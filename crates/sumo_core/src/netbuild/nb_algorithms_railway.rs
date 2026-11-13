@@ -1,6 +1,38 @@
-//! Port of netbuild/NBAlgorithms_Railway.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of netbuild/NBAlgorithms_Railway.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_message, write_warning};
+use utils::common::string_utils::{is_int, to_bool, to_int};
+use utils::geom::geom_helper::{angle_diff, deg2rad, rad2deg};
+use utils::options::options_cont::{exists, get_bool, get_float, get_string};
+
+// C++ global debug switch, false by default
+const gDebugFlag1: bool = false;
+// C++ NBTrafficLightDefinition::OSM_DIRECTION
+const OSM_DIRECTION: &str = "osm:direction";
+// C++ #define SHARP_THRESHOLD_SAMEDIR 100 / SHARP_THRESHOLD 80
+const SHARP_THRESHOLD_SAMEDIR: f64 = 100.0;
+const SHARP_THRESHOLD: f64 = 80.0;
+
+// C++ MIN2 / MAX2 macros
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+// C++ `new Track(...)`; the caller frees it with Box::from_raw when the C++ code does `delete t`
+fn leak_track(t: NBRailwayTopologyAnalyzer_Track) -> Ptr<NBRailwayTopologyAnalyzer_Track> {
+    Ptr::from_raw(Box::into_raw(Box::new(t)))
+}
+
+/// shortcut: C++ shared_ptr<NBPTStop> is mutated freely; Rc only gives &T, so this goes through
+/// the raw pointer like Ptr::m(). Replace with RefCell<NBPTStop> once the owners are ported.
+#[allow(clippy::mut_from_ref)]
+fn stop_m(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
+    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
+}
 
 /// C++ class `NBRailwayGeometryHelper` (netbuild/NBAlgorithms_Railway.h)
 pub struct NBRailwayGeometryHelper {
@@ -144,7 +176,160 @@ impl NBRailwayGeometryHelper {
     // }
     #[allow(unused_variables)]
     pub fn straigthen_corrdidor(ec: &mut NBEdgeCont, maxAngle: f64) -> i32 {
-        todo!("port NBRailwayGeometryHelper::straigthenCorrdidor")
+        let mut moved = 0;
+        let mut numCorridors = 0;
+        let railNodes = NBRailwayTopologyAnalyzer::get_rail_nodes(ec, false);
+        let mut railGeomNodes: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        for n in railNodes.iter() {
+            if n.geometry_like() {
+                railGeomNodes.insert(*n);
+            }
+        }
+        // determinism: std::set<NBNode*, ComparatorIdLess> is ordered by node id, so kinkNodes is keyed by id
+        let mut kinkNodes: BTreeMap<String, Ptr<NBNode>> = BTreeMap::new();
+        for n in railGeomNodes.iter() {
+            let in_ = n.get_incoming_edges()[0];
+            let out = if n.get_outgoing_edges().len() == 1 || n.get_outgoing_edges()[1].is_turning_direction_at(in_) {
+                n.get_outgoing_edges()[0]
+            } else {
+                *n.get_outgoing_edges().last().unwrap()
+            };
+            let relAngle = rad2deg(angle_diff(deg2rad(in_.get_angle_at_node(*n)), deg2rad(out.get_angle_at_node(*n)))).abs();
+            if maxAngle > 0.0 && relAngle > maxAngle {
+                kinkNodes.insert(n.get_id().to_string(), *n);
+            }
+        }
+        while !kinkNodes.is_empty() {
+            let mut corridor: Vec<Ptr<NBNode>> = Vec::new();
+            let mut corridorEdges: Vec<Ptr<NBEdge>> = Vec::new();
+            let mut corridorBox = Boundary::default();
+            let mut length: f64 = 0.0;
+            let (_, n) = kinkNodes.pop_first().unwrap();
+            // go downstream and upstream, add kinkNodes until a "long" enough
+            // non-kink stretch is found
+            let mut in_ = n.get_incoming_edges()[0];
+            let mut out = if n.get_outgoing_edges().len() == 1 || n.get_outgoing_edges()[1].is_turning_direction_at(in_) {
+                n.get_outgoing_edges()[0]
+            } else {
+                *n.get_outgoing_edges().last().unwrap()
+            };
+            let centerIn = in_;
+            let centerOut = out;
+            let mut up = in_.get_from_node();
+            let mut down = out.get_to_node();
+            corridor.push(up);
+            corridor.push(n);
+            corridor.push(down);
+            corridorBox.add_pos(up.get_position());
+            corridorBox.add_pos(down.get_position());
+            corridorEdges.push(in_);
+            corridorEdges.push(out);
+            length += in_.get_loaded_length();
+            length += out.get_loaded_length();
+            let mut cBeg = Position::default();
+            let mut cEnd = Position::default();
+            let mut delta = Position::default();
+            while kinkNodes.contains_key(up.get_id()) {
+                let out2 = in_;
+                let in2 = if up.get_incoming_edges().len() == 1 || up.get_incoming_edges()[1].is_turning_direction_at(out2) {
+                    up.get_incoming_edges()[0]
+                } else {
+                    *up.get_incoming_edges().last().unwrap()
+                };
+                length += in2.get_loaded_length();
+                up = in2.get_from_node();
+                corridor.insert(0, up);
+                corridorEdges.insert(0, in2);
+                kinkNodes.remove(up.get_id());
+                corridorBox.add_pos(up.get_position());
+            }
+            cBeg = *up.get_position();
+            cEnd = *down.get_position();
+            delta = cEnd - cBeg;
+            while delta.length2d() <= utils::geom::POSITION_EPS * (corridor.len() as f64) && railGeomNodes.contains(&up) {
+                let out2 = in_;
+                let in2 = if up.get_incoming_edges().len() == 1 || up.get_incoming_edges()[1].is_turning_direction_at(out2) {
+                    up.get_incoming_edges()[0]
+                } else {
+                    *up.get_incoming_edges().last().unwrap()
+                };
+                length += in2.get_loaded_length();
+                up = in2.get_from_node();
+                corridor.insert(0, up);
+                corridorEdges.insert(0, in2);
+                kinkNodes.remove(up.get_id());
+                corridorBox.add_pos(up.get_position());
+                cBeg = *up.get_position();
+                cEnd = *down.get_position();
+                delta = cEnd - cBeg;
+            }
+            in_ = centerIn;
+            out = centerOut;
+            while kinkNodes.contains_key(down.get_id()) {
+                let in2 = out;
+                let out2 = if down.get_outgoing_edges().len() == 1 || down.get_outgoing_edges()[1].is_turning_direction_at(in2) {
+                    down.get_outgoing_edges()[0]
+                } else {
+                    *down.get_outgoing_edges().last().unwrap()
+                };
+                down = out2.get_to_node();
+                length += out2.get_loaded_length();
+                corridor.push(down);
+                corridorEdges.push(out2);
+                kinkNodes.remove(down.get_id());
+                corridorBox.add_pos(down.get_position());
+            }
+            cBeg = *up.get_position();
+            cEnd = *down.get_position();
+            delta = cEnd - cBeg;
+            while delta.length2d() <= utils::geom::POSITION_EPS * (corridor.len() as f64) && railGeomNodes.contains(&down) {
+                let in2 = out;
+                let out2 = if down.get_outgoing_edges().len() == 1 || down.get_outgoing_edges()[1].is_turning_direction_at(in2) {
+                    down.get_outgoing_edges()[0]
+                } else {
+                    *down.get_outgoing_edges().last().unwrap()
+                };
+                down = out2.get_to_node();
+                length += out2.get_loaded_length();
+                corridor.push(down);
+                corridorEdges.push(out2);
+                kinkNodes.remove(down.get_id());
+                corridorBox.add_pos(down.get_position());
+                cBeg = *up.get_position();
+                cEnd = *down.get_position();
+                delta = cEnd - cBeg;
+            }
+            // straighten all edges in corridor (corridorEdges doesn't include bidi)
+            let corridorNodes: BTreeSet<Ptr<NBNode>> = corridor.iter().copied().collect();
+            for n2 in corridorNodes.iter() {
+                for e in n2.get_edges().iter() {
+                    if corridorNodes.contains(&e.get_from_node()) && corridorNodes.contains(&e.get_to_node()) {
+                        let simpleGeom = PositionVector::from(vec![*e.get_from_node().get_position(), *e.get_to_node().get_position()]);
+                        e.m().set_geometry(&simpleGeom, false);
+                    }
+                }
+            }
+            if delta.length2d() > 0.0 {
+                let mut currLength = 0.0;
+                for i in 1..corridor.len() - 1 {
+                    currLength += corridorEdges[i - 1].get_loaded_length();
+                    let newPos = cBeg + delta * (currLength / length);
+                    let n2 = corridor[i];
+                    n2.m().reinit(&newPos, n2.get_type(), false);
+                    for e in n2.get_edges().iter() {
+                        e.m().reset_endpoint_at_node(n2);
+                    }
+                    moved += 1;
+                }
+                numCorridors += 1;
+            } else {
+                write_warningf!("Could not straighten corridor %.", corridor.iter().map(|n| n.get_id().to_string()).collect::<Vec<_>>().join(" "));
+            }
+        }
+        //std::cout << " railNodes=" << railNodes.size() << " railGeomNodes=" << railGeomNodes.size() << " kinkNodes=" << kinkNodes.size() << "\n";
+
+        write_messagef!("Moved % rail junctions for straightening % corridors.", moved, numCorridors);
+        moved
     }
 
 }
@@ -175,7 +360,20 @@ impl NBRailwaySignalGuesser {
     // }
     #[allow(unused_variables)]
     pub fn guess_rail_signals(nc: &mut NBNodeCont, ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, dc: &mut NBDistrictCont) -> i32 {
-        todo!("port NBRailwaySignalGuesser::guessRailSignals")
+        let mut addedSignals = 0;
+        if exists("railway.signal.guess.by-stops") {
+            if get_bool("railway.signal.guess.by-stops") {
+                NBTurningDirectionsComputer::compute_turn_directions(nc, false);
+                let minLength = get_float("osm.stop-output.length.train");
+                let split = get_bool("railway.signal.guess.by-stops.split");
+                if split {
+                    // needed for finding and splitting bidi-edges
+                    NBTurningDirectionsComputer::compute_turn_directions(nc, false);
+                }
+                addedSignals += Self::guess_by_stops(nc, ec, sc, dc, minLength, split);
+            }
+        }
+        addedSignals
     }
 
     /// C++: `int NBRailwaySignalGuesser::guessByStops(NBNodeCont &, NBEdgeCont &, NBPTStopCont &, NBDistrictCont &, double, bool)` [static, private]
@@ -268,7 +466,94 @@ impl NBRailwaySignalGuesser {
     // }
     #[allow(unused_variables)]
     pub fn guess_by_stops(nc: &mut NBNodeCont, ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, dc: &mut NBDistrictCont, minLength: f64, split: bool) -> i32 {
-        todo!("port NBRailwaySignalGuesser::guessByStops")
+        let splitOffset = 10.0;
+        let splitOffsetSlack = 200.0;
+        let mut addedSignals = 0;
+        for (itemId, item) in sc.get_stops().iter() {
+            let mut stopEdge = ec.retrieve(item.get_edge_id(), false);
+            if !stopEdge.is_null() && is_railway(stopEdge.get_permissions(-1)) {
+                let to = stopEdge.get_to_node();
+                if Self::can_be_signal(to) {
+                    let stopEnd = item.get_end_pos();
+                    if split && (!to.geometry_like() || stopEdge.get_length() - stopEnd > splitOffsetSlack) {
+                        let splitPos = min2(stopEnd + 1.0, max2(stopEdge.get_length() - splitOffset, stopEdge.get_length() / 2.0));
+                        let nodeID = nc.create_unused_id(&format!("{}_{}", stopEdge.get_id(), itemId), "#");
+                        let n = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(&nodeID, &stopEdge.get_geometry().position_at_offset(splitPos, 0.0), SumoXMLNodeType::RAIL_SIGNAL))));
+                        nc.insert_2(n);
+                        let edgeID = ec.create_unused_id(&format!("{}.{}", stopEdge.get_id(), splitPos as i32), "#");
+                        let stopEdgeID = stopEdge.get_id().to_string();
+                        let bidi = stopEdge.get_bidi_edge();
+                        if ec.split_at_2(dc, stopEdge, n, &stopEdgeID, &edgeID, stopEdge.get_num_lanes(), stopEdge.get_num_lanes(), -1.0, 1.0, 0) {
+                            if !bidi.is_null() {
+                                let edgeID2 = ec.create_unused_id(&format!("{}.{}", bidi.get_id(), splitPos as i32), "#");
+                                ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
+                            }
+                            addedSignals += 1;
+                            stop_m(item).find_lane_and_compute_bus_stop_extent_2(stopEdge);
+                            stopEdge = ec.retrieve(&stopEdgeID, false);
+                            NBTurningDirectionsComputer::compute_turn_directions_for_node(stopEdge.get_from_node(), false);
+                            NBTurningDirectionsComputer::compute_turn_directions_for_node(stopEdge.get_to_node(), false);
+                        }
+                    } else {
+                        let p = *to.get_position();
+                        to.m().reinit(&p, SumoXMLNodeType::RAIL_SIGNAL, false);
+                        addedSignals += 1;
+                    }
+                }
+                let mut from = stopEdge.get_from_node();
+                let mut curr = stopEdge;
+                let mut searchDist = minLength - stopEdge.get_loaded_length();
+                while searchDist > 0.0 && from.geometry_like() && from.get_type() != SumoXMLNodeType::RAIL_SIGNAL {
+                    for in_ in from.get_incoming_edges().iter() {
+                        if in_.get_from_node() != curr.get_to_node() {
+                            // found edge that isn't a bidi predecessor
+                            curr = *in_;
+                            break;
+                        }
+                    }
+                    if curr.get_from_node() == from {
+                        // bidi edge without predecessor
+                        break;
+                    } else {
+                        from = curr.get_from_node();
+                    }
+                    searchDist -= curr.get_loaded_length();
+                }
+                if Self::can_be_signal(from) {
+                    let minPos = min2(splitOffset, curr.get_length() / 2.0);
+                    let splitPos = if searchDist >= 0.0 {
+                        minPos
+                    } else {
+                        max2(minPos, min2(item.get_start_pos(), -searchDist - 10.0))
+                    };
+                    if split && (!from.geometry_like() || splitPos > splitOffsetSlack) {
+                        let nodeID = nc.create_unused_id(&format!("{}_{}", curr.get_id(), itemId), "#");
+                        let n = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(&nodeID, &curr.get_geometry().position_at_offset(splitPos, 0.0), SumoXMLNodeType::RAIL_SIGNAL))));
+                        nc.insert_2(n);
+                        let edgeID = ec.create_unused_id(&format!("{}.{}", curr.get_id(), splitPos as i32), "#");
+                        let currID = curr.get_id().to_string();
+                        let bidi = curr.get_bidi_edge();
+                        if ec.split_at_2(dc, curr, n, &edgeID, curr.get_id(), curr.get_num_lanes(), curr.get_num_lanes(), -1.0, 1.0, 0) {
+                            if !bidi.is_null() {
+                                let edgeID2 = ec.create_unused_id(&format!("{}.{}", bidi.get_id(), splitPos as i32), "#");
+                                ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
+                            }
+                            addedSignals += 1;
+                            stop_m(item).find_lane_and_compute_bus_stop_extent_2(stopEdge);
+                            curr = ec.retrieve(&currID, false);
+                            NBTurningDirectionsComputer::compute_turn_directions_for_node(curr.get_from_node(), false);
+                            NBTurningDirectionsComputer::compute_turn_directions_for_node(curr.get_to_node(), false);
+                        }
+                    } else {
+                        let p = *from.get_position();
+                        from.m().reinit(&p, SumoXMLNodeType::RAIL_SIGNAL, false);
+                        addedSignals += 1;
+                    }
+                }
+            }
+        }
+        write_messagef!("Added % rail signals at % stops.", addedSignals, sc.get_stops().len());
+        addedSignals
     }
 
     /// C++: `bool NBRailwaySignalGuesser::canBeSignal(const NBNode *)` [static, private]
@@ -282,7 +567,11 @@ impl NBRailwaySignalGuesser {
     // }
     #[allow(unused_variables)]
     pub fn can_be_signal(node: Ptr<NBNode>) -> bool {
-        todo!("port NBRailwaySignalGuesser::canBeSignal")
+        node.get_type() != SumoXMLNodeType::RAIL_SIGNAL
+            && node.get_incoming_edges().len() >= 1
+            && node.get_outgoing_edges().len() >= 1
+            && (node.get_edges().len() > 2
+                || node.get_incoming_edges()[0].get_from_node() != node.get_outgoing_edges()[0].get_to_node())
     }
 
 }
@@ -299,7 +588,7 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn analyze_topology(ec: &mut NBEdgeCont) {
-        todo!("port NBRailwayTopologyAnalyzer::analyzeTopology")
+        Self::get_broken_rail_nodes(ec, true);
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::repairTopology(NBEdgeCont &, NBPTStopCont &, NBPTLineCont &)` [static]
@@ -325,7 +614,23 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn repair_topology(ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, lc: &mut NBPTLineCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::repairTopology")
+        let minimal = get_bool("railway.topology.repair.minimal");
+        let mut addedBidi = 0;
+        if !minimal {
+            addedBidi += Self::extend_bidi_edges(ec);
+            addedBidi += Self::reverse_edges(ec, sc, lc); // technically not bidi but new edges nevertheless
+            addedBidi += Self::add_bidi_edges_for_buffer_stops(ec);
+            addedBidi += Self::add_bidi_edges_between_switches(ec);
+        }
+        if lc.get_lines().len() > 0 {
+            addedBidi += Self::add_bidi_edges_for_stops(ec, lc, sc, minimal);
+        }
+        if get_bool("railway.topology.repair.connect-straight") {
+            addedBidi += Self::add_bidi_edges_for_straight_connectivity(ec, true);
+            addedBidi += Self::add_bidi_edges_for_straight_connectivity(ec, false);
+            addedBidi += Self::extend_bidi_edges(ec);
+        }
+        addedBidi
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::makeAllBidi(NBEdgeCont &)` [static]
@@ -373,7 +678,45 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn make_all_bidi(ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::makeAllBidi")
+        let mut numNotCenterEdges = 0;
+        let mut numAddedBidiEdges = 0;
+        let inputfile = get_string("railway.topology.all-bidi.input-file");
+        let mut edges: Vec<Ptr<NBEdge>> = Vec::new();
+        if inputfile == "" {
+            for edge in ec.get_all_edges() {
+                edges.push(edge);
+            }
+        } else {
+            let mut edgeIDs: BTreeSet<String> = BTreeSet::new();
+            NBHelpers::load_edges_from_file(&inputfile, &mut edgeIDs);
+            for edgeID in edgeIDs.iter() {
+                let edge = ec.retrieve(edgeID, false);
+                if !edge.is_null() {
+                    edges.push(edge);
+                }
+            }
+        }
+        for edge in edges {
+            if Self::has_railway(edge.get_permissions(-1)) {
+                // rebuild connections if given from an earlier network
+                edge.m().invalidate_connections(true);
+                if !edge.is_bidi_rail(false) {
+                    if edge.get_lane_spread_function() == LaneSpreadFunction::CENTER {
+                        let e2 = Self::add_bidi_edge(ec, edge, false);
+                        if !e2.is_null() {
+                            numAddedBidiEdges += 1;
+                        }
+                    } else {
+                        numNotCenterEdges += 1;
+                    }
+                }
+            }
+        }
+        write_messagef!("Added % bidi-edges to ensure that all tracks are usable in both directions.", numAddedBidiEdges);
+        if numNotCenterEdges != 0 {
+            write_warningf!("Ignore % edges because they have the wrong spreadType", numNotCenterEdges);
+        }
+        numAddedBidiEdges
     }
 
     /// C++: `void NBRailwayTopologyAnalyzer::setPTLinePriority(NBEdgeCont &, NBPTLineCont &, SVCPermissions)` [static]
@@ -403,7 +746,27 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn set_pt_line_priority(ec: &mut NBEdgeCont, lc: &mut NBPTLineCont, vClasses: SVCPermissions) {
-        todo!("port NBRailwayTopologyAnalyzer::setPTLinePriority")
+        for edge in ec.get_all_edges() {
+            let p = edge.get_permissions(-1);
+            if is_railway(p) && (p & vClasses) != 0 {
+                if edge.get_routing_type() == "" {
+                    edge.m().set_priority(-1);
+                } else if is_int(edge.get_routing_type()) {
+                    edge.m().set_priority(to_int(edge.get_routing_type()).unwrap());
+                }
+            }
+        }
+        for item in lc.get_lines().values() {
+            if (item.get_v_class() & vClasses) == 0 {
+                continue;
+            }
+            for edge in item.get_edges().iter() {
+                if edge.get_routing_type() == "" {
+                    edge.m().set_priority(4);
+                    edge.m().set_routing_type("4");
+                }
+            }
+        }
     }
 
     /// C++: `void NBRailwayTopologyAnalyzer::extendDirectionPriority(NBEdgeCont &, bool)` [static]
@@ -533,7 +896,100 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn extend_direction_priority(ec: &mut NBEdgeCont, fromUniDir: bool) {
-        todo!("port NBRailwayTopologyAnalyzer::extendDirectionPriority")
+        // determinism: std::set<NBEdge*, ComparatorIdLess> is ordered by edge id, so bidi is keyed by id
+        let mut bidi: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
+        let mut uni: EdgeSet = EdgeSet::new();
+        for edge in ec.get_all_edges() {
+            if Self::has_railway(edge.get_permissions(-1)) {
+                if fromUniDir {
+                    if !edge.is_bidi_rail(false) {
+                        edge.m().set_priority(4);
+                        edge.m().set_routing_type("4");
+                        uni.insert(edge);
+                    } else {
+                        bidi.insert(edge.get_id().to_string(), edge);
+                    }
+                } else {
+                    if edge.get_priority() >= 0 {
+                        uni.insert(edge);
+                    } else {
+                        bidi.insert(edge.get_id().to_string(), edge);
+                    }
+                }
+            }
+        }
+
+        if uni.is_empty() {
+            if !bidi.is_empty() {
+                write_warning("Cannot extend track direction priority because there are no track edges with positive priority");
+            }
+            return;
+        }
+        let mut seen: EdgeSet = EdgeSet::new();
+        let mut check = uni.clone();
+        let mut forward: EdgeSet = EdgeSet::new();
+        while !check.is_empty() {
+            let edge = check.pop_first().unwrap();
+            if seen.contains(&edge) {
+                continue;
+            }
+            seen.insert(edge);
+            let straightOut = edge.get_straight_continuation(edge.get_permissions(-1));
+            if !straightOut.is_null() && straightOut.get_straight_predecessor(straightOut.get_permissions(-1)) == edge {
+                forward.insert(straightOut);
+                check.insert(straightOut);
+            }
+            let straightIn = edge.get_straight_predecessor(edge.get_permissions(-1));
+            if !straightIn.is_null() && straightIn.get_straight_continuation(straightIn.get_permissions(-1)) == edge {
+                forward.insert(straightIn);
+                check.insert(straightIn);
+            }
+        }
+
+        for edge in bidi.values() {
+            let edge = *edge;
+            let bidiEdge = edge.get_bidi_edge();
+            let (mut prio, mut bidiPrio) = if forward.contains(&edge) {
+                if !forward.contains(&bidiEdge) {
+                    (3, 0)
+                } else {
+                    // both forward
+                    (2, 2)
+                }
+            } else if forward.contains(&bidiEdge) {
+                (0, 3)
+            } else {
+                // neither forward
+                (1, 1)
+            };
+            if bidiEdge.is_null() {
+                write_warningf!("Edge '%' was loaded with undefined priority (%) but has unambiguous main direction (no bidi edge)", edge.get_id(), edge.get_priority());
+            }
+            if edge.get_priority() >= 0 {
+                bidiPrio = 0;
+            }
+            if !bidiEdge.is_null() && bidiEdge.get_priority() >= 0 {
+                prio = 0;
+            }
+            if edge.get_priority() < 0 {
+                edge.m().set_priority(prio);
+                edge.m().set_routing_type(&prio.to_string());
+            }
+            if !bidiEdge.is_null() && bidiEdge.get_priority() < 0 {
+                bidiEdge.m().set_priority(bidiPrio);
+                bidiEdge.m().set_routing_type(&bidiPrio.to_string());
+            }
+        }
+        let mut numPrios: BTreeMap<i32, i32> = BTreeMap::new();
+        for edge in bidi.values() {
+            *numPrios.entry(edge.get_priority()).or_insert(0) += 1;
+        }
+        let joined = numPrios.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<_>>().join(" ");
+        if fromUniDir {
+            write_message(&format!("Assigned edge priority based on main direction: {}.", joined));
+        } else {
+            write_message(&format!("Extended edge priority based on main direction: {}.", joined));
+        }
     }
 
     /// C++: `double NBRailwayTopologyAnalyzer::getTravelTimeStatic(const Track *const, const NBVehicle *const, double)` [static]
@@ -543,7 +999,7 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(track: Ptr<NBRailwayTopologyAnalyzer_Track>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
-        todo!("port NBRailwayTopologyAnalyzer::getTravelTimeStatic")
+        NBEdge::get_travel_time_static(track.edge, veh, time) * track.penalty
     }
 
     /// C++: `std::set<NBNode *> NBRailwayTopologyAnalyzer::getRailNodes(NBEdgeCont &, bool)` [static]
@@ -571,7 +1027,25 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn get_rail_nodes(ec: &mut NBEdgeCont, verbose: bool) -> BTreeSet<Ptr<NBNode>> {
-        todo!("port NBRailwayTopologyAnalyzer::getRailNodes")
+        let mut railNodes: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut numRailEdges = 0;
+        for edge in ec.get_all_edges() {
+            if Self::has_railway(edge.get_permissions(-1)) {
+                numRailEdges += 1;
+                railNodes.insert(edge.get_from_node());
+                railNodes.insert(edge.get_to_node());
+            }
+        }
+        let mut numRailSignals = 0;
+        for node in railNodes.iter() {
+            if node.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                numRailSignals += 1;
+            }
+        }
+        if verbose {
+            write_messagef!("Found % railway edges and % railway nodes (% signals).", numRailEdges, railNodes.len(), numRailSignals);
+        }
+        railNodes
     }
 
     /// C++: `std::set<NBNode *> NBRailwayTopologyAnalyzer::getBrokenRailNodes(NBEdgeCont &, bool)` [static, private]
@@ -730,7 +1204,155 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn get_broken_rail_nodes(ec: &mut NBEdgeCont, verbose: bool) -> BTreeSet<Ptr<NBNode>> {
-        todo!("port NBRailwayTopologyAnalyzer::getBrokenRailNodes")
+        let mut brokenNodes: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let devName = if verbose { get_string("railway.topology.output") } else { "/dev/null".to_string() };
+        let deviceRef = OutputDevice::get_device(&devName, true).unwrap();
+        let mut device = deviceRef.borrow_mut();
+
+        device.write_xml_header("railwayTopology", "", BTreeMap::new(), true);
+        let railNodes = Self::get_rail_nodes(ec, verbose);
+        // determinism: std::map<pair<int,int>, std::set<NBNode*, ComparatorIdLess>> and std::set<NBEdge*, ComparatorIdLess>
+        // are keyed by id here
+        let mut types: BTreeMap<(i32, i32), BTreeMap<String, Ptr<NBNode>>> = BTreeMap::new();
+        let mut bidiEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
+        for node in railNodes.iter() {
+            let mut inEdges: EdgeVector = Vec::new();
+            let mut outEdges: EdgeVector = Vec::new();
+            Self::get_rail_edges(*node, &mut inEdges, &mut outEdges);
+            types.entry((inEdges.len() as i32, outEdges.len() as i32)).or_default().insert(node.get_id().to_string(), *node);
+            for e in outEdges.iter() {
+                if e.is_bidi_rail(false) && !bidiEdges.contains_key(e.get_turn_destination(true).get_id()) {
+                    let mut primary = *e;
+                    let mut secondary = e.get_turn_destination(true);
+                    if e.get_id().starts_with('-') {
+                        std::mem::swap(&mut primary, &mut secondary);
+                    } else if !primary.get_id().starts_with('-') && !secondary.get_id().starts_with('-') && secondary.get_id() < primary.get_id() {
+                        std::mem::swap(&mut primary, &mut secondary);
+                    }
+                    if !bidiEdges.contains_key(secondary.get_id()) {
+                        // avoid duplicate when both ids start with '-'
+                        bidiEdges.insert(primary.get_id().to_string(), primary);
+                    }
+                }
+            }
+        }
+
+        let mut numBrokenA = 0;
+        let mut numBrokenB = 0;
+        let mut numBrokenC = 0;
+        let mut numBrokenD = 0;
+        let mut numBufferStops = 0;
+        if verbose && types.len() > 0 {
+            write_message("Railway nodes by number of incoming,outgoing edges:");
+        }
+        device.open_tag("legend");
+        device.open_tag("error");
+        device.write_attr(SUMO_ATTR_ID, "a");
+        device.write_attr("meaning", "edge pair angle supports driving but both are outgoing");
+        device.close_tag("");
+        device.open_tag("error");
+        device.write_attr(SUMO_ATTR_ID, "b");
+        device.write_attr("meaning", "edge pair angle supports driving but both are incoming");
+        device.close_tag("");
+        device.open_tag("error");
+        device.write_attr(SUMO_ATTR_ID, "c");
+        device.write_attr("meaning", "an incoming edge has a sharp angle to all outgoing edges");
+        device.close_tag("");
+        device.open_tag("error");
+        device.write_attr(SUMO_ATTR_ID, "d");
+        device.write_attr("meaning", "an outgoing edge has a sharp angle from all incoming edges");
+        device.close_tag("");
+        device.close_tag("");
+
+        for (key, nodes) in types.iter() {
+            let mut numBrokenType = 0;
+            device.open_tag("railNodeType");
+            let (in_, out) = *key;
+            device.write_attr("in", &in_);
+            device.write_attr("out", &out);
+            for n in nodes.values() {
+                device.open_tag("node");
+                device.write_attr(SUMO_ATTR_ID, n.get_id());
+                let mut inRail: EdgeVector = Vec::new();
+                let mut outRail: EdgeVector = Vec::new();
+                Self::get_rail_edges(*n, &mut inRail, &mut outRail);
+                // check if there is a mismatch between angle and edge direction
+                // (see above)
+
+                let mut broken = String::new();
+                if in_ < 2 && Self::has_straight_pair(*n, &outRail, &outRail) {
+                    broken += "a";
+                    numBrokenA += 1;
+                }
+                if out < 2 && Self::has_straight_pair(*n, &inRail, &inRail) {
+                    broken += "b";
+                    numBrokenB += 1;
+                }
+                if out > 0 {
+                    for e in inRail.iter() {
+                        let tmp: EdgeVector = vec![*e];
+                        if Self::all_sharp(*n, &tmp, &outRail, false) {
+                            broken += "c";
+                            numBrokenC += 1;
+                            break;
+                        }
+                    }
+                }
+                if in_ > 0 {
+                    for e in outRail.iter() {
+                        let tmp: EdgeVector = vec![*e];
+                        if Self::all_sharp(*n, &inRail, &tmp, false) {
+                            broken += "d";
+                            numBrokenD += 1;
+                            break;
+                        }
+                    }
+                }
+                // do not mark bidi nodes as broken
+                if ((in_ == 1 && out == 1) || (in_ == 2 && out == 2)) && Self::all_bidi(&inRail) && Self::all_bidi(&outRail) {
+                    broken = String::new();
+                }
+
+                if broken.len() > 0 {
+                    device.write_attr("broken", &broken);
+                    brokenNodes.insert(*n);
+                    numBrokenType += 1;
+                }
+                if to_bool(&n.base2.get_parameter("buffer_stop", "false")).unwrap() {
+                    device.write_attr("buffer_stop", "true");
+                    numBufferStops += 1;
+                }
+                device.close_tag("");
+            }
+            device.close_tag("");
+            if verbose {
+                write_message(&format!("   {},{} count: {} broken: {}", in_, out, nodes.len(), numBrokenType));
+            }
+        }
+        if verbose {
+            write_message(&format!(
+                "Found {} broken railway nodes (A={} B={} C={} D={})",
+                brokenNodes.len(),
+                numBrokenA,
+                numBrokenB,
+                numBrokenC,
+                numBrokenD
+            ));
+            write_messagef!("Found % railway nodes marked as buffer_stop", numBufferStops);
+        }
+
+        for e in bidiEdges.values() {
+            device.open_tag("bidiEdge");
+            device.write_attr(SUMO_ATTR_ID, e.get_id());
+            device.write_attr("bidi", e.get_turn_destination(true).get_id());
+            device.close_tag("");
+        }
+        if verbose {
+            write_messagef!("Found % bidirectional rail edges", bidiEdges.len());
+        }
+
+        let _ = device.close();
+        brokenNodes
     }
 
     /// C++: `void NBRailwayTopologyAnalyzer::getRailEdges(const NBNode *, EdgeVector &, EdgeVector &)` [static, private]
@@ -751,7 +1373,16 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn get_rail_edges(node: Ptr<NBNode>, inEdges: &mut EdgeVector, outEdges: &mut EdgeVector) {
-        todo!("port NBRailwayTopologyAnalyzer::getRailEdges")
+        for e in node.get_incoming_edges().iter() {
+            if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                inEdges.push(*e);
+            }
+        }
+        for e in node.get_outgoing_edges().iter() {
+            if (e.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                outEdges.push(*e);
+            }
+        }
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::hasRailway(SVCPermissions)` [static, private]
@@ -761,7 +1392,7 @@ impl NBRailwayTopologyAnalyzer {
     //     }
     #[allow(unused_variables)]
     pub fn has_railway(permissions: SVCPermissions) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::hasRailway")
+        (permissions & SVC_RAIL_CLASSES) > 0 && permissions != SVC_ALL
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::isStraight(const NBNode *, const NBEdge *, const NBEdge *)` [static, private]
@@ -788,7 +1419,23 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn is_straight(node: Ptr<NBNode>, e1: Ptr<NBEdge>, e2: Ptr<NBEdge>) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::isStraight")
+        let relAngle = NBHelpers::norm_rel_angle(e1.get_angle_at_node(node), e2.get_angle_at_node(node));
+        /*
+        std::cout << "  isStraight n=" << node->getID()
+            << " e1=" << e1->getID()
+            << " e2=" << e2->getID()
+            << " a1=" << e1->getAngleAtNode(node)
+            << " a2=" << e2->getAngleAtNode(node)
+            << " rel=" << relAngle
+            << "\n";
+            */
+        if (e1.get_to_node() == node && e2.get_from_node() == node) || (e1.get_from_node() == node && e2.get_to_node() == node) {
+            // edges go in the same direction
+            relAngle.abs() < SHARP_THRESHOLD
+        } else {
+            // edges go in the opposite direction (both incoming or outgoing)
+            relAngle.abs() > SHARP_THRESHOLD_SAMEDIR
+        }
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::hasStraightPair(const NBNode *, const EdgeVector &, const EdgeVector &)` [static, private]
@@ -818,7 +1465,21 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn has_straight_pair(node: Ptr<NBNode>, edges: &EdgeVector, edges2: &EdgeVector) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::hasStraightPair")
+        for e1 in edges.iter() {
+            for e2 in edges2.iter() {
+                //if (e1->getID() == "195411601#2" && e2->getID() == "93584120#3") {
+                //    std::cout
+                //        << " DEBUG normRelA=" << NBHelpers::normRelAngle(
+                //                    e1->getAngleAtNode(node),
+                //                    e2->getAngleAtNode(node))
+                //        << "\n";
+                //}
+                if e1 != e2 && Self::is_straight(node, *e1, *e2) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::allBroken(const NBNode *, NBEdge *, const EdgeVector &, const EdgeVector &)` [static, private]
@@ -844,7 +1505,23 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn all_broken(node: Ptr<NBNode>, candOut: Ptr<NBEdge>, in_: &EdgeVector, out: &EdgeVector) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::allBroken")
+        for e in in_.iter() {
+            if *e != candOut && Self::is_straight(node, *e, candOut) {
+                if gDebugFlag1 {
+                    println!(" isStraight e={} candOut={}", e.get_id(), candOut.get_id());
+                }
+                return false;
+            }
+        }
+        for e in out.iter() {
+            if *e != candOut && !Self::is_straight(node, *e, candOut) {
+                if gDebugFlag1 {
+                    println!(" isSharp e={} candOut={}", e.get_id(), candOut.get_id());
+                }
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::allSharp(const NBNode *, const EdgeVector &, const EdgeVector &, bool)` [static, private]
@@ -866,7 +1543,19 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn all_sharp(node: Ptr<NBNode>, in_: &EdgeVector, out: &EdgeVector, countBidiAsSharp: bool) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::allSharp")
+        let mut allBidi = true;
+        for e1 in in_.iter() {
+            for e2 in out.iter() {
+                if e1 != e2 && Self::is_straight(node, *e1, *e2) {
+                    return false;
+                }
+                if !e1.is_bidi_rail(true) {
+                    //std::cout << " allSharp node=" << node->getID() << " e1=" << e1->getID() << " is not bidi\n";
+                    allBidi = false;
+                }
+            }
+        }
+        !allBidi || countBidiAsSharp
     }
 
     /// C++: `bool NBRailwayTopologyAnalyzer::allBidi(const EdgeVector &)` [static, private]
@@ -881,7 +1570,12 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn all_bidi(edges: &EdgeVector) -> bool {
-        todo!("port NBRailwayTopologyAnalyzer::allBidi")
+        for e in edges.iter() {
+            if !e.is_bidi_rail(false) {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `NBEdge * NBRailwayTopologyAnalyzer::isBidiSwitch(const NBNode *)` [static, private]
@@ -907,7 +1601,24 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn is_bidi_switch(n: Ptr<NBNode>) -> Ptr<NBEdge> {
-        todo!("port NBRailwayTopologyAnalyzer::isBidiSwitch")
+        let mut inRail = EdgeVector::new();
+        let mut outRail = EdgeVector::new();
+        Self::get_rail_edges(n, &mut inRail, &mut outRail);
+        if inRail.len() == 2 && outRail.len() == 1 && Self::is_straight(n, inRail[0], inRail[inRail.len() - 1]) {
+            if Self::is_straight(n, inRail[0], outRail[0]) {
+                return inRail[0];
+            } else if Self::is_straight(n, inRail[inRail.len() - 1], outRail[0]) {
+                return inRail[inRail.len() - 1];
+            }
+        }
+        if inRail.len() == 1 && outRail.len() == 2 && Self::is_straight(n, outRail[0], outRail[outRail.len() - 1]) {
+            if Self::is_straight(n, outRail[0], inRail[0]) {
+                return outRail[0];
+            } else if Self::is_straight(n, outRail[outRail.len() - 1], inRail[0]) {
+                return outRail[outRail.len() - 1];
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `NBEdge * NBRailwayTopologyAnalyzer::addBidiEdge(NBEdgeCont &, NBEdge *, bool)` [static, private]
@@ -956,7 +1667,81 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_edge(ec: &mut NBEdgeCont, edge: Ptr<NBEdge>, update: bool) -> Ptr<NBEdge> {
-        todo!("port NBRailwayTopologyAnalyzer::addBidiEdge")
+        debug_assert!(edge.get_lane_spread_function() == LaneSpreadFunction::CENTER);
+        debug_assert!(!edge.is_bidi_rail(false));
+        let id2 = if edge.get_id().starts_with('-') {
+            edge.get_id()[1..].to_string()
+        } else {
+            format!("-{}", edge.get_id())
+        };
+        if ec.was_ignored(id2.clone()) {
+            // we had it before so the warning is already there
+            return Ptr::null();
+        }
+        if ec.retrieve(&id2, false).is_null() {
+            // shortcut: NBEdge(id, from, to, tpl, geom) copy constructor is not ported; the reversed edge
+            // gets the template's type, speed, friction, lane count, width, offsets and per-lane speed,
+            // friction, permissions, width and type. Lane parameters, stop offsets and signal position of the
+            // template are not copied yet; upgrade when NBEdge::NBEdge(id, from, to, tpl, geom, numLanes) lands.
+            let geom = edge.get_geometry().reverse();
+            let tryIgnoreNodePositions = !geom.0.is_empty();
+            let mut e2box = NBEdge::new_2(
+                &id2,
+                edge.get_to_node(),
+                edge.get_from_node(),
+                edge.get_type_id().to_string(),
+                edge.get_speed(),
+                edge.get_friction(),
+                edge.get_num_lanes(),
+                edge.get_priority(),
+                edge.get_lane_width(),
+                edge.get_end_offset(),
+                geom,
+                edge.get_lane_spread_function(),
+                edge.get_street_name(),
+                "",
+                tryIgnoreNodePositions,
+            );
+            let e2 = Ptr::from_raw(Box::into_raw(e2box));
+            for i in 0..e2.get_num_lanes() {
+                let tplIndex = std::cmp::min(i, edge.get_num_lanes() - 1);
+                e2.m().set_speed(i, edge.get_lane_speed(tplIndex));
+                e2.m().set_friction(i, edge.get_lane_friction(tplIndex));
+                e2.m().set_permissions(edge.get_permissions(tplIndex), i);
+                let lane = &edge.get_lanes()[tplIndex as usize];
+                e2.m().set_lane_width(i, lane.width);
+                e2.m().set_lane_type(i, &lane.type_);
+                if e2.get_to_node() == edge.get_to_node() {
+                    e2.m().set_end_offset(i, lane.endOffset);
+                }
+            }
+            if edge.base2.get_parameter(OSM_DIRECTION, "") == "forward" {
+                e2.m().base2.set_parameter(OSM_DIRECTION, "backward");
+            } else if edge.base2.get_parameter(OSM_DIRECTION, "") == "backward" {
+                e2.m().base2.set_parameter(OSM_DIRECTION, "forward");
+            }
+            if edge.get_distance() != 0.0 {
+                e2.m().set_distance(-edge.get_distance() - edge.get_loaded_length());
+            }
+            ec.insert(e2, false);
+            if ec.retrieve(&id2, false).is_null() {
+                write_warningf!("Bidi-edge '%' prevented by filtering rules.", id2.clone());
+                return Ptr::null();
+            }
+            if update {
+                Self::update_turns(edge);
+                // reconnected added edges
+                for incoming in e2.get_from_node().get_incoming_edges().iter() {
+                    if Self::has_railway(incoming.get_permissions(-1)) {
+                        incoming.m().invalidate_connections(true);
+                    }
+                }
+            }
+            e2
+        } else {
+            write_warningf!("Could not add bidi-edge '%'.", id2.clone());
+            Ptr::null()
+        }
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::extendBidiEdges(NBEdgeCont &)` [static, private]
@@ -978,10 +1763,19 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn extend_bidi_edges(ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::extendBidiEdges")
-    }
-
-    /// C++: `int NBRailwayTopologyAnalyzer::extendBidiEdges(NBEdgeCont &, NBNode *, NBEdge *)` [static, private]
+        // shortcut: C++ walks the live ec map while addBidiEdge inserts into it; this walks a snapshot, so
+        // edges inserted during the walk are not visited. Upgrade when NBEdgeCont exposes live iteration.
+        let mut added = 0;
+        for e in ec.get_all_edges() {
+            if e.is_bidi_rail(false) {
+                added += Self::extend_bidi_edges_2(ec, e.get_from_node(), e.get_turn_destination(true));
+                added += Self::extend_bidi_edges_2(ec, e.get_to_node(), e);
+            }
+        }
+        if added > 0 {
+            write_messagef!("Added % bidi-edges as extension of existing bidi edges.", added);
+        }
+        added
     // int
     // NBRailwayTopologyAnalyzer::extendBidiEdges(NBEdgeCont& ec, NBNode* node, NBEdge* bidiIn) {
     //     assert(bidiIn->getToNode() == node);
@@ -1023,7 +1817,37 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn extend_bidi_edges_2(ec: &mut NBEdgeCont, node: Ptr<NBNode>, bidiIn: Ptr<NBEdge>) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::extendBidiEdges")
+        assert!(bidiIn.get_to_node() == node);
+        let bidiOut = bidiIn.get_turn_destination(true);
+        if bidiOut.is_null() {
+            write_warningf!("Could not find bidi-edge for edge '%'", bidiIn.get_id());
+            return 0;
+        }
+        let tmpBidiOut: EdgeVector = vec![bidiOut];
+        let tmpBidiIn: EdgeVector = vec![bidiIn];
+        let mut added = 0;
+        let mut inRail = EdgeVector::new();
+        let mut outRail = EdgeVector::new();
+        Self::get_rail_edges(node, &mut inRail, &mut outRail);
+        for cand in outRail.clone() {
+            //std::cout << " extendBidiEdges n=" << node->getID() << " bidiIn=" << bidiIn->getID() << " cand=" << cand->getID() << " isStraight=" << isStraight(node, bidiIn, cand) <<  " allSharp=" << allSharp(node, inRail, tmpBidiOut, true) << "\n";
+            if !cand.is_bidi_rail(false) && Self::is_straight(node, bidiIn, cand) && cand.get_lane_spread_function() == LaneSpreadFunction::CENTER && Self::all_sharp(node, &inRail, &tmpBidiOut, true) {
+                let e2 = Self::add_bidi_edge(ec, cand, true);
+                if !e2.is_null() {
+                    added += 1 + Self::extend_bidi_edges_2(ec, cand.get_to_node(), cand);
+                }
+            }
+        }
+        for cand in inRail.clone() {
+            //std::cout << " extendBidiEdges n=" << node->getID() << " bidiOut=" << bidiOut->getID() << " cand=" << cand->getID() << " isStraight=" << isStraight(node, cand, bidiOut) << " allSharp=" << allSharp(node, outRail, tmpBidiIn, true) << "\n";
+            if !cand.is_bidi_rail(false) && Self::is_straight(node, cand, bidiOut) && cand.get_lane_spread_function() == LaneSpreadFunction::CENTER && Self::all_sharp(node, &outRail, &tmpBidiIn, true) {
+                let e2 = Self::add_bidi_edge(ec, cand, true);
+                if !e2.is_null() {
+                    added += 1 + Self::extend_bidi_edges_2(ec, cand.get_from_node(), e2);
+                }
+            }
+        }
+        added
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::reverseEdges(NBEdgeCont &, NBPTStopCont &, NBPTLineCont &)` [static, private]
@@ -1151,7 +1975,94 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn reverse_edges(ec: &mut NBEdgeCont, sc: &mut NBPTStopCont, lc: &mut NBPTLineCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::reverseEdges")
+        // determinism: C++ iterates std::set<NBNode*> (pointer order) for brokenNodes
+        let brokenNodes = Self::get_broken_rail_nodes(ec, false);
+        // find reversible edge sequences between broken nodes
+        let mut seqsToReverse: Vec<EdgeVector> = Vec::new();
+        let mut lineEdges: EdgeSet = EdgeSet::new();
+        for item in lc.get_lines().values() {
+            let route = item.get_edges();
+            lineEdges.extend(route.iter().copied());
+        }
+        for n in brokenNodes.iter() {
+            let mut inRail = EdgeVector::new();
+            let mut outRail = EdgeVector::new();
+            Self::get_rail_edges(*n, &mut inRail, &mut outRail);
+            for mut start in outRail.clone() {
+                // only reverse edges where the node would be unbroken afterwards
+                if !Self::all_broken(*n, start, &inRail, &outRail) || (inRail.len() == 1 && outRail.len() == 1) {
+                    continue;
+                }
+                let mut forward = true;
+                let mut seq: EdgeVector = EdgeVector::new();
+                while forward {
+                    if lineEdges.contains(&start) {
+                        // ptline edges should never be reversed. They are fixed by a different algorithm which requires their original ids and orientation
+                        break;
+                    } else if start.base2.has_parameter(OSM_DIRECTION) {
+                        // do not reverse edges where direction was explicitly set in OSM (including via signal direction)
+                        break;
+                    }
+                    seq.push(start);
+                    //std::cout << " seq=" << toString(seq) << "\n";
+                    let n2 = start.get_to_node();
+                    let mut inRail2 = EdgeVector::new();
+                    let mut outRail2 = EdgeVector::new();
+                    Self::get_rail_edges(n2, &mut inRail2, &mut outRail2);
+                    if brokenNodes.contains(&n2) {
+                        if Self::all_broken(n2, start, &outRail2, &inRail2) {
+                            seqsToReverse.push(seq.clone());
+                        }
+                        forward = false;
+                    } else {
+                        if outRail2.len() == 0 {
+                            // stop at network border
+                            forward = false;
+                        } else if outRail2.len() > 1 || inRail2.len() > 1 {
+                            // stop at switch
+                            forward = false;
+                        } else {
+                            start = outRail2[0];
+                        }
+                    }
+                }
+            }
+        }
+        // sort by sequence length
+        if seqsToReverse.len() > 0 {
+            write_messagef!("Found % reversible edge sequences between broken rail nodes", seqsToReverse.len());
+        }
+        // determinism: std::sort is not stable; sequences of equal length keep their discovery order here
+        seqsToReverse.sort_by(|a, b| a.len().cmp(&b.len()));
+        let mut numReversed = 0;
+        let mut affectedEndpoints: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut reversedIDs: BTreeSet<String> = BTreeSet::new();
+        let mut seqLengths: BTreeMap<i32, i32> = BTreeMap::new();
+        for seq in seqsToReverse.iter() {
+            let seqStart = seq[0].get_from_node();
+            let seqEnd = seq[seq.len() - 1].get_to_node();
+            // avoid reversing sequences on both sides of a broken node
+            if !affectedEndpoints.contains(&seqStart) && !affectedEndpoints.contains(&seqEnd) {
+                affectedEndpoints.insert(seqStart);
+                affectedEndpoints.insert(seqEnd);
+                for e in seq.iter() {
+                    Self::reverse_edge(*e);
+                    reversedIDs.insert(e.get_id().to_string());
+                }
+                *seqLengths.entry(seq.len() as i32).or_insert(0) += 1;
+                numReversed += 1;
+            }
+        }
+        if numReversed > 0 {
+            let joined = seqLengths.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<_>>().join(" ");
+            write_messagef!("Reversed % sequences (count by length: %)", numReversed, joined);
+            for item in sc.get_stops().values() {
+                if reversedIDs.contains(item.get_edge_id()) {
+                    stop_m(item).find_lane_and_compute_bus_stop_extent(ec);
+                }
+            }
+        }
+        numReversed
     }
 
     /// C++: `void NBRailwayTopologyAnalyzer::reverseEdge(NBEdge *)` [static, private]
@@ -1166,7 +2077,12 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn reverse_edge(e: Ptr<NBEdge>) {
-        todo!("port NBRailwayTopologyAnalyzer::reverseEdge")
+        e.m().reinit_nodes(e.get_to_node(), e.get_from_node());
+        let reversed = e.get_geometry().reverse();
+        e.m().set_geometry(&reversed, false);
+        if e.base2.get_parameter(OSM_DIRECTION, "") == "forward" {
+            e.m().base2.set_parameter(OSM_DIRECTION, "backward");
+        }
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::addBidiEdgesForBufferStops(NBEdgeCont &)` [static, private]
@@ -1244,7 +2160,70 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_edges_for_buffer_stops(ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::addBidiEdgesForBufferStops")
+        let brokenNodes = Self::get_broken_rail_nodes(ec, false);
+        let railNodes = Self::get_rail_nodes(ec, false);
+        // find buffer stops and ensure that they are connect to the network in both directions
+        let mut numBufferStops = 0;
+        let mut numAddedBidiTotal = 0;
+        for n in railNodes.iter() {
+            let mut node = *n;
+            if to_bool(&node.base2.get_parameter("buffer_stop", "false")).unwrap() {
+                if node.get_edges().len() != 1 {
+                    write_warningf!("Ignoring buffer stop junction '%' with % edges.", node.get_id(), node.get_edges().len());
+                    continue;
+                }
+                // int numAddedBidi = 0;
+                numBufferStops += 1;
+                let mut prev: Ptr<NBEdge> = Ptr::null();
+                let mut prev2: Ptr<NBEdge> = Ptr::null();
+                let mut inRail = EdgeVector::new();
+                let mut outRail = EdgeVector::new();
+                Self::get_rail_edges(node, &mut inRail, &mut outRail);
+                let mut addAway = true; // add new edges away from buffer stop
+                while prev.is_null() || (inRail.len() + outRail.len()) == 3 {
+                    let e: Ptr<NBEdge>;
+                    if prev.is_null() {
+                        debug_assert!(node.get_edges().len() == 1);
+                        e = node.get_edges()[0];
+                        addAway = node == e.get_to_node();
+                    } else {
+                        // XXX if node is broken we need to switch direction
+                        if addAway {
+                            debug_assert!(inRail.len() == 2);
+                            e = if inRail[0] == prev2 { inRail[inRail.len() - 1] } else { inRail[0] };
+                        } else {
+                            // XXX if node is broken we need to switch direction
+                            debug_assert!(outRail.len() == 2);
+                            e = if outRail[0] == prev2 { outRail[outRail.len() - 1] } else { outRail[0] };
+                        }
+                    }
+                    e.m().set_lane_spread_function(LaneSpreadFunction::CENTER);
+                    if addAway {
+                        node = e.get_from_node();
+                    } else {
+                        node = e.get_to_node();
+                    }
+                    let e2 = Self::add_bidi_edge(ec, e, true);
+                    if e2.is_null() {
+                        break;
+                    }
+                    prev = e;
+                    prev2 = e2;
+                    // numAddedBidi++;
+                    numAddedBidiTotal += 1;
+                    inRail.clear();
+                    outRail.clear();
+                    Self::get_rail_edges(node, &mut inRail, &mut outRail);
+                }
+                //if (numAddedBidi > 0) {
+                //    WRITE_MESSAGEF(TL(" added % edges between buffer stop junction '%' and junction '%'"), toString(numAddedBidi), bufferStop->getID(), node->getID());
+                //}
+            }
+        }
+        if numAddedBidiTotal > 0 {
+            write_messagef!("Added % edges to connect % buffer stops in both directions.", numAddedBidiTotal, numBufferStops);
+        }
+        numAddedBidiTotal
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::addBidiEdgesBetweenSwitches(NBEdgeCont &)` [static, private]
@@ -1309,7 +2288,50 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_edges_between_switches(ec: &mut NBEdgeCont) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::addBidiEdgesBetweenSwitches")
+        let brokenNodes = Self::get_broken_rail_nodes(ec, false);
+        let mut seqLengths: BTreeMap<i32, i32> = BTreeMap::new();
+        let mut numAdded = 0;
+        let mut numSeqs = 0;
+        for n in brokenNodes.iter() {
+            let mut edge = Self::is_bidi_switch(*n);
+            if !edge.is_null() && edge.get_lane_spread_function() == LaneSpreadFunction::CENTER {
+                let mut prev = *n;
+                let mut edgeSeq: EdgeVector = vec![edge];
+                let mut forward = true;
+                //std::cout << "Looking for potential bidi-edge sequence starting at junction '" << n->getID() << "' with edge '" + edge->getID() << "'\n";
+                // find a suitable end point for adding bidi edges
+                while forward {
+                    let next = if edge.get_from_node() == prev { edge.get_to_node() } else { edge.get_from_node() };
+                    let mut allRail = EdgeVector::new();
+                    let mut allRailOut = EdgeVector::new();
+                    Self::get_rail_edges(next, &mut allRail, &mut allRailOut);
+                    allRail.extend(allRailOut);
+                    if allRail.len() == 2 && Self::is_straight(next, allRail[0], allRail[allRail.len() - 1]) {
+                        prev = next;
+                        edge = if allRail[0] == edge { allRail[allRail.len() - 1] } else { allRail[0] };
+                        edgeSeq.push(edge);
+                    } else {
+                        forward = false;
+                        if Self::is_bidi_switch(next) == edge {
+                            // suitable switch found as endpoint, add reverse edges
+                            for e in edgeSeq.iter() {
+                                Self::add_bidi_edge(ec, *e, true);
+                            }
+                            *seqLengths.entry(edgeSeq.len() as i32).or_insert(0) += 1;
+                            numSeqs += 1;
+                            numAdded += edgeSeq.len() as i32;
+                        } else {
+                            //std::cout << " sequence ended at junction " << next->getID() ...
+                        }
+                    }
+                }
+            }
+        }
+        if seqLengths.len() > 0 {
+            let joined = seqLengths.iter().map(|(k, v)| format!("{}:{}", k, v)).collect::<Vec<_>>().join(" ");
+            write_messagef!("Added % bidi-edges between % pairs of railway switches (count by length: %)", numAdded, numSeqs, joined);
+        }
+        numAdded
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::addBidiEdgesForStops(NBEdgeCont &, NBPTLineCont &, NBPTStopCont &, bool)` [static, private]
@@ -1550,7 +2572,236 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_edges_for_stops(ec: &mut NBEdgeCont, lc: &mut NBPTLineCont, sc: &mut NBPTStopCont, minimal: bool) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::addBidiEdgesForStops")
+        type Track = NBRailwayTopologyAnalyzer_Track;
+        let penalty = get_float("railway.topology.repair.bidi-penalty");
+        // generate bidirectional routing graph
+        let mut tracks: Vec<Ptr<Track>> = Vec::new();
+        for edge in ec.get_all_edges() {
+            tracks.push(leak_track(Track::new(edge, -1, "", 1.0)));
+        }
+        let numEdges = tracks.len() as i32;
+        for edge in ec.get_all_edges() {
+            let index = tracks.len() as i32;
+            tracks.push(leak_track(Track::new(edge, index, &format!("{}_reverse", edge.get_id()), penalty)));
+        }
+        // add special tracks for starting end ending in both directions
+        let mut stopTracks: BTreeMap<Ptr<NBEdge>, (Ptr<Track>, Ptr<Track>)> = BTreeMap::new();
+        for edge in ec.get_all_edges() {
+            if (edge.get_permissions(-1) & SVC_RAIL_CLASSES) != 0 {
+                let startIndex = tracks.len() as i32;
+                let start = leak_track(Track::new(edge, startIndex, &format!("{}_start", edge.get_id()), 1.0));
+                tracks.push(start);
+                let endIndex = tracks.len() as i32;
+                let end = leak_track(Track::new(edge, endIndex, &format!("{}_end", edge.get_id()), 1.0));
+                tracks.push(end);
+                stopTracks.insert(edge, (start, end));
+            }
+        }
+        // set successors based on angle (connections are not yet built)
+        for node in Self::get_rail_nodes(ec, false).iter() {
+            // C++ getRailEdges(node, railEdges, railEdges) appends the incoming and then the outgoing rail edges
+            let mut inRail = EdgeVector::new();
+            let mut outRail = EdgeVector::new();
+            Self::get_rail_edges(*node, &mut inRail, &mut outRail);
+            let mut railEdges = inRail;
+            railEdges.extend(outRail);
+            for e1 in railEdges.iter() {
+                for e2 in railEdges.iter() {
+                    if e1 != e2 && Self::is_straight(*node, *e1, *e2) {
+                        let i = e1.get_numerical_id();
+                        let i2 = e2.get_numerical_id();
+                        if e1.get_to_node() == *node {
+                            if e2.get_from_node() == *node {
+                                // case 1) plain forward connection
+                                tracks[i as usize].m().add_successor(tracks[i2 as usize]);
+                                // reverse edge (numerical id incremented by numEdges)
+                                tracks[(i2 + numEdges) as usize].m().add_successor(tracks[(i + numEdges) as usize]);
+                            } else {
+                                // case 2) both edges pointing towards each other
+                                tracks[i as usize].m().add_successor(tracks[(i2 + numEdges) as usize]);
+                                tracks[i2 as usize].m().add_successor(tracks[(i + numEdges) as usize]);
+                            }
+                        } else {
+                            if e2.get_from_node() == *node {
+                                // case 3) both edges pointing away from each other
+                                tracks[(i + numEdges) as usize].m().add_successor(tracks[i2 as usize]);
+                                tracks[(i2 + numEdges) as usize].m().add_successor(tracks[i as usize]);
+                            } else {
+                                // already handled via case 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // define start and end successors
+        for (edge, (start, end)) in stopTracks.iter() {
+            let index = edge.get_numerical_id();
+            // start
+            start.m().add_successor(tracks[index as usize]);
+            start.m().add_successor(tracks[(index + numEdges) as usize]);
+            // end
+            tracks[index as usize].m().add_successor(*end);
+            tracks[(index + numEdges) as usize].m().add_successor(*end);
+        }
+        // DEBUG
+        /*
+        for (Track* t : tracks) {
+            std::cout << "track " << t->getID() << " e=" << t->edge->getID() << " i=" << t->getNumericalID() << " succ:\n";
+            for (Track* s : t->getSuccessors(SVC_IGNORING)) {
+                std::cout << "   succ=" << s->getID() << "\n";
+            }
+        }
+        */
+
+        // shortcut: SUMOAbstractRouter<Track, NBVehicle> / DijkstraRouter<Track, NBVehicle> is not usable yet
+        // (DijkstraRouter::new is still unported and SUMOAbstractRouter::Operation is Unmapped), so compute() is replaced by
+        // an empty route and every stop pair is reported as disconnected. Upgrade when DijkstraRouter::new lands.
+        let mut added = 0;
+        let mut numDisconnected = 0;
+        // determinism: std::set<std::shared_ptr<NBPTStop>> and the edge sets are ordered by id here
+        let mut addBidiStops: BTreeMap<String, Rc<NBPTStop>> = BTreeMap::new();
+        let mut addBidiStopEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
+        let mut addBidiEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
+        let mut visited: BTreeSet<(String, String)> = BTreeSet::new();
+
+        // the isConsistent heuristic may fail in some cases. If we observe that a
+        // specific sequence of stop ids in encoded in both directions, we take this
+        // as a reason to overrule the heuristic
+        let requireBidi = Self::find_bidi_candidates(lc);
+
+        for (lineId, item) in lc.get_lines().iter() {
+            let line = *item;
+            let mut stops = line.get_stop_edges(ec);
+            let stopEdges: EdgeVector = stops.iter().map(|it| it.edge).collect();
+            let routeStart = line.get_route_start(ec);
+            let routeEnd = line.get_route_end(ec);
+            if !routeStart.is_null() && (stopEdges.is_empty() || routeStart != stopEdges[0]) {
+                stops.insert(0, NBPTLine_PTStopInfo::new(routeStart, routeStart.get_id(), 0.0, false));
+            }
+            if !routeEnd.is_null() && (stopEdges.is_empty() || routeEnd != stopEdges[stopEdges.len() - 1]) {
+                stops.push(NBPTLine_PTStopInfo::new(routeEnd, routeEnd.get_id(), routeEnd.get_length(), false));
+            }
+            if stops.len() < 2 {
+                continue;
+            }
+            if !line.is_consistent(stopEdges.clone()) && !requireBidi.contains(&line) {
+                write_warningf!("Edge sequence is not consistent with stop sequence in line '%', not adding bidi edges.", lineId.as_str());
+                continue;
+            }
+            for i in 0..stops.len() - 1 {
+                let fromEdge = stops[i].edge;
+                let toEdge = stops[i + 1].edge;
+                let fromStop = stops[i].stopID.clone();
+                let toStop = stops[i + 1].stopID.clone();
+                let fromPos = stops[i].pos;
+                let toPos = stops[i + 1].pos;
+                let fromRevised = stops[i].revised;
+                let toRevised = stops[i + 1].revised;
+                let trip = (fromStop.clone(), toStop.clone());
+                let reverseTrip = (toStop.clone(), fromStop.clone());
+                if visited.contains(&trip) {
+                    continue;
+                } else {
+                    visited.insert(trip);
+                }
+                if !stopTracks.contains_key(&fromEdge) || !stopTracks.contains_key(&toEdge) {
+                    continue;
+                }
+                let mut needBidi = visited.contains(&reverseTrip);
+                let _veh = NBVehicle::new(line.get_ref(), fromEdge.get_permissions(-1) & SVC_RAIL_CLASSES);
+                let mut route: Vec<Ptr<Track>> = Vec::new();
+                let from = if fromRevised { tracks[fromEdge.get_numerical_id() as usize] } else { stopTracks[&fromEdge].0 };
+                let to = if toRevised { tracks[toEdge.get_numerical_id() as usize] } else { stopTracks[&toEdge].1 };
+                let mut iStart = if fromRevised { 0 } else { 1 };
+                let mut iDeltaEnd = if toRevised { 0 } else { 1 };
+                if fromEdge == toEdge && fromPos > toPos {
+                    // must use reverse edge
+                    route.push(tracks[(fromEdge.get_numerical_id() + numEdges) as usize]);
+                    iStart = 0;
+                    iDeltaEnd = 0;
+                    needBidi = true;
+                } else {
+                    // router->compute(from, to, &veh, 0, route) is not available yet, see shortcut above
+                    let _ = (from, to);
+                }
+                if route.len() > 0 {
+                    debug_assert!(route.len() as i32 > iStart + iDeltaEnd);
+                    let mut i2 = iStart;
+                    while i2 < route.len() as i32 - iDeltaEnd {
+                        let isBidi = route[i2 as usize].get_numerical_id() >= numEdges;
+                        let isStop = i2 == iStart || i2 == route.len() as i32 - 1 - iDeltaEnd;
+                        if isBidi || needBidi {
+                            let edge = route[i2 as usize].edge;
+                            if !addBidiEdges.contains_key(edge.get_id()) {
+                                if !edge.is_bidi_rail(true) {
+                                    if edge.get_lane_spread_function() == LaneSpreadFunction::CENTER {
+                                        addBidiEdges.insert(edge.get_id().to_string(), edge);
+                                        if isStop {
+                                            addBidiStopEdges.insert(edge.get_id().to_string(), edge);
+                                        }
+                                    } else if isStop {
+                                        write_warningf!("Stop on edge '%' can only be reached in reverse but edge has the wrong spreadType.", fromEdge.get_id());
+                                    }
+                                }
+                            }
+                        }
+                        if isStop && isBidi {
+                            if let Some(fs) = sc.get(fromStop.clone()) {
+                                addBidiStops.insert(fs.get_id(), fs);
+                            }
+                            if let Some(ts) = sc.get(toStop.clone()) {
+                                addBidiStops.insert(ts.get_id(), ts);
+                            }
+                        }
+                        i2 += 1;
+                    }
+                } else {
+                    write_warningf!("No connection found between stops on edge '%' and edge '%'.", fromEdge.get_id(), toEdge.get_id());
+                    numDisconnected += 1;
+                }
+            }
+        }
+        for edge in addBidiEdges.values() {
+            let edge = *edge;
+            if !edge.is_bidi_rail(false) {
+                if edge.get_from_node().get_incoming_edges().len() == 0 && edge.get_to_node().get_outgoing_edges().len() == 0 {
+                    // flip a single broken edge instead of adding the reverse
+                    Self::reverse_edge(edge);
+                } else {
+                    let e2 = Self::add_bidi_edge(ec, edge, true);
+                    //std::cout << " add bidiEdge for stop at edge " << edge->getID() << "\n";
+                    if !e2.is_null() {
+                        added += 1;
+                        if !minimal {
+                            added += Self::extend_bidi_edges_2(ec, edge.get_to_node(), edge);
+                            added += Self::extend_bidi_edges_2(ec, edge.get_from_node(), e2);
+                        }
+                    }
+                }
+            }
+        }
+        for stop in addBidiStops.values() {
+            if let Some(fromReverse) = sc.get_reverse_stop(stop.clone(), ec) {
+                sc.insert(fromReverse.clone(), false);
+                stop_m(stop).set_bidi_stop(fromReverse);
+            }
+        }
+        if addBidiEdges.len() > 0 || numDisconnected > 0 {
+            write_message(&format!(
+                "Added {} bidi-edges for public transport stops and a total of {} bidi-edges to ensure connectivity of stops ({} stops remain disconnected)",
+                addBidiStopEdges.len(),
+                added,
+                numDisconnected
+            ));
+        }
+
+        // clean up
+        for t in tracks {
+            // SAFETY: every track was created by leak_track() and is not referenced after this point
+            unsafe { drop(Box::from_raw(t.as_raw())) };
+        }
+        addBidiEdges.len() as i32
     }
 
     /// C++: `int NBRailwayTopologyAnalyzer::addBidiEdgesForStraightConnectivity(NBEdgeCont &, bool)` [static, private]
@@ -1640,7 +2891,89 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn add_bidi_edges_for_straight_connectivity(ec: &mut NBEdgeCont, geometryLike: bool) -> i32 {
-        todo!("port NBRailwayTopologyAnalyzer::addBidiEdgesForStraightConnectivity")
+        let mut added = 0;
+        let brokenNodes = Self::get_broken_rail_nodes(ec, false);
+        for e in ec.get_all_edges() {
+            if !Self::has_railway(e.get_permissions(-1)) {
+                continue;
+            }
+            let from = e.get_from_node();
+            let to = e.get_to_node();
+            if !brokenNodes.contains(&from) && !brokenNodes.contains(&to) {
+                continue;
+            }
+            if e.is_bidi_rail(false) {
+                continue;
+            }
+            let mut inRailFrom = EdgeVector::new();
+            let mut outRailFrom = EdgeVector::new();
+            let mut inRailTo = EdgeVector::new();
+            let mut outRailTo = EdgeVector::new();
+            Self::get_rail_edges(from, &mut inRailFrom, &mut outRailFrom);
+            Self::get_rail_edges(to, &mut inRailTo, &mut outRailTo);
+            // check whether there is a straight edge pointing away from this one at the from-node
+            // and there is no straight incoming edge at the from-node
+            let mut haveStraight = false;
+            let mut haveStraightReverse = false;
+            if !geometryLike || outRailFrom.len() + inRailFrom.len() == 2 {
+                for fromStraightCand in outRailFrom.iter() {
+                    if *fromStraightCand != e && Self::is_straight(from, *fromStraightCand, e) {
+                        haveStraightReverse = true;
+                        //std::cout << " haveStraightReverse outRailFrom=" << fromStraightCand->getID() << "\n";
+                        break;
+                    }
+                }
+                if haveStraightReverse {
+                    for fromStraightCand in inRailFrom.iter() {
+                        if *fromStraightCand != e && Self::is_straight(from, *fromStraightCand, e) {
+                            haveStraight = true;
+                            //std::cout << " haveStraight inRailFrom=" << fromStraightCand->getID() << "\n";
+                            break;
+                        }
+                    }
+                }
+            }
+            if (!haveStraightReverse || haveStraight) && (!geometryLike || outRailTo.len() + inRailTo.len() == 2) {
+                // check whether there is a straight edge pointing towards this one at the to-node
+                // and there is no straight outgoing edge at the to-node
+                haveStraight = false;
+                haveStraightReverse = false;
+                for toStraightCand in inRailTo.iter() {
+                    if *toStraightCand != e && Self::is_straight(to, *toStraightCand, e) {
+                        haveStraightReverse = true;
+                        //std::cout << " haveStraightReverse inRailTo=" << toStraightCand->getID() << "\n";
+                        break;
+                    }
+                }
+                if haveStraightReverse {
+                    for toStraightCand in outRailTo.iter() {
+                        if *toStraightCand != e && Self::is_straight(to, *toStraightCand, e) {
+                            haveStraight = true;
+                            //std::cout << " haveStraightReverse outRailTo=" << toStraightCand->getID() << "\n";
+                            break;
+                        }
+                    }
+                }
+            }
+            //std::cout << "edge=" << e.second->getID() << " haveStraight=" << haveStraight << " haveStraightReverse=" << haveStraightReverse << "\n";
+            if haveStraightReverse && !haveStraight {
+                let e2 = Self::add_bidi_edge(ec, e, true);
+                //std::cout << " add bidiEdge for straight connectivity at edge " << e.second->getID() << " fromBroken=" << brokenNodes.count(from) << " toBroken=" << brokenNodes.count(to) << "\n";
+                if !e2.is_null() {
+                    added += 1;
+                    added += Self::extend_bidi_edges_2(ec, to, e);
+                    added += Self::extend_bidi_edges_2(ec, from, e2);
+                }
+            }
+        }
+        if added > 0 {
+            if geometryLike {
+                write_messagef!("Added % bidi-edges to ensure connectivity of straight tracks at geometry-like nodes.", added);
+            } else {
+                write_messagef!("Added % bidi-edges to ensure connectivity of straight tracks at switches.", added);
+            }
+        }
+        added
     }
 
     /// C++: `void NBRailwayTopologyAnalyzer::updateTurns(NBEdge *)` [static, private]
@@ -1652,7 +2985,8 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn update_turns(edge: Ptr<NBEdge>) {
-        todo!("port NBRailwayTopologyAnalyzer::updateTurns")
+        NBTurningDirectionsComputer::compute_turn_directions_for_node(edge.get_from_node(), false);
+        NBTurningDirectionsComputer::compute_turn_directions_for_node(edge.get_to_node(), false);
     }
 
     /// C++: `std::set<NBPTLine *> NBRailwayTopologyAnalyzer::findBidiCandidates(NBPTLineCont &)` [static, private]
@@ -1689,7 +3023,30 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn find_bidi_candidates(lc: &mut NBPTLineCont) -> BTreeSet<Ptr<NBPTLine>> {
-        todo!("port NBRailwayTopologyAnalyzer::findBidiCandidates")
+        let mut result: BTreeSet<Ptr<NBPTLine>> = BTreeSet::new();
+        // std::set<std::pair<shared_ptr<NBPTStop>, shared_ptr<NBPTStop>>> is ordered by pointer, so the stops are keyed by address
+        let mut visited: BTreeSet<(usize, usize)> = BTreeSet::new();
+        for item in lc.get_lines().values() {
+            let stops = item.m().get_stops();
+            if stops.len() > 1 {
+                for w in stops.windows(2) {
+                    visited.insert((Rc::as_ptr(&w[0]) as usize, Rc::as_ptr(&w[1]) as usize));
+                }
+            }
+        }
+        for item in lc.get_lines().values() {
+            let stops = item.m().get_stops();
+            if stops.len() > 1 {
+                for w in stops.windows(2) {
+                    let reverseTrip = (Rc::as_ptr(&w[1]) as usize, Rc::as_ptr(&w[0]) as usize);
+                    if visited.contains(&reverseTrip) {
+                        result.insert(*item);
+                        break;
+                    }
+                }
+            }
+        }
+        result
     }
 
 }
@@ -1719,7 +3076,17 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<NBEdge>, i: i32, _id: &str, _penalty: f64) -> Self {
-        todo!("port Track::Track")
+        NBRailwayTopologyAnalyzer_Track {
+            edge: e,
+            penalty: _penalty,
+            index: if i < 0 { e.get_numerical_id() } else { i },
+            id: if _id == "" { e.get_id().to_string() } else { _id.to_string() },
+            successors: Vec::new(),
+            viaSuccessors: Vec::new(),
+            minPermissions: e.get_permissions(-1),
+            svcSuccessors: BTreeMap::new(),
+            svcViaSuccessors: BTreeMap::new(),
+        }
     }
 
     /// C++: `void Track::addSuccessor(Track *)`
@@ -1731,21 +3098,51 @@ impl NBRailwayTopologyAnalyzer_Track {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, track: Ptr<NBRailwayTopologyAnalyzer_Track>) {
-        todo!("port Track::addSuccessor")
+        self.successors.push(track);
+        self.viaSuccessors.push((track, Ptr::null()));
+        self.minPermissions &= track.edge.get_permissions(-1);
     }
 
     /// C++: `const std::vector<Track *> & Track::getSuccessors(SUMOVehicleClass) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_successors(&self, svc: SUMOVehicleClass) -> &Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> {
-        todo!("port Track::getSuccessors")
+        if (self.minPermissions & svc) != 0 {
+            return &self.successors;
+        }
+        // C++ `mutable` cache, filled on first use. shortcut: written through &self like Ptr::m(); replace with UnsafeCell/RefCell when Track is ported fully
+        let cache = unsafe { &mut *(self as *const Self as *mut Self) };
+        if !cache.svcSuccessors.contains_key(&svc) {
+            let mut succ: Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> = Vec::new();
+            for t in self.successors.iter() {
+                if (t.edge.get_permissions(-1) & svc) != 0 {
+                    succ.push(*t);
+                }
+            }
+            cache.svcSuccessors.insert(svc, succ);
+        }
+        &cache.svcSuccessors[&svc]
     }
 
     /// C++: `const std::vector<std::pair<const Track *, const Track *>> & Track::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, svc: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> {
-        todo!("port Track::getViaSuccessors")
+        if (self.minPermissions & svc) != 0 {
+            return &self.viaSuccessors;
+        }
+        // C++ `mutable` cache, filled on first use
+        let cache = unsafe { &mut *(self as *const Self as *mut Self) };
+        if !cache.svcViaSuccessors.contains_key(&svc) {
+            let mut succ: Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> = Vec::new();
+            for t in self.successors.iter() {
+                if (t.edge.get_permissions(-1) & svc) != 0 {
+                    succ.push((*t, Ptr::null()));
+                }
+            }
+            cache.svcViaSuccessors.insert(svc, succ);
+        }
+        &cache.svcViaSuccessors[&svc]
     }
 
     /// C++: `const std::string & Track::getID() const` [const]
@@ -1754,7 +3151,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port Track::getID")
+        &self.id
     }
 
     /// C++: `int Track::getNumericalID() const` [const]
@@ -1763,7 +3160,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port Track::getNumericalID")
+        self.index
     }
 
     /// C++: `double Track::getLength() const` [const]
@@ -1772,7 +3169,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port Track::getLength")
+        0.0
     }
 
     /// C++: `const Track * Track::getBidiEdge() const` [const]
@@ -1781,7 +3178,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<NBRailwayTopologyAnalyzer_Track> {
-        todo!("port Track::getBidiEdge")
+        Ptr::new(self)
     }
 
     /// C++: `bool Track::isInternal() const` [const]
@@ -1790,7 +3187,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port Track::isInternal")
+        false
     }
 
     /// C++: `bool Track::prohibits(const NBVehicle *const) const` [const]
@@ -1799,7 +3196,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn prohibits(&self, arg0: Ptr<NBVehicle>) -> bool {
-        todo!("port Track::prohibits")
+        false
     }
 
     /// C++: `bool Track::restricts(const NBVehicle *const) const` [const]
@@ -1808,14 +3205,15 @@ impl NBRailwayTopologyAnalyzer_Track {
     //         }
     #[allow(unused_variables)]
     pub fn restricts(&self, arg0: Ptr<NBVehicle>) -> bool {
-        todo!("port Track::restricts")
+        false
     }
 
     /// C++: `Track & Track::operator=(const Track &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NBRailwayTopologyAnalyzer_Track) -> &mut NBRailwayTopologyAnalyzer_Track {
-        todo!("port Track::operator=")
+        // C++ declares Track::operator=(const Track&) = delete (private), so no assignment can happen
+        panic!("NBRailwayTopologyAnalyzer::Track::operator= is deleted in C++")
     }
 
 }
