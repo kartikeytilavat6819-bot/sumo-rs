@@ -68,6 +68,17 @@ impl std::ops::DerefMut for MSStateHandler {
     }
 }
 
+// C++ MSStateHandler::closeVehicle overrides MSRouteHandler::closeVehicle, dispatched through SUMORouteHandler::vt
+fn state_handler_close_vehicle(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSStateHandler>().m().close_vehicle()
+}
+
+/// C++ MSStateHandler overrides, installed in SUMORouteHandler::vt by MSStateHandler::new
+static MS_STATE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
+    close_vehicle: state_handler_close_vehicle,
+    ..crate::microsim::ms_route_handler::MS_ROUTE_HANDLER_VT
+};
+
 impl MSStateHandler {
     /// C++: `void MSStateHandler::MSStateHandler(const std::string &, const SUMOTime)`
     /// standard constructor
@@ -117,6 +128,7 @@ impl MSStateHandler {
         };
         sh.myAmLoadingState = true;
         sh.myAllowInternalRoutes = true;
+        sh.base.base.vt = &MS_STATE_HANDLER_VT;
         sh
     }
 

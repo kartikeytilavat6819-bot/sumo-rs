@@ -111,6 +111,109 @@ impl std::ops::DerefMut for RORouteHandler {
     }
 }
 
+// C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)
+}
+fn ro_close_vehicle_type_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_vehicle_type_distribution()
+}
+fn ro_open_route(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route(attrs)
+}
+fn ro_open_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_flow(attrs)
+}
+fn ro_open_route_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route_flow(attrs)
+}
+fn ro_open_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_trip(attrs)
+}
+fn ro_close_route(d: &mut SUMORouteHandler, mayBeDisconnected: bool) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_route(mayBeDisconnected)
+}
+fn ro_open_route_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route_distribution(attrs)
+}
+fn ro_close_route_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_route_distribution()
+}
+fn ro_close_vehicle(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_vehicle()
+}
+fn ro_close_v_type(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_v_type()
+}
+fn ro_close_person(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_person()
+}
+fn ro_close_person_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_person_flow()
+}
+fn ro_close_container(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_container()
+}
+fn ro_close_container_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_container_flow()
+}
+fn ro_close_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_flow()
+}
+fn ro_close_trip(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_trip()
+}
+fn ro_add_stop(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) -> Ptr<Parameterised> {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_stop(attrs)
+}
+fn ro_add_person_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_person_trip(attrs)
+}
+fn ro_add_walk(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_walk(attrs)
+}
+fn ro_add_ride(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_ride(attrs)
+}
+fn ro_add_transport(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_transport(attrs)
+}
+fn ro_add_tranship(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_tranship(attrs)
+}
+fn ro_get_v_type_parameter(d: &mut SUMORouteHandler, refid: &str) -> Ptr<SUMOVTypeParameter> {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().get_v_type_parameter(refid)
+}
+
+/// C++ RORouteHandler overrides, installed in SUMORouteHandler::vt by RORouteHandler::new
+static RO_ROUTE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
+    open_vehicle_type_distribution: ro_open_vehicle_type_distribution,
+    close_vehicle_type_distribution: ro_close_vehicle_type_distribution,
+    open_route: ro_open_route,
+    open_flow: ro_open_flow,
+    open_route_flow: ro_open_route_flow,
+    open_trip: ro_open_trip,
+    close_route: ro_close_route,
+    open_route_distribution: ro_open_route_distribution,
+    close_route_distribution: ro_close_route_distribution,
+    close_vehicle: ro_close_vehicle,
+    close_v_type: ro_close_v_type,
+    close_person: ro_close_person,
+    close_person_flow: ro_close_person_flow,
+    close_container: ro_close_container,
+    close_container_flow: ro_close_container_flow,
+    close_flow: ro_close_flow,
+    close_trip: ro_close_trip,
+    add_transportable: crate::utils::vehicle::sumo_route_handler::default_add_transportable,
+    add_stop: ro_add_stop,
+    add_person_trip: ro_add_person_trip,
+    add_walk: ro_add_walk,
+    add_ride: ro_add_ride,
+    add_transport: ro_add_transport,
+    add_tranship: ro_add_tranship,
+    get_v_type_parameter: ro_get_v_type_parameter,
+};
+
 impl RORouteHandler {
     /// C++: `void RORouteHandler::RORouteHandler(RONet &, const std::string &, const bool, const bool, const bool, const bool)`
     /// standard constructor
@@ -150,7 +253,7 @@ impl RORouteHandler {
         let mut myActiveRoute: ConstROEdgeVector = Vec::new();
         myActiveRoute.reserve(100);
         RORouteHandler {
-            base: SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true),
+            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
             base2: (),
             myNet: Ptr::from_mut(net),
             myActiveRoute,

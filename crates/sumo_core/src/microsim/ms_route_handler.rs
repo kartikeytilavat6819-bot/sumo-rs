@@ -93,6 +93,112 @@ fn tag_to_string(tag: SumoXMLTag) -> String {
     utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
 }
 
+// C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+fn ms_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_vehicle_type_distribution(attrs)
+}
+fn ms_close_vehicle_type_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_vehicle_type_distribution()
+}
+fn ms_open_route(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route(attrs)
+}
+fn ms_open_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_flow(attrs)
+}
+fn ms_open_route_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route_flow(attrs)
+}
+fn ms_open_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_trip(attrs)
+}
+fn ms_close_route(d: &mut SUMORouteHandler, mayBeDisconnected: bool) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_route(mayBeDisconnected)
+}
+fn ms_open_route_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route_distribution(attrs)
+}
+fn ms_close_route_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_route_distribution()
+}
+fn ms_close_vehicle(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_vehicle()
+}
+fn ms_close_v_type(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_v_type()
+}
+fn ms_close_person(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_person()
+}
+fn ms_close_person_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_person_flow()
+}
+fn ms_close_container(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_container()
+}
+fn ms_close_container_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_container_flow()
+}
+fn ms_close_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_flow()
+}
+fn ms_close_trip(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_trip()
+}
+fn ms_add_transportable(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes, isPerson: bool) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_transportable(attrs, isPerson)
+}
+fn ms_add_stop(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) -> Ptr<Parameterised> {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_stop(attrs)
+}
+fn ms_add_person_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_person_trip(attrs)
+}
+fn ms_add_walk(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_walk(attrs)
+}
+fn ms_add_ride(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_ride(attrs)
+}
+fn ms_add_transport(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_transport(attrs)
+}
+fn ms_add_tranship(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_tranship(attrs)
+}
+fn ms_get_v_type_parameter(d: &mut SUMORouteHandler, refid: &str) -> Ptr<SUMOVTypeParameter> {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().get_v_type_parameter(refid)
+}
+
+/// C++ MSRouteHandler overrides, installed in SUMORouteHandler::vt by MSRouteHandler::new
+pub const MS_ROUTE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
+    open_vehicle_type_distribution: ms_open_vehicle_type_distribution,
+    close_vehicle_type_distribution: ms_close_vehicle_type_distribution,
+    open_route: ms_open_route,
+    open_flow: ms_open_flow,
+    open_route_flow: ms_open_route_flow,
+    open_trip: ms_open_trip,
+    close_route: ms_close_route,
+    open_route_distribution: ms_open_route_distribution,
+    close_route_distribution: ms_close_route_distribution,
+    close_vehicle: ms_close_vehicle,
+    close_v_type: ms_close_v_type,
+    close_person: ms_close_person,
+    close_person_flow: ms_close_person_flow,
+    close_container: ms_close_container,
+    close_container_flow: ms_close_container_flow,
+    close_flow: ms_close_flow,
+    close_trip: ms_close_trip,
+    add_transportable: ms_add_transportable,
+    add_stop: ms_add_stop,
+    add_person_trip: ms_add_person_trip,
+    add_walk: ms_add_walk,
+    add_ride: ms_add_ride,
+    add_transport: ms_add_transport,
+    add_tranship: ms_add_tranship,
+    get_v_type_parameter: ms_get_v_type_parameter,
+};
+
 /// Parser and container for routes during their loading
 /// C++ class `MSRouteHandler` (microsim/MSRouteHandler.h)
 #[repr(C)]
@@ -179,7 +285,7 @@ impl MSRouteHandler {
     #[allow(unused_variables)]
     pub fn new(file: &str, addVehiclesDirectly: bool) -> Self {
         // shortcut: MapMatcher<MSEdge, MSLane, MSJunction> is not ported yet (base2 is a unit placeholder), its mapmatch.* options are not read, upgrade when utils MapMatcher exists
-        MSRouteHandler {
+        let mut h = MSRouteHandler {
             base: SUMORouteHandler::new(file, if addVehiclesDirectly { "" } else { "routes" }, true),
             base2: (),
             myActiveRoute: Vec::with_capacity(100),
@@ -201,7 +307,9 @@ impl MSRouteHandler {
             myScaleSuffix: utils::options::options_cont::get_string("scale-suffix"),
             myReplayRerouting: utils::options::options_cont::get_bool("replay-rerouting"),
             myStartTriggeredInFlow: false,
-        }
+        };
+        h.base.vt = &MS_ROUTE_HANDLER_VT;
+        h
     }
 
     /// C++: `void MSRouteHandler::~MSRouteHandler() noexcept` [virtual]
