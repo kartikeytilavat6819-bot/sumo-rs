@@ -74,14 +74,6 @@ pub trait RouterEdge<V> {
     }
     fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool;
     fn restricts(&self, veh: Ptr<V>) -> bool;
-    // shortcut: IntermodalEdge has no junctions in C++, upgrade when an edge type needs the k-d tree or arc flags
-    fn from_junction(&self) -> Ptr<Self::Node> {
-        panic!("shortcut: this edge type has no from junction")
-    }
-    // shortcut: IntermodalEdge has no junctions in C++, upgrade when an edge type needs the k-d tree or arc flags
-    fn to_junction(&self) -> Ptr<Self::Node> {
-        panic!("shortcut: this edge type has no to junction")
-    }
 }
 
 /// Accessors the generic router code calls on its vehicle type `V` (`V::getVClass()`).
