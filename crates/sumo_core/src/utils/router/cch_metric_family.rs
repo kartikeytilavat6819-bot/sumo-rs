@@ -6,7 +6,7 @@ use crate::prelude::*;
 pub type CCHMetricFamily_EffortOperation = CCHGraph_EffortOperation;
 
 /// C++ typedef `CCHGraph<E, V> CCHMetricFamily::Graph`
-pub type CCHMetricFamily_Graph = Unmapped /* CCHGraph<E, V> */;
+pub type CCHMetricFamily_Graph<E, V> = CCHGraph<E, V>;
 
 /// C++ typedef `const int * CCHMetricFamily::MetricPtr`
 pub type CCHMetricFamily_MetricPtr = Ptr<i32>;
@@ -21,7 +21,7 @@ pub type CCHMetricFamily_WeightPatch = Unmapped /* void (*)(const Graph *, const
 /// C++ class `CCHMetricFamily` (utils/router/CCHMetricFamily.h)
 pub struct CCHMetricFamily<E, V, K> {
     /// the immutable shared topology
-    pub myGraph: Ptr<CCHMetricFamily_Graph>,
+    pub myGraph: Ptr<CCHMetricFamily_Graph<E, V>>,
     /// the effort the metrics are filled from
     pub myFillEffort: CCHGraph_EffortOperation,
     /// the type-independent effort of the LIVE deadband
@@ -35,8 +35,9 @@ pub struct CCHMetricFamily<E, V, K> {
     /// @{
     pub myBegin: SUMOTime,
     pub myWeightPeriod: SUMOTime,
-    pub myStaticMetrics: i32,
-    pub myStaticLock: Unmapped /* std::mutex */,
+    /// C++ std::map<pair<const K*, int>, StaticMetric>; ordered by (key address, period) like the C++ map
+    pub myStaticMetrics: BTreeMap<(Ptr<K>, i32), CCHMetricFamily_StaticMetric<V>>,
+    pub myStaticLock: std::sync::Mutex<()>,
     /// the efforts changed behind the cached metrics: refill and re-customize them all on the next get() (see flagStale)
     pub myStale: bool,
     /// the deadband bounds (see the LIVE constructor)
@@ -45,11 +46,11 @@ pub struct CCHMetricFamily<E, V, K> {
     /// frozen random-factor realizations per type (see the LIVE ctor)
     pub myEnsembleK: i32,
     /// every type's state, in creation order (barrier iteration) and by key (query lookup; only mutated while no query is in flight)
-    pub myLiveMetrics: i32,
-    pub myByKey: i32,
+    pub myLiveMetrics: Vec<Ptr<CCHMetricFamily_LiveMetric<V>>>,
+    pub myByKey: HashMap<Ptr<K>, Vec<Ptr<CCHMetricFamily_LiveMetric<V>>>>,
     /// types that queried but have no metric yet (demand streams, so types can appear after seeding); queries register them under the lock and route via the fallback until the next barrier builds their state
-    pub myWantedKeys: i32,
-    pub myWantedLock: Unmapped /* std::mutex */,
+    pub myWantedKeys: Vec<Ptr<K>>,
+    pub myWantedLock: std::sync::Mutex<()>,
     /// whether a query arrived since the last barrier (bootstraps type creation and re-arms after resets -- see atBarrier)
     pub myQueried: bool,
     /// a permission flip has not yet been customized into the published metrics (queries divert to the exact fallback while set)
@@ -60,9 +61,9 @@ pub struct CCHMetricFamily<E, V, K> {
     /// how many customize passes must run a FULL refill after a permission flip: 2 = both ping-pong buffers (the sparse path cannot repair connection-level mask changes: arcsOfEdge deliberately omits the tail side)
     pub myFullFillsPending: i32,
     /// per-buffer edge state for the sparse path: the gate effort each edge's arcs were last filled from (NaN = never applied / forced), the pending-dirty flag, and the pending list
-    pub myAppliedEffort: Unmapped /* int[2] */,
-    pub myPendingFlag: Unmapped /* int[2] */,
-    pub myPendingList: Unmapped /* int[2] */,
+    pub myAppliedEffort: [Vec<f64>; 2],
+    pub myPendingFlag: [Vec<i32>; 2],
+    pub myPendingList: [Vec<Ptr<E>>; 2],
     _p: std::marker::PhantomData<(E, V, K,)>,
 }
 
@@ -78,8 +79,36 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         myUpdateFactor(1.), myUpdateConstant(0.) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(graph: Ptr<CCHMetricFamily_Graph>, fillEffort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime, factory: CCHMetricFamily_RefVehicleFactory, patch: CCHMetricFamily_WeightPatch) -> Self {
-        todo!("port CCHMetricFamily::CCHMetricFamily<E, V, K>")
+    pub fn new(graph: Ptr<CCHMetricFamily_Graph<E, V>>, fillEffort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime, factory: CCHMetricFamily_RefVehicleFactory, patch: CCHMetricFamily_WeightPatch) -> Self {
+        CCHMetricFamily {
+            myGraph: graph,
+            myFillEffort: fillEffort,
+            myGateEffort: (),
+            myFactory: factory,
+            myPatch: patch,
+            myLive: false,
+            myBegin: begin,
+            myWeightPeriod: weightPeriod,
+            myStaticMetrics: BTreeMap::new(),
+            myStaticLock: std::sync::Mutex::new(()),
+            myStale: false,
+            myUpdateFactor: 1.,
+            myUpdateConstant: 0.,
+            myEnsembleK: 1,
+            myLiveMetrics: Vec::new(),
+            myByKey: HashMap::new(),
+            myWantedKeys: Vec::new(),
+            myWantedLock: std::sync::Mutex::new(()),
+            myQueried: false,
+            myMetricStale: false,
+            mySpeedEpoch: 0,
+            myPublishedEpoch: 0,
+            myFullFillsPending: 0,
+            myAppliedEffort: [Vec::new(), Vec::new()],
+            myPendingFlag: [Vec::new(), Vec::new()],
+            myPendingList: [Vec::new(), Vec::new()],
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CCHMetricFamily::CCHMetricFamily<E, V, K>(const Graph *, EffortOperation, EffortOperation, double, double, RefVehicleFactory, int)`
@@ -102,8 +131,44 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(graph: Ptr<CCHMetricFamily_Graph>, fillEffort: CCHGraph_EffortOperation, gateEffort: CCHGraph_EffortOperation, updateFactor: f64, updateConstant: f64, factory: CCHMetricFamily_RefVehicleFactory, ensembleK: i32) -> Self {
-        todo!("port CCHMetricFamily::CCHMetricFamily<E, V, K>")
+    pub fn new_2(graph: Ptr<CCHMetricFamily_Graph<E, V>>, fillEffort: CCHGraph_EffortOperation, gateEffort: CCHGraph_EffortOperation, updateFactor: f64, updateConstant: f64, factory: CCHMetricFamily_RefVehicleFactory, ensembleK: i32) -> Self {
+        let space = graph.edge_id_space() as usize;
+        let mut this = CCHMetricFamily {
+            myGraph: graph,
+            myFillEffort: fillEffort,
+            myGateEffort: gateEffort,
+            myFactory: factory,
+            myPatch: (),
+            myLive: true,
+            myBegin: 0,
+            myWeightPeriod: utils::common::time::SUMOTIME_MAX,
+            myStaticMetrics: BTreeMap::new(),
+            myStaticLock: std::sync::Mutex::new(()),
+            myStale: false,
+            myUpdateFactor: updateFactor,
+            myUpdateConstant: updateConstant,
+            myEnsembleK: if ensembleK > 1 { ensembleK } else { 1 },
+            myLiveMetrics: Vec::new(),
+            myByKey: HashMap::new(),
+            myWantedKeys: Vec::new(),
+            myWantedLock: std::sync::Mutex::new(()),
+            myQueried: false,
+            myMetricStale: false,
+            mySpeedEpoch: 0,
+            myPublishedEpoch: 0,
+            myFullFillsPending: 0,
+            myAppliedEffort: [Vec::new(), Vec::new()],
+            myPendingFlag: [Vec::new(), Vec::new()],
+            myPendingList: [Vec::new(), Vec::new()],
+            _p: std::marker::PhantomData,
+        };
+        for i in 0..2 {
+            // NaN = "never applied": the first pending occurrence always
+            // passes the deadband and primes the entry
+            this.myAppliedEffort[i] = vec![f64::NAN; space];
+            this.myPendingFlag[i] = vec![0; space];
+        }
+        this
     }
 
     /// C++: `void CCHMetricFamily::~CCHMetricFamily<E, V, K>()`
@@ -118,7 +183,20 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CCHMetricFamily::~CCHMetricFamily<E, V, K>")
+        // shortcut: LiveMetric/StaticMetric are allocated by buildLiveMetric/get, which are not ported yet, so the Box::from_raw below assumes Box allocations; upgrade with those
+        for c in self.myLiveMetrics.drain(..) {
+            let rv = c.m().refVehicle;
+            if !rv.is_null() {
+                unsafe { drop(Box::from_raw(rv.as_raw())) };
+            }
+            unsafe { drop(Box::from_raw(c.as_raw())) };
+        }
+        for item in self.myStaticMetrics.values() {
+            let rv = item.refVehicle;
+            if !rv.is_null() {
+                unsafe { drop(Box::from_raw(rv.as_raw())) };
+            }
+        }
     }
 
     /// C++: `MetricPtr CCHMetricFamily::get(const K *, SUMOVehicleClass, SUMOTime, const V *)`
@@ -154,7 +232,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn get(&mut self, key: Ptr<K>, vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<V>) -> CCHRouter_MetricPtr {
-        todo!("port CCHMetricFamily::get")
+        // shortcut: the STATIC metric map needs the borrowing RoutingKit CustomizableContractionHierarchyMetric (self-referential with sm.weights) and typed WeightPatch/RefVehicleFactory
+        panic!("shortcut: CCHMetricFamily::get needs the borrowing RoutingKit metric and typed RefVehicleFactory/WeightPatch")
     }
 
     /// C++: `SUMOTime CCHMetricFamily::periodEnd(SUMOTime) const` [const]
@@ -167,7 +246,10 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn period_end(&self, time: SUMOTime) -> SUMOTime {
-        todo!("port CCHMetricFamily::periodEnd")
+        if self.myWeightPeriod <= 0 || self.myWeightPeriod == SUMOTIME_MAX {
+            return SUMOTIME_MAX;
+        }
+        return self.myBegin + (self.period_of(time) as SUMOTime + 1) * self.myWeightPeriod;
     }
 
     /// C++: `void CCHMetricFamily::flagStale()`
@@ -178,7 +260,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn flag_stale(&mut self) {
-        todo!("port CCHMetricFamily::flagStale")
+        let _lock = self.myStaticLock.lock();
+        self.myStale = true;
     }
 
     /// C++: `void CCHMetricFamily::flagPermissionsStale()`
@@ -188,7 +271,7 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn flag_permissions_stale(&mut self) {
-        todo!("port CCHMetricFamily::flagPermissionsStale")
+        self.flag_stale();
     }
 
     /// C++: `void CCHMetricFamily::seedKey(const K *)`
@@ -203,7 +286,13 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn seed_key(&mut self, key: Ptr<K>) {
-        todo!("port CCHMetricFamily::seedKey")
+        if !self.myByKey.contains_key(&key) {
+            let mut slots = Vec::new();
+            for k in 0..self.myEnsembleK {
+                slots.push(self.build_live_metric(key, k));
+            }
+            self.myByKey.insert(key, slots);
+        }
     }
 
     /// C++: `void CCHMetricFamily::markDirty(const E *)`
@@ -222,7 +311,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn mark_dirty(&mut self, e: Ptr<E>) {
-        todo!("port CCHMetricFamily::markDirty")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `void CCHMetricFamily::invalidateEdge(const E *)`
@@ -242,7 +332,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_edge(&mut self, e: Ptr<E>) {
-        todo!("port CCHMetricFamily::invalidateEdge")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `void CCHMetricFamily::atBarrier(double, bool)`
@@ -259,7 +350,14 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn at_barrier(&mut self, now: f64, effortsMoved: bool) {
-        todo!("port CCHMetricFamily::atBarrier")
+        if effortsMoved {
+            self.mySpeedEpoch += 1;
+        }
+        let queried = self.myQueried;
+        self.myQueried = false;
+        if queried || self.myMetricStale || (effortsMoved && !self.myLiveMetrics.is_empty()) {
+            self.customize(now);
+        }
     }
 
     /// C++: `void CCHMetricFamily::customize(double)`
@@ -402,7 +500,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn customize(&mut self, now: f64) {
-        todo!("port CCHMetricFamily::customize")
+        // shortcut: the deadband/sparse-customize pass needs E::getNumericalID, the CCH partial-customization metric (borrows weights, see LiveMetric) and typed GateEffort
+        panic!("shortcut: CCHMetricFamily::customize needs router trait bounds (lead) and the borrowing RoutingKit metric")
     }
 
     /// C++: `MetricPtr CCHMetricFamily::published(const K *, const std::string &)`
@@ -453,7 +552,30 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn published(&mut self, key: Ptr<K>, vehID: &str) -> CCHRouter_MetricPtr {
-        todo!("port CCHMetricFamily::published")
+        let slots = match self.myByKey.get(&key) {
+            Some(slots) => slots.clone(),
+            None => {
+                self.myWantedKeys.push(key);
+                self.myQueried = true;
+                return Ptr::default();
+            }
+        };
+        if !self.myQueried {
+            self.myQueried = true;
+        }
+        if self.myMetricStale {
+            return Ptr::default();
+        }
+        if self.myPublishedEpoch != self.mySpeedEpoch {
+            return Ptr::default();
+        }
+        let c = if self.myEnsembleK == 1 {
+            slots[0]
+        } else {
+            slots[(CCHMetricFamily::<E, V, K>::fnv1a(vehID) % self.myEnsembleK as u64) as usize]
+        };
+        // shortcut: LiveMetric::front is still a placeholder i32 (the published RoutingKit metric pointer), upgrade with the typed metric
+        panic!("shortcut: LiveMetric::front publishing needs the typed RoutingKit metric pointer")
     }
 
     /// C++: `bool CCHMetricFamily::empty() const` [const]
@@ -463,7 +585,7 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn empty(&self) -> bool {
-        todo!("port CCHMetricFamily::empty")
+        self.myLiveMetrics.is_empty()
     }
 
     /// C++: `int CCHMetricFamily::periodOf(SUMOTime) const` [const, private]
@@ -476,7 +598,10 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn period_of(&self, time: SUMOTime) -> i32 {
-        todo!("port CCHMetricFamily::periodOf")
+        if self.myWeightPeriod > 0 && self.myWeightPeriod != SUMOTIME_MAX && time > self.myBegin {
+            return ((time - self.myBegin) / self.myWeightPeriod) as i32;
+        }
+        return 0;
     }
 
     /// C++: `void CCHMetricFamily::fillStatic(StaticMetric &, int, SUMOTime, const V *, const V *)` [private]
@@ -503,8 +628,22 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn fill_static(&mut self, sm: &mut CCHMetricFamily_StaticMetric, period: i32, time: SUMOTime, ref_: Ptr<V>, veh: Ptr<V>) {
-        todo!("port CCHMetricFamily::fillStatic")
+    pub fn fill_static(&mut self, sm: &mut CCHMetricFamily_StaticMetric<V>, period: i32, time: SUMOTime, ref_: Ptr<V>, veh: Ptr<V>) {
+        let fillTime = if self.myWeightPeriod == utils::common::time::SUMOTIME_MAX {
+            utils::common::time::steps2time(time)
+        } else {
+            utils::common::time::steps2time(self.myBegin + period as SUMOTime * self.myWeightPeriod)
+        };
+        self.myGraph.fill_input_weights(self.myFillEffort, sm.vClass, ref_, fillTime, &mut sm.weights);
+        if !sm.filled {
+            sm.filled = true;
+            // shortcut: WeightPatch typedef is still Unmapped, so myPatch(myGraph, veh, weights) cannot be called; upgrade with the typed WeightPatch
+            panic!("shortcut: CCHMetricFamily::fillStatic needs typed WeightPatch")
+        } else {
+            for &(a, w) in &sm.patched {
+                sm.weights[a as usize] = w;
+            }
+        }
     }
 
     /// C++: `uint64_t CCHMetricFamily::fnv1a(const std::string &)` [static, private]
@@ -518,7 +657,11 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn fnv1a(s: &str) -> u64 {
-        todo!("port CCHMetricFamily::fnv1a")
+        let mut h: u64 = 1469598103934665603;
+        for ch in s.bytes() {
+            h = (h ^ ch as u64).wrapping_mul(1099511628211);
+        }
+        h
     }
 
     /// C++: `LiveMetric * CCHMetricFamily::buildLiveMetric(const K *, int)` [private]
@@ -534,8 +677,9 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         return c;
     //     }
     #[allow(unused_variables)]
-    pub fn build_live_metric(&mut self, key: Ptr<K>, slot: i32) -> Ptr<CCHMetricFamily_LiveMetric> {
-        todo!("port CCHMetricFamily::buildLiveMetric")
+    pub fn build_live_metric(&mut self, key: Ptr<K>, slot: i32) -> Ptr<CCHMetricFamily_LiveMetric<V>> {
+        // shortcut: needs the RefVehicleFactory typedef (Unmapped) and a RoutingKit partial customization that borrows the CCH; upgrade with the typedef
+        panic!("shortcut: CCHMetricFamily::buildLiveMetric needs typed RefVehicleFactory")
     }
 
     /// C++: `void CCHMetricFamily::CCHMetricFamily<E, V, K>(const CCHMetricFamily<E, V, K> &)` [private]
@@ -543,49 +687,51 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &CCHMetricFamily<E, V, K>) -> Self {
-        todo!("port CCHMetricFamily::CCHMetricFamily<E, V, K>")
+        // shortcut: the C++ copy is deleted (std::mutex and std::atomic members make the implicit copy ill-formed) and never called; a Rust copy would also share the owned metric pointers
+        panic!("shortcut: CCHMetricFamily copy is deleted in C++ (std::mutex/std::atomic members)")
     }
 
     /// C++: `CCHMetricFamily<E, V, K> & CCHMetricFamily::operator=(const CCHMetricFamily<E, V, K> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &CCHMetricFamily<E, V, K>) -> &mut CCHMetricFamily<E, V, K> {
-        todo!("port CCHMetricFamily::operator=")
+        // shortcut: the C++ assignment is deleted (std::mutex and std::atomic members) and never called
+        panic!("shortcut: CCHMetricFamily assignment is deleted in C++ (std::mutex/std::atomic members)")
     }
 
 }
 
 /// per-type LIVE metric state. Heap-owned: the atomic makes it non-movable, so it cannot live in a map by value.
 /// C++ class `CCHMetricFamily::LiveMetric` (utils/router/CCHMetricFamily.h)
-pub struct CCHMetricFamily_LiveMetric {
-    pub weight: Unmapped /* int[2] */,
+pub struct CCHMetricFamily_LiveMetric<V> {
+    pub weight: [Vec<u32>; 2],
     pub metric: Unmapped /* int[2] */,
     pub front: i32,
     pub frontIndex: i32,
     pub vClass: SUMOVehicleClass,
     /// OWNED effort-reference vehicle (see RefVehicleFactory)
-    pub refVehicle: Ptr<Unmapped /* V */>,
+    pub refVehicle: Ptr<V>,
     /// partial-customization worker (queue over the shared CCH); one per metric -- its queue is drained by every customize()
     pub partial: i32,
 }
 
-impl CCHMetricFamily_LiveMetric {
+impl<V> CCHMetricFamily_LiveMetric<V> {
 }
 
 /// per-(type, period) STATIC metric state. RoutingKit metrics BORROW their input-weight buffer, so buffer and metric live together in the map (std::map nodes are address-stable).
 /// C++ class `CCHMetricFamily::StaticMetric` (utils/router/CCHMetricFamily.h)
-pub struct CCHMetricFamily_StaticMetric {
-    pub weights: i32,
-    pub metric: i32,
+pub struct CCHMetricFamily_StaticMetric<V> {
+    pub weights: Vec<u32>,
+    pub metric: Unmapped /* RoutingKit CCH metric, borrows weights */,
     pub vClass: SUMOVehicleClass,
     /// OWNED reference vehicle (nullptr when filling with the querying vehicle)
-    pub refVehicle: Ptr<Unmapped /* V */>,
+    pub refVehicle: Ptr<V>,
     /// whether the first fill (which runs the patch) is done
     pub filled: bool,
     /// the (arc, weight) pairs the patch wrote on the first fill, re-applied on every refill
-    pub patched: i32,
+    pub patched: Vec<(u32, u32)>,
 }
 
-impl CCHMetricFamily_StaticMetric {
+impl<V> CCHMetricFamily_StaticMetric<V> {
 }
 
