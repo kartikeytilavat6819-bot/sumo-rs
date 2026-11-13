@@ -13,8 +13,58 @@ fn max2(a: f64, b: f64) -> f64 {
     if a < b { b } else { a }
 }
 
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
 fn current_millis() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
+// std::push_heap over the whole slice (libstdc++ algorithm, so ties land where C++ puts them)
+fn std_push_heap<T: Copy, F: FnMut(T, T) -> bool>(v: &mut [T], mut comp: F) {
+    let last = v.len() as isize - 1;
+    let value = v[last as usize];
+    push_heap_at(v, last, 0, value, &mut comp);
+}
+
+fn push_heap_at<T: Copy, F: FnMut(T, T) -> bool>(v: &mut [T], mut hole: isize, top: isize, value: T, comp: &mut F) {
+    let mut parent = (hole - 1) / 2;
+    while hole > top && comp(v[parent as usize], value) {
+        v[hole as usize] = v[parent as usize];
+        hole = parent;
+        parent = (hole - 1) / 2;
+    }
+    v[hole as usize] = value;
+}
+
+// std::pop_heap over the whole slice (libstdc++ algorithm)
+fn std_pop_heap<T: Copy, F: FnMut(T, T) -> bool>(v: &mut [T], mut comp: F) {
+    if v.len() > 1 {
+        let last = v.len() - 1;
+        let value = v[last];
+        v[last] = v[0];
+        adjust_heap(&mut v[..last], 0, last as isize, value, &mut comp);
+    }
+}
+
+fn adjust_heap<T: Copy, F: FnMut(T, T) -> bool>(v: &mut [T], mut hole: isize, len: isize, value: T, comp: &mut F) {
+    let top = hole;
+    let mut second = hole;
+    while second < (len - 1) / 2 {
+        second = 2 * (second + 1);
+        if comp(v[second as usize], v[(second - 1) as usize]) {
+            second -= 1;
+        }
+        v[hole as usize] = v[second as usize];
+        hole = second;
+    }
+    if (len & 1) == 0 && second == (len - 2) / 2 {
+        second = 2 * (second + 1);
+        v[hole as usize] = v[(second - 1) as usize];
+        hole = second - 1;
+    }
+    push_heap_at(v, hole, top, value, comp);
 }
 
 /// C++ typedef `typename KDTreePartition<E, N, V>::Cell AFRouter::Cell`
@@ -579,7 +629,56 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     // }
     #[allow(unused_variables)]
     pub fn flag_context(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool) {
-        panic!("shortcut: AFRouter::flagContext needs E::getFromJunction() (not on RouterEdge) and KDTreePartition::getCellsAtLevel()/Cell::contains() (still &i32 / Unmapped placeholders), upgrade when both are generic")
+        assert!(!settledEdge.is_null() && !targetEdge.is_null());
+        let mut sHARCLevel: i32 = 0; // lowest level with smallest cells
+        let mut settledEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
+        let mut targetEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
+        if !self.myLastSettledEdgeCell.is_null() && self.myLastSettledEdgeCell.contains(Self::edge_from_junction(settledEdge).cast()) {
+            // exploit the partial locality of Dijkstra's algorithm: settled edge is still
+            // in the same cell as the last one? Then we can simply return the
+            // last flagContext tuple again.
+            return self.myLastFlagContext;
+        }
+        let numberOfPartitionLevels = self.myPartition.get_number_of_levels();
+        if numberOfPartitionLevels <= 4 { // small number of bottom cells -> go through them, no use of k-d tree
+            let partitionLevel = Self::s_harc_level2_partition_level(sHARCLevel, self.myPartition.get_number_of_levels());
+            // go through the cells of the level
+            for iter in Self::cells_at_level(partitionLevel) {
+                // myPartition is assumed to partition a non-reversed (forward) graph
+                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge).cast()) {
+                    settledEdgeCell = iter;
+                }
+                if targetEdgeCell.is_null() && !self.myTargetEdgeCellLevel0.is_null() {
+                    targetEdgeCell = self.myTargetEdgeCellLevel0;
+                } else if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge).cast()) {
+                    self.myTargetEdgeCellLevel0 = iter;
+                    targetEdgeCell = self.myTargetEdgeCellLevel0;
+                }
+                if !settledEdgeCell.is_null() && !targetEdgeCell.is_null() {
+                    assert!(!self.myTargetEdgeCellLevel0.is_null());
+                    break;
+                }
+            }
+        } else { // larger number of bottom cells -> use a k-d tree
+            settledEdgeCell = self.myPartition.search_node(Self::edge_from_junction(settledEdge));
+            if targetEdgeCell.is_null() && !self.myTargetEdgeCellLevel0.is_null() {
+                // search only once per query
+                targetEdgeCell = self.myTargetEdgeCellLevel0;
+            } else if targetEdgeCell.is_null() {
+                self.myTargetEdgeCellLevel0 = self.myPartition.search_node(Self::edge_from_junction(targetEdge));
+                targetEdgeCell = self.myTargetEdgeCellLevel0; // myTargetEdgeCellLevel0 is reset in init()
+            }
+        }
+        assert!(!settledEdgeCell.is_null() && !targetEdgeCell.is_null()); // we should find both edges on each level
+        while settledEdgeCell.get_supercell() != targetEdgeCell.get_supercell() {
+            settledEdgeCell = settledEdgeCell.get_supercell();
+            targetEdgeCell = targetEdgeCell.get_supercell();
+            sHARCLevel += 1;
+        }
+        self.myLastSettledEdgeCell = settledEdgeCell;
+        let flagContext = (sHARCLevel, if targetEdgeCell.is_left_or_lower_cell() { 0 } else { 1 }, settledEdgeCell == targetEdgeCell);
+        self.myLastFlagContext = flagContext;
+        flagContext
     }
 
     /// C++: `std::tuple<int, int, bool> AFRouter::flagContextNaive(const E *, const E *)`
@@ -620,7 +719,32 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     // }
     #[allow(unused_variables)]
     pub fn flag_context_naive(&mut self, settledEdge: Ptr<E>, targetEdge: Ptr<E>) -> (i32, i32, bool) {
-        panic!("shortcut: AFRouter::flagContextNaive needs E::getFromJunction() (not on RouterEdge) and KDTreePartition::getCellsAtLevel()/Cell::contains() (still &i32 / Unmapped placeholders), upgrade when both are generic")
+        assert!(!settledEdge.is_null() && !targetEdge.is_null());
+        for sHARCLevel in 0..self.myPartition.get_number_of_levels() - 1 {
+            let partitionLevel = Self::s_harc_level2_partition_level(sHARCLevel, self.myPartition.get_number_of_levels());
+            let levelCells = Self::cells_at_level(partitionLevel);
+            let mut settledEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
+            let mut targetEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
+            // go through the cells of the level
+            for iter in levelCells {
+                // myPartition is assumed to partition a non-reversed (forward) graph
+                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge).cast()) {
+                    settledEdgeCell = iter;
+                }
+                if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge).cast()) {
+                    targetEdgeCell = iter;
+                }
+                if !settledEdgeCell.is_null() && !targetEdgeCell.is_null() {
+                    break;
+                }
+            }
+            assert!(!settledEdgeCell.is_null() && !targetEdgeCell.is_null()); // we should find both edges on each level
+            if settledEdgeCell.get_supercell() == targetEdgeCell.get_supercell() {
+                return (sHARCLevel, if targetEdgeCell.is_left_or_lower_cell() { 0 } else { 1 }, settledEdgeCell == targetEdgeCell);
+            }
+        }
+        // we should never arrive here
+        panic!("{}", ProcessError::new("flagContext: relevant level could not be determined."));
     }
 
     /// C++: `bool AFRouter::compute(const E *, const E *, const V *const, SUMOTime, int &, bool)`
@@ -791,14 +915,14 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         // check whether from and to can be used
         if self.is_prohibited(from, vehicle, steps2time(msTime)) {
             if !silent {
-                panic!("shortcut: compute's 'is not allowed on source edge' message needs Named::getIDSecure(vehicle), RouterVehicle has no id accessor");
+                self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on source edge '{}'.", Self::vehicle_id_secure(vehicle), from.id()), true);
             }
             return false;
         }
         // technically, a temporary permission might be lifted by the time of arrival
         if self.is_prohibited(to, vehicle, steps2time(msTime)) {
             if !silent {
-                panic!("shortcut: compute's 'is not allowed on destination edge' message needs Named::getIDSecure(vehicle), RouterVehicle has no id accessor");
+                self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on destination edge '{}'.", Self::vehicle_id_secure(vehicle), to.id()), true);
             }
             return false;
         }
@@ -813,16 +937,102 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         // of time-dependent routing)
         let msTime = self.myValidUntil - self.myWeightPeriod;
 
-        let length = 0.; // dummy for the via edge cost update
+        let mut length = 0.; // dummy for the via edge cost update
         self.start_query();
         let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
         self.init(from.numerical_id(), msTime);
         self.myAmClean = false;
         // loop
-        let mut num_visited = 0;
-        let mayRevisit = self.myLookupTable.as_ref().is_some_and(|t| !t.consistent());
+        let mut num_visited: i32 = 0;
+        let mayRevisit = match &self.myLookupTable {
+            Some(t) => !t.consistent(),
+            None => false,
+        };
+        let speed = if vehicle.is_null() { self.myMaxSpeed } else { min2(Self::vehicle_max_speed(vehicle), self.myMaxSpeed * Self::vehicle_chosen_speed_factor(vehicle)) };
 
-        panic!("shortcut: compute's frontier loop is not ported: needs libstdc++-order std::push_heap/pop_heap on myFrontierList with myComparator (EdgeInfo.edge is Unmapped), flagContext (see above), and the vehicle's getMaxSpeed()/getChosenSpeedFactor() (RouterVehicle has only v_class)")
+        let comp = self.myComparator;
+        while !self.myFrontierList.is_empty() {
+            num_visited += 1;
+            // use the edge with the minimal length
+            let minimumInfo = self.myFrontierList[0];
+            let minEdge: Ptr<E> = minimumInfo.edge.cast();
+            // check whether the destination edge was already reached
+            if minEdge == to {
+                self.build_path_from(minimumInfo, into);
+                self.end_query(num_visited);
+                return true;
+            }
+            std_pop_heap(&mut self.myFrontierList, |a, b| comp.call_op::<E, V>(a, b));
+            self.myFrontierList.pop();
+            self.myFound.push(minimumInfo);
+            minimumInfo.m().visited = true;
+
+            let effortDelta = self.get_effort(minEdge, vehicle, minimumInfo.leaveTime);
+            let leaveTime = minimumInfo.leaveTime + self.get_travel_time(minEdge, vehicle, minimumInfo.leaveTime, effortDelta);
+
+            // admissible A* heuristic: straight line distance at maximum speed
+            // this is calculated from the end of minEdge so it possibly includes via efforts to the followers
+            let mut heuristic_remaining: f64 = 0.;
+            let mut heuristicEffort = minimumInfo.effort + effortDelta + heuristic_remaining;
+            // check all ways from the edge with the minimal length
+            for &follower in minEdge.via_successors(vClass, false) {
+                let followerInfo = Ptr::from_mut(&mut self.myEdgeInfos[follower.0.numerical_id() as usize]);
+                let followerFlagInfo = self.myFlagInfos.m()[follower.0.numerical_id() as usize];
+                // check whether it can be used
+                if self.is_prohibited(follower.0, vehicle, leaveTime) {
+                    continue;
+                }
+                let flagContext = self.flag_context(follower.0, to);
+                if !Self::flag(followerFlagInfo, flagContext) {
+                    continue;
+                }
+
+                // admissible A* heuristic: straight line distance at maximum speed
+                // this is calculated from the end of minEdge so it possibly includes via efforts to the followers
+                if heuristic_remaining == 0. && flagContext.0 == 0 && flagContext.2 {
+                    // arrived at the target cell at level 0? use heuristic
+                    heuristic_remaining = match &self.myLookupTable {
+                        None => minEdge.distance_to(to, false) / speed,
+                        Some(t) => t.lower_bound(minEdge, to, speed, Self::vehicle_chosen_speed_factor(vehicle), Self::edge_minimum_travel_time(minEdge), Self::edge_minimum_travel_time(to)),
+                    };
+                    if heuristic_remaining == UNREACHABLE {
+                        break; // -> skip remaining followers, continue with next min heap element
+                    }
+                    heuristicEffort += heuristic_remaining;
+                }
+
+                let mut effort = minimumInfo.effort + effortDelta;
+                let mut time = leaveTime;
+                self.update_via_edge_cost(follower.1, vehicle, &mut time, &mut effort, &mut length);
+                let oldEffort = followerInfo.effort;
+                if (!followerInfo.visited || mayRevisit) && effort < oldEffort {
+                    followerInfo.m().effort = effort;
+                    // if we use the effort including the via effort below we would count the via twice as shown by the ticket676 test
+                    // but we should never get below the real effort, see #12463
+                    followerInfo.m().heuristicEffort = max2(min2(heuristicEffort, followerInfo.heuristicEffort), effort);
+                    followerInfo.m().leaveTime = time;
+                    followerInfo.m().prev = minimumInfo;
+                    if oldEffort == f64::MAX {
+                        self.myFrontierList.push(followerInfo);
+                        std_push_heap(&mut self.myFrontierList, |a, b| comp.call_op::<E, V>(a, b));
+                    } else {
+                        match self.myFrontierList.iter().position(|p| *p == followerInfo) {
+                            None => {
+                                assert!(mayRevisit);
+                                self.myFrontierList.push(followerInfo);
+                                std_push_heap(&mut self.myFrontierList, |a, b| comp.call_op::<E, V>(a, b));
+                            }
+                            Some(idx) => std_push_heap(&mut self.myFrontierList[..=idx], |a, b| comp.call_op::<E, V>(a, b)),
+                        }
+                    }
+                }
+            } // for followers
+        }
+        self.end_query(num_visited);
+        if !silent {
+            self.myErrorMsgHandler.m().informf("No connection between edge '%' and edge '%' found.", &[&from.id(), &to.id()]);
+        }
+        false
     }
 
     /// C++: `void AFRouter::startQuery()`
@@ -903,10 +1113,41 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         panic!("{}", ProcessError::new("Bulk mode is not supported by the arc flag router."));
     }
 
+    // shortcut: RouterEdge has no getFromJunction() accessor, add from_junction() -> Ptr<Self::Node> to router_edge.rs
+    fn edge_from_junction(edge: Ptr<E>) -> Ptr<N> {
+        panic!("shortcut: RouterEdge has no getFromJunction accessor, add from_junction() to router_edge.rs")
+    }
+
+    // shortcut: RouterEdge has no getMinimumTravelTime(nullptr) accessor, add minimum_travel_time() to router_edge.rs
+    fn edge_minimum_travel_time(edge: Ptr<E>) -> f64 {
+        panic!("shortcut: RouterEdge has no getMinimumTravelTime accessor, add minimum_travel_time() to router_edge.rs")
+    }
+
+    // shortcut: RouterVehicle has no getMaxSpeed() accessor, add max_speed() to router_edge.rs
+    fn vehicle_max_speed(vehicle: Ptr<V>) -> f64 {
+        panic!("shortcut: RouterVehicle has no getMaxSpeed accessor, add max_speed() to router_edge.rs")
+    }
+
+    // shortcut: RouterVehicle has no getChosenSpeedFactor() accessor, add chosen_speed_factor() to router_edge.rs
+    fn vehicle_chosen_speed_factor(vehicle: Ptr<V>) -> f64 {
+        panic!("shortcut: RouterVehicle has no getChosenSpeedFactor accessor, add chosen_speed_factor() to router_edge.rs")
+    }
+
+    // shortcut: RouterVehicle has no getID() accessor (Named::getIDSecure), add id() to router_edge.rs
+    fn vehicle_id_secure(vehicle: Ptr<V>) -> String {
+        panic!("shortcut: RouterVehicle has no getID accessor (Named::getIDSecure), add id() to router_edge.rs")
+    }
+
+    // shortcut: KDTreePartition::get_cells_at_level returns a &i32 placeholder, upgrade kd_tree_partition.rs to return Vec<Ptr<KDTreePartition_Cell>>
+    fn cells_at_level(level: i32) -> Vec<Ptr<KDTreePartition_Cell>> {
+        panic!("shortcut: KDTreePartition::get_cells_at_level is a &i32 placeholder, cannot iterate the cells of a level")
+    }
+
 }
 
 /// Class to compare (and so sort) nodes by their effort
 /// C++ class `AFRouter::EdgeInfoComparator` (utils/router/AFRouter.h)
+#[derive(Clone, Copy)]
 pub struct AFRouter_EdgeInfoComparator {
 }
 
