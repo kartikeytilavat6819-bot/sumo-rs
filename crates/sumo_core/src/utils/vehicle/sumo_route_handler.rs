@@ -140,8 +140,7 @@ impl SUMORouteHandler {
         let begin_default = if utils::options::options_cont::exists("begin") { utils::common::time::string2time(&utils::options::options_cont::get_string("begin")).unwrap_or_else(|e| panic!("{}", e)) } else { 0 };
         let end_default = if utils::options::options_cont::exists("end") { utils::common::time::string2time(&utils::options::options_cont::get_string("end")).unwrap_or_else(|e| panic!("{}", e)) } else { -1 };
         SUMORouteHandler {
-            // shortcut: the SUMOSAXHandler predefined tag/attribute tables are not passed (empty maps), upgrade when GenericSAXHandler::new takes the global SUMO tag table
-            base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, file, expectedRoot),
+            base: utils::xml::sumo_sax_handler::new(file, expectedRoot),
             myHardFail: hardFail,
             myVehicleParameter: Ptr::null(),
             myParamStack: Vec::new(),
@@ -1437,4 +1436,12 @@ impl SUMORouteHandler {
 
 impl utils::xml::generic_sax_handler::SaxHandler for SUMORouteHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_start_element(element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_end_element(element);
+        Ok(())
+    }
 }

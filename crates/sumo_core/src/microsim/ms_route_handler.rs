@@ -4252,4 +4252,12 @@ impl MSRouteHandler {
 
 impl utils::xml::generic_sax_handler::SaxHandler for MSRouteHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+    fn my_start_element(&mut self, element: i32, attrs: &utils::xml::sumo_sax_attributes::SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_start_element(element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.base.my_end_element(element);
+        Ok(())
+    }
 }
