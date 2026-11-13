@@ -600,7 +600,7 @@ impl RORouteDef {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn write_xml_definition(&self, dev: &mut OutputDevice, veh: Ptr<ROVehicle>, asAlternatives: bool, withExitTimes: bool, withCost: bool, withLength: bool) -> &mut OutputDevice {
+    pub fn write_xml_definition<'a>(&self, dev: &'a mut OutputDevice, veh: Ptr<ROVehicle>, asAlternatives: bool, withExitTimes: bool, withCost: bool, withLength: bool) -> &'a mut OutputDevice {
         if asAlternatives {
             dev.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_LAST, &self.myLastUsed);
             for i in 0..self.myAlternatives.len() {

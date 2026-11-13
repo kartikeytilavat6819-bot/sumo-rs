@@ -1088,7 +1088,7 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(numberOfLevels: i32, edges: &i32, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         todo!("port KDTreePartition::KDTreePartition<E, N, V>")
     }
 

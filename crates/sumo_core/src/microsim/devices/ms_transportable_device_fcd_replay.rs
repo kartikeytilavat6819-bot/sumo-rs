@@ -187,7 +187,8 @@ impl MSTransportableDevice_FCDReplay {
                         let lane = v.m().get_lane();
                         lane.m().get_vehicles_secure(); // lock the lane
                         let mut dummy: SUMOTime = -1; // boarding- and loading-time are not considered
-                        MSNet::get_instance().m().get_person_control().load_any_waiting(edge, v, &mut dummy, &mut dummy, holder);
+                        let mut dummy2: SUMOTime = -1;
+                        MSNet::get_instance().m().get_person_control().load_any_waiting(edge, v, &mut dummy, &mut dummy2, holder);
                         lane.m().release_vehicles(); // unlock the lane
                     }
                 }

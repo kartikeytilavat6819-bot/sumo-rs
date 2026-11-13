@@ -120,7 +120,7 @@ thread_local! {
     static MY_DRIVE_WAY_LOOKUP: std::cell::RefCell<BTreeMap<String, Ptr<MSDriveWay>>> = std::cell::RefCell::new(BTreeMap::new());
 }
 /// C++ `MSDriveWay::EMPTY_DRIVEWAY_VECTOR`
-static EMPTY_DRIVEWAY_VECTOR: Vec<Ptr<MSDriveWay>> = Vec::new();
+// C++ MSDriveWay::EMPTY_DRIVEWAY_VECTOR is only ever returned empty; no Rust static needed (raw pointers are not Sync).
 
 // determinism: C++ orders myDepartureDriveways/myEndingDriveways/mySidingDriveways by edge numerical id
 // (ComparatorNumericalIdLess) while the BTreeMap here orders by pointer address; this only affects the order
@@ -961,7 +961,7 @@ impl MSDriveWay {
                         }
                     }
                     if !ego.is_null() {
-                        if foe.as_raw() == ego.as_raw() && !self.myForward.contains(&lane) {
+                        if (foe.as_raw() as *mut ()) == (ego.as_raw() as *mut ()) && !self.myForward.contains(&lane) {
                             continue;
                         }
                         let foe_stop = foe.cast::<MSVehicle>().get_next_stop_parameter();
@@ -1306,11 +1306,11 @@ impl MSDriveWay {
                     MY_CURRENT_SIDING_CHECK.with(|c| c.borrow_mut().push(end));
                     if mveh.get_length() > end.get_length() && !MSGlobals::use_meso_sim() {
                         let mut back_dist = mveh.get_length() - self.get_forward_distance(self.myForward.len() as i32 - 1);
-                        let mut lane = self.myForward.first().unwrap();
+                        let mut lane = *self.myForward.first().unwrap();
                         let mut prev = lane.get_logical_predecessor_lane();
                         while back_dist > 0. && !prev.is_null() {
                             back_dist -= lane.get_length();
-                            let link = prev.get_link_to(&lane);
+                            let link = prev.get_link_to(lane);
                             if prev.is_normal()
                                 && !link.get_tl_logic().is_null()
                                 && link.get_tl_logic().get_logic_type() == TrafficLightType::RAIL_SIGNAL

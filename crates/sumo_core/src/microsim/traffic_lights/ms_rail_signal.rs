@@ -157,7 +157,7 @@ impl MSRailSignal_LinkInfo {
             }
         };
         //std::cout << SIMTIME << " veh=" << veh->getID() << " rsl=" << getID() << " dws=" << myDriveways.size() << "\n";
-        self.get_drive_way_2(arg0.cast::<MSVehicle>().get_current_route().get_edge_vector(), first_it, end, arg0.get_id())
+        self.get_drive_way_2(arg0.cast::<MSVehicle>().get_route().get_edges(), first_it, end, arg0.get_id())
     }
 
     /// C++: `MSDriveWay & LinkInfo::getDriveWay(MSRouteIterator, MSRouteIterator, const std::string &)`
@@ -1546,7 +1546,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_drive_way_for_route(&mut self, tlIndex: i32, first: MSRouteIterator, end: MSRouteIterator) -> &MSDriveWay {
-        self.myLinkInfos[tlIndex as usize].get_drive_way_2(first, end, "")
+        self.myLinkInfos[tlIndex as usize].get_drive_way_2(&Vec::new(), first, end, "")
     }
 
     /// C++: `const std::vector<MSDriveWay *> MSRailSignal::retrieveDriveWays(int) const` [const]
@@ -1662,7 +1662,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_existing_drive_way(&mut self, link: Ptr<MSLink>, firstIt: MSRouteIterator, endIt: MSRouteIterator) -> &MSDriveWay {
-        let cand = self.myLinkInfos[link.get_tl_index() as usize].get_drive_way_2(firstIt, endIt, "_tmp_");
+        let cand = self.myLinkInfos[link.get_tl_index() as usize].get_drive_way_2(&Vec::new(), firstIt, endIt, "_tmp_");
         // an existing driveway should be found
         debug_assert!(cand.get_first_vehicle() != "_tmp_");
         cand

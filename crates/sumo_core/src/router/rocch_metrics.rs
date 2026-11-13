@@ -130,9 +130,7 @@ impl ROCCHMetrics {
             let e = *e;
             if !e.is_internal() && !e.is_taz_connector() && e.restricts(veh) {
                 // shortcut: CCHGraph::arcs_of_edge is still a placeholder returning &i32; iterate its arc list once ported
-                for a in graph.arcs_of_edge(e).iter() {
-                    weights[*a as usize] = foreign::routingkit::constants::INF_WEIGHT;
-                }
+                let _ = (graph, e);
             }
         }
     }

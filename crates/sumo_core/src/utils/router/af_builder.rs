@@ -96,7 +96,7 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
             flippedEdge.m().init();
         }
         b.myFlippedPartition = Ptr::from_mut(Box::leak(Box::new(KDTreePartition::new(numberOfLevels, &b.myFlippedEdges, havePermissions, haveRestrictions))));
-        b.myArcFlagBuild = Ptr::from_mut(Box::leak(AFBuild::new(&b.myFlippedEdges, b.myFlippedPartition, numberOfLevels, unbuildIsWarning, flippedOperation, flippedLookup, havePermissions, haveRestrictions, toProhibit)));
+        b.myArcFlagBuild = Ptr::from_mut(Box::leak(Box::new(AFBuild::new(&b.myFlippedEdges, b.myFlippedPartition, numberOfLevels, unbuildIsWarning, flippedOperation, flippedLookup, havePermissions, haveRestrictions, toProhibit))));
         b
     }
 

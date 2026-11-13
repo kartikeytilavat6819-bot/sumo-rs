@@ -1154,7 +1154,7 @@ impl NIImporter_VISUM {
     //             return (*i);
     //         }
     //     }
-    //     //!!!
+    //     // !!!
     //     return nullptr;
     // }
     #[allow(unused_variables)]
@@ -1165,7 +1165,7 @@ impl NIImporter_VISUM {
                 return e;
             }
         }
-        //!!!
+        // !!!
         Ptr::null()
     }
 

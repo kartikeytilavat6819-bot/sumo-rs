@@ -337,7 +337,8 @@ impl MSRailSignalConstraint {
         let veh_id = Self::lookup_veh_id(tripID);
         if veh_id != "" {
             let veh = {
-                let control = MSNet::get_instance().m().get_vehicle_control();
+                let net = MSNet::get_instance();
+                let control = net.m().get_vehicle_control();
                 control.get_vehicle(veh_id)
             };
             if !veh.is_null() {
@@ -345,7 +346,8 @@ impl MSRailSignalConstraint {
             }
         }
         let found = {
-            let control = MSNet::get_instance().m().get_vehicle_control();
+            let net = MSNet::get_instance();
+            let control = net.m().get_vehicle_control();
             let mut result = Ptr::null();
             for veh in control.myVehicleDict.values() {
                 let base = veh.cast::<MSBaseVehicle>();
@@ -705,7 +707,7 @@ impl MSRailSignalConstraint_Predecessor {
             "{}{}{} at signal {} passed={}{}{}",
             tag,
             "  ",
-            self.myTripId + &veh_id,
+            self.myTripId.clone() + &veh_id,
             junction,
             utils::common::string_utils::prune(&self.myTrackers[0].myPassed.join(" ")),
             passed_ids2,

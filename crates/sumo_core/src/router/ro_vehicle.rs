@@ -50,7 +50,9 @@ impl std::ops::DerefMut for ROVehicle {
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):
 //   static std::map<ConstROEdgeVector, std::string> ROVehicle::mySavedRoutes;
 /// C++ std::map keyed by edge vector: BTreeMap orders keys like std::map (lexicographic by pointer)
-static MY_SAVED_ROUTES: std::sync::Mutex<BTreeMap<ConstROEdgeVector, String>> = std::sync::Mutex::new(BTreeMap::new());
+thread_local! {
+    static MY_SAVED_ROUTES: std::cell::RefCell<BTreeMap<ConstROEdgeVector, String>> = std::cell::RefCell::new(BTreeMap::new());
+}
 /// C++ `#define INVALID_STOP_POS -1` (ROVehicle.cpp)
 const INVALID_STOP_POS: f64 = -1.;
 /// C++ SUMOVehicleParameter.h stop index markers (same values as the other ports)
@@ -256,12 +258,12 @@ impl ROVehicle {
         // shortcut: addAlternative returns Rc (never null), so the C++ "replaced != nullptr" check is not repeated
         if self.get_parameter().departEdge > 0 {
             let mut idx = self.get_parameter().departEdge;
-            self.update_index(replaced.clone(), current.clone(), &mut idx);
+            self.update_index(replaced.clone().expect("replaced route"), current.clone(), &mut idx);
             self.get_parameter_mutable().departEdge = idx;
         }
         if self.get_parameter().arrivalEdge >= 0 {
             let mut idx = self.get_parameter().arrivalEdge;
-            self.update_index(replaced.clone(), current.clone(), &mut idx);
+            self.update_index(replaced.clone().expect("replaced route"), current.clone(), &mut idx);
             self.get_parameter_mutable().arrivalEdge = idx;
         }
         self.myRoutingSuccess = true;
@@ -534,16 +536,18 @@ impl ROVehicle {
         let mut routeID = String::new();
         if writeNamedRoute {
             let edges: ConstROEdgeVector = self.myRoute.get_used_route().get_normal_edges();
-            let mut saved = MY_SAVED_ROUTES.lock().unwrap();
-            let existing = saved.get(&edges).cloned();
-            match existing {
-                None => {
-                    routeID = format!("r{}", saved.len());
-                    self.myRoute.get_used_route().write_xml_definition(os, Ptr::new(self), writeCosts, false, writeExit, writeLength, &routeID);
-                    saved.insert(edges, routeID.clone());
+            MY_SAVED_ROUTES.with(|cell| {
+                let mut saved = cell.borrow_mut();
+                let existing = saved.get(&edges).cloned();
+                match existing {
+                    None => {
+                        routeID = format!("r{}", saved.len());
+                        self.myRoute.get_used_route().write_xml_definition(os, Ptr::new(self), writeCosts, false, writeExit, writeLength, &routeID);
+                        saved.insert(edges, routeID.clone());
+                    }
+                    Some(id) => routeID = id,
                 }
-                Some(id) => routeID = id,
-            }
+            });
         }
         let tag = if writeFlow {
             SUMO_TAG_FLOW
@@ -667,7 +671,7 @@ impl ROVehicle {
             self.myRoute.write_xml_definition(os, Ptr::new(self), asAlternatives, writeExit, writeCosts, writeLength);
         }
         for stop in self.get_parameter().stops.iter() {
-            stop.write(os);
+            stop.write(os, true, true);
         }
         self.get_parameter().write_params(os);
         os.close_tag("");

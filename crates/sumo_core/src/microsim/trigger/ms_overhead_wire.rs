@@ -1298,7 +1298,7 @@ impl MSTractionSubstation {
         let mut vehicleIDs: String = String::new();
         self.myTotalEnergy += energy; //[Wh]
         for it in self.myElecHybrid.iter() {
-            vehicleIDs += &format!("{} ", it.m().get_id());
+            vehicleIDs += &format!("{} ", it.m().base2.get_id());
         }
         // TODO vehicleIDs should not be empty, but in some case, it is (due to teleporting of vehicle?)
         if !vehicleIDs.is_empty() {

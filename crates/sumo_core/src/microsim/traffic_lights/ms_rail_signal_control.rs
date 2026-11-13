@@ -457,7 +457,8 @@ impl MSRailSignalControl {
                     for item in &list {
                         let mut start = item.foe.cast::<MSBaseVehicle>().get_route_position();
                         if !MSGlobals::use_meso_sim() {
-                            let further = item.foe.cast::<MSVehicle>().get_further_lanes();
+                            let mv = item.foe.cast::<MSVehicle>();
+                            let further = mv.get_further_lanes();
                             let skipped = if MSGlobals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
                                 further.len() / 2
                             } else {
@@ -465,7 +466,8 @@ impl MSRailSignalControl {
                             };
                             start = std::cmp::max(0, start - skipped as i32);
                         }
-                        let route = item.foe.cast::<MSBaseVehicle>().get_route();
+                        let mb = item.foe.cast::<MSBaseVehicle>();
+                        let route = mb.get_route();
                         let future: Vec<String> = route
                             .get_edges()
                             .iter()

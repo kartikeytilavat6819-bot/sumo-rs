@@ -326,7 +326,7 @@ impl NLEdgeControlBuilder {
                             "Mutually inconsistent neigh lane definitions for lanes '{}', '{}' and '{}'",
                             item.0.get_id(),
                             item.0.get_opposite().get_id(),
-                            Named::get_id_secure(item.0.get_opposite().get_opposite().get(), "")
+                            item.0.get_opposite().get_opposite().get().map(|l| l.get_id().to_string()).unwrap_or_default()
                         )));
                     }
                 }

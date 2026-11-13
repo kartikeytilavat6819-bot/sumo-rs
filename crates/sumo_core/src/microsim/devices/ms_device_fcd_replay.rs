@@ -698,7 +698,7 @@ impl Command for MSDevice_FCDReplay_MoveVehicles {
 fn fcd_replay_device(devices: &Vec<Ptr<MSVehicleDevice>>) -> Ptr<MSDevice_FCDReplay> {
     // shortcut: C++ looks the device up by dynamic type (typeid); no RTTI here, so the port matches the device name "fcd-replay" it reports
     for d in devices {
-        if d.device_name() == "fcd-replay" {
+        if d.base2.get_id() == "fcd-replay" {
             return d.cast::<MSDevice_FCDReplay>();
         }
     }
@@ -1080,7 +1080,8 @@ impl MSDevice_FCDReplay_MoveVehicles {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        let c = MSNet::get_instance().m().get_vehicle_control();
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
         for (_, veh) in c.myVehicleDict.iter() {
             let device = fcd_replay_device(veh.get_devices());
             if !device.is_null() && veh.cast::<MSBaseVehicle>().has_departed() {
@@ -1112,6 +1113,7 @@ impl FCDHandler_StageStart {
 }
 
 impl SaxHandler for MSDevice_FCDReplay_FCDHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler { &mut self.base }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
         MSDevice_FCDReplay_FCDHandler::my_start_element(self, element, attrs);
         Ok(())
@@ -1133,6 +1135,3 @@ impl MSDevice_FCDReplay_TrajectoryEntry {
 }
 
 
-impl utils::xml::generic_sax_handler::SaxHandler for MSDevice_FCDReplay_FCDHandler {
-    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
-}

@@ -2614,7 +2614,7 @@ impl RORouteHandler {
             if attrs.has_attribute(SUMO_ATTR_ROUTE) {
                 let routeID: String = attrs.get(SUMO_ATTR_ROUTE, &self.myVehicleParameter.id, &mut ok, true);
                 let routeDef = self.myNet.get_route_def(&routeID);
-                let route: Option<Rc<RORoute>> = if !routeDef.is_null() { Some(routeDef.get_first_route()) } else { None };
+                let route: Option<Rc<RORoute>> = if !routeDef.is_null() { routeDef.get_first_route() } else { None };
                 match route {
                     None => throw_process_error(format!(
                         "The route '{}' for walk of person '{}' is not known.",

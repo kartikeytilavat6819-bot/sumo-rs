@@ -988,7 +988,7 @@ impl SUMOVehicleParserHelper {
     //         }
     //         if (attrs.hasAttribute(SUMO_ATTR_GUISHAPE)) {
     //             vType->shape = parseGuiShape(attrs, vType->id);
-    //             if (vType->shape != SUMOVehicleShape::UNKNOWN) {
+    //             if (vType->shape != SUMOVehicleShape::Unknown) {
     //                 vType->parametersSet |= VTYPEPARS_SHAPE_SET;
     //             }
     //         }
@@ -1698,7 +1698,7 @@ impl SUMOVehicleParserHelper {
     //         return result;
     //     } else {
     //         WRITE_ERRORF(TL("The shape '%' for % '%' is not known."), vclassS, attrs.getObjectType(), id);
-    //         return SUMOVehicleShape::UNKNOWN;
+    //         return SUMOVehicleShape::Unknown;
     //     }
     // }
     #[allow(unused_variables)]
@@ -1714,7 +1714,7 @@ impl SUMOVehicleParserHelper {
             return result;
         } else {
             write_error(&format!("The shape '{}' for {} '{}' is not known.", vclassS, attrs.get_object_type(), id));
-            return SUMOVehicleShape::UNKNOWN;
+            return SUMOVehicleShape::Unknown;
         }
     }
 

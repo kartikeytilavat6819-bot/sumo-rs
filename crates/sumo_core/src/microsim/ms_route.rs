@@ -873,7 +873,7 @@ impl MSRoute {
                 Some((dist, permanent)) if !*permanent => {
                     let rps: Vec<ConstMSRoutePtr> = dist.get_vals().to_vec();
                     // `it` stays alive until the end of the block, so erase after the loop below
-                    Some((dist, rps))
+                    Some((*dist, rps))
                 }
                 _ => None,
             }

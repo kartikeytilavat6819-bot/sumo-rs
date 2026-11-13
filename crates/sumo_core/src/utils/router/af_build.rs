@@ -74,7 +74,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(flippedEdges: &i32, flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
+    pub fn new(flippedEdges: &Vec<Ptr<FlippedEdge<E, N, V>>>,
+ flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
         todo!("port AFBuild::AFBuild<E, N, V, M>")
     }
 
@@ -145,7 +146,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     myArcInfos.clear();
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut i32) {
+    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut Vec<Ptr<AFInfo_FlagInfo>>) {
         todo!("port AFBuild::init")
     }
 
