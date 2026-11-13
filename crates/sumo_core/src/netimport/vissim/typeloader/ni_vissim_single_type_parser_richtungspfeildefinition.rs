@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Richtungspfeildefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Richtungspfeildefinition::NIVissimSingleTypeParser_Richtungspfeildefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Richtungspfeildefinition::~NIVissimSingleTypeParser_Richtungspfeildefinition() noexcept` [virtual]
@@ -36,7 +36,6 @@ impl NIVissimSingleTypeParser_Richtungspfeildefinition {
     // NIVissimSingleTypeParser_Richtungspfeildefinition::~NIVissimSingleTypeParser_Richtungspfeildefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Richtungspfeildefinition::~NIVissimSingleTypeParser_Richtungspfeildefinition")
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Richtungspfeildefinition::parse(std::istream &)` [virtual]
@@ -48,8 +47,18 @@ impl NIVissimSingleTypeParser_Richtungspfeildefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Richtungspfeildefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        // getline(from, t): consume through the next newline, the text is unused
+        let data = from.get_ref();
+        let mut i = from.position() as usize;
+        while i < data.len() && data[i] != b'\n' {
+            i += 1;
+        }
+        if i < data.len() {
+            i += 1;
+        }
+        from.set_position(i as u64);
+        true
     }
 
 }
