@@ -265,7 +265,104 @@ pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
 // }
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatrix) {
-    todo!("port computeRoutes")
+    // build the router
+    let measure = oc.get_string("weight-attribute").unwrap_or_else(|e| panic!("{e}"));
+    let routingAlgorithm = oc.get_string("routing-algorithm").unwrap_or_else(|e| panic!("{e}"));
+    let priorityFactor = oc.get_float("weights.priority-factor").unwrap_or_else(|e| panic!("{e}"));
+    let mut begin = utils::common::time::string2time(&oc.get_string("begin").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
+    let mut end = utils::common::time::string2time(&oc.get_string("end").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
+    if oc.is_default("begin") && matrix.get_begin() >= 0 {
+        begin = matrix.get_begin();
+    }
+    if oc.is_default("end") {
+        end = if matrix.get_end() >= 0 { matrix.get_end() } else { utils::common::time::SUMOTIME_MAX };
+    }
+    let ignoreErrors = oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}"));
+    let mut dijkstra: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle>;
+    if measure == "traveltime" && priorityFactor == 0.0 {
+        match routingAlgorithm.as_str() {
+            "dijkstra" => {
+                // shortcut: SUMOAbstractRouter::Operation is still (), so ttOp is passed as () and the travel-time operation cannot be called
+                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, (), (), false, Ptr::null(), net.has_permissions(), false);
+            }
+            "astar" | "CH" | "CHWrapper" | "CCH" => {
+                // shortcut: astar, CH, CHWrapper and CCH routers need the SUMOAbstractRouter trait object, not ported
+                panic!("shortcut: routing algorithm '{}' is not ported", routingAlgorithm);
+            }
+            _ => {
+                panic!("{}", ProcessError::new(format!("Unknown routing Algorithm '{}'!", routingAlgorithm)));
+            }
+        }
+    } else {
+        if measure != "traveltime" && !net.has_loaded_effort() {
+            utils::common::msg_handler::write_warning(&format!("No weight data was loaded for attribute '{}'.", measure));
+        }
+        // shortcut: SUMOAbstractRouter::Operation is still (), so the effort operation is not selected and the weighted router cannot route yet
+        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, (), (), false, Ptr::null(), net.has_permissions(), false);
+    }
+    let router: &mut crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle> = &mut dijkstra.base;
+    // shortcut: RORouterProvider and the HAVE_FOX worker threads are not ported, routing runs on this thread only
+    // prepare the output
+    net.open_output(oc);
+    // process route definitions
+    if oc.is_set("timeline", true).unwrap_or_else(|e| panic!("{e}")) {
+        let timeline = oc.get_string_vector("timeline").unwrap_or_else(|e| panic!("{e}")).clone();
+        let dayInHours = oc.get_bool("timeline.day-in-hours").unwrap_or_else(|e| panic!("{e}"));
+        let points = matrix.parse_time_line(&timeline, dayInHours);
+        matrix.apply_curve(&points);
+    }
+    matrix.sort_by_begin_time();
+    let haveOutput = OutputDevice::create_device_by_option("netload-output", "meandata", "", -1).unwrap_or_else(|e| panic!("{e}"));
+    let defaultVType = net.get_vehicle_type_secure(utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID);
+    let defaultVehicle = ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), defaultVType, Ptr::from_mut(&mut *net), Ptr::null());
+    let netloadOutput: Ptr<OutputDevice> = if haveOutput {
+        Ptr::from_raw(OutputDevice::get_device_by_option("netload-output").unwrap_or_else(|e| panic!("{e}")).as_ptr())
+    } else {
+        Ptr::null()
+    };
+    let mut a = ROMAAssignments::new(
+        begin,
+        end,
+        oc.get_bool("additive-traffic").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_float("weight-adaption").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_int("max-alternatives").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_bool("capacities.default").unwrap_or_else(|e| panic!("{e}")),
+        net,
+        matrix,
+        router,
+        netloadOutput,
+    );
+    a.reset_flows();
+    // shortcut: router->reset(&defaultVehicle) (CH router initialisation) and the worker thread pool are not ported
+    let _ = &defaultVehicle;
+    let mut assignMethod = oc.get_string("assignment-method").unwrap_or_else(|e| panic!("{e}"));
+    if assignMethod == "UE" {
+        utils::common::msg_handler::write_warning("Deterministic user equilibrium ('UE') is not implemented yet, using stochastic method ('SUE').");
+        assignMethod = "SUE".to_string();
+    }
+    if assignMethod == "incremental" {
+        a.incremental(oc.get_int("max-iterations").unwrap_or_else(|e| panic!("{e}")), oc.get_bool("verbose").unwrap_or_else(|e| panic!("{e}")));
+    } else if assignMethod == "SUE" {
+        a.sue(
+            oc.get_int("max-iterations").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_int("max-inner-iterations").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_int("paths").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_float("paths.penalty").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_float("tolerance").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_string("route-choice-method").unwrap_or_else(|e| panic!("{e}")),
+        );
+    }
+    // update path costs and output
+    let dev = net.get_route_output(false);
+    if !dev.is_null() {
+        // shortcut: the per-ODCell route flow output (pathsVector, departures, OutputDevice_String and RORoute::writeXMLDefinition) is not ported
+        panic!("shortcut: route output per ODCell is not ported");
+    }
+    if !haveOutput {
+        panic!("{}", ProcessError::new("No output file given."));
+    }
+    // end the processing
+    net.cleanup();
 }
 
 /// C++: `double (const ROEdge *const, const ROVehicle *const, double) getTravelTime`
