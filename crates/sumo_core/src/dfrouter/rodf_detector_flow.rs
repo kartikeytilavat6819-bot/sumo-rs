@@ -80,8 +80,8 @@ impl RODFDetectorFlows {
     //     } else {
     //         ofd.qLKW = ofd.qLKW + fd.qLKW;
     //         ofd.qPKW = ofd.qPKW + fd.qPKW;
-    //         ofd.vLKW = ofd.vLKW + fd.vLKW; //!!! mean value?
-    //         ofd.vPKW = ofd.vPKW + fd.vPKW; //!!! mean value?
+    //         ofd.vLKW = ofd.vLKW + fd.vLKW; // !!! mean value?
+    //         ofd.vPKW = ofd.vPKW + fd.vPKW; // !!! mean value?
     //     }
     //     if (ofd.qPKW != 0) {
     //         ofd.fLKW = ofd.qLKW / (ofd.qLKW + ofd.qPKW);
@@ -116,8 +116,8 @@ impl RODFDetectorFlows {
         } else {
             ofd.qLKW = ofd.qLKW + fd.qLKW;
             ofd.qPKW = ofd.qPKW + fd.qPKW;
-            ofd.vLKW = ofd.vLKW + fd.vLKW; //!!! mean value?
-            ofd.vPKW = ofd.vPKW + fd.vPKW; //!!! mean value?
+            ofd.vLKW = ofd.vLKW + fd.vLKW; // !!! mean value?
+            ofd.vPKW = ofd.vPKW + fd.vPKW; // !!! mean value?
         }
         if ofd.qPKW != 0.0 {
             ofd.fLKW = ofd.qLKW / (ofd.qLKW + ofd.qPKW);

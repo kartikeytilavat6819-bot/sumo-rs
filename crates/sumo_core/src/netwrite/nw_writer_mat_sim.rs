@@ -60,25 +60,26 @@ impl NWWriter_MATSim {
             return;
         }
         // shortcut: device << double uses the stream's %g-style precision (gPrecision = 2) which needs utils::common::to_string::f64_to_string_prec; Rust Display is used until that port is in this worktree
-        let mut device = or_panic(OutputDevice::get_device(&or_panic(oc.get_string("matsim-output")), true));
-        device.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
-        device.write("<!DOCTYPE network SYSTEM \"http://www.matsim.org/files/dtd/network_v1.dtd\">\n\n");
-        device.write("<network name=\"NAME\">\n"); // !!! name
+        let device = or_panic(OutputDevice::get_device(&or_panic(oc.get_string("matsim-output")), true));
+        let mut dev = device.borrow_mut();
+        dev.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        dev.write("<!DOCTYPE network SYSTEM \"http://www.matsim.org/files/dtd/network_v1.dtd\">\n\n");
+        dev.write("<network name=\"NAME\">\n"); // !!! name
         // write nodes
-        device.write("   <nodes>\n");
+        dev.write("   <nodes>\n");
         let nc = nb.get_node_cont();
         for (id, node) in nc.begin() {
-            device.write("      <node id=\"").write(id.as_str())
+            dev.write("      <node id=\"").write(id.as_str())
                 .write("\" x=\"").write(&format!("{}", node.get_position().x()))
                 .write("\" y=\"").write(&format!("{}", node.get_position().y()))
                 .write("\"/>\n");
         }
-        device.write("   </nodes>\n");
+        dev.write("   </nodes>\n");
         // write edges
-        device.write("   <links capperiod=\"01:00:00\">\n");
+        dev.write("   <links capperiod=\"01:00:00\">\n");
         let ec = nb.get_edge_cont();
         for (id, edge) in ec.begin() {
-            device.write("      <link id=\"").write(id.as_str())
+            dev.write("      <link id=\"").write(id.as_str())
                 .write("\" from=\"").write(edge.get_from_node().get_id())
                 .write("\" to=\"").write(edge.get_to_node().get_id())
                 .write("\" length=\"").write(&format!("{}", edge.get_loaded_length()))
@@ -87,10 +88,10 @@ impl NWWriter_MATSim {
                 .write("\" permlanes=\"").write(&format!("{}", edge.get_num_lanes()))
                 .write("\"/>\n");
         }
-        device.write("   </links>\n");
+        dev.write("   </links>\n");
         //
-        device.write("</network>\n"); // !!! name
-        or_panic(device.close());
+        dev.write("</network>\n"); // !!! name
+        let _ = dev.close();
     }
 
 }
