@@ -34,6 +34,40 @@ fn add_step_6(logic: Ptr<NBTrafficLightLogic>, duration: SUMOTime, state: &str, 
     logic.m().add_step_2(duration, state, minDur, maxDur, earliestEnd, latestEnd, u, u, u, "", &Vec::new(), -1);
 }
 
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn own_tl_def_of(d: &NBTrafficLightDefinition) -> &NBOwnTLDef {
+    Ptr::new(d).cast::<NBOwnTLDef>().get().unwrap()
+}
+fn own_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBOwnTLDef {
+    Ptr::from_mut(d).cast::<NBOwnTLDef>().get_mut().unwrap()
+}
+fn own_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    own_tl_def_of_mut(d).collect_links()
+}
+fn own_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    own_tl_def_of(d).set_tl_controlling_information()
+}
+fn own_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    own_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn own_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    own_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn own_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    own_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn own_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    own_tl_def_of_mut(d).get_max_index()
+}
+static NB_OWN_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: own_tl_def_collect_links,
+    set_tl_controlling_information: own_tl_def_set_tl_controlling_information,
+    remap_removed: own_tl_def_remap_removed,
+    replace_removed: own_tl_def_replace_removed,
+    my_compute: own_tl_def_my_compute,
+    get_max_index: own_tl_def_get_max_index,
+};
+
 /// A traffic light logics which must be computed (only nodes/edges are given)
 /// C++ class `NBOwnTLDef` (netbuild/NBOwnTLDef.h)
 #[repr(C)]
@@ -73,11 +107,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+        let mut d = Self {
             base: NBTrafficLightDefinition::new(id, junctions, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        };
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -90,11 +126,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+        let mut d = Self {
             base: NBTrafficLightDefinition::new_2(id, junction, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        };
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, SUMOTime, TrafficLightType)`
@@ -107,11 +145,13 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+        let mut d = Self {
             base: NBTrafficLightDefinition::new_3(id, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        };
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBOwnTLDef::~NBOwnTLDef() noexcept` [virtual]

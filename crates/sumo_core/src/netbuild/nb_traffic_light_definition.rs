@@ -19,12 +19,58 @@ pub type NBTrafficLightDefinition_ExtraConflicts = BTreeSet<(i32, i32)>;
 /// C++ typedef `std::set<StreamPair> NBTrafficLightDefinition::NeedsContRelation`
 pub type NBTrafficLightDefinition_NeedsContRelation = BTreeSet<NBTrafficLightDefinition_StreamPair>;
 
+/// Virtual dispatch table for the pure virtual methods of NBTrafficLightDefinition.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct NBTrafficLightDefinitionVt {
+    pub collect_links: fn(&mut NBTrafficLightDefinition),
+    pub set_tl_controlling_information: fn(&NBTrafficLightDefinition),
+    pub remap_removed: fn(&mut NBTrafficLightDefinition, Ptr<NBEdge>, &EdgeVector, &EdgeVector),
+    pub replace_removed: fn(&mut NBTrafficLightDefinition, Ptr<NBEdge>, i32, Ptr<NBEdge>, i32, bool),
+    pub my_compute: fn(&mut NBTrafficLightDefinition, i32) -> Ptr<NBTrafficLightLogic>,
+    pub get_max_index: fn(&mut NBTrafficLightDefinition) -> i32,
+}
+
+fn default_collect_links(_: &mut NBTrafficLightDefinition) {
+    panic!("NBTrafficLightDefinition::collectLinks is pure virtual")
+}
+
+fn default_set_tl_controlling_information(_: &NBTrafficLightDefinition) {
+    panic!("NBTrafficLightDefinition::setTLControllingInformation is pure virtual")
+}
+
+fn default_remap_removed(_: &mut NBTrafficLightDefinition, _: Ptr<NBEdge>, _: &EdgeVector, _: &EdgeVector) {
+    panic!("NBTrafficLightDefinition::remapRemoved is pure virtual")
+}
+
+fn default_replace_removed(_: &mut NBTrafficLightDefinition, _: Ptr<NBEdge>, _: i32, _: Ptr<NBEdge>, _: i32, _: bool) {
+    panic!("NBTrafficLightDefinition::replaceRemoved is pure virtual")
+}
+
+fn default_my_compute(_: &mut NBTrafficLightDefinition, _: i32) -> Ptr<NBTrafficLightLogic> {
+    panic!("NBTrafficLightDefinition::myCompute is pure virtual")
+}
+
+fn default_get_max_index(_: &mut NBTrafficLightDefinition) -> i32 {
+    panic!("NBTrafficLightDefinition::getMaxIndex is pure virtual")
+}
+
+static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: default_collect_links,
+    set_tl_controlling_information: default_set_tl_controlling_information,
+    remap_removed: default_remap_removed,
+    replace_removed: default_replace_removed,
+    my_compute: default_my_compute,
+    get_max_index: default_get_max_index,
+};
+
 /// The base class for traffic light logic definitions
 /// C++ class `NBTrafficLightDefinition` (netbuild/NBTrafficLightDefinition.h)
 #[repr(C)]
 pub struct NBTrafficLightDefinition {
     /// C++ base class `Named`
     pub base: Named,
+    /// Virtual dispatch table; must stay after `base`
+    pub vt: &'static NBTrafficLightDefinitionVt,
     /// C++ base class `Parameterised`
     pub base2: Parameterised,
     /// The container with participating nodes
@@ -123,6 +169,7 @@ impl NBTrafficLightDefinition {
         // shortcut: C++ calls node->addTrafficLight(this) here, but `this` is not stable in a by-value constructor, so the nodes are not registered (callers must register after boxing), upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
+            vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
             base2: Parameterised::new(),
             myControlledNodes,
             myIncomingEdges: Vec::new(),
@@ -156,6 +203,7 @@ impl NBTrafficLightDefinition {
         // shortcut: C++ addNode(junction) also calls junction->addTrafficLight(this); `this` is not stable in a by-value constructor, so only the node list is filled, upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
+            vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
             base2: Parameterised::new(),
             myControlledNodes: vec![junction],
             myIncomingEdges: Vec::new(),
@@ -187,6 +235,7 @@ impl NBTrafficLightDefinition {
     pub fn new_3(id: &str, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
         Self {
             base: Named::new(id),
+            vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
             base2: Parameterised::new(),
             myControlledNodes: Vec::new(),
             myIncomingEdges: Vec::new(),
@@ -634,8 +683,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_tl_controlling_information(&self) {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::setTLControllingInformation is pure virtual")
+        (self.vt.set_tl_controlling_information)(self)
     }
 
     /// C++: `void NBTrafficLightDefinition::setParticipantsInformation()` [virtual]
@@ -680,8 +728,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remap_removed(&mut self, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::remapRemoved is pure virtual")
+        (self.vt.remap_removed)(self, removed, incoming, outgoing)
     }
 
     /// C++: `void NBTrafficLightDefinition::replaceRemoved(NBEdge *, int, NBEdge *, int, bool)` [virtual, pure virtual]
@@ -689,8 +736,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn replace_removed(&mut self, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::replaceRemoved is pure virtual")
+        (self.vt.replace_removed)(self, removed, removedLane, by, byLane, incoming)
     }
 
     /// C++: `void NBTrafficLightDefinition::shiftTLConnectionLaneIndex(NBEdge *, int, int)` [virtual]
@@ -896,8 +942,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_index(&mut self) -> i32 {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::getMaxIndex is pure virtual")
+        (self.vt.get_max_index)(self)
     }
 
     /// C++: `int NBTrafficLightDefinition::getMaxValidIndex()` [virtual]
@@ -984,8 +1029,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn my_compute(&mut self, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::myCompute is pure virtual")
+        (self.vt.my_compute)(self, brakingTime)
     }
 
     /// C++: `void NBTrafficLightDefinition::collectLinks()` [virtual, pure virtual, protected]
@@ -993,8 +1037,7 @@ impl NBTrafficLightDefinition {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        // pure virtual in C++: there is no base implementation, subclasses provide it
-        unreachable!("NBTrafficLightDefinition::collectLinks is pure virtual")
+        (self.vt.collect_links)(self)
     }
 
     /// C++: `void NBTrafficLightDefinition::collectEdges()` [virtual, protected]

@@ -6,6 +6,40 @@ use utils::common::msg_handler::write_warning;
 /// C++ typedef `std::map<std::string, SignalGroup *> NBLoadedTLDef::SignalGroupCont`
 pub type NBLoadedTLDef_SignalGroupCont = BTreeMap<String, Ptr<NBLoadedTLDef_SignalGroup>>;
 
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn loaded_tl_def_of(d: &NBTrafficLightDefinition) -> &NBLoadedTLDef {
+    Ptr::new(d).cast::<NBLoadedTLDef>().get().unwrap()
+}
+fn loaded_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBLoadedTLDef {
+    Ptr::from_mut(d).cast::<NBLoadedTLDef>().get_mut().unwrap()
+}
+fn loaded_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    loaded_tl_def_of_mut(d).collect_links()
+}
+fn loaded_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    loaded_tl_def_of(d).set_tl_controlling_information()
+}
+fn loaded_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    loaded_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn loaded_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    loaded_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn loaded_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    loaded_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn loaded_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    loaded_tl_def_of_mut(d).get_max_index()
+}
+static NB_LOADED_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: loaded_tl_def_collect_links,
+    set_tl_controlling_information: loaded_tl_def_set_tl_controlling_information,
+    remap_removed: loaded_tl_def_remap_removed,
+    replace_removed: loaded_tl_def_replace_removed,
+    my_compute: loaded_tl_def_my_compute,
+    get_max_index: loaded_tl_def_get_max_index,
+};
+
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedTLDef` (netbuild/NBLoadedTLDef.h)
 #[repr(C)]
@@ -41,12 +75,14 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+        let mut d = NBLoadedTLDef {
             base: NBTrafficLightDefinition::new(id, junctions, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        };
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -57,12 +93,14 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+        let mut d = NBLoadedTLDef {
             base: NBTrafficLightDefinition::new_2(id, junction, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        };
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, SUMOTime, TrafficLightType)`
@@ -73,12 +111,14 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(ec: &NBEdgeCont, id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+        let mut d = NBLoadedTLDef {
             base: NBTrafficLightDefinition::new_3(id, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        };
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBLoadedTLDef::~NBLoadedTLDef() noexcept` [virtual]
