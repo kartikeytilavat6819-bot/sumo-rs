@@ -2025,6 +2025,8 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_container: ms_vehicle_is_container,
     get_parameter: ms_vehicle_get_parameter,
     get_edge: ms_vehicle_get_edge,
+    get_lane: ms_vehicle_get_lane,
+    get_speed: ms_vehicle_get_speed,
     get_position: ms_vehicle_get_position,
     get_numerical_id: ms_vehicle_get_numerical_id,
     get_random_seed: ms_vehicle_get_random_seed,
@@ -2181,14 +2183,6 @@ fn ms_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevic
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
     let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
     MSBaseVehicle::get_parameter(v)
-}
-fn ms_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
-    let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
-    MSBaseVehicle::get_numerical_id(v)
-}
-fn ms_vehicle_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
-    let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
-    MSBaseVehicle::get_v_class(v)
 }
 fn ms_vehicle_of_mut(v: &mut SUMOVehicle) -> &mut MSVehicle {
     Ptr::from_mut(v).cast::<MSVehicle>().get_mut().unwrap()

@@ -3046,9 +3046,12 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_parking(&self) -> bool {
+        // C++ short-circuits on isStopped(); keep that order, the stop list may be empty
+        if !self.is_stopped() {
+            return false;
+        }
         let front = self.myStops.front().unwrap();
-        self.is_stopped()
-            && (front.pars.parking == ParkingType::OFFROAD)
+        (front.pars.parking == ParkingType::OFFROAD)
             && (front.parkingarea.is_null() || !front.parkingarea.park_on_road())
             && (front.get_speed() == 0.0 || self.get_speed() < utils::common::std_defs::SUMO_CONST_HALTING_SPEED)
     }
@@ -4680,7 +4683,7 @@ impl MSBaseVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        panic!("hasInfluencer() is pure virtual in MSBaseVehicle");
+        false // shortcut: no myInfluencer field yet, so nothing can be attached; C++ returns myInfluencer != nullptr
     }
 
     /// C++: `int MSBaseVehicle::getRoutingMode() const` [const, virtual]
