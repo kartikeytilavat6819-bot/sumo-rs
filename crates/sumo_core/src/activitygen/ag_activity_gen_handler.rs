@@ -699,7 +699,7 @@ impl AGActivityGenHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &AGActivityGenHandler) -> Self {
-        todo!("port AGActivityGenHandler::AGActivityGenHandler")
+        panic!("AGActivityGenHandler(const AGActivityGenHandler&) is private and never defined in C++")
     }
 
     /// C++: `AGActivityGenHandler & AGActivityGenHandler::operator=(const AGActivityGenHandler &)` [private]
@@ -707,7 +707,7 @@ impl AGActivityGenHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &AGActivityGenHandler) -> &mut AGActivityGenHandler {
-        todo!("port AGActivityGenHandler::operator=")
+        panic!("AGActivityGenHandler::operator= is private and never defined in C++")
     }
 
 }
