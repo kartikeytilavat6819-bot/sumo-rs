@@ -1113,7 +1113,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_devices(&self) -> &Vec<Ptr<MSVehicleDevice>> {
-        todo!("port SUMOVehicle::getDevices")
+        (self.vt.get_devices)(self)
     }
 
     /// C++: `double SUMOVehicle::getLength() const` [const, virtual, pure virtual]
@@ -1128,14 +1128,14 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_rail(&self) -> bool {
-        todo!("port SUMOVehicle::isRail")
+        (self.vt.is_rail)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getLastActionTime() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_last_action_time(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getLastActionTime")
+        (self.vt.get_last_action_time)(self)
     }
 
     /// C++: `PositionVector SUMOVehicle::getBoundingBox(double) const` [const, virtual, pure virtual]
@@ -1143,84 +1143,84 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_bounding_box(&self, offset: f64) -> PositionVector {
-        todo!("port SUMOVehicle::getBoundingBox")
+        (self.vt.get_bounding_box)(self, offset)
     }
 
     /// C++: `std::unique_ptr<MFXOptionalLock> SUMOVehicle::getScopeLock()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_scope_lock(&mut self) -> Box<Unmapped /* MFXOptionalLock */> {
-        todo!("port SUMOVehicle::getScopeLock")
+        (self.vt.get_scope_lock)(self)
     }
 
     /// C++: `void SUMOVehicle::rememberBlockedParkingArea(const MSStoppingPlace *, bool)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_blocked_parking_area(&mut self, pa: Ptr<MSStoppingPlace>, local: bool) {
-        todo!("port SUMOVehicle::rememberBlockedParkingArea")
+        (self.vt.remember_blocked_parking_area)(self, pa, local)
     }
 
     /// C++: `SUMOTime SUMOVehicle::sawBlockedParkingArea(const MSStoppingPlace *, bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn saw_blocked_parking_area(&self, pa: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        todo!("port SUMOVehicle::sawBlockedParkingArea")
+        (self.vt.saw_blocked_parking_area)(self, pa, local)
     }
 
     /// C++: `void SUMOVehicle::rememberParkingAreaScore(const MSStoppingPlace *, const std::string &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_parking_area_score(&mut self, pa: Ptr<MSStoppingPlace>, score: &str) {
-        todo!("port SUMOVehicle::rememberParkingAreaScore")
+        (self.vt.remember_parking_area_score)(self, pa, score)
     }
 
     /// C++: `void SUMOVehicle::resetParkingAreaScores()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_parking_area_scores(&mut self) {
-        todo!("port SUMOVehicle::resetParkingAreaScores")
+        (self.vt.reset_parking_area_scores)(self)
     }
 
     /// C++: `int SUMOVehicle::getNumberParkingReroutes() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_number_parking_reroutes(&self) -> i32 {
-        todo!("port SUMOVehicle::getNumberParkingReroutes")
+        (self.vt.get_number_parking_reroutes)(self)
     }
 
     /// C++: `void SUMOVehicle::setNumberParkingReroutes(int)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_number_parking_reroutes(&mut self, value: i32) {
-        todo!("port SUMOVehicle::setNumberParkingReroutes")
+        (self.vt.set_number_parking_reroutes)(self, value)
     }
 
     /// C++: `void SUMOVehicle::rememberBlockedChargingStation(const MSStoppingPlace *, bool)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_blocked_charging_station(&mut self, cs: Ptr<MSStoppingPlace>, local: bool) {
-        todo!("port SUMOVehicle::rememberBlockedChargingStation")
+        (self.vt.remember_blocked_charging_station)(self, cs, local)
     }
 
     /// C++: `SUMOTime SUMOVehicle::sawBlockedChargingStation(const MSStoppingPlace *, bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn saw_blocked_charging_station(&self, cs: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        todo!("port SUMOVehicle::sawBlockedChargingStation")
+        (self.vt.saw_blocked_charging_station)(self, cs, local)
     }
 
     /// C++: `void SUMOVehicle::rememberChargingStationScore(const MSStoppingPlace *, const std::string &)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_charging_station_score(&mut self, cs: Ptr<MSStoppingPlace>, score: &str) {
-        todo!("port SUMOVehicle::rememberChargingStationScore")
+        (self.vt.remember_charging_station_score)(self, cs, score)
     }
 
     /// C++: `void SUMOVehicle::resetChargingStationScores()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_charging_station_scores(&mut self) {
-        todo!("port SUMOVehicle::resetChargingStationScores")
+        (self.vt.reset_charging_station_scores)(self)
     }
 
     /// C++: `void SUMOVehicle::saveState(OutputDevice &)` [virtual, pure virtual]
