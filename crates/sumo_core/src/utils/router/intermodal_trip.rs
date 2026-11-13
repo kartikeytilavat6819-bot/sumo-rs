@@ -1,6 +1,7 @@
 //! Port of utils/router/IntermodalTrip.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterVehicle;
 
 /// the "vehicle" type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalTrip` (utils/router/IntermodalTrip.h)
@@ -18,6 +19,12 @@ pub struct IntermodalTrip<E, N, V> {
     pub calc: Ptr<EffortCalculator>,
     pub externalFactor: f64,
     _p: std::marker::PhantomData<(E, N, V,)>,
+}
+
+impl<E, N, V> RouterVehicle for IntermodalTrip<E, N, V> {
+    fn v_class(&self) -> SUMOVehicleClass {
+        self.get_v_class()
+    }
 }
 
 impl<E, N, V> IntermodalTrip<E, N, V> {

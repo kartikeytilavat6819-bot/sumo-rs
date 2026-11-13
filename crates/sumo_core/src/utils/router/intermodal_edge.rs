@@ -1,6 +1,7 @@
 //! Port of utils/router/IntermodalEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalEdge` (utils/router/IntermodalEdge.h)
@@ -34,6 +35,54 @@ impl<E, L, N, V> std::ops::Deref for IntermodalEdge<E, L, N, V> {
 impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
     fn deref_mut(&mut self) -> &mut Named {
         &mut self.base
+    }
+}
+
+impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N, V> {
+    type Node = N;
+    type Lane = L;
+    fn id(&self) -> &str {
+        self.base.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        self.get_length_geometry_factor()
+    }
+    // shortcut: IntermodalEdge::getDistanceTo always estimates the boundary, a false flag is not supported, upgrade when the C++ flag is threaded through
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        if !do_boundary_estimate {
+            panic!("shortcut: IntermodalEdge::getDistanceTo without boundary estimate")
+        }
+        self.get_distance_to(other)
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        self.get_successors(vclass)
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn speed_limit(&self) -> f64 {
+        self.get_speed_limit()
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
+        Self::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
+        Self::get_travel_time_aggregated_2(edge, veh, time)
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<IntermodalTrip<E, N, V>>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<IntermodalTrip<E, N, V>>) -> bool {
+        self.restricts(veh)
     }
 }
 
