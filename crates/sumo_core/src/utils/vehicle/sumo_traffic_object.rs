@@ -18,6 +18,7 @@ pub struct SUMOTrafficObjectVt {
     pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
     pub get_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
     pub get_numerical_id: fn(&SUMOTrafficObject) -> SUMOTrafficObject_NumericalID,
+    pub get_v_class: fn(&SUMOTrafficObject) -> SUMOVehicleClass,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
@@ -36,6 +37,10 @@ pub fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_Nume
     panic!("SUMOTrafficObject::getNumericalID is pure virtual")
 }
 
+pub fn default_get_v_class(_: &SUMOTrafficObject) -> SUMOVehicleClass {
+    panic!("SUMOTrafficObject::getVClass is pure virtual")
+}
+
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: default_is_false,
     is_person: default_is_false,
@@ -43,6 +48,7 @@ static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt
     get_parameter: default_get_parameter,
     get_edge: default_get_edge,
     get_numerical_id: default_get_numerical_id,
+    get_v_class: default_get_v_class,
 };
 
 /// Representation of a vehicle, person, or container
@@ -278,7 +284,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        panic!("SUMOTrafficObject::getVClass is pure virtual")
+        (self.vt.get_v_class)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::ignoreTransientPermissions() const` [const, virtual]

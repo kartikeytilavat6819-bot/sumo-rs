@@ -2026,6 +2026,7 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     get_parameter: ms_vehicle_get_parameter,
     get_edge: ms_vehicle_get_edge,
     get_numerical_id: ms_vehicle_get_numerical_id,
+    get_v_class: ms_vehicle_get_v_class,
 };
 
 // C++ virtual overrides of SUMOVehicle, dispatched through SUMOVehicle::vt
@@ -2044,6 +2045,10 @@ fn ms_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
 fn ms_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
     let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
     MSBaseVehicle::get_numerical_id(v)
+}
+fn ms_vehicle_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    let v: &MSVehicle = Ptr::new(o).cast::<MSVehicle>().get().unwrap();
+    MSBaseVehicle::get_v_class(v)
 }
 fn ms_vehicle_of_mut(v: &mut SUMOVehicle) -> &mut MSVehicle {
     Ptr::from_mut(v).cast::<MSVehicle>().get_mut().unwrap()
