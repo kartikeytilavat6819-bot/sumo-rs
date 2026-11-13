@@ -430,19 +430,19 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
     //         const MSDevice_BTsender::VehicleState& senderState,
     //         SeenDevice* senderDevice) const {
     //     if (senderDevice->nextView == -1.) {
-    //         senderDevice->nextView = senderDevice->lastView + inquiryDelaySlots(int(myOffTime / 0.000625 + .5)) * 0.000625;
+    //         senderDevice->nextView = senderDevice->lastView + inquiryDelaySlots(int(myOffTime / 0.000625 + 0.5)) * 0.000625;
     //     }
     //     if (tEnd > senderDevice->nextView) {
     //         senderDevice->lastView = senderDevice->nextView;
     //         MeetingPoint* mp = new MeetingPoint(tEnd, receiverState, senderState);
     //         senderDevice->recognitionPoints.push_back(mp);
-    //         senderDevice->nextView = senderDevice->lastView + inquiryDelaySlots(int(myOffTime / 0.000625 + .5)) * 0.000625;
+    //         senderDevice->nextView = senderDevice->lastView + inquiryDelaySlots(int(myOffTime / 0.000625 + 0.5)) * 0.000625;
     //     }
     // }
     #[allow(unused_variables)]
     pub fn add_recognition_point(&self, tEnd: f64, receiverState: &MSDevice_BTsender_VehicleState, senderState: &MSDevice_BTsender_VehicleState, senderDevice: Ptr<MSDevice_BTreceiver_SeenDevice>) {
         let sd = senderDevice.m();
-        let backoffLimit = (MY_OFF_TIME.with(|c| c.get()) / 0.000625 + .5) as i32;
+        let backoffLimit = (MY_OFF_TIME.with(|c| c.get()) / 0.000625 + 0.5) as i32;
         if sd.nextView == -1. {
             sd.nextView = sd.lastView + MSDevice_BTreceiver::inquiry_delay_slots(backoffLimit) * 0.000625;
         }

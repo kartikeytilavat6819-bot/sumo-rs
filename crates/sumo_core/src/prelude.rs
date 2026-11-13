@@ -727,3 +727,11 @@ pub use crate::utils::vehicle::sumo_vehicle::*;
 pub use crate::utils::vehicle::sumo_vehicle_parameter::*;
 pub use crate::utils::vehicle::sumo_vehicle_parser_helper::*;
 pub use crate::utils::vehicle::sumov_type_parameter::*;
+
+/// Convenience for ported code that must not silently ignore a `Result`: unwraps it or panics.
+pub fn or_panic<T, E: std::fmt::Debug>(r: Result<T, E>) -> T {
+    match r {
+        Ok(v) => v,
+        Err(e) => panic!("{e:?}"),
+    }
+}

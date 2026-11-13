@@ -1776,6 +1776,7 @@ impl NBRailwayTopologyAnalyzer {
             write_messagef!("Added % bidi-edges as extension of existing bidi edges.", added);
         }
         added
+    }
     // int
     // NBRailwayTopologyAnalyzer::extendBidiEdges(NBEdgeCont& ec, NBNode* node, NBEdge* bidiIn) {
     //     assert(bidiIn->getToNode() == node);
@@ -3106,6 +3107,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     /// C++: `const std::vector<Track *> & Track::getSuccessors(SUMOVehicleClass) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
+    #[allow(invalid_reference_casting)]
     pub fn get_successors(&self, svc: SUMOVehicleClass) -> &Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> {
         if (self.minPermissions & svc) != 0 {
             return &self.successors;
@@ -3127,6 +3129,7 @@ impl NBRailwayTopologyAnalyzer_Track {
     /// C++: `const std::vector<std::pair<const Track *, const Track *>> & Track::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
+    #[allow(invalid_reference_casting)]
     pub fn get_via_successors(&self, svc: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> {
         if (self.minPermissions & svc) != 0 {
             return &self.viaSuccessors;

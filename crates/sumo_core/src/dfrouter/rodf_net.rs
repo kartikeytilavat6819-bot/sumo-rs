@@ -308,7 +308,8 @@ impl RODFNet {
     #[allow(unused_variables)]
     pub fn compute_types(&self, dets: &mut RODFDetectorCon, sourcesStrict: bool) {
         // mutable counters of a const method in C++: mutate through the shared pointer
-        let this = Ptr::new(self).m();
+        let this_ptr = Ptr::new(self);
+        let this = this_ptr.m();
         progress_begin_message("Computing detector types");
         let dets_list = dets.get_detectors().clone();
         // build needed information. first
@@ -366,7 +367,7 @@ impl RODFNet {
     //         doneEdges[e] = routes;
     //         RODFRouteDesc rd;
     //         rd.edges2Pass.push_back(e);
-    //         rd.duration_2 = (e->getLength() / e->getSpeedLimit()); //!!!;
+    //         rd.duration_2 = (e->getLength() / e->getSpeedLimit()); // !!!;
     //         rd.endDetectorEdge = nullptr;
     //         rd.lastDetectorEdge = nullptr;
     //         rd.distance = e->getLength();
@@ -379,7 +380,7 @@ impl RODFNet {
     //         visited.push_back(e);
     //         computeRoutesFor(e, rd, 0, keepUnfoundEnds, keepShortestOnly,
     //                          visited, **i, *routes, detcont, maxFollowingLength, seen);
-    //         //!!!routes->removeIllegal(illegals);
+    //         // !!!routes->removeIllegal(illegals);
     //         (*i)->addRoutes(routes);
     //
     //         // add routes to in-between detectors if wished
@@ -405,7 +406,7 @@ impl RODFNet {
     //                         if (m.getType() == BETWEEN_DETECTOR) {
     //                             RODFRouteDesc nrd;
     //                             copy(k, routeend, back_inserter(nrd.edges2Pass));
-    //                             nrd.duration_2 = duration;//!!!;
+    //                             nrd.duration_2 = duration;// !!!;
     //                             nrd.endDetectorEdge = mrd.endDetectorEdge;
     //                             nrd.lastDetectorEdge = mrd.lastDetectorEdge;
     //                             nrd.distance = distance;
@@ -447,7 +448,7 @@ impl RODFNet {
             let mut rd = RODFRouteDesc {
                 edges2Pass: vec![e],
                 routename: String::new(),
-                duration_2: e.get_length() / e.get_speed_limit(), //!!!;
+                duration_2: e.get_length() / e.get_speed_limit(), // !!!;
                 distance: e.get_length(),
                 passedNo: 0,
                 endDetectorEdge: Ptr::null(),
@@ -459,7 +460,7 @@ impl RODFNet {
             };
             let mut visited: ROEdgeVector = vec![e];
             self.compute_routes_for(e, &mut rd, 0, keepUnfoundEnds, keepShortestOnly, &mut visited, i.m(), routes.m(), det, maxFollowingLength, &mut seen);
-            //!!!routes->removeIllegal(illegals);
+            // !!!routes->removeIllegal(illegals);
             i.m().add_routes(routes);
 
             // add routes to in-between detectors if wished
@@ -485,7 +486,7 @@ impl RODFNet {
                                 let mut nrd = RODFRouteDesc {
                                     edges2Pass: mrd.edges2Pass[k..].to_vec(),
                                     routename: String::new(),
-                                    duration_2: duration, //!!!;
+                                    duration_2: duration, // !!!;
                                     distance,
                                     passedNo: 0,
                                     endDetectorEdge: mrd.endDetectorEdge,
@@ -1884,7 +1885,7 @@ impl RODFNet {
     //                     current.distance2Last = current.distance;
     //                     current.endDetectorEdge = last;
     //                     if (hasSourceDetector(last, detectors)) {
-    // ///!!!                        //toDiscard.push_back(current);
+    // /// !!!                        //toDiscard.push_back(current);
     //                     }
     //                     current.factor = 1.;
     //                     double cdist = current.edges2Pass[0]->getFromJunction()->getPosition().distanceTo(current.edges2Pass.back()->getToJunction()->getPosition());
@@ -1939,7 +1940,7 @@ impl RODFNet {
     //                 continue;
     //             }
     //             RODFRouteDesc t(current);
-    //             t.duration_2 += (appr[i]->getLength() / appr[i]->getSpeedLimit()); //!!!
+    //             t.duration_2 += (appr[i]->getLength() / appr[i]->getSpeedLimit()); // !!!
     //             t.distance += appr[i]->getLength();
     //             t.edges2Pass.push_back(appr[i]);
     //             if (!addNextNoFurther) {
@@ -2084,7 +2085,7 @@ impl RODFNet {
                     continue;
                 }
                 let mut t = copy_route_desc(&current);
-                t.duration_2 += appr[i].get_length() / appr[i].get_speed_limit(); //!!!
+                t.duration_2 += appr[i].get_length() / appr[i].get_speed_limit(); // !!!
                 t.distance += appr[i].get_length();
                 t.edges2Pass.push(appr[i]);
                 if !addNextNoFurther {
@@ -2133,7 +2134,8 @@ impl RODFNet {
     #[allow(unused_variables)]
     pub fn build_detector_edge_dependencies(&self, dets: &mut RODFDetectorCon) {
         // const in C++, but it rebuilds the mutable edge caches
-        let this = Ptr::new(self).m();
+        let this_ptr = Ptr::new(self);
+        let this = this_ptr.m();
         this.myDetectorsOnEdges.clear();
         this.myDetectorEdges.clear();
         for i in dets.get_detectors().iter().copied() {
