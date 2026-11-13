@@ -40,6 +40,22 @@ impl std::ops::DerefMut for MSJunction {
     }
 }
 
+impl crate::utils::router::router_edge::RouterNode for MSJunction {
+    type Edge = MSEdge;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn position(&self) -> &Position {
+        self.get_position(false)
+    }
+    fn incoming(&self) -> &[Ptr<MSEdge>] {
+        self.get_incoming()
+    }
+    fn outgoing(&self) -> &[Ptr<MSEdge>] {
+        self.get_outgoing()
+    }
+}
+
 impl MSJunction {
     /// C++: `void MSJunction::MSJunction(const std::string &, SumoXMLNodeType, const Position &, const PositionVector &, const std::string &)`
     /// Constructor

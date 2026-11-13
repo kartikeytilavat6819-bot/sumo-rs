@@ -1,7 +1,46 @@
 //! Port of utils/router/KDTreePartition.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
+use std::collections::HashSet;
+
+/// Typed view of the type-erased node container shared by all cells (`Vec<Ptr<N>>` in C++ `std::vector<const N*>`)
+fn node_at<N>(nodes: Ptr<Vec<Ptr<()>>>, i: usize) -> Ptr<N> {
+    nodes.m()[i].cast::<N>()
+}
+
+/// The C++ `std::sort` comparator of KDTreePartition: NodeXComparator for X, NodeYComparator for Y, as a total order
+fn node_cmp<N: RouterNode>(a: Ptr<N>, b: Ptr<N>, axis: Axis) -> std::cmp::Ordering {
+    let less = |x: Ptr<N>, y: Ptr<N>| {
+        if axis == Axis::Y {
+            KDTreePartition_NodeYComparator {}.call_op(x, y)
+        } else {
+            KDTreePartition_NodeXComparator {}.call_op(x, y)
+        }
+    };
+    if less(a, b) {
+        std::cmp::Ordering::Less
+    } else if less(b, a) {
+        std::cmp::Ordering::Greater
+    } else {
+        std::cmp::Ordering::Equal
+    }
+}
+
+/// C++ `std::strtoimax(str, nullptr, 10)`: optional leading whitespace and sign, then decimal digits (0 if none)
+fn strtoimax10(s: &str) -> i64 {
+    let t = s.trim_start();
+    let (neg, digits) = match t.as_bytes().first() {
+        Some(b'-') => (true, &t[1..]),
+        Some(b'+') => (false, &t[1..]),
+        _ => (false, t),
+    };
+    let mut v: i64 = 0;
+    for b in digits.bytes().take_while(|b| b.is_ascii_digit()) {
+        v = v.wrapping_mul(10).wrapping_add((b - b'0') as i64);
+    }
+    if neg { -v } else { v }
+}
 /// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
 fn delete_ptr<T>(p: Ptr<T>) {
     if !p.is_null() {
@@ -23,11 +62,12 @@ pub enum Axis {
 /// C++ class `KDTreePartition::Cell` (utils/router/KDTreePartition.h)
 pub struct KDTreePartition_Cell {
     /// The cells
-    pub myCells: Ptr<i32>,
+    pub myCells: Ptr<Vec<Ptr<KDTreePartition_Cell>>>,
     /// The cells of all partitions at all levels of the k-d tree subdivisional scheme
-    pub myLevelCells: Ptr<i32>,
+    pub myLevelCells: Ptr<Vec<Vec<Ptr<KDTreePartition_Cell>>>>,
     /// The container with all nodes, sorted wrt to the k-d tree subdivisional scheme
-    pub mySortedNodes: Ptr<i32>,
+    /// (type-erased node pointers, cast back to `Vec<Ptr<N>>` in the methods)
+    pub mySortedNodes: Ptr<Vec<Ptr<()>>>,
     /// The total number of levels of the k-d tree
     pub myNumberOfLevels: i32,
     /// The level
@@ -41,10 +81,11 @@ pub struct KDTreePartition_Cell {
     /// The to-index (exclusive)
     pub myToExclusive: usize,
     /// Those nodes on the cell boundary, which are from-nodes of outgoing boundary edges
-    pub myBoundaryFromNodes: i32,
-    /// The incoming edges on the cell boundary
-    pub myIncomingBoundaryEdges: i32,
-    pub myOutgoingBoundaryEdges: i32,
+    pub myBoundaryFromNodes: Vec<Ptr<()>>,
+    /// The incoming edges on the cell boundary (type-erased edge pointers)
+    pub myIncomingBoundaryEdges: HashSet<Ptr<()>>,
+    /// The outgoing edges on the cell boundary (type-erased edge pointers)
+    pub myOutgoingBoundaryEdges: HashSet<Ptr<()>>,
     /// The super cell
     pub mySupercell: Ptr<KDTreePartition_Cell>,
     /// The left (cell's axis is X) or lower (cell's axis is Y) subcell
@@ -444,9 +485,127 @@ impl KDTreePartition_Cell {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(cells: Ptr<i32>, levelCells: Ptr<i32>, sortedNodes: Ptr<i32>, numberOfLevels: i32, level: i32, axis: Axis, fromInclusive: usize, toExclusive: usize, supercell: Ptr<KDTreePartition_Cell>, minX: f64, maxX: f64, minY: f64, maxY: f64, isLeftOrLowerCell: bool, vehicle: Ptr<Unmapped /* V */>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        // shortcut: Cell is not generic over N/E/V and mySortedNodes is an i32 placeholder, upgrade when the k-d tree storage is typed
-        panic!("shortcut: Cell::new needs typed cell storage and N accessors")
+    pub fn new<E, N, V>(cells: Ptr<Vec<Ptr<KDTreePartition_Cell>>>, levelCells: Ptr<Vec<Vec<Ptr<KDTreePartition_Cell>>>>, sortedNodes: Ptr<Vec<Ptr<()>>>, numberOfLevels: i32, level: i32, axis: Axis, fromInclusive: usize, toExclusive: usize, supercell: Ptr<KDTreePartition_Cell>, minX: f64, maxX: f64, minY: f64, maxY: f64, isLeftOrLowerCell: bool, vehicle: Ptr<V>, havePermissions: bool, haveRestrictions: bool) -> Box<Self>
+    where
+        E: RouterEdge<V, Node = N>,
+        N: RouterNode<Edge = E>,
+        V: RouterVehicle,
+    {
+        // shortcut: C++ throws std::invalid_argument here, Rust panics with the same message
+        if fromInclusive >= toExclusive {
+            panic!("Cell::Cell: myFromInclusive greater than or equal to myToExclusive!");
+        }
+        let myNumber = *Self::cell_counter();
+        *Self::cell_counter() += 1;
+        let mut b = Box::new(KDTreePartition_Cell {
+            myCells: cells,
+            myLevelCells: levelCells,
+            mySortedNodes: sortedNodes,
+            myNumberOfLevels: numberOfLevels,
+            myLevel: level,
+            myNumber,
+            myAxis: axis,
+            myFromInclusive: fromInclusive,
+            myToExclusive: toExclusive,
+            myBoundaryFromNodes: Vec::new(),
+            myIncomingBoundaryEdges: HashSet::new(),
+            myOutgoingBoundaryEdges: HashSet::new(),
+            mySupercell: supercell,
+            myLeftOrLowerSubcell: Ptr::null(),
+            myRightOrUpperSubcell: Ptr::null(),
+            myMinX: minX,
+            myMaxX: maxX,
+            myMinY: minY,
+            myMaxY: maxY,
+            myHasCompleteSpatialInfo: false,
+            myHasNodesSortedWrtToMyAxis: false,
+            myIsLeftOrLowerCell: isLeftOrLowerCell,
+            myHavePermissions: havePermissions,
+            myHaveRestrictions: haveRestrictions,
+            myMedianCoordinate: -1.,
+        });
+        let this = Ptr::from_mut(&mut *b);
+        cells.m()[myNumber as usize] = this;
+        levelCells.m()[level as usize].push(this);
+
+        // edge sets of the boundary (KDTP_KEEP_INCOMING_BOUNDARY_EDGES and KDTP_KEEP_OUTGOING_BOUNDARY_EDGES are defined)
+        let edgeSet = b.edge_set::<E, N, V>(vehicle);
+        for iter in fromInclusive..toExclusive {
+            let node: Ptr<N> = node_at::<N>(b.mySortedNodes, iter);
+            for &nodeEdge in node.m().incoming() {
+                if b.is_prohibited(nodeEdge, vehicle) {
+                    continue;
+                }
+                if nodeEdge.m().is_internal() {
+                    continue;
+                }
+                debug_assert!(nodeEdge.m().to_junction() == node);
+                if !edgeSet.contains(&nodeEdge) {
+                    b.myIncomingBoundaryEdges.insert(nodeEdge.cast::<()>());
+                }
+            }
+            let mut boundaryFromNode = false;
+            for &nodeEdge in node.m().outgoing() {
+                if b.is_prohibited(nodeEdge, vehicle) {
+                    continue;
+                }
+                if nodeEdge.m().is_internal() {
+                    continue;
+                }
+                debug_assert!(nodeEdge.m().from_junction() == node);
+                if !edgeSet.contains(&nodeEdge) {
+                    b.myOutgoingBoundaryEdges.insert(nodeEdge.cast::<()>());
+                    boundaryFromNode = true;
+                }
+            }
+            if boundaryFromNode {
+                b.myBoundaryFromNodes.push(node.cast::<()>());
+            }
+        }
+
+        let medianIndex = b.partition::<N>();
+        b.complete_spatial_info::<N>();
+
+        if level < numberOfLevels - 1 {
+            // determine min/max X/Y-values to pass on to left or lower subcell
+            let mut passMinX = -1.;
+            let mut passMaxX = -1.;
+            let mut passMinY = -1.;
+            let mut passMaxY = -1.;
+            if axis == Axis::X {
+                passMinX = b.myMinX;
+                passMaxX = node_at::<N>(b.mySortedNodes, medianIndex).m().position().x();
+                passMinY = b.myMinY;
+                passMaxY = b.myMaxY;
+            } else {
+                passMinX = b.myMinX;
+                passMaxX = b.myMaxX;
+                passMinY = b.myMinY;
+                passMaxY = node_at::<N>(b.mySortedNodes, medianIndex).m().position().y();
+            }
+            let left = KDTreePartition_Cell::new::<E, N, V>(cells, levelCells, sortedNodes, numberOfLevels, level + 1, KDTreePartition::<E, N, V>::flip(axis), fromInclusive, medianIndex + 1, this, passMinX, passMaxX, passMinY, passMaxY, true, vehicle, havePermissions, haveRestrictions);
+            b.myLeftOrLowerSubcell = Ptr::from_raw(Box::into_raw(left));
+
+            // determine min/max X/Y-values to pass on to right or upper subcell
+            if axis == Axis::X {
+                passMinX = node_at::<N>(b.mySortedNodes, medianIndex + 1).m().position().x();
+                passMaxX = b.myMaxX;
+                passMinY = b.myMinY;
+                passMaxY = b.myMaxY;
+            } else {
+                passMinX = b.myMinX;
+                passMaxX = b.myMaxX;
+                passMinY = node_at::<N>(b.mySortedNodes, medianIndex + 1).m().position().y();
+                passMaxY = b.myMaxY;
+            }
+            let right = KDTreePartition_Cell::new::<E, N, V>(cells, levelCells, sortedNodes, numberOfLevels, level + 1, KDTreePartition::<E, N, V>::flip(axis), medianIndex + 1, toExclusive, this, passMinX, passMaxX, passMinY, passMaxY, false, vehicle, havePermissions, haveRestrictions);
+            b.myRightOrUpperSubcell = Ptr::from_raw(Box::into_raw(right));
+        } else {
+            // leaves of the k-d tree: subcell pointers equal nullptr
+            b.myLeftOrLowerSubcell = Ptr::null();
+            b.myRightOrUpperSubcell = Ptr::null();
+        }
+        b
     }
 
     /// C++: `void Cell::~Cell()` [virtual]
@@ -523,9 +682,41 @@ impl KDTreePartition_Cell {
     //     return edgeSet;
     // }
     #[allow(unused_variables)]
-    pub fn edge_set(&self, vehicle: Ptr<Unmapped /* V */>) -> Ptr<i32> {
-        // shortcut: E has no getFromJunction/getToJunction in RouterEdge and N has no getIncoming/getOutgoing, upgrade when those traits exist
-        panic!("shortcut: Cell::edgeSet needs RouterEdge junctions and RouterNode edges")
+    pub fn edge_set<E, N, V>(&self, vehicle: Ptr<V>) -> HashSet<Ptr<E>>
+    where
+        E: RouterEdge<V, Node = N>,
+        N: RouterNode<Edge = E>,
+        V: RouterVehicle,
+    {
+        let mut edgeSet = HashSet::new();
+        for iter in self.myFromInclusive..self.myToExclusive {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, iter);
+            for &incomingEdge in node.m().incoming() {
+                if self.is_prohibited(incomingEdge, vehicle) {
+                    continue;
+                }
+                if incomingEdge.m().is_internal() {
+                    continue;
+                }
+                let edgeNode = incomingEdge.m().from_junction();
+                if self.contains::<N>(edgeNode) {
+                    edgeSet.insert(incomingEdge);
+                }
+            }
+            for &outgoingEdge in node.m().outgoing() {
+                if self.is_prohibited(outgoingEdge, vehicle) {
+                    continue;
+                }
+                if outgoingEdge.m().is_internal() {
+                    continue;
+                }
+                let edgeNode = outgoingEdge.m().to_junction();
+                if self.contains::<N>(edgeNode) {
+                    edgeSet.insert(outgoingEdge);
+                }
+            }
+        }
+        edgeSet
     }
 
     /// C++: `size_t Cell::numberOfEdgesEndingInCell(const V *const) const` [const]
@@ -554,9 +745,27 @@ impl KDTreePartition_Cell {
     //     return edgeCounter;
     // }
     #[allow(unused_variables)]
-    pub fn number_of_edges_ending_in_cell(&self, vehicle: Ptr<Unmapped /* V */>) -> usize {
-        // shortcut: N has no getIncoming in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::numberOfEdgesEndingInCell needs RouterNode::incoming")
+    pub fn number_of_edges_ending_in_cell<E, N, V>(&self, vehicle: Ptr<V>) -> usize
+    where
+        E: RouterEdge<V, Node = N>,
+        N: RouterNode<Edge = E>,
+        V: RouterVehicle,
+    {
+        let mut edgeCounter = 0;
+        for iter in self.myFromInclusive..self.myToExclusive {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, iter);
+            for &incomingEdge in node.m().incoming() {
+                if self.is_prohibited(incomingEdge, vehicle) {
+                    continue;
+                }
+                if incomingEdge.m().is_internal() {
+                    continue;
+                } else {
+                    edgeCounter += 1;
+                }
+            }
+        }
+        edgeCounter
     }
 
     /// C++: `size_t Cell::numberOfEdgesStartingInCell(const V *const) const` [const]
@@ -585,9 +794,27 @@ impl KDTreePartition_Cell {
     //     return edgeCounter;
     // }
     #[allow(unused_variables)]
-    pub fn number_of_edges_starting_in_cell(&self, vehicle: Ptr<Unmapped /* V */>) -> usize {
-        // shortcut: N has no getOutgoing in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::numberOfEdgesStartingInCell needs RouterNode::outgoing")
+    pub fn number_of_edges_starting_in_cell<E, N, V>(&self, vehicle: Ptr<V>) -> usize
+    where
+        E: RouterEdge<V, Node = N>,
+        N: RouterNode<Edge = E>,
+        V: RouterVehicle,
+    {
+        let mut edgeCounter = 0;
+        for iter in self.myFromInclusive..self.myToExclusive {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, iter);
+            for &outgoingEdge in node.m().outgoing() {
+                if self.is_prohibited(outgoingEdge, vehicle) {
+                    continue;
+                }
+                if outgoingEdge.m().is_internal() {
+                    continue;
+                } else {
+                    edgeCounter += 1;
+                }
+            }
+        }
+        edgeCounter
     }
 
     /// C++: `int Cell::getNumber() const` [const]
@@ -629,9 +856,8 @@ impl KDTreePartition_Cell {
     //     return nodes;
     // }
     #[allow(unused_variables)]
-    pub fn nodes(&self) -> Ptr<i32> {
-        // shortcut: mySortedNodes is an i32 placeholder, upgrade when the k-d tree storage is typed as Vec<Ptr<N>>
-        panic!("shortcut: Cell::nodes needs typed mySortedNodes")
+    pub fn nodes<N: RouterNode>(&self) -> Vec<Ptr<N>> {
+        (self.myFromInclusive..self.myToExclusive).map(|iter| node_at::<N>(self.mySortedNodes, iter)).collect()
     }
 
     /// C++: `const int & Cell::getBoundaryFromNodes() const` [const]
@@ -640,7 +866,7 @@ impl KDTreePartition_Cell {
     //             return myBoundaryFromNodes;
     //         }
     #[allow(unused_variables)]
-    pub fn get_boundary_from_nodes(&self) -> &i32 {
+    pub fn get_boundary_from_nodes(&self) -> &Vec<Ptr<()>> {
         &self.myBoundaryFromNodes
     }
 
@@ -650,7 +876,7 @@ impl KDTreePartition_Cell {
     //             return myIncomingBoundaryEdges;
     //         }
     #[allow(unused_variables)]
-    pub fn get_incoming_boundary_edges(&self) -> &i32 {
+    pub fn get_incoming_boundary_edges(&self) -> &HashSet<Ptr<()>> {
         &self.myIncomingBoundaryEdges
     }
 
@@ -660,7 +886,7 @@ impl KDTreePartition_Cell {
     //             return myOutgoingBoundaryEdges;
     //         }
     #[allow(unused_variables)]
-    pub fn get_outgoing_boundary_edges(&self) -> &i32 {
+    pub fn get_outgoing_boundary_edges(&self) -> &HashSet<Ptr<()>> {
         &self.myOutgoingBoundaryEdges
     }
 
@@ -809,9 +1035,15 @@ impl KDTreePartition_Cell {
     //     return true; // if the node does not lie on a spatial border, the passed in-bounds test suffices
     // }
     #[allow(unused_variables)]
-    pub fn contains(&self, node: Ptr<Unmapped /* N */>) -> bool {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::contains needs RouterNode::position")
+    pub fn contains<N: RouterNode>(&self, node: Ptr<N>) -> bool {
+        // the synthetic-network (KDTP_FOR_SYNTHETIC_NETWORKS) conflict-node test is not compiled in
+        if self.myLevel == 0 {
+            return true;
+        }
+        if !self.is_in_bounds(node) {
+            return false;
+        }
+        true
     }
 
     /// C++: `bool Cell::isLeftOrLowerCell() const` [const]
@@ -886,9 +1118,34 @@ impl KDTreePartition_Cell {
     //     return medianIndex;
     // }
     #[allow(unused_variables)]
-    pub fn partition(&mut self) -> usize {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::partition needs RouterNode::position")
+    pub fn partition<N: RouterNode>(&mut self) -> usize {
+        // determinism: C++ std::sort is unstable; ties (equal coordinate and equal id number) are ordered by the sort algorithm
+        let first = self.myFromInclusive;
+        let last = self.myToExclusive;
+        let axis = self.myAxis;
+        let range = &mut self.mySortedNodes.m()[first..last];
+        range.sort_unstable_by(|a, b| node_cmp::<N>(a.cast::<N>(), b.cast::<N>(), axis));
+        self.myHasNodesSortedWrtToMyAxis = true;
+        if !self.mySupercell.is_null() {
+            // sorting at one level destroys order at higher levels (but preserves the median split property)
+            self.mySupercell.m().myHasNodesSortedWrtToMyAxis = false;
+        }
+        let length = self.myToExclusive - self.myFromInclusive;
+        let mut medianIndex = self.myFromInclusive + (if length % 2 == 0 { length / 2 - 1 } else { (length + 1) / 2 - 1 });
+        // shift the median index until the nodes with indexes medianIndex and medianIndex+1 have different coordinates
+        let coordinate = |i: usize| -> f64 {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, i);
+            if self.myAxis == Axis::X { node.m().position().x() } else { node.m().position().y() }
+        };
+        let mut medianNodeCoordinate = coordinate(medianIndex);
+        let mut afterMedianNodeCoordinate = coordinate(medianIndex + 1);
+        while medianNodeCoordinate == afterMedianNodeCoordinate && medianIndex < self.myToExclusive.wrapping_sub(3) {
+            medianIndex += 1;
+            medianNodeCoordinate = coordinate(medianIndex);
+            afterMedianNodeCoordinate = coordinate(medianIndex + 1);
+        }
+        self.myMedianCoordinate = medianNodeCoordinate;
+        medianIndex
     }
 
     /// C++: `int & Cell::cellCounter()` [static, private]
@@ -926,9 +1183,13 @@ impl KDTreePartition_Cell {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn is_in_bounds(&self, node: Ptr<Unmapped /* N */>) -> bool {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::isInBounds needs RouterNode::position")
+    pub fn is_in_bounds<N: RouterNode>(&self, node: Ptr<N>) -> bool {
+        let nodeX = node.m().position().x();
+        let nodeY = node.m().position().y();
+        if nodeX < self.myMinX || nodeX > self.myMaxX || nodeY < self.myMinY || nodeY > self.myMaxY {
+            return false;
+        }
+        true
     }
 
     /// C++: `void Cell::completeSpatialInfo()` [private]
@@ -951,9 +1212,20 @@ impl KDTreePartition_Cell {
     //     myHasCompleteSpatialInfo = true;
     // }
     #[allow(unused_variables)]
-    pub fn complete_spatial_info(&mut self) {
-        // shortcut: depends on minAxisValue/maxAxisValue, which need RouterNode::position, upgrade when RouterNode is added
-        panic!("shortcut: Cell::completeSpatialInfo needs RouterNode::position")
+    pub fn complete_spatial_info<N: RouterNode>(&mut self) {
+        if self.myMinX < 0. {
+            self.myMinX = self.min_axis_value::<N>(Axis::X);
+        }
+        if self.myMaxX < 0. {
+            self.myMaxX = self.max_axis_value::<N>(Axis::X);
+        }
+        if self.myMinY < 0. {
+            self.myMinY = self.min_axis_value::<N>(Axis::Y);
+        }
+        if self.myMaxY < 0. {
+            self.myMaxY = self.max_axis_value::<N>(Axis::Y);
+        }
+        self.myHasCompleteSpatialInfo = true;
     }
 
     /// C++: `double Cell::minAxisValue(Axis) const` [const, private]
@@ -991,9 +1263,21 @@ impl KDTreePartition_Cell {
     //     return minAxisValue;
     // }
     #[allow(unused_variables)]
-    pub fn min_axis_value(&self, axis: Axis) -> f64 {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::minAxisValue needs RouterNode::position")
+    pub fn min_axis_value<N: RouterNode>(&self, axis: Axis) -> f64 {
+        if self.myHasNodesSortedWrtToMyAxis && axis == self.myAxis {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, self.myFromInclusive);
+            return if self.myAxis == Axis::Y { node.m().position().y() } else { node.m().position().x() };
+        }
+        let mut minAxisValue = f64::MAX;
+        for iter in self.myFromInclusive..self.myToExclusive {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, iter);
+            let nodeAxisValue = if axis == Axis::Y { node.m().position().y() } else { node.m().position().x() };
+            if nodeAxisValue < minAxisValue {
+                minAxisValue = nodeAxisValue;
+            }
+        }
+        debug_assert!(minAxisValue < f64::MAX);
+        minAxisValue
     }
 
     /// C++: `double Cell::minAxisValue() const` [const, private]
@@ -1003,9 +1287,8 @@ impl KDTreePartition_Cell {
     //     return minAxisValue(myAxis);
     // }
     #[allow(unused_variables)]
-    pub fn min_axis_value_2(&self) -> f64 {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::minAxisValue needs RouterNode::position")
+    pub fn min_axis_value_2<N: RouterNode>(&self) -> f64 {
+        self.min_axis_value::<N>(self.myAxis)
     }
 
     /// C++: `double Cell::maxAxisValue(Axis) const` [const, private]
@@ -1044,9 +1327,21 @@ impl KDTreePartition_Cell {
     //     return maxAxisValue;
     // }
     #[allow(unused_variables)]
-    pub fn max_axis_value(&self, axis: Axis) -> f64 {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::maxAxisValue needs RouterNode::position")
+    pub fn max_axis_value<N: RouterNode>(&self, axis: Axis) -> f64 {
+        if self.myHasNodesSortedWrtToMyAxis && axis == self.myAxis {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, self.myToExclusive - 1);
+            return if self.myAxis == Axis::Y { node.m().position().y() } else { node.m().position().x() };
+        }
+        let mut maxAxisValue = -1.;
+        for iter in self.myFromInclusive..self.myToExclusive {
+            let node: Ptr<N> = node_at::<N>(self.mySortedNodes, iter);
+            let nodeAxisValue = if axis == Axis::Y { node.m().position().y() } else { node.m().position().x() };
+            if nodeAxisValue > maxAxisValue {
+                maxAxisValue = nodeAxisValue;
+            }
+        }
+        debug_assert!(maxAxisValue > 0.);
+        maxAxisValue
     }
 
     /// C++: `double Cell::maxAxisValue() const` [const, private]
@@ -1056,9 +1351,8 @@ impl KDTreePartition_Cell {
     //     return maxAxisValue(myAxis);
     // }
     #[allow(unused_variables)]
-    pub fn max_axis_value_2(&self) -> f64 {
-        // shortcut: N has no getPosition in a router trait yet, upgrade when RouterNode is added
-        panic!("shortcut: Cell::maxAxisValue needs RouterNode::position")
+    pub fn max_axis_value_2<N: RouterNode>(&self) -> f64 {
+        self.max_axis_value::<N>(self.myAxis)
     }
 
 }
@@ -1071,9 +1365,9 @@ pub struct KDTreePartition<E, N, V> {
     /// The number of levels
     pub myNumberOfLevels: i32,
     /// The reference to a constant container with pointers to edges
-    pub myEdges: Ptr<i32>,
+    pub myEdges: Ptr<Vec<Ptr<E>>>,
     /// The container with all nodes, sorted wrt to the k-d tree subdivision scheme
-    pub mySortedNodes: i32,
+    pub mySortedNodes: Vec<Ptr<N>>,
     /// The cells
     pub myCells: Vec<Ptr<KDTreePartition_Cell>>,
     /// The cells of all partitions at all levels of the k-d tree subdivision scheme
@@ -1104,8 +1398,21 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     // }
     #[allow(unused_variables)]
     pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        // shortcut: needs typed cell storage (mySortedNodes is an i32 placeholder), upgrade when the k-d tree storage is typed
-        panic!("shortcut: KDTreePartition::new needs typed storage")
+        if numberOfLevels <= 0 {
+            panic!("KDTreePartition::KDTreePartition: zero or negative number of levels has been passed!");
+        }
+        KDTreePartition {
+            myRoot: Ptr::null(),
+            myNumberOfLevels: numberOfLevels,
+            myEdges: Ptr::new(edges),
+            mySortedNodes: Vec::new(),
+            myCells: Vec::new(),
+            myLevelCells: Vec::new(),
+            myHavePermissions: havePermissions,
+            myHaveRestrictions: haveRestrictions,
+            myAmClean: true,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void KDTreePartition::~KDTreePartition<E, N, V>()`
@@ -1202,9 +1509,32 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     myAmClean = false;
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, vehicle: Ptr<V>) {
-        // shortcut: needs RouterNode accessors and typed mySortedNodes/Cell constructor, upgrade when both exist
-        panic!("shortcut: KDTreePartition::init needs RouterNode and typed storage")
+    pub fn init(&mut self, vehicle: Ptr<V>) where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle {
+        // extract nodes from edges (C++ resizes mySortedNodes to the edge count and then to edgeCounter: same content as clear + push)
+        let mut nodeSet: HashSet<Ptr<N>> = HashSet::new();
+        self.mySortedNodes.clear();
+        for &edge in self.myEdges.m().iter() {
+            if (self.myHavePermissions && edge.m().prohibits(vehicle, false)) || (self.myHaveRestrictions && edge.m().restricts(vehicle)) {
+                continue;
+            }
+            let node = edge.m().from_junction();
+            if nodeSet.insert(node) {
+                self.mySortedNodes.push(node);
+            }
+            let node = edge.m().to_junction();
+            if nodeSet.insert(node) {
+                self.mySortedNodes.push(node);
+            }
+        }
+        // C++ resize keeps existing entries; the cells overwrite them
+        let numberOfCells = self.number_of_cells();
+        self.myCells.resize(numberOfCells, Ptr::null());
+        self.myLevelCells.resize(self.myNumberOfLevels as usize, Vec::new());
+        // call the recursive cell constructor at the root (instantiates the whole k-d tree of cells)
+        let sortedNodes = Ptr::from_mut(&mut self.mySortedNodes).cast::<Vec<Ptr<()>>>();
+        let root = KDTreePartition_Cell::new::<E, N, V>(Ptr::from_mut(&mut self.myCells), Ptr::from_mut(&mut self.myLevelCells), sortedNodes, self.myNumberOfLevels, 0, Axis::Y, 0, self.mySortedNodes.len(), Ptr::null(), -1., -1., -1., -1., false, vehicle, self.myHavePermissions, self.myHaveRestrictions);
+        self.myRoot = Ptr::from_raw(Box::into_raw(root));
+        self.myAmClean = false;
     }
 
     /// C++: `void KDTreePartition::reset(const V *const)`
@@ -1214,9 +1544,9 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //         init(vehicle);
     //     }
     #[allow(unused_variables)]
-    pub fn reset(&mut self, vehicle: Ptr<V>) {
-        // shortcut: depends on init, upgrade when init is ported
-        panic!("shortcut: KDTreePartition::reset needs init")
+    pub fn reset(&mut self, vehicle: Ptr<V>) where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle {
+        delete_ptr(self.myRoot);
+        self.init(vehicle);
     }
 
     /// C++: `const Cell * KDTreePartition::getRoot() const` [const]
@@ -1277,9 +1607,10 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     //     return nodeCellNumbers;
     // }
     #[allow(unused_variables)]
-    pub fn cell_numbers(&self, node: Ptr<N>) -> Ptr<i32> {
-        // shortcut: needs RouterNode::position for cellNumbersAux, upgrade when RouterNode is added
-        panic!("shortcut: KDTreePartition::cellNumbers needs RouterNode::position")
+    pub fn cell_numbers(&self, node: Ptr<N>) -> Vec<i32> where N: RouterNode {
+        let mut nodeCellNumbers = vec![-1; self.myNumberOfLevels as usize];
+        self.cell_numbers_aux(node, self.myCells[0], 0, &mut nodeCellNumbers);
+        nodeCellNumbers
     }
 
     /// C++: `Axis KDTreePartition::flip(Axis)` [static]
@@ -1349,9 +1680,20 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     /// Search a node in the bottom cells (i.e., return the respective cell)
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn search_node(&self, node: Ptr<N>) -> Ptr<KDTreePartition_Cell> {
-        // shortcut: needs RouterNode::position via cell contains, upgrade when RouterNode is added
-        panic!("shortcut: KDTreePartition::searchNode needs RouterNode::position")
+    pub fn search_node(&self, node: Ptr<N>) -> Ptr<KDTreePartition_Cell> where N: RouterNode {
+        let mut cell = self.myRoot;
+        if !self.myRoot.m().contains(node) {
+            return Ptr::null();
+        }
+        loop {
+            let nodeCoordinate = if cell.m().get_axis() == Axis::X { node.m().position().x() } else { node.m().position().y() };
+            let nextCell = if nodeCoordinate <= cell.m().get_median_coordinate() { cell.m().get_left_or_lower_subcell() } else { cell.m().get_right_or_upper_subcell() };
+            if nextCell.is_null() {
+                return cell;
+            } else {
+                cell = nextCell;
+            }
+        }
     }
 
     /// C++: `void KDTreePartition::cellNumbersAux(const N *, const Cell *, int, int *) const` [const, private]
@@ -1393,9 +1735,22 @@ impl<E, N, V> KDTreePartition<E, N, V> {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn cell_numbers_aux(&self, node: Ptr<N>, cell: Ptr<KDTreePartition_Cell>, level: i32, nodeCellNumbers: Ptr<i32>) {
-        // shortcut: needs RouterNode::position, upgrade when RouterNode is added
-        panic!("shortcut: KDTreePartition::cellNumbersAux needs RouterNode::position")
+    pub fn cell_numbers_aux(&self, node: Ptr<N>, cell: Ptr<KDTreePartition_Cell>, level: i32, nodeCellNumbers: &mut Vec<i32>) where N: RouterNode {
+        debug_assert!(level < self.myNumberOfLevels);
+        if cell.m().contains(node) {
+            // node is inside the cell, hence cell is one of the cells of node
+            nodeCellNumbers[level as usize] = cell.m().get_number();
+            // only one of the below two calls may actually alter array nodeCellNumbers
+            let leftOrLowerSubcell = cell.m().get_left_or_lower_subcell();
+            if !leftOrLowerSubcell.is_null() {
+                // no more calls at shallowest (i.e. leaf) level
+                self.cell_numbers_aux(node, leftOrLowerSubcell, level + 1, nodeCellNumbers);
+            }
+            let rightOrUpperSubcell = cell.m().get_right_or_upper_subcell();
+            if !rightOrUpperSubcell.is_null() {
+                self.cell_numbers_aux(node, rightOrUpperSubcell, level + 1, nodeCellNumbers);
+            }
+        }
     }
 
 }
@@ -1419,9 +1774,14 @@ impl KDTreePartition_NodeXComparator {
     //             return firstNode->getPosition().x() < secondNode->getPosition().x();
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, firstNode: Ptr<Unmapped /* N */>, secondNode: Ptr<Unmapped /* N */>) -> bool {
-        // shortcut: needs RouterNode::position and getID, upgrade when RouterNode is added
-        panic!("shortcut: NodeXComparator needs RouterNode::position and id")
+    pub fn call_op<N: RouterNode>(&self, firstNode: Ptr<N>, secondNode: Ptr<N>) -> bool {
+        if firstNode.m().position().x() == secondNode.m().position().x() {
+            // tie
+            let firstValue = strtoimax10(firstNode.m().id());
+            let secondValue = strtoimax10(secondNode.m().id());
+            return firstValue < secondValue;
+        }
+        firstNode.m().position().x() < secondNode.m().position().x()
     }
 
 }
@@ -1445,9 +1805,14 @@ impl KDTreePartition_NodeYComparator {
     //             return firstNode->getPosition().y() < secondNode->getPosition().y();
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, firstNode: Ptr<Unmapped /* N */>, secondNode: Ptr<Unmapped /* N */>) -> bool {
-        // shortcut: needs RouterNode::position and getID, upgrade when RouterNode is added
-        panic!("shortcut: NodeYComparator needs RouterNode::position and id")
+    pub fn call_op<N: RouterNode>(&self, firstNode: Ptr<N>, secondNode: Ptr<N>) -> bool {
+        if firstNode.m().position().y() == secondNode.m().position().y() {
+            // tie
+            let firstValue = strtoimax10(firstNode.m().id());
+            let secondValue = strtoimax10(secondNode.m().id());
+            return firstValue < secondValue;
+        }
+        firstNode.m().position().y() < secondNode.m().position().y()
     }
 
 }

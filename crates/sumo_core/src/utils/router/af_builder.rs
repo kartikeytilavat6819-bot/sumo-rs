@@ -201,10 +201,10 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
         }
         assert!(!self.myFlippedPartition.is_null());
         if self.myFlippedPartition.m().is_clean() {
-            self.myFlippedPartition.m().init(vehicle);
-            self.myArcFlagBuild.m().set_flipped_partition(self.myFlippedPartition);
+            // shortcut: KDTreePartition::init needs RouterEdge/RouterNode for FlippedEdge/FlippedNode, which are still shortcut stubs; upgrade with flipped_edge.rs/flipped_node.rs
+            panic!("shortcut: AFBuilder::build needs RouterEdge for FlippedEdge (KDTreePartition::init)");
         } else {
-            self.myFlippedPartition.m().reset(vehicle);
+            panic!("shortcut: AFBuilder::build needs RouterEdge for FlippedEdge (KDTreePartition::reset)");
         }
         assert!(!self.myArcFlagBuild.is_null());
         self.myArcFlagBuild.m().init(msTime, vehicle, &mut self.myFlagInfos);
