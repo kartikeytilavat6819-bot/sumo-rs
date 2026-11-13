@@ -1,6 +1,8 @@
 //! Port of utils/router/Node2EdgeRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::a_star_lookup_table::AStarLookupTableKind;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `AbstractLookupTable<E, V> Node2EdgeRouter::LookupTable`
 pub type Node2EdgeRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
@@ -26,7 +28,7 @@ impl<E, N, V, M> std::ops::DerefMut for Node2EdgeRouter<E, N, V, M> {
     }
 }
 
-impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
+impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     /// C++: `typename SUMOAbstractRouter<E, V>::EdgeInfo * Node2EdgeRouter::edgeInfo(const E *const)`
     /// Returns the edge information for the passed edge
     // typename SUMOAbstractRouter<E, V>::EdgeInfo* edgeInfo(const E* const edge) {
@@ -57,7 +59,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         Self {
             base: AStarRouter::new(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
             _p: std::marker::PhantomData,
@@ -72,7 +74,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         Self {
             base: AStarRouter::new_2(edgeInfos, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
             _p: std::marker::PhantomData,

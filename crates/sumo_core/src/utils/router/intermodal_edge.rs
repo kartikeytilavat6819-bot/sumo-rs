@@ -72,6 +72,9 @@ impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N,
     fn speed_limit(&self) -> f64 {
         self.get_speed_limit()
     }
+    fn minimum_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
+        self.get_minimum_travel_time(trip)
+    }
     fn travel_time_static(edge: Ptr<Self>, veh: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
         Self::get_travel_time_static(edge, veh, time)
     }

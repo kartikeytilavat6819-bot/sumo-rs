@@ -9,10 +9,8 @@ pub type Unidirectional_ConnectionVector = Vec<CHBuilder_Connection>;
 /// C++ typedef `std::pair<const typename SUMOAbstractRouter<E, V>::EdgeInfo *, const typename SUMOAbstractRouter<E, V>::EdgeInfo *> CHRouter::Meeting`
 pub type CHRouter_Meeting = (Ptr<SUMOAbstractRouter_EdgeInfo>, Ptr<SUMOAbstractRouter_EdgeInfo>);
 
-// shortcut: needs router trait bounds (lead), V::getVClass is not callable on the generic V
-#[allow(unused_variables)]
-pub(crate) fn v_class<V>(v: Ptr<V>) -> SUMOVehicleClass {
-    panic!("shortcut: needs router trait bounds (lead), V::getVClass")
+pub(crate) fn v_class<V: RouterVehicle>(v: Ptr<V>) -> SUMOVehicleClass {
+    v.v_class()
 }
 
 fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
@@ -104,7 +102,18 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port CHRouter::CHRouter<E, V>")
+        Self {
+            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
+            myForwardSearch: CHRouter_Unidirectional::new(edges, true),
+            myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
+            myHierarchyBuilder: Ptr::null(),
+            myHierarchy: hierarchy,
+            myWeightPeriod: SUMOTIME_MAX,
+            myValidUntil: SUMOTIME_MAX,
+            mySVC: svc,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CHRouter::~CHRouter<E, V>()` [virtual]

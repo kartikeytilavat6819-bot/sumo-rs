@@ -1,7 +1,7 @@
 //! Port of utils/router/IntermodalTrip.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterVehicle;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// the "vehicle" type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalTrip` (utils/router/IntermodalTrip.h)
@@ -21,9 +21,24 @@ pub struct IntermodalTrip<E, N, V> {
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
 
-impl<E, N, V> RouterVehicle for IntermodalTrip<E, N, V> {
+impl<E, N, V> RouterVehicle for IntermodalTrip<E, N, V>
+where
+    E: RouterEdge<V>,
+{
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
+    }
+    fn get_id(&self) -> String {
+        format!("{}:{}:{}", self.from.id(), self.to.id(), time2string(self.departTime))
+    }
+    fn get_max_speed(&self) -> f64 {
+        self.get_max_speed()
+    }
+    fn get_chosen_speed_factor(&self) -> f64 {
+        self.get_chosen_speed_factor()
+    }
+    fn ignore_transient_permissions(&self) -> bool {
+        self.ignore_transient_permissions()
     }
 }
 

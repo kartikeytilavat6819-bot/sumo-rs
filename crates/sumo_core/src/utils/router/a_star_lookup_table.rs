@@ -25,7 +25,7 @@ impl<E, V> AbstractLookupTable<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
-        todo!("port AbstractLookupTable::lowerBound")
+        panic!("pure virtual AbstractLookupTable::lowerBound called: only FullLookupTable and LandmarkLookupTable are instantiated")
     }
 
     /// C++: `bool AbstractLookupTable::consistent() const` [const, virtual, pure virtual]
@@ -33,7 +33,7 @@ impl<E, V> AbstractLookupTable<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn consistent(&self) -> bool {
-        todo!("port AbstractLookupTable::consistent")
+        panic!("pure virtual AbstractLookupTable::consistent called: only FullLookupTable and LandmarkLookupTable are instantiated")
     }
 
 }
@@ -715,7 +715,29 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
 
 }
 
-const UNREACHABLE: f64 = f64::MAX / 1000.0;
+/// C++ `AStarRouter::lookupTable` as a value: the router dispatches virtual lowerBound()/consistent() to the table kind
+pub enum AStarLookupTableKind<E, V, M> {
+    Full(FullLookupTable<E, V>),
+    Landmark(LandmarkLookupTable<E, V, M>),
+}
+
+impl<E: RouterEdge<V>, V, M> AStarLookupTableKind<E, V, M> {
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
+        match self {
+            AStarLookupTableKind::Full(t) => t.lower_bound(from, to, speed, speedFactor, fromEffort, toEffort),
+            AStarLookupTableKind::Landmark(t) => t.lower_bound(from, to, speed, speedFactor, fromEffort, toEffort),
+        }
+    }
+
+    pub fn consistent(&self) -> bool {
+        match self {
+            AStarLookupTableKind::Full(t) => t.consistent(),
+            AStarLookupTableKind::Landmark(t) => t.consistent(),
+        }
+    }
+}
+
+pub const UNREACHABLE: f64 = f64::MAX / 1000.0;
 
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }

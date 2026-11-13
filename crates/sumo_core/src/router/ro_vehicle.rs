@@ -58,14 +58,17 @@ impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }
-    fn length(&self) -> f64 {
-        self.get_length()
+    fn get_id(&self) -> String {
+        self.base.get_id().to_string()
     }
-    fn id(&self) -> &str {
-        self.get_id()
+    fn get_max_speed(&self) -> f64 {
+        self.base.get_max_speed()
     }
-    fn vtype_id(&self) -> &str {
-        &self.get_parameter().vtypeid
+    fn get_chosen_speed_factor(&self) -> f64 {
+        self.base.get_chosen_speed_factor()
+    }
+    fn ignore_transient_permissions(&self) -> bool {
+        self.base.ignore_transient_permissions()
     }
 }
 

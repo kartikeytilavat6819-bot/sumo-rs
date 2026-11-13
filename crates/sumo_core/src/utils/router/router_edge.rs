@@ -25,6 +25,7 @@ pub trait RouterEdge<V> {
         panic!("shortcut: this edge type has no lanes")
     }
     fn speed_limit(&self) -> f64;
+    fn minimum_travel_time(&self, veh: Ptr<V>) -> f64;
     // shortcut: IntermodalEdge has no getPreference in C++, upgrade when an edge type needs routing preferences
     fn preference(&self, pars: &SUMOVTypeParameter) -> f64 {
         panic!("shortcut: this edge type has no routing preference")
@@ -79,16 +80,10 @@ pub trait RouterEdge<V> {
 /// Accessors the generic router code calls on its vehicle type `V` (`V::getVClass()`).
 pub trait RouterVehicle {
     fn v_class(&self) -> SUMOVehicleClass;
-    // shortcut: IntermodalTrip is not a vehicle in C++, upgrade if a trip is routed as a vehicle
-    fn length(&self) -> f64 {
-        panic!("shortcut: this vehicle type has no length")
-    }
-    fn id(&self) -> &str {
-        panic!("shortcut: this vehicle type has no id")
-    }
-    fn vtype_id(&self) -> &str {
-        panic!("shortcut: this vehicle type has no vtype id")
-    }
+    fn get_id(&self) -> String;
+    fn get_max_speed(&self) -> f64;
+    fn get_chosen_speed_factor(&self) -> f64;
+    fn ignore_transient_permissions(&self) -> bool;
 }
 
 /// Accessors the generic router code calls on its node type `N` (`N::getID()`, `N::getPosition()`, `N::getIncoming()`, ...).

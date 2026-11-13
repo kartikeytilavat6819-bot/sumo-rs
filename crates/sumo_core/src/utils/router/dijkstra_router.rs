@@ -1,6 +1,22 @@
 //! Port of utils/router/DijkstraRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    utils::common::msg_handler::with_instance(if warning { utils::common::msg_handler::MsgType::Warning } else { utils::common::msg_handler::MsgType::Error }, |h| Ptr::from_mut(h))
+}
+
+/// C++ `Named::getIDSecure(vehicle)`
+fn vehicle_id_secure<V: RouterVehicle>(vehicle: Ptr<V>) -> String {
+    if vehicle.is_null() { "NULL".to_string() } else { vehicle.get_id() }
+}
+
+/// the edge of an EdgeInfo is always an `E` (SUMOAbstractRouter keeps it as an untyped pointer)
+fn edge_numerical_id<E: RouterEdge<V>, V>(edge: Ptr<()>) -> i32 {
+    edge.cast::<E>().numerical_id()
+}
 
 /// Computes the shortest path through a network using the Dijkstra algorithm.
 /// C++ class `DijkstraRouter` (utils/router/DijkstraRouter.h)
@@ -11,7 +27,7 @@ pub struct DijkstraRouter<E, V> {
     /// whether to suppress warning/error if no route was found
     pub mySilent: bool,
     /// cache of the last query to enable automated bulk routing
-    pub myLastQuery: Unmapped /* std::tuple<const E *, const V *, SUMOTime> */,
+    pub myLastQuery: (Ptr<E>, Ptr<V>, SUMOTime),
     pub myExternalEffort: Ptr<EffortCalculator>,
     pub myComparator: DijkstraRouter_EdgeInfoByEffortComparator,
     _p: std::marker::PhantomData<(E, V,)>,
@@ -43,7 +59,18 @@ impl<E, V> DijkstraRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port DijkstraRouter::DijkstraRouter<E, V>")
+        let mut base = SUMOAbstractRouter::new("DijkstraRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions);
+        for e in edges.iter() {
+            base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(e.cast::<()>()));
+        }
+        Self {
+            base,
+            mySilent: silent,
+            myLastQuery: Default::default(),
+            myExternalEffort: calc,
+            myComparator: DijkstraRouter_EdgeInfoByEffortComparator {},
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void DijkstraRouter::~DijkstraRouter<E, V>()` [virtual]
@@ -51,7 +78,7 @@ impl<E, V> DijkstraRouter<E, V> {
     // virtual ~DijkstraRouter() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port DijkstraRouter::~DijkstraRouter<E, V>")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * DijkstraRouter::clone()` [virtual]
@@ -64,9 +91,15 @@ impl<E, V> DijkstraRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port DijkstraRouter::clone")
+        let warning = self.base.myErrorMsgHandler == msg_instance(true);
+        let mut clone: DijkstraRouter<E, V> = DijkstraRouter::new_2(&self.base.myEdgeInfos, warning, self.base.myOperation, self.base.myTTOperation, self.mySilent, self.myExternalEffort, self.base.myHavePermissions, self.base.myHaveRestrictions);
+        clone.set_auto_bulk_mode(self.base.myAutoBulkMode);
+        Ptr::from_raw(Box::into_raw(Box::new(clone))).cast::<SUMOAbstractRouter<E, V>>()
     }
 
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> DijkstraRouter<E, V> {
     /// C++: `bool DijkstraRouter::compute(const E *, const E *, const V *const, SUMOTime, std::vector<const E *> &, bool)`
     /// Builds the route between the given edges using the minimum effort at the given time The definition of the effort depends on the wished routing scheme
     // bool compute(const E* from, const E* to, const V* const vehicle,
@@ -220,9 +253,104 @@ impl<E, V> DijkstraRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        todo!("port DijkstraRouter::compute")
+        // check whether from and to can be used
+        if self.is_prohibited(from, vehicle, steps2time(msTime)) {
+            if !silent {
+                self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on source edge '{}'.", vehicle_id_secure(vehicle), from.id()), true);
+            }
+            return false;
+        }
+        // technically, a temporary permission might be lifted by the time of arrival
+        if !to.is_null() && self.is_prohibited(to, vehicle, steps2time(msTime)) {
+            if !silent {
+                self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on destination edge '{}'.", vehicle_id_secure(vehicle), to.id()), true);
+            }
+            return false;
+        }
+        let mut length = 0.;
+        self.start_query();
+        let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
+        let ignoreTransient = if vehicle.is_null() { false } else { vehicle.ignore_transient_permissions() };
+        let query = (from, vehicle, msTime);
+        let cmp = DijkstraRouter_EdgeInfoByEffortComparator {};
+        if ((self.myBulkMode && from == self.myLastQuery.0) || (self.myAutoBulkMode && query == self.myLastQuery)) && !self.myAmClean {
+            let toInfo = Ptr::from_mut(&mut self.myEdgeInfos[to.numerical_id() as usize]);
+            if toInfo.visited {
+                self.build_path_from(toInfo, into);
+                self.end_query(1);
+                return true;
+            }
+        } else {
+            self.init(from.numerical_id(), msTime);
+            if !self.myExternalEffort.is_null() {
+                self.myExternalEffort.m().set_initial_state(from.numerical_id());
+            }
+            self.myAmClean = false;
+        }
+        self.myLastQuery = query;
+        // loop
+        let mut num_visited: i32 = 0;
+        while !self.myFrontierList.is_empty() {
+            num_visited += 1;
+            // use the node with the minimal length
+            let minimumInfo = self.myFrontierList[0];
+            let minEdge = minimumInfo.edge.cast::<E>();
+            minimumInfo.m().visited = true;
+            // check whether the destination node was already reached
+            if minEdge == to {
+                //propagate last external effort state to destination edge
+                if !self.myExternalEffort.is_null() {
+                    self.myExternalEffort.m().update(minEdge.numerical_id(), minimumInfo.prev.edge.cast::<E>().numerical_id(), minEdge.length());
+                }
+                self.build_path_from(minimumInfo, into);
+                self.end_query(num_visited);
+                return true;
+            }
+            std_pop_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+            self.myFrontierList.pop();
+            self.myFound.push(minimumInfo);
+            let effortDelta = self.get_effort(minEdge, vehicle, minimumInfo.leaveTime);
+            let leaveTime = minimumInfo.leaveTime + self.get_travel_time(minEdge, vehicle, minimumInfo.leaveTime, effortDelta);
+            if !self.myExternalEffort.is_null() {
+                self.myExternalEffort.m().update(minEdge.numerical_id(), minimumInfo.prev.edge.cast::<E>().numerical_id(), minEdge.length());
+            }
+            // check all ways from the node with the minimal length
+            for follower in minEdge.via_successors(vClass, ignoreTransient) {
+                let followerInfo = Ptr::from_mut(&mut self.myEdgeInfos[follower.0.numerical_id() as usize]);
+                // check whether it can be used
+                if self.is_prohibited(follower.0, vehicle, leaveTime) {
+                    continue;
+                }
+                let mut effort = minimumInfo.effort + effortDelta;
+                let mut time = leaveTime;
+                self.update_via_edge_cost(follower.1, vehicle, &mut time, &mut effort, &mut length);
+                let oldEffort = followerInfo.effort;
+                if !followerInfo.visited && effort < oldEffort {
+                    followerInfo.m().effort = effort;
+                    followerInfo.m().leaveTime = time;
+                    followerInfo.m().prev = minimumInfo;
+                    if oldEffort == f64::MAX {
+                        self.myFrontierList.push(followerInfo);
+                        std_push_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+                    } else {
+                        let fi = self.myFrontierList.iter().position(|p| *p == followerInfo).unwrap();
+                        std_push_heap(&mut self.myFrontierList[..=fi], &|a, b| cmp.call_op::<E, V>(a, b));
+                    }
+                }
+            }
+        }
+        self.end_query(num_visited);
+        if !to.is_null() && !self.mySilent && !silent {
+            let (fromId, toId) = (from.id().to_string(), to.id().to_string());
+            let args: [&dyn ToStringPrec; 2] = [&fromId, &toId];
+            self.myErrorMsgHandler.m().informf("No connection between edge '%' and edge '%' found.", &args);
+        }
+        false
     }
 
+}
+
+impl<E, V> DijkstraRouter<E, V> {
     /// C++: `void DijkstraRouter::DijkstraRouter<E, V>(const std::vector<typename SUMOAbstractRouter<E, V>::EdgeInfo> &, bool, typename SUMOAbstractRouter<E, V>::Operation, typename SUMOAbstractRouter<E, V>::Operation, bool, EffortCalculator *, const bool, const bool)` [private]
     // DijkstraRouter(const std::vector<typename SUMOAbstractRouter<E, V>::EdgeInfo>& edgeInfos, bool unbuildIsWarning,
     //                    typename SUMOAbstractRouter<E, V>::Operation effortOperation, typename SUMOAbstractRouter<E, V>::Operation ttOperation, bool silent, EffortCalculator* calc,
@@ -236,7 +364,18 @@ impl<E, V> DijkstraRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port DijkstraRouter::DijkstraRouter<E, V>")
+        let mut base = SUMOAbstractRouter::new("DijkstraRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions);
+        for edgeInfo in edgeInfos.iter() {
+            base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(edgeInfo.edge));
+        }
+        Self {
+            base,
+            mySilent: silent,
+            myLastQuery: Default::default(),
+            myExternalEffort: calc,
+            myComparator: DijkstraRouter_EdgeInfoByEffortComparator {},
+            _p: std::marker::PhantomData,
+        }
     }
 
 }
@@ -256,8 +395,11 @@ impl DijkstraRouter_EdgeInfoByEffortComparator {
     //             return nod1->effort > nod2->effort;
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
-        todo!("port EdgeInfoByEffortComparator::operator()")
+    pub fn call_op<E: RouterEdge<V>, V>(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
+        if nod1.effort == nod2.effort {
+            return edge_numerical_id::<E, V>(nod1.edge) > edge_numerical_id::<E, V>(nod2.edge);
+        }
+        nod1.effort > nod2.effort
     }
 
 }
