@@ -104,7 +104,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_car_walk_transfer(&self) -> i32 {
-        todo!("port IntermodalRouter::getCarWalkTransfer")
+        self.myCarWalkTransfer
     }
 
     /// C++: `bool IntermodalRouter::compute(const E *, const E *, const double, const std::string &, const double, const std::string &, const double, const V *const, const SUMOVTypeParameter &, const SVCPermissions, const SUMOTime, std::vector<TripItem> &, const double)`
@@ -247,7 +247,10 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port IntermodalRouter::setBulkMode")
+        self.base.set_bulk_mode(mode);
+        if !self.myInternalRouter.is_null() {
+            self.myInternalRouter.m().set_bulk_mode(mode);
+        }
     }
 
     /// C++: `void IntermodalRouter::prohibit(const _Prohibitions &)`
@@ -308,7 +311,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_network(&self) -> Ptr<IntermodalRouter_Network<E, L, N, V>> {
-        todo!("port IntermodalRouter::getNetwork")
+        self.myIntermodalNet
     }
 
     /// C++: `EffortCalculator * IntermodalRouter::getExternalEffort() const` [const]
@@ -317,7 +320,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_external_effort(&self) -> Ptr<EffortCalculator> {
-        todo!("port IntermodalRouter::getExternalEffort")
+        self.myExternalEffort
     }
 
     /// C++: `void IntermodalRouter::IntermodalRouter<E, L, N, V>(Network *, const int, double, const std::string &, const int, EffortCalculator *)` [private]
@@ -437,7 +440,21 @@ impl IntermodalRouter_TripItem {
     //             line(_line), intended(_line) {}
     #[allow(unused_variables)]
     pub fn new(_line: &str) -> Self {
-        todo!("port TripItem::TripItem")
+        Self {
+            line: _line.to_string(),
+            vType: String::new(),
+            destStop: String::new(),
+            intended: _line.to_string(),
+            depart: -1.,
+            edges: Vec::new(),
+            traveltime: 0.,
+            cost: 0.,
+            length: 0.,
+            departPos: utils::common::std_defs::INVALID_DOUBLE,
+            arrivalPos: utils::common::std_defs::INVALID_DOUBLE,
+            description: String::new(),
+            exitTimes: Vec::new(),
+        }
     }
 
 }
