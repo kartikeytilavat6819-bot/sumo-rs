@@ -93,17 +93,32 @@ impl std::ops::DerefMut for ROEdge {
 impl RouterEdge<ROVehicle> for ROEdge {
     type Node = RONode;
     type Lane = ROLane;
+    fn bidi_edge(&self) -> Ptr<ROEdge> {
+        self.get_bidi_edge()
+    }
+    fn to_junction(&self) -> Ptr<RONode> {
+        self.get_to_junction()
+    }
+    fn from_junction(&self) -> Ptr<RONode> {
+        self.get_from_junction()
+    }
+    fn is_crossing(&self) -> bool {
+        self.is_crossing()
+    }
+    fn is_walking_area(&self) -> bool {
+        self.is_walking_area()
+    }
+    fn railway_routing_edge(&self) -> Ptr<RailEdge<ROEdge, ROVehicle>> {
+        self.get_railway_routing_edge()
+    }
+    fn all_edges() -> Vec<Ptr<ROEdge>> {
+        Self::get_all_edges().clone()
+    }
     fn id(&self) -> &str {
         self.get_id()
     }
     fn numerical_id(&self) -> i32 {
         self.get_numerical_id()
-    }
-    fn from_junction(&self) -> Ptr<RONode> {
-        self.get_from_junction()
-    }
-    fn to_junction(&self) -> Ptr<RONode> {
-        self.get_to_junction()
     }
     fn length(&self) -> f64 {
         self.get_length()

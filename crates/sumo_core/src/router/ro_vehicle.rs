@@ -58,6 +58,15 @@ impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn vtype_id(&self) -> &str {
+        &self.get_parameter().vtypeid
+    }
 }
 
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):

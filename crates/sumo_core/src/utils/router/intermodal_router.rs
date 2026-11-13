@@ -244,7 +244,94 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, departPos: f64, originStopID: &str, arrivalPos: f64, stopID: &str, speed: f64, vehicle: Ptr<V>, pars: &SUMOVTypeParameter, modeSet: SVCPermissions, msTime: SUMOTime, into: &mut Vec<IntermodalRouter_TripItem>, externalFactor: f64) -> bool {
-        todo!("port IntermodalRouter::compute")
+        self.create_net();
+        let mut trip = IntermodalTrip::new(from, to, departPos, arrivalPos, speed, msTime, Ptr::null(), pars, vehicle, modeSet, self.myExternalEffort, externalFactor);
+        let mut intoEdges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = Vec::new();
+        let iFrom = if originStopID != "" { self.myIntermodalNet.get_stop_edge(originStopID) } else { self.myIntermodalNet.get_depart_edge(from, trip.departPos) };
+        let iTo = if stopID != "" { self.myIntermodalNet.get_stop_edge(stopID) } else { self.myIntermodalNet.get_arrival_edge(to, trip.arrivalPos) };
+        let success = self.myInternalRouter.m().compute(iFrom, iTo, Ptr::from_mut(&mut trip), msTime, &mut intoEdges, true);
+        if success {
+            let mut lastLine = String::new();
+            let mut lastLineEdge: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
+            let mut lastLineTime = utils::common::time::steps2time(msTime);
+            let mut time = utils::common::time::steps2time(msTime);
+            let mut effort = 0.;
+            let mut length = 0.;
+            let mut prev: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
+            for iEdge in intoEdges.iter().copied() {
+                let mut addedEdge = false;
+                let edge: Ptr<Unmapped> = iEdge.get_edge().cast();
+                if iEdge.include_in_route(false) {
+                    if iEdge.get_line() == "!stop" {
+                        if into.len() > 0 {
+                            // previous stage ends at stop
+                            let back = into.last_mut().unwrap();
+                            back.destStop = iEdge.get_id().to_string();
+                            if !self.myExternalEffort.is_null() {
+                                back.description = self.myExternalEffort.output(iEdge.get_numerical_id());
+                            }
+                            if lastLine == "!ped" {
+                                lastLine = String::new(); // a stop always starts a new trip item
+                            }
+                        } else {
+                            // trip starts at stop
+                            lastLine = String::new();
+                            into.push(IntermodalRouter_TripItem::new("!stop"));
+                            into.last_mut().unwrap().destStop = iEdge.get_id().to_string();
+                        }
+                    } else {
+                        if iEdge.get_line() != lastLine || self.looped_line_transfer(lastLineEdge, iEdge, lastLineTime, time) {
+                            lastLine = iEdge.get_line().to_string();
+                            lastLineEdge = iEdge;
+                            lastLineTime = time;
+                            if lastLine == "!car" {
+                                // shortcut: vehicle.getID() and getParameter().vtypeid need RouterVehicle, which SUMOVehicle does not implement yet
+                                panic!("shortcut: IntermodalRouter::compute cannot name a !car trip item without RouterVehicle");
+                            } else if lastLine == "!ped" {
+                                into.push(IntermodalRouter_TripItem::new(""));
+                            } else {
+                                into.push(IntermodalRouter_TripItem::new(&lastLine));
+                                let back = into.last_mut().unwrap();
+                                back.depart = iEdge.get_intended(time, &mut back.intended);
+                            }
+                            into.last_mut().unwrap().departPos = iEdge.get_start_pos();
+                        }
+                        let back = into.last_mut().unwrap();
+                        if back.edges.is_empty() || back.edges.last() != Some(&edge) {
+                            back.edges.push(edge);
+                            back.arrivalPos = iEdge.get_end_pos();
+                            addedEdge = true;
+                        }
+                    }
+                }
+                let prevTime = time;
+                let prevEffort = effort;
+                let prevLength = length;
+                self.myInternalRouter.update_via_cost(prev, iEdge, Ptr::from_mut(&mut trip), &mut time, &mut effort, &mut length);
+                // correct intermodal length:
+                length += iEdge.get_partial_length(Ptr::from_mut(&mut trip)) - iEdge.get_length();
+                prev = iEdge;
+                if !into.is_empty() {
+                    let back = into.last_mut().unwrap();
+                    back.traveltime += time - prevTime;
+                    back.cost += effort - prevEffort;
+                    back.length += length - prevLength;
+                    if back.depart < 0. {
+                        back.depart = prevTime;
+                    }
+                    if addedEdge {
+                        back.exitTimes.push(time);
+                    }
+                }
+            }
+        } else {
+            // shortcut: the no-connection message needs E::getID and V::getVClass, which need RouterEdge/RouterVehicle bounds that MSEdge and SUMOVehicle do not implement yet
+            panic!("shortcut: IntermodalRouter::compute cannot report a missing connection without RouterEdge/RouterVehicle");
+        }
+        if !into.is_empty() {
+            into.last_mut().unwrap().arrivalPos = arrivalPos;
+        }
+        success
     }
 
     /// C++: `bool IntermodalRouter::compute(const E *, const E *, const _IntermodalTrip *const, SUMOTime, std::vector<const E *> &, bool)`
@@ -449,13 +536,39 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn create_net(&mut self) {
         if self.myIntermodalNet.is_null() {
-            // shortcut: needs E::getAllEdges() (static on the edge type, not on RouterEdge) and the myCallback invocation, upgrade when the edge trait exposes all edges
+            // shortcut: E::getAllEdges() needs a RouterEdge bound that MSEdge does not implement yet, and myCallback is Unmapped
             panic!("shortcut: IntermodalRouter::createNet cannot build the network without E::getAllEdges()");
         }
         if self.myInternalRouter.is_null() {
-            // shortcut: internal router needs the Operation/TT function pointers (Unmapped in sumo_abstract_router.rs) and MapMatcher for A*, upgrade with those types
-            panic!("shortcut: IntermodalRouter::createNet cannot construct the internal router yet");
+            let edges = self.myIntermodalNet.m().get_all_edges().clone();
+            match self.myRoutingMode {
+                0 => {
+                    if self.myRoutingAlgorithm == "astar" {
+                        // shortcut: _InternalAStar needs the AStarRouter lookup table and MapMatcher, which are not ported
+                        panic!("shortcut: IntermodalRouter astar routing needs AStarRouter lookup table and MapMatcher");
+                    } else {
+                        self.set_internal_dijkstra(&edges, Ptr::null());
+                    }
+                }
+                1 => self.set_internal_dijkstra(&edges, Ptr::null()),
+                2 => self.set_internal_dijkstra(&edges, Ptr::null()),
+                3 => {
+                    if !self.myExternalEffort.is_null() {
+                        let edgeLines: Vec<String> = edges.iter().map(|e| e.get_line().to_string()).collect();
+                        self.myExternalEffort.m().init(&edgeLines);
+                    }
+                    self.set_internal_dijkstra(&edges, self.myExternalEffort);
+                }
+                _ => {}
+            }
         }
+    }
+
+    /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
+    // shortcut: the effort and travel-time function pointers are Unmapped (SUMOAbstractRouter_Operation), passed as ()
+    fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, calc: Ptr<EffortCalculator>) {
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, (), (), false, calc, true, false);
+        self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 
     /// C++: `bool IntermodalRouter::loopedLineTransfer(const _IntermodalEdge *, const _IntermodalEdge *, double, double)` [private]

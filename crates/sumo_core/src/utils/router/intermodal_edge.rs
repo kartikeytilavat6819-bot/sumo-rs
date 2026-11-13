@@ -41,6 +41,9 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
 impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N, V> {
     type Node = N;
     type Lane = L;
+    fn bidi_edge(&self) -> Ptr<IntermodalEdge<E, L, N, V>> {
+        self.get_bidi_edge()
+    }
     fn id(&self) -> &str {
         self.base.get_id()
     }
