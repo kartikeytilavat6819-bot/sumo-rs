@@ -354,8 +354,32 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_permissions(&mut self) {
-        // shortcut: NBEdge connections are mapped to CHBuilder_Connection, which has no fromLane, so fixPermissions cannot read lanes; upgrade when NBEdge::Connection is mapped
-        panic!("NBPTLineCont::fixPermissions: shortcut, NBEdge::Connection has no fromLane yet");
+        for item in self.myPTLines.values() {
+            let line = item.m();
+            let route: Vec<Ptr<NBEdge>> = line.get_route().clone();
+            let svc = line.get_v_class();
+            for i in 1..route.len() {
+                let e1 = route[i - 1];
+                let e2 = route[i];
+                let cons = e1.get_connections_from_lane(-1, e2, -1);
+                if cons.len() == 0 {
+                    //WRITE_WARNINGF(TL("Disconnected ptline '%' between edge '%' and edge '%'"), line->getLineID(), e1->getID(), e2->getID());
+                } else {
+                    let mut ok = false;
+                    for c in &cons {
+                        if (e1.get_permissions(c.fromLane) & svc) == svc {
+                            ok = true;
+                            break;
+                        }
+                    }
+                    if !ok {
+                        let lane = cons[0].fromLane;
+                        let perms = e1.get_permissions(lane) | svc;
+                        e1.m().set_permissions(perms, lane);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `std::set<std::string> NBPTLineCont::getServedPTStops()`
