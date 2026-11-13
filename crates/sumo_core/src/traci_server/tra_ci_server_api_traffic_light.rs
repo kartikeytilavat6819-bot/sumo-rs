@@ -119,7 +119,110 @@ impl TraCIServerAPI_TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_TrafficLight::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != TL_PHASE_INDEX
+            && variable != TL_PROGRAM
+            && variable != TL_PHASE_DURATION
+            && variable != TL_RED_YELLOW_GREEN_STATE
+            && variable != TL_COMPLETE_PROGRAM_RYG
+            && variable != VAR_NAME
+            && variable != TL_CONSTRAINT_REMOVE
+            && variable != TL_CONSTRAINT_UPDATE
+            && variable != TL_CONSTRAINT_ADD
+            && variable != VAR_PARAMETER
+        {
+            return server.write_error_status_cmd(
+                CMD_SET_TL_VARIABLE,
+                &format!("Change TLS State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        match variable {
+            TL_PHASE_INDEX => {
+                TrafficLight::set_phase(&id, StorageHelper::read_typed_int(inputStorage, "The phase index must be given as an integer."));
+            }
+            VAR_NAME => {
+                TrafficLight::set_phase_name(&id, &StorageHelper::read_typed_string(inputStorage, "The phase name must be given as a string."));
+            }
+            TL_PROGRAM => {
+                TrafficLight::set_program(&id, &StorageHelper::read_typed_string(inputStorage, "The program must be given as a string."));
+            }
+            TL_PHASE_DURATION => {
+                TrafficLight::set_phase_duration(&id, StorageHelper::read_typed_double(inputStorage, "The phase duration must be given as a double."));
+            }
+            TL_RED_YELLOW_GREEN_STATE => {
+                TrafficLight::set_red_yellow_green_state(&id, &StorageHelper::read_typed_string(inputStorage, "The phase must be given as a string."));
+            }
+            TL_COMPLETE_PROGRAM_RYG => {
+                StorageHelper::read_compound(inputStorage, -1, "A compound object is needed for setting a new program.");
+                let mut logic = TraCILogic::new();
+                logic.programID = StorageHelper::read_typed_string(inputStorage, "set program: 1. parameter (programID) must be a string.");
+                logic.type_ = StorageHelper::read_typed_int(inputStorage, "set program: 2. parameter (type) must be an int.");
+                logic.currentPhaseIndex = StorageHelper::read_typed_int(inputStorage, "set program: 3. parameter (index) must be an int.");
+
+                let numPhases = StorageHelper::read_compound(inputStorage, -1, "A compound object is needed for the phases.");
+                for _j in 0..numPhases {
+                    let items = StorageHelper::read_compound(inputStorage, -1, "A compound object is needed for every phase.");
+                    if items != 6 && items != 5 {
+                        return server.write_error_status_cmd(CMD_SET_TL_VARIABLE, "A phase compound object requires 5 or 6 items.", outputStorage);
+                    }
+                    let duration = StorageHelper::read_typed_double(inputStorage, "set program: 4.1. parameter (duration) must be a double.");
+                    let state = StorageHelper::read_typed_string(inputStorage, "set program: 4.2. parameter (phase) must be a string.");
+                    let minDuration = StorageHelper::read_typed_double(inputStorage, "set program: 4.3. parameter (min duration) must be a double.");
+                    let maxDuration = StorageHelper::read_typed_double(inputStorage, "set program: 4.4. parameter (max duration) must be a double.");
+                    let numNext = StorageHelper::read_compound(inputStorage, -1, "set program 4.5 parameter (next) must be a compound (list of ints).");
+                    let mut next: Vec<i32> = Vec::new();
+                    for _k in 0..numNext {
+                        next.push(StorageHelper::read_typed_int(inputStorage, "set program: 4.5. parameter (next) must be a list of int."));
+                    }
+                    let mut name = String::new();
+                    if items == 6 {
+                        name = StorageHelper::read_typed_string(inputStorage, "set program: 4.6. parameter (name) must be a string.");
+                    }
+                    logic.phases.push(Rc::new(TraCIPhase::new_2(duration, &state, minDuration, maxDuration, &next, &name, "")));
+                }
+                let numParams = StorageHelper::read_compound(inputStorage, -1, "set program: 5. parameter (subparams) must be a compound object.");
+                for _j in 0..numParams {
+                    let par = StorageHelper::read_typed_string_list(inputStorage, "");
+                    logic.subParameter.insert(par[0].clone(), par[1].clone());
+                }
+                TrafficLight::set_complete_red_yellow_green_definition(&id, &logic);
+            }
+            TL_CONSTRAINT_REMOVE => {
+                StorageHelper::read_compound(inputStorage, 3, "A compound object of size 3 is needed for removing constraints.");
+                let tripId = StorageHelper::read_typed_string(inputStorage, "The tripId must be given as a string.");
+                let foeSignal = StorageHelper::read_typed_string(inputStorage, "The foeSignal id must be given as a string.");
+                let foeId = StorageHelper::read_typed_string(inputStorage, "The foe tripId must be given as a string.");
+                TrafficLight::remove_constraints(&id, &tripId, &foeSignal, &foeId);
+            }
+            TL_CONSTRAINT_UPDATE => {
+                TrafficLight::update_constraints(&id, StorageHelper::read_typed_string(inputStorage, "The tripId index must be given as a string."));
+            }
+            TL_CONSTRAINT_ADD => {
+                StorageHelper::read_compound(inputStorage, 5, "A compound object of size 5 is needed for adding constraints.");
+                let tripId = StorageHelper::read_typed_string(inputStorage, "The tripId must be given as a string.");
+                let foeSignal = StorageHelper::read_typed_string(inputStorage, "The foe signal must be given as a string.");
+                let foeId = StorageHelper::read_typed_string(inputStorage, "The foe tripId must be given as a string.");
+                let type_ = StorageHelper::read_typed_int(inputStorage, "The type must be an int.");
+                let limit = StorageHelper::read_typed_int(inputStorage, "The limit must be an int.");
+                TrafficLight::add_constraint(&id, &tripId, &foeSignal, &foeId, type_, limit);
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                TrafficLight::set_parameter(&id, &name, &value);
+            }
+            _ => {}
+        }
+        server.write_status_cmd(CMD_SET_TL_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_TrafficLight::writeConstraint(TraCIServer &, const libsumo::TraCISignalConstraint &)` [static, private]
@@ -142,7 +245,20 @@ impl TraCIServerAPI_TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn write_constraint(server: &mut TraCIServer, c: &TraCISignalConstraint) {
-        todo!("port TraCIServerAPI_TrafficLight::writeConstraint")
+        StorageHelper::write_typed_string(server.get_wrapper_storage(), &c.signalId);
+        StorageHelper::write_typed_string(server.get_wrapper_storage(), &c.tripId);
+        StorageHelper::write_typed_string(server.get_wrapper_storage(), &c.foeId);
+        StorageHelper::write_typed_string(server.get_wrapper_storage(), &c.foeSignal);
+        StorageHelper::write_typed_int(server.get_wrapper_storage(), c.limit);
+        StorageHelper::write_typed_int(server.get_wrapper_storage(), c.type_);
+        StorageHelper::write_typed_byte(server.get_wrapper_storage(), c.mustWait as i32);
+        StorageHelper::write_typed_byte(server.get_wrapper_storage(), c.active as i32);
+        let mut paramItems: Vec<String> = Vec::new();
+        for (k, v) in c.param.iter() {
+            paramItems.push(k.clone());
+            paramItems.push(v.clone());
+        }
+        StorageHelper::write_typed_string_list(server.get_wrapper_storage(), &paramItems);
     }
 
     /// C++: `void TraCIServerAPI_TrafficLight::TraCIServerAPI_TrafficLight(const TraCIServerAPI_TrafficLight &)` [private]

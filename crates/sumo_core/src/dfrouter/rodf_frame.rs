@@ -218,7 +218,202 @@ impl RODFFrame {
     // }
     #[allow(unused_variables)]
     pub fn fill_options() {
-        todo!("port RODFFrame::fillOptions")
+        utils::options::options_cont::with_options(|oc| {
+            // insert options sub-topics
+            // shortcut: SystemFrame::addConfigurationOptions is not ported yet, its configuration options are missing, upgrade when system_frame is ported
+            oc.add_option_sub_topic("Input");
+            oc.add_option_sub_topic("Output");
+            oc.add_option_sub_topic("Processing");
+            oc.add_option_sub_topic("Defaults");
+            oc.add_option_sub_topic("Time");
+
+            // register the options
+            // register input-options
+            oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
+            oc.add_synonyme("net-file", "net", false);
+            oc.add_description("net-file", "Input", "Loads the SUMO-network FILE");
+
+            oc.do_register_abbr("detector-files", 'd', SumoOption::file_name());
+            oc.add_synonyme("detector-files", "detectors", false);
+            oc.add_description("detector-files", "Input", "Loads detector descriptions from FILE");
+
+            oc.do_register_abbr("measure-files", 'f', SumoOption::file_name());
+            oc.add_synonyme("measure-files", "detflows", false);
+            oc.add_synonyme("measure-files", "detector-flow-files", true);
+            oc.add_description("measure-files", "Input", "Loads detector flows from FILE(s)");
+
+            // need to do this here to be able to check for network and route input options
+            // shortcut: SystemFrame::addReportOptions is not ported yet, its report options are missing, upgrade when system_frame is ported
+
+            // register output options
+            oc.do_register_abbr("routes-output", 'o', SumoOption::file_name());
+            oc.add_description("routes-output", "Output", "Saves computed routes to FILE");
+
+            oc.do_register("routes-for-all", SumoOption::bool(false));
+            oc.add_description("routes-for-all", "Output", "Forces dfrouter to compute routes for in-between detectors");
+
+            oc.do_register("detector-output", SumoOption::file_name());
+            oc.add_synonyme("detector-output", "detectors-output", true);
+            oc.add_description("detector-output", "Output", "Saves typed detectors to FILE");
+
+            oc.do_register("detectors-poi-output", SumoOption::file_name());
+            oc.add_description("detectors-poi-output", "Output", "Saves detector positions as pois to FILE");
+
+            oc.do_register("emitters-output", SumoOption::file_name());
+            oc.add_description("emitters-output", "Output", "Saves emitter definitions for source detectors to FILE");
+
+            oc.do_register("vtype", SumoOption::bool(false));
+            oc.add_description("vtype", "Output", "Add vehicle types to the emitters file (PKW, LKW)");
+
+            oc.do_register("vtype-output", SumoOption::file_name_with(vec![String::new()]));
+            oc.add_description("vtype-output", "Output", "Write generated vehicle types into separate FILE instead of including them into the emitters-output");
+
+            oc.do_register("emitters-poi-output", SumoOption::file_name()); // !!! describe
+            oc.add_description("emitters-poi-output", "Output", "Saves emitter positions as pois to FILE");
+
+            oc.do_register("variable-speed-sign-output", SumoOption::file_name());
+            oc.add_synonyme("variable-speed-sign-output", "speed-trigger-output", true);
+            oc.add_description("variable-speed-sign-output", "Output", "Saves variable seed sign definitions for sink detectors to FILE");
+
+            oc.do_register("end-reroute-output", SumoOption::file_name());
+            oc.add_description("end-reroute-output", "Output", "Saves rerouter definitions for sink detectors to FILE");
+
+            oc.do_register("validation-output", SumoOption::file_name());
+            oc.add_description("validation-output", "Output", "Write induction loop definitions for the given detector positions to FILE");
+
+            oc.do_register("validation-output.add-sources", SumoOption::bool(false));
+            oc.add_description("validation-output.add-sources", "Output", "Add source detectors to the validation output");
+
+            // register processing options
+            // to guess empty flows
+            oc.do_register("guess-empty-flows", SumoOption::bool(false));
+            oc.add_description("guess-empty-flows", "Processing", "Derive missing flow values from upstream or downstream (not working!)");
+
+            // for guessing source/sink detectors
+            oc.do_register_abbr("highway-mode", 'h', SumoOption::bool(false)); // !!! describe
+            oc.add_description("highway-mode", "Processing", "Switches to highway-mode");
+
+            // for detector reading
+            oc.do_register("ignore-invalid-detectors", SumoOption::bool(false));
+            oc.add_description("ignore-invalid-detectors", "Processing", "Only warn about unparseable detectors");
+
+            // for detector type computation
+            oc.do_register("revalidate-detectors", SumoOption::bool(false));
+            oc.add_description("revalidate-detectors", "Processing", "Recomputes detector types even if given");
+
+            // for route computation
+            oc.do_register("revalidate-routes", SumoOption::bool(false));
+            oc.add_description("revalidate-routes", "Processing", "Recomputes routes even if given");
+
+            oc.do_register("keep-unfinished-routes", SumoOption::bool(false));
+            oc.add_synonyme("keep-unfinished-routes", "keep-unfound-ends", true);
+            oc.add_description("keep-unfinished-routes", "Processing", "Keeps routes even if they have exhausted max-search-depth");
+
+            oc.do_register("keep-longer-routes", SumoOption::bool(false));
+            oc.add_description("keep-longer-routes", "Processing", "Keeps routes even if a shorter one exists");
+
+            oc.do_register("max-search-depth", SumoOption::integer(30));
+            oc.add_synonyme("max-search-depth", "max-nodet-follower", true);
+            oc.add_description("max-search-depth", "Processing", "Number of edges to follow a route without passing a detector");
+
+            oc.do_register("emissions-only", SumoOption::bool(false));
+            oc.add_description("emissions-only", "Processing", "Writes only emission times");
+
+            oc.do_register("disallowed-edges", SumoOption::string_vector_with(vec![String::new()]));
+            oc.add_description("disallowed-edges", "Processing", "Do not route on these edges");
+
+            oc.do_register("vclass", SumoOption::string_with("ignoring"));
+            oc.add_description("vclass", "Processing", "Only route on edges allowing the given vclass");
+
+            oc.do_register("keep-turnarounds", SumoOption::bool(false));
+            oc.add_description("keep-turnarounds", "Processing", "Allow turnarounds as route continuations");
+
+            oc.do_register("min-route-length", SumoOption::float(-1.0));
+            oc.add_synonyme("min-route-length", "min-dist", true);
+            oc.add_synonyme("min-route-length", "min-distance", true);
+            oc.add_description("min-route-length", "Processing", "Minimum distance in meters between start and end node of every route");
+
+            oc.do_register("randomize-flows", SumoOption::bool(false));
+            oc.add_description("randomize-flows", "Processing", "generate random departure times for emitted vehicles");
+
+            // flow reading
+            oc.do_register("time-factor", SumoOption::string_typed("60", "TIME"));
+            oc.add_description("time-factor", "Processing", "Multiply flow times with TIME to get seconds");
+
+            oc.do_register("time-offset", SumoOption::string_typed("0", "TIME"));
+            oc.add_description("time-offset", "Processing", "Subtracts TIME seconds from (scaled) flow times");
+
+            oc.do_register("time-step", SumoOption::string_typed("60", "TIME"));
+            oc.add_description("time-step", "Processing", "Expected distance between two successive data sets");
+
+            // saving further structures
+            oc.do_register("calibrator-output", SumoOption::bool(false));
+            oc.add_synonyme("calibrator-output", "write-calibrators", true);
+            oc.add_description("calibrator-output", "Processing", "Write calibrators to FILE");
+
+            oc.do_register("include-unused-routes", SumoOption::bool(false));
+            oc.add_description("include-unused-routes", "Processing", "Include routes in the output which have no vehicles");
+
+            //
+            oc.do_register("revalidate-flows", SumoOption::bool(false));
+            oc.add_description("revalidate-flows", "Processing", "Checks whether detectors with calculated flow 0 can attract additional traffic");
+
+            oc.do_register("remove-empty-detectors", SumoOption::bool(false));
+            oc.add_description("remove-empty-detectors", "Processing", "Removes empty detectors from the list");
+
+            oc.do_register("strict-sources", SumoOption::bool(false));
+            oc.add_description("strict-sources", "Processing", "Whether edges with unknown status can prevent an edge from becoming a source");
+
+            oc.do_register("respect-concurrent-inflows", SumoOption::bool(false));
+            oc.add_description("respect-concurrent-inflows", "Processing", "Try to determine further inflows to an inbetween detector when computing split probabilities");
+
+            //
+            oc.do_register("scale", SumoOption::float(1.0));
+            oc.add_description("scale", "Processing", "Scale factor for flows");
+
+            // register defaults options
+            oc.do_register("departlane", SumoOption::string());
+            oc.add_description("departlane", "Defaults", "Assigns a default depart lane");
+
+            oc.do_register("departpos", SumoOption::string());
+            oc.add_description("departpos", "Defaults", "Assigns a default depart position");
+
+            oc.do_register("departspeed", SumoOption::string());
+            oc.add_description("departspeed", "Defaults", "Assigns a default depart speed");
+
+            oc.do_register("arrivallane", SumoOption::string());
+            oc.add_description("arrivallane", "Defaults", "Assigns a default arrival lane");
+
+            oc.do_register("arrivalpos", SumoOption::string());
+            oc.add_description("arrivalpos", "Defaults", "Assigns a default arrival position");
+
+            oc.do_register("arrivalspeed", SumoOption::string());
+            oc.add_description("arrivalspeed", "Defaults", "Assigns a default arrival speed");
+
+            oc.do_register("speeddev", SumoOption::float(0.1));
+            oc.add_description("speeddev", "Defaults", "The default speed deviation of vehicles");
+
+            // register the simulation settings
+            oc.do_register_abbr("begin", 'b', SumoOption::string_typed("0", "TIME"));
+            oc.add_description("begin", "Time", "Defines the begin time; Previous defs will be discarded");
+
+            oc.do_register_abbr("end", 'e', SumoOption::string_typed("86400", "TIME"));
+            oc.add_description("end", "Time", "Defines the end time; Later defs will be discarded; Defaults to one day");
+
+            //
+            // register report options
+            oc.do_register("report-empty-detectors", SumoOption::bool(false));
+            oc.add_description("report-empty-detectors", "Report", "Lists detectors with no flow (enable -v)");
+
+            oc.do_register("print-absolute-flows", SumoOption::bool(false));
+            oc.add_description("print-absolute-flows", "Report", "Prints aggregated detector flows");
+
+            // register report options
+            oc.do_register("no-step-log", SumoOption::bool(false));
+            oc.add_description("no-step-log", "Report", "Disable console output of route parsing step");
+
+            // shortcut: RandHelper::insertRandOptions is not ported yet, the random options are missing, upgrade when rand_helper registers them
+        });
     }
 
     /// C++: `bool RODFFrame::checkOptions()` [static]

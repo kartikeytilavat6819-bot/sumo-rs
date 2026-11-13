@@ -1183,7 +1183,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn inform(&mut self, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
-        todo!("port MSAbstractLaneChangeModel::inform")
+        panic!("MSAbstractLaneChangeModel::inform is pure virtual in C++ and has no base body; subclasses implement it")
     }
 
     /// C++: `double MSAbstractLaneChangeModel::patchSpeed(const double, const double, const double, const MSCFModel &)` [virtual, pure virtual]
@@ -1191,14 +1191,14 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn patch_speed(&mut self, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::patchSpeed")
+        panic!("MSAbstractLaneChangeModel::patchSpeed is pure virtual in C++ and has no base body; subclasses implement it")
     }
 
     /// C++: `void MSAbstractLaneChangeModel::changed()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn changed(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::changed")
+        panic!("MSAbstractLaneChangeModel::changed is pure virtual in C++ and has no base body; subclasses implement it")
     }
 
     /// C++: `void MSAbstractLaneChangeModel::resetState()` [virtual]

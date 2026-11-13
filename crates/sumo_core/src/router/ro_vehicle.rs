@@ -813,7 +813,7 @@ impl ROVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROVehicle) -> Self {
-        todo!("port ROVehicle::ROVehicle")
+        panic!("ROVehicle copy constructor is private and invalidated in C++")
     }
 
     /// C++: `ROVehicle & ROVehicle::operator=(const ROVehicle &)` [private]
@@ -821,7 +821,7 @@ impl ROVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROVehicle) -> &mut ROVehicle {
-        todo!("port ROVehicle::operator=")
+        panic!("ROVehicle assignment operator is private and invalidated in C++")
     }
 
 }
