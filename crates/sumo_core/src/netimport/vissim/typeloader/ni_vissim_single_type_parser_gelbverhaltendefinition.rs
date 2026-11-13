@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Gelbverhaltendefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Gelbverhaltendefinition::NIVissimSingleTypeParser_Gelbverhaltendefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Gelbverhaltendefinition::~NIVissimSingleTypeParser_Gelbverhaltendefinition() noexcept` [virtual]
@@ -36,7 +36,6 @@ impl NIVissimSingleTypeParser_Gelbverhaltendefinition {
     // NIVissimSingleTypeParser_Gelbverhaltendefinition::~NIVissimSingleTypeParser_Gelbverhaltendefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Gelbverhaltendefinition::~NIVissimSingleTypeParser_Gelbverhaltendefinition")
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Gelbverhaltendefinition::parse(std::istream &)` [virtual]
@@ -47,7 +46,7 @@ impl NIVissimSingleTypeParser_Gelbverhaltendefinition {
     // }
     #[allow(unused_variables)]
     pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Gelbverhaltendefinition::parse")
+        true
     }
 
 }
