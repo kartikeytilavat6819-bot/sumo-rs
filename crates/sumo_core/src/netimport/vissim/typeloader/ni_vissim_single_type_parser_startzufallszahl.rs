@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Startzufallszahl {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Startzufallszahl::NIVissimSingleTypeParser_Startzufallszahl")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Startzufallszahl::~NIVissimSingleTypeParser_Startzufallszahl() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Startzufallszahl {
     // NIVissimSingleTypeParser_Startzufallszahl::~NIVissimSingleTypeParser_Startzufallszahl() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Startzufallszahl::~NIVissimSingleTypeParser_Startzufallszahl")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Startzufallszahl::parse(std::istream &)` [virtual]
@@ -46,8 +46,8 @@ impl NIVissimSingleTypeParser_Startzufallszahl {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Startzufallszahl::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        true
     }
 
 }
