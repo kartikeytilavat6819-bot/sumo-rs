@@ -34,7 +34,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info(&mut self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Node2EdgeRouter::edgeInfo")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `const typename SUMOAbstractRouter<E, V>::EdgeInfo * Node2EdgeRouter::edgeInfo(const E *const) const` [const]
@@ -44,7 +45,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info_2(&self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Node2EdgeRouter::edgeInfo")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `void Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
@@ -55,8 +57,11 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>")
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: AStarRouter::new(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
@@ -67,8 +72,11 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>")
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: AStarRouter::new_2(edgeInfos, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void Node2EdgeRouter::~Node2EdgeRouter<E, N, V, M>()` [virtual]
@@ -78,7 +86,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Node2EdgeRouter::~Node2EdgeRouter<E, N, V, M>")
+        utils::common::msg_handler::write_message("The following stats for AStarRouter (which might also be empty) belong to Node2EdgeRouter, a derived class:");
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * Node2EdgeRouter::clone()` [virtual]
@@ -89,7 +97,9 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port Node2EdgeRouter::clone")
+        let unbuildIsWarning = self.myErrorMsgHandler == utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| Ptr::from_mut(h));
+        let router = Node2EdgeRouter::new_2(&self.myEdgeInfos, unbuildIsWarning, self.myOperation, self.myLookupTable.clone(), self.myHavePermissions, self.myHaveRestrictions);
+        Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
     }
 
     /// C++: `void Node2EdgeRouter::reset(const V *const)` [virtual]
@@ -107,7 +117,14 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn reset(&mut self, vehicle: Ptr<V>) {
-        todo!("port Node2EdgeRouter::reset")
+        for edgeInfo in self.myFrontierList.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFrontierList.clear();
+        for edgeInfo in self.myFound.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFound.clear();
     }
 
     /// C++: `bool Node2EdgeRouter::computeNode2Edges(const N *, const int &, const V *const, SUMOTime, bool)`
@@ -230,7 +247,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_node2_edges(&mut self, fromNode: Ptr<N>, toEdges: &i32, vehicle: Ptr<V>, msTime: SUMOTime, silent: bool) -> bool {
-        todo!("port Node2EdgeRouter::computeNode2Edges")
+        // shortcut: needs router trait bounds (lead), N::getOutgoing / E::isInternal / E::getNumericalID are not callable on generic E, N
+        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
     }
 
     /// C++: `bool Node2EdgeRouter::computeNode2Edge(const N *, const E *, const V *const, SUMOTime, int &, bool)`
@@ -347,7 +365,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        todo!("port Node2EdgeRouter::computeNode2Edge")
+        // shortcut: needs router trait bounds (lead), N::getOutgoing / E::isInternal / E::getViaSuccessors are not callable on generic E, N
+        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
     }
 
     /// C++: `void Node2EdgeRouter::updateViaCostUpToEdge(const E *const, const E *const, const V *const, double &, double &, double &) const` [const]
@@ -364,7 +383,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn update_via_cost_up_to_edge(&self, prev: Ptr<E>, e: Ptr<E>, v: Ptr<V>, time: &mut f64, effort: &mut f64, length: &mut f64) {
-        todo!("port Node2EdgeRouter::updateViaCostUpToEdge")
+        // shortcut: needs router trait bounds (lead), E::getViaSuccessors is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
     }
 
     /// C++: `double Node2EdgeRouter::recomputeCostsNoLastEdge(const int &, const V *const, SUMOTime, double *) const` [const]
@@ -394,8 +414,31 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         return effort;
     //     }
     #[allow(unused_variables)]
-    pub fn recompute_costs_no_last_edge(&self, edges: &i32, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
-        todo!("port Node2EdgeRouter::recomputeCostsNoLastEdge")
+    pub fn recompute_costs_no_last_edge(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
+        let lastEdge = *edges.last().unwrap();
+        let mut time = utils::common::time::steps2time(msTime);
+        let mut effort = 0.;
+        let mut length = 0.;
+        let lengthp: &mut f64 = if lengthp.is_null() {
+            &mut length
+        } else {
+            *lengthp.m() = 0.;
+            lengthp.m()
+        };
+        let mut prev: Ptr<E> = Ptr::null();
+        for e in edges.iter().copied() {
+            if e == lastEdge {
+                break;
+            }
+            // shortcut: the C++ calls the two-argument isProhibited(e, v), which SUMOAbstractRouter does not provide, upgrade when that overload is ported
+            if panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported") {
+                return -1.;
+            }
+            self.update_via_cost(prev, e, v, &mut time, &mut effort, lengthp);
+            prev = e;
+        }
+        self.update_via_cost_up_to_edge(prev, lastEdge, v, &mut time, &mut effort, lengthp);
+        effort
     }
 
     /// C++: `void Node2EdgeRouter::setBulkMode(const bool)` [virtual]
@@ -406,7 +449,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port Node2EdgeRouter::setBulkMode")
+        panic!("Bulk mode is not supported by the node-to-edge router.")
     }
 
     /// C++: `void Node2EdgeRouter::init(int, const V *const, const SUMOTime)` [protected]
@@ -439,8 +482,19 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, fromEdges: i32, vehicle: Ptr<V>, msTime: SUMOTime) {
-        todo!("port Node2EdgeRouter::init")
+    pub fn init(&mut self, fromEdges: Vec<Ptr<E>>, vehicle: Ptr<V>, msTime: SUMOTime) {
+        for edgeInfo in self.myFrontierList.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFrontierList.clear();
+        for edgeInfo in self.myFound.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFound.clear();
+        for from in fromEdges {
+            // shortcut: needs router trait bounds (lead), E::isInternal / E::getNumericalID are not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+        }
     }
 
 }
