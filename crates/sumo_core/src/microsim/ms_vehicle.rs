@@ -11468,8 +11468,21 @@ impl MSVehicle {
     //     return result;
     // }
     #[allow(unused_variables)]
-    pub fn validate_position(&self, result: Position, offset: f64) -> Position {
-        todo!("port MSVehicle::validatePosition")
+    pub fn validate_position(&self, mut result: Position, mut offset: f64) -> Position {
+        let mut furtherIndex: i32 = 0;
+        let mut lastLength = self.get_position_on_lane();
+        while result == Position::INVALID {
+            if furtherIndex >= self.myFurtherLanes.len() as i32 {
+                //WRITE_WARNINGF(TL("Could not compute position for vehicle '%', time=%."), getID(), time2string(MSNet::getInstance()->getCurrentTimeStep()));
+                break;
+            }
+            let further = self.myFurtherLanes[furtherIndex as usize];
+            offset += lastLength;
+            result = further.geometry_position_at_offset(further.get_length() + offset, -self.get_lateral_position_on_lane());
+            lastLength = further.get_length();
+            furtherIndex += 1;
+        }
+        result
     }
 
     /// C++: `void MSVehicle::drawOutsideNetwork(bool)` [virtual, protected]
@@ -11477,7 +11490,7 @@ impl MSVehicle {
     // virtual void drawOutsideNetwork(bool /*add*/) {}
     #[allow(unused_variables)]
     pub fn draw_outside_network(&mut self, arg0: bool) {
-        todo!("port MSVehicle::drawOutsideNetwork")
+        // C++ body is empty
     }
 
     /// C++: `void MSVehicle::boardTransportables(MSStop &)` [protected]
@@ -11538,7 +11551,65 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn board_transportables(&mut self, stop: &mut MSStop) {
-        todo!("port MSVehicle::boardTransportables")
+        if stop.skipOnDemand {
+            return;
+        }
+        // we have reached the stop
+        // any waiting persons may board now
+        let time = MSNet::get_instance().m().get_current_time_step();
+        let net = MSNet::get_instance();
+        let boarded = time <= stop.endBoarding
+            && net.m().has_persons()
+            && net.m().get_person_control().load_any_waiting(
+                Ptr::from_mut(self.myLane.get_edge()),
+                Ptr::from_mut(&mut self.base.base),
+                &mut stop.timeToBoardNextPerson,
+                &mut stop.duration,
+                Ptr::null(),
+            )
+            && stop.numExpectedPerson == 0;
+        // load containers
+        let loaded = time <= stop.endBoarding
+            && net.m().has_containers()
+            && net.m().get_container_control().load_any_waiting(
+                Ptr::from_mut(self.myLane.get_edge()),
+                Ptr::from_mut(&mut self.base.base),
+                &mut stop.timeToLoadNextContainer,
+                &mut stop.duration,
+                Ptr::null(),
+            )
+            && stop.numExpectedContainer == 0;
+
+        let mut unregister = false;
+        if time > stop.endBoarding {
+            stop.triggered = false;
+            stop.containerTriggered = false;
+            if self.myAmRegisteredAsWaiting {
+                unregister = true;
+                self.myAmRegisteredAsWaiting = false;
+            }
+        }
+        if boarded {
+            // the triggering condition has been fulfilled. Maybe we want to wait a bit longer for additional riders (car pooling)
+            if self.myAmRegisteredAsWaiting {
+                unregister = true;
+            }
+            stop.triggered = false;
+            self.myAmRegisteredAsWaiting = false;
+        }
+        if loaded {
+            // the triggering condition has been fulfilled
+            if self.myAmRegisteredAsWaiting {
+                unregister = true;
+            }
+            stop.containerTriggered = false;
+            self.myAmRegisteredAsWaiting = false;
+        }
+
+        if unregister {
+            MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+            // DEBUG_STOPS trace from the C++ is not compiled in release builds
+        }
     }
 
     /// C++: `bool MSVehicle::joinTrainPart(MSVehicle *)` [protected]
@@ -11564,7 +11635,21 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn join_train_part(&mut self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSVehicle::joinTrainPart")
+        // check if veh is close enough to be joined to the rear of this vehicle
+        let backLane = if self.myFurtherLanes.is_empty() { self.myLane } else { *self.myFurtherLanes.last().unwrap() };
+        let gap = self.get_back_position_on_lane_2() - veh.get_position_on_lane();
+        if self.is_stopped() && self.myStops.front().unwrap().duration <= utils::common::time::delta_t() && self.myStops.front().unwrap().joinTriggered && backLane == veh.get_lane() && gap >= 0. && gap <= self.get_vehicle_type().get_min_gap() + 1. {
+            let newLength = self.get_vehicle_type().get_length() + veh.get_vehicle_type().get_length();
+            self.get_singular_type().set_length(&newLength);
+            self.myStops.front_mut().unwrap().joinTriggered = false;
+            if self.myAmRegisteredAsWaiting {
+                MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                self.myAmRegisteredAsWaiting = false;
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `bool MSVehicle::joinTrainPartFront(MSVehicle *)` [protected]
@@ -11623,7 +11708,52 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn join_train_part_front(&mut self, veh: Ptr<MSVehicle>) -> bool {
-        todo!("port MSVehicle::joinTrainPartFront")
+        // check if veh is close enough to be joined to the front of this vehicle
+        let backLane = if veh.myFurtherLanes.is_empty() { veh.myLane } else { *veh.myFurtherLanes.last().unwrap() };
+        let gap = veh.get_back_position_on_lane(backLane) - self.get_position_on_lane();
+        if self.is_stopped() && self.myStops.front().unwrap().duration <= utils::common::time::delta_t() && self.myStops.front().unwrap().joinTriggered && backLane == self.get_lane() && gap >= 0. && gap <= self.get_vehicle_type().get_min_gap() + 1. {
+            let mut skippedLaneLengths = 0.;
+            if veh.myFurtherLanes.len() > 0 {
+                skippedLaneLengths += self.get_lane().get_length();
+                // this vehicle must be moved to the lane of veh
+                // ensure that lane and furtherLanes of veh match our route
+                let mut routeIndex = self.get_route_position();
+                if self.myLane.is_internal() {
+                    routeIndex += 1;
+                }
+                for i in (0..veh.myFurtherLanes.len()).rev() {
+                    let edge: Ptr<MSEdge> = Ptr::from_mut(veh.myFurtherLanes[i].get_edge());
+                    if edge.is_internal() {
+                        continue;
+                    }
+                    if !edge.is_internal() && edge != self.myRoute.get_edges()[routeIndex as usize] {
+                        write_warningf!("Cannot join vehicle '%' to vehicle '%' due to incompatible routes. time=%.", veh.get_id(), self.get_id(), utils::common::time::time2string(MSNet::get_instance().m().get_current_time_step()));
+                        return false;
+                    }
+                    routeIndex += 1;
+                }
+                if veh.get_current_edge().get_normal_successor() != self.myRoute.get_edges()[routeIndex as usize] {
+                    write_warningf!("Cannot join vehicle '%' to vehicle '%' due to incompatible routes. time=%.", veh.get_id(), self.get_id(), utils::common::time::time2string(MSNet::get_instance().m().get_current_time_step()));
+                    return false;
+                }
+                for i in (0..veh.myFurtherLanes.len().saturating_sub(1)).rev() {
+                    skippedLaneLengths += veh.myFurtherLanes[i].get_length();
+                }
+            }
+
+            let newLength = self.get_vehicle_type().get_length() + veh.get_vehicle_type().get_length();
+            self.get_singular_type().set_length(&newLength);
+            // lane will be advanced just as for regular movement
+            self.myState.myPos = skippedLaneLengths + veh.get_position_on_lane();
+            self.myStops.front_mut().unwrap().joinTriggered = false;
+            if self.myAmRegisteredAsWaiting {
+                MSNet::get_instance().m().get_vehicle_control().unregister_one_waiting();
+                self.myAmRegisteredAsWaiting = false;
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `double MSVehicle::slowDownForSchedule(double) const` [const, protected]
