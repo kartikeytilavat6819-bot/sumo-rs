@@ -1,6 +1,98 @@
 //! Port of utils/router/IntermodalNetwork.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use utils::geom::POSITION_EPS;
+use utils::common::to_string::to_string;
+
+/// C++ `new` for a network edge: owned by `myEdges` (C++ deletes it in the destructor)
+fn leak_edge<T>(edge: T) -> Ptr<T> {
+    Ptr::from_raw(Box::into_raw(Box::new(edge)))
+}
+
+// shortcut: RouterEdge has no isWalkingArea(), add it to the trait to port IntermodalNetwork
+fn e_is_walking_area<E>(_edge: Ptr<E>) -> bool {
+    panic!("shortcut: E::isWalkingArea() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no isNormal(), add it to the trait to port IntermodalNetwork
+fn e_is_normal<E>(_edge: Ptr<E>) -> bool {
+    panic!("shortcut: E::isNormal() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getFunction(), add it to the trait to port IntermodalNetwork
+fn e_has_normal_function<E>(_edge: Ptr<E>) -> bool {
+    panic!("shortcut: E::getFunction() == NORMAL is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getFunction(), add it to the trait to port IntermodalNetwork
+fn e_has_internal_function<E>(_edge: Ptr<E>) -> bool {
+    panic!("shortcut: E::getFunction() == INTERNAL is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getPermissions(), add it to the trait to port IntermodalNetwork
+fn e_permissions<E>(_edge: Ptr<E>) -> SVCPermissions {
+    panic!("shortcut: E::getPermissions() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getFromJunction()/getToJunction(), add them to the trait to port IntermodalNetwork
+fn e_from_junction<E, N>(_edge: Ptr<E>) -> Ptr<N> {
+    panic!("shortcut: E::getFromJunction() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getFromJunction()/getToJunction(), add them to the trait to port IntermodalNetwork
+fn e_to_junction<E, N>(_edge: Ptr<E>) -> Ptr<N> {
+    panic!("shortcut: E::getToJunction() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no getOtherTazConnector(), add it to the trait to port IntermodalNetwork
+fn e_other_taz_connector<E>(_edge: Ptr<E>) -> Ptr<E> {
+    panic!("shortcut: E::getOtherTazConnector() is not on RouterEdge")
+}
+
+// shortcut: RouterEdge has no static getStopPosition(), add it to the trait to port IntermodalNetwork
+fn e_stop_position<E>(_stop: &SUMOVehicleParameter_Stop) -> Position {
+    panic!("shortcut: E::getStopPosition() is not on RouterEdge")
+}
+
+// shortcut: junction nodes have no getID()/getOutgoing()/getIncoming() on the router side, add them to RouterEdge::Node
+fn n_id<N>(_node: Ptr<N>) -> String {
+    panic!("shortcut: N::getID() is not available on the router node type")
+}
+
+// shortcut: junction nodes have no getOutgoing() on the router side, add it to RouterEdge::Node
+fn n_outgoing<E, N>(_node: Ptr<N>) -> Vec<Ptr<E>> {
+    panic!("shortcut: N::getOutgoing() is not available on the router node type")
+}
+
+// shortcut: junction nodes have no getIncoming() on the router side, add it to RouterEdge::Node
+fn n_incoming<E, N>(_node: Ptr<N>) -> Vec<Ptr<E>> {
+    panic!("shortcut: N::getIncoming() is not available on the router node type")
+}
+
+// shortcut: RouterEdge::Lane has no getOutgoingViaLanes()/getEdge(), add them to the lane type to port IntermodalNetwork
+fn l_outgoing_via_lanes<L, E>(_lane: Ptr<L>) -> Vec<(Ptr<L>, Ptr<E>)> {
+    panic!("shortcut: L::getOutgoingViaLanes() is not available on the router lane type")
+}
+
+// shortcut: RouterEdge::Lane has no getEdge(), add it to the lane type to port IntermodalNetwork
+fn l_edge<L, E>(_lane: Ptr<L>) -> Ptr<E> {
+    panic!("shortcut: L::getEdge() is not available on the router lane type")
+}
+
+// shortcut: C++ dynamic_cast<_AccessEdge*> stand-in: both AccessEdge ctors tag the line "!access" and no other intermodal edge does, upgrade to a type flag when the edge kinds get one
+fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>> {
+    if edge.get_line() == "!access" { edge.cast() } else { Ptr::null() }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a < b { b } else { a }
+}
+
+/// C++ `gTaxiClasses`
+fn g_taxi_classes_perm() -> SVCPermissions {
+    utils::common::std_defs::g_taxi_classes() as SVCPermissions
+}
 
 /// C++ enum `ModeChangeOptions`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -20,6 +112,14 @@ pub enum ModeChangeOptions {
 /// C++ typedef `std::pair<_IntermodalEdge *, _IntermodalEdge *> IntermodalNetwork::EdgePair`
 pub type IntermodalNetwork_EdgePair<E, L, N, V> = (Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>);
 
+/// The typed forward / backward pair of a network edge (C++ `EdgePair` with `_IntermodalEdge*`)
+pub type BidiPair<E, L, N, V> = (Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>);
+
+// shortcut: the edge id is only needed for the error text and RouterEdge is not bounded on the unbounded callers (pedestrian_router), upgrade when callers bound E
+fn e_id_unbounded<E>(_edge: Ptr<E>) -> String {
+    panic!("shortcut: E::getID() needs the RouterEdge bound for the error message")
+}
+
 /// C++ typedef `AccessEdge<E, L, N, V> IntermodalNetwork::_AccessEdge`
 pub type IntermodalNetwork__AccessEdge = Unmapped /* AccessEdge<E, L, N, V> */;
 
@@ -36,23 +136,23 @@ pub type IntermodalNetwork__PedestrianEdge = Unmapped /* PedestrianEdge<E, L, N,
 /// C++ class `IntermodalNetwork` (utils/router/IntermodalNetwork.h)
 pub struct IntermodalNetwork<E, L, N, V> {
     /// the edge dictionary
-    pub myEdges: Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
+    pub myEdges: Vec<Ptr<IntermodalEdge<E, L, N, V>>>,
     /// retrieve the forward and backward edge for the given input edge E
-    pub myBidiLookup: BTreeMap<Ptr<E>, IntermodalNetwork_EdgePair<E, L, N, V>>,
+    pub myBidiLookup: BTreeMap<Ptr<E>, BidiPair<E, L, N, V>>,
     /// retrieve the depart edges for the given input edge E
-    pub myDepartLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
+    pub myDepartLookup: BTreeMap<Ptr<E>, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
     /// retrieve the arrival edges for the given input edge E
-    pub myArrivalLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
+    pub myArrivalLookup: BTreeMap<Ptr<E>, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
     /// the walking connector edge (fake walking area)
-    pub myWalkingConnectorLookup: BTreeMap<Ptr<N>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
+    pub myWalkingConnectorLookup: BTreeMap<Ptr<N>, Ptr<IntermodalEdge<E, L, N, V>>>,
     /// retrieve the car edge for the given input edge E
-    pub myCarLookup: BTreeMap<Ptr<E>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>, // C++: std::map<const E *, _IntermodalEdge *, ComparatorNumericalIdLess>
+    pub myCarLookup: BTreeMap<Ptr<E>, Ptr<IntermodalEdge<E, L, N, V>>>, // C++: std::map<const E *, _IntermodalEdge *, ComparatorNumericalIdLess>
     /// retrieve the public transport edges for the given line
-    pub myPTLines: BTreeMap<String, Vec<Ptr<IntermodalNetwork__PTEdge>>>,
+    pub myPTLines: BTreeMap<String, Vec<Ptr<PublicTransportEdge<E, L, N, V>>>>,
     /// retrieve the representing edge for the given stopping place
-    pub myStopConnections: BTreeMap<String, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
+    pub myStopConnections: BTreeMap<String, Ptr<IntermodalEdge<E, L, N, V>>>,
     /// retrieve the splitted edges for the given "original"
-    pub myAccessSplits: BTreeMap<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
+    pub myAccessSplits: BTreeMap<Ptr<IntermodalEdge<E, L, N, V>>, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
     /// looped lines need extra checking when building itineraries
     pub myLoopedLines: BTreeSet<String>,
     pub myNumericalID: i32,
@@ -62,6 +162,13 @@ pub struct IntermodalNetwork<E, L, N, V> {
 }
 
 impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
+    /// Returns the next numerical ID (C++ `myNumericalID++`)
+    fn next_id(&mut self) -> i32 {
+        let id = self.myNumericalID;
+        self.myNumericalID += 1;
+        id
+    }
+
     /// C++: `void IntermodalNetwork::IntermodalNetwork<E, L, N, V>(const std::vector<E *> &, const bool, const int)`
     // IntermodalNetwork(const std::vector<E*>& edges, const bool pedestrianOnly, const int carWalkTransfer = 0)
     //         : myNumericalID(0), myCarWalkTransfer(carWalkTransfer), myHavePTSchedules(false) {
@@ -246,8 +353,195 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self {
-        todo!("port IntermodalNetwork::IntermodalNetwork<E, L, N, V>")
+    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        let mut net = Self {
+            myEdges: Vec::new(),
+            myBidiLookup: BTreeMap::new(),
+            myDepartLookup: BTreeMap::new(),
+            myArrivalLookup: BTreeMap::new(),
+            myWalkingConnectorLookup: BTreeMap::new(),
+            myCarLookup: BTreeMap::new(),
+            myPTLines: BTreeMap::new(),
+            myStopConnections: BTreeMap::new(),
+            myAccessSplits: BTreeMap::new(),
+            myLoopedLines: BTreeSet::new(),
+            myNumericalID: 0,
+            myCarWalkTransfer: carWalkTransfer,
+            myHavePTSchedules: false,
+            _p: std::marker::PhantomData,
+        };
+        // build the pedestrian edges and the depart / arrival connectors with lookup tables
+        let mut haveSeenWalkingArea = false;
+        for &edge in edges {
+            if edge.is_taz_connector() {
+                // only a single edge
+                let id = net.next_id();
+                let access = leak_edge(AccessEdge::<E, L, N, V>::new_2(id, edge.id(), edge, 0., SVC_IGNORING, SVC_IGNORING)).cast::<IntermodalEdge<E, L, N, V>>();
+                net.add_edge(access);
+                net.myDepartLookup.entry(edge).or_default().push(access);
+                net.myArrivalLookup.entry(edge).or_default().push(access);
+            } else {
+                let lane = get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN);
+                if !lane.is_null() {
+                    if e_is_walking_area(edge) {
+                        // only a single edge
+                        let id = net.next_id();
+                        net.add_edge(leak_edge(PedestrianEdge::<E, L, N, V>::new(id, edge, lane, true, -1.)).cast());
+                        let last = *net.myEdges.last().unwrap();
+                        net.myBidiLookup.insert(edge, (last, last));
+                        net.myDepartLookup.entry(edge).or_default().push(last);
+                        net.myArrivalLookup.entry(edge).or_default().push(last);
+                        haveSeenWalkingArea = true;
+                    } else { // regular edge or crossing
+                        // forward and backward edges
+                        let id = net.next_id();
+                        net.add_edge(leak_edge(PedestrianEdge::<E, L, N, V>::new(id, edge, lane, true, -1.)).cast());
+                        let id = net.next_id();
+                        net.add_edge(leak_edge(PedestrianEdge::<E, L, N, V>::new(id, edge, lane, false, -1.)).cast());
+                        let fwd = net.myEdges[(net.myNumericalID - 2) as usize];
+                        let bwd = *net.myEdges.last().unwrap();
+                        net.myBidiLookup.insert(edge, (fwd, bwd));
+                    }
+                }
+                if !e_is_walking_area(edge) {
+                    // depart and arrival edges (the router can decide the initial direction to take and the direction to arrive from)
+                    let id = net.next_id();
+                    let departConn = leak_edge(IntermodalEdge::<E, L, N, V>::new(edge.id().to_string() + "_depart_connector", id, edge, "!connector", -1.));
+                    let id = net.next_id();
+                    let arrivalConn = leak_edge(IntermodalEdge::<E, L, N, V>::new(edge.id().to_string() + "_arrival_connector", id, edge, "!connector", -1.));
+                    net.add_connectors(departConn, arrivalConn, 0);
+                }
+            }
+        }
+
+        // build the walking connectors if there are no walking areas
+        for &edge in edges {
+            if edge.is_taz_connector() || edge.is_internal() {
+                continue;
+            }
+            if haveSeenWalkingArea {
+                // connectivity needs to be ensured only in the real intermodal case, for simple pedestrian routing we don't have connectors if we have walking areas
+                if !pedestrianOnly && get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN).is_null() {
+                    let node: Ptr<N> = e_to_junction(edge);
+                    if !net.myWalkingConnectorLookup.contains_key(&node) {
+                        let id = net.next_id();
+                        let conn = leak_edge(IntermodalEdge::<E, L, N, V>::new(n_id(node) + "_walking_connector", id, Ptr::null(), "!connector", -1.));
+                        net.add_edge(conn);
+                        net.myWalkingConnectorLookup.insert(node, conn);
+                    }
+                }
+            } else {
+                let nodes: [Ptr<N>; 2] = [e_from_junction(edge), e_to_junction(edge)];
+                for node in nodes {
+                    if !net.myWalkingConnectorLookup.contains_key(&node) {
+                        let id = net.next_id();
+                        let conn = leak_edge(IntermodalEdge::<E, L, N, V>::new(n_id(node) + "_walking_connector", id, Ptr::null(), "!connector", -1.));
+                        net.add_edge(conn);
+                        net.myWalkingConnectorLookup.insert(node, conn);
+                    }
+                }
+            }
+        }
+        // build the connections
+        for &edge in edges {
+            if edge.is_taz_connector() {
+                // since pedestrians walk in both directions, also allow departing at sinks and arriving at sources
+                let tazDepart = net.get_depart_connector(edge, 0);
+                let tazArrive = net.get_arrival_connector(edge, 0);
+                let other = e_other_taz_connector(edge);
+                let otherTazDepart = if !other.is_null() { net.get_depart_connector(other, 0) } else { tazDepart };
+                let otherTazArrive = if !other.is_null() { net.get_arrival_connector(other, 0) } else { tazArrive };
+                for &out in edge.successors(SVC_IGNORING) {
+                    if e_is_normal(out) {
+                        let d = net.get_depart_connector(out, 0);
+                        tazDepart.m().add_successor(d, Ptr::null());
+                        net.get_arrival_connector(out, 0).m().add_successor(otherTazArrive, Ptr::null());
+                    }
+                }
+                for &in_ in edge.predecessors() {
+                    if e_is_normal(in_) {
+                        net.get_arrival_connector(in_, 0).m().add_successor(tazArrive, Ptr::null());
+                        let d = net.get_depart_connector(in_, 0);
+                        otherTazDepart.m().add_successor(d, Ptr::null());
+                    }
+                }
+                continue;
+            }
+            let sidewalk = get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN);
+            if sidewalk.is_null() {
+                continue;
+            }
+            // find all incoming and outgoing lanes for the sidewalk and
+            // connect the corresponding IntermodalEdges
+            let pair = net.bidi(edge);
+            if haveSeenWalkingArea {
+                let outgoing = l_outgoing_via_lanes::<L, E>(sidewalk);
+                // if one of the outgoing lanes is a walking area it must be used.
+                // All other connections shall be ignored
+                // if it has no outgoing walking area, it probably is a walking area itself
+                let mut hasWalkingArea = false;
+                for target in &outgoing {
+                    if e_is_walking_area(l_edge::<L, E>(target.0)) {
+                        hasWalkingArea = true;
+                        break;
+                    }
+                }
+                for target in &outgoing {
+                    let targetEdge = l_edge::<L, E>(target.0);
+                    let used = target.0 == get_sidewalk::<E, L>(targetEdge, SVC_PEDESTRIAN) && (!hasWalkingArea || e_is_walking_area(targetEdge));
+                    if used {
+                        let targetPair = net.bidi(targetEdge);
+                        pair.0.m().add_successor(targetPair.0, Ptr::null());
+                        targetPair.1.m().add_successor(pair.1, Ptr::null());
+                    }
+                }
+            }
+            // We may have a network without pedestrian structures or a car-only edge.
+            // In the first case we assume that all sidewalks at a junction are interconnected,
+            // in the second we connect all car-only edges to all sidewalks.
+            let toNodeConn = *net.myWalkingConnectorLookup.entry(e_to_junction(edge)).or_insert(Ptr::null());
+            if !toNodeConn.is_null() {
+                // Check for the outgoing vias and use the shortest one as an approximation
+                let outgoing = l_outgoing_via_lanes::<L, E>(sidewalk);
+                let mut minViaLength = f64::MAX;
+                let mut minVia: Ptr<E> = Ptr::null();
+                for target in &outgoing {
+                    if !target.1.is_null() && target.1.length() < minViaLength {
+                        minViaLength = target.1.length();
+                        minVia = target.1;
+                    }
+                }
+                let mut interVia: BidiPair<E, L, N, V> = (Ptr::null(), Ptr::null());
+                if !minVia.is_null() {
+                    if let Some(it) = net.myBidiLookup.get(&minVia) {
+                        interVia = *it;
+                    }
+                }
+                if !haveSeenWalkingArea {
+                    // if we have walking areas we should use them and not the connector
+                    pair.0.m().add_successor(toNodeConn, interVia.0);
+                }
+                toNodeConn.m().add_successor(pair.1, interVia.1);
+            }
+            let fromNodeConn = *net.myWalkingConnectorLookup.entry(e_from_junction(edge)).or_insert(Ptr::null());
+            if !fromNodeConn.is_null() {
+                if !haveSeenWalkingArea {
+                    pair.1.m().add_successor(fromNodeConn, Ptr::null());
+                }
+                fromNodeConn.m().add_successor(pair.0, Ptr::null());
+            }
+            if !e_is_walking_area(edge) {
+                // build connections from depart connector
+                let startConnector = net.get_depart_connector(edge, 0);
+                startConnector.m().add_successor(pair.0, Ptr::null());
+                startConnector.m().add_successor(pair.1, Ptr::null());
+                // build connections to arrival connector
+                let endConnector = net.get_arrival_connector(edge, 0);
+                pair.0.m().add_successor(endConnector, Ptr::null());
+                pair.1.m().add_successor(endConnector, Ptr::null());
+            }
+        }
+        net
     }
 
     /// C++: `void IntermodalNetwork::~IntermodalNetwork<E, L, N, V>()`
@@ -258,7 +552,8 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port IntermodalNetwork::~IntermodalNetwork<E, L, N, V>")
+        // shortcut: the concrete edge kind is not recorded, so the Box cannot be rebuilt; the edges are leaked, upgrade with a per-kind owner
+        self.myEdges.clear();
     }
 
     /// C++: `void IntermodalNetwork::addEdge(_IntermodalEdge *)`
@@ -269,8 +564,11 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         myEdges[edge->getNumericalID()] = edge;
     //     }
     #[allow(unused_variables)]
-    pub fn add_edge(&mut self, edge: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>) {
-        todo!("port IntermodalNetwork::addEdge")
+    pub fn add_edge(&mut self, edge: Ptr<IntermodalEdge<E, L, N, V>>) {
+        while (self.myEdges.len() as i32) <= edge.get_numerical_id() {
+            self.myEdges.push(Ptr::null());
+        }
+        self.myEdges[edge.get_numerical_id() as usize] = edge;
     }
 
     /// C++: `void IntermodalNetwork::addConnectors(_IntermodalEdge *const, _IntermodalEdge *const, const int)`
@@ -281,8 +579,13 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         myArrivalLookup[arrConn->getEdge()].insert(myArrivalLookup[arrConn->getEdge()].begin() + index, arrConn);
     //     }
     #[allow(unused_variables)]
-    pub fn add_connectors(&mut self, depConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, arrConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, index: i32) {
-        todo!("port IntermodalNetwork::addConnectors")
+    pub fn add_connectors(&mut self, depConn: Ptr<IntermodalEdge<E, L, N, V>>, arrConn: Ptr<IntermodalEdge<E, L, N, V>>, index: i32) {
+        self.add_edge(depConn);
+        self.add_edge(arrConn);
+        let depEdge = depConn.get_edge();
+        self.myDepartLookup.entry(depEdge).or_default().insert(index as usize, depConn);
+        let arrEdge = arrConn.get_edge();
+        self.myArrivalLookup.entry(arrEdge).or_default().insert(index as usize, arrConn);
     }
 
     /// C++: `const std::vector<_IntermodalEdge *> & IntermodalNetwork::getAllEdges()`
@@ -290,8 +593,8 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return myEdges;
     //     }
     #[allow(unused_variables)]
-    pub fn get_all_edges(&mut self) -> &Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>> {
-        todo!("port IntermodalNetwork::getAllEdges")
+    pub fn get_all_edges(&mut self) -> &Vec<Ptr<IntermodalEdge<E, L, N, V>>> {
+        &self.myEdges
     }
 
     /// C++: `const EdgePair & IntermodalNetwork::getBothDirections(const E *) const` [const]
@@ -305,8 +608,17 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return (*it).second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_both_directions(&self, e: Ptr<E>) -> &IntermodalNetwork_EdgePair<E, L, N, V> {
-        todo!("port IntermodalNetwork::getBothDirections")
+    pub fn get_both_directions(&self, e: Ptr<E>) -> IntermodalNetwork_EdgePair {
+        let (fwd, bwd) = self.bidi(e);
+        (fwd.cast(), bwd.cast())
+    }
+
+    /// Typed form of [`get_both_directions`](Self::get_both_directions) for the router-internal callers
+    fn bidi(&self, e: Ptr<E>) -> BidiPair<E, L, N, V> {
+        match self.myBidiLookup.get(&e) {
+            Some(pair) => *pair,
+            None => panic!("{}", ProcessError::new(format!("Edge '{}' not found in intermodal network.'", e_id_unbounded(e)))),
+        }
     }
 
     /// C++: `const _IntermodalEdge * IntermodalNetwork::getDepartEdge(const E *, const double) const` [const]
@@ -344,8 +656,36 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getDepartEdge")
+    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        let splitList = match self.myDepartLookup.get(&e) {
+            Some(list) => list,
+            None => panic!("{}", ProcessError::new(format!("Depart edge '{}' not found in intermodal network.", e.id()))),
+        };
+        if (e_permissions(e) & SVC_PEDESTRIAN) == 0 {
+            // use most specific split (best trainStop, quay etc)
+            let mut bestDist = f64::MAX;
+            let mut best: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
+            for &split in splitList {
+                if pos >= split.get_start_pos() - POSITION_EPS && pos <= split.get_end_pos() + POSITION_EPS {
+                    let dist = split.get_end_pos() - split.get_start_pos();
+                    if dist < bestDist {
+                        bestDist = dist;
+                        best = split;
+                    }
+                }
+            }
+            assert!(!best.is_null());
+            best
+        } else {
+            // use next downstream edge
+            let mut splitIt = 0;
+            let mut totalLength = 0.;
+            while splitIt + 1 != splitList.len() && totalLength + splitList[splitIt].get_length() < pos {
+                totalLength += splitList[splitIt].get_length();
+                splitIt += 1;
+            }
+            splitList[splitIt]
+        }
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getDepartConnector(const E *, const int) const` [const]
@@ -361,8 +701,15 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second[splitIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getDepartConnector")
+    pub fn get_depart_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<IntermodalEdge<E, L, N, V>> {
+        let splitList = match self.myDepartLookup.get(&e) {
+            Some(list) => list,
+            None => panic!("{}", ProcessError::new(format!("Depart edge '{}' not found in intermodal network.", e_id_unbounded(e)))),
+        };
+        if splitIndex >= splitList.len() as i32 {
+            panic!("{}", ProcessError::new(format!("Split index {} invalid for depart edge '{}' .", splitIndex, e_id_unbounded(e))));
+        }
+        splitList[splitIndex as usize]
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getArrivalEdge(const E *, const double) const` [const]
@@ -386,8 +733,22 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getArrivalEdge")
+    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        let splitList = match self.myArrivalLookup.get(&e) {
+            Some(list) => list,
+            None => panic!("{}", ProcessError::new(format!("Arrival edge '{}' not found in intermodal network.", e.id()))),
+        };
+        let mut splitIt = 0;
+        let mut totalLength = 0.;
+        while splitIt < splitList.len() && totalLength + splitList[splitIt].get_length() < pos {
+            totalLength += splitList[splitIt].get_length();
+            splitIt += 1;
+        }
+        if splitIt < splitList.len() {
+            splitList[splitIt]
+        } else {
+            *splitList.last().unwrap()
+        }
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getArrivalConnector(const E *, const int) const` [const]
@@ -396,8 +757,8 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return myArrivalLookup.find(e)->second[splitIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getArrivalConnector")
+    pub fn get_arrival_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<IntermodalEdge<E, L, N, V>> {
+        self.myArrivalLookup[&e][splitIndex as usize]
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getWalkingConnector(const E *) const` [const]
@@ -419,8 +780,22 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getWalkingConnector")
+    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        match self.myWalkingConnectorLookup.get(&e_to_junction(e)) {
+            Some(conn) => *conn,
+            None => {
+                let sidewalk = get_sidewalk::<E, L>(e, SVC_PEDESTRIAN);
+                if e.is_internal() || sidewalk.is_null() {
+                    return Ptr::null();
+                }
+                for target in l_outgoing_via_lanes::<L, E>(sidewalk) {
+                    if e_is_walking_area(l_edge::<L, E>(target.0)) {
+                        return self.bidi(l_edge::<L, E>(target.0)).0;
+                    }
+                }
+                Ptr::null()
+            }
+        }
     }
 
     /// C++: `void IntermodalNetwork::addCarEdges(const std::vector<E *> &, double)`
@@ -505,8 +880,97 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) {
-        todo!("port IntermodalNetwork::addCarEdges")
+    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        for &edge in edges {
+            if e_has_normal_function(edge) || e_has_internal_function(edge) {
+                let id = self.next_id();
+                let carEdge = leak_edge(CarEdge::<E, L, N, V>::new(id, edge, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+                self.myCarLookup.insert(edge, carEdge);
+                self.add_edge(carEdge);
+            }
+        }
+        // determinism: BTreeMap iterates by pointer, like the C++ std::map keyed by E*
+        let carPairs: Vec<(Ptr<E>, Ptr<IntermodalEdge<E, L, N, V>>)> = self.myCarLookup.iter().map(|(k, v)| (*k, *v)).collect();
+        let taxiClasses = g_taxi_classes_perm();
+        for (edge, carEdge) in carPairs {
+            // connectivity within the car network
+            for &suc in edge.via_successors(SVC_IGNORING, false) {
+                let sucCarEdge = self.get_car_edge(suc.0);
+                let sucViaEdge = self.get_car_edge(suc.1);
+                if !sucCarEdge.is_null() {
+                    carEdge.m().add_successor(sucCarEdge, sucViaEdge);
+                }
+            }
+            // connectivity to the pedestrian network (only for normal edges)
+            if !e_has_normal_function(edge) {
+                continue;
+            }
+            if (self.myCarWalkTransfer & ModeChangeOptions::ALL_JUNCTIONS as i32) != 0 {
+                let walkCon = self.get_walking_connector(edge);
+                if !walkCon.is_null() {
+                    carEdge.m().add_successor(walkCon, Ptr::null());
+                } else {
+                    // we are on an edge where pedestrians are forbidden and want to continue on an arbitrary pedestrian edge
+                    for out in n_outgoing::<E, N>(e_to_junction(edge)) {
+                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L>(out, SVC_PEDESTRIAN).is_null() {
+                            let target = self.bidi(out).0;
+                            carEdge.m().add_successor(target, Ptr::null());
+                        }
+                    }
+                    for inc in n_incoming::<E, N>(e_to_junction(edge)) {
+                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L>(inc, SVC_PEDESTRIAN).is_null() {
+                            let target = self.bidi(inc).1;
+                            carEdge.m().add_successor(target, Ptr::null());
+                        }
+                    }
+                }
+            }
+            if (self.myCarWalkTransfer & ModeChangeOptions::ALL_JUNCTIONS as i32) == 0 && (self.myCarWalkTransfer & ModeChangeOptions::TAXI_DROPOFF_ANYWHERE as i32) != 0 {
+                // add access edges that allow exiting a taxi
+                let walkCon = self.get_walking_connector(edge);
+                if !walkCon.is_null() {
+                    self.add_restricted_car_exit(carEdge, walkCon, taxiClasses);
+                } else {
+                    // we are on an edge where pedestrians are forbidden and want to continue on an arbitrary pedestrian edge
+                    for out in n_outgoing::<E, N>(e_to_junction(edge)) {
+                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L>(out, SVC_PEDESTRIAN).is_null() {
+                            let target = self.bidi(out).0;
+                            self.add_restricted_car_exit(carEdge, target, taxiClasses);
+                        }
+                    }
+                    for inc in n_incoming::<E, N>(e_to_junction(edge)) {
+                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L>(inc, SVC_PEDESTRIAN).is_null() {
+                            let target = self.bidi(inc).1;
+                            self.add_restricted_car_exit(carEdge, target, taxiClasses);
+                        }
+                    }
+                }
+            }
+            // use intermediate access edge that prevents taxi departure
+            let departConn = self.get_depart_connector(edge, 0);
+            let id = self.next_id();
+            let access = leak_edge(AccessEdge::new(id, departConn, carEdge, 0., SVC_ALL & !SVC_TAXI, SVC_IGNORING, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+            self.add_edge(access);
+            departConn.m().add_successor(access, Ptr::null());
+            access.m().add_successor(carEdge, Ptr::null());
+            if (self.myCarWalkTransfer & ModeChangeOptions::TAXI_PICKUP_ANYWHERE as i32) != 0 {
+                // taxi may depart anywhere but there is a time penalty
+                let id = self.next_id();
+                let taxiAccess = leak_edge(AccessEdge::new(id, departConn, carEdge, 0., SVC_TAXI, SVC_IGNORING, taxiWait)).cast::<IntermodalEdge<E, L, N, V>>();
+                self.add_edge(taxiAccess);
+                departConn.m().add_successor(taxiAccess, Ptr::null());
+                taxiAccess.m().add_successor(carEdge, Ptr::null());
+            }
+            if (self.myCarWalkTransfer & ModeChangeOptions::TAXI_DROPOFF_ANYWHERE as i32) != 0 {
+                // taxi (as all other cars) may arrive anywhere
+                let arrConn = self.get_arrival_connector(edge, 0);
+                carEdge.m().add_successor(arrConn, Ptr::null());
+            } else {
+                // use intermediate access edge that prevents taxi arrival
+                let arrConn = self.get_arrival_connector(edge, 0);
+                self.add_restricted_car_exit(carEdge, arrConn, SVC_ALL & !taxiClasses);
+            }
+        }
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getCarEdge(const E *) const` [const]
@@ -522,8 +986,14 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_car_edge(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getCarEdge")
+    pub fn get_car_edge(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> {
+        if e.is_null() {
+            return Ptr::null();
+        }
+        match self.myCarLookup.get(&e) {
+            Some(carEdge) => *carEdge,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `_IntermodalEdge * IntermodalNetwork::getStopEdge(const std::string &) const` [const]
@@ -536,8 +1006,11 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_stop_edge(&self, stopId: &str) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
-        todo!("port IntermodalNetwork::getStopEdge")
+    pub fn get_stop_edge(&self, stopId: &str) -> Ptr<IntermodalEdge<E, L, N, V>> {
+        match self.myStopConnections.get(stopId) {
+            Some(stopEdge) => *stopEdge,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `void IntermodalNetwork::addAccess(const std::string &, const E *, const double, const double, const double, const SumoXMLTag, bool, double)`
@@ -690,8 +1163,167 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) {
-        todo!("port IntermodalNetwork::addAccess")
+    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        assert!(!stopEdge.is_null());
+        let transferCarWalk = (category == SUMO_TAG_PARKING_AREA && (self.myCarWalkTransfer & ModeChangeOptions::PARKING_AREAS as i32) != 0)
+            || (category == SUMO_TAG_BUS_STOP && (self.myCarWalkTransfer & ModeChangeOptions::PT_STOPS as i32) != 0);
+        let transferTaxiWalk = (category == SUMO_TAG_PARKING_AREA && (self.myCarWalkTransfer & ModeChangeOptions::TAXI_DROPOFF_PARKING_AREAS as i32) != 0)
+            || (category == SUMO_TAG_BUS_STOP && (self.myCarWalkTransfer & ModeChangeOptions::TAXI_DROPOFF_PT as i32) != 0);
+        let transferWalkTaxi = (category == SUMO_TAG_PARKING_AREA && (self.myCarWalkTransfer & ModeChangeOptions::TAXI_PICKUP_PARKING_AREAS as i32) != 0)
+            || (category == SUMO_TAG_BUS_STOP && (self.myCarWalkTransfer & ModeChangeOptions::TAXI_PICKUP_PT as i32) != 0);
+        let pos = (startPos + endPos) / 2.;
+
+        if !self.myStopConnections.contains_key(stopId) {
+            let id = self.next_id();
+            let stop = leak_edge(StopEdge::<E, L, N, V>::new(stopId.to_string(), id, stopEdge, startPos, endPos)).cast::<IntermodalEdge<E, L, N, V>>();
+            self.myStopConnections.insert(stopId.to_string(), stop);
+            self.add_edge(stop);
+        }
+        let stopConn = self.myStopConnections[stopId];
+        let lane = get_sidewalk::<E, L>(stopEdge, SVC_PEDESTRIAN);
+        if !lane.is_null() {
+            let pair = self.bidi(stopEdge);
+            let mut relPos = 0.;
+            let mut needSplit = false;
+            let splitIndex = self.find_split_index(pair.0, pos, &mut relPos, &mut needSplit);
+            let fwdSplit: Ptr<IntermodalEdge<E, L, N, V>> = if needSplit {
+                let id = self.next_id();
+                leak_edge(PedestrianEdge::<E, L, N, V>::new(id, stopEdge, lane, true, pos)).cast()
+            } else {
+                Ptr::null()
+            };
+            self.split_edge(pair.0, splitIndex, fwdSplit, relPos, length, needSplit, stopConn, true, true, true);
+            let backSplit: Ptr<IntermodalEdge<E, L, N, V>> = if needSplit {
+                let id = self.next_id();
+                leak_edge(PedestrianEdge::<E, L, N, V>::new(id, stopEdge, lane, false, pos)).cast()
+            } else {
+                Ptr::null()
+            };
+            self.split_edge(pair.1, splitIndex, backSplit, relPos, length, needSplit, stopConn, false, true, true);
+            let mut carSplit: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
+            if self.myCarLookup.contains_key(&stopEdge) {
+                if needSplit {
+                    let id = self.next_id();
+                    carSplit = leak_edge(CarEdge::<E, L, N, V>::new(id, stopEdge, pos)).cast();
+                }
+                let carEdge = self.myCarLookup[&stopEdge];
+                self.split_edge(carEdge, splitIndex, carSplit, relPos, length, needSplit, stopConn, true, false, transferCarWalk);
+            }
+            if needSplit {
+                if !carSplit.is_null() && (transferCarWalk || transferTaxiWalk) {
+                    // adding access from car to walk
+                    let beforeSplit = self.myAccessSplits[&self.myCarLookup[&stopEdge]][splitIndex as usize];
+                    for conn in [fwdSplit, backSplit] {
+                        if transferCarWalk {
+                            let id = self.next_id();
+                            let access = leak_edge(AccessEdge::new(id, beforeSplit, conn, length, SVC_IGNORING, SVC_IGNORING, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+                            self.add_edge(access);
+                            beforeSplit.m().add_successor(access, Ptr::null());
+                            access.m().add_successor(conn, Ptr::null());
+                        } else if transferTaxiWalk {
+                            self.add_restricted_car_exit(beforeSplit, stopConn, g_taxi_classes_perm());
+                        }
+                    }
+                }
+                if !carSplit.is_null() && transferWalkTaxi && !isAccess {
+                    let id = self.next_id();
+                    let access = leak_edge(AccessEdge::new(id, stopConn, carSplit, 0., SVC_TAXI, SVC_IGNORING, taxiWait)).cast::<IntermodalEdge<E, L, N, V>>();
+                    self.add_edge(access);
+                    stopConn.m().add_successor(access, Ptr::null());
+                    access.m().add_successor(carSplit, Ptr::null());
+                }
+
+                // fixing depart connections for the forward pedestrian, the backward pedestrian and the car edge
+                let prevDep = self.get_depart_connector(stopEdge, splitIndex);
+                let backSplitList = self.myAccessSplits[&pair.1].clone();
+                let backBeforeSplit = backSplitList[(backSplitList.len() as i64 - 2 - splitIndex as i64) as usize];
+                let id = self.next_id();
+                let depConn = leak_edge(IntermodalEdge::<E, L, N, V>::new(stopEdge.id().to_string() + "_depart_connector" + &to_string(&pos), id, stopEdge, "!connector", -1.));
+                depConn.m().add_successor(fwdSplit, Ptr::null());
+                depConn.m().add_successor(backBeforeSplit, Ptr::null());
+                depConn.m().set_length(fwdSplit.get_length());
+                prevDep.m().remove_successor(backBeforeSplit);
+                prevDep.m().add_successor(backSplit, Ptr::null());
+                prevDep.m().set_length(backSplit.get_length());
+                if !carSplit.is_null() {
+                    depConn.m().add_successor(carSplit, Ptr::null());
+                }
+
+                // fixing arrival connections for the forward pedestrian, the backward pedestrian and the car edge
+                let prevArr = self.get_arrival_connector(stopEdge, splitIndex);
+                let fwdBeforeSplit = self.myAccessSplits[&pair.0][splitIndex as usize];
+                let id = self.next_id();
+                let arrConn = leak_edge(IntermodalEdge::<E, L, N, V>::new(stopEdge.id().to_string() + "_arrival_connector" + &to_string(&pos), id, stopEdge, "!connector", -1.));
+                fwdSplit.m().add_successor(arrConn, Ptr::null());
+                backBeforeSplit.m().add_successor(arrConn, Ptr::null());
+                arrConn.m().set_length(fwdSplit.get_length());
+                fwdSplit.m().remove_successor(prevArr);
+                fwdBeforeSplit.m().add_successor(prevArr, Ptr::null());
+                prevArr.m().set_length(backSplit.get_length());
+                if !carSplit.is_null() {
+                    if carSplit.m().remove_successor(prevArr) {
+                        carSplit.m().add_successor(arrConn, Ptr::null());
+                        let carSplitBefore = self.myAccessSplits[&self.myCarLookup[&stopEdge]][splitIndex as usize];
+                        carSplitBefore.m().add_successor(prevArr, Ptr::null());
+                    } else {
+                        // check for restricted access
+                        for out in carSplit.get_successors(SVC_IGNORING).clone() {
+                            let aOut = as_access_edge(out);
+                            if !aOut.is_null() && out.m().remove_successor(prevArr) {
+                                out.m().add_successor(arrConn, Ptr::null());
+                                let carSplitBefore = self.myAccessSplits[&self.myCarLookup[&stopEdge]][splitIndex as usize];
+                                self.add_restricted_car_exit(carSplitBefore, prevArr, aOut.get_vehicle_retriction());
+                                break;
+                            }
+                        }
+                    }
+                }
+                self.add_connectors(depConn, arrConn, splitIndex + 1);
+            }
+        } else {
+            // pedestrians cannot walk here:
+            // add stop edge as depart connector so that pedestrians may start at the stop
+            let mut splitIt = 0;
+            let splitList = self.myDepartLookup.entry(stopEdge).or_default();
+            assert!(!splitList.is_empty());
+            while splitIt < splitList.len() && startPos > splitList[splitIt].get_end_pos() {
+                splitIt += 1;
+            }
+            splitList.insert(splitIt, stopConn);
+
+            if !isAccess && (transferWalkTaxi || transferCarWalk || transferTaxiWalk) {
+                let carEdge = self.myCarLookup[&stopEdge];
+                let mut relPos = 0.;
+                let mut needSplit = false;
+                let splitIndex = self.find_split_index(carEdge, pos, &mut relPos, &mut needSplit);
+                if needSplit {
+                    let id = self.next_id();
+                    let carSplit: Ptr<IntermodalEdge<E, L, N, V>> = leak_edge(CarEdge::<E, L, N, V>::new(id, stopEdge, pos)).cast();
+                    self.split_edge(carEdge, splitIndex, carSplit, relPos, length, needSplit, stopConn, true, false, false);
+
+                    if transferCarWalk || transferTaxiWalk {
+                        // adding access from car to walk
+                        let beforeSplit = self.myAccessSplits[&carEdge][splitIndex as usize];
+                        if transferCarWalk {
+                            let id = self.next_id();
+                            let access = leak_edge(AccessEdge::new(id, beforeSplit, stopConn, length, SVC_IGNORING, SVC_IGNORING, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+                            self.add_edge(access);
+                            beforeSplit.m().add_successor(access, Ptr::null());
+                            access.m().add_successor(stopConn, Ptr::null());
+                        } else if transferTaxiWalk {
+                            self.add_restricted_car_exit(beforeSplit, stopConn, g_taxi_classes_perm());
+                        }
+                    }
+                    if transferWalkTaxi {
+                        let id = self.next_id();
+                        let access = leak_edge(AccessEdge::new(id, stopConn, carSplit, 0., SVC_TAXI, SVC_IGNORING, taxiWait)).cast::<IntermodalEdge<E, L, N, V>>();
+                        self.add_edge(access);
+                        stopConn.m().add_successor(access, Ptr::null());
+                        access.m().add_successor(carSplit, Ptr::null());
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool IntermodalNetwork::hasPTSchedules() const` [const]
@@ -700,7 +1332,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn has_pt_schedules(&self) -> bool {
-        todo!("port IntermodalNetwork::hasPTSchedules")
+        self.myHavePTSchedules
     }
 
     /// C++: `void IntermodalNetwork::addSchedule(const SUMOVehicleParameter &, const StopParVector *)`
@@ -793,7 +1425,90 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn add_schedule(&mut self, pars: &SUMOVehicleParameter, addStops: Ptr<StopParVector>) {
-        todo!("port IntermodalNetwork::addSchedule")
+        let mut lastUntil: SUMOTime = 0;
+        let mut validStops: StopParVector = Vec::new();
+        if !addStops.is_null() {
+            // stops are part of a stand-alone route. until times are offsets from vehicle departure
+            for stop in addStops.m().iter() {
+                if self.myStopConnections.contains_key(&stop.busstop) {
+                    // compute stop times for the first vehicle
+                    let newUntil = stop.until + pars.depart;
+                    if newUntil >= lastUntil {
+                        validStops.push(stop.clone());
+                        validStops.last_mut().unwrap().until = newUntil;
+                        lastUntil = newUntil;
+                    } else {
+                        write_warningf!("Ignoring unordered stop at '%' until % for vehicle '%'.", stop.busstop, time2string(stop.until), pars.id);
+                    }
+                }
+            }
+        }
+        for stop in &pars.stops {
+            // stops are part of the vehicle until times are absolute times for the first vehicle
+            if self.myStopConnections.contains_key(&stop.busstop) && stop.until >= lastUntil {
+                validStops.push(stop.clone());
+                lastUntil = stop.until;
+            } else if stop.busstop != "" && stop.until >= 0 {
+                write_warningf!("Ignoring stop at '%' until % for vehicle '%'.", stop.busstop, time2string(stop.until), pars.id);
+            }
+        }
+        if validStops.len() < 2 && pars.line != "taxi" {
+            write_warningf!("Not using public transport line '%' for routing persons. It has less than two usable stops.", pars.line);
+            return;
+        }
+
+        let lineEdgesEmpty = self.myPTLines.entry(pars.line.clone()).or_default().is_empty();
+        if lineEdgesEmpty {
+            let mut lastStop: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
+            let mut lastPos = Position::default();
+            let mut lastTime: SUMOTime = 0;
+            for s in &validStops {
+                let currStop = self.myStopConnections[&s.busstop];
+                let stopPos = e_stop_position::<E>(s);
+                if !lastStop.is_null() {
+                    let id = self.next_id();
+                    let newEdge = leak_edge(PublicTransportEdge::<E, L, N, V>::new(s.busstop.clone(), id, lastStop, currStop.get_edge(), &pars.line, lastPos.distance_to(&stopPos)));
+                    self.add_edge(newEdge.cast());
+                    newEdge.m().add_schedule(pars.id.clone(), lastTime, pars.repetitionNumber, pars.repetitionOffset, s.until - lastTime);
+                    self.myHavePTSchedules = true;
+                    let newBase: Ptr<IntermodalEdge<E, L, N, V>> = newEdge.cast();
+                    lastStop.m().add_successor(newBase, Ptr::null());
+                    newBase.m().add_successor(currStop, Ptr::null());
+                    self.myPTLines.entry(pars.line.clone()).or_default().push(newEdge);
+                }
+                lastTime = s.until;
+                lastStop = currStop;
+                lastPos = stopPos;
+            }
+            if pars.line != "taxi" && validStops.first().unwrap().busstop == validStops.last().unwrap().busstop {
+                self.myLoopedLines.insert(pars.line.clone());
+            }
+        } else {
+            let lineEdges = self.myPTLines[&pars.line].clone();
+            if validStops.len() != lineEdges.len() + 1 {
+                write_warningf!("Number of stops for public transport line '%' does not match earlier definitions, ignoring schedule.", pars.line);
+                return;
+            }
+            if lineEdges[0].get_entry_stop() != self.myStopConnections[&validStops[0].busstop] {
+                write_warningf!("Different stop for '%' compared to earlier definitions, ignoring schedule.", pars.line);
+                return;
+            }
+            for (idx, s) in validStops.iter().skip(1).enumerate() {
+                if lineEdges[idx].base.get_successors(SVC_IGNORING)[0] != self.myStopConnections[&s.busstop] {
+                    write_warningf!("Different stop for '%' compared to earlier definitions, ignoring schedule.", pars.line);
+                    return;
+                }
+            }
+            let mut lastTime = validStops[0].until;
+            if lineEdges[0].has_schedule(lastTime) {
+                write_warningf!("Duplicate schedule for '%' at time=%.", pars.line, time2string(lastTime));
+            }
+            for (idx, s) in validStops.iter().skip(1).enumerate() {
+                lineEdges[idx].m().add_schedule(pars.id.clone(), lastTime, pars.repetitionNumber, pars.repetitionOffset, s.until - lastTime);
+                self.myHavePTSchedules = true;
+                lastTime = s.until;
+            }
+        }
     }
 
     /// C++: `void IntermodalNetwork::addCarAccess(const E *, SUMOVehicleClass, double)`
@@ -812,7 +1527,17 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn add_car_access(&mut self, edge: Ptr<E>, svc: SUMOVehicleClass, traveltime: f64) {
-        todo!("port IntermodalNetwork::addCarAccess")
+        assert!(!edge.is_null());
+        assert!(self.myCarLookup.contains_key(&edge));
+        assert!(self.myBidiLookup.contains_key(&edge));
+        let pedestrianEdges = self.myBidiLookup[&edge];
+        let carEdge = self.myCarLookup[&edge];
+        let id = self.next_id();
+        let access = leak_edge(AccessEdge::new(id, pedestrianEdges.0, carEdge, 0., svc as SVCPermissions, SVC_IGNORING, traveltime)).cast::<IntermodalEdge<E, L, N, V>>();
+        self.add_edge(access);
+        pedestrianEdges.0.m().add_successor(access, Ptr::null());
+        pedestrianEdges.1.m().add_successor(access, Ptr::null());
+        access.m().add_successor(carEdge, Ptr::null());
     }
 
     /// C++: `void IntermodalNetwork::addRestrictedCarExit(_IntermodalEdge *, _IntermodalEdge *, SVCPermissions)`
@@ -824,8 +1549,12 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         access->addSuccessor(to);
     //     }
     #[allow(unused_variables)]
-    pub fn add_restricted_car_exit(&mut self, from: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, to: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, vehicleRestriction: SVCPermissions) {
-        todo!("port IntermodalNetwork::addRestrictedCarExit")
+    pub fn add_restricted_car_exit(&mut self, from: Ptr<IntermodalEdge<E, L, N, V>>, to: Ptr<IntermodalEdge<E, L, N, V>>, vehicleRestriction: SVCPermissions) {
+        let id = self.next_id();
+        let access = leak_edge(AccessEdge::new(id, from, to, 0., SVC_IGNORING, vehicleRestriction, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+        self.add_edge(access);
+        from.m().add_successor(access, Ptr::null());
+        access.m().add_successor(to, Ptr::null());
     }
 
     /// C++: `bool IntermodalNetwork::isLooped(const std::string) const` [const]
@@ -834,7 +1563,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_looped(&self, lineID: String) -> bool {
-        todo!("port IntermodalNetwork::isLooped")
+        self.myLoopedLines.contains(&lineID)
     }
 
     /// C++: `int IntermodalNetwork::findSplitIndex(_IntermodalEdge *const, const double, double &, bool &) const` [const, private]
@@ -860,8 +1589,26 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return splitIndex;
     //     }
     #[allow(unused_variables)]
-    pub fn find_split_index(&self, toSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, pos: f64, relPos: &mut f64, needSplit: &mut bool) -> i32 {
-        todo!("port IntermodalNetwork::findSplitIndex")
+    pub fn find_split_index(&self, toSplit: Ptr<IntermodalEdge<E, L, N, V>>, pos: f64, relPos: &mut f64, needSplit: &mut bool) -> i32 {
+        *relPos = pos;
+        *needSplit = true;
+        let mut splitIndex: i32 = 0;
+        if let Some(splitList) = self.myAccessSplits.get(&toSplit) {
+            if !splitList.is_empty() {
+                for split in splitList {
+                    if *relPos < split.get_length() + POSITION_EPS {
+                        break;
+                    }
+                    *relPos -= split.get_length();
+                    splitIndex += 1;
+                }
+                assert!((splitIndex as usize) < splitList.len());
+                if (splitIndex as usize) + 1 < splitList.len() && (*relPos - splitList[splitIndex as usize].get_length()).abs() < POSITION_EPS {
+                    *needSplit = false;
+                }
+            }
+        }
+        splitIndex
     }
 
     /// C++: `void IntermodalNetwork::splitEdge(_IntermodalEdge *const, int, _IntermodalEdge *, const double, const double, const bool, _IntermodalEdge *const, const bool, const bool, const bool)` [private]
@@ -916,8 +1663,54 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn split_edge(&mut self, toSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, splitIndex: i32, afterSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, relPos: f64, length: f64, needSplit: bool, stopConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, forward: bool, addExit: bool, addEntry: bool) {
-        todo!("port IntermodalNetwork::splitEdge")
+    pub fn split_edge(&mut self, toSplit: Ptr<IntermodalEdge<E, L, N, V>>, mut splitIndex: i32, mut afterSplit: Ptr<IntermodalEdge<E, L, N, V>>, relPos: f64, length: f64, needSplit: bool, stopConn: Ptr<IntermodalEdge<E, L, N, V>>, forward: bool, addExit: bool, addEntry: bool) {
+        let splitList = self.myAccessSplits.entry(toSplit).or_default();
+        if splitList.is_empty() {
+            splitList.push(toSplit);
+        }
+        if !forward {
+            splitIndex = splitList.len() as i32 - 1 - splitIndex;
+            if !needSplit {
+                splitIndex -= 1;
+            }
+        }
+        let beforeSplit = splitList[splitIndex as usize];
+        if needSplit {
+            self.add_edge(afterSplit);
+            beforeSplit.m().transfer_successors(afterSplit);
+            beforeSplit.m().add_successor(afterSplit, Ptr::null());
+            if forward {
+                afterSplit.m().set_length(max2(0.0, beforeSplit.get_length() - relPos));
+                beforeSplit.m().set_length(relPos);
+            } else {
+                afterSplit.m().set_length(relPos);
+                beforeSplit.m().set_length(max2(0.0, beforeSplit.get_length() - relPos));
+                // rename backward edges for easier referencing
+                let newID = beforeSplit.get_id().to_string();
+                beforeSplit.m().set_id(afterSplit.get_id());
+                afterSplit.m().set_id(&newID);
+            }
+            self.myAccessSplits.entry(toSplit).or_default().insert((splitIndex + 1) as usize, afterSplit);
+        } else {
+            // don't split, use the present split edges
+            afterSplit = self.myAccessSplits[&toSplit][(splitIndex + 1) as usize];
+        }
+        // add access to / from edge
+        if addEntry {
+            let id = self.next_id();
+            let access = leak_edge(AccessEdge::new(id, beforeSplit, stopConn, length, SVC_IGNORING, SVC_IGNORING, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+            self.add_edge(access);
+            beforeSplit.m().add_successor(access, Ptr::null());
+            access.m().add_successor(stopConn, Ptr::null());
+        }
+        if addExit {
+            // pedestrian case only, exit from public to pedestrian
+            let id = self.next_id();
+            let exit = leak_edge(AccessEdge::new(id, stopConn, afterSplit, length, SVC_IGNORING, SVC_IGNORING, -1.)).cast::<IntermodalEdge<E, L, N, V>>();
+            self.add_edge(exit);
+            stopConn.m().add_successor(exit, Ptr::null());
+            exit.m().add_successor(afterSplit, Ptr::null());
+        }
     }
 
     /// C++: `IntermodalNetwork<E, L, N, V> & IntermodalNetwork::operator=(const IntermodalNetwork<E, L, N, V> &)` [private]
@@ -925,7 +1718,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &IntermodalNetwork<E, L, N, V>) -> &mut IntermodalNetwork<E, L, N, V> {
-        todo!("port IntermodalNetwork::operator=")
+        panic!("IntermodalNetwork::operator= is private and never defined in C++, it cannot be called")
     }
 
 }
