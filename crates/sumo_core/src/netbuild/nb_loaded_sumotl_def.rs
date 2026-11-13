@@ -12,6 +12,40 @@ fn delete_tl_logic(logic: Ptr<NBTrafficLightLogic>) {
     }
 }
 
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn sumo_tl_def_of(d: &NBTrafficLightDefinition) -> &NBLoadedSUMOTLDef {
+    Ptr::new(d).cast::<NBLoadedSUMOTLDef>().get().unwrap()
+}
+fn sumo_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBLoadedSUMOTLDef {
+    Ptr::from_mut(d).cast::<NBLoadedSUMOTLDef>().get_mut().unwrap()
+}
+fn sumo_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    sumo_tl_def_of_mut(d).collect_links()
+}
+fn sumo_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    sumo_tl_def_of(d).set_tl_controlling_information()
+}
+fn sumo_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    sumo_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn sumo_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    sumo_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn sumo_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    sumo_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn sumo_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    sumo_tl_def_of_mut(d).get_max_index()
+}
+static NB_LOADED_SUMOTL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: sumo_tl_def_collect_links,
+    set_tl_controlling_information: sumo_tl_def_set_tl_controlling_information,
+    remap_removed: sumo_tl_def_remap_removed,
+    replace_removed: sumo_tl_def_replace_removed,
+    my_compute: sumo_tl_def_my_compute,
+    get_max_index: sumo_tl_def_get_max_index,
+};
+
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedSUMOTLDef` (netbuild/NBLoadedSUMOTLDef.h)
 #[repr(C)]
@@ -55,14 +89,16 @@ impl NBLoadedSUMOTLDef {
     #[allow(unused_variables)]
     pub fn new(id: &str, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
         let myTLLogic = Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new(id, programID, 0, offset, type_))));
-        NBLoadedSUMOTLDef {
+        let mut d = NBLoadedSUMOTLDef {
             base: NBTrafficLightDefinition::new_3(id, programID, offset, type_),
             myTLLogic,
             myShifted: BTreeSet::new(),
             myReconstructAddedConnections: false,
             myReconstructRemovedConnections: false,
             myPhasesLoaded: false,
-        }
+        };
+        d.base.vt = &NB_LOADED_SUMOTL_DEF_VT;
+        d
     }
 
     /// C++: `void NBLoadedSUMOTLDef::NBLoadedSUMOTLDef(const NBTrafficLightDefinition &, const NBTrafficLightLogic &)`
@@ -95,6 +131,7 @@ impl NBLoadedSUMOTLDef {
             myReconstructRemovedConnections: false,
             myPhasesLoaded: false,
         };
+        ret.base.vt = &NB_LOADED_SUMOTL_DEF_VT;
         ret.base.myControlledLinks = def.get_controlled_links().iter().map(NBConnection::new_4).collect();
         ret.base.myControlledNodes = def.get_nodes().clone();
         ret.base.base2.update_parameters(def.base2.get_parameters_map());
