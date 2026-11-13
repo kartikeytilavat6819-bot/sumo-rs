@@ -131,7 +131,7 @@ impl PCTypeDefHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &PCTypeDefHandler) -> Self {
-        todo!("port PCTypeDefHandler::PCTypeDefHandler")
+        panic!("PCTypeDefHandler copy constructor is private and never defined in C++; copying is not allowed")
     }
 
     /// C++: `PCTypeDefHandler & PCTypeDefHandler::operator=(const PCTypeDefHandler &)` [private]
@@ -139,7 +139,7 @@ impl PCTypeDefHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &PCTypeDefHandler) -> &mut PCTypeDefHandler {
-        todo!("port PCTypeDefHandler::operator=")
+        panic!("PCTypeDefHandler::operator= is private and never defined in C++; assignment is not allowed")
     }
 
 }

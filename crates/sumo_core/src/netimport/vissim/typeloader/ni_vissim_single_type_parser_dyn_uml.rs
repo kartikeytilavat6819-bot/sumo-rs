@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_DynUml {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_DynUml::NIVissimSingleTypeParser_DynUml")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_DynUml::~NIVissimSingleTypeParser_DynUml() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_DynUml {
     // NIVissimSingleTypeParser_DynUml::~NIVissimSingleTypeParser_DynUml() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_DynUml::~NIVissimSingleTypeParser_DynUml")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_DynUml::parse(std::istream &)` [virtual]
@@ -54,8 +54,16 @@ impl NIVissimSingleTypeParser_DynUml {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_DynUml::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tmp: Vec<String> = Vec::new();
+        tmp.push("reisezeit".to_string());
+        tmp.push("kante".to_string());
+        self.read_until(from, "kirchhoffexponent");
+        let mut tag: String = self.read_end_secure_2(from, &tmp);
+        while tag != "DATAEND" {
+            tag = self.read_end_secure_2(from, &tmp);
+        }
+        true
     }
 
 }
