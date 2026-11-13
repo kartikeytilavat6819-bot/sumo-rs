@@ -9,12 +9,32 @@ pub type ConstMSRoutePtr = Rc<MSRoute>;
 /// C++ typedef `long long SUMOTrafficObject::NumericalID`
 pub type SUMOTrafficObject_NumericalID = i64;
 
+/// Virtual dispatch table for the polymorphic methods of SUMOTrafficObject.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct SUMOTrafficObjectVt {
+    pub is_vehicle: fn(&SUMOTrafficObject) -> bool,
+    pub is_person: fn(&SUMOTrafficObject) -> bool,
+    pub is_container: fn(&SUMOTrafficObject) -> bool,
+}
+
+fn default_is_false(_: &SUMOTrafficObject) -> bool {
+    false
+}
+
+static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: default_is_false,
+    is_person: default_is_false,
+    is_container: default_is_false,
+};
+
 /// Representation of a vehicle, person, or container
 /// C++ class `SUMOTrafficObject` (utils/vehicle/SUMOTrafficObject.h)
 #[repr(C)]
 pub struct SUMOTrafficObject {
     /// C++ base class `Named`
     pub base: Named,
+    /// Virtual dispatch table; must stay after `base`
+    pub vt: &'static SUMOTrafficObjectVt,
 }
 
 impl std::ops::Deref for SUMOTrafficObject {
@@ -35,7 +55,7 @@ impl SUMOTrafficObject {
     // SUMOTrafficObject(const std::string& id) : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        SUMOTrafficObject { base: Named::new(id) }
+        SUMOTrafficObject { base: Named::new(id), vt: &DEFAULT_SUMO_TRAFFIC_OBJECT_VT }
     }
 
     /// C++: `void SUMOTrafficObject::~SUMOTrafficObject() noexcept` [virtual]
@@ -53,7 +73,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_vehicle(&self) -> bool {
-        false
+        (self.vt.is_vehicle)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::isPerson() const` [const, virtual]
@@ -63,7 +83,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_person(&self) -> bool {
-        false
+        (self.vt.is_person)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::isContainer() const` [const, virtual]
@@ -73,7 +93,7 @@ impl SUMOTrafficObject {
     //     }
     #[allow(unused_variables)]
     pub fn is_container(&self) -> bool {
-        false
+        (self.vt.is_container)(self)
     }
 
     /// C++: `NumericalID SUMOTrafficObject::getNumericalID() const` [const, virtual, pure virtual]
@@ -551,5 +571,19 @@ impl SUMOTrafficObject {
         }
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn default_table_is_all_false() {
+        let obj = SUMOTrafficObject::new("bare");
+        let p = Ptr::new(&obj);
+        assert!(!p.is_vehicle());
+        assert!(!p.is_person());
+        assert!(!p.is_container());
+    }
 }
 

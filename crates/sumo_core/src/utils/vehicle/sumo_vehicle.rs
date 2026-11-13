@@ -5,12 +5,68 @@ use crate::prelude::*;
 /// C++ typedef `std::vector<const MSEdge *> ConstMSEdgeVector`
 pub type ConstMSEdgeVector = Vec<Ptr<MSEdge>>;
 
+/// Virtual dispatch table for the polymorphic methods of SUMOVehicle.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct SUMOVehicleVt {
+    pub get_route: fn(&SUMOVehicle) -> &MSRoute,
+    pub get_departure: fn(&SUMOVehicle) -> SUMOTime,
+    pub get_depart_pos: fn(&SUMOVehicle) -> f64,
+    pub get_odometer: fn(&SUMOVehicle) -> f64,
+    pub has_departed: fn(&SUMOVehicle) -> bool,
+    pub is_stopped: fn(&SUMOVehicle) -> bool,
+    pub get_length: fn(&SUMOVehicle) -> f64,
+    pub get_current_edge: fn(&SUMOVehicle) -> Ptr<MSEdge>,
+    pub is_on_road: fn(&SUMOVehicle) -> bool,
+}
+
+fn default_get_route(_: &SUMOVehicle) -> &MSRoute {
+    todo!("port SUMOVehicle::getRoute")
+}
+fn default_get_departure(_: &SUMOVehicle) -> SUMOTime {
+    todo!("port SUMOVehicle::getDeparture")
+}
+fn default_get_depart_pos(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getDepartPos")
+}
+fn default_get_odometer(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getOdometer")
+}
+fn default_has_departed(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::hasDeparted")
+}
+fn default_is_stopped(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::isStopped")
+}
+fn default_get_length(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getLength")
+}
+fn default_get_current_edge(_: &SUMOVehicle) -> Ptr<MSEdge> {
+    todo!("port SUMOVehicle::getCurrentEdge")
+}
+fn default_is_on_road(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::isOnRoad")
+}
+
+static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
+    get_route: default_get_route,
+    get_departure: default_get_departure,
+    get_depart_pos: default_get_depart_pos,
+    get_odometer: default_get_odometer,
+    has_departed: default_has_departed,
+    is_stopped: default_is_stopped,
+    get_length: default_get_length,
+    get_current_edge: default_get_current_edge,
+    is_on_road: default_is_on_road,
+};
+
 /// Representation of a vehicle
 /// C++ class `SUMOVehicle` (utils/vehicle/SUMOVehicle.h)
 #[repr(C)]
 pub struct SUMOVehicle {
     /// C++ base class `SUMOTrafficObject`
     pub base: SUMOTrafficObject,
+    /// Virtual dispatch table; must stay after `base`
+    pub vt: &'static SUMOVehicleVt,
 }
 
 impl std::ops::Deref for SUMOVehicle {
@@ -31,7 +87,7 @@ impl SUMOVehicle {
     // SUMOVehicle(const std::string& id) : SUMOTrafficObject(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        SUMOVehicle { base: SUMOTrafficObject::new(id) }
+        SUMOVehicle { base: SUMOTrafficObject::new(id), vt: &DEFAULT_SUMO_VEHICLE_VT }
     }
 
     /// C++: `void SUMOVehicle::~SUMOVehicle() noexcept` [virtual]
@@ -63,7 +119,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_route(&self) -> &MSRoute {
-        todo!("port SUMOVehicle::getRoute")
+        (self.vt.get_route)(self)
     }
 
     /// C++: `ConstMSRoutePtr SUMOVehicle::getRoutePtr() const` [const, virtual, pure virtual]
@@ -159,7 +215,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        todo!("port SUMOVehicle::getCurrentEdge")
+        (self.vt.get_current_edge)(self)
     }
 
     /// C++: `EnergyParams * SUMOVehicle::getEmissionParameters() const` [const, virtual, pure virtual]
@@ -191,7 +247,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        todo!("port SUMOVehicle::isOnRoad")
+        (self.vt.is_on_road)(self)
     }
 
     /// C++: `bool SUMOVehicle::isIdling() const` [const, virtual, pure virtual]
@@ -239,7 +295,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_departure(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getDeparture")
+        (self.vt.get_departure)(self)
     }
 
     /// C++: `double SUMOVehicle::getDepartPos() const` [const, virtual, pure virtual]
@@ -247,7 +303,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_pos(&self) -> f64 {
-        todo!("port SUMOVehicle::getDepartPos")
+        (self.vt.get_depart_pos)(self)
     }
 
     /// C++: `double SUMOVehicle::getArrivalPos() const` [const, virtual, pure virtual]
@@ -271,7 +327,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_departed(&self) -> bool {
-        todo!("port SUMOVehicle::hasDeparted")
+        (self.vt.has_departed)(self)
     }
 
     /// C++: `int SUMOVehicle::getDepartEdge() const` [const, virtual, pure virtual]
@@ -287,7 +343,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_odometer(&self) -> f64 {
-        todo!("port SUMOVehicle::getOdometer")
+        (self.vt.get_odometer)(self)
     }
 
     /// C++: `int SUMOVehicle::getNumberReroutes() const` [const, virtual, pure virtual]
@@ -438,7 +494,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped(&self) -> bool {
-        todo!("port SUMOVehicle::isStopped")
+        (self.vt.is_stopped)(self)
     }
 
     /// C++: `bool SUMOVehicle::isStoppedTriggered() const` [const, virtual, pure virtual]
@@ -595,7 +651,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port SUMOVehicle::getLength")
+        (self.vt.get_length)(self)
     }
 
     /// C++: `bool SUMOVehicle::isRail() const` [const, virtual, pure virtual]
@@ -713,5 +769,31 @@ impl SUMOVehicle {
         todo!("port SUMOVehicle::loadState")
     }
 
+}
+
+#[cfg(test)]
+mod vt_dispatch_tests {
+    use super::*;
+
+    fn stopped_true(_: &SUMOVehicle) -> bool {
+        true
+    }
+
+    #[test]
+    fn installed_table_is_used_by_base_method() {
+        let mut v = SUMOVehicle::new("v");
+        v.vt = &SUMOVehicleVt {
+            get_route: default_get_route,
+            get_departure: default_get_departure,
+            get_depart_pos: default_get_depart_pos,
+            get_odometer: default_get_odometer,
+            has_departed: default_has_departed,
+            is_stopped: stopped_true,
+            get_length: default_get_length,
+            get_current_edge: default_get_current_edge,
+            is_on_road: default_is_on_road,
+        };
+        assert!(v.is_stopped());
+    }
 }
 

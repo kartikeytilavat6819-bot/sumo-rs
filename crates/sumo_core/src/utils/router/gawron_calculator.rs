@@ -33,7 +33,7 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     // GawronCalculator(const double beta, const double a) : myBeta(beta), myA(a) {}
     #[allow(unused_variables)]
     pub fn new(beta: f64, a: f64) -> Self {
-        todo!("port GawronCalculator::GawronCalculator<R, E, V>")
+        Self { base: RouteCostCalculator::new(), myBeta: beta, myA: a, _p: std::marker::PhantomData }
     }
 
     /// C++: `void GawronCalculator::~GawronCalculator<R, E, V>()` [virtual]
@@ -41,7 +41,7 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     // virtual ~GawronCalculator() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port GawronCalculator::~GawronCalculator<R, E, V>")
+        // C++ destructor body is empty; nothing to release
     }
 
     /// C++: `void GawronCalculator::setCosts(std::shared_ptr<R>, const double, const bool) const` [const]
@@ -54,7 +54,8 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_costs(&self, route: Rc<R>, costs: f64, isActive: bool) {
-        todo!("port GawronCalculator::setCosts")
+        // shortcut: needs router trait bounds (lead), R::setCosts and R::getCosts are not callable on generic R
+        panic!("shortcut: needs router trait bounds (lead), R::setCosts")
     }
 
     /// C++: `void GawronCalculator::calculateProbabilities(const std::vector<std::shared_ptr<R>> &, const V *const, const SUMOTime)`
@@ -86,7 +87,8 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_probabilities(&mut self, alternatives: &Vec<Rc<R>>, arg1: Ptr<V>, arg2: SUMOTime) {
-        todo!("port GawronCalculator::calculateProbabilities")
+        // shortcut: needs router trait bounds (lead), R::getCosts / R::getProbability / R::setProbability are not callable on generic R
+        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
     }
 
     /// C++: `double GawronCalculator::gawronF(const double, const double, const double) const` [const, private]
@@ -100,7 +102,11 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn gawron_f(&self, pdr: f64, pds: f64, x: f64) -> f64 {
-        todo!("port GawronCalculator::gawronF")
+        let g = self.gawron_g(self.myA, x);
+        if pdr * g + pds == 0. {
+            return f64::MAX;
+        }
+        (pdr * (pdr + pds) * g) / (pdr * g + pds)
     }
 
     /// C++: `double GawronCalculator::gawronG(const double, const double) const` [const, private]
@@ -113,7 +119,10 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn gawron_g(&self, a: f64, x: f64) -> f64 {
-        todo!("port GawronCalculator::gawronG")
+        if (1.0 - (x * x)) == 0. {
+            return f64::MAX;
+        }
+        ((a * x) / (1.0 - (x * x))).exp()
     }
 
     /// C++: `GawronCalculator<R, E, V> & GawronCalculator::operator=(const GawronCalculator<R, E, V> &)` [private]
@@ -121,7 +130,7 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &GawronCalculator<R, E, V>) -> &mut GawronCalculator<R, E, V> {
-        todo!("port GawronCalculator::operator=")
+        panic!("GawronCalculator assignment operator is private and invalidated in C++")
     }
 
 }
