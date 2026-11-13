@@ -213,7 +213,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
-        todo!("port MSPModel_JuPedSim::MSPModel_JuPedSim")
+        // shortcut: needs gRPC (tonic 0.14.9 + prost 0.14.6, tonic-build needs protoc) for the JuPedSim channel and stub, upgrade when tonic/prost are in Cargo.toml and protoc is installed (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::new needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
     /// C++: `void MSPModel_JuPedSim::~MSPModel_JuPedSim() noexcept` [virtual]
@@ -242,7 +243,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_JuPedSim::~MSPModel_JuPedSim")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGeom_destroy/finishGEOS) and the gRPC server process handle, upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::~MSPModel_JuPedSim needs GEOS (geos crate) and the gRPC server process handle")
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_JuPedSim::add(MSTransportable *, MSStageMoving *, SUMOTime)` [virtual]
@@ -409,7 +411,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, person: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel_JuPedSim::add")
+        // shortcut: needs gRPC (tonic + prost) for AddJourney and SwitchAgentJourney, upgrade when tonic/prost are in Cargo.toml and protoc is installed
+        panic!("MSPModel_JuPedSim::add needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
     /// C++: `void MSPModel_JuPedSim::remove(MSTransportableStateAdapter *)` [virtual]
@@ -428,7 +431,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSPModel_JuPedSim::remove")
+        // shortcut: needs the myActiveLanes member (C++ std::map<MSLane*, std::vector<PState*>>), which the generated struct omits, add it then port remove, upgrade when the struct is regenerated with it
+        panic!("MSPModel_JuPedSim::remove needs the myActiveLanes member, missing from the generated struct")
     }
 
     /// C++: `SUMOTime MSPModel_JuPedSim::execute(SUMOTime)`
@@ -735,7 +739,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, time: SUMOTime) -> SUMOTime {
-        todo!("port MSPModel_JuPedSim::execute")
+        // shortcut: needs gRPC (tonic + prost) for Iterate and GetCorePropertiesOfAllAgents, plus GEOS for train geometry, upgrade when both are wired (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::execute needs gRPC (tonic + prost) and GEOS")
     }
 
     /// C++: `bool MSPModel_JuPedSim::usingShortcuts()` [virtual]
@@ -772,7 +777,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn register_arrived(&mut self, agentID: MSPModel_JuPedSim_JPS_AgentId) {
-        todo!("port MSPModel_JuPedSim::registerArrived")
+        // shortcut: needs gRPC (tonic + prost) for RemoveAgents, upgrade when tonic/prost are in Cargo.toml and protoc is installed
+        panic!("MSPModel_JuPedSim::registerArrived needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
     /// C++: `void MSPModel_JuPedSim::clearState()` [virtual]
@@ -782,7 +788,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSPModel_JuPedSim::clearState")
+        self.myPedestrianStates.clear();
+        self.myNumActivePedestrians = 0;
     }
 
     /// C++: `void MSPModel_JuPedSim::polygonChanged(const SUMOPolygon *const, const bool, const bool)` [virtual]
@@ -817,7 +824,26 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn polygon_changed(&mut self, poly: Ptr<SUMOPolygon>, added: bool, removed: bool) {
-        todo!("port MSPModel_JuPedSim::polygonChanged")
+        if poly.get_shape_type() == "jupedsim.vanishing_area" || poly.get_shape_type() == "jupedsim.influencer" {
+            let mut lastRemovalTime: SUMOTime = 0;
+            if !added {
+                if let Some(areaIt) = self.myAreas.iter().position(|a| poly.get_id() == a.id) {
+                    lastRemovalTime = self.myAreas[areaIt].lastRemovalTime;
+                    self.myAreas.remove(areaIt);
+                }
+            }
+            if !removed {
+                let areaBoundary: Vec<Position> = poly.get_shape().iter().copied().collect();
+                let type_ = StringTokenizer::with_token(poly.get_shape_type(), ".", false).get_vector()[1].clone();
+                self.myAreas.push(Box::new(MSPModel_JuPedSim_AreaData {
+                    id: poly.get_id().to_string(),
+                    areaType: type_,
+                    areaBoundary,
+                    params: Ptr::new(poly.base2.get_parameters_map()),
+                    lastRemovalTime,
+                }));
+            }
+        }
     }
 
     /// C++: `void MSPModel_JuPedSim::initialize(const OptionsCont &)` [private]
@@ -893,7 +919,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn initialize(&mut self, oc: &OptionsCont) {
-        todo!("port MSPModel_JuPedSim::initialize")
+        // shortcut: needs GEOS (geos 11.3.1) for the pedestrian network and gRPC for CreateSimulation, upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::initialize needs GEOS (geos crate) and gRPC (CreateSimulation)")
     }
 
     /// C++: `void MSPModel_JuPedSim::tryPedestrianInsertion(PState *, const Position &)` [private]
@@ -946,14 +973,16 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn try_pedestrian_insertion(&mut self, state: Ptr<MSPModel_Striping_PState>, p: &Position) {
-        todo!("port MSPModel_JuPedSim::tryPedestrianInsertion")
+        // shortcut: needs gRPC (tonic + prost) for CreateAgent, upgrade when tonic/prost are in Cargo.toml and protoc is installed
+        panic!("MSPModel_JuPedSim::tryPedestrianInsertion needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
     /// C++: `JPS_StageId MSPModel_JuPedSim::addWaypoint(const std::string &, WaypointDesc &, const MSStageMoving *const)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_waypoint(&mut self, agentID: &str, waypoint: &mut MSPModel_JuPedSim_WaypointDesc, finalStage: Ptr<MSStageMoving>) -> MSPModel_JuPedSim_JPS_StageId {
-        todo!("port MSPModel_JuPedSim::addWaypoint")
+        // shortcut: needs gRPC (tonic + prost) for AddWaypointStage, upgrade when tonic/prost are in Cargo.toml and protoc is installed
+        panic!("MSPModel_JuPedSim::addWaypoint needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
     /// C++: `int * MSPModel_JuPedSim::createGeometryFromCenterLine(PositionVector, double, int)` [static, private]
@@ -967,7 +996,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn create_geometry_from_center_line(centerLine: PositionVector, width: f64, capStyle: i32) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim::createGeometryFromCenterLine")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSBufferWithStyle), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::createGeometryFromCenterLine needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim::createGeometryFromShape(PositionVector, std::string, std::string, bool)` [static, private]
@@ -1035,7 +1065,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn create_geometry_from_shape(shape: PositionVector, junctionID: String, shapeID: String, isInternalShape: bool) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim::createGeometryFromShape")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSisValid/GEOSConvexHull/GEOSBufferWithStyle), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::createGeometryFromShape needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim::buildPedestrianNetwork(MSNet *)` [private]
@@ -1151,7 +1182,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn build_pedestrian_network(&mut self, network: Ptr<MSNet>) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim::buildPedestrianNetwork")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSUnaryUnion/GEOSDifference/GEOSisSimple), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::buildPedestrianNetwork needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim::convertToGEOSPoints(PositionVector)` [static, private]
@@ -1166,7 +1198,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_geos_points(shape: PositionVector) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim::convertToGEOSPoints")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSCoordSeq), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::convertToGEOSPoints needs GEOS (geos crate)")
     }
 
     /// C++: `void MSPModel_JuPedSim::convertToJPSPoints(const int *, int *)` [static, private]
@@ -1188,7 +1221,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_jps_points(geometry: Ptr<i32>, into: Ptr<i32>) {
-        todo!("port MSPModel_JuPedSim::convertToJPSPoints")
+        // shortcut: needs GEOS (geos 11.3.1, reads coordinates) and protobuf sumo_jupedsim_api::Polygon (prost), upgrade once both are in Cargo.toml (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::convertToJPSPoints needs GEOS (geos crate) and protobuf Polygon (prost)")
     }
 
     /// C++: `PositionVector MSPModel_JuPedSim::convertToSUMOPoints(const int *)` [static, private]
@@ -1209,7 +1243,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_sumo_points(geometry: Ptr<i32>) -> PositionVector {
-        todo!("port MSPModel_JuPedSim::convertToSUMOPoints")
+        // shortcut: needs GEOS (geos 11.3.1, reads coordinates), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::convertToSUMOPoints needs GEOS (geos crate)")
     }
 
     /// C++: `double MSPModel_JuPedSim::getLinearRingArea(const int *)` [static, private]
@@ -1223,7 +1258,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn get_linear_ring_area(linearRing: Ptr<i32>) -> f64 {
-        todo!("port MSPModel_JuPedSim::getLinearRingArea")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSArea), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::getLinearRingArea needs GEOS (geos crate)")
     }
 
     /// C++: `void MSPModel_JuPedSim::removePolygonFromDrawing(const std::string &)` [private]
@@ -1233,7 +1269,7 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn remove_polygon_from_drawing(&mut self, polygonId: &str) {
-        todo!("port MSPModel_JuPedSim::removePolygonFromDrawing")
+        self.myShapeContainer.m().remove_polygon(polygonId, true);
     }
 
     /// C++: `void MSPModel_JuPedSim::preparePolygonForDrawing(const int *, const std::string &, const RGBColor &)` [private]
@@ -1259,7 +1295,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn prepare_polygon_for_drawing(&mut self, polygon: Ptr<i32>, polygonId: &str, color: &RGBColor) {
-        todo!("port MSPModel_JuPedSim::preparePolygonForDrawing")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGetExteriorRing/GEOSGetInteriorRingN), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::preparePolygonForDrawing needs GEOS (geos crate)")
     }
 
     /// C++: `const int * MSPModel_JuPedSim::getLargestComponent(const int *, int &, double &, double &)` [static, private]
@@ -1283,7 +1320,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn get_largest_component(polygon: Ptr<i32>, nbrComponents: &mut i32, maxArea: &mut f64, totalArea: &mut f64) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim::getLargestComponent")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGetNumGeometries/GEOSArea), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::getLargestComponent needs GEOS (geos crate)")
     }
 
     /// C++: `int64_t MSPModel_JuPedSim::buildJPSGeometryFromGEOSGeometry(const int *)` [private]
@@ -1320,7 +1358,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn build_jps_geometry_from_geos_geometry(&mut self, polygon: Ptr<i32>) -> i64 {
-        todo!("port MSPModel_JuPedSim::buildJPSGeometryFromGEOSGeometry")
+        // shortcut: needs GEOS (geos 11.3.1, reads rings) and gRPC CreateGeometry (tonic + prost), upgrade once both are wired (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::buildJPSGeometryFromGEOSGeometry needs GEOS (geos crate) and gRPC CreateGeometry")
     }
 
     /// C++: `void MSPModel_JuPedSim::dumpGeometry(const int *, const std::string &, bool)` [static, private]
@@ -1364,7 +1403,8 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn dump_geometry(polygon: Ptr<i32>, filename: &str, useGeoCoordinates: bool) {
-        todo!("port MSPModel_JuPedSim::dumpGeometry")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSWKTWriter), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::dumpGeometry needs GEOS (geos crate)")
     }
 
     /// C++: `double MSPModel_JuPedSim::getRadius(const MSVehicleType &)` [static, private]
@@ -1374,14 +1414,17 @@ impl MSPModel_JuPedSim {
     // }
     #[allow(unused_variables)]
     pub fn get_radius(vehType: &MSVehicleType) -> f64 {
-        todo!("port MSPModel_JuPedSim::getRadius")
+        let length = vehType.get_length();
+        let width = vehType.get_width();
+        0.5 * (if length > width { length } else { width })
     }
 
     /// C++: `JPS_StageId MSPModel_JuPedSim::addWaitingSet(const MSLane *const, const bool)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_waiting_set(&mut self, crossing: Ptr<MSLane>, entry: bool) -> MSPModel_JuPedSim_JPS_StageId {
-        todo!("port MSPModel_JuPedSim::addWaitingSet")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSContains on the pedestrian network) and gRPC AddWaitingSetStage (tonic + prost), upgrade once both are wired (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim::addWaitingSet needs GEOS (geos crate) and gRPC AddWaitingSetStage")
     }
 
     /// C++: `Response MSPModel_JuPedSim::callGrpc(int (*)(int *, const Request &, Response *), Request &, const std::string &, const bool)` [private]
@@ -1405,7 +1448,8 @@ impl MSPModel_JuPedSim {
     //     }
     #[allow(unused_variables)]
     pub fn call_grpc(&mut self) -> Unmapped /* Response */ {
-        todo!("port MSPModel_JuPedSim::callGrpc")
+        // shortcut: needs gRPC (tonic + prost) for every JuPedSimService stub call, upgrade when tonic/prost are in Cargo.toml and protoc is installed
+        panic!("MSPModel_JuPedSim::callGrpc needs gRPC (tonic + prost, protoc for tonic-build)")
     }
 
 }
@@ -1446,7 +1490,15 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &[MSPModel_JuPedSim_WaypointDesc]) -> Self {
-        todo!("port PState::PState")
+        let mut state = Self {
+            base: MSPModel_InteractingState::new(person, stage, Ptr::null()),
+            myJourneyId: journeyId,
+            myStageId: stageId,
+            myWaypoints: waypoints.to_vec(),
+            myAgentId: 0,
+        };
+        state.myDir = 1; // MSPModel::FORWARD
+        state
     }
 
     /// C++: `void PState::~PState() noexcept` [virtual]
@@ -1454,7 +1506,7 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PState::~PState")
+
     }
 
     /// C++: `void PState::reinit(MSStageMoving *, JPS_JourneyId, JPS_StageId, const int &)`
@@ -1471,7 +1523,13 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &[MSPModel_JuPedSim_WaypointDesc]) {
-        todo!("port PState::reinit")
+        if !self.myStage.is_null() {
+            self.myStage.m().set_p_state(Ptr::null());
+        }
+        self.myStage = stage;
+        self.myJourneyId = journeyId;
+        self.myStageId = stageId;
+        self.myWaypoints = waypoints.to_vec();
     }
 
     /// C++: `Position PState::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -1480,7 +1538,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_position(&self, arg0: &MSStageMoving, arg1: SUMOTime) -> Position {
-        todo!("port PState::getPosition")
+        self.myRemoteXYPos
     }
 
     /// C++: `void PState::setPosition(const double, const double, const double)`
@@ -1494,7 +1552,12 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn set_position(&mut self, x: f64, y: f64, z: f64) {
-        todo!("port PState::setPosition")
+        if self.myRemoteXYPos != Position::INVALID {
+            self.mySpeed = self.myRemoteXYPos.distance_to2d(&Position::new3(x, y, z)) / utils::common::time::steps2time(utils::common::time::delta_t());
+        } else {
+            self.mySpeed = 0.;
+        }
+        self.myRemoteXYPos.set3(x, y, z);
     }
 
     /// C++: `void PState::setAngle(double)`
@@ -1503,7 +1566,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_angle(&mut self, angle: f64) {
-        todo!("port PState::setAngle")
+        self.myAngle = angle;
     }
 
     /// C++: `void PState::setStage(MSStageMoving *const)`
@@ -1512,7 +1575,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_stage(&mut self, stage: Ptr<MSStageMoving>) {
-        todo!("port PState::setStage")
+        self.myStage = stage;
     }
 
     /// C++: `void PState::setLane(MSLane *)`
@@ -1521,7 +1584,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_lane(&mut self, lane: Ptr<MSLane>) {
-        todo!("port PState::setLane")
+        self.myLane = lane;
     }
 
     /// C++: `void PState::setLanePosition(double)`
@@ -1530,7 +1593,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_lane_position(&mut self, lanePosition: f64) {
-        todo!("port PState::setLanePosition")
+        self.myEdgePos = lanePosition;
     }
 
     /// C++: `const MSEdge * PState::getNextEdge(const MSStageMoving &) const` [const, virtual]
@@ -1539,7 +1602,7 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        todo!("port PState::getNextEdge")
+        stage.get_next_route_edge()
     }
 
     /// C++: `const MSPModel_JuPedSim::WaypointDesc * PState::getNextWaypoint(const int) const` [const]
@@ -1549,7 +1612,11 @@ impl MSPModel_JuPedSim_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_waypoint(&self, offset: i32) -> Ptr<MSPModel_JuPedSim_WaypointDesc> {
-        todo!("port PState::getNextWaypoint")
+        if (offset as usize) < self.myWaypoints.len() {
+            Ptr::new(&self.myWaypoints[offset as usize])
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `JPS_AgentId PState::getAgentId() const` [const]
@@ -1558,7 +1625,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_agent_id(&self) -> MSPModel_JuPedSim_JPS_AgentId {
-        todo!("port PState::getAgentId")
+        self.myAgentId
     }
 
     /// C++: `void PState::setAgentId(JPS_AgentId)`
@@ -1568,7 +1635,8 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_agent_id(&mut self, id: MSPModel_JuPedSim_JPS_AgentId) {
-        todo!("port PState::setAgentId")
+        self.myAgentId = id;
+        self.myWaitingToEnter = false;
     }
 
     /// C++: `bool PState::isFinished() const` [const, virtual]
@@ -1578,7 +1646,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn is_finished(&self) -> bool {
-        todo!("port PState::isFinished")
+        self.myWaypoints.is_empty()
     }
 
     /// C++: `JPS_JourneyId PState::getJourneyId() const` [const]
@@ -1587,7 +1655,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_journey_id(&self) -> MSPModel_JuPedSim_JPS_JourneyId {
-        todo!("port PState::getJourneyId")
+        self.myJourneyId
     }
 
     /// C++: `JPS_StageId PState::getStageId() const` [const]
@@ -1597,7 +1665,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_stage_id(&self) -> MSPModel_JuPedSim_JPS_StageId {
-        todo!("port PState::getStageId")
+        self.myStageId
     }
 
     /// C++: `bool PState::advanceNextWaypoint()`
@@ -1607,7 +1675,8 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn advance_next_waypoint(&mut self) -> bool {
-        todo!("port PState::advanceNextWaypoint")
+        self.myWaypoints.remove(0);
+        self.myWaypoints.is_empty()
     }
 
 }
