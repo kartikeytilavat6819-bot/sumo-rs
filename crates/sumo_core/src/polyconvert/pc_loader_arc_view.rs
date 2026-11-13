@@ -296,7 +296,7 @@ impl PCLoaderArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &PCLoaderArcView) -> Self {
-        todo!("port PCLoaderArcView::PCLoaderArcView")
+        panic!("PCLoaderArcView copy constructor is invalidated in SUMO")
     }
 
     /// C++: `PCLoaderArcView & PCLoaderArcView::operator=(const PCLoaderArcView &)` [private]
@@ -304,7 +304,7 @@ impl PCLoaderArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &PCLoaderArcView) -> &mut PCLoaderArcView {
-        todo!("port PCLoaderArcView::operator=")
+        panic!("PCLoaderArcView assignment operator is invalidated in SUMO")
     }
 
 }

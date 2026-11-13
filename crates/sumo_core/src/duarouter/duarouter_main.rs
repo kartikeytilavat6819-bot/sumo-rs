@@ -193,6 +193,19 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
 // }
 #[allow(unused_variables)]
 pub fn init_net(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
-    todo!("port initNet")
+    // load the net
+    let mut builder = crate::duarouter::rodua_edge_builder::RODUAEdgeBuilder::new();
+    crate::router::ro_edge::ROEdge::set_global_options(oc.get_bool("weights.interpolate").unwrap());
+    loader.load_net(net, &mut builder);
+    // load the weights when wished/available
+    if oc.is_set("weight-files", true).unwrap() {
+        loader.load_weights(net, "weight-files", &oc.get_string("weight-attribute").unwrap(), false, oc.get_bool("weights.expand").unwrap());
+    }
+    if oc.is_set("lane-weight-files", true).unwrap() {
+        loader.load_weights(net, "lane-weight-files", &oc.get_string("weight-attribute").unwrap(), true, oc.get_bool("weights.expand").unwrap());
+    }
+    if oc.get_bool("skip-new-routes").unwrap() {
+        crate::router::ro_route_def::RORouteDef::set_skip_new();
+    }
 }
 

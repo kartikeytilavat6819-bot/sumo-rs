@@ -480,7 +480,7 @@ impl NGRandomNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NGRandomNetBuilder) -> Self {
-        todo!("port NGRandomNetBuilder::NGRandomNetBuilder")
+        panic!("NGRandomNetBuilder copy constructor is invalidated in SUMO")
     }
 
     /// C++: `NGRandomNetBuilder & NGRandomNetBuilder::operator=(const NGRandomNetBuilder &)` [private]
@@ -488,7 +488,7 @@ impl NGRandomNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NGRandomNetBuilder) -> &mut NGRandomNetBuilder {
-        todo!("port NGRandomNetBuilder::operator=")
+        panic!("NGRandomNetBuilder assignment operator is invalidated in SUMO")
     }
 
 }
