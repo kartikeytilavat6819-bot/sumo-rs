@@ -138,6 +138,22 @@ impl MSPerson_Influencer {
 
 }
 
+// C++ virtual overrides of SUMOTrafficObject, dispatched through SUMOTrafficObject::vt
+fn ms_person_is_vehicle(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn ms_person_is_person(_: &SUMOTrafficObject) -> bool {
+    true
+}
+fn ms_person_is_container(_: &SUMOTrafficObject) -> bool {
+    false
+}
+static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: ms_person_is_vehicle,
+    is_person: ms_person_is_person,
+    is_container: ms_person_is_container,
+};
+
 /// The class holds a simulated person together with her movement stages
 /// C++ class `MSPerson` (microsim/transportables/MSPerson.h)
 #[repr(C)]
@@ -176,12 +192,14 @@ impl MSPerson {
     pub fn new(pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, speedFactor: f64) -> Self {
         let base = MSTransportable::new(pars, vtype, plan, true);
         let timegap = base.get_float_param("pedestrian.timegap-crossing", false, utils::common::std_defs::INVALID_DOUBLE, true);
-        MSPerson {
+        let mut p = MSPerson {
             base,
             myInfluencer: Ptr::null(),
             myChosenSpeedFactor: if pars.speedFactor < 0. { speedFactor } else { pars.speedFactor },
             myTimegapCrossing: timegap,
-        }
+        };
+        p.base.base.vt = &MS_PERSON_VT;
+        p
     }
 
     /// C++: `void MSPerson::~MSPerson() noexcept` [virtual]
