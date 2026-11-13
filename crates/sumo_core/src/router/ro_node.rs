@@ -30,6 +30,22 @@ impl std::ops::DerefMut for RONode {
     }
 }
 
+impl crate::utils::router::router_edge::RouterNode for RONode {
+    type Edge = ROEdge;
+    fn id(&self) -> &str {
+        self.base.get_id()
+    }
+    fn position(&self) -> &Position {
+        self.get_position()
+    }
+    fn incoming(&self) -> &[Ptr<ROEdge>] {
+        self.get_incoming()
+    }
+    fn outgoing(&self) -> &[Ptr<ROEdge>] {
+        self.get_outgoing()
+    }
+}
+
 impl RONode {
     /// C++: `void RONode::RONode(const std::string &)`
     /// Constructor

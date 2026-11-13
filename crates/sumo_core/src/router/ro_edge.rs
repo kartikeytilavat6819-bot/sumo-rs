@@ -99,6 +99,12 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn numerical_id(&self) -> i32 {
         self.get_numerical_id()
     }
+    fn from_junction(&self) -> Ptr<RONode> {
+        self.get_from_junction()
+    }
+    fn to_junction(&self) -> Ptr<RONode> {
+        self.get_to_junction()
+    }
     fn length(&self) -> f64 {
         self.get_length()
     }
