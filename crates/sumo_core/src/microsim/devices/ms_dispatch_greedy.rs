@@ -277,7 +277,7 @@ impl MSDispatch_Greedy {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDispatch_Greedy) -> &mut MSDispatch_Greedy {
-        todo!("port MSDispatch_Greedy::operator=")
+        panic!("MSDispatch_Greedy cannot be assigned: the assignment operator is invalidated in C++")
     }
 
 }

@@ -40,6 +40,13 @@ impl std::ops::DerefMut for RORouteDef {
 static MY_USING_JTRR: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 static MY_SKIP_NEW_ROUTES: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 
+/// C++ `MsgHandler::getWarningInstance()` / `getErrorInstance()`
+// shortcut: the instances are kept in a locked static, the pointer stays valid because they are only dropped by cleanup_on_end
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    let t = if warning { MsgType::Warning } else { MsgType::Error };
+    Ptr::from_raw(utils::common::msg_handler::with_instance(t, |h| h as *mut MsgHandler))
+}
+
 impl RORouteDef {
     /// C++: `void RORouteDef::RORouteDef(const std::string &, const int, const bool, const bool)`
     /// Constructor
@@ -224,7 +231,80 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn pre_compute_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle) {
-        todo!("port RORouteDef::preComputeCurrentRoute")
+        // C++ `mutable` members are written from this const method
+        let me = Ptr::new(self).get_mut().unwrap();
+        me.myNewRoute = false;
+        let ignoreErrors = utils::options::options_cont::get_bool("ignore-errors");
+        let hasRestrictions = RONet::get_instance().has_param_restrictions();
+        assert!(me.myAlternatives[0].get_edge_vector().len() > 0);
+        let mh = msg_instance(ignoreErrors);
+        if me.myAlternatives[0].get_first().prohibits(Ptr::new(veh), hasRestrictions)
+            && (!utils::options::options_cont::get_bool("repair.from") || me.myMayBeDisconnected || me.myAlternatives[0].get_edge_vector().len() < 2)
+        {
+            let args: [&dyn ToStringPrec; 2] = [&veh.get_id().to_string(), &me.myAlternatives[0].get_first().get_id().to_string()];
+            mh.m().informf("Vehicle '%' is not allowed to depart on edge '%'.", &args);
+            return;
+        } else if me.myAlternatives[0].get_last().prohibits(Ptr::new(veh), hasRestrictions)
+            && (!utils::options::options_cont::get_bool("repair.to") || me.myMayBeDisconnected || me.myAlternatives[0].get_edge_vector().len() < 2)
+        {
+            // this check is not strictly necessary unless myTryRepair is set.
+            // However, the error message is more helpful than "no connection found"
+            let args: [&dyn ToStringPrec; 2] = [&veh.get_id().to_string(), &me.myAlternatives[0].get_last().get_id().to_string()];
+            mh.m().informf("Vehicle '%' is not allowed to arrive on edge '%'.", &args);
+            return;
+        }
+        let skipTripRouting = utils::options::options_cont::exists("write-trips")
+            && utils::options::options_cont::get_bool("write-trips")
+            && RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().skip_route_calculation();
+        if (me.myTryRepair && !skipTripRouting) || MY_USING_JTRR.load(std::sync::atomic::Ordering::Relaxed) {
+            let mut newEdges: ConstROEdgeVector = Vec::new();
+            let oldEdges = me.myAlternatives[0].get_edge_vector().clone();
+            if me.repair_current_route(router, begin, veh, oldEdges, &mut newEdges, false) {
+                if me.myAlternatives[0].get_edge_vector() != &newEdges {
+                    if !me.myMayBeDisconnected {
+                        write_warningf!("Repaired route of vehicle '%'.", veh.get_id());
+                    }
+                    me.myNewRoute = true;
+                    let col = me.myAlternatives[0].get_color();
+                    me.myPrecomputed = Some(Rc::new(RORoute::new(self.get_id(), 0.0, me.myAlternatives[0].get_probability(), &newEdges, col, me.myAlternatives[0].get_stops())));
+                } else {
+                    me.myPrecomputed = Some(me.myAlternatives[0].clone());
+                }
+            }
+            return;
+        }
+        if RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().skip_route_calculation() || utils::options::options_cont::get_bool("remove-loops") {
+            if skipTripRouting || me.myAlternatives[me.myLastUsed as usize].is_valid(veh, ignoreErrors, Ptr::null()) {
+                me.myPrecomputed = Some(me.myAlternatives[me.myLastUsed as usize].clone());
+            }
+        } else {
+            // build a new route to test whether it is better
+            let oldEdges: ConstROEdgeVector = vec![self.get_origin(), self.get_destination()];
+            let mut edges: ConstROEdgeVector = Vec::new();
+            if me.repair_current_route(router, begin, veh, oldEdges, &mut edges, true) {
+                if !edges.is_empty() && edges[0].is_taz_connector() {
+                    edges.remove(0);
+                }
+                if !edges.is_empty() && edges[edges.len() - 1].is_taz_connector() {
+                    edges.pop();
+                }
+                // check whether the same route was already used
+                let mut existing: i32 = -1;
+                for i in 0..me.myAlternatives.len() {
+                    if &edges == me.myAlternatives[i].get_edge_vector() {
+                        existing = i as i32;
+                        break;
+                    }
+                }
+                if existing >= 0 {
+                    me.myPrecomputed = Some(me.myAlternatives[existing as usize].clone());
+                } else {
+                    let col = me.myAlternatives[0].get_color();
+                    me.myPrecomputed = Some(Rc::new(RORoute::new(self.get_id(), 0.0, 1.0, &edges, col, me.myAlternatives[0].get_stops())));
+                    me.myNewRoute = true;
+                }
+            }
+        }
     }
 
     /// C++: `bool RORouteDef::repairCurrentRoute(SUMOAbstractRouter<ROEdge, ROVehicle> &, SUMOTime, const ROVehicle &, ConstROEdgeVector, ConstROEdgeVector &, bool) const` [const]
@@ -417,7 +497,198 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn repair_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle, oldEdges: ConstROEdgeVector, newEdges: &mut ConstROEdgeVector, isTrip: bool) -> bool {
-        todo!("port RORouteDef::repairCurrentRoute")
+        // C++ `mutable` member (myDiscardSilent) is written from this const method
+        let me = Ptr::new(self).get_mut().unwrap();
+        let mh = msg_instance(utils::options::options_cont::get_bool("ignore-errors"));
+        let net = RONet::get_instance();
+        let mut oldEdges = oldEdges;
+        let initialSize = oldEdges.len() as i32;
+        let hasRestrictions = net.has_param_restrictions();
+        if net.has_prohibitions() && router.supports_prohibitions() {
+            if net.get_prohibitions().len() > 0 && !router.has_prohibitions() {
+                // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped> while RONet_Prohibitions is keyed by Ptr<ROEdge>, keys are cast, upgrade when the router is generic over E
+                let prohibitions: SUMOAbstractRouter_Prohibitions = net.get_prohibitions().iter().map(|(k, v)| (k.cast::<Unmapped>(), *v)).collect();
+                router.prohibit(&prohibitions);
+            }
+            net.m().update_lane_prohibitions(begin);
+        }
+        if initialSize == 1 {
+            if MY_USING_JTRR.load(std::sync::atomic::Ordering::Relaxed) {
+                // only ROJTRRouter is supposed to handle this type of input
+                let ok = router.compute(oldEdges[0], Ptr::null(), Ptr::new(veh), begin, newEdges, false);
+                me.myDiscardSilent = ok && newEdges.is_empty();
+            } else {
+                *newEdges = oldEdges;
+            }
+        } else {
+            if oldEdges[0].prohibits(Ptr::new(veh), hasRestrictions) {
+                // option repair.from is in effect
+                let frontID = oldEdges[0].get_id().to_string();
+                let mut k: usize = 0;
+                while k < oldEdges.len() {
+                    if oldEdges[k].prohibits(Ptr::new(veh), hasRestrictions) || oldEdges[k].is_internal() {
+                        oldEdges.remove(k);
+                    } else {
+                        utils::common::msg_handler::write_message(&format!("Changing invalid starting edge '{}' to '{}' for vehicle '{}'.", frontID, oldEdges[k].get_id(), veh.get_id()));
+                        break;
+                    }
+                }
+            }
+            if oldEdges.is_empty() {
+                let args: [&dyn ToStringPrec; 1] = [&veh.get_id().to_string()];
+                mh.m().informf("Could not find new starting edge for vehicle '%'.", &args);
+                return false;
+            }
+            if oldEdges[oldEdges.len() - 1].prohibits(Ptr::new(veh), hasRestrictions) {
+                // option repair.to is in effect
+                let backID = oldEdges[oldEdges.len() - 1].get_id().to_string();
+                // oldEdges cannot get empty here, otherwise we would have left the stage when checking "from"
+                while !oldEdges.is_empty() && (oldEdges[oldEdges.len() - 1].prohibits(Ptr::new(veh), hasRestrictions) || oldEdges[oldEdges.len() - 1].is_internal()) {
+                    oldEdges.pop();
+                }
+                utils::common::msg_handler::write_message(&format!(
+                    "Changing invalid destination edge '{}' to edge '{}' for vehicle '{}'.",
+                    backID,
+                    oldEdges[oldEdges.len() - 1].get_id(),
+                    veh.get_id()
+                ));
+            }
+            let mandatory = veh.get_mandatory_edges(oldEdges[0], oldEdges[oldEdges.len() - 1]);
+            assert!(mandatory.len() >= 2);
+            // removed prohibited
+            let mut k: usize = 0;
+            while k < oldEdges.len() {
+                if oldEdges[k].prohibits(Ptr::new(veh), hasRestrictions) || oldEdges[k].is_internal() {
+                    // no need to check the mandatories here, this was done before
+                    write_messagef!("Removing invalid edge '%' from route for vehicle '%'.", oldEdges[k].get_id(), veh.get_id());
+                    oldEdges.remove(k);
+                } else {
+                    k += 1;
+                }
+            }
+            // reconnect remaining edges
+            if mandatory.len() > oldEdges.len() && initialSize > 2 {
+                write_messagef!("There are stop edges which were not part of the original route for vehicle '%'.", veh.get_id());
+            }
+            let mut targets: ConstROEdgeVector = Vec::new();
+            let mut checkPositions = false;
+            if mandatory.len() >= oldEdges.len() {
+                for m in mandatory.iter() {
+                    targets.push(m.edge);
+                    checkPositions |= m.pos >= 0.0;
+                }
+            } else {
+                targets = oldEdges.clone();
+            }
+            newEdges.push(targets[0]);
+            let mut nextMandatory: usize = 1;
+            while nextMandatory != mandatory.len()
+                && targets[0] == mandatory[nextMandatory].edge
+                && (mandatory[nextMandatory].edge != mandatory[nextMandatory - 1].edge
+                    || mandatory[nextMandatory].pos >= mandatory[nextMandatory - 1].pos
+                    // ignore invalid via stop pos
+                    || mandatory[nextMandatory].pos < 0.0)
+            {
+                nextMandatory += 1;
+            }
+            let mut lastMandatory: i32 = 0;
+            let mut i: usize = 1;
+            while i < targets.len() && nextMandatory != mandatory.len() {
+                let prev = targets[i - 1];
+                let cur = targets[i];
+                if prev.is_connected_to(&cur, veh.get_v_class(), false) && (!utils::common::sumo_vehicle_class::is_railway(veh.get_v_class()) || prev.get_bidi_edge() != cur) {
+                    newEdges.push(cur);
+                } else {
+                    if initialSize > 2 {
+                        // only inform if the input is (probably) not a trip
+                        write_messagef!("Edge '%' not connected to edge '%' for vehicle '%'.", targets[i - 1].get_id(), targets[i].get_id(), veh.get_id());
+                    }
+                    let mut last = newEdges[newEdges.len() - 1];
+                    newEdges.pop();
+                    if last.is_taz_connector() && newEdges.len() > 1 {
+                        // assume this was a viaTaz
+                        last = newEdges[newEdges.len() - 1];
+                        newEdges.pop();
+                    }
+                    if veh.has_jumps() && mandatory[nextMandatory - 1].isJump {
+                        while targets[i] != mandatory[nextMandatory].edge {
+                            i += 1;
+                        }
+                        newEdges.push(last);
+                        newEdges.push(targets[i]);
+                    } else {
+                        let numEdgesBefore = newEdges.len();
+                        if self.myTryRepair && lastMandatory < newEdges.len() as i32 && last != newEdges[lastMandatory as usize] {
+                            router.set_msg_handler(msg_instance(true));
+                        }
+                        let ok: bool;
+                        if checkPositions && mandatory[i - 1].pos >= 0.0 && mandatory[i].pos >= 0.0 {
+                            ok = router.compute_2(last, mandatory[i - 1].pos, targets[i], mandatory[i].pos, Ptr::new(veh), begin, newEdges, false);
+                        } else {
+                            ok = router.compute(last, targets[i], Ptr::new(veh), begin, newEdges, false);
+                        }
+                        router.set_msg_handler(mh);
+                        if !ok {
+                            // backtrack: try to route from last mandatory edge to next mandatory edge
+                            if lastMandatory >= newEdges.len() as i32
+                                || last == newEdges[lastMandatory as usize]
+                                || !Self::back_track(router, &targets, &mut i, lastMandatory, mandatory[nextMandatory].edge, newEdges, veh, begin)
+                            {
+                                let args: [&dyn ToStringPrec; 2] = [&targets[i].get_id().to_string(), &veh.get_id().to_string()];
+                                mh.m().informf("Mandatory edge '%' not reachable by vehicle '%'.", &args);
+                                return false;
+                            }
+                        } else if !self.myMayBeDisconnected && !isTrip && last != targets[i] {
+                            let airDist = last.get_to_junction().get_position().distance_to(targets[i].get_from_junction().get_position());
+                            let mut repairDist = 0.0_f64;
+                            let len = newEdges.len();
+                            let mut it2 = numEdgesBefore + 1;
+                            while it2 + 1 < len {
+                                repairDist += newEdges[it2].get_length();
+                                it2 += 1;
+                            }
+                            let detourFactor = repairDist / (if airDist > 1.0 { airDist } else { 1.0 });
+                            let gap = repairDist - airDist;
+                            let detour = if 0.0 > gap { 0.0 } else { gap };
+                            let maxDetourFactor = utils::options::options_cont::get_float("repair.max-detour-factor");
+                            if detourFactor > maxDetourFactor {
+                                write_messagef!("    Backtracking to avoid detour of %m for gap of %m)", detour, airDist);
+                                Self::back_track(router, &targets, &mut i, lastMandatory, mandatory[nextMandatory].edge, newEdges, veh, begin);
+                            } else if detourFactor > 1.1 {
+                                write_messagef!("    Taking detour of %m to avoid gap of %m)", detour, airDist);
+                            }
+                        }
+                    }
+                }
+                while nextMandatory != mandatory.len()
+                    && targets[i] == mandatory[nextMandatory].edge
+                    && (mandatory[nextMandatory].edge != mandatory[nextMandatory - 1].edge
+                        || mandatory[nextMandatory].pos >= mandatory[nextMandatory - 1].pos
+                        // ignore invalid via stop pos
+                        || mandatory[nextMandatory].pos < 0.0)
+                {
+                    nextMandatory += 1;
+                    lastMandatory = newEdges.len() as i32 - 1;
+                }
+                i += 1;
+            }
+        }
+        if veh.get_parameter().via.len() > 0 && veh.get_parameter().stops.len() > 0 {
+            // check consistency of stops and vias
+            let mut it: usize = 0;
+            for stop in veh.get_parameter().stops.iter() {
+                let e = net.get_edge(&stop.edge);
+                match newEdges[it..].iter().position(|x| *x == e) {
+                    Some(p) => it += p,
+                    None => {
+                        let args: [&dyn ToStringPrec; 2] = [&e.get_id().to_string(), &veh.get_id().to_string()];
+                        mh.m().informf("Stop edge '%' is inconsistent with via edges for vehicle '%'.", &args);
+                        return false;
+                    }
+                }
+            }
+        }
+        true
     }
 
     /// C++: `std::shared_ptr<RORoute> RORouteDef::addAlternative(SUMOAbstractRouter<ROEdge, ROVehicle> &, const ROVehicle *const, std::shared_ptr<RORoute>, SUMOTime, MsgHandler *)`
@@ -535,8 +806,131 @@ impl RORouteDef {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn add_alternative(&mut self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, arg1: Ptr<ROVehicle>, current: Rc<RORoute>, begin: SUMOTime, errorHandler: Ptr<MsgHandler>) -> Option<Rc<RORoute>> {
-        todo!("port RORouteDef::addAlternative")
+    pub fn add_alternative(&mut self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, veh: Ptr<ROVehicle>, current: Rc<RORoute>, begin: SUMOTime, errorHandler: Ptr<MsgHandler>) -> Option<Rc<RORoute>> {
+        let mut replaced: Option<Rc<RORoute>> = None;
+        if self.myTryRepair || MY_USING_JTRR.load(std::sync::atomic::Ordering::Relaxed) {
+            if self.myNewRoute {
+                replaced = Some(self.myAlternatives[0].clone());
+                self.myAlternatives[0] = current.clone();
+            }
+            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
+            if !router.is_valid(current.get_edge_vector(), veh, utils::common::time::steps2time(begin)) {
+                panic!("Route '{}' (vehicle '{}') is not valid.", self.get_id(), veh.get_id());
+            }
+            let mut costs = router.recompute_costs(current.get_edge_vector(), veh, begin, Ptr::null());
+            if veh.has_jumps() {
+                // @todo: jumpTime should be applied in recomputeCost to ensure the
+                // correctness of time-dependent traveltimes
+                costs += utils::common::time::steps2time(veh.get_jump_time());
+            }
+            Ptr::new(&*current).get_mut().unwrap().set_costs(costs);
+            return replaced;
+        }
+        // add the route when it's new
+        let last = self.myAlternatives.len() - 1;
+        if self.myAlternatives[last].get_probability() < 0.0 || !self.myAlternatives[last].is_permitted(veh, errorHandler) {
+            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
+            if self.myAlternatives[last].get_probability() >= 0.0 && errorHandler == msg_instance(false) {
+                panic!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id());
+            }
+            self.myAlternatives.pop();
+        }
+        if self.myNewRoute {
+            self.myAlternatives.push(current.clone());
+        }
+        // recompute the costs and (when a new route was added) scale the probabilities
+        let scale = (self.myAlternatives.len().wrapping_sub(1)) as f64 / (self.myAlternatives.len() as f64);
+        for idx in 0..self.myAlternatives.len() {
+            let alt = self.myAlternatives[idx].clone();
+            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
+            if !router.is_valid(alt.get_edge_vector(), veh, utils::common::time::steps2time(begin)) {
+                panic!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id());
+            }
+            // recompute the costs for all routes
+            let newCosts = router.recompute_costs(alt.get_edge_vector(), veh, begin, Ptr::null());
+            assert!(self.myAlternatives.len() != 0);
+            if self.myNewRoute {
+                if Rc::ptr_eq(&alt, &current) {
+                    // set initial probability and costs
+                    Ptr::new(&*alt).get_mut().unwrap().set_probability(1.0 / (self.myAlternatives.len() as f64));
+                    Ptr::new(&*alt).get_mut().unwrap().set_costs(newCosts);
+                } else {
+                    // rescale probs for all others
+                    let p = alt.get_probability() * scale;
+                    Ptr::new(&*alt).get_mut().unwrap().set_probability(p);
+                }
+            }
+            let isActive = Rc::ptr_eq(&alt, &self.myAlternatives[self.myLastUsed as usize]);
+            RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().set_costs(alt.clone(), newCosts, isActive);
+        }
+        assert!(self.myAlternatives.len() != 0);
+        RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().calculate_probabilities(&self.myAlternatives, veh, veh.get_departure_time());
+        let keepRoute = RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().keep_route();
+        if !RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().keep_all_routes() && !keepRoute {
+            // remove with probability of 0 (not mentioned in Gawron)
+            let mut i: usize = 0;
+            while i < self.myAlternatives.len() {
+                if self.myAlternatives[i].get_probability() == 0.0 {
+                    self.myAlternatives.remove(i);
+                } else {
+                    i += 1;
+                }
+            }
+        }
+        let maxNumber = RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().get_max_route_number();
+        if self.myAlternatives.len() as i32 > maxNumber {
+            let last = self.myAlternatives[self.myLastUsed as usize].clone();
+            // only keep the routes with highest probability
+            // determinism: C++ std::sort is not stable, ties in probability may end up in a different order than with sort_by
+            self.myAlternatives.sort_by(|a, b| {
+                let (pa, pb) = (a.get_probability(), b.get_probability());
+                if pa > pb {
+                    std::cmp::Ordering::Less
+                } else if pb > pa {
+                    std::cmp::Ordering::Greater
+                } else {
+                    std::cmp::Ordering::Equal
+                }
+            });
+            if keepRoute {
+                for i in 0..self.myAlternatives.len() {
+                    if Rc::ptr_eq(&self.myAlternatives[i], &last) {
+                        self.myLastUsed = i as i32;
+                        break;
+                    }
+                }
+                if self.myLastUsed >= maxNumber {
+                    self.myAlternatives.swap((maxNumber - 1) as usize, self.myLastUsed as usize);
+                    self.myLastUsed = maxNumber - 1;
+                }
+            }
+            self.myAlternatives.truncate(maxNumber as usize);
+        }
+        // rescale probabilities
+        let mut newSum: f64 = 0.0;
+        for alt in self.myAlternatives.iter() {
+            newSum += alt.get_probability();
+        }
+        assert!(newSum > 0.0);
+        // @note newSum may be larger than 1 for numerical reasons
+        for alt in self.myAlternatives.iter() {
+            let p = alt.get_probability() / newSum;
+            Ptr::new(&**alt).get_mut().unwrap().set_probability(p);
+        }
+
+        // find the route to use
+        if !keepRoute {
+            let mut chosen = utils::common::rand_helper::rand();
+            self.myLastUsed = 0;
+            for alt in self.myAlternatives.iter() {
+                chosen -= alt.get_probability();
+                if chosen <= 0.0 {
+                    return None;
+                }
+                self.myLastUsed += 1;
+            }
+        }
+        None
     }
 
     /// C++: `const ROEdge * RORouteDef::getOrigin() const` [const]
@@ -709,8 +1103,18 @@ impl RORouteDef {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn back_track(router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, i: &mut Unmapped /* ConstROEdgeVector::const_iterator */, lastMandatory: i32, nextMandatory: Ptr<ROEdge>, newEdges: &mut ConstROEdgeVector, veh: &ROVehicle, begin: SUMOTime) -> bool {
-        todo!("port RORouteDef::backTrack")
+    pub fn back_track(router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, targets: &ConstROEdgeVector, i: &mut usize, lastMandatory: i32, nextMandatory: Ptr<ROEdge>, newEdges: &mut ConstROEdgeVector, veh: &ROVehicle, begin: SUMOTime) -> bool {
+        let mut edges: ConstROEdgeVector = Vec::new();
+        let ok = router.compute(newEdges[lastMandatory as usize], nextMandatory, Ptr::new(veh), begin, &mut edges, true);
+        if !ok {
+            return false;
+        }
+        while targets[*i] != nextMandatory {
+            *i += 1;
+        }
+        newEdges.truncate((lastMandatory + 1) as usize);
+        newEdges.extend(edges.iter().skip(1).cloned());
+        true
     }
 
     /// C++: `void RORouteDef::RORouteDef(const RORouteDef &)` [private]
@@ -718,7 +1122,7 @@ impl RORouteDef {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RORouteDef) -> Self {
-        todo!("port RORouteDef::RORouteDef")
+        panic!("RORouteDef cannot be copied: the copy constructor is invalidated in C++")
     }
 
     /// C++: `RORouteDef & RORouteDef::operator=(const RORouteDef &)` [private]
@@ -726,7 +1130,7 @@ impl RORouteDef {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RORouteDef) -> &mut RORouteDef {
-        todo!("port RORouteDef::operator=")
+        panic!("RORouteDef cannot be assigned: the assignment operator is invalidated in C++")
     }
 
 }
