@@ -9736,7 +9736,116 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
-        todo!("port MSVehicle::loadState")
+        // C++ `is >> x` for a number: a failed read stores 0 (C++11)
+        fn stream_next<T: std::str::FromStr + Default>(it: &mut std::str::SplitWhitespace) -> T {
+            it.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+        }
+        if !attrs.has_attribute(SUMO_ATTR_POSITION) {
+            panic!("{}", ProcessError::Process("Error: Invalid vehicles in state (may be a meso state)!".to_string()));
+        }
+        let mut ok = true;
+        let id = self.get_id();
+        let state = attrs.get_string(SUMO_ATTR_STATE);
+        let mut bis = state.split_whitespace();
+        self.myParameter.m().parametersSet = stream_next(&mut bis);
+        self.myDeparture = stream_next(&mut bis);
+        let routeOffset: i32 = stream_next(&mut bis);
+        self.myDepartPos = stream_next(&mut bis);
+        self.myWaitingTime = stream_next(&mut bis);
+        self.myTimeLoss = stream_next(&mut bis);
+        self.myLastActionTime = stream_next(&mut bis);
+        let stopped = stream_next::<i32>(&mut bis) != 0;
+        let mut stopDuration: SUMOTime = stream_next(&mut bis);
+        let mut pastStops: i32 = stream_next(&mut bis);
+        self.myJunctionEntryTime = stream_next(&mut bis);
+        self.myJunctionConflictEntryTime = stream_next(&mut bis);
+        self.myJunctionEntryTimeNeverYield = stream_next(&mut bis);
+
+        if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS_RANDOMIZED) {
+            self.myArrivalPos = attrs.get(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &id, &mut ok, true);
+        }
+        // load stops
+        self.myStops.clear();
+        let searchStart = Ptr::from_mut(&mut self.myCurrEdge);
+        self.add_stops(!MSGlobals::check_routes(), searchStart, false);
+
+        if self.has_departed() {
+            self.myCurrEdge = routeOffset as usize;
+            self.myDeparture -= offset;
+            // fix stops
+            while pastStops > 0 {
+                let front = self.myStops.front_mut().unwrap();
+                // assumed these attributes were only added to restore vehroute-output.exit-times
+                if !MSGlobals::use_stop_ended() {
+                    front.pars.parametersSet &= !STOP_ENDED_SET;
+                }
+                if !MSGlobals::use_stop_started() {
+                    front.pars.parametersSet &= !STOP_STARTED_SET;
+                }
+                for rem in self.myMoveReminders.iter() {
+                    rem.0.m().notify_stop_ended();
+                }
+                let pastPars = self.myStops.front().unwrap().pars.clone();
+                self.myPastStops.push(pastPars);
+                let routeIndex = self.myStops.front().unwrap().edge as i32;
+                self.myPastStops.last_mut().unwrap().routeIndex = routeIndex;
+                self.myStops.pop_front();
+                pastStops -= 1;
+            }
+            // see MSBaseVehicle constructor
+            if self.myParameter.was_set(VEHPARS_FORCE_REROUTE) {
+                self.calculate_arrival_params(true);
+            }
+            // a (tentative lane is needed for calling hasArrivedInternal
+            self.myLane = self.get_current_edge().get_lanes()[0];
+        }
+        let simstep = MSNet::get_instance().m().get_current_time_step();
+        if self.get_action_step_length() == utils::common::time::delta_t() && !self.is_action_step(simstep) {
+            self.myLastActionTime -= (self.myLastActionTime - simstep) % utils::common::time::delta_t();
+            write_warningf!("Action steps are out of sync for loaded vehicle '%'.", self.get_id());
+        }
+        let posState = attrs.get_string(SUMO_ATTR_POSITION);
+        let mut pis = posState.split_whitespace();
+        self.myState.myPos = stream_next(&mut pis);
+        self.myState.myBackPos = stream_next(&mut pis);
+        self.myState.myLastCoveredDist = stream_next(&mut pis);
+        let speedState = attrs.get_string(SUMO_ATTR_SPEED);
+        let mut sis = speedState.split_whitespace();
+        self.myState.mySpeed = stream_next(&mut sis);
+        self.myState.myPreviousSpeed = stream_next(&mut sis);
+        self.myAcceleration = speed2accel(self.myState.mySpeed - self.myState.myPreviousSpeed);
+        self.myAngle = utils::geom::geom_helper::from_navi_degree(attrs.get_float(SUMO_ATTR_ANGLE).unwrap_or_else(|e| panic!("{e}")));
+        self.myRawAngle = self.myAngle;
+        self.myState.myPosLat = attrs.get_float(SUMO_ATTR_POSITION_LAT).unwrap_or_else(|e| panic!("{e}"));
+        let distState = attrs.get_string(SUMO_ATTR_DISTANCE);
+        let mut dis = distState.split_whitespace();
+        self.myOdometer = stream_next(&mut dis);
+        self.myNumberReroutes = stream_next(&mut dis);
+        self.myWaitingTimeCollector.set_state(&attrs.get_string(SUMO_ATTR_WAITINGTIME));
+        if stopped {
+            let realPos = self.get_position_on_lane();
+            let entryPos: f64 = attrs.get_opt(SUMO_ATTR_ENTRYPOS, &id, &mut ok, realPos, true);
+            self.myStops.front_mut().unwrap().startedFromState = true;
+            if entryPos != realPos {
+                self.myStops.front_mut().unwrap().entryPos = entryPos;
+            }
+            self.myLane = self.myStops.front().unwrap().lane;
+            self.myStopDist = 0.;
+            self.myState.myPos = entryPos; // fake position for replication stop entry which happened before the position was updated
+            let speed = self.get_speed();
+            self.process_next_stop(speed);
+            self.myState.myPos = realPos; // reset fake position
+            if self.myStops.front().unwrap().pars.parking != ParkingType::ONROAD {
+                // processNextStop is called again during MSVehicleTransfer::loadState
+                stopDuration += self.get_action_step_length();
+            }
+            self.myStops.front_mut().unwrap().duration = stopDuration;
+            if !MSGlobals::use_stop_started() {
+                self.myStops.front_mut().unwrap().pars.parametersSet &= !STOP_STARTED_SET;
+            }
+        }
+        self.myLaneChangeModel.m().load_state(attrs);
+        // no need to reset myCachedPosition here since state loading happens directly after creation
     }
 
     /// C++: `void MSVehicle::loadPreviousApproaching(MSLink *, bool, SUMOTime, double, double, double, double)`
