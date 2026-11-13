@@ -798,7 +798,21 @@ impl MSStateHandler_MSStateTimeHandler {
     // }
     #[allow(unused_variables)]
     pub fn get_time(fileName: &str) -> SUMOTime {
-        todo!("port MSStateTimeHandler::getTime")
+        // build handler and parser
+        let mut handler = MSStateHandler_MSStateTimeHandler { base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, "", ""), myTime: 0 };
+        handler.set_file_name(fileName);
+        handler.myTime = -1;
+        let mut parser = utils::xml::xml_sub_sys::get_sax_reader(false, false);
+        if !parser.parse_first(&mut handler, fileName).unwrap_or_else(|e| panic!("{}", e)) {
+            panic!("{}", ProcessError::new(format!("Can not read XML-file '{}'.", fileName)));
+        }
+        // parse
+        while parser.parse_next(&mut handler).unwrap_or_else(|e| panic!("{}", e)) && handler.myTime != -1 {}
+        // clean up
+        if handler.myTime == -1 {
+            panic!("{}", ProcessError::new(format!("Could not parse time from state file '{}'", fileName)));
+        }
+        handler.myTime
     }
 
     /// C++: `void MSStateTimeHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -821,4 +835,20 @@ impl MSStateHandler_MSStateTimeHandler {
 
 impl utils::xml::generic_sax_handler::SaxHandler for MSStateHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        MSStateHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        MSStateHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl utils::xml::generic_sax_handler::SaxHandler for MSStateHandler_MSStateTimeHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        MSStateHandler_MSStateTimeHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
 }
