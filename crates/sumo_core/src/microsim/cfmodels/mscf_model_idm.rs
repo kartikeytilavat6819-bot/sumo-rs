@@ -105,7 +105,7 @@ impl MSCFModel_IDM {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         if self.myAdaptationFactor != 1. {
             let vars = veh.get_car_follow_variables().cast::<MSCFModel_IDM_VehicleVariables>();
             vars.m().levelOfService += (vNext / veh.get_lane().get_vehicle_max_speed(traffic_object(veh)) - vars.levelOfService) / self.myAdaptationTime * ts();
@@ -319,11 +319,11 @@ impl MSCFModel_IDM {
     pub fn insertion_stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
         // we want to insert the vehicle in an equilibrium state
         let mut speed = speed;
-        let mut result = self.base.insertion_stop_speed(veh, speed, gap);
+        let mut result = self.base.insertion_stop_speed_base(veh, speed, gap);
         let mut i = 0;
         while result - speed < -accel2speed(self.myDecel) && { i += 1; i < 10 } {
             speed = result;
-            result = self.base.insertion_stop_speed(veh, speed, gap);
+            result = self.base.insertion_stop_speed_base(veh, speed, gap);
         }
         result
     }

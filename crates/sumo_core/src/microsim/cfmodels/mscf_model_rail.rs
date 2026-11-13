@@ -457,7 +457,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        self.base.finalize_speed(veh, vPos)
+        self.base.finalize_speed_base(veh, vPos)
     }
 
     /// C++: `double MSCFModel_Rail::freeSpeed(const MSVehicle *const, double, double, double, const bool, const CalcReason) const` [const, virtual]

@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use super::mscf_model::*;
+use super::mscf_model_krauss::KRAUSS_VT;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
 use utils::common::to_string::f64_to_string_prec;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
@@ -30,6 +31,24 @@ impl std::ops::DerefMut for MSCFModel_KraussX {
     }
 }
 
+fn krauss_x_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_KraussX>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn krauss_x_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_KraussX>(m).get_model_id()
+}
+fn krauss_x_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_KraussX>(m).duplicate(vtype)
+}
+
+/// Virtual table of MSCFModel_KraussX: its overrides on top of the MSCFModel_Krauss table
+pub const KRAUSS_X_VT: MSCFModelVt = MSCFModelVt {
+    patch_speed_before_lc: krauss_x_patch_speed_before_lc,
+    get_model_id: krauss_x_get_model_id,
+    duplicate: krauss_x_duplicate,
+    ..KRAUSS_VT
+};
+
 impl MSCFModel_KraussX {
     /// C++: `void MSCFModel_KraussX::MSCFModel_KraussX(const MSVehicleType *)`
     /// Constructor
@@ -42,7 +61,9 @@ impl MSCFModel_KraussX {
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
         let myTmp1 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP1, 0.0);
         let myTmp2 = vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP2, 0.0);
-        MSCFModel_KraussX { base: MSCFModel_Krauss::new(vtype), myTmp1, myTmp2 }
+        let mut this = MSCFModel_KraussX { base: MSCFModel_Krauss::new(vtype), myTmp1, myTmp2 };
+        this.base.base.base.vt = &KRAUSS_X_VT;
+        this
     }
 
     /// C++: `void MSCFModel_KraussX::~MSCFModel_KraussX() noexcept` [virtual]

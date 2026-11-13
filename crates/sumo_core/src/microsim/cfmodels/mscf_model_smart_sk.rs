@@ -134,7 +134,7 @@ impl MSCFModel_SmartSK {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         self.update_my_headway(veh);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_SmartSK_SSKVehicleVariables);
         // ggOld[(int) vPos] inserts a 0 entry when the key is missing, as std::map::operator[] does

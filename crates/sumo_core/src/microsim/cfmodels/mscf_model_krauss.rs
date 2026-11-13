@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use super::mscf_model::*;
+use super::mscf_model_krauss_orig1::KRAUSS_ORIG1_VT;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
 use utils::common::to_string::f64_to_string_prec;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
@@ -60,7 +61,9 @@ impl MSCFModel_Krauss {
             }
             utils::common::msg_handler::write_warning(&format!("Rounding 'sigmaStep' to {} for vType '{}'", f64_to_string_prec(steps2time(myDawdleStep), 6), base.myType.get_id()));
         }
-        MSCFModel_Krauss { base, myDawdleStep }
+        let mut this = MSCFModel_Krauss { base, myDawdleStep };
+        this.base.base.vt = &KRAUSS_VT;
+        this
     }
 
     /// C++: `void MSCFModel_Krauss::~MSCFModel_Krauss() noexcept` [virtual]
@@ -278,6 +281,36 @@ impl MSCFModel_Krauss {
 
 }
 
+fn krauss_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_Krauss>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn krauss_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Krauss>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+fn krauss_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Krauss>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn krauss_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_Krauss>(m).get_model_id()
+}
+fn krauss_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_Krauss>(m).duplicate(vtype)
+}
+fn krauss_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_Krauss>(m).create_vehicle_variables()
+}
+
+/// Virtual table of MSCFModel_Krauss: its overrides on top of the MSCFModel_KraussOrig1 table
+pub const KRAUSS_VT: MSCFModelVt = MSCFModelVt {
+    patch_speed_before_lc: krauss_patch_speed_before_lc,
+    stop_speed_2: krauss_stop_speed_2,
+    follow_speed: krauss_follow_speed,
+    get_model_id: krauss_get_model_id,
+    duplicate: krauss_duplicate,
+    create_vehicle_variables: krauss_create_vehicle_variables,
+    ..KRAUSS_ORIG1_VT
+};
+
 /// C++ class `MSCFModel_Krauss::VehicleVariables` (microsim/cfmodels/MSCFModel_Krauss.h)
 #[repr(C)]
 #[derive(Clone)]
@@ -367,5 +400,40 @@ impl MSCFModel_Krauss_VehicleVariables {
         Ok(())
     }
 
+}
+
+#[cfg(test)]
+mod vt_dispatch_tests {
+    use super::*;
+
+    #[test]
+    fn base_pointer_reaches_krauss_overrides() {
+        let vtp = SUMOVTypeParameter::new("passenger", utils::common::sumo_vehicle_class::SVC_PASSENGER);
+        let vtype = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&vtp))));
+        let krauss = Ptr::from_mut(Box::leak(Box::new(MSCFModel_Krauss::new(vtype))));
+        let cf: Ptr<MSCFModel> = krauss.cast::<MSCFModel>();
+        assert_eq!(cf.m().get_model_id(), SUMO_TAG_CF_KRAUSS as i32);
+        // base MSCFModel::getImperfection returns -1; KraussOrig1 returns myDawdle
+        cf.m().set_imperfection(0.3);
+        assert_eq!(cf.m().get_imperfection(), 0.3);
+    }
+
+    #[test]
+    fn most_derived_table_wins_through_base_pointer() {
+        let vtp = SUMOVTypeParameter::new("passenger", utils::common::sumo_vehicle_class::SVC_PASSENGER);
+        let vtype = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&vtp))));
+        let ps = Ptr::from_mut(Box::leak(Box::new(MSCFModel_KraussPS::new(vtype))));
+        let cf: Ptr<MSCFModel> = ps.cast::<MSCFModel>();
+        assert_eq!(cf.m().get_model_id(), SUMO_TAG_CF_KRAUSS_PLUS_SLOPE as i32);
+    }
+
+    #[test]
+    #[should_panic(expected = "MSCFModel::getModelID is pure virtual")]
+    fn bare_base_model_is_pure_virtual() {
+        let vtp = SUMOVTypeParameter::new("passenger", utils::common::sumo_vehicle_class::SVC_PASSENGER);
+        let vtype = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&vtp))));
+        let base = MSCFModel::new(vtype);
+        base.get_model_id();
+    }
 }
 

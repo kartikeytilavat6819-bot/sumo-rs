@@ -291,7 +291,7 @@ impl MSCFModel_CACC {
                 set_cacc_vehicle_mode(veh, vehicle_mode_name(MSCFModel_CACC_VehicleMode::CC_MODE));
             }
         }
-        self.base.free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+        self.base.free_speed_base(veh, speed, seen, maxSpeed, onInsertion, usage)
     }
 
     /// C++: `double MSCFModel_CACC::followSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const, const CalcReason) const` [const, virtual]
@@ -407,7 +407,7 @@ impl MSCFModel_CACC {
         } else {
             desSpacing = self.myHeadwayTime * speed; // speedGapControl
         }
-        let desSpacingDefault = self.base.get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel);
+        let desSpacingDefault = self.base.get_secure_gap_base(veh, pred, speed, leaderSpeed, leaderMaxDecel);
         max2(desSpacing, desSpacingDefault)
     }
 
