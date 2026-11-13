@@ -387,7 +387,7 @@ impl MSLCM_DK2008 {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        self.base.prepare_step();
+        self.base.prepare_step_base();
         self.myOwnState = 0;
         self.myLeadingBlockerLength = 0.;
         self.myLeftSpace = 0.;
