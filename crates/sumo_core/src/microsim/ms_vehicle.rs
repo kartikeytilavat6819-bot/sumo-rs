@@ -2086,6 +2086,36 @@ fn ms_vehicle_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
 fn ms_vehicle_get_depart_delay(v: &SUMOVehicle) -> SUMOTime {
     ms_vehicle_of(v).get_depart_delay()
 }
+fn ms_vehicle_get_stops(v: &SUMOVehicle) -> &VecDeque<MSStop> {
+    ms_vehicle_of(v).get_stops()
+}
+fn ms_vehicle_get_next_stop(v: &SUMOVehicle) -> &MSStop {
+    ms_vehicle_of(v).get_next_stop()
+}
+fn ms_vehicle_get_current_route_edge(v: &SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_current_route_edge()
+}
+fn ms_vehicle_get_route_ptr(v: &SUMOVehicle) -> ConstMSRoutePtr {
+    ms_vehicle_of(v).get_route_ptr()
+}
+fn ms_vehicle_is_idling(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_idling()
+}
+fn ms_vehicle_get_number_reroutes(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_number_reroutes()
+}
+fn ms_vehicle_is_stopped_triggered(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_stopped_triggered()
+}
+fn ms_vehicle_get_reroute_origin(v: &SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_reroute_origin()
+}
+fn ms_vehicle_get_next_parking_area(v: &mut SUMOVehicle) -> Ptr<MSParkingArea> {
+    Ptr::from_mut(v).cast::<MSVehicle>().m().get_next_parking_area()
+}
+fn ms_vehicle_on_depart(v: &mut SUMOVehicle) {
+    Ptr::from_mut(v).cast::<MSVehicle>().m().on_depart()
+}
 static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: ms_vehicle_get_route,
     get_departure: ms_vehicle_get_departure,
@@ -2106,6 +2136,16 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_impatience: ms_vehicle_get_impatience,
     get_time_loss: ms_vehicle_get_time_loss,
     get_depart_delay: ms_vehicle_get_depart_delay,
+    get_stops: ms_vehicle_get_stops,
+    get_next_stop: ms_vehicle_get_next_stop,
+    get_current_route_edge: ms_vehicle_get_current_route_edge,
+    get_route_ptr: ms_vehicle_get_route_ptr,
+    is_idling: ms_vehicle_is_idling,
+    get_number_reroutes: ms_vehicle_get_number_reroutes,
+    is_stopped_triggered: ms_vehicle_is_stopped_triggered,
+    get_reroute_origin: ms_vehicle_get_reroute_origin,
+    get_next_parking_area: ms_vehicle_get_next_parking_area,
+    on_depart: ms_vehicle_on_depart,
 };
 
 impl MSVehicle {
