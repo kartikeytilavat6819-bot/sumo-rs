@@ -152,6 +152,7 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: ms_person_is_vehicle,
     is_person: ms_person_is_person,
     is_container: ms_person_is_container,
+    get_parameter: ms_person_get_parameter,
 };
 
 /// The class holds a simulated person together with her movement stages
@@ -876,4 +877,9 @@ impl Command for MSPersonStage_Access_ProceedCmd {
     fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
         MSPersonStage_Access_ProceedCmd::execute(self, currentTime)
     }
+}
+
+fn ms_person_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    let p: &MSPerson = Ptr::new(o).cast::<MSPerson>().get().unwrap();
+    p.get_parameter()
 }

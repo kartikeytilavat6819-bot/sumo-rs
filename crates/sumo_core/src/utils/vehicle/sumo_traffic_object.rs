@@ -15,16 +15,22 @@ pub struct SUMOTrafficObjectVt {
     pub is_vehicle: fn(&SUMOTrafficObject) -> bool,
     pub is_person: fn(&SUMOTrafficObject) -> bool,
     pub is_container: fn(&SUMOTrafficObject) -> bool,
+    pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
     false
 }
 
+fn default_get_parameter(_: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    panic!("SUMOTrafficObject::getParameter is pure virtual")
+}
+
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: default_is_false,
     is_person: default_is_false,
     is_container: default_is_false,
+    get_parameter: default_get_parameter,
 };
 
 /// Representation of a vehicle, person, or container
@@ -141,7 +147,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVehicleParameter {
-        panic!("SUMOTrafficObject::getParameter is pure virtual")
+        (self.vt.get_parameter)(self)
     }
 
     /// C++: `SumoRNG * SUMOTrafficObject::getRNG() const` [const, virtual, pure virtual]
