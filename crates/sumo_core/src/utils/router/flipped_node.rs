@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::vector<const FlippedEdge<E, N, V> *> FlippedNode::ConstFlippedEdgeVector`
-pub type FlippedNode_ConstFlippedEdgeVector = Unmapped /* std::vector<const FlippedEdge<E, N, V> *> */;
+pub type FlippedNode_ConstFlippedEdgeVector<E, N, V> = Vec<Ptr<FlippedEdge<E, N, V>>>;
 
 /// the node type representing nodes used for backward search
 /// C++ class `FlippedNode` (utils/router/FlippedNode.h)
@@ -11,9 +11,9 @@ pub struct FlippedNode<E, N, V> {
     /// The original node
     pub myOriginalNode: Ptr<N>,
     /// The incoming edges
-    pub myIncoming: FlippedNode_ConstFlippedEdgeVector,
+    pub myIncoming: FlippedNode_ConstFlippedEdgeVector<E, N, V>,
     /// The outgoing edges
-    pub myOutgoing: FlippedNode_ConstFlippedEdgeVector,
+    pub myOutgoing: FlippedNode_ConstFlippedEdgeVector<E, N, V>,
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
 
@@ -24,7 +24,12 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         myOriginalNode(originalNode) {}
     #[allow(unused_variables)]
     pub fn new(originalNode: Ptr<N>) -> Self {
-        todo!("port FlippedNode::FlippedNode<E, N, V>")
+        Self {
+            myOriginalNode: originalNode,
+            myIncoming: Vec::new(),
+            myOutgoing: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FlippedNode::~FlippedNode<E, N, V>()`
@@ -32,7 +37,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     // ~FlippedNode() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FlippedNode::~FlippedNode<E, N, V>")
+
     }
 
     /// C++: `const Position & FlippedNode::getPosition() const` [const]
@@ -42,7 +47,8 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port FlippedNode::getPosition")
+        // shortcut: needs router trait bounds (lead), N::getPosition is not callable on generic N
+        panic!("shortcut: needs router trait bounds (lead), N::getPosition")
     }
 
     /// C++: `const std::string & FlippedNode::getID() const` [const]
@@ -52,7 +58,8 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port FlippedNode::getID")
+        // shortcut: needs router trait bounds (lead), N::getID is not callable on generic N
+        panic!("shortcut: needs router trait bounds (lead), N::getID")
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getIncoming() const` [const]
@@ -68,7 +75,8 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector {
-        todo!("port FlippedNode::getIncoming")
+        // shortcut: needs router trait bounds (lead), N::getOutgoing/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
+        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getOutgoing() const` [const]
@@ -84,7 +92,8 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector {
-        todo!("port FlippedNode::getOutgoing")
+        // shortcut: needs router trait bounds (lead), N::getIncoming/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
+        panic!("shortcut: needs router trait bounds (lead), N::getIncoming")
     }
 
     /// C++: `const N * FlippedNode::getOriginalNode() const` [const]
@@ -94,7 +103,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_node(&self) -> Ptr<N> {
-        todo!("port FlippedNode::getOriginalNode")
+        self.myOriginalNode
     }
 
 }

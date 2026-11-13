@@ -3,15 +3,15 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> ReversedEdge::ConstEdgePairVector`
-pub type ReversedEdge_ConstEdgePairVector = Unmapped /* std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> */;
+pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, Ptr<ReversedEdge<E, V>>)>;
 
 /// the edge type representing backward edges
 /// C++ class `ReversedEdge` (utils/router/ReversedEdge.h)
 pub struct ReversedEdge<E, V> {
     pub myOriginal: Ptr<E>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector>,
-    pub myViaSuccessors: ReversedEdge_ConstEdgePairVector,
+    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector<E, V>>,
+    pub myViaSuccessors: ReversedEdge_ConstEdgePairVector<E, V>,
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
@@ -21,7 +21,12 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(orig: Ptr<E>) -> Self {
-        todo!("port ReversedEdge::ReversedEdge<E, V>")
+        Self {
+            myOriginal: orig,
+            myClassesViaSuccessorMap: BTreeMap::new(),
+            myViaSuccessors: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void ReversedEdge::init()`
@@ -42,7 +47,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port ReversedEdge::init")
+        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors/getReversedRoutingEdge are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
     }
 
     /// C++: `const E * ReversedEdge::getOriginalEdge() const` [const]
@@ -52,7 +58,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_edge(&self) -> Ptr<E> {
-        todo!("port ReversedEdge::getOriginalEdge")
+        self.myOriginal
     }
 
     /// C++: `int ReversedEdge::getNumericalID() const` [const]
@@ -62,7 +68,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port ReversedEdge::getNumericalID")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `const std::string & ReversedEdge::getID() const` [const]
@@ -72,7 +79,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port ReversedEdge::getID")
+        // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getID")
     }
 
     /// C++: `double ReversedEdge::getLength() const` [const]
@@ -82,7 +90,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port ReversedEdge::getLength")
+        // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getLength")
     }
 
     /// C++: `const ReversedEdge<E, V> * ReversedEdge::getBidiEdge() const` [const]
@@ -91,7 +100,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<ReversedEdge<E, V>> {
-        todo!("port ReversedEdge::getBidiEdge")
+        // shortcut: needs router trait bounds (lead), E::getBidiEdge is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getBidiEdge")
     }
 
     /// C++: `bool ReversedEdge::isInternal() const` [const]
@@ -100,7 +110,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port ReversedEdge::isInternal")
+        // shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
     }
 
     /// C++: `bool ReversedEdge::prohibits(const V *const) const` [const]
@@ -109,7 +120,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port ReversedEdge::prohibits")
+        // shortcut: needs router trait bounds (lead), E::prohibits is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::prohibits")
     }
 
     /// C++: `bool ReversedEdge::restricts(const V *const) const` [const]
@@ -118,7 +130,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port ReversedEdge::restricts")
+        // shortcut: needs router trait bounds (lead), E::restricts is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::restricts")
     }
 
     /// C++: `double ReversedEdge::getTravelTimeStatic(const ReversedEdge<E, V> *const, const V *const, double)` [static]
@@ -127,7 +140,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<ReversedEdge<E, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port ReversedEdge::getTravelTimeStatic")
+        // shortcut: needs router trait bounds (lead), E::getTravelTime is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getTravelTime")
     }
 
     /// C++: `const ConstEdgePairVector & ReversedEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -155,8 +169,12 @@ impl<E, V> ReversedEdge<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector {
-        todo!("port ReversedEdge::getViaSuccessors")
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector<E, V> {
+        if vClass == SVC_IGNORING {
+            return &self.myViaSuccessors;
+        }
+        // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the cache rebuild also needs Ptr::new(self).m()
+        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
     }
 
 }
