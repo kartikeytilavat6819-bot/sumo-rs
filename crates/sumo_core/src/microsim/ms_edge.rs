@@ -187,6 +187,9 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn travel_time_aggregated(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>, time: f64) -> f64 {
         MSEdge::get_travel_time_aggregated(edge, veh, time)
     }
+    fn minimum_travel_time(&self, veh: Ptr<SUMOVehicle>) -> f64 {
+        self.get_minimum_travel_time(veh)
+    }
     fn is_internal(&self) -> bool {
         self.is_internal()
     }

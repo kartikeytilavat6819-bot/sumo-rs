@@ -31,6 +31,9 @@ where
     fn get_id(&self) -> String {
         format!("{}:{}:{}", self.from.id(), self.to.id(), time2string(self.departTime))
     }
+    fn length(&self) -> f64 {
+        0.0
+    }
     fn get_max_speed(&self) -> f64 {
         self.get_max_speed()
     }

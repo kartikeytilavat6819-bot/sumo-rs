@@ -540,6 +540,21 @@ pub struct SUMOVehicle {
 }
 
 impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
+    fn get_id(&self) -> String {
+        Named::get_id(self).to_string()
+    }
+    fn get_max_speed(&self) -> f64 {
+        self.get_max_speed()
+    }
+    fn get_chosen_speed_factor(&self) -> f64 {
+        self.get_chosen_speed_factor()
+    }
+    fn ignore_transient_permissions(&self) -> bool {
+        false
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }

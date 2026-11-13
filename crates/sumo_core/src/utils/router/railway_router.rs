@@ -64,7 +64,7 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
     utils::common::msg_handler::with_instance(if warning { MsgType::Warning } else { MsgType::Error }, |h| Ptr::from_mut(h))
 }
 
-impl<E, V> RailwayRouter<E, V> {
+impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     /// C++: `void RailwayRouter::RailwayRouter<E, V>(const std::vector<E *> &, bool, typename SUMOAbstractRouter<E, V>::Operation, typename SUMOAbstractRouter<E, V>::Operation, bool, bool, const bool, double, double)`
     /// Constructor
     // RailwayRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation effortOperation,

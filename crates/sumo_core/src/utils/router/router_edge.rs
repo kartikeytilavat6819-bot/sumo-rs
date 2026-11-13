@@ -84,6 +84,12 @@ pub trait RouterVehicle {
     fn get_max_speed(&self) -> f64;
     fn get_chosen_speed_factor(&self) -> f64;
     fn ignore_transient_permissions(&self) -> bool;
+    /// C++ `V::getLength()` — the railway router's max-train-length check.
+    fn length(&self) -> f64;
+    /// C++ `V::getID()` in warning text (owned string, unlike `get_id`).
+    fn id(&self) -> String {
+        self.get_id()
+    }
 }
 
 /// Accessors the generic router code calls on its node type `N` (`N::getID()`, `N::getPosition()`, `N::getIncoming()`, ...).

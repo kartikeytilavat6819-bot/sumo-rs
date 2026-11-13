@@ -55,6 +55,9 @@ impl ROVehicle {
 }
 
 impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }

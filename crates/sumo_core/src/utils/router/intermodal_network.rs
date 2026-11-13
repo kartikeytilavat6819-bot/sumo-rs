@@ -1424,7 +1424,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_schedule(&mut self, pars: &SUMOVehicleParameter, addStops: Ptr<StopParVector>) {
+    pub fn add_schedule(&mut self, pars: &SUMOVehicleParameter, addStops: Ptr<StopParVector>) where E: RouterEdge<V>, V: RouterVehicle {
         let mut lastUntil: SUMOTime = 0;
         let mut validStops: StopParVector = Vec::new();
         if !addStops.is_null() {
@@ -1722,4 +1722,3 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     }
 
 }
-
