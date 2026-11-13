@@ -1,6 +1,7 @@
 //! Port of utils/router/CCHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `MetricPtr (*)(SUMOVehicleClass, SUMOTime, const V *) CCHRouter::MetricProvider`
 pub type CCHRouter_MetricProvider<V> = fn(SUMOVehicleClass, SUMOTime, Ptr<V>) -> CCHRouter_MetricPtr;
@@ -51,7 +52,7 @@ impl<E, V, GRAPH> std::ops::DerefMut for CCHRouter<E, V, GRAPH> {
     }
 }
 
-impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
+impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     /// C++: `void CCHRouter::CCHRouter<E, V, GRAPH>(const GRAPH *, MetricProvider, Operation, const bool, SUMOAbstractRouter<E, V> *, PeriodEnd, ResetHook)`
     /// Constructor.
     // CCHRouter(const GRAPH* graph, MetricProvider provider,
@@ -254,8 +255,8 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        // shortcut: needs router trait bounds (lead), E::isTazConnector/prohibits/getID are not callable on generic E, and runQuery needs the typed myQuery
-        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
+        // shortcut: runQuery needs the typed CustomizableContractionHierarchyQuery (myQuery); the trait bounds for isTazConnector/prohibits/id are in place
+        panic!("shortcut: CCHRouter::compute needs the typed myQuery for runQuery")
     }
 
     /// C++: `void CCHRouter::prohibit(const Prohibitions &)`
@@ -373,9 +374,9 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     pub fn prohibitions_covered_by_metric(&self, vClass: SUMOVehicleClass) -> bool {
         for item in self.myProhibited.iter() {
             if (item.1.permissions & vClass) != vClass
-                // shortcut: needs router trait bounds (lead), E::getPermissions is not callable on the generic prohibited edge
+                // shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
                 && ({
-                    let perm: SVCPermissions = panic!("shortcut: needs router trait bounds (lead), E::getPermissions");
+                    let perm: SVCPermissions = panic!("shortcut: CCHRouter::prohibitionsCoveredByMetric needs E::getPermissions, not in RouterEdge");
                     (perm & vClass) != 0
                 })
             {

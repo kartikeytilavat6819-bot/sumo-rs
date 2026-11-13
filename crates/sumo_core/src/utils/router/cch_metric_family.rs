@@ -1,12 +1,17 @@
 //! Port of utils/router/CCHMetricFamily.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::router::ro_edge::ROEdge;
+use crate::router::ro_vehicle::ROVehicle;
+use crate::utils::router::cch_graph::CCHGraph;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `typename Graph::EffortOperation CCHMetricFamily::EffortOperation`
 pub type CCHMetricFamily_EffortOperation = CCHGraph_EffortOperation;
 
 /// C++ typedef `CCHGraph<E, V> CCHMetricFamily::Graph`
-pub type CCHMetricFamily_Graph<E, V> = CCHGraph<E, V>;
+// shortcut: default params keep the bare name in router/rocch_metrics.rs (outside this batch) compiling; drop the defaults once it passes explicit <E, V>
+pub type CCHMetricFamily_Graph<E = ROEdge, V = ROVehicle> = CCHGraph<E, V>;
 
 /// C++ typedef `const int * CCHMetricFamily::MetricPtr`
 pub type CCHMetricFamily_MetricPtr = Ptr<i32>;
@@ -21,7 +26,7 @@ pub type CCHMetricFamily_WeightPatch = Unmapped /* void (*)(const Graph *, const
 /// C++ class `CCHMetricFamily` (utils/router/CCHMetricFamily.h)
 pub struct CCHMetricFamily<E, V, K> {
     /// the immutable shared topology
-    pub myGraph: Ptr<CCHMetricFamily_Graph<E, V>>,
+    pub myGraph: Ptr<CCHGraph<E, V>>,
     /// the effort the metrics are filled from
     pub myFillEffort: CCHGraph_EffortOperation,
     /// the type-independent effort of the LIVE deadband
@@ -67,7 +72,7 @@ pub struct CCHMetricFamily<E, V, K> {
     _p: std::marker::PhantomData<(E, V, K,)>,
 }
 
-impl<E, V, K> CCHMetricFamily<E, V, K> {
+impl<E: RouterEdge<V>, V, K> CCHMetricFamily<E, V, K> {
     /// C++: `void CCHMetricFamily::CCHMetricFamily<E, V, K>(const Graph *, EffortOperation, SUMOTime, SUMOTime, RefVehicleFactory, WeightPatch)`
     /// construct a STATIC family (lazy build per (type, period))
     // CCHMetricFamily(const Graph* graph, EffortOperation fillEffort,
@@ -79,7 +84,7 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         myUpdateFactor(1.), myUpdateConstant(0.) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(graph: Ptr<CCHMetricFamily_Graph<E, V>>, fillEffort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime, factory: CCHMetricFamily_RefVehicleFactory, patch: CCHMetricFamily_WeightPatch) -> Self {
+    pub fn new(graph: Ptr<CCHGraph<E, V>>, fillEffort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime, factory: CCHMetricFamily_RefVehicleFactory, patch: CCHMetricFamily_WeightPatch) -> Self {
         CCHMetricFamily {
             myGraph: graph,
             myFillEffort: fillEffort,
@@ -131,7 +136,7 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(graph: Ptr<CCHMetricFamily_Graph<E, V>>, fillEffort: CCHGraph_EffortOperation, gateEffort: CCHGraph_EffortOperation, updateFactor: f64, updateConstant: f64, factory: CCHMetricFamily_RefVehicleFactory, ensembleK: i32) -> Self {
+    pub fn new_2(graph: Ptr<CCHGraph<E, V>>, fillEffort: CCHGraph_EffortOperation, gateEffort: CCHGraph_EffortOperation, updateFactor: f64, updateConstant: f64, factory: CCHMetricFamily_RefVehicleFactory, ensembleK: i32) -> Self {
         let space = graph.edge_id_space() as usize;
         let mut this = CCHMetricFamily {
             myGraph: graph,
@@ -311,8 +316,16 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn mark_dirty(&mut self, e: Ptr<E>) {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        let id = e.numerical_id();
+        if id < 0 || id as usize >= self.myPendingFlag[0].len() {
+            return;
+        }
+        for i in 0..2 {
+            if self.myPendingFlag[i][id as usize] == 0 {
+                self.myPendingFlag[i][id as usize] = 1;
+                self.myPendingList[i].push(e);
+            }
+        }
     }
 
     /// C++: `void CCHMetricFamily::invalidateEdge(const E *)`
@@ -332,8 +345,15 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_edge(&mut self, e: Ptr<E>) {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        let id = e.numerical_id();
+        if id < 0 || id as usize >= self.myPendingFlag[0].len() {
+            return;
+        }
+        self.mark_dirty(e);
+        self.myAppliedEffort[0][id as usize] = f64::NAN;
+        self.myAppliedEffort[1][id as usize] = f64::NAN;
+        self.myFullFillsPending = 2;
+        self.myMetricStale = true;
     }
 
     /// C++: `void CCHMetricFamily::atBarrier(double, bool)`
@@ -500,8 +520,8 @@ impl<E, V, K> CCHMetricFamily<E, V, K> {
     //     }
     #[allow(unused_variables)]
     pub fn customize(&mut self, now: f64) {
-        // shortcut: the deadband/sparse-customize pass needs E::getNumericalID, the CCH partial-customization metric (borrows weights, see LiveMetric) and typed GateEffort
-        panic!("shortcut: CCHMetricFamily::customize needs router trait bounds (lead) and the borrowing RoutingKit metric")
+        // shortcut: the sparse customize pass needs the borrowing RoutingKit metric (see LiveMetric) and typed GateEffort (Unmapped alias); the trait bounds are now in place
+        panic!("shortcut: CCHMetricFamily::customize needs the borrowing RoutingKit metric and typed GateEffort")
     }
 
     /// C++: `MetricPtr CCHMetricFamily::published(const K *, const std::string &)`

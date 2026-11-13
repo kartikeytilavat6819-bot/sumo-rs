@@ -1,6 +1,7 @@
 //! Port of utils/router/CHRouterWrapper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `CHRouter<E, V> CHRouterWrapper::CHRouterType`
 pub type CHRouterWrapper_CHRouterType = Unmapped /* CHRouter<E, V> */;
@@ -37,7 +38,7 @@ impl<E, V> std::ops::DerefMut for CHRouterWrapper<E, V> {
     }
 }
 
-impl<E, V> CHRouterWrapper<E, V> {
+impl<E: RouterEdge<V>, V> CHRouterWrapper<E, V> {
     /// C++: `void CHRouterWrapper::CHRouterWrapper<E, V>(const int &, const bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOTime, const SUMOTime, const SUMOTime, bool, const int)`
     /// Constructor
     // CHRouterWrapper(const std::vector<E*>& edges, const bool ignoreErrors, typename SUMOAbstractRouter<E, V>::Operation operation,

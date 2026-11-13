@@ -1,6 +1,7 @@
 //! Port of utils/router/CHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `int Unidirectional::ConnectionVector`
 pub type Unidirectional_ConnectionVector = i32;
@@ -20,7 +21,7 @@ pub struct CHRouter<E, V> {
     pub myForwardSearch: CHRouter_Unidirectional,
     pub myBackwardSearch: CHRouter_Unidirectional,
     pub myHierarchyBuilder: Ptr<CHBuilder<E, V>>,
-    pub myHierarchy: Ptr<CHBuilder_Hierarchy>,
+    pub myHierarchy: Ptr<CHBuilder_Hierarchy<E>>,
     /// the validity duration of one weight interval
     pub myWeightPeriod: SUMOTime,
     /// the validity duration of the current hierarchy (exclusive)
@@ -42,7 +43,7 @@ impl<E, V> std::ops::DerefMut for CHRouter<E, V> {
     }
 }
 
-impl<E, V> CHRouter<E, V> {
+impl<E: RouterEdge<V>, V> CHRouter<E, V> {
     /// C++: `void CHRouter::CHRouter<E, V>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOVehicleClass, SUMOTime, const bool, const bool)`
     /// Constructor
     // CHRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation operation,
@@ -81,7 +82,7 @@ impl<E, V> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         todo!("port CHRouter::CHRouter<E, V>")
     }
 
