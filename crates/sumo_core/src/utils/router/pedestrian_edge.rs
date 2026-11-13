@@ -51,7 +51,8 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(numericalID: i32, edge: Ptr<E>, lane: Ptr<L>, forward: bool, pos: f64) -> Self {
-        todo!("port PedestrianEdge::PedestrianEdge<E, L, N, V>")
+        // shortcut: needs router trait bounds (lead), E::getID, E::isWalkingArea, E::getFunction, E::getLength are not callable on generic E (the id is always built from edge->getID())
+        panic!("shortcut: needs router trait bounds (lead), E::getID")
     }
 
     /// C++: `bool PedestrianEdge::includeInRoute(bool) const` [const]
@@ -60,7 +61,12 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn include_in_route(&self, allEdges: bool) -> bool {
-        todo!("port PedestrianEdge::includeInRoute")
+        if allEdges {
+            true
+        } else {
+            // shortcut: needs router trait bounds (lead), E::isCrossing, E::isWalkingArea, E::isInternal are not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::isCrossing")
+        }
     }
 
     /// C++: `bool PedestrianEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -76,7 +82,12 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        todo!("port PedestrianEdge::prohibits")
+        if trip.node.is_null() {
+            false
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getFromJunction and E::getToJunction are not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getFromJunction")
+        }
     }
 
     /// C++: `double PedestrianEdge::getPartialLength(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -100,7 +111,22 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_partial_length(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
-        todo!("port PedestrianEdge::getPartialLength")
+        let mut length = self.get_length();
+        if self.get_edge() == trip.from && !self.myForward && trip.departPos < self.myStartPos {
+            length = trip.departPos - (self.myStartPos - self.get_length());
+        }
+        if self.get_edge() == trip.to && self.myForward && trip.arrivalPos < self.myStartPos + self.get_length() {
+            length = trip.arrivalPos - self.myStartPos;
+        }
+        if self.get_edge() == trip.from && self.myForward && trip.departPos > self.myStartPos {
+            length -= trip.departPos - self.myStartPos;
+        }
+        if self.get_edge() == trip.to && !self.myForward && trip.arrivalPos > self.myStartPos - self.get_length() {
+            length -= trip.arrivalPos - (self.myStartPos - self.get_length());
+        }
+        // ensure that 'normal' edges always have a higher weight than connector edges
+        length = if length > utils::geom::NUMERICAL_EPS { length } else { utils::geom::NUMERICAL_EPS };
+        length
     }
 
     /// C++: `double PedestrianEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const]
@@ -126,7 +152,8 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port PedestrianEdge::getTravelTime")
+        // shortcut: needs router trait bounds (lead), E::isCrossing, E::getTimePenalty and L::getIncomingLinkState are not callable on generic E, L
+        panic!("shortcut: needs router trait bounds (lead), E::isCrossing")
     }
 
     /// C++: `double PedestrianEdge::getStartPos() const` [const]
@@ -135,7 +162,7 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
-        todo!("port PedestrianEdge::getStartPos")
+        self.myStartPos
     }
 
     /// C++: `double PedestrianEdge::getEndPos() const` [const]
@@ -144,7 +171,7 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
-        todo!("port PedestrianEdge::getEndPos")
+        if self.myForward { self.myStartPos + self.get_length() } else { self.myStartPos - self.get_length() }
     }
 
 }
