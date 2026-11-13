@@ -2024,11 +2024,31 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_person: ms_vehicle_is_person,
     is_container: ms_vehicle_is_container,
     get_parameter: ms_vehicle_get_parameter,
+    get_edge: ms_vehicle_get_edge,
+    get_lane: ms_vehicle_get_lane,
+    get_speed: ms_vehicle_get_speed,
+    get_position: ms_vehicle_get_position,
 };
 
 // C++ virtual overrides of SUMOVehicle, dispatched through SUMOVehicle::vt
 fn ms_vehicle_of(v: &SUMOVehicle) -> &MSVehicle {
     Ptr::new(v).cast::<MSVehicle>().get().unwrap()
+}
+
+fn ms_vehicle_ref(o: &SUMOTrafficObject) -> &MSVehicle {
+    Ptr::new(o).cast::<MSVehicle>().get().unwrap()
+}
+fn ms_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_vehicle_ref(o).get_edge()
+}
+fn ms_vehicle_get_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    ms_vehicle_ref(o).get_lane()
+}
+fn ms_vehicle_get_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_speed()
+}
+fn ms_vehicle_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
+    ms_vehicle_ref(o).get_position(offset)
 }
 
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {

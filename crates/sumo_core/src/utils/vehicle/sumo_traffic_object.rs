@@ -16,14 +16,30 @@ pub struct SUMOTrafficObjectVt {
     pub is_person: fn(&SUMOTrafficObject) -> bool,
     pub is_container: fn(&SUMOTrafficObject) -> bool,
     pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
+    pub get_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub get_lane: fn(&SUMOTrafficObject) -> Ptr<MSLane>,
+    pub get_speed: fn(&SUMOTrafficObject) -> f64,
+    pub get_position: fn(&SUMOTrafficObject, f64) -> Position,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
     false
 }
 
-fn default_get_parameter(_: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+pub(crate) fn default_get_parameter(_: &SUMOTrafficObject) -> &SUMOVehicleParameter {
     panic!("SUMOTrafficObject::getParameter is pure virtual")
+}
+pub(crate) fn default_get_edge(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getEdge is pure virtual")
+}
+pub(crate) fn default_get_lane(_: &SUMOTrafficObject) -> Ptr<MSLane> {
+    panic!("SUMOTrafficObject::getLane is pure virtual")
+}
+pub(crate) fn default_get_speed(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getSpeed is pure virtual")
+}
+pub(crate) fn default_get_position(_: &SUMOTrafficObject, _: f64) -> Position {
+    panic!("SUMOTrafficObject::getPosition is pure virtual")
 }
 
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
@@ -31,6 +47,10 @@ static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt
     is_person: default_is_false,
     is_container: default_is_false,
     get_parameter: default_get_parameter,
+    get_edge: default_get_edge,
+    get_lane: default_get_lane,
+    get_speed: default_get_speed,
+    get_position: default_get_position,
 };
 
 /// Representation of a vehicle, person, or container
@@ -179,7 +199,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        panic!("SUMOTrafficObject::getEdge is pure virtual")
+        (self.vt.get_edge)(self)
     }
 
     /// C++: `const MSEdge * SUMOTrafficObject::getCurrentEdge() const` [const, virtual, pure virtual]
@@ -211,7 +231,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        panic!("SUMOTrafficObject::getLane is pure virtual")
+        (self.vt.get_lane)(self)
     }
 
     /// C++: `const MSLane * SUMOTrafficObject::getBackLane() const` [const, virtual, pure virtual]
@@ -315,7 +335,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        panic!("SUMOTrafficObject::getSpeed is pure virtual")
+        (self.vt.get_speed)(self)
     }
 
     /// C++: `double SUMOTrafficObject::getPreviousSpeed() const` [const, virtual, pure virtual]
@@ -355,7 +375,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_position(&self, offset: f64) -> Position {
-        panic!("SUMOTrafficObject::getPosition is pure virtual")
+        (self.vt.get_position)(self, offset)
     }
 
     /// C++: `double SUMOTrafficObject::getAngle() const` [const, virtual, pure virtual]

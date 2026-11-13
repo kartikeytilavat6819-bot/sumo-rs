@@ -153,6 +153,10 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_person: ms_person_is_person,
     is_container: ms_person_is_container,
     get_parameter: ms_person_get_parameter,
+    get_edge: crate::utils::vehicle::sumo_traffic_object::default_get_edge,
+    get_lane: crate::utils::vehicle::sumo_traffic_object::default_get_lane,
+    get_speed: crate::utils::vehicle::sumo_traffic_object::default_get_speed,
+    get_position: crate::utils::vehicle::sumo_traffic_object::default_get_position,
 };
 
 /// The class holds a simulated person together with her movement stages
