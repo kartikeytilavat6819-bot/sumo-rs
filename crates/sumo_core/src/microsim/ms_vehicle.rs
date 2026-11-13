@@ -2025,6 +2025,49 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_container: ms_vehicle_is_container,
 };
 
+// C++ virtual overrides of SUMOVehicle, dispatched through SUMOVehicle::vt
+fn ms_vehicle_of(v: &SUMOVehicle) -> &MSVehicle {
+    Ptr::new(v).cast::<MSVehicle>().get().unwrap()
+}
+fn ms_vehicle_get_route(v: &SUMOVehicle) -> &MSRoute {
+    ms_vehicle_of(v).get_route()
+}
+fn ms_vehicle_get_departure(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_departure()
+}
+fn ms_vehicle_get_depart_pos(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_depart_pos()
+}
+fn ms_vehicle_get_odometer(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_odometer()
+}
+fn ms_vehicle_has_departed(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).has_departed()
+}
+fn ms_vehicle_is_stopped(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_stopped()
+}
+fn ms_vehicle_get_length(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_length()
+}
+fn ms_vehicle_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
+    ms_vehicle_of(v).get_current_edge()
+}
+fn ms_vehicle_is_on_road(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_on_road()
+}
+static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
+    get_route: ms_vehicle_get_route,
+    get_departure: ms_vehicle_get_departure,
+    get_depart_pos: ms_vehicle_get_depart_pos,
+    get_odometer: ms_vehicle_get_odometer,
+    has_departed: ms_vehicle_has_departed,
+    is_stopped: ms_vehicle_is_stopped,
+    get_length: ms_vehicle_get_length,
+    get_current_edge: ms_vehicle_get_current_edge,
+    is_on_road: ms_vehicle_is_on_road,
+};
+
 impl MSVehicle {
     /// C++: `void MSVehicle::MSVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
     /// Constructor
@@ -2112,6 +2155,7 @@ impl MSVehicle {
         };
         v.myCFVariables = type_.get_car_follow_model().create_vehicle_variables();
         v.base.base.base.vt = &MS_VEHICLE_VT;
+        v.base.base.vt = &MS_VEHICLE_SUMO_VEHICLE_VT;
         v
     }
 
