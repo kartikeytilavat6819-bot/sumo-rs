@@ -1,12 +1,25 @@
 //! Port of utils/router/CHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ch_builder::{e_id, e_numerical_id, std_pop_heap, std_push_heap};
+use super::sumo_abstract_router::SUMOAbstractRouter_Prohibitions;
+use utils::common::time::SUMOTIME_MAX;
 
 /// C++ typedef `int Unidirectional::ConnectionVector`
-pub type Unidirectional_ConnectionVector = i32;
+pub type Unidirectional_ConnectionVector = Vec<CHBuilder_Connection>;
 
 /// C++ typedef `std::pair<const typename SUMOAbstractRouter<E, V>::EdgeInfo *, const typename SUMOAbstractRouter<E, V>::EdgeInfo *> CHRouter::Meeting`
 pub type CHRouter_Meeting = (Ptr<SUMOAbstractRouter_EdgeInfo>, Ptr<SUMOAbstractRouter_EdgeInfo>);
+
+// shortcut: needs router trait bounds (lead), V::getVClass is not callable on the generic V
+#[allow(unused_variables)]
+pub(crate) fn v_class<V>(v: Ptr<V>) -> SUMOVehicleClass {
+    panic!("shortcut: needs router trait bounds (lead), V::getVClass")
+}
+
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    utils::common::msg_handler::with_instance(if warning { utils::common::msg_handler::MsgType::Warning } else { utils::common::msg_handler::MsgType::Error }, |h| Ptr::from_mut(h))
+}
 
 /// Computes the shortest path through a contracted network
 /// C++ class `CHRouter` (utils/router/CHRouter.h)
@@ -15,10 +28,10 @@ pub struct CHRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,
     /// all edges with numerical ids
-    pub myEdges: Ptr<i32>,
+    pub myEdges: Ptr<Vec<Ptr<E>>>,
     /// the unidirectional search queues
-    pub myForwardSearch: CHRouter_Unidirectional,
-    pub myBackwardSearch: CHRouter_Unidirectional,
+    pub myForwardSearch: CHRouter_Unidirectional<E, V>,
+    pub myBackwardSearch: CHRouter_Unidirectional<E, V>,
     pub myHierarchyBuilder: Ptr<CHBuilder<E, V>>,
     pub myHierarchy: Ptr<CHBuilder_Hierarchy<E>>,
     /// the validity duration of one weight interval
@@ -60,8 +73,19 @@ impl<E, V> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, weightPeriod: SUMOTime, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port CHRouter::CHRouter<E, V>")
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, weightPeriod: SUMOTime, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: SUMOAbstractRouter::new("CHRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
+            myForwardSearch: CHRouter_Unidirectional::new(edges, true),
+            myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
+            myHierarchyBuilder: Ptr::from_raw(Box::into_raw(Box::new(CHBuilder::new(edges, unbuildIsWarning, svc, havePermissions)))),
+            myHierarchy: Ptr::null(),
+            myWeightPeriod: weightPeriod,
+            myValidUntil: 0,
+            mySVC: svc,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CHRouter::CHRouter<E, V>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOVehicleClass, typename CHBuilder<E, V>::Hierarchy *, const bool, const bool)`
@@ -81,8 +105,19 @@ impl<E, V> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port CHRouter::CHRouter<E, V>")
+    pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
+            myForwardSearch: CHRouter_Unidirectional::new(edges, true),
+            myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
+            myHierarchyBuilder: Ptr::null(),
+            myHierarchy: hierarchy,
+            myWeightPeriod: SUMOTIME_MAX,
+            myValidUntil: SUMOTIME_MAX,
+            mySVC: svc,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void CHRouter::~CHRouter<E, V>()` [virtual]
@@ -95,7 +130,11 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CHRouter::~CHRouter<E, V>")
+        if !self.myHierarchyBuilder.is_null() {
+            unsafe { drop(Box::from_raw(self.myHierarchy.as_raw())) };
+            let mut builder = unsafe { Box::from_raw(self.myHierarchyBuilder.as_raw()) };
+            builder.drop_();
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * CHRouter::clone()` [virtual]
@@ -110,7 +149,14 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port CHRouter::clone")
+        let unbuildIsWarning = self.myErrorMsgHandler == msg_instance(true);
+        if self.myWeightPeriod == utils::common::time::SUMOTIME_MAX && !self.myHierarchy.is_null() {
+            // we only need one hierarchy
+            let cloned: CHRouter<E, V> = CHRouter::new_2(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myHierarchy, self.myHavePermissions, self.myHaveRestrictions);
+        return Ptr::from_raw(Box::into_raw(Box::new(cloned))).cast();
+        }
+        let cloned2: CHRouter<E, V> = CHRouter::new(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myWeightPeriod, self.myHavePermissions, self.myHaveRestrictions);
+        Ptr::from_raw(Box::into_raw(Box::new(cloned2))).cast()
     }
 
     /// C++: `void CHRouter::prohibit(const int &)` [virtual]
@@ -120,8 +166,10 @@ impl<E, V> CHRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn prohibit(&mut self, toProhibit: &i32) {
-        todo!("port CHRouter::prohibit")
+    pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+        if toProhibit.len() > 0 {
+            utils::common::msg_handler::write_warning("Routing algorithm CH does not support dynamic closing of edges");
+        }
     }
 
     /// C++: `bool CHRouter::supportsProhibitions() const` [const, virtual]
@@ -131,7 +179,8 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn supports_prohibitions(&self) -> bool {
-        todo!("port CHRouter::supportsProhibitions")
+        utils::common::msg_handler::write_warning("Routing algorithm CH does not support dynamic closing of edges and lanes");
+        false
     }
 
     /// C++: `void CHRouter::reset(const V *const)` [virtual]
@@ -150,7 +199,18 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn reset(&mut self, vehicle: Ptr<V>) {
-        todo!("port CHRouter::reset")
+        if self.myValidUntil == 0 {
+            self.myValidUntil = self.myWeightPeriod;
+        }
+        let hierarchyBuilder = self.myHierarchyBuilder;
+        let weightWindow = self.myValidUntil - self.myWeightPeriod;
+        let selfPtr = Ptr::from_mut(self).cast();
+        let newHierarchy = hierarchyBuilder.m().build_contraction_hierarchy(weightWindow, vehicle, selfPtr);
+        if self.myHierarchy.is_null() {
+            self.myHierarchy = newHierarchy;
+        } else {
+            *self.myHierarchy.m() = *unsafe { Box::from_raw(newHierarchy.as_raw()) };
+        }
     }
 
     /// C++: `bool CHRouter::compute(const E *, const E *, const V *const, SUMOTime, int &, bool)` [virtual]
@@ -203,8 +263,49 @@ impl<E, V> CHRouter<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        todo!("port CHRouter::compute")
+    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+        assert!(!from.is_null() && !to.is_null());
+        // assert(myHierarchyBuilder.mySPTree->validatePermissions() || vehicle->getVClass() == mySVC || mySVC == SVC_IGNORING);
+        // do we need to rebuild the hierarchy?
+        if msTime >= self.myValidUntil {
+            assert!(!self.myHierarchyBuilder.is_null()); // only time independent clones do not have a builder
+            while msTime >= self.myValidUntil {
+                self.myValidUntil += self.myWeightPeriod;
+            }
+            self.reset(vehicle);
+        }
+        // ready for routing
+        self.start_query();
+        self.myForwardSearch.init(from, vehicle);
+        self.myBackwardSearch.init(to, vehicle);
+        let mut minTTSeen = f64::MAX;
+        let mut meeting: CHRouter_Meeting = (Ptr::null(), Ptr::null());
+        let mut continueForward = true;
+        let mut continueBackward = true;
+        let mut num_visited_fw = 0;
+        let mut num_visited_bw = 0;
+        let mut result = true;
+        while continueForward || continueBackward {
+            if continueForward {
+                continueForward = self.myForwardSearch.step(&self.myHierarchy.m().forwardUplinks, &self.myBackwardSearch, &mut minTTSeen, &mut meeting);
+                num_visited_fw += 1;
+            }
+            if continueBackward {
+                continueBackward = self.myBackwardSearch.step(&self.myHierarchy.m().backwardUplinks, &self.myForwardSearch, &mut minTTSeen, &mut meeting);
+                num_visited_bw += 1;
+            }
+        }
+        if minTTSeen < f64::MAX {
+            self.build_path_from_meeting(meeting, into);
+        } else {
+            if !silent {
+                self.myErrorMsgHandler.m().informf("No connection between edge '%' and edge '%' found.", &[&e_id(from), &e_id(to)]);
+            }
+            result = false;
+        }
+        // #ifdef CHRouter_DEBUG_QUERY_PERF: "visited N edges (fw,bw) ,final path length" (debug only, off)
+        self.end_query(num_visited_bw + num_visited_fw);
+        result
     }
 
     /// C++: `void CHRouter::buildPathFromMeeting(Meeting, int &) const` [const]
@@ -242,8 +343,35 @@ impl<E, V> CHRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn build_path_from_meeting(&self, meeting: CHRouter_Meeting, into: &mut i32) {
-        todo!("port CHRouter::buildPathFromMeeting")
+    pub fn build_path_from_meeting(&self, meeting: CHRouter_Meeting, into: &mut Vec<Ptr<E>>) {
+        let mut tmp: std::collections::VecDeque<Ptr<E>> = std::collections::VecDeque::new();
+        let mut backtrack = meeting.0;
+        while !backtrack.is_null() {
+            tmp.push_front(backtrack.m().edge.cast::<E>()); // !!!
+            backtrack = backtrack.m().prev;
+        }
+        backtrack = meeting.1.m().prev; // don't use central edge twice
+        while !backtrack.is_null() {
+            tmp.push_back(backtrack.m().edge.cast::<E>()); // !!!
+            backtrack = backtrack.m().prev;
+        }
+        // expand shortcuts
+        let mut prev: Ptr<E> = Ptr::null();
+        while let Some(cur) = tmp.pop_front() {
+            if prev.is_null() {
+                into.push(cur);
+                prev = cur;
+            } else {
+                let via = self.get_via(prev, cur);
+                if via.is_null() {
+                    into.push(cur);
+                    prev = cur;
+                } else {
+                    tmp.push_front(cur);
+                    tmp.push_front(via);
+                }
+            }
+        }
     }
 
     /// C++: `const E * CHRouter::getVia(const E *, const E *) const` [const, private]
@@ -258,7 +386,11 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_via(&self, forwardFrom: Ptr<E>, forwardTo: Ptr<E>) -> Ptr<E> {
-        todo!("port CHRouter::getVia")
+        let forward = (forwardFrom, forwardTo);
+        match self.myHierarchy.m().shortcuts.get(&forward) {
+            Some(via) => *via,
+            None => Ptr::null(),
+        }
     }
 
 }
@@ -278,28 +410,32 @@ impl Unidirectional_EdgeInfoByTTComparator {
     //                 return nod1->effort > nod2->effort;
     //             }
     #[allow(unused_variables)]
-    pub fn call_op(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
-        todo!("port EdgeInfoByTTComparator::operator()")
+    pub fn call_op<E>(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
+        if nod1.m().effort == nod2.m().effort {
+            e_numerical_id(nod1.m().edge.cast::<E>()) > e_numerical_id(nod2.m().edge.cast::<E>())
+        } else {
+            nod1.m().effort > nod2.m().effort
+        }
     }
 
 }
 
 /// class for searching in one direction
 /// C++ class `CHRouter::Unidirectional` (utils/router/CHRouter.h)
-pub struct CHRouter_Unidirectional {
+pub struct CHRouter_Unidirectional<E, V> {
     /// the role of this search
     pub myAmForward: bool,
     /// the min edge heap
-    pub myFrontier: i32,
+    pub myFrontier: Vec<Ptr<SUMOAbstractRouter_EdgeInfo>>,
     /// the set of visited (settled) Edges
-    pub myFound: i32,
+    pub myFound: std::collections::BTreeSet<Ptr<E>>,
     /// The container of edge information
-    pub myEdgeInfos: i32,
+    pub myEdgeInfos: Vec<SUMOAbstractRouter_EdgeInfo>,
     pub myComparator: Unidirectional_EdgeInfoByTTComparator,
-    pub myVehicle: Ptr<Unmapped /* V */>,
+    pub myVehicle: Ptr<V>,
 }
 
-impl CHRouter_Unidirectional {
+impl<E, V> CHRouter_Unidirectional<E, V> {
     /// C++: `void Unidirectional::Unidirectional(const int &, bool)`
     /// Constructor
     // Unidirectional(const std::vector<E*>& edges, bool forward):
@@ -310,8 +446,16 @@ impl CHRouter_Unidirectional {
     //             }
     //         }
     #[allow(unused_variables)]
-    pub fn new(edges: &i32, forward: bool) -> Self {
-        todo!("port Unidirectional::Unidirectional")
+    pub fn new(edges: &Vec<Ptr<E>>, forward: bool) -> Self {
+        Self {
+            myAmForward: forward,
+            myFrontier: Vec::new(),
+            myFound: std::collections::BTreeSet::new(),
+            // shortcut: SUMOAbstractRouter::EdgeInfo.edge is Unmapped (), so edges are stored with cast(); upgrade when EdgeInfo is generic over E
+            myEdgeInfos: edges.iter().map(|e| SUMOAbstractRouter_EdgeInfo::new(e.cast())).collect(),
+            myComparator: Unidirectional_EdgeInfoByTTComparator {},
+            myVehicle: Ptr::null(),
+        }
     }
 
     /// C++: `bool Unidirectional::found(const E *const) const` [const]
@@ -319,8 +463,8 @@ impl CHRouter_Unidirectional {
     //             return myFound.count(edge) > 0;
     //         }
     #[allow(unused_variables)]
-    pub fn found(&self, edge: Ptr<Unmapped /* E */>) -> bool {
-        todo!("port Unidirectional::found")
+    pub fn found(&self, edge: Ptr<E>) -> bool {
+        self.myFound.contains(&edge)
     }
 
     /// C++: `typename SUMOAbstractRouter<E, V>::EdgeInfo * Unidirectional::getEdgeInfo(const E *const)`
@@ -328,8 +472,8 @@ impl CHRouter_Unidirectional {
     //             return &(myEdgeInfos[edge->getNumericalID()]);
     //         }
     #[allow(unused_variables)]
-    pub fn get_edge_info(&mut self, edge: Ptr<Unmapped /* E */>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Unidirectional::getEdgeInfo")
+    pub fn get_edge_info(&mut self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
+        Ptr::from_mut(&mut self.myEdgeInfos[e_numerical_id(edge) as usize])
     }
 
     /// C++: `const typename SUMOAbstractRouter<E, V>::EdgeInfo * Unidirectional::getEdgeInfo(const E *const) const` [const]
@@ -337,8 +481,8 @@ impl CHRouter_Unidirectional {
     //             return &(myEdgeInfos[edge->getNumericalID()]);
     //         }
     #[allow(unused_variables)]
-    pub fn get_edge_info_2(&self, edge: Ptr<Unmapped /* E */>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Unidirectional::getEdgeInfo")
+    pub fn get_edge_info_2(&self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
+        Ptr::new(&self.myEdgeInfos[e_numerical_id(edge) as usize])
     }
 
     /// C++: `void Unidirectional::init(const E *const, const V *const)`
@@ -360,8 +504,22 @@ impl CHRouter_Unidirectional {
     //             myFrontier.push_back(startInfo);
     //         }
     #[allow(unused_variables)]
-    pub fn init(&mut self, start: Ptr<Unmapped /* E */>, vehicle: Ptr<Unmapped /* V */>) {
-        todo!("port Unidirectional::init")
+    pub fn init(&mut self, start: Ptr<E>, vehicle: Ptr<V>) {
+        assert!(!vehicle.is_null());
+        // all EdgeInfos touched in the previous query are either in myFrontier or myFound: clean those up
+        for ei in self.myFrontier.iter() {
+            ei.m().reset();
+        }
+        self.myFrontier.clear();
+        for edge in self.myFound.clone() {
+            self.get_edge_info(edge).m().reset();
+        }
+        self.myFound.clear();
+        self.myVehicle = vehicle;
+        let startInfo = self.get_edge_info(start);
+        startInfo.m().effort = 0.;
+        startInfo.m().prev = Ptr::null();
+        self.myFrontier.push(startInfo);
     }
 
     /// C++: `bool Unidirectional::step(const int &, const Unidirectional &, double &, Meeting &)`
@@ -431,8 +589,58 @@ impl CHRouter_Unidirectional {
     //             return !myFrontier.empty() && myFrontier.front()->effort < minTTSeen;
     //         }
     #[allow(unused_variables)]
-    pub fn step(&mut self, uplinks: &i32, otherSearch: &CHRouter_Unidirectional, minTTSeen: &mut f64, meeting: &mut CHRouter_Meeting) -> bool {
-        todo!("port Unidirectional::step")
+    pub fn step(&mut self, uplinks: &Vec<Vec<CHBuilder_Connection>>, otherSearch: &CHRouter_Unidirectional<E, V>, minTTSeen: &mut f64, meeting: &mut CHRouter_Meeting) -> bool {
+        // pop the node with the minimal length
+        let minimumInfo = self.myFrontier[0];
+        std_pop_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E>(a, b));
+        self.myFrontier.pop();
+        // check for a meeting with the other search
+        let minEdge = minimumInfo.m().edge.cast::<E>();
+        if otherSearch.found(minEdge) {
+            let otherInfo = otherSearch.get_edge_info_2(minEdge);
+            let ttSeen = minimumInfo.m().effort + otherInfo.m().effort;
+            if ttSeen < *minTTSeen {
+                *minTTSeen = ttSeen;
+                if self.myAmForward {
+                    meeting.0 = minimumInfo;
+                    meeting.1 = otherInfo;
+                } else {
+                    meeting.0 = otherInfo;
+                    meeting.1 = minimumInfo;
+                }
+            }
+        }
+        // prepare next steps
+        minimumInfo.m().visited = true;
+        // XXX we only need to keep found elements if they have a higher rank than the lowest rank in the other search queue
+        self.myFound.insert(minEdge);
+        for uplink in uplinks[e_numerical_id(minEdge) as usize].iter() {
+            let upwardInfo = Ptr::from_mut(&mut self.myEdgeInfos[uplink.target as usize]);
+            let effort = minimumInfo.m().effort + uplink.cost;
+            let svc = v_class(self.myVehicle);
+            // check whether it can be used
+            if (uplink.permissions & svc) != svc {
+                continue;
+            }
+            let oldEffort = upwardInfo.m().effort;
+            if !upwardInfo.m().visited && effort < oldEffort {
+                upwardInfo.m().effort = effort;
+                upwardInfo.m().prev = minimumInfo;
+                if oldEffort == f64::MAX {
+                    self.myFrontier.push(upwardInfo);
+                    std_push_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E>(a, b));
+                } else {
+                    let pos = self.myFrontier.iter().position(|x| x.as_raw() == upwardInfo.as_raw()).unwrap();
+                    std_push_heap(&mut self.myFrontier[..pos + 1], &|a, b| self.myComparator.call_op::<E>(a, b));
+                }
+            }
+        }
+        // @note: this effectively does a full dijkstra search.
+        // the effort compared to the naive stopping criterion is thus
+        // quadrupled. We could implement a better stopping criterion (Holte)
+        // However since the search shall take place in a contracted graph
+        // it probably does not matter
+        !self.myFrontier.is_empty() && self.myFrontier[0].m().effort < *minTTSeen
     }
 
 }

@@ -461,7 +461,7 @@ impl NIFrame {
         oc.add_description("heightmap.geotiff", "Input", "Read heightmap from GeoTIFF");
 
         // need to do this here to be able to check for network and route input options
-        // shortcut: SystemFrame is not ported yet, so SystemFrame::addReportOptions(oc) (verbose, log, ...) is not called here, add it once system_frame.rs exists
+        utils::common::system_frame::add_report_options(oc);
         // register basic processing options
         oc.do_register("ignore-errors", SumoOption::bool(false));
         oc.add_synonyme("ignore-errors", "dismiss-loading-errors", true);

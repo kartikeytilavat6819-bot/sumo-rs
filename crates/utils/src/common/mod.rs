@@ -10,6 +10,7 @@ pub mod string_bijection;
 pub mod string_tokenizer;
 pub mod string_utils;
 pub mod sumo_vehicle_class;
+pub mod system_frame;
 pub mod time;
 pub mod to_string;
 pub mod util_exceptions;

@@ -14,7 +14,6 @@ use utils::common::util_exceptions::ProcessError;
 use utils::distribution::distribution_cont;
 use utils::geom::geo_conv_helper::GeoConvHelper;
 use utils::geom::Position;
-use utils::iodevices::output_device::OutputDevice;
 use utils::options::options_cont::{get_bool, with_options};
 use utils::options::options_io;
 use utils::xml::xml_sub_sys;
@@ -32,7 +31,7 @@ fn fill_options() {
         oc.add_call_example("-n ./nodes.xml -e ./edges.xml -v -t ./owntypes.xml", "generate net with given nodes, edges, and edge types doing verbose output");
 
         // insert options sub-topics
-        // shortcut: SystemFrame::addConfigurationOptions(oc) is not ported, so its configuration subtopic is not filled, upgrade when system_frame is ported
+        utils::common::system_frame::add_configuration_options(oc);
         oc.add_option_sub_topic("Input");
         oc.add_option_sub_topic("Output");
         // shortcut: GeoConvHelper::addProjectionOptions(oc) is not ported, so the projection options and subtopic are missing, upgrade when geo_conv_helper registers them
@@ -66,14 +65,8 @@ fn check_options() -> bool {
     })
 }
 
-/// C++: `SystemFrame::close()`, which is not ported: flushes warnings, closes the output devices and
-/// the XML subsystem, clears the options and messages
 fn close_system_frame() {
-    with_instance(MsgType::Warning, |h| h.clear(true));
-    OutputDevice::close_all(false);
-    xml_sub_sys::close();
-    with_options(|oc| oc.clear());
-    MsgHandler::cleanup_on_end();
+    utils::common::system_frame::close();
 }
 
 /// The try block of C++ `main()`; Ok(false) when a meta option (--help, --version, ...) ended the run
