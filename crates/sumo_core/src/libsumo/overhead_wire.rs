@@ -11,6 +11,13 @@ pub struct OverheadWire {
 //   static SubscriptionResults OverheadWire::mySubscriptionResults;
 //   static ContextSubscriptionResults OverheadWire::myContextSubscriptionResults;
 
+thread_local! {
+    /// C++ static `OverheadWire::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `OverheadWire::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
+
 impl OverheadWire {
     /// C++: `std::string OverheadWire::getLaneID(const std::string &)` [static]
     // std::string
@@ -19,7 +26,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_id(stopID: &str) -> String {
-        todo!("port OverheadWire::getLaneID")
+        Self::get_overhead_wire(stopID).get_lane().get_id().to_string()
     }
 
     /// C++: `double OverheadWire::getStartPos(const std::string &)` [static]
@@ -29,7 +36,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_start_pos(stopID: &str) -> f64 {
-        todo!("port OverheadWire::getStartPos")
+        Self::get_overhead_wire(stopID).get_begin_lane_position()
     }
 
     /// C++: `double OverheadWire::getEndPos(const std::string &)` [static]
@@ -39,7 +46,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_end_pos(stopID: &str) -> f64 {
-        todo!("port OverheadWire::getEndPos")
+        Self::get_overhead_wire(stopID).get_end_lane_position()
     }
 
     /// C++: `std::string OverheadWire::getName(const std::string &)` [static]
@@ -49,7 +56,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_name(stopID: &str) -> String {
-        todo!("port OverheadWire::getName")
+        Self::get_overhead_wire(stopID).get_my_name().to_string()
     }
 
     /// C++: `int OverheadWire::getVehicleCount(const std::string &)` [static]
@@ -60,7 +67,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_count(stopID: &str) -> i32 {
-        todo!("port OverheadWire::getVehicleCount")
+        Self::get_overhead_wire(stopID).cast::<MSOverheadWire>().get_charging_vehicles().len() as i32
     }
 
     /// C++: `std::vector<std::string> OverheadWire::getVehicleIDs(const std::string &)` [static]
@@ -75,7 +82,12 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_i_ds(stopID: &str) -> Vec<String> {
-        todo!("port OverheadWire::getVehicleIDs")
+        let wire = Self::get_overhead_wire(stopID).cast::<MSOverheadWire>();
+        let mut result: Vec<String> = Vec::new();
+        for veh in wire.get_charging_vehicles() {
+            result.push(veh.get_id().to_string());
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> OverheadWire::getIDList()` [static]
@@ -90,7 +102,12 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        todo!("port OverheadWire::getIDList")
+        let mut ids = Vec::new();
+        for item in MSNet::get_instance().get_stopping_places(SUMO_TAG_OVERHEAD_WIRE_SEGMENT) {
+            ids.push(item.0.to_string());
+        }
+        ids.sort();
+        ids
     }
 
     /// C++: `int OverheadWire::getIDCount()` [static]
@@ -100,7 +117,7 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_id_count() -> i32 {
-        todo!("port OverheadWire::getIDCount")
+        Self::get_id_list().len() as i32
     }
 
     /// C++: `std::string OverheadWire::getParameter(const std::string &, const std::string &)` [static]
@@ -111,14 +128,14 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        todo!("port OverheadWire::getParameter")
+        Self::get_overhead_wire(objectID).base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> OverheadWire::getParameterWithKey(const std::string &, const std::string &)` [static]
     // LIBSUMO_GET_PARAMETER_WITH_KEY_IMPLEMENTATION(OverheadWire)
     #[allow(unused_variables)]
     pub fn get_parameter_with_key(objectID: &str, key: &str) -> (String, String) {
-        todo!("port OverheadWire::getParameterWithKey")
+        (key.to_string(), Self::get_parameter(objectID, key))
     }
 
     /// C++: `void OverheadWire::setParameter(const std::string &, const std::string &, const std::string &)` [static]
@@ -129,77 +146,78 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        todo!("port OverheadWire::setParameter")
+        Self::get_overhead_wire(objectID).base2.set_parameter(key, value);
     }
 
     /// C++: `void OverheadWire::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn subscribe(objectID: &str, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port OverheadWire::subscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_OVERHEADWIRE_VARIABLE, objectID, varIDs, begin, end, parameters, 0, 0.0);
     }
 
     /// C++: `void OverheadWire::unsubscribe(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn unsubscribe(objectID: &str) {
-        todo!("port OverheadWire::unsubscribe")
+        Helper::subscribe(CMD_SUBSCRIBE_OVERHEADWIRE_VARIABLE, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), 0, 0.0);
     }
 
     /// C++: `void OverheadWire::subscribeContext(const std::string &, int, double, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn subscribe_context(objectID: &str, domain: i32, dist: f64, varIDs: &Vec<i32>, begin: f64, end: f64, parameters: &TraCIResults) {
-        todo!("port OverheadWire::subscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_OVERHEADWIRE_CONTEXT, objectID, varIDs, begin, end, parameters, domain, dist);
     }
 
     /// C++: `void OverheadWire::unsubscribeContext(const std::string &, int, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn unsubscribe_context(objectID: &str, domain: i32, dist: f64) {
-        todo!("port OverheadWire::unsubscribeContext")
+        Helper::subscribe(CMD_SUBSCRIBE_OVERHEADWIRE_CONTEXT, objectID, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, &TraCIResults::new(), domain, dist);
     }
 
     /// C++: `const libsumo::SubscriptionResults OverheadWire::getAllSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        todo!("port OverheadWire::getAllSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults OverheadWire::getSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        todo!("port OverheadWire::getSubscriptionResults")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults OverheadWire::getAllContextSubscriptionResults()` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        todo!("port OverheadWire::getAllContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults OverheadWire::getContextSubscriptionResults(const std::string &)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        todo!("port OverheadWire::getContextSubscriptionResults")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void OverheadWire::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(OverheadWire, OVERHEADWIRE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        todo!("port OverheadWire::subscribeParameterWithKey")
+        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
+        panic!("shortcut: OverheadWire::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
     }
 
     /// C++: `int OverheadWire::domainID()` [static]
     // LIBSUMO_SUBSCRIPTION_API
     #[allow(unused_variables)]
     pub fn domain_id() -> i32 {
-        todo!("port OverheadWire::domainID")
+        CMD_GET_OVERHEADWIRE_VARIABLE
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> OverheadWire::makeWrapper()` [static]
@@ -209,7 +227,8 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        todo!("port OverheadWire::makeWrapper")
+        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
+        panic!("shortcut: OverheadWire::makeWrapper needs the subscription wrapper over class statics")
     }
 
     /// C++: `bool OverheadWire::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -244,7 +263,29 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        todo!("port OverheadWire::handleVariable")
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_POSITION => wrapper.m().wrap_double(objID, variable, Self::get_start_pos(objID)),
+            VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_end_pos(objID)),
+            VAR_NAME => wrapper.m().wrap_string(objID, variable, &Self::get_name(objID)),
+            VAR_STOP_STARTING_VEHICLES_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_vehicle_count(objID)),
+            VAR_STOP_STARTING_VEHICLES_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_vehicle_i_ds(objID)),
+            VAR_PARAMETER => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                paramData.m().read_unsigned_byte();
+                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
+                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => false,
+        }
     }
 
     /// C++: `MSStoppingPlace * OverheadWire::getOverheadWire(const std::string &)` [static, private]
@@ -258,7 +299,11 @@ impl OverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_overhead_wire(id: &str) -> Ptr<MSStoppingPlace> {
-        todo!("port OverheadWire::getOverheadWire")
+        let s = MSNet::get_instance().get_stopping_place(id, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        if s.is_null() {
+            panic!("OverheadWire '{}' is not known", id);
+        }
+        s
     }
 
     /// C++: `void OverheadWire::OverheadWire()` [private]
@@ -266,7 +311,7 @@ impl OverheadWire {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port OverheadWire::OverheadWire")
+        panic!("libsumo::OverheadWire cannot be constructed: the standard constructor is invalidated in C++")
     }
 
 }
