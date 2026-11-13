@@ -1,6 +1,7 @@
 //! Port of utils/router/CCHGraph.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) CCHGraph::EffortOperation`
 pub type CCHGraph_EffortOperation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -39,8 +40,9 @@ static EMPTY_NODES: Vec<u32> = Vec::new();
 
 // C++ static members of CCHGraph (port as module-level statics, see AGENTS.md):
 //   static const unsigned int CCHGraph::INVALID_NODE;
+const INVALID_NODE: u32 = foreign::routingkit::constants::INVALID_ID;
 
-impl<E, V> CCHGraph<E, V> {
+impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     /// C++: `void CCHGraph::CCHGraph<E, V>(const int &)`
     /// Build the union line graph + CCH from the given edges.
     // explicit CCHGraph(const std::vector<E*>& allEdges) {
@@ -163,8 +165,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(allEdges: &Vec<Ptr<E>>) -> Self {
-        // shortcut: needs router trait bounds (lead), E::isInternal/getNumericalID/getLanes/getViaSuccessors are not callable on generic E; the placeholder arc lists cannot be filled, CCH build needs the typed fields
-        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+        // shortcut: needs E::getOtherTazConnector (for isStarConnector) and L::geometryPositionAtOffset plus junction getPosition (lane/junction geometry), none in RouterEdge
+        panic!("shortcut: CCHGraph::new needs E::getOtherTazConnector and junction/lane geometry, not in RouterEdge")
     }
 
     /// C++: `void CCHGraph::~CCHGraph<E, V>()` [virtual]
@@ -212,8 +214,10 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn node_of(&self, e: Ptr<E>) -> u32 {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        if e.is_null() || e.numerical_id() < 0 || e.numerical_id() as usize >= self.myEdgeToNode.len() {
+            return INVALID_NODE;
+        }
+        self.myEdgeToNode[e.numerical_id() as usize]
     }
 
     /// C++: `const E * CCHGraph::edgeOf(unsigned int) const` [const]
@@ -261,8 +265,10 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn arcs_of_edge(&self, e: Ptr<E>) -> &Vec<u32> {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        if e.is_null() || e.numerical_id() < 0 || e.numerical_id() as usize >= self.myEdgeToArcs.len() {
+            return &EMPTY_NODES;
+        }
+        &self.myEdgeToArcs[e.numerical_id() as usize]
     }
 
     /// C++: `void CCHGraph::expandNodePath(const int &, int &) const` [const]
@@ -296,8 +302,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn via_chain_effort(via: Ptr<E>, effort: CCHGraph_EffortOperation, veh: Ptr<V>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors are not callable on generic E; EffortOperation typedef is still Unmapped
-        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+        // shortcut: CCHGraph_EffortOperation is Unmapped, so effort(via, veh, time) cannot be called; the alias needs E,V params (rocch_metrics.rs outside this batch uses it bare)
+        panic!("shortcut: CCHGraph::viaChainEffort needs typed EffortOperation")
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeight(unsigned int, EffortOperation, SUMOVehicleClass, const V *, double) const` [const]
@@ -316,8 +322,8 @@ impl<E, V> CCHGraph<E, V> {
         if maskClass != utils::common::sumo_vehicle_class::SVC_IGNORING
                 && (((self.myArcPerm[a as usize] & maskClass) == 0)
                     || ({
-                        // shortcut: needs router trait bounds (lead), E::getPermissions is not callable on generic E
-                        let perm: SVCPermissions = panic!("shortcut: needs router trait bounds (lead), E::getPermissions");
+                        // shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
+                        let perm: SVCPermissions = panic!("shortcut: CCHGraph::computeArcWeight needs E::getPermissions, not in RouterEdge");
                         (perm & maskClass) == 0
                     }))
         {
@@ -365,8 +371,8 @@ impl<E, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_star_connector(e: Ptr<E>) -> bool {
-        // shortcut: needs router trait bounds (lead), E::isTazConnector/getOtherTazConnector are not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
+        // shortcut: E::getOtherTazConnector is not in RouterEdge, add it to the trait to upgrade
+        panic!("shortcut: CCHGraph::isStarConnector needs E::getOtherTazConnector, not in RouterEdge")
     }
 
     /// C++: `void CCHGraph::primeClassMask(SUMOVehicleClass) const` [const, private]
@@ -394,8 +400,19 @@ impl<E, V> CCHGraph<E, V> {
         if vClass == utils::common::sumo_vehicle_class::SVC_IGNORING || (self.myPrimedClasses & vClass) == vClass {
             return;
         }
-        // shortcut: needs router trait bounds (lead), E::getViaSuccessors(vClass) is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+        let this = Ptr::new(self);
+        for n in 0..self.myNodeToEdge.len() as u32 {
+            for follower in self.myNodeToEdge[n as usize].via_successors(vClass, false) {
+                let toNode = self.node_of(follower.0);
+                if toNode == INVALID_NODE {
+                    continue;
+                }
+                if let Some(&a) = self.myArcOf.get(&(n, toNode)) {
+                    this.m().myArcPerm[a as usize] |= vClass;
+                }
+            }
+        }
+        this.m().myPrimedClasses |= vClass;
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeightRaw(unsigned int, EffortOperation, const V *, double) const` [const, private]

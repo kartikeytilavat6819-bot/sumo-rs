@@ -1,6 +1,7 @@
 //! Port of utils/router/CHBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `std::pair<const CHConnection *, const CHConnection *> CHBuilder::CHConnectionPair`
 pub type CHBuilder_CHConnectionPair<E> = (Ptr<CHBuilder_CHConnection<E>>, Ptr<CHBuilder_CHConnection<E>>);
@@ -17,40 +18,10 @@ pub type CHBuilder_ConstEdgePair<E> = (Ptr<E>, Ptr<E>);
 /// C++ typedef `int CHBuilder::ShortcutVia`
 pub type CHBuilder_ShortcutVia<E> = std::collections::BTreeMap<CHBuilder_ConstEdgePair<E>, Ptr<E>>;
 
-// shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on the generic E
-#[allow(unused_variables)]
-pub(crate) fn e_numerical_id<E>(e: Ptr<E>) -> i32 {
-    panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
-}
-
-// shortcut: needs router trait bounds (lead), E::getPermissions is not callable on the generic E
+// shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
 #[allow(unused_variables)]
 pub(crate) fn e_permissions<E>(e: Ptr<E>) -> SVCPermissions {
-    panic!("shortcut: needs router trait bounds (lead), E::getPermissions")
-}
-
-// shortcut: needs router trait bounds (lead), E::getViaSuccessors(SUMOVehicleClass) is not callable on the generic E
-#[allow(unused_variables)]
-pub(crate) fn e_via_successors<E>(e: Ptr<E>, svc: SUMOVehicleClass) -> Vec<(Ptr<E>, Ptr<E>)> {
-    panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
-}
-
-// shortcut: needs router trait bounds (lead), E::getViaSuccessors() (no-arg front) is not callable on the generic E
-#[allow(unused_variables)]
-pub(crate) fn e_front_via_successor<E>(e: Ptr<E>) -> Ptr<E> {
-    panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors().front()")
-}
-
-// shortcut: needs router trait bounds (lead), E::isInternal is not callable on the generic E
-#[allow(unused_variables)]
-pub(crate) fn e_is_internal<E>(e: Ptr<E>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::isInternal")
-}
-
-// shortcut: needs router trait bounds (lead), E::getID is not callable on the generic E
-#[allow(unused_variables)]
-pub(crate) fn e_id<E>(e: Ptr<E>) -> String {
-    panic!("shortcut: needs router trait bounds (lead), E::getID")
+    panic!("shortcut: CHBuilder needs E::getPermissions, not in RouterEdge")
 }
 
 /// C++ `&obj` taken as a pointer (the object is owned by a container that outlives the pointer)
@@ -147,7 +118,7 @@ pub struct CHBuilder<E, V> {
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
-impl<E, V> CHBuilder<E, V> {
+impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
     /// C++: `void CHBuilder::CHBuilder<E, V>(const int &, bool, const SUMOVehicleClass, bool)`
     /// Constructor
     // CHBuilder(const std::vector<E*>& edges, bool unbuildIsWarning,
@@ -315,7 +286,7 @@ impl<E, V> CHBuilder<E, V> {
             queue.push(Ptr::from_mut(&mut self.myCHInfos[i]));
         }
         let cmp = CHBuilder_CHInfoComparator {};
-        std_make_heap(&mut queue, &|a, b| cmp.call_op(a, b));
+        std_make_heap(&mut queue, &|a, b| cmp.call_op::<E, V>(a, b));
         let mut contractionRank = 0;
         // contraction loop
         while !queue.is_empty() {
@@ -324,15 +295,15 @@ impl<E, V> CHBuilder<E, V> {
             max.m().rank = contractionRank;
             let edge = max.m().edge;
             // add outgoing connections to the forward search
-            let edgeID = e_numerical_id(edge) as usize;
+            let edgeID = edge.numerical_id() as usize;
             for con in max.m().followers.iter() {
-                result.m().forwardUplinks[edgeID].push(CHBuilder_Connection::new(e_numerical_id(con.target.m().edge), con.cost, con.permissions));
+                result.m().forwardUplinks[edgeID].push(CHBuilder_Connection::new(con.target.m().edge.numerical_id(), con.cost, con.permissions));
                 self.disconnect(&mut con.target.m().approaching, max);
                 con.target.m().update_priority(Ptr::null());
             }
             // add incoming connections to the backward search
             for con in max.m().approaching.iter() {
-                result.m().backwardUplinks[edgeID].push(CHBuilder_Connection::new(e_numerical_id(con.target.m().edge), con.cost, con.permissions));
+                result.m().backwardUplinks[edgeID].push(CHBuilder_Connection::new(con.target.m().edge.numerical_id(), con.cost, con.permissions));
                 self.disconnect(&mut con.target.m().followers, max);
                 con.target.m().update_priority(Ptr::null());
             }
@@ -348,7 +319,7 @@ impl<E, V> CHBuilder<E, V> {
             // if you need to debug the chrouter with MSVC uncomment the following line, hierarchy building will get slower and the hierarchy may change though
             //std::make_heap(queue.begin(), queue.end(), myCmp);
             // remove from queue
-            std_pop_heap(&mut queue, &|a, b| cmp.call_op(a, b));
+            std_pop_heap(&mut queue, &|a, b| cmp.call_op::<E, V>(a, b));
             queue.pop();
             /*
             if (contractionRank % 10000 == 0) {
@@ -377,7 +348,7 @@ impl<E, V> CHBuilder<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_ch_info(&mut self, edge: Ptr<E>) -> Ptr<CHBuilder_CHInfo<E>> {
-        Ptr::from_mut(&mut self.myCHInfos[e_numerical_id(edge) as usize])
+        Ptr::from_mut(&mut self.myCHInfos[edge.numerical_id() as usize])
     }
 
     /// C++: `void CHBuilder::synchronize(CHInfo &, double, const V *const, const SUMOAbstractRouter<E, V> *)` [private]
@@ -422,7 +393,7 @@ impl<E, V> CHBuilder<E, V> {
         }
         let baseCost = effortProvider.m().get_effort(edge, vehicle, time);
 
-        for successor in e_via_successors(edge, self.mySVC) {
+        for successor in edge.via_successors(self.mySVC, false) {
             let fEdge = successor.0;
             if prune && ((e_permissions(fEdge) & self.mySVC) != self.mySVC) {
                 continue;
@@ -431,9 +402,9 @@ impl<E, V> CHBuilder<E, V> {
             let permissions = e_permissions(edge) & e_permissions(fEdge);
             let mut cost = baseCost;
             let mut viaEdge = successor.1;
-            while !viaEdge.is_null() && e_is_internal(viaEdge) {
+            while !viaEdge.is_null() && viaEdge.is_internal() {
                 cost += effortProvider.m().get_effort(viaEdge, vehicle, time);
-                viaEdge = e_front_via_successor(viaEdge);
+                viaEdge = viaEdge.via_successors(utils::common::sumo_vehicle_class::SVC_IGNORING, false)[0].0;
             }
             info.followers.push(CHBuilder_CHConnection::new(follower, cost, permissions, 1));
             follower.m().approaching.push(CHBuilder_CHConnection::new(ptr_of(info), cost, permissions, 1));
@@ -485,8 +456,8 @@ impl<E, V> CHBuilder<E, V> {
         // #ifdef CHRouter_DEBUG_CONTRACTION_QUEUE: "updating '<edge id>'" and debugPrintQueue(queue) (debug only, off)
         if max.m().update_priority(self.mySPTree) {
             let cmp = CHBuilder_CHInfoComparator {};
-            std_pop_heap(queue, &|a, b| cmp.call_op(a, b));
-            std_push_heap(queue, &|a, b| cmp.call_op(a, b));
+            std_pop_heap(queue, &|a, b| cmp.call_op::<E, V>(a, b));
+            std_push_heap(queue, &|a, b| cmp.call_op::<E, V>(a, b));
             true
         } else {
             false
@@ -787,8 +758,8 @@ impl<E> CHBuilder_CHInfo<E> {
     //             std::cout << "adding shortcut between " << aInfo.target->edge->getID() << ", " << fInfo.target->edge->getID() << " via " << edge->getID() << "\n";
     //         }
     #[allow(unused_variables)]
-    pub fn debug_no_witness(&mut self, aInfo: &CHBuilder_CHConnection<E>, fInfo: &CHBuilder_CHConnection<E>) {
-        print!("adding shortcut between {}, {} via {}\n", e_id(aInfo.target.m().edge), e_id(fInfo.target.m().edge), e_id(self.edge));
+    pub fn debug_no_witness<V>(&mut self, aInfo: &CHBuilder_CHConnection<E>, fInfo: &CHBuilder_CHConnection<E>) where E: RouterEdge<V> {
+        print!("adding shortcut between {}, {} via {}\n", aInfo.target.m().edge.id(), fInfo.target.m().edge.id(), self.edge.id());
     }
 
     /// C++: `void CHInfo::debugWitness(const CHConnection &, const CHConnection &)`
@@ -797,15 +768,15 @@ impl<E> CHBuilder_CHInfo<E> {
     //             std::cout << "found witness with length " << fInfo.target->traveltime << " against via " << edge->getID() << " (length " << viaCost << ") for " << aInfo.target->edge->getID() << ", " << fInfo.target->edge->getID() << "\n";
     //         }
     #[allow(unused_variables)]
-    pub fn debug_witness(&mut self, aInfo: &CHBuilder_CHConnection<E>, fInfo: &CHBuilder_CHConnection<E>) {
+    pub fn debug_witness<V>(&mut self, aInfo: &CHBuilder_CHConnection<E>, fInfo: &CHBuilder_CHConnection<E>) where E: RouterEdge<V> {
         let viaCost = aInfo.cost + fInfo.cost;
         print!(
             "found witness with length {} against via {} (length {}) for {}, {}\n",
             utils::common::to_string::f64_to_string_prec(fInfo.target.m().traveltime, 6),
-            e_id(self.edge),
+            self.edge.id(),
             utils::common::to_string::f64_to_string_prec(viaCost, 6),
-            e_id(aInfo.target.m().edge),
-            e_id(fInfo.target.m().edge)
+            aInfo.target.m().edge.id(),
+            fInfo.target.m().edge.id()
         );
     }
 
@@ -827,9 +798,9 @@ impl CHBuilder_CHInfoComparator {
     //             };
     //         }
     #[allow(unused_variables)]
-    pub fn call_op<E>(&self, a: Ptr<CHBuilder_CHInfo<E>>, b: Ptr<CHBuilder_CHInfo<E>>) -> bool {
+    pub fn call_op<E: RouterEdge<V>, V>(&self, a: Ptr<CHBuilder_CHInfo<E>>, b: Ptr<CHBuilder_CHInfo<E>>) -> bool {
         if a.m().priority == b.m().priority {
-            e_numerical_id(a.m().edge) > e_numerical_id(b.m().edge)
+            a.m().edge.numerical_id() > b.m().edge.numerical_id()
         } else {
             a.m().priority < b.m().priority
         }

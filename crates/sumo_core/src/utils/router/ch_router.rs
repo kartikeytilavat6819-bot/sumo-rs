@@ -1,9 +1,7 @@
 //! Port of utils/router/CHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use super::ch_builder::{e_id, e_numerical_id, std_pop_heap, std_push_heap};
-use super::sumo_abstract_router::SUMOAbstractRouter_Prohibitions;
-use utils::common::time::SUMOTIME_MAX;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `int Unidirectional::ConnectionVector`
 pub type Unidirectional_ConnectionVector = Vec<CHBuilder_Connection>;
@@ -55,7 +53,7 @@ impl<E, V> std::ops::DerefMut for CHRouter<E, V> {
     }
 }
 
-impl<E, V> CHRouter<E, V> {
+impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     /// C++: `void CHRouter::CHRouter<E, V>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOVehicleClass, SUMOTime, const bool, const bool)`
     /// Constructor
     // CHRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation operation,
@@ -106,18 +104,7 @@ impl<E, V> CHRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        Self {
-            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
-            myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
-            myForwardSearch: CHRouter_Unidirectional::new(edges, true),
-            myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
-            myHierarchyBuilder: Ptr::null(),
-            myHierarchy: hierarchy,
-            myWeightPeriod: SUMOTIME_MAX,
-            myValidUntil: SUMOTIME_MAX,
-            mySVC: svc,
-            _p: std::marker::PhantomData,
-        }
+        todo!("port CHRouter::CHRouter<E, V>")
     }
 
     /// C++: `void CHRouter::~CHRouter<E, V>()` [virtual]
@@ -410,7 +397,7 @@ impl Unidirectional_EdgeInfoByTTComparator {
     //                 return nod1->effort > nod2->effort;
     //             }
     #[allow(unused_variables)]
-    pub fn call_op<E>(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
+    pub fn call_op<E: RouterEdge<V>, V>(&self, nod1: Ptr<SUMOAbstractRouter_EdgeInfo>, nod2: Ptr<SUMOAbstractRouter_EdgeInfo>) -> bool {
         if nod1.m().effort == nod2.m().effort {
             e_numerical_id(nod1.m().edge.cast::<E>()) > e_numerical_id(nod2.m().edge.cast::<E>())
         } else {
@@ -435,7 +422,7 @@ pub struct CHRouter_Unidirectional<E, V> {
     pub myVehicle: Ptr<V>,
 }
 
-impl<E, V> CHRouter_Unidirectional<E, V> {
+impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter_Unidirectional<E, V> {
     /// C++: `void Unidirectional::Unidirectional(const int &, bool)`
     /// Constructor
     // Unidirectional(const std::vector<E*>& edges, bool forward):
@@ -592,7 +579,7 @@ impl<E, V> CHRouter_Unidirectional<E, V> {
     pub fn step(&mut self, uplinks: &Vec<Vec<CHBuilder_Connection>>, otherSearch: &CHRouter_Unidirectional<E, V>, minTTSeen: &mut f64, meeting: &mut CHRouter_Meeting) -> bool {
         // pop the node with the minimal length
         let minimumInfo = self.myFrontier[0];
-        std_pop_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E>(a, b));
+        std_pop_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E, V>(a, b));
         self.myFrontier.pop();
         // check for a meeting with the other search
         let minEdge = minimumInfo.m().edge.cast::<E>();
@@ -628,10 +615,10 @@ impl<E, V> CHRouter_Unidirectional<E, V> {
                 upwardInfo.m().prev = minimumInfo;
                 if oldEffort == f64::MAX {
                     self.myFrontier.push(upwardInfo);
-                    std_push_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E>(a, b));
+                    std_push_heap(&mut self.myFrontier, &|a, b| self.myComparator.call_op::<E, V>(a, b));
                 } else {
                     let pos = self.myFrontier.iter().position(|x| x.as_raw() == upwardInfo.as_raw()).unwrap();
-                    std_push_heap(&mut self.myFrontier[..pos + 1], &|a, b| self.myComparator.call_op::<E>(a, b));
+                    std_push_heap(&mut self.myFrontier[..pos + 1], &|a, b| self.myComparator.call_op::<E, V>(a, b));
                 }
             }
         }
@@ -645,3 +632,7 @@ impl<E, V> CHRouter_Unidirectional<E, V> {
 
 }
 
+
+// helpers used by the ported CH code to read edge identity through the router trait
+fn e_id<E: RouterEdge<V>, V>(e: Ptr<E>) -> String { e.id().to_string() }
+fn e_numerical_id<E: RouterEdge<V>, V>(e: Ptr<E>) -> i32 { e.numerical_id() }
