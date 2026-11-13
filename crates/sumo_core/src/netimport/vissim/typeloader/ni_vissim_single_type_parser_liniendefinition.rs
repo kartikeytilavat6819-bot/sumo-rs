@@ -21,6 +21,39 @@ impl std::ops::DerefMut for NIVissimSingleTypeParser_Liniendefinition {
     }
 }
 
+/// C++ `from >> tag` for a std::string (same as NIImporter_Vissim's private vissim_read_token)
+fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    from.set_position(i as u64);
+    tok
+}
+
+/// C++ `std::getline(strm, line)` (same as NIImporter_Vissim's private vissim_getline)
+fn vissim_getline(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let start = from.position() as usize;
+    if start >= data.len() {
+        return String::new();
+    }
+    let mut i = start;
+    while i < data.len() && data[i] != b'\n' {
+        i += 1;
+    }
+    let line = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let next = if i < data.len() { i + 1 } else { i };
+    from.set_position(next as u64);
+    line
+}
+
 impl NIVissimSingleTypeParser_Liniendefinition {
     /// C++: `void NIVissimSingleTypeParser_Liniendefinition::NIVissimSingleTypeParser_Liniendefinition(NIImporter_Vissim &)`
     /// Constructor
@@ -28,7 +61,7 @@ impl NIVissimSingleTypeParser_Liniendefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Liniendefinition::NIVissimSingleTypeParser_Liniendefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Liniendefinition::~NIVissimSingleTypeParser_Liniendefinition() noexcept` [virtual]
@@ -36,7 +69,7 @@ impl NIVissimSingleTypeParser_Liniendefinition {
     // NIVissimSingleTypeParser_Liniendefinition::~NIVissimSingleTypeParser_Liniendefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Liniendefinition::~NIVissimSingleTypeParser_Liniendefinition")
+        // destructor: nothing to release explicitly, the base parser drops with the struct
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Liniendefinition::parse(std::istream &)` [virtual]
@@ -52,8 +85,15 @@ impl NIVissimSingleTypeParser_Liniendefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Liniendefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let _ = vissim_read_token(from);
+        loop {
+            let tag = vissim_getline(from);
+            if !(tag.len() > 0 && tag.starts_with(' ')) {
+                break;
+            }
+        }
+        true
     }
 
 }
