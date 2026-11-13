@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Definition of the traffic during a certain time containing the flows and speeds
 /// C++ class `FlowDef` (dfrouter/RODFDetectorFlow.h)
+#[derive(Clone, Copy, Default)]
 pub struct FlowDef {
     pub qPKW: f64,
     pub qLKW: f64,
@@ -19,12 +20,14 @@ impl FlowDef {
 
 /// A container for flows
 /// C++ class `RODFDetectorFlows` (dfrouter/RODFDetectorFlow.h)
+#[derive(Clone)]
 pub struct RODFDetectorFlows {
     pub myFastAccessFlows: BTreeMap<String, Vec<FlowDef>>,
     pub myBeginTime: SUMOTime,
     pub myEndTime: SUMOTime,
     pub myStepOffset: SUMOTime,
-    pub myMaxDetectorFlow: f64,
+    /// `mutable` in C++: cached by the const getMaxDetectorFlow()
+    pub myMaxDetectorFlow: std::cell::Cell<f64>,
 }
 
 impl RODFDetectorFlows {
@@ -35,14 +38,19 @@ impl RODFDetectorFlows {
     //       myMaxDetectorFlow(-1) {}
     #[allow(unused_variables)]
     pub fn new(startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime) -> Self {
-        todo!("port RODFDetectorFlows::RODFDetectorFlows")
+        RODFDetectorFlows {
+            myFastAccessFlows: BTreeMap::new(),
+            myBeginTime: startTime,
+            myEndTime: endTime,
+            myStepOffset: stepOffset,
+            myMaxDetectorFlow: std::cell::Cell::new(-1.0),
+        }
     }
 
     /// C++: `void RODFDetectorFlows::~RODFDetectorFlows()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFDetectorFlows::~RODFDetectorFlows")
     }
 
     /// C++: `void RODFDetectorFlows::addFlow(const std::string &, SUMOTime, const FlowDef &)`
@@ -84,7 +92,39 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn add_flow(&mut self, detector_id: &str, timestamp: SUMOTime, fd: &FlowDef) {
-        todo!("port RODFDetectorFlows::addFlow")
+        if !self.myFastAccessFlows.contains_key(detector_id) {
+            let noItems = ((self.myEndTime - self.myBeginTime) / self.myStepOffset) as usize;
+            let mut cflows = vec![FlowDef::default(); noItems];
+            for i in cflows.iter_mut() {
+                i.qPKW = 0.0;
+                i.qLKW = 0.0;
+                i.vPKW = 0.0;
+                i.vLKW = 0.0;
+                i.fLKW = 0.0;
+                i.isLKW = 0.0;
+                i.firstSet = true;
+            }
+            self.myFastAccessFlows.insert(detector_id.to_string(), cflows);
+        }
+        let index = ((timestamp - self.myBeginTime) / self.myStepOffset) as usize;
+        let flows = self.myFastAccessFlows.get_mut(detector_id).unwrap();
+        assert!(index < flows.len());
+        let ofd = &mut flows[index];
+        if ofd.firstSet {
+            *ofd = *fd;
+            ofd.firstSet = false;
+        } else {
+            ofd.qLKW = ofd.qLKW + fd.qLKW;
+            ofd.qPKW = ofd.qPKW + fd.qPKW;
+            ofd.vLKW = ofd.vLKW + fd.vLKW; //!!! mean value?
+            ofd.vPKW = ofd.vPKW + fd.vPKW; //!!! mean value?
+        }
+        if ofd.qPKW != 0.0 {
+            ofd.fLKW = ofd.qLKW / (ofd.qLKW + ofd.qPKW);
+        } else {
+            ofd.fLKW = 1.0;
+            ofd.isLKW = 1.0;
+        }
     }
 
     /// C++: `void RODFDetectorFlows::removeFlow(const std::string &)`
@@ -94,7 +134,7 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn remove_flow(&mut self, detector_id: &str) {
-        todo!("port RODFDetectorFlows::removeFlow")
+        self.myFastAccessFlows.remove(detector_id);
     }
 
     /// C++: `void RODFDetectorFlows::setFlows(const std::string &, std::vector<FlowDef> &)`
@@ -113,7 +153,14 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn set_flows(&mut self, detector_id: &str, arg1: &mut Vec<FlowDef>) {
-        todo!("port RODFDetectorFlows::setFlows")
+        for ofd in arg1.iter_mut() {
+            if ofd.qLKW != 0.0 && ofd.qPKW != 0.0 {
+                ofd.fLKW = ofd.qLKW / ofd.qPKW;
+            } else {
+                ofd.fLKW = 0.0;
+            }
+        }
+        self.myFastAccessFlows.insert(detector_id.to_string(), arg1.clone());
     }
 
     /// C++: `const std::vector<FlowDef> & RODFDetectorFlows::getFlowDefs(const std::string &) const` [const]
@@ -125,7 +172,9 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn get_flow_defs(&self, id: &str) -> &Vec<FlowDef> {
-        todo!("port RODFDetectorFlows::getFlowDefs")
+        assert!(self.myFastAccessFlows.contains_key(id));
+        assert!(self.myFastAccessFlows[id].len() != 0);
+        &self.myFastAccessFlows[id]
     }
 
     /// C++: `bool RODFDetectorFlows::knows(const std::string &) const` [const]
@@ -135,7 +184,7 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn knows(&self, det_id: &str) -> bool {
-        todo!("port RODFDetectorFlows::knows")
+        self.myFastAccessFlows.contains_key(det_id)
     }
 
     /// C++: `double RODFDetectorFlows::getFlowSumSecure(const std::string &) const` [const]
@@ -153,7 +202,15 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn get_flow_sum_secure(&self, id: &str) -> f64 {
-        todo!("port RODFDetectorFlows::getFlowSumSecure")
+        let mut ret = 0.0;
+        if self.knows(id) {
+            let flows = self.get_flow_defs(id);
+            for i in flows.iter() {
+                ret += i.qPKW;
+                ret += i.qLKW;
+            }
+        }
+        ret
     }
 
     /// C++: `double RODFDetectorFlows::getMaxDetectorFlow() const` [const]
@@ -179,7 +236,21 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn get_max_detector_flow(&self) -> f64 {
-        todo!("port RODFDetectorFlows::getMaxDetectorFlow")
+        if self.myMaxDetectorFlow.get() < 0.0 {
+            let mut max = 0.0;
+            for (_, flows) in self.myFastAccessFlows.iter() {
+                let mut curr = 0.0;
+                for i in flows.iter() {
+                    curr += i.qPKW;
+                    curr += i.qLKW;
+                }
+                if max < curr {
+                    max = curr;
+                }
+            }
+            self.myMaxDetectorFlow.set(max);
+        }
+        self.myMaxDetectorFlow.get()
     }
 
     /// C++: `void RODFDetectorFlows::printAbsolute() const` [const]
@@ -199,7 +270,20 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn print_absolute(&self) {
-        todo!("port RODFDetectorFlows::printAbsolute")
+        for (id, flows) in self.myFastAccessFlows.iter() {
+            print!("{}:", id);
+            let mut qPKW = 0.0;
+            let mut qLKW = 0.0;
+            for j in flows.iter() {
+                qPKW += j.qPKW;
+                qLKW += j.qLKW;
+            }
+            println!(
+                "{}/{}",
+                utils::common::to_string::f64_to_string_default(qPKW),
+                utils::common::to_string::f64_to_string_default(qLKW)
+            );
+        }
     }
 
     /// C++: `void RODFDetectorFlows::mesoJoin(const std::string &, const std::vector<std::string> &)`
@@ -220,7 +304,20 @@ impl RODFDetectorFlows {
     // }
     #[allow(unused_variables)]
     pub fn meso_join(&mut self, nid: &str, oldids: &Vec<String>) {
-        todo!("port RODFDetectorFlows::mesoJoin")
+        for i in oldids.iter() {
+            if !self.knows(i) {
+                continue;
+            }
+            let mut index = 0;
+            let mut t = self.myBeginTime;
+            while t != self.myEndTime {
+                let fd = self.myFastAccessFlows[i.as_str()][index];
+                index += 1;
+                self.add_flow(nid, t, &fd);
+                t += self.myStepOffset;
+            }
+            self.myFastAccessFlows.remove(i.as_str());
+        }
     }
 
     /// C++: `void RODFDetectorFlows::RODFDetectorFlows(const RODFDetectorFlows &)` [private]
@@ -228,7 +325,7 @@ impl RODFDetectorFlows {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RODFDetectorFlows) -> Self {
-        todo!("port RODFDetectorFlows::RODFDetectorFlows")
+        src.clone()
     }
 
     /// C++: `RODFDetectorFlows & RODFDetectorFlows::operator=(const RODFDetectorFlows &)` [private]
@@ -236,7 +333,8 @@ impl RODFDetectorFlows {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFDetectorFlows) -> &mut RODFDetectorFlows {
-        todo!("port RODFDetectorFlows::operator=")
+        *self = src.clone();
+        self
     }
 
 }
