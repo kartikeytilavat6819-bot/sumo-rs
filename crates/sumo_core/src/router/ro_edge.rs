@@ -129,6 +129,9 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn speed_limit(&self) -> f64 {
         self.get_speed_limit()
     }
+    fn minimum_travel_time(&self, veh: Ptr<ROVehicle>) -> f64 {
+        self.get_minimum_travel_time(veh)
+    }
     fn preference(&self, pars: &SUMOVTypeParameter) -> f64 {
         self.get_preference(pars)
     }

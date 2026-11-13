@@ -58,6 +58,18 @@ impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }
+    fn get_id(&self) -> String {
+        self.base.get_id().to_string()
+    }
+    fn get_max_speed(&self) -> f64 {
+        self.base.get_max_speed()
+    }
+    fn get_chosen_speed_factor(&self) -> f64 {
+        self.base.get_chosen_speed_factor()
+    }
+    fn ignore_transient_permissions(&self) -> bool {
+        self.base.ignore_transient_permissions()
+    }
 }
 
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):
