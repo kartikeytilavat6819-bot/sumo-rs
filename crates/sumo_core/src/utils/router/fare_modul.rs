@@ -1,7 +1,9 @@
 //! Port of utils/router/FareModul.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::fare_token::{string_to_token, token_to_ticket};
 use crate::utils::router::fare_zones::{fare_zone_to_rep, get_overlay_zone};
+use std::collections::BTreeMap;
 
 /// The fare modul responsible for calculating prices
 /// C++ class `FareModul` (utils/router/FareModul.h)
@@ -10,15 +12,15 @@ pub struct FareModul {
     /// C++ base class `EffortCalculator`
     pub base: EffortCalculator,
     /// List of all fare states *
-    pub myFareStates: i32,
+    pub myFareStates: Vec<FareState>,
     /// List of all edge line attributes *
-    pub myEdges: i32,
+    pub myEdges: Vec<String>,
     /// the fare zone this stop is a part of *
-    pub myStopFareZone: i32,
+    pub myStopFareZone: BTreeMap<i32, i32>,
     /// the faretoken that can be collected at this station *
-    pub myStopFareToken: i32,
+    pub myStopFareToken: BTreeMap<i32, FareToken>,
     /// the faretoken that is used when a trip is started at this station *
-    pub myStopStartToken: i32,
+    pub myStopStartToken: BTreeMap<i32, FareToken>,
     /// List of the prices *
     pub prices: Prices,
 }
@@ -43,7 +45,15 @@ impl FareModul {
     //     {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port FareModul::FareModul")
+        FareModul {
+            base: EffortCalculator {},
+            myFareStates: Vec::new(),
+            myEdges: Vec::new(),
+            myStopFareZone: BTreeMap::new(),
+            myStopFareToken: BTreeMap::new(),
+            myStopStartToken: BTreeMap::new(),
+            prices: Prices::default(),
+        }
     }
 
     /// C++: `void FareModul::init(const int &)`
@@ -53,8 +63,9 @@ impl FareModul {
     //         myFareStates.resize(edges.size());
     //     }
     #[allow(unused_variables)]
-    pub fn init(&mut self, edges: &i32) {
-        todo!("port FareModul::init")
+    pub fn init(&mut self, edges: &Vec<String>) {
+        self.myEdges = edges.clone();
+        self.myFareStates.resize(edges.len(), FareState::new());
     }
 
     /// C++: `void FareModul::addStop(const int, const Parameterised &)` [virtual]
@@ -65,7 +76,10 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopEdge: i32, params: &Parameterised) {
-        todo!("port FareModul::addStop")
+        let zone = utils::common::string_utils::to_int(&params.get_parameter("fareZone", "")).unwrap();
+        self.myStopFareZone.insert(stopEdge, zone);
+        self.myStopFareToken.insert(stopEdge, string_to_token(params.get_parameter("fareToken", "")));
+        self.myStopStartToken.insert(stopEdge, string_to_token(params.get_parameter("startToken", "")));
     }
 
     /// C++: `double FareModul::getEffort(const int) const` [const, virtual]
@@ -82,7 +96,12 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn get_effort(&self, numericalID: i32) -> f64 {
-        todo!("port FareModul::getEffort")
+        let state = &self.myFareStates[numericalID as usize];
+        if state.is_valid() {
+            state.myPriceDiff
+        } else {
+            f64::MAX
+        }
     }
 
     /// C++: `void FareModul::update(const int, const int, const double)` [virtual]
@@ -121,7 +140,33 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update(&mut self, edge: i32, prev: i32, length: f64) {
-        todo!("port FareModul::update")
+        let edgeType = self.myEdges[edge as usize].clone();
+
+        // get propagated fare state (copied: the update helpers only read it)
+        let state = self.myFareStates[prev as usize];
+
+        let oldPr = if state.myFareToken == FareToken::START {
+            0.0
+        } else {
+            self.compute_price(&state)
+        };
+        // treat  public transport edges
+        if !edgeType.starts_with('!') {
+            self.update_fare_state_public(&state, edge, length);
+        } else if edgeType == "!stop" {
+            self.update_fare_state_stop(&state, edge);
+        } else if edgeType == "!ped" {
+            self.update_fare_state_pedestrian(&state, edge);
+        } else if edgeType == "!access" {
+            self.update_fare_state_access(&state, edge, prev);
+        } else {
+            self.update_fare_state(&state, edge);
+        }
+        let stateAtE = self.myFareStates[edge as usize];
+        let newPr = self.compute_price(&stateAtE);
+        self.myFareStates[edge as usize].myPriceDiff = newPr - oldPr;
+
+        assert!(self.myFareStates[edge as usize].myPriceDiff >= 0.0);
     }
 
     /// C++: `void FareModul::setInitialState(const int)` [virtual]
@@ -134,7 +179,7 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn set_initial_state(&mut self, edge: i32) {
-        todo!("port FareModul::setInitialState")
+        self.myFareStates[edge as usize] = FareState::new_2(FareToken::START);
     }
 
     /// C++: `double FareModul::computePrice(const FareState &) const` [const, private]
@@ -179,7 +224,23 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn compute_price(&self, fareState: &FareState) -> f64 {
-        todo!("port FareModul::computePrice")
+        match fareState.myFareToken {
+            FareToken::H => return self.prices.halle,
+            FareToken::L => return self.prices.leipzig,
+            FareToken::T1 => return self.prices.t1,
+            FareToken::T2 => return self.prices.t2,
+            FareToken::T3 => return self.prices.t3,
+            FareToken::U => return self.prices.zonePrices[0],
+            FareToken::Z => return self.prices.zonePrices[(fareState.myCounter.num_zones() - 1) as usize],
+            FareToken::M => return self.prices.maxPrice,
+            FareToken::K => return self.prices.shortTrip,
+            FareToken::KL | FareToken::KLZ | FareToken::KLU => return self.prices.shortTripLeipzig,
+            FareToken::KH | FareToken::KHU | FareToken::KHZ => return self.prices.shortTripHalle,
+            FareToken::Free => return 1.4,
+            FareToken::START => return 0.0,
+            FareToken::ZU | FareToken::None => debug_assert!(false),
+        }
+        f64::MAX
     }
 
     /// C++: `std::string FareModul::output(const int) const` [const, virtual, private]
@@ -213,7 +274,20 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn output(&self, edge: i32) -> String {
-        todo!("port FareModul::output")
+        let my = self.myFareStates[edge as usize];
+        let mut msg = format!("{} ", token_to_ticket(&my.myFareToken));
+        if my.myFareToken == FareToken::Z {
+            msg += &format!("{} ", my.myCounter.num_zones());
+            if my.myCounter.num_zones() == 1 {
+                msg += "Zone";
+            } else {
+                msg += "Zonen";
+            }
+        } else if my.myFareToken == FareToken::U {
+            msg += &format!("{}1 Zone", my.myCounter.num_zones());
+        }
+        msg += &format!(":{}", utils::common::to_string::format_g(self.compute_price(&my), 6));
+        msg
     }
 
     /// C++: `void FareModul::updateFareStateStop(const FareState &, const int)` [private]
@@ -358,7 +432,132 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update_fare_state_stop(&mut self, currentFareState: &FareState, stopEdge: i32) {
-        todo!("port FareModul::updateFareStateStop")
+        let collectedToken = *self.myStopFareToken.entry(stopEdge).or_insert(FareToken::None);
+
+        // if station has no fare information, just propagate
+        if collectedToken == FareToken::None {
+            println!("Propagating fare state for stop w/o a price!");
+            return;
+        }
+
+        let token = currentFareState.myFareToken;
+
+        self.myFareStates[stopEdge as usize] = *currentFareState;
+
+        let zone = *self.myStopFareZone.entry(stopEdge).or_insert(0);
+        self.myFareStates[stopEdge as usize].myCounter.add_zone(zone);
+
+        self.myFareStates[stopEdge as usize].myVisistedStops += 1;
+
+        let stateAtE = &mut self.myFareStates[stopEdge as usize];
+        match token {
+            FareToken::Free => {
+                stateAtE.myFareToken = *self.myStopStartToken.entry(stopEdge).or_insert(FareToken::None);
+            }
+            FareToken::M => {}
+            FareToken::Z => {
+                if stateAtE.myCounter.num_zones() > 6 {
+                    stateAtE.myFareToken = FareToken::M;
+                }
+            }
+            FareToken::T1 | FareToken::T2 | FareToken::T3 => {
+                if collectedToken == FareToken::Z {
+                    stateAtE.myFareToken = if stateAtE.myTravelledDistance <= 4000.0 { FareToken::K } else { FareToken::Z };
+                }
+            }
+            FareToken::U => {
+                if collectedToken == FareToken::H {
+                    stateAtE.myFareToken = FareToken::H;
+                }
+                if collectedToken == FareToken::L {
+                    stateAtE.myFareToken = FareToken::L;
+                }
+                if collectedToken == FareToken::Z {
+                    stateAtE.myFareToken = FareToken::Z;
+                }
+            }
+            FareToken::H | FareToken::L => {
+                if collectedToken == FareToken::Z {
+                    stateAtE.myFareToken = FareToken::Z;
+                }
+            }
+            FareToken::KH => {
+                if stateAtE.myVisistedStops <= 4 {
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::KHU;
+                    }
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::KHZ;
+                    }
+                } else {
+                    if collectedToken == FareToken::H {
+                        stateAtE.myFareToken = FareToken::H;
+                    }
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::Z;
+                    }
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::U;
+                    }
+                }
+            }
+            FareToken::KL => {
+                if stateAtE.myVisistedStops <= 4 {
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::KLU;
+                    }
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::KLZ;
+                    }
+                } else {
+                    if collectedToken == FareToken::L {
+                        stateAtE.myFareToken = FareToken::L;
+                    }
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::Z;
+                    }
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::U;
+                    }
+                }
+            }
+            FareToken::K => {
+                if stateAtE.myTravelledDistance > 4000.0 {
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::U;
+                    }
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::Z;
+                    }
+                }
+            }
+            FareToken::KHU | FareToken::KLU => {
+                if stateAtE.myVisistedStops > 4 {
+                    if collectedToken == FareToken::U {
+                        stateAtE.myFareToken = FareToken::U;
+                    }
+                }
+            }
+            FareToken::KLZ | FareToken::KHZ => {
+                if stateAtE.myVisistedStops > 4 {
+                    if collectedToken == FareToken::Z {
+                        stateAtE.myFareToken = FareToken::Z;
+                    }
+                }
+            }
+            FareToken::ZU => {
+                assert!(false);
+                if collectedToken == FareToken::U {
+                    stateAtE.myFareToken = FareToken::U;
+                } else {
+                    stateAtE.myFareToken = FareToken::Z;
+                }
+            }
+            FareToken::None | FareToken::START => {
+                println!("Reached invalid position in fareToken selection!");
+                assert!(false);
+            }
+        }
     }
 
     /// C++: `void FareModul::updateFareStatePedestrian(const FareState &, const int)` [private]
@@ -376,7 +575,14 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update_fare_state_pedestrian(&mut self, currentFareState: &FareState, pedestrianEdge: i32) {
-        todo!("port FareModul::updateFareStatePedestrian")
+        // only propagates the fare state
+        let stateAtE = &mut self.myFareStates[pedestrianEdge as usize];
+
+        *stateAtE = *currentFareState;
+
+        if currentFareState.myFareToken == FareToken::START {
+            stateAtE.myFareToken = FareToken::Free;
+        }
     }
 
     /// C++: `void FareModul::updateFareStatePublic(const FareState &, const int, const double)` [private]
@@ -394,7 +600,14 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update_fare_state_public(&mut self, currentFareState: &FareState, publicTransportEdge: i32, length: f64) {
-        todo!("port FareModul::updateFareStatePublic")
+        if currentFareState.myFareToken == FareToken::None {
+            return;
+        }
+
+        let stateAtE = &mut self.myFareStates[publicTransportEdge as usize];
+
+        *stateAtE = *currentFareState;
+        stateAtE.myTravelledDistance += length;
     }
 
     /// C++: `void FareModul::updateFareState(const FareState &, const int)` [private]
@@ -415,7 +628,17 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update_fare_state(&mut self, currentFareState: &FareState, intermodalEdge: i32) {
-        todo!("port FareModul::updateFareState")
+        if currentFareState.myFareToken == FareToken::None {
+            return;
+        }
+
+        let stateAtE = &mut self.myFareStates[intermodalEdge as usize];
+
+        *stateAtE = *currentFareState;
+
+        if currentFareState.myFareToken == FareToken::START {
+            stateAtE.myFareToken = FareToken::Free;
+        }
     }
 
     /// C++: `void FareModul::updateFareStateAccess(const FareState &, const int, const int)` [private]
@@ -469,13 +692,42 @@ impl FareModul {
     //     }
     #[allow(unused_variables)]
     pub fn update_fare_state_access(&mut self, currentFareState: &FareState, accessEdge: i32, prev: i32) {
-        todo!("port FareModul::updateFareStateAccess")
+        let token = currentFareState.myFareToken;
+
+        let stateAtE = &mut self.myFareStates[accessEdge as usize];
+
+        *stateAtE = *currentFareState;
+
+        if currentFareState.myFareToken == FareToken::START {
+            stateAtE.myFareToken = FareToken::Free;
+        }
+
+        if self.myEdges[prev as usize] == "!ped" {
+            match token {
+                FareToken::Free => {} // we have not yet taken public transport
+                FareToken::K => {
+                    if currentFareState.myCounter.num_zones() == 0 {
+                        stateAtE.myFareToken = FareToken::U;
+                    } else {
+                        stateAtE.myFareToken = FareToken::Z;
+                    }
+                }
+                FareToken::KH => stateAtE.myFareToken = FareToken::H,
+                FareToken::KL => stateAtE.myFareToken = FareToken::L,
+                FareToken::KLU => stateAtE.myFareToken = FareToken::L,
+                FareToken::KHU => stateAtE.myFareToken = FareToken::H,
+                FareToken::KLZ => stateAtE.myFareToken = FareToken::Z,
+                FareToken::KHZ => stateAtE.myFareToken = FareToken::Z,
+                _ => {}
+            }
+        }
     }
 
 }
 
 /// A fare state collects all the information that is necessary to compute the price. Is used as an edge label in IntermodalRouter
 /// C++ class `FareState` (utils/router/FareModul.h)
+#[derive(Clone, Copy)]
 pub struct FareState {
     /// fare token *
     pub myFareToken: FareToken,
@@ -551,7 +803,7 @@ impl FareState {
 /// C++ class `Prices` (utils/router/FareModul.h)
 pub struct Prices {
     /// Prices for zones *
-    pub zonePrices: i32,
+    pub zonePrices: Vec<f64>,
     pub halle: f64,
     pub leipzig: f64,
     pub t1: f64,
@@ -563,10 +815,25 @@ pub struct Prices {
     pub maxPrice: f64,
 }
 
-impl Prices {
+impl Default for Prices {
+    fn default() -> Self {
+        Prices {
+            zonePrices: vec![1.9, 3.4, 4.9, 6.2, 7.7, 9.2],
+            halle: 2.3,
+            leipzig: 2.7,
+            t1: 1.5,
+            t2: 1.6,
+            t3: 1.6,
+            shortTrip: 1.6,
+            shortTripLeipzig: 1.9,
+            shortTripHalle: 1.7,
+            maxPrice: 10.6,
+        }
+    }
 }
 
 /// C++ class `ZoneCounter` (utils/router/FareModul.h)
+#[derive(Clone, Copy)]
 pub struct ZoneCounter {
     pub myCount: i64,
 }
@@ -666,6 +933,13 @@ mod tests {
         assert_eq!(c.bitcount(7), 3);
         assert_eq!(c.bitcount(0), 0);
         assert_eq!(c.bitcount(i64::MIN), 1);
+    }
+
+    #[test]
+    fn compute_price_uses_default_prices() {
+        let fm = FareModul::new();
+        assert_eq!(fm.compute_price(&FareState::new_2(FareToken::H)), 2.3);
+        assert_eq!(fm.compute_price(&FareState::new_2(FareToken::START)), 0.0);
     }
 
     #[test]
