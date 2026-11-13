@@ -8,8 +8,12 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 
 use super::geom_helper::deg2rad;
-use super::{write_warning, Boundary, Position};
+use super::{Boundary, Position};
+use crate::common::msg_handler::{write_error, write_warning};
 use crate::common::to_string::f64_to_string;
+use crate::common::util_exceptions::ProcessError;
+use crate::options::option::SumoOption;
+use crate::options::options_cont::OptionsCont;
 
 /// projection method
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -121,19 +125,51 @@ impl GeoConvHelper {
         }
     }
 
-    /// GeoConvHelper::init(OptionsCont&) for a build without PROJ.
-    // shortcut: takes the option values directly until OptionsCont is ported; the PROJ-only options
-    // (proj, proj.utm, proj.dhdn, proj.dhdnutm) and addProjectionOptions are not handled
-    #[allow(clippy::too_many_arguments)]
-    pub fn init_from_options(simple_projection: bool, scale: f64, rot: f64, offset: Position, inverse: bool, flatten: bool) -> bool {
-        let proj = if simple_projection { "-" } else { "!" };
-        let h = GeoConvHelper::new(proj, offset, Boundary::new(), Boundary::new(), scale, rot, inverse, flatten);
+    /// GeoConvHelper::init(OptionsCont&)
+    // shortcut: PROJ data search path (SUMO_HOME/data/proj) is not set, no PROJ binding yet
+    pub fn init_from_options(oc: &OptionsCont) -> Result<bool, ProcessError> {
+        let mut proj: String = "!".into(); // the default
+        let scale = oc.get_float("proj.scale")?;
+        let rot = oc.get_float("proj.rotate")?;
+        let offset = Position::new3(oc.get_float("offset.x")?, oc.get_float("offset.y")?, oc.get_float("offset.z")?);
+        let inverse = oc.exists("proj.inverse") && oc.get_bool("proj.inverse")?;
+        let flatten = oc.exists("flatten") && oc.get_bool("flatten")?;
+
+        if oc.get_bool("simple-projection")? {
+            proj = "-".into();
+        }
+
+        if oc.get_bool("proj.inverse")? && oc.get_string("proj")? == "!" {
+            write_error("Inverse projection works only with explicit proj parameters.");
+            return Ok(false);
+        }
+        let num_projections = u32::from(oc.get_bool("simple-projection")?)
+            + u32::from(oc.get_bool("proj.utm")?)
+            + u32::from(oc.get_bool("proj.dhdn")?)
+            + u32::from(oc.get_bool("proj.dhdnutm")?)
+            + u32::from(oc.get_string("proj")?.len() > 1);
+        if num_projections > 1 {
+            write_error("The projection method needs to be uniquely defined.");
+            return Ok(false);
+        }
+
+        if oc.get_bool("proj.utm")? {
+            proj = "UTM".into();
+        } else if oc.get_bool("proj.dhdn")? {
+            proj = "DHDN".into();
+        } else if oc.get_bool("proj.dhdnutm")? {
+            proj = "DHDN_UTM".into();
+        } else if !oc.is_default("proj") {
+            proj = oc.get_string("proj")?;
+        }
+
+        let h = GeoConvHelper::new(&proj, offset, Boundary::new(), Boundary::new(), scale, rot, inverse, flatten);
         STATICS.with(|s| {
             let mut s = s.borrow_mut();
             s.final_ = h.clone();
             s.processing = h;
         });
-        true
+        Ok(true)
     }
 
     /// Initialises the processing and the final instance using the given proj.4-definition and complete network parameter
@@ -145,6 +181,36 @@ impl GeoConvHelper {
             s.final_ = h.clone();
             s.processing = h;
         });
+    }
+
+    /// GeoConvHelper::addProjectionOptions(OptionsCont&)
+    pub fn add_projection_options(oc: &mut OptionsCont) {
+        oc.add_option_sub_topic("Projection");
+
+        oc.do_register("simple-projection", SumoOption::bool(false));
+        oc.add_synonyme("simple-projection", "proj.simple", true);
+        oc.add_description("simple-projection", "Projection", "Uses a simple method for projection");
+
+        oc.do_register("proj.scale", SumoOption::float(1.0));
+        oc.add_description("proj.scale", "Projection", "Scaling factor for input coordinates");
+
+        oc.do_register("proj.rotate", SumoOption::float(0.0));
+        oc.add_description("proj.rotate", "Projection", "Rotation (clockwise degrees) for input coordinates");
+
+        oc.do_register("proj.utm", SumoOption::bool(false));
+        oc.add_description("proj.utm", "Projection", "Determine the UTM zone (for a universal transversal mercator projection based on the WGS84 ellipsoid)");
+
+        oc.do_register("proj.dhdn", SumoOption::bool(false));
+        oc.add_description("proj.dhdn", "Projection", "Determine the DHDN zone (for a transversal mercator projection based on the bessel ellipsoid, \"Gauss-Krueger\")");
+
+        oc.do_register("proj", SumoOption::string_with("!"));
+        oc.add_description("proj", "Projection", "Uses STR as proj.4 definition for projection");
+
+        oc.do_register("proj.inverse", SumoOption::bool(false));
+        oc.add_description("proj.inverse", "Projection", "Inverses projection");
+
+        oc.do_register("proj.dhdnutm", SumoOption::bool(false));
+        oc.add_description("proj.dhdnutm", "Projection", "Convert from Gauss-Krueger to UTM");
     }
 
     /// the coordinate transformation to use for input conversion and processing
@@ -424,5 +490,23 @@ mod tests {
         GeoConvHelper::init("!", Position::new(5., 5.), Boundary::new(), Boundary::new(), 1.0);
         GeoConvHelper::compute_final(false);
         assert_eq!(GeoConvHelper::with_final(|f| f.get_offset()), Position::new(5., 5.));
+    }
+
+    #[test]
+    fn init_from_options_projection_choice() {
+        let mut oc = OptionsCont::new();
+        GeoConvHelper::add_projection_options(&mut oc);
+        for name in ["offset.x", "offset.y", "offset.z"] {
+            oc.do_register(name, SumoOption::float(0.0));
+        }
+        assert!(GeoConvHelper::init_from_options(&oc).unwrap());
+        assert!(!GeoConvHelper::with_final(|f| f.using_geo_projection()));
+
+        oc.set("simple-projection", "true", false).unwrap();
+        assert!(GeoConvHelper::init_from_options(&oc).unwrap());
+        assert!(GeoConvHelper::with_final(|f| f.using_geo_projection()));
+
+        oc.set("proj.utm", "true", false).unwrap();
+        assert!(!GeoConvHelper::init_from_options(&oc).unwrap());
     }
 }
