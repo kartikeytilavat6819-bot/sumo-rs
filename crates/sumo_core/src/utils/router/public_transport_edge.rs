@@ -1,6 +1,7 @@
 //! Port of utils/router/PublicTransportEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// the public transport edge type connecting the stop edges
 /// C++ class `PublicTransportEdge` (utils/router/PublicTransportEdge.h)
@@ -8,7 +9,8 @@ use crate::prelude::*;
 pub struct PublicTransportEdge<E, L, N, V> {
     /// C++ base class `IntermodalEdge<E, L, N, V>`
     pub base: IntermodalEdge<E, L, N, V>,
-    pub mySchedules: BTreeMap<SUMOTime, PublicTransportEdge_Schedule>,
+    // multimap in C++: several schedules may share a begin time, kept in insertion order
+    pub mySchedules: BTreeMap<SUMOTime, Vec<PublicTransportEdge_Schedule>>,
     pub myEntryStop: Ptr<IntermodalEdge<E, L, N, V>>,
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
@@ -30,8 +32,17 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     // PublicTransportEdge(const std::string id, int numericalID, const IntermodalEdge<E, L, N, V>* entryStop, const E* endEdge, const std::string& line, const double length) :
     //         IntermodalEdge<E, L, N, V>(line + ":" + (id != "" ? id : endEdge->getID()), numericalID, endEdge, line, length), myEntryStop(entryStop) { }
     #[allow(unused_variables)]
-    pub fn new(id: String, numericalID: i32, entryStop: Ptr<IntermodalEdge<E, L, N, V>>, endEdge: Ptr<E>, line: &str, length: f64) -> Self {
-        todo!("port PublicTransportEdge::PublicTransportEdge<E, L, N, V>")
+    pub fn new(id: String, numericalID: i32, entryStop: Ptr<IntermodalEdge<E, L, N, V>>, endEdge: Ptr<E>, line: &str, length: f64) -> Self
+    where
+        E: RouterEdge<V>,
+    {
+        let base_id = format!("{}:{}", line, if id != "" { id } else { endEdge.id().to_string() });
+        Self {
+            base: IntermodalEdge::new(base_id, numericalID, endEdge, line, length),
+            mySchedules: BTreeMap::new(),
+            myEntryStop: entryStop,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `bool PublicTransportEdge::includeInRoute(bool) const` [const]
@@ -40,7 +51,7 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn include_in_route(&self, arg0: bool) -> bool {
-        todo!("port PublicTransportEdge::includeInRoute")
+        true
     }
 
     /// C++: `bool PublicTransportEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -49,7 +60,7 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, trip: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        todo!("port PublicTransportEdge::prohibits")
+        (trip.modeSet & SVC_BUS) == 0
     }
 
     /// C++: `const IntermodalEdge<E, L, N, V> * PublicTransportEdge::getEntryStop() const` [const]
@@ -58,7 +69,7 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_entry_stop(&self) -> Ptr<IntermodalEdge<E, L, N, V>> {
-        todo!("port PublicTransportEdge::getEntryStop")
+        self.myEntryStop
     }
 
     /// C++: `bool PublicTransportEdge::hasSchedule(const SUMOTime) const` [const]
@@ -67,7 +78,7 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn has_schedule(&self, begin: SUMOTime) -> bool {
-        todo!("port PublicTransportEdge::hasSchedule")
+        self.mySchedules.contains_key(&begin)
     }
 
     /// C++: `void PublicTransportEdge::addSchedule(const std::string, const SUMOTime, const long long, const SUMOTime, const SUMOTime)`
@@ -98,7 +109,28 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn add_schedule(&mut self, id: String, begin: SUMOTime, repetitionNumber: i64, period: SUMOTime, travelTime: SUMOTime) {
-        todo!("port PublicTransportEdge::addSchedule")
+        // try to merge with existing vehicle or flow
+        let mut found = false;
+        for s in self.mySchedules.values_mut().flat_map(|v| v.iter_mut()) {
+            if travelTime == s.travelTime {
+                if repetitionNumber == -1 && s.repetitionNumber == 1 {
+                    if begin > s.begin {
+                        s.period = begin - s.begin;
+                        found = true;
+                    }
+                } else if begin == s.begin + s.repetitionNumber * s.period {
+                    found = true;
+                }
+                if found {
+                    s.repetitionNumber += std::cmp::max(repetitionNumber, 1);
+                    s.ids.push(id.clone());
+                    break;
+                }
+            }
+        }
+        if !found {
+            self.mySchedules.entry(begin).or_default().push(PublicTransportEdge_Schedule::new(&id, begin, std::cmp::max(repetitionNumber, 1), std::cmp::max(period, 1), travelTime));
+        }
     }
 
     /// C++: `double PublicTransportEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const]
@@ -133,7 +165,28 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        todo!("port PublicTransportEdge::getTravelTime")
+        let mut minArrival: SUMOTime = SUMOTIME_MAX;
+        let step = time2steps(time);
+        for (key, s) in self.mySchedules.iter().flat_map(|(k, v)| v.iter().map(move |s| (*k, s))) {
+            if key > minArrival {
+                break;
+            }
+            let offset = std::cmp::max(0, step - s.begin);
+            let mut running = (offset / s.period) as i32;
+            if offset % s.period != 0 {
+                running += 1;
+            }
+            if (running as i64) < s.repetitionNumber {
+                let nextDepart = s.begin + running as i64 * s.period;
+                minArrival = std::cmp::min(nextDepart + s.travelTime, minArrival);
+            }
+        }
+        if minArrival != SUMOTIME_MAX {
+            steps2time(minArrival - step)
+        } else {
+            // indicate failure
+            f64::MAX
+        }
     }
 
     /// C++: `double PublicTransportEdge::getIntended(const double, std::string &) const` [const]
@@ -170,7 +223,34 @@ impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_intended(&self, time: f64, intended: &mut String) -> f64 {
-        todo!("port PublicTransportEdge::getIntended")
+        // @note: duplicates some code of getTravelTime()
+        let mut minArrival: SUMOTime = SUMOTIME_MAX;
+        let mut bestDepartTime = f64::MAX;
+        let step = time2steps(time);
+        for (key, s) in self.mySchedules.iter().flat_map(|(k, v)| v.iter().map(move |s| (*k, s))) {
+            if key > minArrival {
+                break;
+            }
+            let offset = std::cmp::max(0, step - s.begin);
+            let mut running = (offset / s.period) as i32;
+            if offset % s.period != 0 {
+                running += 1;
+            }
+            if (running as i64) < s.repetitionNumber {
+                let nextDepart = s.begin + running as i64 * s.period;
+                if nextDepart + s.travelTime < minArrival {
+                    minArrival = nextDepart + s.travelTime;
+                    bestDepartTime = steps2time(nextDepart);
+                    // see naming scheme inMSInsertionControl::determineCandidates()
+                    if s.ids.len() == 1 || running >= s.ids.len() as i32 {
+                        *intended = if s.repetitionNumber == 1 { s.ids[0].clone() } else { format!("{}.{}", s.ids[0], running) };
+                    } else {
+                        *intended = s.ids[running as usize].clone();
+                    }
+                }
+            }
+        }
+        bestDepartTime
     }
 
 }
@@ -192,7 +272,13 @@ impl PublicTransportEdge_Schedule {
     //         }), begin(_begin), repetitionNumber(_repetitionNumber), period(_period), travelTime(_travelTime) {}
     #[allow(unused_variables)]
     pub fn new(_id: &str, _begin: SUMOTime, _repetitionNumber: i64, _period: SUMOTime, _travelTime: SUMOTime) -> Self {
-        todo!("port Schedule::Schedule")
+        Self {
+            ids: vec![_id.to_string()],
+            begin: _begin,
+            repetitionNumber: _repetitionNumber,
+            period: _period,
+            travelTime: _travelTime,
+        }
     }
 
 }
