@@ -1,6 +1,10 @@
 //! Port of utils/handlers/TemplateHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{write_error, write_warning};
+use utils::common::std_defs::{INVALID_DOUBLE, INVALID_INT};
+use utils::common::string_utils::to_bool;
+use utils::common::to_string::to_string;
 
 /// A SAX-Handler for loading options
 /// C++ class `TemplateHandler` (utils/handlers/TemplateHandler.h)
@@ -65,7 +69,8 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_template(options: &mut OptionsCont, templateString: &str) {
-        todo!("port TemplateHandler::parseTemplate")
+        // shortcut: the XML parser (quick-xml) lives in the utils crate and sumo_core cannot reach it, so the template text cannot be read, upgrade when utils exposes a SAX entry point that accepts this handler
+        panic!("TemplateHandler::parseTemplate: cannot parse template '{}' yet", templateString);
     }
 
     /// C++: `void TemplateHandler::TemplateHandler(OptionsCont &)` [private]
@@ -76,7 +81,14 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(options: &mut OptionsCont) -> Self {
-        todo!("port TemplateHandler::TemplateHandler")
+        TemplateHandler {
+            base: (),
+            myError: false,
+            myLevel: 0,
+            myOptions: Ptr::from_mut(options),
+            myOptionName: String::new(),
+            mySubTopic: String::new(),
+        }
     }
 
     /// C++: `void TemplateHandler::~TemplateHandler() noexcept` [virtual, private]
@@ -84,7 +96,7 @@ impl TemplateHandler {
     // TemplateHandler::~TemplateHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port TemplateHandler::~TemplateHandler")
+        // destructor: nothing to release explicitly, the fields drop with the struct
     }
 
     /// C++: `void TemplateHandler::startElement(const XMLCh *const, xercesc_3_2::AttributeList &)` [virtual, private]
@@ -143,8 +155,56 @@ impl TemplateHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn start_element(&mut self, name: Ptr<Unmapped /* XMLCh */>, attributes: &mut Unmapped /* xercesc_3_2::AttributeList */) {
-        todo!("port TemplateHandler::startElement")
+    pub fn start_element(&mut self, name: &str, attributes: &[(String, String)]) {
+        // get current topic
+        self.myOptionName = name.to_string();
+        let level = self.myLevel;
+        self.myLevel += 1;
+        if level == 0 {
+            // skip root elemnt
+            return;
+        }
+        // check if this is a subtopic
+        if attributes.is_empty() {
+            self.mySubTopic = self.myOptionName.clone();
+            self.myOptions.m().add_option_sub_topic(&self.mySubTopic);
+        } else {
+            // declare options parameters (by default all empty)
+            let mut value = String::new();
+            let mut synonymes = String::new();
+            let mut type_ = String::new();
+            let mut help = String::new();
+            let mut required = false;
+            let mut positional = false;
+            let mut listSep = String::new();
+            // iterate over attributes
+            for (attributeName, attributeValue) in attributes {
+                // check attribute name
+                if attributeName == "value" {
+                    value = attributeValue.clone();
+                } else if attributeName == "synonymes" {
+                    synonymes = attributeValue.clone();
+                } else if attributeName == "type" {
+                    type_ = attributeValue.clone();
+                } else if attributeName == "help" {
+                    help = attributeValue.clone();
+                } else if attributeName == "category" {
+                    // tool templates have subtopic as attribute category
+                    self.mySubTopic = attributeValue.clone();
+                    if !self.myOptions.get_sub_topics().contains(attributeValue) {
+                        self.myOptions.m().add_option_sub_topic(attributeValue);
+                    }
+                } else if attributeName == "required" {
+                    required = to_bool(attributeValue).unwrap_or_else(|e| panic!("{}", e));
+                } else if attributeName == "positional" {
+                    positional = to_bool(attributeValue).unwrap_or_else(|e| panic!("{}", e));
+                } else if attributeName == "listSeparator" {
+                    listSep = attributeValue.clone();
+                }
+            }
+            // add option
+            self.add_option(value, &synonymes, &type_, &help, required, positional, &listSep);
+        }
     }
 
     /// C++: `bool TemplateHandler::addOption(std::string, const std::string &, const std::string &, const std::string &, bool, bool, const std::string &) const` [const, private]
@@ -237,7 +297,91 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn add_option(&self, value: String, synonymes: &str, type_: &str, help: &str, required: bool, positional: bool, listSep: &str) -> bool {
-        todo!("port TemplateHandler::addOption")
+        if self.myOptions.exists(&self.myOptionName) {
+            write_warning(&format!("{} already exists", self.myOptionName));
+            return false;
+        }
+        // declare option
+        let mut value = value;
+        let mut option: Option<SumoOption> = None;
+        // handle "None" as empty
+        if value == "None" {
+            value.clear();
+        }
+        // create register depending of type
+        if type_ == "STR" || type_ == "string" {
+            option = Some(SumoOption::string_with(&value));
+        } else if type_ == "TIME" || type_ == "time" {
+            option = Some(SumoOption::string_typed(&value, "TIME"));
+        } else if type_ == "INT" || type_ == "int" {
+            let mut o = SumoOption::integer(0);
+            if value.is_empty() {
+                o.set(&to_string(&INVALID_INT), "", true).unwrap_or_else(|e| panic!("{}", e));
+            } else {
+                o.set(&value, &value, true).unwrap_or_else(|e| panic!("{}", e));
+            }
+            option = Some(o);
+        } else if type_ == "FLOAT" || type_ == "float" {
+            let mut o = SumoOption::float(0.);
+            if value.is_empty() {
+                o.set(&to_string(&INVALID_DOUBLE), "", true).unwrap_or_else(|e| panic!("{}", e));
+            } else {
+                o.set(&value, &value, true).unwrap_or_else(|e| panic!("{}", e));
+            }
+            option = Some(o);
+        } else if type_ == "BOOL" || type_ == "bool" {
+            let mut o = SumoOption::bool(false);
+            if value.is_empty() {
+                o.set("false", "", true).unwrap_or_else(|e| panic!("{}", e));
+            } else {
+                o.set(&value, &value, true).unwrap_or_else(|e| panic!("{}", e));
+            }
+            option = Some(o);
+        } else if type_ == "INT[]" {
+            option = Some(SumoOption::int_vector());
+        } else if type_ == "STR[]" {
+            option = Some(SumoOption::string_vector());
+        } else if type_ == "FILE" || type_ == "file" {
+            option = Some(SumoOption::file_name());
+        } else if type_ == "NETWORK" || type_ == "net_file" {
+            option = Some(SumoOption::network(&value));
+        } else if type_ == "ADDITIONAL" || type_ == "additional_file" {
+            option = Some(SumoOption::additional(&value));
+        } else if type_ == "ROUTE" || type_ == "route_file" {
+            option = Some(SumoOption::route(&value));
+        } else if type_ == "DATA" || type_ == "data_file" || type_ == "edgedata_file" {
+            option = Some(SumoOption::data(&value));
+        } else if type_ == "SUMOCONFIG" || type_ == "sumoconfig_file" {
+            option = Some(SumoOption::sumo_config(&value));
+        } else if type_ == "EDGE" || type_ == "edge" {
+            if listSep.is_empty() {
+                option = Some(SumoOption::edge(&value));
+            } else {
+                option = Some(SumoOption::edge_vector(&value));
+            }
+        } else if !type_.is_empty() {
+            write_warning(&format!("{} is an invalid type", type_));
+        }
+        // check if option was created
+        if let Some(mut option) = option {
+            // set value
+            if !option.is_set() {
+                option.set(&value, "", false).unwrap_or_else(|e| panic!("{}", e));
+            }
+            self.myOptions.m().do_register(&self.myOptionName, option);
+            // check if add synonyme
+            if !synonymes.is_empty() {
+                self.myOptions.m().add_synonyme(&self.myOptionName, synonymes, false);
+            }
+            // check if add help
+            if !help.is_empty() {
+                self.myOptions.m().add_description(&self.myOptionName, &self.mySubTopic, help);
+            }
+            self.myOptions.m().set_further_attributes(&self.myOptionName, &self.mySubTopic, required, positional, listSep);
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void TemplateHandler::endElement(const XMLCh *const)` [virtual, private]
@@ -251,8 +395,12 @@ impl TemplateHandler {
     //     myOptionName = "";
     // }
     #[allow(unused_variables)]
-    pub fn end_element(&mut self, name: Ptr<Unmapped /* XMLCh */>) {
-        todo!("port TemplateHandler::endElement")
+    pub fn end_element(&mut self, name: &str) {
+        self.myLevel -= 1;
+        if self.myOptionName.is_empty() {
+            return;
+        }
+        self.myOptionName = String::new();
     }
 
     /// C++: `void TemplateHandler::warning(const xercesc_3_2::SAXParseException &)` [virtual, private]
@@ -266,8 +414,10 @@ impl TemplateHandler {
     //     myError = true;
     // }
     #[allow(unused_variables)]
-    pub fn warning(&mut self, exception: &Unmapped /* xercesc_3_2::SAXParseException */) {
-        todo!("port TemplateHandler::warning")
+    pub fn warning(&mut self, msg: &str, line: u64, column: u64) {
+        write_warning(msg);
+        write_warning(&format!(" (At line/column {}/{}).", line + 1, column));
+        self.myError = true;
     }
 
     /// C++: `void TemplateHandler::error(const xercesc_3_2::SAXParseException &)` [virtual, private]
@@ -281,8 +431,10 @@ impl TemplateHandler {
     //     myError = true;
     // }
     #[allow(unused_variables)]
-    pub fn error(&mut self, exception: &Unmapped /* xercesc_3_2::SAXParseException */) {
-        todo!("port TemplateHandler::error")
+    pub fn error(&mut self, msg: &str, line: u64, column: u64) {
+        write_error(msg);
+        write_error(&format!(" (At line/column {}/{}).", line + 1, column));
+        self.myError = true;
     }
 
     /// C++: `void TemplateHandler::fatalError(const xercesc_3_2::SAXParseException &)` [virtual, private]
@@ -296,8 +448,10 @@ impl TemplateHandler {
     //     myError = true;
     // }
     #[allow(unused_variables)]
-    pub fn fatal_error(&mut self, exception: &Unmapped /* xercesc_3_2::SAXParseException */) {
-        todo!("port TemplateHandler::fatalError")
+    pub fn fatal_error(&mut self, msg: &str, line: u64, column: u64) {
+        write_error(msg);
+        write_error(&format!(" (At line/column {}/{}).", line + 1, column));
+        self.myError = true;
     }
 
     /// C++: `void TemplateHandler::TemplateHandler()` [private]
@@ -305,7 +459,7 @@ impl TemplateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
-        todo!("port TemplateHandler::TemplateHandler")
+        panic!("TemplateHandler default constructor is invalidated")
     }
 
     /// C++: `void TemplateHandler::TemplateHandler(const TemplateHandler &)` [private]
@@ -313,7 +467,7 @@ impl TemplateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(s: &TemplateHandler) -> Self {
-        todo!("port TemplateHandler::TemplateHandler")
+        panic!("TemplateHandler copy constructor is invalidated")
     }
 
     /// C++: `TemplateHandler & TemplateHandler::operator=(const TemplateHandler &)` [private]
@@ -321,7 +475,7 @@ impl TemplateHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &TemplateHandler) -> &mut TemplateHandler {
-        todo!("port TemplateHandler::operator=")
+        panic!("TemplateHandler assignment operator is invalidated")
     }
 
 }
