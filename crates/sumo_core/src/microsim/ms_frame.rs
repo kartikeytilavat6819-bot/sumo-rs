@@ -918,7 +918,7 @@ impl MSFrame {
             oc.add_call_example("-b 0 -e 1000 -n net.xml -r routes.xml", "start a simulation from time 0 to 1000 with given net and routes");
             oc.add_call_example("-c munich_config.cfg", "start with a configuration file");
             oc.add_call_example("--help", "print help");
-            // shortcut: C++ SystemFrame::addConfigurationOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Time");
@@ -953,7 +953,7 @@ impl MSFrame {
             oc.add_description("load-state.remove-vehicles", "Input", "Removes vehicles with the given IDs from the loaded state");
             oc.do_register("junction-taz", SumoOption::bool(false));
             oc.add_description("junction-taz", "Input", "Initialize a TAZ for every junction to use attributes toJunction and fromJunction");
-            // shortcut: C++ SystemFrame::addReportOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            utils::common::system_frame::add_report_options(oc);
             oc.do_register("netstate-dump", SumoOption::file_name());
             oc.add_synonyme("netstate-dump", "ndump", false);
             oc.add_synonyme("netstate-dump", "netstate", false);
@@ -1444,7 +1444,7 @@ impl MSFrame {
             oc.add_description("meso-recheck", "Mesoscopic", "Time interval for rechecking insertion into the next segment after failure");
             oc.do_register("meso-interpolate-pos", SumoOption::bool(false));
             oc.add_description("meso-interpolate-pos", "Mesoscopic", "Enable mesoscopic position interpolation");
-            // shortcut: C++ RandHelper::insertRandOptions is not ported, so the rand options are not registered here; upgrade when rand_helper registers them
+            utils::common::rand_helper::insert_rand_options(oc);
             oc.do_register("thread-rngs", SumoOption::integer(64));
             oc.add_description("thread-rngs", "Random Number", "Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).");
             oc.add_option_sub_topic("GUI Only");
