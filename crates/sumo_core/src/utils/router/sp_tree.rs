@@ -3,20 +3,21 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::pair<const C *, const C *> SPTree::CHConnectionPair`
-pub type SPTree_CHConnectionPair = Unmapped /* std::pair<const C *, const C *> */;
+pub type SPTree_CHConnectionPair<C> = (Ptr<C>, Ptr<C>);
 
 /// C++ typedef `int SPTree::CHConnectionPairs`
-pub type SPTree_CHConnectionPairs = i32;
+pub type SPTree_CHConnectionPairs<C> = Vec<SPTree_CHConnectionPair<C>>;
 
 /// C++ typedef `int SPTree::CHConnections`
 pub type SPTree_CHConnections = i32;
 
 /// Class to compare (and so sort) nodes by their effort
 /// C++ class `SPTree::EdgeByTTComparator` (utils/router/SPTree.h)
-pub struct SPTree_EdgeByTTComparator {
+pub struct SPTree_EdgeByTTComparator<E> {
+    _p: std::marker::PhantomData<E>,
 }
 
-impl SPTree_EdgeByTTComparator {
+impl<E> SPTree_EdgeByTTComparator<E> {
     /// C++: `bool EdgeByTTComparator::operator()(const E *, const E *) const` [const]
     /// Comparing method
     // bool operator()(const E* a, const E* b) const {
@@ -26,8 +27,9 @@ impl SPTree_EdgeByTTComparator {
     //             return a->traveltime > b->traveltime;
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, a: Ptr<Unmapped /* E */>, b: Ptr<Unmapped /* E */>) -> bool {
-        todo!("port EdgeByTTComparator::operator()")
+    pub fn call_op(&self, a: Ptr<E>, b: Ptr<E>) -> bool {
+        // shortcut: needs router trait bounds (lead), E::traveltime and E::edge are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::traveltime / E::edge")
     }
 
 }
@@ -35,19 +37,19 @@ impl SPTree_EdgeByTTComparator {
 /// C++ class `SPTree` (utils/router/SPTree.h)
 pub struct SPTree<E, C> {
     /// the min edge heap
-    pub myFrontier: i32,
+    pub myFrontier: Vec<Ptr<E>>,
     /// the list of visited edges (used when resetting)
-    pub myFound: i32,
+    pub myFound: Vec<Ptr<E>>,
     /// comparator for search queue
-    pub myCmp: SPTree_EdgeByTTComparator,
+    pub myCmp: SPTree_EdgeByTTComparator<E>,
     /// maximum search depth
     pub myMaxDepth: i32,
     /// whether permissions should be validated
     pub myValidatePermissions: bool,
     /// vector of needed shortcuts after validation
-    pub myShortcutsToValidate: SPTree_CHConnectionPairs,
+    pub myShortcutsToValidate: SPTree_CHConnectionPairs<C>,
     /// vector of needed shortcuts after validation
-    pub myNeededShortcuts: SPTree_CHConnectionPairs,
+    pub myNeededShortcuts: SPTree_CHConnectionPairs<C>,
     _p: std::marker::PhantomData<(E, C,)>,
 }
 
@@ -60,7 +62,16 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn new(maxDepth: i32, validatePermissions: bool) -> Self {
-        todo!("port SPTree::SPTree<E, C>")
+        SPTree {
+            myFrontier: Vec::new(),
+            myFound: Vec::new(),
+            myCmp: SPTree_EdgeByTTComparator { _p: std::marker::PhantomData },
+            myMaxDepth: maxDepth,
+            myValidatePermissions: validatePermissions,
+            myShortcutsToValidate: Vec::new(),
+            myNeededShortcuts: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void SPTree::init()`
@@ -77,7 +88,8 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port SPTree::init")
+        // shortcut: needs router trait bounds (lead), E::reset is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::reset")
     }
 
     /// C++: `void SPTree::rebuildFrom(E *, const E *)`
@@ -123,7 +135,8 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn rebuild_from(&mut self, start: Ptr<E>, excluded: Ptr<E>) {
-        todo!("port SPTree::rebuildFrom")
+        // shortcut: needs router trait bounds (lead), E::traveltime / E::depth / E::followers are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::traveltime / E::followers")
     }
 
     /// C++: `bool SPTree::validatePermissions()`
@@ -133,7 +146,7 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn validate_permissions(&mut self) -> bool {
-        todo!("port SPTree::validatePermissions")
+        self.myValidatePermissions
     }
 
     /// C++: `void SPTree::registerForValidation(const C *, const C *)`
@@ -144,7 +157,8 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn register_for_validation(&mut self, aInfo: Ptr<C>, fInfo: Ptr<C>) {
-        todo!("port SPTree::registerForValidation")
+        assert!(self.myValidatePermissions);
+        self.myShortcutsToValidate.push((aInfo, fInfo));
     }
 
     /// C++: `const CHConnectionPairs & SPTree::getNeededShortcuts(const E *)`
@@ -165,8 +179,11 @@ impl<E, C> SPTree<E, C> {
     //         return myNeededShortcuts;
     //     }
     #[allow(unused_variables)]
-    pub fn get_needed_shortcuts(&mut self, excluded: Ptr<E>) -> &SPTree_CHConnectionPairs {
-        todo!("port SPTree::getNeededShortcuts")
+    pub fn get_needed_shortcuts(&mut self, excluded: Ptr<E>) -> &SPTree_CHConnectionPairs<C> {
+        assert!(self.myValidatePermissions);
+        self.myNeededShortcuts.clear();
+        // shortcut: needs router trait bounds (lead), C::target / C::cost / C::permissions and dijkstraTT are not callable on generic E, C
+        panic!("shortcut: needs router trait bounds (lead), C::target / dijkstraTT")
     }
 
     /// C++: `double SPTree::dijkstraTT(E *, E *, const E *, SVCPermissions)` [private]
@@ -217,7 +234,8 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn dijkstra_tt(&mut self, start: Ptr<E>, dest: Ptr<E>, excluded: Ptr<E>, permissions: SVCPermissions) -> f64 {
-        todo!("port SPTree::dijkstraTT")
+        // shortcut: needs router trait bounds (lead), E::traveltime / E::followers / E::visited are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::traveltime / E::followers")
     }
 
     /// C++: `void SPTree::debugPrintVector(int &, E *, const E *)` [private]
@@ -230,8 +248,9 @@ impl<E, C> SPTree<E, C> {
     //         std::cout << "\n";
     //     }
     #[allow(unused_variables)]
-    pub fn debug_print_vector(&mut self, vec: &mut i32, start: Ptr<E>, excluded: Ptr<E>) {
-        todo!("port SPTree::debugPrintVector")
+    pub fn debug_print_vector(&mut self, vec: &mut Vec<Ptr<E>>, start: Ptr<E>, excluded: Ptr<E>) {
+        // shortcut: needs router trait bounds (lead), E::edge->getID() and E::traveltime are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::edge / E::traveltime")
     }
 
 }
