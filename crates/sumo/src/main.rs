@@ -1,6 +1,5 @@
 //! Port of sumo_main.cpp
 // shortcut: signal handlers (SIGINT/SIGTERM graceful stop, SIGUSR1 statistics) are not installed; they need libc signal() and MSNet's instance is thread-local so a Windows handler thread cannot see it; upgrade when MSNet's instance is process-global and signal FFI is added
-// shortcut: SystemFrame::close() is not ported, so its cleanup step is skipped; upgrade when system_frame is ported
 // shortcut: VERSION_STRING comes from config.h.cmake (1.28.0), no Rust const exists yet; upgrade when version info is ported
 use std::any::Any;
 use std::panic::AssertUnwindSafe;
@@ -98,6 +97,7 @@ fn sumo_main(args: Vec<String>) -> i32 {
         }
     }
     TraCIServer::close();
+    utils::common::system_frame::close();
     ret
 }
 
