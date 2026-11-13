@@ -3,10 +3,13 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::vector<std::pair<const _RailEdge *, const _RailEdge *>> RailEdge::ConstEdgePairVector`
-pub type RailEdge_ConstEdgePairVector = Vec<(Ptr<RailEdge__RailEdge>, Ptr<RailEdge__RailEdge>)>;
+pub type RailEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<RailEdge<E, V>>, Ptr<RailEdge<E, V>>)>;
 
 /// C++ typedef `RailEdge<E, V> RailEdge::_RailEdge`
-pub type RailEdge__RailEdge = Unmapped /* RailEdge<E, V> */;
+pub type RailEdge__RailEdge<E, V> = RailEdge<E, V>;
+
+/// C++ `#define REVERSAL_SLACK (POSITION_EPS + NUMERICAL_EPS)`
+const REVERSAL_SLACK: f64 = utils::geom::POSITION_EPS + utils::geom::NUMERICAL_EPS;
 
 /// the edge type representing backward edges
 /// C++ class `RailEdge` (utils/router/RailEdge.h)
@@ -14,7 +17,7 @@ pub struct RailEdge<E, V> {
     pub myNumericalID: i32,
     pub myID: String,
     pub myOriginal: Ptr<E>,
-    pub myTurnaround: Ptr<RailEdge__RailEdge>,
+    pub myTurnaround: Ptr<RailEdge__RailEdge<E, V>>,
     pub myIsVirtual: bool,
     /// actual edges to return when passing this (turnaround) edge - only forward
     pub myReplacementEdges: Vec<Ptr<E>>,
@@ -23,8 +26,8 @@ pub struct RailEdge<E, V> {
     /// length of the edge where this turn starts
     pub myStartLength: f64,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector>,
-    pub myViaSuccessors: ReversedEdge_ConstEdgePairVector,
+    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, RailEdge_ConstEdgePairVector<E, V>>,
+    pub myViaSuccessors: RailEdge_ConstEdgePairVector<E, V>,
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
@@ -38,7 +41,8 @@ impl<E, V> RailEdge<E, V> {
     //     { }
     #[allow(unused_variables)]
     pub fn new(orig: Ptr<E>) -> Self {
-        todo!("port RailEdge::RailEdge<E, V>")
+        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
     }
 
     /// C++: `void RailEdge::RailEdge<E, V>(const E *, const E *, int)`
@@ -54,7 +58,8 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(turnStart: Ptr<E>, turnEnd: Ptr<E>, numericalID: i32) -> Self {
-        todo!("port RailEdge::RailEdge<E, V>")
+        // shortcut: needs router trait bounds (lead), E::getID/getLength/getRailwayRoutingEdge are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getID")
     }
 
     /// C++: `void RailEdge::~RailEdge<E, V>()` [virtual]
@@ -64,7 +69,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RailEdge::~RailEdge<E, V>")
+        if !self.myTurnaround.is_null() {
+            // turnarounds are created with Box::into_raw in add_virtual_turns/init; delete runs the nested destructor
+            let mut turnaround = unsafe { Box::from_raw(self.myTurnaround.as_raw()) };
+            turnaround.drop_();
+        }
     }
 
     /// C++: `void RailEdge::update(double, const std::vector<const E *> &)`
@@ -79,7 +88,10 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn update(&mut self, maxTrainLength: f64, replacementEdges: &Vec<Ptr<E>>) {
-        todo!("port RailEdge::update")
+        if maxTrainLength > self.myMaxLength {
+            self.myMaxLength = maxTrainLength;
+            self.myReplacementEdges = replacementEdges.clone();
+        }
     }
 
     /// C++: `void RailEdge::addVirtualTurns(const E *, const E *, std::vector<_RailEdge *> &, int &, double, double, const std::vector<const E *> &)`
@@ -136,8 +148,12 @@ impl<E, V> RailEdge<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_virtual_turns(&mut self, forward: Ptr<E>, backward: Ptr<E>, railEdges: &mut Vec<Ptr<RailEdge__RailEdge>>, numericalID: &mut i32, dist: f64, maxTrainLength: f64, replacementEdges: &Vec<Ptr<E>>) {
-        todo!("port RailEdge::addVirtualTurns")
+    pub fn add_virtual_turns(&mut self, forward: Ptr<E>, backward: Ptr<E>, railEdges: &mut Vec<Ptr<RailEdge__RailEdge<E, V>>>, numericalID: &mut i32, dist: f64, maxTrainLength: f64, replacementEdges: &Vec<Ptr<E>>) {
+        if dist <= 0. {
+            return;
+        }
+        // shortcut: needs router trait bounds (lead), E::getPredecessors/getBidiEdge/isConnectedTo/getLength are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getPredecessors")
     }
 
     /// C++: `void RailEdge::init(std::vector<_RailEdge *> &, int &, double, bool)`
@@ -179,8 +195,9 @@ impl<E, V> RailEdge<E, V> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn init(&mut self, railEdges: &mut Vec<Ptr<RailEdge__RailEdge>>, numericalID: &mut i32, maxTrainLength: f64, permitReversal: bool) {
-        todo!("port RailEdge::init")
+    pub fn init(&mut self, railEdges: &mut Vec<Ptr<RailEdge__RailEdge<E, V>>>, numericalID: &mut i32, maxTrainLength: f64, permitReversal: bool) {
+        // shortcut: needs router trait bounds (lead), E::getViaSuccessors/getBidiEdge/getRailwayRoutingEdge are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
     }
 
     /// C++: `int RailEdge::getNumericalID() const` [const]
@@ -190,7 +207,7 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port RailEdge::getNumericalID")
+        self.myNumericalID
     }
 
     /// C++: `const E * RailEdge::getOriginal() const` [const]
@@ -200,7 +217,7 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_original(&self) -> Ptr<E> {
-        todo!("port RailEdge::getOriginal")
+        self.myOriginal
     }
 
     /// C++: `const std::string & RailEdge::getID() const` [const]
@@ -210,7 +227,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port RailEdge::getID")
+        if self.myOriginal.is_null() {
+            return &self.myID;
+        }
+        // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getID")
     }
 
     /// C++: `void RailEdge::insertOriginalEdges(double, std::vector<const E *> &) const` [const]
@@ -242,7 +263,12 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn insert_original_edges(&self, length: f64, into: &mut Vec<Ptr<E>>) {
-        todo!("port RailEdge::insertOriginalEdges")
+        if !self.myOriginal.is_null() {
+            into.push(self.myOriginal);
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getLength/isConnectedTo/getBidiEdge are not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getLength")
+        }
     }
 
     /// C++: `double RailEdge::getLength() const` [const]
@@ -252,7 +278,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port RailEdge::getLength")
+        if self.myOriginal.is_null() {
+            return 0.;
+        }
+        // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getLength")
     }
 
     /// C++: `bool RailEdge::isInternal() const` [const]
@@ -261,7 +291,8 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port RailEdge::isInternal")
+        // shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
     }
 
     /// C++: `bool RailEdge::prohibits(const V *const) const` [const]
@@ -277,7 +308,8 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port RailEdge::prohibits")
+        // shortcut: needs router trait bounds (lead), V::getLength and E::prohibits are not callable on generic E/V
+        panic!("shortcut: needs router trait bounds (lead), V::getLength")
     }
 
     /// C++: `bool RailEdge::replacementProhibits(const V *const) const` [const]
@@ -291,7 +323,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn replacement_prohibits(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port RailEdge::replacementProhibits")
+        if !self.myReplacementEdges.is_empty() {
+            // shortcut: needs router trait bounds (lead), E::prohibits(V) is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::prohibits")
+        }
+        false
     }
 
     /// C++: `bool RailEdge::restricts(const V *const) const` [const]
@@ -300,7 +336,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port RailEdge::restricts")
+        if !self.myOriginal.is_null() {
+            // shortcut: needs router trait bounds (lead), E::restricts(V) is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::restricts")
+        }
+        self.replacement_restricts(vehicle)
     }
 
     /// C++: `bool RailEdge::replacementRestricts(const V *const) const` [const]
@@ -314,7 +354,11 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn replacement_restricts(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port RailEdge::replacementRestricts")
+        if !self.myReplacementEdges.is_empty() {
+            // shortcut: needs router trait bounds (lead), E::restricts(V) is not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::restricts")
+        }
+        false
     }
 
     /// C++: `const ConstEdgePairVector & RailEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -343,8 +387,12 @@ impl<E, V> RailEdge<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector {
-        todo!("port RailEdge::getViaSuccessors")
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &RailEdge_ConstEdgePairVector<E, V> {
+        if vClass == SVC_IGNORING || self.myOriginal.is_null() {
+            return &self.myViaSuccessors;
+        }
+        // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the rebuild also writes the mutable cache (needs Ptr::new(self).m())
+        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
     }
 
     /// C++: `bool RailEdge::isVirtual() const` [const]
@@ -353,8 +401,36 @@ impl<E, V> RailEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_virtual(&self) -> bool {
-        todo!("port RailEdge::isVirtual")
+        self.myIsVirtual
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn update_keeps_longest_train_length() {
+        let mut e: RailEdge<u8, u8> = RailEdge {
+            myNumericalID: 0,
+            myID: String::new(),
+            myOriginal: Ptr::null(),
+            myTurnaround: Ptr::null(),
+            myIsVirtual: true,
+            myReplacementEdges: vec![],
+            myMaxLength: 10.,
+            myStartLength: 0.,
+            myClassesViaSuccessorMap: BTreeMap::new(),
+            myViaSuccessors: vec![],
+            _p: std::marker::PhantomData,
+        };
+        e.update(5., &vec![]);
+        assert_eq!(e.myMaxLength, 10.);
+        assert!(e.myReplacementEdges.is_empty());
+        e.update(15., &vec![Ptr::null()]);
+        assert_eq!(e.myMaxLength, 15.);
+        assert_eq!(e.myReplacementEdges.len(), 1);
+    }
 }
 
