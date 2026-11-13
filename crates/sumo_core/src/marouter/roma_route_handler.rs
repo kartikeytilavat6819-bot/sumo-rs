@@ -49,7 +49,19 @@ impl ROMARouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(matrix: &mut ODMatrix) -> Self {
-        todo!("port ROMARouteHandler::ROMARouteHandler")
+        let mut handler = ROMARouteHandler {
+            base: utils::xml::sumo_sax_handler::new("", ""),
+            myMatrix: Ptr::from_mut(matrix),
+            myTazParamKeys: Vec::new(),
+            myVehicleParameter: Ptr::null(),
+            myIgnoreTaz: utils::options::options_cont::get_bool("ignore-taz"),
+            myScale: utils::options::options_cont::get_float("scale"),
+            myNumLoaded: 0,
+        };
+        if utils::options::options_cont::is_set("taz-param") {
+            handler.myTazParamKeys = utils::options::options_cont::get_string_vector("taz-param");
+        }
+        handler
     }
 
     /// C++: `void ROMARouteHandler::~ROMARouteHandler() noexcept` [virtual]
@@ -58,7 +70,7 @@ impl ROMARouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROMARouteHandler::~ROMARouteHandler")
+        // C++ destructor body is empty; members are destroyed implicitly
     }
 
     /// C++: `void ROMARouteHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -97,7 +109,41 @@ impl ROMARouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port ROMARouteHandler::myStartElement")
+        // mirrors the private constants in utils/vehicle/sumo_vehicle_parameter.rs
+        const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
+        const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
+        if element == SUMO_TAG_TRIP || element == SUMO_TAG_VEHICLE || element == SUMO_TAG_FLOW {
+            self.myVehicleParameter = if element == SUMO_TAG_FLOW {
+                crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_flow_attributes(SUMO_TAG_FLOW, attrs, true, true, 0, utils::common::time::time2steps(3600.0), false)
+            } else {
+                crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_vehicle_attributes(element, attrs, true, false, false, false)
+            };
+            let vp = self.myVehicleParameter;
+            if !vp.was_set(VEHPARS_FROM_TAZ_SET) || self.myIgnoreTaz {
+                if attrs.has_attribute(SUMO_ATTR_FROM) {
+                    vp.m().fromTaz = attrs.get_string(SUMO_ATTR_FROM);
+                } else if attrs.has_attribute(SUMO_ATTR_FROM_JUNCTION) {
+                    vp.m().fromTaz = attrs.get_string(SUMO_ATTR_FROM_JUNCTION) + "-source";
+                }
+            }
+            if !vp.was_set(VEHPARS_TO_TAZ_SET) || self.myIgnoreTaz {
+                if attrs.has_attribute(SUMO_ATTR_TO) {
+                    vp.m().toTaz = attrs.get_string(SUMO_ATTR_TO);
+                } else if attrs.has_attribute(SUMO_ATTR_TO_JUNCTION) {
+                    vp.m().toTaz = attrs.get_string(SUMO_ATTR_TO_JUNCTION) + "-sink";
+                }
+            }
+        } else if element == SUMO_TAG_PARAM && !self.myTazParamKeys.is_empty() {
+            let vp = self.myVehicleParameter;
+            if attrs.get_string(SUMO_ATTR_KEY) == self.myTazParamKeys[0] {
+                vp.m().fromTaz = attrs.get_string(SUMO_ATTR_VALUE);
+                vp.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
+            }
+            if self.myTazParamKeys.len() > 1 && attrs.get_string(SUMO_ATTR_KEY) == self.myTazParamKeys[1] {
+                vp.m().toTaz = attrs.get_string(SUMO_ATTR_VALUE);
+                vp.m().parametersSet |= VEHPARS_TO_TAZ_SET;
+            }
+        }
     }
 
     /// C++: `void ROMARouteHandler::myEndElement(int)` [virtual, protected]
@@ -142,7 +188,43 @@ impl ROMARouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        todo!("port ROMARouteHandler::myEndElement")
+        const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
+        const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
+        if element == SUMO_TAG_TRIP || element == SUMO_TAG_VEHICLE || element == SUMO_TAG_FLOW {
+            let vp = self.myVehicleParameter;
+            if vp.fromTaz == "" || vp.toTaz == "" {
+                utils::write_warningf!("No origin or no destination given, ignoring '%'!", vp.id);
+            } else {
+                let mut quota: i32 = 1;
+                let mut departOffset: SUMOTime = 0;
+                if element == SUMO_TAG_FLOW {
+                    let mut flowSize: i64 = 1;
+                    let flowDur = utils::common::time::steps2time(vp.repetitionEnd - vp.depart);
+                    if vp.repetitionNumber != i64::MAX {
+                        flowSize = vp.repetitionNumber;
+                    } else if vp.poissonRate > 0. {
+                        flowSize = (flowDur * vp.poissonRate) as i64;
+                    } else if vp.repetitionProbability > 0. {
+                        flowSize = (flowDur * vp.repetitionProbability) as i64;
+                    }
+                    quota = ((flowSize as f64) * self.myScale + 0.5) as i32;
+                    self.myNumLoaded += flowSize;
+                    departOffset = utils::common::time::time2steps(flowDur) / quota as i64;
+                } else {
+                    quota = utils::common::std_defs::get_scaling_quota(self.myScale, self.myNumLoaded);
+                    self.myNumLoaded += 1;
+                }
+                let mut depart: SUMOTime = vp.depart;
+                for i in 0..quota {
+                    let mut veh: SUMOVehicleParameter = (*vp).clone();
+                    veh.id = if i == 0 { vp.id.clone() } else { format!("{}.{}", vp.id, i) };
+                    veh.depart = depart;
+                    self.myMatrix.m().add_2(&veh, !vp.was_set(VEHPARS_FROM_TAZ_SET) || self.myIgnoreTaz, !vp.was_set(VEHPARS_TO_TAZ_SET) || self.myIgnoreTaz);
+                    depart += departOffset;
+                }
+            }
+            drop(unsafe { Box::from_raw(self.myVehicleParameter.as_raw()) });
+        }
     }
 
     /// C++: `void ROMARouteHandler::ROMARouteHandler(const ROMARouteHandler &)` [private]
@@ -150,7 +232,8 @@ impl ROMARouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ROMARouteHandler) -> Self {
-        todo!("port ROMARouteHandler::ROMARouteHandler")
+        // shortcut: private copy constructor is declared in ROMARouteHandler.h but never defined; calling it is a link error in C++
+        panic!("ROMARouteHandler copy constructor is declared but not defined");
     }
 
     /// C++: `ROMARouteHandler & ROMARouteHandler::operator=(const ROMARouteHandler &)` [private]
@@ -158,7 +241,8 @@ impl ROMARouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &ROMARouteHandler) -> &mut ROMARouteHandler {
-        todo!("port ROMARouteHandler::operator=")
+        // C++ declares `ROMARouteHandler& operator=(const ROMARouteHandler&)` as private and undefined, so it can never be called
+        panic!("ROMARouteHandler::operator= is declared but not defined");
     }
 
 }

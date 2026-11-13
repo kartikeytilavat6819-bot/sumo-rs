@@ -20,6 +20,14 @@ pub struct ROMAAssignments {
 
 // C++ static members of ROMAAssignments (port as module-level statics, see AGENTS.md):
 //   static std::map<const ROEdge *const, double> ROMAAssignments::myPenalties;
+thread_local! {
+    static MY_PENALTIES: std::cell::RefCell<std::collections::BTreeMap<Ptr<ROEdge>, f64>> = std::cell::RefCell::new(std::collections::BTreeMap::new());
+}
+
+/// Mutable access to a route shared through `Rc` (C++ `std::shared_ptr<RORoute>` is mutated in place)
+fn route_mut(r: &Rc<RORoute>) -> Ptr<RORoute> {
+    Ptr::new(&**r)
+}
 
 impl ROMAAssignments {
     /// C++: `void ROMAAssignments::ROMAAssignments(const SUMOTime, const SUMOTime, const bool, const double, const int, const bool, RONet &, ODMatrix &, SUMOAbstractRouter<ROEdge, ROVehicle> &, OutputDevice *)`
@@ -35,7 +43,21 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn new(begin: SUMOTime, end: SUMOTime, additiveTraffic: bool, adaptionFactor: f64, maxAlternatives: i32, defaultCapacities: bool, net: &mut RONet, matrix: &mut ODMatrix, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, netloadOutput: Ptr<OutputDevice>) -> Self {
-        todo!("port ROMAAssignments::ROMAAssignments")
+        let vtype = net.get_vehicle_type_secure(utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID);
+        let myDefaultVehicle = Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), vtype, Ptr::from_mut(net), Ptr::null())));
+        ROMAAssignments {
+            myBegin: begin,
+            myEnd: end,
+            myAdditiveTraffic: additiveTraffic,
+            myAdaptionFactor: adaptionFactor,
+            myMaxAlternatives: maxAlternatives,
+            myUseDefaultCapacities: defaultCapacities,
+            myNet: Ptr::from_mut(net),
+            myMatrix: Ptr::from_mut(matrix),
+            myRouter: Ptr::from_mut(router),
+            myDefaultVehicle: Ptr::from_raw(myDefaultVehicle),
+            myNetloadOutput: netloadOutput,
+        }
     }
 
     /// C++: `void ROMAAssignments::~ROMAAssignments() noexcept`
@@ -45,7 +67,9 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROMAAssignments::~ROMAAssignments")
+        if !self.myDefaultVehicle.is_null() {
+            drop(unsafe { Box::from_raw(self.myDefaultVehicle.as_raw()) });
+        }
     }
 
     /// C++: `ROVehicle * ROMAAssignments::getDefaultVehicle() const` [const]
@@ -54,7 +78,7 @@ impl ROMAAssignments {
     //     }
     #[allow(unused_variables)]
     pub fn get_default_vehicle(&self) -> Ptr<ROVehicle> {
-        todo!("port ROMAAssignments::getDefaultVehicle")
+        self.myDefaultVehicle
     }
 
     /// C++: `double ROMAAssignments::getCapacity(const ROEdge *) const` [const]
@@ -109,7 +133,55 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn get_capacity(&self, edge: Ptr<ROEdge>) -> f64 {
-        todo!("port ROMAAssignments::getCapacity")
+        if edge.is_taz_connector() {
+            return 0.;
+        }
+        let roadClass: i32 = if self.myUseDefaultCapacities { -1 } else { -edge.get_priority() };
+        // TODO: differ road class 1 from the unknown road class 1!!!
+        let lanes = edge.get_num_lanes() as f64;
+        let speed = edge.get_speed_limit();
+        let rc4 = roadClass >= 4 || roadClass == -1;
+        if edge.get_num_lanes() == 0 {
+            // TAZ have no cost
+            return 0.;
+        } else if roadClass == 0 || roadClass == 1 {
+            return lanes * 2000.; //CR13 in table.py
+        } else if roadClass == 2 && speed <= 11. {
+            return lanes * 1333.33; //CR5 in table.py
+        } else if roadClass == 2 && speed > 11. && speed <= 16. {
+            return lanes * 1500.; //CR3 in table.py
+        } else if roadClass == 2 && speed > 16. {
+            return lanes * 2000.; //CR13 in table.py
+        } else if roadClass == 3 && speed <= 11. {
+            return lanes * 800.; //CR5 in table.py
+        } else if roadClass == 3 && speed > 11. && speed <= 13. {
+            return lanes * 875.; //CR5 in table.py
+        } else if roadClass == 3 && speed > 13. && speed <= 16. {
+            return lanes * 1500.; //CR4 in table.py
+        } else if roadClass == 3 && speed > 16. {
+            return lanes * 1800.; //CR13 in table.py
+        } else if rc4 && speed <= 5. {
+            return lanes * 200.; //CR7 in table.py
+        } else if rc4 && speed > 5. && speed <= 7. {
+            return lanes * 412.5; //CR7 in table.py
+        } else if rc4 && speed > 7. && speed <= 9. {
+            return lanes * 600.; //CR6 in table.py
+        } else if rc4 && speed > 9. && speed <= 11. {
+            return lanes * 800.; //CR5 in table.py
+        } else if rc4 && speed > 11. && speed <= 13. {
+            return lanes * 1125.; //CR5 in table.py
+        } else if rc4 && speed > 13. && speed <= 16. {
+            return lanes * 1583.; //CR4 in table.py
+        } else if rc4 && speed > 16. && speed <= 18. {
+            return lanes * 1100.; //CR3 in table.py
+        } else if rc4 && speed > 18. && speed <= 22. {
+            return lanes * 1200.; //CR3 in table.py
+        } else if rc4 && speed > 22. && speed <= 26. {
+            return lanes * 1300.; //CR3 in table.py
+        } else if rc4 && speed > 26. {
+            return lanes * 1400.; //CR3 in table.py
+        }
+        lanes * 800. //CR5 in table.py
     }
 
     /// C++: `double ROMAAssignments::capacityConstraintFunction(const ROEdge *, const double) const` [const]
@@ -165,7 +237,56 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn capacity_constraint_function(&self, edge: Ptr<ROEdge>, flow: f64) -> f64 {
-        todo!("port ROMAAssignments::capacityConstraintFunction")
+        if edge.is_taz_connector() {
+            return 0.;
+        }
+        let roadClass: i32 = if self.myUseDefaultCapacities { -1 } else { -edge.get_priority() };
+        let capacity = self.get_capacity(edge);
+        // TODO: differ road class 1 from the unknown road class 1!!!
+        let length = edge.get_length();
+        let speed = edge.get_speed_limit();
+        let rc4 = roadClass >= 4 || roadClass == -1;
+        if edge.get_num_lanes() == 0 {
+            // TAZ have no cost
+            return 0.;
+        } else if roadClass == 0 || roadClass == 1 {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.3)) * 2.); //CR13 in table.py
+        } else if roadClass == 2 && speed <= 11. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.); //CR5 in table.py
+        } else if roadClass == 2 && speed > 11. && speed <= 16. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.)) * 2.); //CR3 in table.py
+        } else if roadClass == 2 && speed > 16. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.3)) * 2.); //CR13 in table.py
+        } else if roadClass == 3 && speed <= 11. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.); //CR5 in table.py
+        } else if roadClass == 3 && speed > 11. && speed <= 13. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.); //CR5 in table.py
+        } else if roadClass == 3 && speed > 13. && speed <= 16. {
+            return length / speed * (1. + 1.7 * (flow / (capacity * 1.)) * 2.); //CR4 in table.py
+        } else if roadClass == 3 && speed > 16. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.3)) * 2.); //CR13 in table.py
+        } else if rc4 && speed <= 5. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.5)) * 3.); //CR7 in table.py
+        } else if rc4 && speed > 5. && speed <= 7. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.5)) * 3.); //CR7 in table.py
+        } else if rc4 && speed > 7. && speed <= 9. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.8)) * 3.); //CR6 in table.py
+        } else if rc4 && speed > 9. && speed <= 11. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.); //CR5 in table.py
+        } else if rc4 && speed > 11. && speed <= 13. {
+            return length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.); //CR5 in table.py
+        } else if rc4 && speed > 13. && speed <= 16. {
+            return length / speed * (1. + 1.7 * (flow / (capacity * 1.)) * 2.); //CR4 in table.py
+        } else if rc4 && speed > 16. && speed <= 18. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.)) * 2.); //CR3 in table.py
+        } else if rc4 && speed > 18. && speed <= 22. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.)) * 2.); //CR3 in table.py
+        } else if rc4 && speed > 22. && speed <= 26. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.)) * 2.); //CR3 in table.py
+        } else if rc4 && speed > 26. {
+            return length / speed * (1. + 1. * (flow / (capacity * 1.)) * 2.); //CR3 in table.py
+        }
+        length / speed * (1. + 1. * (flow / (capacity * 0.9)) * 3.) //CR5 in table.py
     }
 
     /// C++: `void ROMAAssignments::resetFlows()`
@@ -180,7 +301,14 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn reset_flows(&mut self) {
-        todo!("port ROMAAssignments::resetFlows")
+        let matrix = self.myMatrix;
+        let first_begin = self.myBegin.min(matrix.m().get_cells()[0].begin);
+        let begin = utils::common::time::steps2time(first_begin);
+        for e in ROEdge::get_all_edges().iter() {
+            let edge = e.cast::<ROMAEdge>();
+            edge.m().set_flow(begin, utils::common::time::steps2time(self.myEnd), 0.);
+            edge.m().set_help_flow(begin, utils::common::time::steps2time(self.myEnd), 0.);
+        }
     }
 
     /// C++: `void ROMAAssignments::writeInterval(const SUMOTime, const SUMOTime)`
@@ -214,7 +342,33 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn write_interval(&mut self, begin: SUMOTime, end: SUMOTime) {
-        todo!("port ROMAAssignments::writeInterval")
+        use utils::common::time::steps2time;
+        let out = self.myNetloadOutput;
+        if !out.is_null() {
+            out.m().open_tag_id(SUMO_TAG_INTERVAL).write_attr(SUMO_ATTR_BEGIN, &utils::common::time::time2string(begin)).write_attr(SUMO_ATTR_END, &utils::common::time::time2string(end));
+            for e in ROEdge::get_all_edges().iter() {
+                let edge = e.cast::<ROMAEdge>();
+                if edge.get_function() == SumoXMLEdgeFunc::NORMAL {
+                    out.m().open_tag_id(SUMO_TAG_EDGE).write_attr(SUMO_ATTR_ID, e.get_id());
+                    let traveltime = edge.get_travel_time(self.get_default_vehicle(), steps2time(begin));
+                    let speed = edge.get_length() / traveltime;
+                    let flow = edge.get_flow(steps2time(begin));
+                    let timeGap = steps2time(end - begin) / flow;
+                    let spaceGap = timeGap * speed;
+                    let density = 1000.0 / spaceGap;
+                    let laneDensity = density / edge.get_num_lanes() as f64;
+                    out.m().write_attr(SUMO_ATTR_TRAVELTIME, &traveltime);
+                    out.m().write_attr(SUMO_ATTR_SPEED, &speed);
+                    out.m().write_attr(SUMO_ATTR_SPEEDREL, &(speed / edge.get_speed_limit()));
+                    out.m().write_attr(SUMO_ATTR_ENTERED, &flow);
+                    out.m().write_attr(SUMO_ATTR_DENSITY, &density);
+                    out.m().write_attr(SUMO_ATTR_LANEDENSITY, &laneDensity);
+                    out.m().write_attr("flowCapacityRatio", &(100. * flow / self.get_capacity(*e)));
+                    out.m().close_tag("");
+                }
+            }
+            out.m().close_tag("");
+        }
     }
 
     /// C++: `void ROMAAssignments::incremental(const int, const bool)`
@@ -321,14 +475,89 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn incremental(&mut self, numIter: i32, verbose: bool) {
-        todo!("port ROMAAssignments::incremental")
+        use utils::common::time::steps2time;
+        let mut lastBegin: SUMOTime = -1;
+        let mut intervals: Vec<usize> = Vec::new();
+        let matrix = self.myMatrix;
+        let cells: Vec<Ptr<ODCell>> = matrix.m().get_cells().clone();
+        let mut count: usize = 0;
+        for c in cells.iter() {
+            if c.begin != lastBegin {
+                intervals.push(count);
+                lastBegin = c.begin;
+            }
+            count += 1;
+        }
+        lastBegin = -1;
+        for (offset_idx, &offset) in intervals.iter().enumerate() {
+            let firstCell = offset;
+            let lastCell = if offset_idx != intervals.len() - 1 { intervals[offset_idx + 1] } else { cells.len() };
+            let intervalStart = cells[firstCell].begin;
+            if verbose {
+                utils::common::msg_handler::write_message(&format!(" starting interval {}", utils::common::time::time2string(intervalStart)));
+            }
+            let mut loadedTravelTimes: std::collections::BTreeMap<Ptr<ROMAEdge>, f64> = std::collections::BTreeMap::new();
+            for e in ROEdge::get_all_edges().iter() {
+                let edge = e.cast::<ROMAEdge>();
+                if edge.has_loaded_travel_time(steps2time(intervalStart)) {
+                    loadedTravelTimes.insert(edge, edge.get_travel_time(self.myDefaultVehicle, steps2time(intervalStart)));
+                }
+            }
+            if loadedTravelTimes.is_empty() {
+                // we don't have loaded travel times for this interval but we may have set ourselves some for the interval before but no need to warn
+                ROEdge::disable_timeline_warning();
+            }
+            for t in 0..numIter {
+                if verbose {
+                    utils::common::msg_handler::write_message(&format!("  starting iteration {}", t));
+                }
+                // shortcut: HAVE_FOX thread-pool routing (RONet::BulkmodeTask / RoutingTask) is not ported; this is the serial path of a build without FOX
+                let mut lastOrigin = String::new();
+                for i in firstCell..lastCell {
+                    let c = cells[i];
+                    let linkFlow = c.vehicleNumber / numIter as f64;
+                    let begin = if self.myAdditiveTraffic { self.myBegin } else { c.begin };
+                    if lastOrigin != c.origin {
+                        self.myRouter.m().set_bulk_mode(false);
+                        lastOrigin = c.origin.clone();
+                    }
+                    self.compute_path(c, begin, linkFlow, self.myRouter, true);
+                }
+                for i in firstCell..lastCell {
+                    let c = cells[i];
+                    let linkFlow = c.vehicleNumber / numIter as f64;
+                    let begin = if self.myAdditiveTraffic { self.myBegin } else { c.begin };
+                    let end = if self.myAdditiveTraffic { self.myEnd } else { c.end };
+                    let intervalLengthInHours = steps2time(end - begin) / 3600.;
+                    let edges = c.pathsVector.last().expect("pathsVector.back()").get_edge_vector().clone();
+                    for e in edges.iter() {
+                        let edge = self.myNet.get_edge(e.get_id()).cast::<ROMAEdge>();
+                        let newFlow = edge.get_flow(steps2time(begin)) + linkFlow;
+                        edge.m().set_flow(steps2time(begin), steps2time(end), newFlow);
+                        let mut travelTime = self.capacity_constraint_function(edge.cast::<ROEdge>(), newFlow / intervalLengthInHours);
+                        if lastBegin >= 0 && self.myAdaptionFactor > 0. {
+                            if loadedTravelTimes.contains_key(&edge) {
+                                travelTime = loadedTravelTimes[&edge] * self.myAdaptionFactor + (1. - self.myAdaptionFactor) * travelTime;
+                            } else {
+                                travelTime = edge.get_travel_time(self.myDefaultVehicle, steps2time(lastBegin)) * self.myAdaptionFactor + (1. - self.myAdaptionFactor) * travelTime;
+                            }
+                        }
+                        edge.m().add_travel_time(travelTime, steps2time(begin), steps2time(end));
+                    }
+                }
+                self.myRouter.m().reset(self.myDefaultVehicle);
+            }
+            self.write_interval(intervalStart, cells[lastCell - 1].end);
+            lastBegin = intervalStart;
+        }
     }
 
     /// C++: `void ROMAAssignments::ue()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn ue(&mut self) {
-        todo!("port ROMAAssignments::ue")
+        // shortcut: ue() is declared in ROMAAssignments.h but never defined in ROMAAssignments.cpp; calling it is a link error in C++
+        panic!("ROMAAssignments::ue is declared but not defined");
     }
 
     /// C++: `void ROMAAssignments::sue(const int, const int, const int, const double, const double, const std::string)`
@@ -445,7 +674,123 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn sue(&mut self, maxOuterIteration: i32, maxInnerIteration: i32, kPaths: i32, penalty: f64, tolerance: f64, routeChoiceMethod: String) {
-        todo!("port ROMAAssignments::sue")
+        use utils::common::time::steps2time;
+        self.get_k_paths(kPaths, penalty);
+        let mut intervals: std::collections::BTreeMap<SUMOTime, SUMOTime> = std::collections::BTreeMap::new();
+        let matrix = self.myMatrix;
+        let cells: Vec<Ptr<ODCell>> = matrix.m().get_cells().clone();
+        if self.myAdditiveTraffic {
+            intervals.insert(self.myBegin, self.myEnd);
+        } else {
+            for c in cells.iter() {
+                intervals.insert(c.begin, c.end);
+            }
+        }
+        for outer in 0..maxOuterIteration {
+            for inner in 0..maxInnerIteration {
+                for c in cells.iter() {
+                    let c = *c;
+                    let begin = if self.myAdditiveTraffic { self.myBegin } else { c.begin };
+                    let end = if self.myAdditiveTraffic { self.myEnd } else { c.end };
+                    // update path cost
+                    for r in c.pathsVector.iter() {
+                        let costs = self.myRouter.recompute_costs(r.get_edge_vector(), self.myDefaultVehicle, 0, Ptr::null());
+                        route_mut(r).m().set_costs(costs);
+                    }
+                    // calculate route utilities and probabilities
+                    RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().calculate_probabilities(&c.pathsVector, self.myDefaultVehicle, 0);
+                    // calculate route flows
+                    for r in c.pathsVector.iter() {
+                        let pathFlow = r.get_probability() * c.vehicleNumber;
+                        // assign edge flow deltas
+                        for e in r.get_edge_vector().iter() {
+                            let edge = self.myNet.get_edge(e.get_id()).cast::<ROMAEdge>();
+                            let helpFlow = edge.get_help_flow(steps2time(begin)) + pathFlow;
+                            edge.m().set_help_flow(steps2time(begin), steps2time(end), helpFlow);
+                        }
+                    }
+                }
+                // calculate new edge flows and check for stability
+                let mut unstableEdges = 0;
+                for (&first, &second) in intervals.iter() {
+                    let intervalLengthInHours = steps2time(second - first) / 3600.;
+                    let intBegin = steps2time(first);
+                    let intEnd = steps2time(second);
+                    for e in ROEdge::get_all_edges().iter() {
+                        let edge = e.cast::<ROMAEdge>();
+                        let oldFlow = edge.get_flow(intBegin);
+                        let mut newFlow = oldFlow;
+                        if inner == 0 && outer == 0 {
+                            newFlow += edge.get_help_flow(intBegin);
+                        } else {
+                            newFlow += (edge.get_help_flow(intBegin) - oldFlow) / (inner + 1) as f64;
+                        }
+                        //                if not lohse:
+                        if newFlow > 0. {
+                            if (newFlow - oldFlow).abs() / newFlow > tolerance {
+                                unstableEdges += 1;
+                            }
+                        } else if newFlow == 0. {
+                            if oldFlow != 0. && ((newFlow - oldFlow).abs() / oldFlow > tolerance) {
+                                unstableEdges += 1;
+                            }
+                        } else {
+                            // newFlow < 0.
+                            unstableEdges += 1;
+                            newFlow = 0.;
+                        }
+                        edge.m().set_flow(intBegin, intEnd, newFlow);
+                        let travelTime = self.capacity_constraint_function(edge.cast::<ROEdge>(), newFlow / intervalLengthInHours);
+                        edge.m().add_travel_time(travelTime, intBegin, intEnd);
+                        edge.m().set_help_flow(intBegin, intEnd, 0.);
+                    }
+                }
+                // if stable break
+                if unstableEdges == 0 {
+                    break;
+                }
+                // additional stability check from python script: if notstable < math.ceil(net.geteffEdgeCounts()*0.005) or notstable < 3: stable = True
+            }
+            // travel times changed since the metric was last built (or since the
+            // previous outer iteration): flag it stale so the *first* subsequent
+            // router query re-customizes (CCH) / rebuilds the hierarchy (CH)
+            // from current edge weights. recomputeCosts() above never consults
+            // the cached metric (it reads the live effort function directly), so
+            // a single reset() here -- right before the only call that does,
+            // computePath()'s router->compute() below -- is exactly as correct
+            // as resetting after every inner iteration, but for an
+            // expensive-to-rebuild algorithm like CH this cuts the number of
+            // rebuilds from O(maxInnerIteration) to one per outer iteration.
+            self.myRouter.m().reset(self.myDefaultVehicle);
+            // check for a new route, if none available, break
+            // several modifications about when a route is new and when to break are in the original script
+            let mut newRoute = false;
+            for c in cells.iter() {
+                newRoute |= !self.compute_path(*c, 0, 0., Ptr::null(), false).is_empty();
+            }
+            if !newRoute {
+                break;
+            }
+        }
+        // final round of assignment
+        for c in cells.iter() {
+            let c = *c;
+            // update path cost
+            for r in c.pathsVector.iter() {
+                let costs = self.myRouter.recompute_costs(r.get_edge_vector(), self.myDefaultVehicle, 0, Ptr::null());
+                route_mut(r).m().set_costs(costs);
+            }
+            // calculate route utilities and probabilities
+            RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().calculate_probabilities(&c.pathsVector, self.myDefaultVehicle, 0);
+            // calculate route flows
+            for r in c.pathsVector.iter() {
+                let prob = r.get_probability() * c.vehicleNumber;
+                route_mut(r).m().set_probability(prob);
+            }
+        }
+        for (&first, &second) in intervals.iter() {
+            self.write_interval(first, second);
+        }
     }
 
     /// C++: `double ROMAAssignments::getPenalizedEffort(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -457,7 +802,11 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn get_penalized_effort(e: Ptr<ROEdge>, v: Ptr<ROVehicle>, t: f64) -> f64 {
-        todo!("port ROMAAssignments::getPenalizedEffort")
+        let penalty = MY_PENALTIES.with(|p| p.borrow().get(&e).copied());
+        match penalty {
+            None => e.get_effort(v, t),
+            Some(i) => e.get_effort(v, t) + i,
+        }
     }
 
     /// C++: `double ROMAAssignments::getPenalizedTT(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -469,7 +818,11 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn get_penalized_tt(e: Ptr<ROEdge>, v: Ptr<ROVehicle>, t: f64) -> f64 {
-        todo!("port ROMAAssignments::getPenalizedTT")
+        let penalty = MY_PENALTIES.with(|p| p.borrow().get(&e).copied());
+        match penalty {
+            None => e.get_travel_time(v, t),
+            Some(i) => e.get_travel_time(v, t) + i,
+        }
     }
 
     /// C++: `double ROMAAssignments::getTravelTime(const ROEdge *const, const ROVehicle *const, double)` [static]
@@ -480,7 +833,7 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time(e: Ptr<ROEdge>, v: Ptr<ROVehicle>, t: f64) -> f64 {
-        todo!("port ROMAAssignments::getTravelTime")
+        e.get_travel_time(v, t)
     }
 
     /// C++: `bool ROMAAssignments::addRoute(const ConstROEdgeVector &, std::vector<std::shared_ptr<RORoute>> &, std::string, double)` [private]
@@ -503,7 +856,18 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn add_route(&mut self, edges: &ConstROEdgeVector, paths: &mut Vec<Rc<RORoute>>, routeId: String, prob: f64) -> bool {
-        todo!("port ROMAAssignments::addRoute")
+        match paths.iter().position(|p| edges == p.get_edge_vector()) {
+            None => {
+                paths.push(Rc::new(RORoute::new(&routeId, 0., prob, edges, Ptr::null(), &Default::default())));
+                true
+            }
+            Some(p) => {
+                route_mut(&paths[p]).m().add_probability(prob);
+                let last = paths.len() - 1;
+                paths.swap(last, p);
+                false
+            }
+        }
     }
 
     /// C++: `const ConstROEdgeVector ROMAAssignments::computePath(ODCell *, const SUMOTime, const double, SUMOAbstractRouter<ROEdge, ROVehicle> *, bool)` [private]
@@ -545,7 +909,43 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn compute_path(&mut self, cell: Ptr<ODCell>, time: SUMOTime, probability: f64, router: Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>>, setBulkMode: bool) -> ConstROEdgeVector {
-        todo!("port ROMAAssignments::computePath")
+        let fromId = format!("{}{}", cell.origin, if cell.originIsEdge { "" } else { "-source" });
+        let from = self.myNet.get_edge(&fromId);
+        if from.is_null() {
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(utils::common::string_utils::format("Unknown origin '%'.", &[&cell.origin as &dyn utils::common::to_string::ToStringPrec])));
+        }
+        let toId = format!("{}{}", cell.destination, if cell.destinationIsEdge { "" } else { "-sink" });
+        let to = self.myNet.get_edge(&toId);
+        if to.is_null() {
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(utils::common::string_utils::format("Unknown destination '%'.", &[&cell.destination as &dyn utils::common::to_string::ToStringPrec])));
+        }
+        let mut edges: ConstROEdgeVector = Vec::new();
+        let router = if router.is_null() { self.myRouter } else { router };
+        if self.myMaxAlternatives > 0 && (cell.pathsVector.len() as i32) < self.myMaxAlternatives {
+            router.m().compute(from, to, self.myDefaultVehicle, time, &mut edges, false);
+            if setBulkMode {
+                router.m().set_bulk_mode(true);
+            }
+            let id = format!("{}{}{}", cell.origin, cell.destination, cell.pathsVector.len());
+            if self.add_route(&edges, &mut cell.m().pathsVector, id, probability) {
+                return edges;
+            }
+        } else {
+            let mut minCost = f64::MAX;
+            let mut minRoute: Option<Ptr<RORoute>> = None;
+            for p in cell.pathsVector.iter() {
+                // C++ recomputes costs for the (still empty) `edges` vector here, reproduced as-is
+                let cost = router.recompute_costs(&edges, self.myDefaultVehicle, time, Ptr::null());
+                if cost < minCost {
+                    minCost = cost;
+                    minRoute = Some(route_mut(p));
+                }
+            }
+            if let Some(r) = minRoute {
+                r.m().add_probability(probability);
+            }
+        }
+        ConstROEdgeVector::new()
     }
 
     /// C++: `void ROMAAssignments::getKPaths(const int, const double)` [private]
@@ -564,7 +964,17 @@ impl ROMAAssignments {
     // }
     #[allow(unused_variables)]
     pub fn get_k_paths(&mut self, kPaths: i32, penalty: f64) {
-        todo!("port ROMAAssignments::getKPaths")
+        let matrix = self.myMatrix;
+        let cells: Vec<Ptr<ODCell>> = matrix.m().get_cells().clone();
+        for c in cells.iter() {
+            MY_PENALTIES.with(|p| p.borrow_mut().clear());
+            for _k in 0..kPaths {
+                for e in self.compute_path(*c, 0, 0., Ptr::null(), false) {
+                    MY_PENALTIES.with(|p| *p.borrow_mut().entry(e).or_insert(0.) += penalty);
+                }
+            }
+        }
+        MY_PENALTIES.with(|p| p.borrow_mut().clear());
     }
 
     /// C++: `ROMAAssignments & ROMAAssignments::operator=(const ROMAAssignments &)` [private]
@@ -572,7 +982,8 @@ impl ROMAAssignments {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROMAAssignments) -> &mut ROMAAssignments {
-        todo!("port ROMAAssignments::operator=")
+        // C++ declares `ROMAAssignments& operator=(const ROMAAssignments&) = delete;`, so it can never be called
+        panic!("ROMAAssignments::operator= is deleted");
     }
 
 }
