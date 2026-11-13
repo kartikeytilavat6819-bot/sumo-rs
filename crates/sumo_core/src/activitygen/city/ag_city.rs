@@ -691,7 +691,8 @@ impl AGCity {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn closest_school_to(&mut self, pos: AGPosition) -> AGSchool {
-        todo!("port AGCity::closestSchoolTo")
+        // (declared in AGCity.h but never defined in C++: calling it is a link error)
+        panic!("AGCity::closestSchoolTo is declared but not defined in C++")
     }
 
     /// C++: `void AGCity::generateOutgoingWP()` [private]
@@ -776,7 +777,8 @@ impl AGCity {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &AGCity) -> &mut AGCity {
-        todo!("port AGCity::operator=")
+        // (declared private in AGCity.h and never defined in C++: calling it is a link error)
+        panic!("AGCity::operator= is declared but not defined in C++")
     }
 
 }
