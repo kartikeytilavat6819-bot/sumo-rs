@@ -64,7 +64,7 @@ impl MSTransportableDevice {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportableDevice) -> Self {
-        todo!("port MSTransportableDevice::MSTransportableDevice")
+        panic!("MSTransportableDevice copy constructor is private and undefined in C++")
     }
 
     /// C++: `MSTransportableDevice & MSTransportableDevice::operator=(const MSTransportableDevice &)` [private]
@@ -72,7 +72,7 @@ impl MSTransportableDevice {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice) -> &mut MSTransportableDevice {
-        todo!("port MSTransportableDevice::operator=")
+        panic!("MSTransportableDevice assignment operator is private and undefined in C++")
     }
 
 }

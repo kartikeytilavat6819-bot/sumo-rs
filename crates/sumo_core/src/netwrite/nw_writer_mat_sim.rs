@@ -2,6 +2,11 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `OptionsCont` getters throw ProcessError; the options used here are always registered
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
+
 /// Exporter writing networks using the MATSim format
 /// C++ class `NWWriter_MATSim` (netwrite/NWWriter_MATSim.h)
 pub struct NWWriter_MATSim {
@@ -50,7 +55,42 @@ impl NWWriter_MATSim {
     // }
     #[allow(unused_variables)]
     pub fn write_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NWWriter_MATSim::writeNetwork")
+        // check whether a matsim-file shall be generated
+        if !or_panic(oc.is_set("matsim-output", true)) {
+            return;
+        }
+        // shortcut: device << double uses the stream's %g-style precision (gPrecision = 2) which needs utils::common::to_string::f64_to_string_prec; Rust Display is used until that port is in this worktree
+        let mut device = or_panic(OutputDevice::get_device(&or_panic(oc.get_string("matsim-output")), true));
+        device.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        device.write("<!DOCTYPE network SYSTEM \"http://www.matsim.org/files/dtd/network_v1.dtd\">\n\n");
+        device.write("<network name=\"NAME\">\n"); // !!! name
+        // write nodes
+        device.write("   <nodes>\n");
+        let nc = nb.get_node_cont();
+        for (id, node) in nc.begin() {
+            device.write("      <node id=\"").write(id.as_str())
+                .write("\" x=\"").write(&format!("{}", node.get_position().x()))
+                .write("\" y=\"").write(&format!("{}", node.get_position().y()))
+                .write("\"/>\n");
+        }
+        device.write("   </nodes>\n");
+        // write edges
+        device.write("   <links capperiod=\"01:00:00\">\n");
+        let ec = nb.get_edge_cont();
+        for (id, edge) in ec.begin() {
+            device.write("      <link id=\"").write(id.as_str())
+                .write("\" from=\"").write(edge.get_from_node().get_id())
+                .write("\" to=\"").write(edge.get_to_node().get_id())
+                .write("\" length=\"").write(&format!("{}", edge.get_loaded_length()))
+                .write("\" capacity=\"").write(&format!("{}", or_panic(oc.get_float("lanes-from-capacity.norm")) * edge.get_num_lanes() as f64))
+                .write("\" freespeed=\"").write(&format!("{}", edge.get_speed()))
+                .write("\" permlanes=\"").write(&format!("{}", edge.get_num_lanes()))
+                .write("\"/>\n");
+        }
+        device.write("   </links>\n");
+        //
+        device.write("</network>\n"); // !!! name
+        or_panic(device.close());
     }
 
 }
