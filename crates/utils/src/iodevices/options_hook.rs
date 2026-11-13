@@ -16,25 +16,30 @@ pub trait OptionsHook: Send + Sync {
     fn write_configuration(&self, into: &mut dyn Write, indent: &str);
 }
 
-/// Stands for an OptionsCont without any registered option.
-struct NoOptions;
-impl OptionsHook for NoOptions {
-    fn exists(&self, _: &str) -> bool {
-        false
+/// OptionsCont::getOptions() (the global options singleton)
+struct RealOptions;
+impl OptionsHook for RealOptions {
+    fn exists(&self, name: &str) -> bool {
+        crate::options::options_cont::exists(name)
     }
-    fn is_set(&self, _: &str) -> bool {
-        false
+    fn is_set(&self, name: &str) -> bool {
+        crate::options::options_cont::with_options(|oc| oc.is_set(name, false).unwrap_or(false))
     }
-    fn get_string(&self, _: &str) -> String {
-        String::new()
+    fn get_string(&self, name: &str) -> String {
+        crate::options::options_cont::get_string(name)
     }
-    fn get_bool(&self, _: &str) -> bool {
-        false
+    fn get_bool(&self, name: &str) -> bool {
+        crate::options::options_cont::get_bool(name)
     }
     fn get_full_name(&self) -> String {
-        String::new()
+        crate::options::options_cont::with_options(|oc| oc.get_full_name().to_string())
     }
-    fn write_configuration(&self, _: &mut dyn Write, _: &str) {}
+    fn write_configuration(&self, into: &mut dyn Write, indent: &str) {
+        let mut s = String::new();
+        crate::options::options_cont::with_options(|oc| oc.write_configuration(&mut s, true, false, false, "", false, true, indent))
+            .unwrap_or_else(|e| panic!("{e}"));
+        let _ = into.write_all(s.as_bytes());
+    }
 }
 
 static OPTIONS: RwLock<Option<Arc<dyn OptionsHook>>> = RwLock::new(None);
@@ -44,7 +49,7 @@ pub fn set_options_hook(hook: Arc<dyn OptionsHook>) {
 }
 
 pub fn options() -> Arc<dyn OptionsHook> {
-    OPTIONS.read().unwrap_or_else(|e| e.into_inner()).clone().unwrap_or_else(|| Arc::new(NoOptions))
+    OPTIONS.read().unwrap_or_else(|e| e.into_inner()).clone().unwrap_or_else(|| Arc::new(RealOptions))
 }
 
 /// OptionsCont::writeXMLHeader

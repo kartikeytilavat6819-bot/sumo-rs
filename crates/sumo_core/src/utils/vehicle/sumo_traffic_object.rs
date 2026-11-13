@@ -17,9 +17,8 @@ pub struct SUMOTrafficObjectVt {
     pub is_container: fn(&SUMOTrafficObject) -> bool,
     pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
     pub get_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
-    pub get_lane: fn(&SUMOTrafficObject) -> Ptr<MSLane>,
-    pub get_speed: fn(&SUMOTrafficObject) -> f64,
-    pub get_position: fn(&SUMOTrafficObject, f64) -> Position,
+    pub get_numerical_id: fn(&SUMOTrafficObject) -> SUMOTrafficObject_NumericalID,
+    pub get_v_class: fn(&SUMOTrafficObject) -> SUMOVehicleClass,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
@@ -42,15 +41,26 @@ pub(crate) fn default_get_position(_: &SUMOTrafficObject, _: f64) -> Position {
     panic!("SUMOTrafficObject::getPosition is pure virtual")
 }
 
+pub fn default_get_edge(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getEdge is pure virtual")
+}
+
+pub fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    panic!("SUMOTrafficObject::getNumericalID is pure virtual")
+}
+
+pub fn default_get_v_class(_: &SUMOTrafficObject) -> SUMOVehicleClass {
+    panic!("SUMOTrafficObject::getVClass is pure virtual")
+}
+
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: default_is_false,
     is_person: default_is_false,
     is_container: default_is_false,
     get_parameter: default_get_parameter,
     get_edge: default_get_edge,
-    get_lane: default_get_lane,
-    get_speed: default_get_speed,
-    get_position: default_get_position,
+    get_numerical_id: default_get_numerical_id,
+    get_v_class: default_get_v_class,
 };
 
 /// Representation of a vehicle, person, or container
@@ -127,7 +137,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> SUMOTrafficObject_NumericalID {
-        panic!("SUMOTrafficObject::getNumericalID is pure virtual")
+        (self.vt.get_numerical_id)(self)
     }
 
     /// C++: `long long SUMOTrafficObject::getRandomSeed() const` [const, virtual, pure virtual]
@@ -286,7 +296,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        panic!("SUMOTrafficObject::getVClass is pure virtual")
+        (self.vt.get_v_class)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::ignoreTransientPermissions() const` [const, virtual]
