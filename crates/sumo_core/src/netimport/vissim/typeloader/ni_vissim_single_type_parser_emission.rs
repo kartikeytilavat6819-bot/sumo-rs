@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Emission {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Emission::NIVissimSingleTypeParser_Emission")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Emission::~NIVissimSingleTypeParser_Emission() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Emission {
     // NIVissimSingleTypeParser_Emission::~NIVissimSingleTypeParser_Emission() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Emission::~NIVissimSingleTypeParser_Emission")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Emission::parse(std::istream &)` [virtual]
@@ -46,8 +46,8 @@ impl NIVissimSingleTypeParser_Emission {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Emission::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        true
     }
 
 }

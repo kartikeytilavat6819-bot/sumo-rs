@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Detektordefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Detektordefinition::NIVissimSingleTypeParser_Detektordefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Detektordefinition::~NIVissimSingleTypeParser_Detektordefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Detektordefinition {
     // NIVissimSingleTypeParser_Detektordefinition::~NIVissimSingleTypeParser_Detektordefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Detektordefinition::~NIVissimSingleTypeParser_Detektordefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Detektordefinition::parse(std::istream &)` [virtual]
@@ -53,8 +53,15 @@ impl NIVissimSingleTypeParser_Detektordefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Detektordefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = String::new();
+        while tag != "strecke" {
+            tag = self.my_read(from);
+        }
+        while tag != "DATAEND" {
+            tag = self.read_end_secure(from, "");
+        }
+        true
     }
 
 }
