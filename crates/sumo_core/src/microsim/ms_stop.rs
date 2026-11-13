@@ -3,7 +3,8 @@
 use crate::prelude::*;
 
 // shortcut: STOP_*_SET belong to SUMOVehicleParameter.h, not ported yet, move them there
-const STOP_STARTED_SET: i32 = 1;
+// C++ MSVehicle.h: static const int STOP_STARTED_SET = 2 << 17;
+const STOP_STARTED_SET: i32 = 2 << 17;
 const STOP_END_SET: i32 = 2;
 
 /// Definition of vehicle stop (position and duration)
