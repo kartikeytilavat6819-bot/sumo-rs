@@ -1,9 +1,7 @@
 //! Port of utils/router/CHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use super::ch_builder::{e_id, e_numerical_id, std_pop_heap, std_push_heap};
-use super::sumo_abstract_router::SUMOAbstractRouter_Prohibitions;
-use utils::common::time::SUMOTIME_MAX;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `int Unidirectional::ConnectionVector`
 pub type Unidirectional_ConnectionVector = Vec<CHBuilder_Connection>;
@@ -55,7 +53,7 @@ impl<E, V> std::ops::DerefMut for CHRouter<E, V> {
     }
 }
 
-impl<E, V> CHRouter<E, V> {
+impl<E: RouterEdge<V>, V> CHRouter<E, V> {
     /// C++: `void CHRouter::CHRouter<E, V>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOVehicleClass, SUMOTime, const bool, const bool)`
     /// Constructor
     // CHRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation operation,
@@ -105,19 +103,8 @@ impl<E, V> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        Self {
-            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
-            myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
-            myForwardSearch: CHRouter_Unidirectional::new(edges, true),
-            myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
-            myHierarchyBuilder: Ptr::null(),
-            myHierarchy: hierarchy,
-            myWeightPeriod: SUMOTIME_MAX,
-            myValidUntil: SUMOTIME_MAX,
-            mySVC: svc,
-            _p: std::marker::PhantomData,
-        }
+    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        todo!("port CHRouter::CHRouter<E, V>")
     }
 
     /// C++: `void CHRouter::~CHRouter<E, V>()` [virtual]
