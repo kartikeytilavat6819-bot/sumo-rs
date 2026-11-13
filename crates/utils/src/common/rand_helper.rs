@@ -2,6 +2,9 @@
 //! random sequences are bit-identical to the C++ build.
 use std::cell::RefCell;
 
+use crate::options::option::SumoOption;
+use crate::options::options_cont::OptionsCont;
+
 pub fn splitmix64(seed: u64) -> u64 {
     let mut z = seed.wrapping_add(0x9e3779b97f4a7c15);
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -188,6 +191,19 @@ pub fn init_rand(rng: Option<&mut SumoRNG>, random: bool, seed: i32) {
         Some(r) => r.set_seed(s),
         None => with_default(|r| r.set_seed(s)),
     }
+}
+
+/// C++: `void RandHelper::insertRandOptions(OptionsCont& oc)`
+pub fn insert_rand_options(oc: &mut OptionsCont) {
+    oc.add_option_sub_topic("Random Number");
+
+    oc.do_register("random", SumoOption::bool(false));
+    oc.add_synonyme("random", "abs-rand", true);
+    oc.add_description("random", "Random Number", "Initialises the random number generator with the current system time");
+
+    oc.do_register("seed", SumoOption::integer(23423));
+    oc.add_synonyme("seed", "srand", true);
+    oc.add_description("seed", "Random Number", "Initialises the random number generator with the given value");
 }
 
 pub fn rand_hash(x: i64) -> f64 {

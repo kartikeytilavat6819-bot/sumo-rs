@@ -149,9 +149,8 @@ impl std::ops::DerefMut for NLHandler {
 
 impl NLHandler {
     /// C++ `SUMOSAXHandler::getFileName()` (inherited through `SUMORouteHandler`)
-    // shortcut: SUMOSAXHandler base is Unmapped and NLHandler does not implement SaxHandler, so the file name is unreachable, upgrade when SUMORouteHandler.base is ported
     pub fn get_file_name(&self) -> &str {
-        panic!("SUMOSAXHandler::getFileName not ported");
+        self.base.base.base.get_file_name()
     }
 
     /// C++: `void NLHandler::NLHandler(const std::string &, MSNet &, NLDetectorBuilder &, NLTriggerBuilder &, NLEdgeControlBuilder &, NLJunctionControlBuilder &)`
@@ -3732,4 +3731,12 @@ impl NLShapeHandler {
 
 impl utils::xml::generic_sax_handler::SaxHandler for NLHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_start_element(element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_end_element(element);
+        Ok(())
+    }
 }
