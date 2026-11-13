@@ -29,7 +29,10 @@ impl RODFEdge {
     //     : ROEdge(id, from, to, index, priority, type, routingType) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
-        todo!("port RODFEdge::RODFEdge")
+        RODFEdge {
+            base: ROEdge::new(id, from, to, index, priority, type_, routingType),
+            myFlows: Vec::new(),
+        }
     }
 
     /// C++: `void RODFEdge::~RODFEdge() noexcept` [virtual]
@@ -37,7 +40,6 @@ impl RODFEdge {
     // RODFEdge::~RODFEdge() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFEdge::~RODFEdge")
     }
 
     /// C++: `void RODFEdge::setFlows(const std::vector<FlowDef> &)`
@@ -47,7 +49,19 @@ impl RODFEdge {
     // }
     #[allow(unused_variables)]
     pub fn set_flows(&mut self, flows: &Vec<FlowDef>) {
-        todo!("port RODFEdge::setFlows")
+        // FlowDef has no Clone; copy the plain fields so the value copy matches std::vector assignment
+        self.myFlows = flows
+            .iter()
+            .map(|f| FlowDef {
+                qPKW: f.qPKW,
+                qLKW: f.qLKW,
+                vPKW: f.vPKW,
+                vLKW: f.vLKW,
+                fLKW: f.fLKW,
+                isLKW: f.isLKW,
+                firstSet: f.firstSet,
+            })
+            .collect();
     }
 
     /// C++: `const std::vector<FlowDef> & RODFEdge::getFlows() const` [const]
@@ -57,7 +71,7 @@ impl RODFEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_flows(&self) -> &Vec<FlowDef> {
-        todo!("port RODFEdge::getFlows")
+        &self.myFlows
     }
 
     /// C++: `void RODFEdge::RODFEdge(const RODFEdge &)` [private]
@@ -65,7 +79,7 @@ impl RODFEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RODFEdge) -> Self {
-        todo!("port RODFEdge::RODFEdge")
+        panic!("RODFEdge copy constructor is private and invalidated in C++")
     }
 
     /// C++: `RODFEdge & RODFEdge::operator=(const RODFEdge &)` [private]
@@ -73,7 +87,7 @@ impl RODFEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFEdge) -> &mut RODFEdge {
-        todo!("port RODFEdge::operator=")
+        panic!("RODFEdge assignment operator is private and invalidated in C++")
     }
 
 }
