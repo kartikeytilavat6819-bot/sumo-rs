@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Zeitschrittfaktor {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Zeitschrittfaktor::NIVissimSingleTypeParser_Zeitschrittfaktor")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Zeitschrittfaktor::~NIVissimSingleTypeParser_Zeitschrittfaktor() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Zeitschrittfaktor {
     // NIVissimSingleTypeParser_Zeitschrittfaktor::~NIVissimSingleTypeParser_Zeitschrittfaktor() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Zeitschrittfaktor::~NIVissimSingleTypeParser_Zeitschrittfaktor")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Zeitschrittfaktor::parse(std::istream &)` [virtual]
@@ -46,8 +46,8 @@ impl NIVissimSingleTypeParser_Zeitschrittfaktor {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Zeitschrittfaktor::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        true
     }
 
 }

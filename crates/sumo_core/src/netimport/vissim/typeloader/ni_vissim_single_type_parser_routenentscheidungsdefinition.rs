@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Routenentscheidungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Routenentscheidungsdefinition::NIVissimSingleTypeParser_Routenentscheidungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Routenentscheidungsdefinition::~NIVissimSingleTypeParser_Routenentscheidungsdefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Routenentscheidungsdefinition {
     // NIVissimSingleTypeParser_Routenentscheidungsdefinition::~NIVissimSingleTypeParser_Routenentscheidungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Routenentscheidungsdefinition::~NIVissimSingleTypeParser_Routenentscheidungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Routenentscheidungsdefinition::parse(std::istream &)` [virtual]
@@ -65,8 +65,30 @@ impl NIVissimSingleTypeParser_Routenentscheidungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Routenentscheidungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = String::new();
+        while tag != "fahrzeugklassen" {
+            tag = self.my_read(from);
+        }
+        loop {
+            while tag != "DATAEND" || tag == "route" {
+                if tag == "route" {
+                    while tag != "strecke" {
+                        tag = self.my_read(from);
+                    }
+                    tag = self.read_end_secure(from, "");
+                } else {
+                    tag = self.read_end_secure(from, "");
+                }
+            }
+            if tag != "DATAEND" {
+                tag = self.read_end_secure(from, "");
+            }
+            if tag == "DATAEND" {
+                break;
+            }
+        }
+        true
     }
 
 }
