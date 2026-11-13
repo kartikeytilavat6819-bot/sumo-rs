@@ -709,7 +709,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn on_depart(&mut self) {
-        todo!("port SUMOVehicle::onDepart")
+        (self.vt.on_depart)(self)
     }
 
     /// C++: `bool SUMOVehicle::isOnRoad() const` [const, virtual, pure virtual]
@@ -725,7 +725,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_idling(&self) -> bool {
-        todo!("port SUMOVehicle::isIdling")
+        (self.vt.is_idling)(self)
     }
 
     /// C++: `bool SUMOVehicle::isFrontOnLane(const MSLane *) const` [const, virtual, pure virtual]
@@ -733,7 +733,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_front_on_lane(&self, arg0: Ptr<MSLane>) -> bool {
-        todo!("port SUMOVehicle::isFrontOnLane")
+        (self.vt.is_front_on_lane)(self, arg0)
     }
 
     /// C++: `bool SUMOVehicle::isParking() const` [const, virtual, pure virtual]
@@ -741,7 +741,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_parking(&self) -> bool {
-        todo!("port SUMOVehicle::isParking")
+        (self.vt.is_parking)(self)
     }
 
     /// C++: `bool SUMOVehicle::isRemoteControlled() const` [const, virtual, pure virtual]
@@ -749,7 +749,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_remote_controlled(&self) -> bool {
-        todo!("port SUMOVehicle::isRemoteControlled")
+        (self.vt.is_remote_controlled)(self)
     }
 
     /// C++: `bool SUMOVehicle::wasRemoteControlled(SUMOTime) const` [const, virtual, pure virtual]
@@ -757,7 +757,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn was_remote_controlled(&self, lookBack: SUMOTime) -> bool {
-        todo!("port SUMOVehicle::wasRemoteControlled")
+        (self.vt.was_remote_controlled)(self, lookBack)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getDeparture() const` [const, virtual, pure virtual]
@@ -781,7 +781,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self) -> f64 {
-        todo!("port SUMOVehicle::getArrivalPos")
+        (self.vt.get_arrival_pos)(self)
     }
 
     /// C++: `void SUMOVehicle::setArrivalPos(double)` [virtual, pure virtual]
@@ -789,7 +789,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_arrival_pos(&mut self, arrivalPos: f64) {
-        todo!("port SUMOVehicle::setArrivalPos")
+        (self.vt.set_arrival_pos)(self, arrivalPos)
     }
 
     /// C++: `bool SUMOVehicle::hasDeparted() const` [const, virtual, pure virtual]
@@ -805,7 +805,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_edge(&self) -> i32 {
-        todo!("port SUMOVehicle::getDepartEdge")
+        (self.vt.get_depart_edge)(self)
     }
 
     /// C++: `double SUMOVehicle::getOdometer() const` [const, virtual, pure virtual]
@@ -821,7 +821,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_number_reroutes(&self) -> i32 {
-        todo!("port SUMOVehicle::getNumberReroutes")
+        (self.vt.get_number_reroutes)(self)
     }
 
     /// C++: `bool SUMOVehicle::allowsBoarding(const MSTransportable *) const` [const, virtual, pure virtual]
@@ -829,7 +829,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn allows_boarding(&self, t: Ptr<MSTransportable>) -> bool {
-        todo!("port SUMOVehicle::allowsBoarding")
+        (self.vt.allows_boarding)(self, t)
     }
 
     /// C++: `void SUMOVehicle::addTransportable(MSTransportable *)` [virtual, pure virtual]
@@ -837,7 +837,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
-        todo!("port SUMOVehicle::addTransportable")
+        (self.vt.add_transportable)(self, transportable)
     }
 
     /// C++: `int SUMOVehicle::getPersonNumber() const` [const, virtual, pure virtual]
@@ -845,7 +845,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_person_number(&self) -> i32 {
-        todo!("port SUMOVehicle::getPersonNumber")
+        (self.vt.get_person_number)(self)
     }
 
     /// C++: `std::vector<std::string> SUMOVehicle::getPersonIDList() const` [const, virtual, pure virtual]
@@ -853,7 +853,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_person_id_list(&self) -> Vec<String> {
-        todo!("port SUMOVehicle::getPersonIDList")
+        (self.vt.get_person_id_list)(self)
     }
 
     /// C++: `int SUMOVehicle::getContainerNumber() const` [const, virtual, pure virtual]
@@ -861,7 +861,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_container_number(&self) -> i32 {
-        todo!("port SUMOVehicle::getContainerNumber")
+        (self.vt.get_container_number)(self)
     }
 
     /// C++: `void SUMOVehicle::removeTransportable(MSTransportable *)` [virtual, pure virtual]
