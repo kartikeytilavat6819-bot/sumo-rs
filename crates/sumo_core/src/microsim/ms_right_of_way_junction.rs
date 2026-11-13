@@ -193,7 +193,149 @@ impl MSRightOfWayJunction {
     // }
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        todo!("port MSRightOfWayJunction::postloadInit")
+        // shortcut: linkResponse.test(c) / linkFoes.test(c) read a std::bitset that MSLogicJunction::LinkBits (unit placeholder) cannot expose, and MSJunctionLogic is not virtually dispatched to MSBitSetLogic, so every bit reads as unset; upgrade when LinkBits is mapped to a typed bitset
+        fn link_bits_test(_bits: &MSLogicJunction_LinkBits, _c: i32) -> bool {
+            false
+        }
+        // inform links where they have to report approaching vehicles to
+        let mut requestPos: i32 = 0;
+        // going through the incoming lanes...
+        let mut maxNo: i32 = 0;
+        let mut sortedLinks: Vec<(Ptr<MSLane>, Ptr<MSLink>)> = Vec::new();
+        let incomingLanes: Vec<Ptr<MSLane>> = self.myIncomingLanes.clone();
+        for lane in incomingLanes.iter().copied() {
+            // ... set information for every link
+            for link in lane.get_link_cont().iter().copied() {
+                if link.get_lane().is_walking_area() || (lane.is_walking_area() && !link.get_lane().is_crossing()) {
+                    continue;
+                }
+                sortedLinks.push((lane, link));
+                maxNo += 1;
+            }
+        }
+
+        let hasFoes = self.myLogic.has_foes();
+        for lane in incomingLanes.iter().copied() {
+            // ... set information for every link
+            let mut walkingAreaFoe: Ptr<MSLane> = Ptr::null();
+            for link in lane.get_link_cont().iter().copied() {
+                if link.get_lane().is_walking_area() {
+                    if lane.get_permissions() != SVC_PEDESTRIAN {
+                        // vehicular lane connects to a walkingarea
+                        walkingAreaFoe = link.get_lane();
+                    }
+                    continue;
+                } else if lane.is_walking_area() && !link.get_lane().is_crossing() {
+                    continue;
+                }
+                if self.myLogic.get_logic_size() <= requestPos {
+                    std::panic::panic_any(ProcessError::new(utils::tlf!(
+                        "Found invalid logic position of a link for junction '%' (%, max %) -> (network error)",
+                        self.get_id(),
+                        requestPos,
+                        self.myLogic.get_logic_size()
+                    )));
+                }
+                let linkResponse = self.myLogic.get_response_for(requestPos);
+                let linkFoes = self.myLogic.get_foes_for(requestPos);
+                let cont = self.myLogic.get_is_cont(requestPos);
+                for c in 0..maxNo {
+                    if link_bits_test(linkResponse, c) {
+                        let foe = sortedLinks[c as usize].1;
+                        self.myLinkFoeLinks.entry(link).or_default().push(foe);
+                        if MSGlobals::using_internal_lanes() && !foe.get_via_lane().is_null() {
+                            let foeExitLink = foe.get_via_lane().get_link_cont()[0];
+                            // add foe links after an internal junction
+                            if !foeExitLink.get_via_lane().is_null() {
+                                self.myLinkFoeLinks.entry(link).or_default().push(foeExitLink);
+                            }
+                        }
+                    }
+                }
+                let mut foes: Vec<Ptr<MSLink>> = Vec::new();
+                for c in 0..maxNo {
+                    if link_bits_test(linkFoes, c) {
+                        let foe = sortedLinks[c as usize].1;
+                        foes.push(foe);
+                        let l = foe.get_via_lane();
+                        if l.is_null() {
+                            continue;
+                        }
+                        // add foe links after an internal junction
+                        for vLink in l.get_link_cont().iter().copied() {
+                            if !vLink.get_via_lane().is_null() {
+                                foes.push(vLink);
+                            }
+                        }
+                    }
+                }
+
+                if MSGlobals::using_internal_lanes() && !self.myInternalLanes.is_empty() {
+                    let mut li: usize = 0;
+                    for c in 0..sortedLinks.len() {
+                        if sortedLinks[c].1.get_lane().is_null() {
+                            // dead end
+                            continue;
+                        }
+                        if link_bits_test(linkFoes, c as i32) {
+                            // vehicles waiting at an internal junction can mostly be ignored. The main exceptions are:
+                            // - they are on the main road and the current link is from a side road
+                            // - its a tls and the current link is on a side road relative to the internal junction
+                            // both cases are encoded in a positive linkResponse
+                            // (case 2 only if netconvert option --tls.ignore-internal-junction-jam was not set)
+                            let inLane = self.myInternalLanes[li];
+                            self.myLinkFoeInternalLanes.entry(link).or_default().push(inLane);
+                            if link.get_lane().is_crossing()
+                                || link_bits_test(linkResponse, c as i32)
+                                || sortedLinks[c].1.is_indirect()
+                                || link.get_lane().get_bidi_lane() == sortedLinks[c].1.get_lane_before()
+                            {
+                                let l = inLane.get_incoming_lanes();
+                                if l.len() == 1 && l[0].lane.get_edge().is_internal() {
+                                    let laneBefore = l[0].lane;
+                                    self.myLinkFoeInternalLanes.entry(link).or_default().push(laneBefore);
+                                }
+                            }
+                        }
+                        li += 1;
+                    }
+                }
+                let foeLinks: Vec<Ptr<MSLink>> = self.myLinkFoeLinks.entry(link).or_default().clone();
+                let foeInternalLanes: Vec<Ptr<MSLane>> = self.myLinkFoeInternalLanes.entry(link).or_default().clone();
+                link.m().set_request_information(requestPos, hasFoes, cont, &foeLinks, &foeInternalLanes, Ptr::null());
+                // the exit link for a link before an internal junction is handled in MSInternalJunction
+                // so we need to skip if cont=true
+                if MSGlobals::using_internal_lanes() && !link.get_via_lane().is_null() && !cont {
+                    let viaLane = link.get_via_lane();
+                    let exitLink = viaLane.get_link_cont()[0];
+                    let noLinks: Vec<Ptr<MSLink>> = Vec::new();
+                    exitLink.m().set_request_information(requestPos, false, false, &noLinks, &foeInternalLanes, viaLane);
+                    let exitLane = exitLink.get_lane();
+                    for ili in exitLane.get_incoming_lanes().iter() {
+                        if ili.lane.is_walking_area() {
+                            exitLink.m().add_walking_area_foe_exit(ili.lane);
+                            break;
+                        }
+                    }
+                }
+                // the exit link for a crossing is needed for the pedestrian model
+                if MSGlobals::using_internal_lanes() && link.get_lane().is_crossing() {
+                    let crossingLane = link.get_lane();
+                    let exitLink = crossingLane.get_link_cont()[0];
+                    let noLinks: Vec<Ptr<MSLink>> = Vec::new();
+                    exitLink.m().set_request_information(requestPos, false, false, &noLinks, &foeInternalLanes, crossingLane);
+                }
+                requestPos += 1;
+            }
+            if !walkingAreaFoe.is_null() && lane.get_link_cont().len() > 1 {
+                for link in lane.get_link_cont().iter().copied() {
+                    if !link.get_lane().is_walking_area() {
+                        let exitLink = link.get_via_lane().get_link_cont()[0];
+                        exitLink.m().add_walking_area_foe(walkingAreaFoe);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `const std::vector<MSLink *> & MSRightOfWayJunction::getFoeLinks(const MSLink *const) const` [const, virtual]
