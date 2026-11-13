@@ -2029,33 +2029,353 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
 fn ms_vehicle_of(v: &SUMOVehicle) -> &MSVehicle {
     Ptr::new(v).cast::<MSVehicle>().get().unwrap()
 }
+fn ms_vehicle_of_mut(v: &mut SUMOVehicle) -> &mut MSVehicle {
+    Ptr::from_mut(v).cast::<MSVehicle>().get_mut().unwrap()
+}
 fn ms_vehicle_get_route(v: &SUMOVehicle) -> &MSRoute {
     ms_vehicle_of(v).get_route()
 }
+
 fn ms_vehicle_get_departure(v: &SUMOVehicle) -> SUMOTime {
     ms_vehicle_of(v).get_departure()
 }
+
 fn ms_vehicle_get_depart_pos(v: &SUMOVehicle) -> f64 {
     ms_vehicle_of(v).get_depart_pos()
 }
+
 fn ms_vehicle_get_odometer(v: &SUMOVehicle) -> f64 {
     ms_vehicle_of(v).get_odometer()
 }
+
 fn ms_vehicle_has_departed(v: &SUMOVehicle) -> bool {
     ms_vehicle_of(v).has_departed()
 }
+
 fn ms_vehicle_is_stopped(v: &SUMOVehicle) -> bool {
     ms_vehicle_of(v).is_stopped()
 }
+
 fn ms_vehicle_get_length(v: &SUMOVehicle) -> f64 {
     ms_vehicle_of(v).get_length()
 }
+
 fn ms_vehicle_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
     ms_vehicle_of(v).get_current_edge()
 }
+
 fn ms_vehicle_is_on_road(v: &SUMOVehicle) -> bool {
     ms_vehicle_of(v).is_on_road()
 }
+
+fn ms_vehicle_get_lateral_position_on_lane(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_lateral_position_on_lane()
+}
+
+fn ms_vehicle_get_angle(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_angle()
+}
+
+fn ms_vehicle_get_route_ptr(v: &SUMOVehicle) -> ConstMSRoutePtr {
+    ms_vehicle_of(v).get_route_ptr()
+}
+
+fn ms_vehicle_get_route_position(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_route_position()
+}
+
+fn ms_vehicle_succ_edge(v: &SUMOVehicle, a0: i32) -> Ptr<MSEdge> {
+    ms_vehicle_of(v).succ_edge(a0)
+}
+
+fn ms_vehicle_get_reroute_origin(v: &SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_reroute_origin()
+}
+
+fn ms_vehicle_replace_route_edges(v: &mut SUMOVehicle, a0: &mut ConstMSEdgeVector, a1: f64, a2: f64, a3: &str, a4: bool, a5: bool, a6: bool, a7: Ptr<String>) -> bool {
+    ms_vehicle_of_mut(v).replace_route_edges(a0, a1, a2, a3, a4, a5, a6, a7)
+}
+
+fn ms_vehicle_reroute(v: &mut SUMOVehicle, a0: SUMOTime, a1: &str, a2: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, a3: bool, a4: bool, a5: bool, a6: Ptr<MSEdge>) -> bool {
+    ms_vehicle_of_mut(v).reroute(a0, a1, a2, a3, a4, a5, a6)
+}
+
+fn ms_vehicle_get_router_tt(v: &SUMOVehicle) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
+    ms_vehicle_of(v).get_router_tt()
+}
+
+fn ms_vehicle_has_valid_route(v: &SUMOVehicle, a0: &mut String, a1: ConstMSRoutePtr) -> bool {
+    ms_vehicle_of(v).has_valid_route(a0, a1)
+}
+
+fn ms_vehicle_has_valid_route_start(v: &mut SUMOVehicle, a0: &mut String) -> bool {
+    ms_vehicle_of_mut(v).has_valid_route_start(a0)
+}
+
+fn ms_vehicle_get_route_validity(v: &mut SUMOVehicle, a0: bool, a1: bool, a2: Ptr<String>) -> i32 {
+    ms_vehicle_of_mut(v).get_route_validity(a0, a1, a2)
+}
+
+fn ms_vehicle_get_current_route_edge(v: &SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_current_route_edge()
+}
+
+fn ms_vehicle_get_emission_parameters(v: &SUMOVehicle) -> Ptr<EnergyParams> {
+    Ptr::new(v).cast::<MSVehicle>().m().get_emission_parameters()
+}
+
+fn ms_vehicle_replace_parameter(v: &mut SUMOVehicle, a0: Ptr<SUMOVehicleParameter>) {
+    ms_vehicle_of_mut(v).replace_parameter(a0)
+}
+
+fn ms_vehicle_on_depart(v: &mut SUMOVehicle) {
+    ms_vehicle_of_mut(v).on_depart()
+}
+
+fn ms_vehicle_is_idling(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_idling()
+}
+
+fn ms_vehicle_is_front_on_lane(v: &SUMOVehicle, a0: Ptr<MSLane>) -> bool {
+    ms_vehicle_of(v).is_front_on_lane(a0)
+}
+
+fn ms_vehicle_is_parking(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_parking()
+}
+
+fn ms_vehicle_is_remote_controlled(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_remote_controlled()
+}
+
+fn ms_vehicle_was_remote_controlled(v: &SUMOVehicle, a0: SUMOTime) -> bool {
+    ms_vehicle_of(v).was_remote_controlled(a0)
+}
+
+fn ms_vehicle_get_arrival_pos(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_arrival_pos()
+}
+
+fn ms_vehicle_set_arrival_pos(v: &mut SUMOVehicle, a0: f64) {
+    ms_vehicle_of_mut(v).set_arrival_pos(a0)
+}
+
+fn ms_vehicle_get_depart_edge(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_depart_edge()
+}
+
+fn ms_vehicle_get_number_reroutes(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_number_reroutes()
+}
+
+fn ms_vehicle_allows_boarding(v: &SUMOVehicle, a0: Ptr<MSTransportable>) -> bool {
+    ms_vehicle_of(v).allows_boarding(a0)
+}
+
+fn ms_vehicle_add_transportable(v: &mut SUMOVehicle, a0: Ptr<MSTransportable>) {
+    ms_vehicle_of_mut(v).add_transportable(a0)
+}
+
+fn ms_vehicle_get_person_number(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_person_number()
+}
+
+fn ms_vehicle_get_person_id_list(v: &SUMOVehicle) -> Vec<String> {
+    ms_vehicle_of(v).get_person_id_list()
+}
+
+fn ms_vehicle_get_container_number(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_container_number()
+}
+
+fn ms_vehicle_remove_transportable(v: &mut SUMOVehicle, a0: Ptr<MSTransportable>) {
+    ms_vehicle_of_mut(v).remove_transportable(a0)
+}
+
+fn ms_vehicle_remove_transportable_mass(v: &mut SUMOVehicle, a0: Ptr<MSTransportable>) {
+    ms_vehicle_of_mut(v).remove_transportable_mass(a0)
+}
+
+fn ms_vehicle_get_persons(v: &SUMOVehicle) -> &Vec<Ptr<MSTransportable>> {
+    ms_vehicle_of(v).get_persons()
+}
+
+fn ms_vehicle_get_containers(v: &SUMOVehicle) -> &Vec<Ptr<MSTransportable>> {
+    ms_vehicle_of(v).get_containers()
+}
+
+fn ms_vehicle_add_stop(v: &mut SUMOVehicle, a0: &SUMOVehicleParameter_Stop, a1: &mut String, a2: SUMOTime, a3: Ptr<crate::microsim::ms_route::MSRouteIterator>) -> bool {
+    ms_vehicle_of_mut(v).add_stop(a0, a1, a2, a3)
+}
+
+fn ms_vehicle_get_stop_indices(v: &SUMOVehicle) -> Vec<(i32, f64)> {
+    ms_vehicle_of(v).get_stop_indices()
+}
+
+fn ms_vehicle_is_line_stop(v: &SUMOVehicle, a0: f64) -> bool {
+    ms_vehicle_of(v).is_line_stop(a0)
+}
+
+fn ms_vehicle_abort_next_stop(v: &mut SUMOVehicle, a0: i32) -> bool {
+    ms_vehicle_of_mut(v).abort_next_stop(a0)
+}
+
+fn ms_vehicle_get_next_parking_area(v: &mut SUMOVehicle) -> Ptr<MSParkingArea> {
+    ms_vehicle_of_mut(v).get_next_parking_area()
+}
+
+fn ms_vehicle_replace_parking_area(v: &mut SUMOVehicle, a0: Ptr<MSParkingArea>, a1: &mut String) -> bool {
+    ms_vehicle_of_mut(v).replace_parking_area(a0, a1)
+}
+
+fn ms_vehicle_get_parking_badges(v: &SUMOVehicle) -> &Vec<String> {
+    ms_vehicle_of(v).get_parking_badges()
+}
+
+fn ms_vehicle_remaining_stop_duration(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).remaining_stop_duration()
+}
+
+fn ms_vehicle_is_stopped_triggered(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_stopped_triggered()
+}
+
+fn ms_vehicle_is_stopped_parking(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_stopped_parking()
+}
+
+fn ms_vehicle_is_stopped_in_range(v: &SUMOVehicle, a0: f64, a1: f64, a2: bool) -> bool {
+    ms_vehicle_of(v).is_stopped_in_range(a0, a1, a2)
+}
+
+fn ms_vehicle_stops_at(v: &SUMOVehicle, a0: Ptr<MSStoppingPlace>) -> bool {
+    ms_vehicle_of(v).stops_at(a0)
+}
+
+fn ms_vehicle_stops_at_edge(v: &SUMOVehicle, a0: Ptr<MSEdge>) -> bool {
+    ms_vehicle_of(v).stops_at_edge(a0)
+}
+
+fn ms_vehicle_has_stops(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).has_stops()
+}
+
+fn ms_vehicle_get_stops(v: &SUMOVehicle) -> &VecDeque<MSStop> {
+    ms_vehicle_of(v).get_stops()
+}
+
+fn ms_vehicle_get_next_stop(v: &SUMOVehicle) -> &MSStop {
+    ms_vehicle_of(v).get_next_stop()
+}
+
+fn ms_vehicle_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
+    ms_vehicle_of_mut(v).get_next_stop_mutable()
+}
+
+fn ms_vehicle_unregister_waiting(v: &mut SUMOVehicle) {
+    ms_vehicle_of_mut(v).unregister_waiting()
+}
+
+fn ms_vehicle_get_next_stop_parameter(v: &SUMOVehicle) -> Ptr<SUMOVehicleParameter_Stop> {
+    ms_vehicle_of(v).get_next_stop_parameter()
+}
+
+fn ms_vehicle_get_stop_duration(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_stop_duration()
+}
+
+fn ms_vehicle_add_traci_stop(v: &mut SUMOVehicle, a0: SUMOVehicleParameter_Stop, a1: &mut String) -> bool {
+    ms_vehicle_of_mut(v).add_traci_stop(a0, a1)
+}
+
+fn ms_vehicle_set_chosen_speed_factor(v: &mut SUMOVehicle, a0: f64) {
+    ms_vehicle_of_mut(v).set_chosen_speed_factor(a0)
+}
+
+fn ms_vehicle_get_depart_delay(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_depart_delay()
+}
+
+fn ms_vehicle_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_time_loss()
+}
+
+fn ms_vehicle_get_brake_gap(v: &SUMOVehicle, a0: bool) -> f64 {
+    ms_vehicle_of(v).get_brake_gap(a0)
+}
+
+fn ms_vehicle_get_impatience(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_impatience()
+}
+
+fn ms_vehicle_get_devices(v: &SUMOVehicle) -> &Vec<Ptr<MSVehicleDevice>> {
+    ms_vehicle_of(v).get_devices()
+}
+
+fn ms_vehicle_is_rail(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_rail()
+}
+
+fn ms_vehicle_get_last_action_time(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_last_action_time()
+}
+
+fn ms_vehicle_get_bounding_box(v: &SUMOVehicle, a0: f64) -> PositionVector {
+    ms_vehicle_of(v).get_bounding_box(a0)
+}
+
+fn ms_vehicle_get_scope_lock(v: &mut SUMOVehicle) -> Box<Unmapped> {
+    ms_vehicle_of_mut(v).get_scope_lock()
+}
+
+fn ms_vehicle_remember_blocked_parking_area(v: &mut SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: bool) {
+    ms_vehicle_of_mut(v).remember_blocked_parking_area(a0, a1)
+}
+
+fn ms_vehicle_saw_blocked_parking_area(v: &SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: bool) -> SUMOTime {
+    ms_vehicle_of(v).saw_blocked_parking_area(a0, a1)
+}
+
+fn ms_vehicle_remember_parking_area_score(v: &mut SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: &str) {
+    ms_vehicle_of_mut(v).remember_parking_area_score(a0, a1)
+}
+
+fn ms_vehicle_reset_parking_area_scores(v: &mut SUMOVehicle) {
+    ms_vehicle_of_mut(v).reset_parking_area_scores()
+}
+
+fn ms_vehicle_get_number_parking_reroutes(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_number_parking_reroutes()
+}
+
+fn ms_vehicle_set_number_parking_reroutes(v: &mut SUMOVehicle, a0: i32) {
+    ms_vehicle_of_mut(v).set_number_parking_reroutes(a0)
+}
+
+fn ms_vehicle_remember_blocked_charging_station(v: &mut SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: bool) {
+    ms_vehicle_of_mut(v).remember_blocked_charging_station(a0, a1)
+}
+
+fn ms_vehicle_saw_blocked_charging_station(v: &SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: bool) -> SUMOTime {
+    ms_vehicle_of(v).saw_blocked_charging_station(a0, a1)
+}
+
+fn ms_vehicle_remember_charging_station_score(v: &mut SUMOVehicle, a0: Ptr<MSStoppingPlace>, a1: &str) {
+    ms_vehicle_of_mut(v).remember_charging_station_score(a0, a1)
+}
+
+fn ms_vehicle_reset_charging_station_scores(v: &mut SUMOVehicle) {
+    ms_vehicle_of_mut(v).reset_charging_station_scores()
+}
+
+fn ms_vehicle_save_state(v: &mut SUMOVehicle, a0: &mut OutputDevice) {
+    ms_vehicle_of_mut(v).save_state(a0)
+}
+
+fn ms_vehicle_load_state(v: &mut SUMOVehicle, a0: &SUMOSAXAttributes, a1: SUMOTime) {
+    ms_vehicle_of_mut(v).load_state(a0, a1)
+}
+
 static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: ms_vehicle_get_route,
     get_departure: ms_vehicle_get_departure,
@@ -2066,6 +2386,83 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_length: ms_vehicle_get_length,
     get_current_edge: ms_vehicle_get_current_edge,
     is_on_road: ms_vehicle_is_on_road,
+    get_lateral_position_on_lane: ms_vehicle_get_lateral_position_on_lane,
+    get_angle: ms_vehicle_get_angle,
+    get_route_ptr: ms_vehicle_get_route_ptr,
+    get_route_position: ms_vehicle_get_route_position,
+    succ_edge: ms_vehicle_succ_edge,
+    get_reroute_origin: ms_vehicle_get_reroute_origin,
+    replace_route_edges: ms_vehicle_replace_route_edges,
+    reroute: ms_vehicle_reroute,
+    get_router_tt: ms_vehicle_get_router_tt,
+    has_valid_route: ms_vehicle_has_valid_route,
+    has_valid_route_start: ms_vehicle_has_valid_route_start,
+    get_route_validity: ms_vehicle_get_route_validity,
+    get_current_route_edge: ms_vehicle_get_current_route_edge,
+    get_emission_parameters: ms_vehicle_get_emission_parameters,
+    replace_parameter: ms_vehicle_replace_parameter,
+    on_depart: ms_vehicle_on_depart,
+    is_idling: ms_vehicle_is_idling,
+    is_front_on_lane: ms_vehicle_is_front_on_lane,
+    is_parking: ms_vehicle_is_parking,
+    is_remote_controlled: ms_vehicle_is_remote_controlled,
+    was_remote_controlled: ms_vehicle_was_remote_controlled,
+    get_arrival_pos: ms_vehicle_get_arrival_pos,
+    set_arrival_pos: ms_vehicle_set_arrival_pos,
+    get_depart_edge: ms_vehicle_get_depart_edge,
+    get_number_reroutes: ms_vehicle_get_number_reroutes,
+    allows_boarding: ms_vehicle_allows_boarding,
+    add_transportable: ms_vehicle_add_transportable,
+    get_person_number: ms_vehicle_get_person_number,
+    get_person_id_list: ms_vehicle_get_person_id_list,
+    get_container_number: ms_vehicle_get_container_number,
+    remove_transportable: ms_vehicle_remove_transportable,
+    remove_transportable_mass: ms_vehicle_remove_transportable_mass,
+    get_persons: ms_vehicle_get_persons,
+    get_containers: ms_vehicle_get_containers,
+    add_stop: ms_vehicle_add_stop,
+    get_stop_indices: ms_vehicle_get_stop_indices,
+    is_line_stop: ms_vehicle_is_line_stop,
+    abort_next_stop: ms_vehicle_abort_next_stop,
+    get_next_parking_area: ms_vehicle_get_next_parking_area,
+    replace_parking_area: ms_vehicle_replace_parking_area,
+    get_parking_badges: ms_vehicle_get_parking_badges,
+    remaining_stop_duration: ms_vehicle_remaining_stop_duration,
+    is_stopped_triggered: ms_vehicle_is_stopped_triggered,
+    is_stopped_parking: ms_vehicle_is_stopped_parking,
+    is_stopped_in_range: ms_vehicle_is_stopped_in_range,
+    stops_at: ms_vehicle_stops_at,
+    stops_at_edge: ms_vehicle_stops_at_edge,
+    has_stops: ms_vehicle_has_stops,
+    get_stops: ms_vehicle_get_stops,
+    get_next_stop: ms_vehicle_get_next_stop,
+    get_next_stop_mutable: ms_vehicle_get_next_stop_mutable,
+    unregister_waiting: ms_vehicle_unregister_waiting,
+    get_next_stop_parameter: ms_vehicle_get_next_stop_parameter,
+    get_stop_duration: ms_vehicle_get_stop_duration,
+    add_traci_stop: ms_vehicle_add_traci_stop,
+    set_chosen_speed_factor: ms_vehicle_set_chosen_speed_factor,
+    get_depart_delay: ms_vehicle_get_depart_delay,
+    get_time_loss: ms_vehicle_get_time_loss,
+    get_brake_gap: ms_vehicle_get_brake_gap,
+    get_impatience: ms_vehicle_get_impatience,
+    get_devices: ms_vehicle_get_devices,
+    is_rail: ms_vehicle_is_rail,
+    get_last_action_time: ms_vehicle_get_last_action_time,
+    get_bounding_box: ms_vehicle_get_bounding_box,
+    get_scope_lock: ms_vehicle_get_scope_lock,
+    remember_blocked_parking_area: ms_vehicle_remember_blocked_parking_area,
+    saw_blocked_parking_area: ms_vehicle_saw_blocked_parking_area,
+    remember_parking_area_score: ms_vehicle_remember_parking_area_score,
+    reset_parking_area_scores: ms_vehicle_reset_parking_area_scores,
+    get_number_parking_reroutes: ms_vehicle_get_number_parking_reroutes,
+    set_number_parking_reroutes: ms_vehicle_set_number_parking_reroutes,
+    remember_blocked_charging_station: ms_vehicle_remember_blocked_charging_station,
+    saw_blocked_charging_station: ms_vehicle_saw_blocked_charging_station,
+    remember_charging_station_score: ms_vehicle_remember_charging_station_score,
+    reset_charging_station_scores: ms_vehicle_reset_charging_station_scores,
+    save_state: ms_vehicle_save_state,
+    load_state: ms_vehicle_load_state,
 };
 
 impl MSVehicle {
