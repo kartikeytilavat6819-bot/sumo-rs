@@ -2026,10 +2026,37 @@ static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     get_parameter: ms_vehicle_get_parameter,
     get_edge: ms_vehicle_get_edge,
     get_position: ms_vehicle_get_position,
-    get_speed: ms_vehicle_get_speed,
-    get_lane: ms_vehicle_get_lane,
     get_numerical_id: ms_vehicle_get_numerical_id,
+    get_random_seed: ms_vehicle_get_random_seed,
+    get_vehicle_type: ms_vehicle_get_vehicle_type,
+    get_v_type_parameter: ms_vehicle_get_v_type_parameter,
+    replace_vehicle_type: ms_vehicle_replace_vehicle_type,
+    get_rng: ms_vehicle_get_rng,
+    get_rng_index: ms_vehicle_get_rng_index,
+    is_stopped: ms_vehicle_is_stopped_sto,
+    get_current_edge: ms_vehicle_get_current_edge_sto,
+    get_next_edge_ptr: ms_vehicle_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: ms_vehicle_get_upcoming_edge_i_ds,
+    get_back_lane: ms_vehicle_get_back_lane,
+    get_route_position: ms_vehicle_get_route_position_sto,
+    get_reroute_destination: ms_vehicle_get_reroute_destination,
+    replace_route: ms_vehicle_replace_route,
+    get_slope: ms_vehicle_get_slope,
+    get_chosen_speed_factor: ms_vehicle_get_chosen_speed_factor,
     get_v_class: ms_vehicle_get_v_class,
+    get_routing_mode: ms_vehicle_get_routing_mode,
+    set_routing_mode: ms_vehicle_set_routing_mode,
+    get_max_speed: ms_vehicle_get_max_speed,
+    get_waiting_time: ms_vehicle_get_waiting_time,
+    get_previous_speed: ms_vehicle_get_previous_speed,
+    get_acceleration: ms_vehicle_get_acceleration,
+    get_position_on_lane: ms_vehicle_get_position_on_lane,
+    get_back_position_on_lane: ms_vehicle_get_back_position_on_lane,
+    get_angle: ms_vehicle_get_angle_sto,
+    has_arrived: ms_vehicle_has_arrived,
+    has_influencer: ms_vehicle_has_influencer,
+    is_selected: ms_vehicle_is_selected,
+    get_device: ms_vehicle_get_device,
 };
 
 // C++ virtual overrides of SUMOVehicle, dispatched through SUMOVehicle::vt
@@ -2051,6 +2078,104 @@ fn ms_vehicle_get_speed(o: &SUMOTrafficObject) -> f64 {
 }
 fn ms_vehicle_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
     ms_vehicle_ref(o).get_position(offset)
+}
+
+fn ms_vehicle_ref_mut(o: &mut SUMOTrafficObject) -> &mut MSVehicle {
+    Ptr::from_mut(o).cast::<MSVehicle>().get_mut().unwrap()
+}
+
+fn ms_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    ms_vehicle_ref(o).get_numerical_id()
+}
+fn ms_vehicle_get_random_seed(o: &SUMOTrafficObject) -> i64 {
+    ms_vehicle_ref(o).get_random_seed()
+}
+fn ms_vehicle_get_vehicle_type(o: &SUMOTrafficObject) -> &MSVehicleType {
+    ms_vehicle_ref(o).get_vehicle_type()
+}
+fn ms_vehicle_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    ms_vehicle_ref(o).get_v_type_parameter()
+}
+fn ms_vehicle_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    ms_vehicle_ref_mut(o).replace_vehicle_type(type_)
+}
+fn ms_vehicle_get_rng(o: &SUMOTrafficObject) -> Ptr<SumoRNG> {
+    ms_vehicle_ref(o).get_rng()
+}
+fn ms_vehicle_get_rng_index(o: &SUMOTrafficObject) -> i32 {
+    ms_vehicle_ref(o).get_rng_index()
+}
+fn ms_vehicle_is_stopped_sto(o: &SUMOTrafficObject) -> bool {
+    ms_vehicle_ref(o).is_stopped()
+}
+fn ms_vehicle_get_current_edge_sto(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_vehicle_ref(o).get_current_edge()
+}
+fn ms_vehicle_get_next_edge_ptr(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_vehicle_ref(o).get_next_edge_ptr()
+}
+fn ms_vehicle_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    ms_vehicle_ref(o).get_upcoming_edge_i_ds()
+}
+fn ms_vehicle_get_back_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    ms_vehicle_ref(o).get_back_lane()
+}
+fn ms_vehicle_get_route_position_sto(o: &SUMOTrafficObject) -> i32 {
+    ms_vehicle_ref(o).get_route_position()
+}
+fn ms_vehicle_get_reroute_destination(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_vehicle_ref(o).get_reroute_destination()
+}
+fn ms_vehicle_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    ms_vehicle_ref_mut(o).replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn ms_vehicle_get_slope(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_slope()
+}
+fn ms_vehicle_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_chosen_speed_factor()
+}
+fn ms_vehicle_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    ms_vehicle_ref(o).get_v_class()
+}
+fn ms_vehicle_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
+    ms_vehicle_ref(o).get_routing_mode()
+}
+fn ms_vehicle_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    ms_vehicle_ref_mut(o).set_routing_mode(value)
+}
+fn ms_vehicle_get_max_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_max_speed()
+}
+fn ms_vehicle_get_waiting_time(o: &SUMOTrafficObject, accumulated: bool) -> SUMOTime {
+    ms_vehicle_ref(o).get_waiting_time(accumulated)
+}
+fn ms_vehicle_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_previous_speed()
+}
+fn ms_vehicle_get_acceleration(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_acceleration()
+}
+fn ms_vehicle_get_position_on_lane(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_position_on_lane()
+}
+fn ms_vehicle_get_back_position_on_lane(o: &SUMOTrafficObject, lane: Ptr<MSLane>) -> f64 {
+    ms_vehicle_ref(o).get_back_position_on_lane(lane)
+}
+fn ms_vehicle_get_angle_sto(o: &SUMOTrafficObject) -> f64 {
+    ms_vehicle_ref(o).get_angle()
+}
+fn ms_vehicle_has_arrived(o: &SUMOTrafficObject) -> bool {
+    ms_vehicle_ref(o).has_arrived()
+}
+fn ms_vehicle_has_influencer(o: &SUMOTrafficObject) -> bool {
+    ms_vehicle_ref(o).has_influencer()
+}
+fn ms_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
+    ms_vehicle_ref(o).is_selected()
+}
+fn ms_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
+    ms_vehicle_ref(o).get_device(type_)
 }
 
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {

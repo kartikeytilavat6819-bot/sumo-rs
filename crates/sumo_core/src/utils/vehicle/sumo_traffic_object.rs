@@ -21,7 +21,36 @@ pub struct SUMOTrafficObjectVt {
     pub get_speed: fn(&SUMOTrafficObject) -> f64,
     pub get_position: fn(&SUMOTrafficObject, f64) -> Position,
     pub get_numerical_id: fn(&SUMOTrafficObject) -> SUMOTrafficObject_NumericalID,
+    pub get_random_seed: fn(&SUMOTrafficObject) -> i64,
+    pub get_vehicle_type: for<'a> fn(&'a SUMOTrafficObject) -> &'a MSVehicleType,
+    pub get_v_type_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVTypeParameter,
+    pub replace_vehicle_type: fn(&mut SUMOTrafficObject, Ptr<MSVehicleType>),
+    pub get_rng: fn(&SUMOTrafficObject) -> Ptr<SumoRNG>,
+    pub get_rng_index: fn(&SUMOTrafficObject) -> i32,
+    pub is_stopped: fn(&SUMOTrafficObject) -> bool,
+    pub get_current_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub get_next_edge_ptr: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub get_upcoming_edge_i_ds: fn(&SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID>,
+    pub get_back_lane: fn(&SUMOTrafficObject) -> Ptr<MSLane>,
+    pub get_route_position: fn(&SUMOTrafficObject) -> i32,
+    pub get_reroute_destination: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub replace_route: fn(&mut SUMOTrafficObject, ConstMSRoutePtr, &str, bool, i32, bool, bool, Ptr<String>) -> bool,
+    pub get_slope: fn(&SUMOTrafficObject) -> f64,
+    pub get_chosen_speed_factor: fn(&SUMOTrafficObject) -> f64,
     pub get_v_class: fn(&SUMOTrafficObject) -> SUMOVehicleClass,
+    pub get_routing_mode: fn(&SUMOTrafficObject) -> i32,
+    pub set_routing_mode: fn(&mut SUMOTrafficObject, i32),
+    pub get_max_speed: fn(&SUMOTrafficObject) -> f64,
+    pub get_waiting_time: fn(&SUMOTrafficObject, bool) -> SUMOTime,
+    pub get_previous_speed: fn(&SUMOTrafficObject) -> f64,
+    pub get_acceleration: fn(&SUMOTrafficObject) -> f64,
+    pub get_position_on_lane: fn(&SUMOTrafficObject) -> f64,
+    pub get_back_position_on_lane: fn(&SUMOTrafficObject, Ptr<MSLane>) -> f64,
+    pub get_angle: fn(&SUMOTrafficObject) -> f64,
+    pub has_arrived: fn(&SUMOTrafficObject) -> bool,
+    pub has_influencer: fn(&SUMOTrafficObject) -> bool,
+    pub is_selected: fn(&SUMOTrafficObject) -> bool,
+    pub get_device: fn(&SUMOTrafficObject, &Unmapped) -> Ptr<MSDevice>,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
@@ -44,12 +73,98 @@ pub(crate) fn default_get_position(_: &SUMOTrafficObject, _: f64) -> Position {
     panic!("SUMOTrafficObject::getPosition is pure virtual")
 }
 
-pub fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+pub(crate) fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
     panic!("SUMOTrafficObject::getNumericalID is pure virtual")
 }
-
-pub fn default_get_v_class(_: &SUMOTrafficObject) -> SUMOVehicleClass {
+pub(crate) fn default_get_random_seed(_: &SUMOTrafficObject) -> i64 {
+    panic!("SUMOTrafficObject::getRandomSeed is pure virtual")
+}
+pub(crate) fn default_get_vehicle_type(_: &SUMOTrafficObject) -> &MSVehicleType {
+    panic!("SUMOTrafficObject::getVehicleType is pure virtual")
+}
+pub(crate) fn default_get_v_type_parameter(_: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    panic!("SUMOTrafficObject::getVTypeParameter is pure virtual")
+}
+pub(crate) fn default_replace_vehicle_type(_: &mut SUMOTrafficObject, _: Ptr<MSVehicleType>) {
+    panic!("SUMOTrafficObject::replaceVehicleType is pure virtual")
+}
+pub(crate) fn default_get_rng(_: &SUMOTrafficObject) -> Ptr<SumoRNG> {
+    panic!("SUMOTrafficObject::getRNG is pure virtual")
+}
+pub(crate) fn default_get_rng_index(_: &SUMOTrafficObject) -> i32 {
+    panic!("SUMOTrafficObject::getRNGIndex is pure virtual")
+}
+pub(crate) fn default_is_stopped(_: &SUMOTrafficObject) -> bool {
+    panic!("SUMOTrafficObject::isStopped is pure virtual")
+}
+pub(crate) fn default_get_current_edge(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getCurrentEdge is pure virtual")
+}
+pub(crate) fn default_get_next_edge_ptr(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getNextEdgePtr is pure virtual")
+}
+pub(crate) fn default_get_upcoming_edge_i_ds(_: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    panic!("SUMOTrafficObject::getUpcomingEdgeIDs is pure virtual")
+}
+pub(crate) fn default_get_back_lane(_: &SUMOTrafficObject) -> Ptr<MSLane> {
+    panic!("SUMOTrafficObject::getBackLane is pure virtual")
+}
+pub(crate) fn default_get_route_position(_: &SUMOTrafficObject) -> i32 {
+    panic!("SUMOTrafficObject::getRoutePosition is pure virtual")
+}
+pub(crate) fn default_get_reroute_destination(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getRerouteDestination is pure virtual")
+}
+pub(crate) fn default_replace_route(_: &mut SUMOTrafficObject, _: ConstMSRoutePtr, _: &str, _: bool, _: i32, _: bool, _: bool, _: Ptr<String>) -> bool {
+    panic!("SUMOTrafficObject::replaceRoute is pure virtual")
+}
+pub(crate) fn default_get_slope(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getSlope is pure virtual")
+}
+pub(crate) fn default_get_chosen_speed_factor(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getChosenSpeedFactor is pure virtual")
+}
+pub(crate) fn default_get_v_class(_: &SUMOTrafficObject) -> SUMOVehicleClass {
     panic!("SUMOTrafficObject::getVClass is pure virtual")
+}
+pub(crate) fn default_get_routing_mode(_: &SUMOTrafficObject) -> i32 {
+    panic!("SUMOTrafficObject::getRoutingMode is pure virtual")
+}
+pub(crate) fn default_set_routing_mode(_: &mut SUMOTrafficObject, _: i32) {
+    panic!("SUMOTrafficObject::setRoutingMode is pure virtual")
+}
+pub(crate) fn default_get_max_speed(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getMaxSpeed is pure virtual")
+}
+pub(crate) fn default_get_waiting_time(_: &SUMOTrafficObject, _: bool) -> SUMOTime {
+    panic!("SUMOTrafficObject::getWaitingTime is pure virtual")
+}
+pub(crate) fn default_get_previous_speed(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getPreviousSpeed is pure virtual")
+}
+pub(crate) fn default_get_acceleration(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getAcceleration is pure virtual")
+}
+pub(crate) fn default_get_position_on_lane(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getPositionOnLane is pure virtual")
+}
+pub(crate) fn default_get_back_position_on_lane(_: &SUMOTrafficObject, _: Ptr<MSLane>) -> f64 {
+    panic!("SUMOTrafficObject::getBackPositionOnLane is pure virtual")
+}
+pub(crate) fn default_get_angle(_: &SUMOTrafficObject) -> f64 {
+    panic!("SUMOTrafficObject::getAngle is pure virtual")
+}
+pub(crate) fn default_has_arrived(_: &SUMOTrafficObject) -> bool {
+    panic!("SUMOTrafficObject::hasArrived is pure virtual")
+}
+pub(crate) fn default_has_influencer(_: &SUMOTrafficObject) -> bool {
+    panic!("SUMOTrafficObject::hasInfluencer is pure virtual")
+}
+pub(crate) fn default_is_selected(_: &SUMOTrafficObject) -> bool {
+    panic!("SUMOTrafficObject::isSelected is pure virtual")
+}
+pub(crate) fn default_get_device(_: &SUMOTrafficObject, _: &Unmapped) -> Ptr<MSDevice> {
+    panic!("SUMOTrafficObject::getDevice is pure virtual")
 }
 
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
@@ -63,6 +178,37 @@ static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt
     get_lane: default_get_lane,
     get_speed: default_get_speed,
     get_position: default_get_position,
+    get_numerical_id: default_get_numerical_id,
+    get_random_seed: default_get_random_seed,
+    get_vehicle_type: default_get_vehicle_type,
+    get_v_type_parameter: default_get_v_type_parameter,
+    replace_vehicle_type: default_replace_vehicle_type,
+    get_rng: default_get_rng,
+    get_rng_index: default_get_rng_index,
+    is_stopped: default_is_stopped,
+    get_current_edge: default_get_current_edge,
+    get_next_edge_ptr: default_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: default_get_upcoming_edge_i_ds,
+    get_back_lane: default_get_back_lane,
+    get_route_position: default_get_route_position,
+    get_reroute_destination: default_get_reroute_destination,
+    replace_route: default_replace_route,
+    get_slope: default_get_slope,
+    get_chosen_speed_factor: default_get_chosen_speed_factor,
+    get_v_class: default_get_v_class,
+    get_routing_mode: default_get_routing_mode,
+    set_routing_mode: default_set_routing_mode,
+    get_max_speed: default_get_max_speed,
+    get_waiting_time: default_get_waiting_time,
+    get_previous_speed: default_get_previous_speed,
+    get_acceleration: default_get_acceleration,
+    get_position_on_lane: default_get_position_on_lane,
+    get_back_position_on_lane: default_get_back_position_on_lane,
+    get_angle: default_get_angle,
+    has_arrived: default_has_arrived,
+    has_influencer: default_has_influencer,
+    is_selected: default_is_selected,
+    get_device: default_get_device,
 };
 
 /// Representation of a vehicle, person, or container
@@ -147,7 +293,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_random_seed(&self) -> i64 {
-        panic!("SUMOTrafficObject::getRandomSeed is pure virtual")
+        (self.vt.get_random_seed)(self)
     }
 
     /// C++: `const MSVehicleType & SUMOTrafficObject::getVehicleType() const` [const, virtual, pure virtual]
@@ -155,7 +301,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_vehicle_type(&self) -> &MSVehicleType {
-        panic!("SUMOTrafficObject::getVehicleType is pure virtual")
+        (self.vt.get_vehicle_type)(self)
     }
 
     /// C++: `const SUMOVTypeParameter & SUMOTrafficObject::getVTypeParameter() const` [const, virtual, pure virtual]
@@ -163,7 +309,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_v_type_parameter(&self) -> &SUMOVTypeParameter {
-        panic!("SUMOTrafficObject::getVTypeParameter is pure virtual")
+        (self.vt.get_v_type_parameter)(self)
     }
 
     /// C++: `void SUMOTrafficObject::replaceVehicleType(const MSVehicleType *)` [virtual, pure virtual]
@@ -171,7 +317,8 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        panic!("SUMOTrafficObject::replaceVehicleType is pure virtual")
+        let vt = self.vt;
+                (vt.replace_vehicle_type)(self, type_)
     }
 
     /// C++: `const SUMOVehicleParameter & SUMOTrafficObject::getParameter() const` [const, virtual, pure virtual]
@@ -187,7 +334,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_rng(&self) -> Ptr<SumoRNG> {
-        panic!("SUMOTrafficObject::getRNG is pure virtual")
+        (self.vt.get_rng)(self)
     }
 
     /// C++: `int SUMOTrafficObject::getRNGIndex() const` [const, virtual, pure virtual]
@@ -195,7 +342,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_rng_index(&self) -> i32 {
-        panic!("SUMOTrafficObject::getRNGIndex is pure virtual")
+        (self.vt.get_rng_index)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::isStopped() const` [const, virtual, pure virtual]
@@ -203,7 +350,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped(&self) -> bool {
-        panic!("SUMOTrafficObject::isStopped is pure virtual")
+        (self.vt.is_stopped)(self)
     }
 
     /// C++: `const MSEdge * SUMOTrafficObject::getEdge() const` [const, virtual, pure virtual]
@@ -219,7 +366,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        panic!("SUMOTrafficObject::getCurrentEdge is pure virtual")
+        (self.vt.get_current_edge)(self)
     }
 
     /// C++: `const MSEdge * SUMOTrafficObject::getNextEdgePtr() const` [const, virtual, pure virtual]
@@ -227,7 +374,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        panic!("SUMOTrafficObject::getNextEdgePtr is pure virtual")
+        (self.vt.get_next_edge_ptr)(self)
     }
 
     /// C++: `const std::set<NumericalID> SUMOTrafficObject::getUpcomingEdgeIDs() const` [const, virtual, pure virtual]
@@ -235,7 +382,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_upcoming_edge_i_ds(&self) -> BTreeSet<SUMOTrafficObject_NumericalID> {
-        panic!("SUMOTrafficObject::getUpcomingEdgeIDs is pure virtual")
+        (self.vt.get_upcoming_edge_i_ds)(self)
     }
 
     /// C++: `const MSLane * SUMOTrafficObject::getLane() const` [const, virtual, pure virtual]
@@ -251,7 +398,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_back_lane(&self) -> Ptr<MSLane> {
-        panic!("SUMOTrafficObject::getBackLane is pure virtual")
+        (self.vt.get_back_lane)(self)
     }
 
     /// C++: `int SUMOTrafficObject::getRoutePosition() const` [const, virtual, pure virtual]
@@ -259,7 +406,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        panic!("SUMOTrafficObject::getRoutePosition is pure virtual")
+        (self.vt.get_route_position)(self)
     }
 
     /// C++: `const MSEdge * SUMOTrafficObject::getRerouteDestination() const` [const, virtual, pure virtual]
@@ -267,7 +414,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_reroute_destination(&self) -> Ptr<MSEdge> {
-        panic!("SUMOTrafficObject::getRerouteDestination is pure virtual")
+        (self.vt.get_reroute_destination)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::replaceRoute(ConstMSRoutePtr, const std::string &, bool, int, bool, bool, std::string *)` [virtual, pure virtual]
@@ -275,7 +422,8 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
-        panic!("SUMOTrafficObject::replaceRoute is pure virtual")
+        let vt = self.vt;
+                (vt.replace_route)(self, route, info, onInit, offset, addStops, removeStops, msgReturn)
     }
 
     /// C++: `double SUMOTrafficObject::getSlope() const` [const, virtual, pure virtual]
@@ -283,14 +431,14 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_slope(&self) -> f64 {
-        panic!("SUMOTrafficObject::getSlope is pure virtual")
+        (self.vt.get_slope)(self)
     }
 
     /// C++: `double SUMOTrafficObject::getChosenSpeedFactor() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        panic!("SUMOTrafficObject::getChosenSpeedFactor is pure virtual")
+        (self.vt.get_chosen_speed_factor)(self)
     }
 
     /// C++: `SUMOVehicleClass SUMOTrafficObject::getVClass() const` [const, virtual, pure virtual]
@@ -316,7 +464,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_routing_mode(&self) -> i32 {
-        panic!("SUMOTrafficObject::getRoutingMode is pure virtual")
+        (self.vt.get_routing_mode)(self)
     }
 
     /// C++: `void SUMOTrafficObject::setRoutingMode(int)` [virtual, pure virtual]
@@ -324,7 +472,8 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_routing_mode(&mut self, value: i32) {
-        panic!("SUMOTrafficObject::setRoutingMode is pure virtual")
+        let vt = self.vt;
+                (vt.set_routing_mode)(self, value)
     }
 
     /// C++: `double SUMOTrafficObject::getMaxSpeed() const` [const, virtual, pure virtual]
@@ -332,14 +481,14 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_speed(&self) -> f64 {
-        panic!("SUMOTrafficObject::getMaxSpeed is pure virtual")
+        (self.vt.get_max_speed)(self)
     }
 
     /// C++: `SUMOTime SUMOTrafficObject::getWaitingTime(const bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self, accumulated: bool) -> SUMOTime {
-        panic!("SUMOTrafficObject::getWaitingTime is pure virtual")
+        (self.vt.get_waiting_time)(self, accumulated)
     }
 
     /// C++: `double SUMOTrafficObject::getSpeed() const` [const, virtual, pure virtual]
@@ -355,7 +504,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        panic!("SUMOTrafficObject::getPreviousSpeed is pure virtual")
+        (self.vt.get_previous_speed)(self)
     }
 
     /// C++: `double SUMOTrafficObject::getAcceleration() const` [const, virtual, pure virtual]
@@ -363,7 +512,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        panic!("SUMOTrafficObject::getAcceleration is pure virtual")
+        (self.vt.get_acceleration)(self)
     }
 
     /// C++: `double SUMOTrafficObject::getPositionOnLane() const` [const, virtual, pure virtual]
@@ -371,7 +520,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_position_on_lane(&self) -> f64 {
-        panic!("SUMOTrafficObject::getPositionOnLane is pure virtual")
+        (self.vt.get_position_on_lane)(self)
     }
 
     /// C++: `double SUMOTrafficObject::getBackPositionOnLane(const MSLane *) const` [const, virtual, pure virtual]
@@ -379,7 +528,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_back_position_on_lane(&self, lane: Ptr<MSLane>) -> f64 {
-        panic!("SUMOTrafficObject::getBackPositionOnLane is pure virtual")
+        (self.vt.get_back_position_on_lane)(self, lane)
     }
 
     /// C++: `Position SUMOTrafficObject::getPosition(const double) const` [const, virtual, pure virtual]
@@ -395,7 +544,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        panic!("SUMOTrafficObject::getAngle is pure virtual")
+        (self.vt.get_angle)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::hasArrived() const` [const, virtual, pure virtual]
@@ -403,7 +552,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_arrived(&self) -> bool {
-        panic!("SUMOTrafficObject::hasArrived is pure virtual")
+        (self.vt.has_arrived)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::hasInfluencer() const` [const, virtual, pure virtual]
@@ -411,7 +560,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        panic!("SUMOTrafficObject::hasInfluencer is pure virtual")
+        (self.vt.has_influencer)(self)
     }
 
     /// C++: `bool SUMOTrafficObject::isSelected() const` [const, virtual, pure virtual]
@@ -419,7 +568,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_selected(&self) -> bool {
-        panic!("SUMOTrafficObject::isSelected is pure virtual")
+        (self.vt.is_selected)(self)
     }
 
     /// C++: `MSDevice * SUMOTrafficObject::getDevice(const std::type_info &) const` [const, virtual, pure virtual]
@@ -427,7 +576,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        panic!("SUMOTrafficObject::getDevice is pure virtual")
+        (self.vt.get_device)(self, type_)
     }
 
     /// C++: `std::string SUMOTrafficObject::getStringParam(const std::string &, const bool, const std::string &) const` [const]
