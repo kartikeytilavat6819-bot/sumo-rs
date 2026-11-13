@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
+use utils::common::std_defs::{g_precision, set_g_precision};
 
 /// version written into saved states (C++ VERSION_STRING)
 // shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with the release version
@@ -678,7 +679,8 @@ impl MSStateHandler {
                 self.myCFMAttrs = leak_attrs(attrs);
             }
             SUMO_TAG_VEHICLETRANSFER => {
-                let vc: &mut MSVehicleControl = MSNet::get_instance().m().get_vehicle_control();
+                let net = MSNet::get_instance();
+                let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
                 MSVehicleTransfer::get_instance().m().load_state(attrs, self.myOffset, vc).unwrap_or_else(|e| panic!("{e}"));
             }
             SUMO_TAG_SEGMENT => {
@@ -803,7 +805,8 @@ impl MSStateHandler {
         self.base.my_end_element(element);
         match element {
             SUMO_TAG_PERSON | SUMO_TAG_CONTAINER => {
-                let tc = if element == SUMO_TAG_PERSON { MSNet::get_instance().m().get_person_control() } else { MSNet::get_instance().m().get_container_control() };
+                let net = MSNet::get_instance();
+                let tc = if element == SUMO_TAG_PERSON { net.m().get_person_control() } else { net.m().get_container_control() };
                 let transportable = tc.get(&self.myAttrs.get_string(SUMO_ATTR_ID));
                 // shortcut: MSTransportable::loadState and fixLoadCount are not wired here, loaded transportable state is refused
                 let _ = transportable;
@@ -817,7 +820,8 @@ impl MSStateHandler {
                 if self.myVCAttrs.is_null() {
                     panic!("{}", ProcessError::new("Could not load vehicle control state"));
                 }
-                let vc: &mut MSVehicleControl = MSNet::get_instance().m().get_vehicle_control();
+                let net = MSNet::get_instance();
+                let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
                 vc.set_state(
                     self.myVCAttrs.get_int(SUMO_ATTR_NUMBER).unwrap_or_else(|e| panic!("{e}")),
                     self.myVCAttrs.get_int(SUMO_ATTR_BEGIN).unwrap_or_else(|e| panic!("{e}")),
@@ -958,7 +962,8 @@ impl MSStateHandler {
     pub fn close_vehicle(&mut self) {
         self.myVehicleParameter.m().depart -= self.myOffset;
         // the vehicle was already counted in MSVehicleControl::setState
-        let vc: &mut MSVehicleControl = MSNet::get_instance().m().get_vehicle_control();
+        let net = MSNet::get_instance();
+        let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
         // make a copy because myVehicleParameter is reset in closeVehicle()
         let vehID = self.myVehicleParameter.m().id.clone();
         if !self.myVehiclesToRemove.contains(&vehID) {
