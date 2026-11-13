@@ -869,7 +869,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remove_transportable(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port SUMOVehicle::removeTransportable")
+        (self.vt.remove_transportable)(self, t)
     }
 
     /// C++: `void SUMOVehicle::removeTransportableMass(MSTransportable *)` [virtual, pure virtual]
@@ -877,7 +877,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remove_transportable_mass(&mut self, t: Ptr<MSTransportable>) {
-        todo!("port SUMOVehicle::removeTransportableMass")
+        (self.vt.remove_transportable_mass)(self, t)
     }
 
     /// C++: `const std::vector<MSTransportable *> & SUMOVehicle::getPersons() const` [const, virtual, pure virtual]
@@ -885,7 +885,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_persons(&self) -> &Vec<Ptr<MSTransportable>> {
-        todo!("port SUMOVehicle::getPersons")
+        (self.vt.get_persons)(self)
     }
 
     /// C++: `const std::vector<MSTransportable *> & SUMOVehicle::getContainers() const` [const, virtual, pure virtual]
@@ -893,7 +893,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_containers(&self) -> &Vec<Ptr<MSTransportable>> {
-        todo!("port SUMOVehicle::getContainers")
+        (self.vt.get_containers)(self)
     }
 
     /// C++: `bool SUMOVehicle::addStop(const SUMOVehicleParameter::Stop &, std::string &, SUMOTime, ConstMSEdgeVector::const_iterator *)` [virtual, pure virtual]
@@ -901,7 +901,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<crate::microsim::ms_route::MSRouteIterator>) -> bool {
-        todo!("port SUMOVehicle::addStop")
+        (self.vt.add_stop)(self, stopPar, errorMsg, untilOffset, searchStart)
     }
 
     /// C++: `std::vector<std::pair<int, double>> SUMOVehicle::getStopIndices() const` [const, virtual, pure virtual]
@@ -909,7 +909,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stop_indices(&self) -> Vec<(i32, f64)> {
-        todo!("port SUMOVehicle::getStopIndices")
+        (self.vt.get_stop_indices)(self)
     }
 
     /// C++: `bool SUMOVehicle::isLineStop(double) const` [const, virtual, pure virtual]
@@ -917,7 +917,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_line_stop(&self, position: f64) -> bool {
-        todo!("port SUMOVehicle::isLineStop")
+        (self.vt.is_line_stop)(self, position)
     }
 
     /// C++: `bool SUMOVehicle::abortNextStop(int)` [virtual, pure virtual]
@@ -925,7 +925,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn abort_next_stop(&mut self, nextStopIndex: i32) -> bool {
-        todo!("port SUMOVehicle::abortNextStop")
+        (self.vt.abort_next_stop)(self, nextStopIndex)
     }
 
     /// C++: `MSParkingArea * SUMOVehicle::getNextParkingArea()` [virtual, pure virtual]
@@ -933,7 +933,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_parking_area(&mut self) -> Ptr<MSParkingArea> {
-        todo!("port SUMOVehicle::getNextParkingArea")
+        (self.vt.get_next_parking_area)(self)
     }
 
     /// C++: `bool SUMOVehicle::replaceParkingArea(MSParkingArea *, std::string &)` [virtual, pure virtual]
@@ -941,14 +941,14 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn replace_parking_area(&mut self, parkingArea: Ptr<MSParkingArea>, errorMsg: &mut String) -> bool {
-        todo!("port SUMOVehicle::replaceParkingArea")
+        (self.vt.replace_parking_area)(self, parkingArea, errorMsg)
     }
 
     /// C++: `const std::vector<std::string> & SUMOVehicle::getParkingBadges() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_parking_badges(&self) -> &Vec<String> {
-        todo!("port SUMOVehicle::getParkingBadges")
+        (self.vt.get_parking_badges)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::remainingStopDuration() const` [const, virtual, pure virtual]
@@ -956,7 +956,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remaining_stop_duration(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::remainingStopDuration")
+        (self.vt.remaining_stop_duration)(self)
     }
 
     /// C++: `bool SUMOVehicle::isStopped() const` [const, virtual, pure virtual]
@@ -972,7 +972,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped_triggered(&self) -> bool {
-        todo!("port SUMOVehicle::isStoppedTriggered")
+        (self.vt.is_stopped_triggered)(self)
     }
 
     /// C++: `bool SUMOVehicle::isStoppedParking() const` [const, virtual, pure virtual]
@@ -980,7 +980,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped_parking(&self) -> bool {
-        todo!("port SUMOVehicle::isStoppedParking")
+        (self.vt.is_stopped_parking)(self)
     }
 
     /// C++: `bool SUMOVehicle::isStoppedInRange(const double, const double, bool) const` [const, virtual, pure virtual]
@@ -988,7 +988,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped_in_range(&self, pos: f64, tolerance: f64, checkFuture: bool) -> bool {
-        todo!("port SUMOVehicle::isStoppedInRange")
+        (self.vt.is_stopped_in_range)(self, pos, tolerance, checkFuture)
     }
 
     /// C++: `bool SUMOVehicle::stopsAt(MSStoppingPlace *) const` [const, virtual, pure virtual]
