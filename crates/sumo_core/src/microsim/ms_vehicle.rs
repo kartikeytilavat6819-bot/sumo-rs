@@ -11802,7 +11802,40 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn slow_down_for_schedule(&self, vMinComfortable: f64) -> f64 {
-        todo!("port MSVehicle::slowDownForSchedule")
+        let sfp = self.get_vehicle_type().get_parameter().speedFactorPremature;
+        let stop = self.myStops.front().unwrap();
+        let timeDist = self.estimate_time_to_next_stop();
+        let mut arrivalDelay = steps2time(MSNet::get_instance().m().get_current_time_step()) + timeDist.0 - steps2time(stop.pars.arrival);
+        let mut t = steps2time(stop.pars.arrival - MSNet::get_instance().m().get_current_time_step());
+        let flexKey = utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_FLEX_ARRIVAL).to_string();
+        if stop.pars.base.has_parameter(&flexKey) {
+            let flexStart = string2time(&stop.pars.base.get_parameter(&flexKey, "")).unwrap_or_else(|e| panic!("{e}"));
+            arrivalDelay += steps2time(stop.pars.arrival - flexStart);
+            t = steps2time(flexStart - MSNet::get_instance().m().get_current_time_step());
+        } else if stop.pars.started >= 0 && MSGlobals::use_stop_started() {
+            arrivalDelay += steps2time(stop.pars.arrival - stop.pars.started);
+            t = steps2time(stop.pars.started - MSNet::get_instance().m().get_current_time_step());
+        }
+        if arrivalDelay < 0. && sfp < self.get_chosen_speed_factor() {
+            // we can slow down to better match the schedule (and increase energy efficiency)
+            let vSlowDownMin = max2(self.myLane.get_speed_limit() * sfp, vMinComfortable);
+            let s = timeDist.1;
+            let b = self.get_car_follow_model().get_max_decel();
+            // x = speed for arriving in t seconds
+            // u = time at full speed
+            // u * x + (t - u) * 0.5 * x = s
+            // t - u = x / b
+            // eliminate u, solve x
+            let radicand = 4. * t * t * b * b - 8. * s * b;
+            let x = if radicand >= 0. { t * b - radicand.sqrt() * 0.5 } else { vSlowDownMin };
+            let vSlowDown = if x < vSlowDownMin { vSlowDownMin } else { x };
+            return vSlowDown;
+        } else if arrivalDelay > 0. && sfp > self.get_chosen_speed_factor() {
+            // in principle we could up to catch up with the schedule
+            // but at this point we can only lower the speed, the
+            // information would have to be used when computing getVehicleMaxSpeed
+        }
+        self.get_max_speed()
     }
 
     /// C++: `void MSVehicle::interpolateLateralZ(Position &, double, double) const` [const, protected]
@@ -11853,7 +11886,16 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_to_leave_junction(&self) -> f64 {
-        todo!("port MSVehicle::getDistanceToLeaveJunction")
+        let mut result = self.get_length() - self.get_position_on_lane();
+        if self.myLane.is_normal() {
+            return max2(0.0, result);
+        }
+        let mut lane = self.myLane;
+        while lane.is_internal() {
+            result += lane.get_length();
+            lane = lane.get_canonical_successor_lane();
+        }
+        result
     }
 
     /// C++: `double MSVehicle::getAngleDiff() const` [const, protected]
