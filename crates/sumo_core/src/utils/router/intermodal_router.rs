@@ -1,6 +1,7 @@
 //! Port of utils/router/IntermodalRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `void (*)(IntermodalRouter<E, L, N, V> &) IntermodalRouter::CreateNetCallback`
 pub type IntermodalRouter_CreateNetCallback = Unmapped /* void (*)(IntermodalRouter<E, L, N, V> &) */;
@@ -243,7 +244,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return success;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, departPos: f64, originStopID: &str, arrivalPos: f64, stopID: &str, speed: f64, vehicle: Ptr<V>, pars: &SUMOVTypeParameter, modeSet: SVCPermissions, msTime: SUMOTime, into: &mut Vec<IntermodalRouter_TripItem>, externalFactor: f64) -> bool {
+    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, departPos: f64, originStopID: &str, arrivalPos: f64, stopID: &str, speed: f64, vehicle: Ptr<V>, pars: &SUMOVTypeParameter, modeSet: SVCPermissions, msTime: SUMOTime, into: &mut Vec<IntermodalRouter_TripItem>, externalFactor: f64) -> bool where E: RouterEdge<V, Node = N>, V: RouterVehicle {
         self.create_net();
         let mut trip = IntermodalTrip::new(from, to, departPos, arrivalPos, speed, msTime, Ptr::null(), pars, vehicle, modeSet, self.myExternalEffort, externalFactor);
         let mut intoEdges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = Vec::new();

@@ -539,6 +539,12 @@ pub struct SUMOVehicle {
     pub vt: &'static SUMOVehicleVt,
 }
 
+impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
+    fn v_class(&self) -> SUMOVehicleClass {
+        self.get_v_class()
+    }
+}
+
 impl std::ops::Deref for SUMOVehicle {
     type Target = SUMOTrafficObject;
     fn deref(&self) -> &SUMOTrafficObject {

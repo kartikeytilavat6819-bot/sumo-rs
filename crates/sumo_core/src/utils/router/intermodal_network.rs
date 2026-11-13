@@ -608,7 +608,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return (*it).second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_both_directions(&self, e: Ptr<E>) -> IntermodalNetwork_EdgePair {
+    pub fn get_both_directions(&self, e: Ptr<E>) -> IntermodalNetwork_EdgePair<E, L, N, V> {
         let (fwd, bwd) = self.bidi(e);
         (fwd.cast(), bwd.cast())
     }

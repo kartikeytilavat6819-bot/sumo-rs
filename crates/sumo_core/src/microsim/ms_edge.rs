@@ -1,6 +1,7 @@
 //! Port of microsim/MSEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
 /// C++ `#define BEST_LANE_LOOKAHEAD 3000.0` (MSEdge.cpp)
@@ -127,6 +128,78 @@ pub struct MSEdge {
     /// a reversed version for backward routing
     pub myReversedRoutingEdge: Ptr<ReversedEdge<MSEdge, SUMOVehicle>>,
     pub myRailwayRoutingEdge: Ptr<RailEdge<MSEdge, SUMOVehicle>>,
+}
+
+impl RouterEdge<SUMOVehicle> for MSEdge {
+    type Node = MSJunction;
+    type Lane = MSLane;
+    fn bidi_edge(&self) -> Ptr<MSEdge> {
+        self.get_bidi_edge()
+    }
+    fn to_junction(&self) -> Ptr<MSJunction> {
+        self.get_to_junction()
+    }
+    fn from_junction(&self) -> Ptr<MSJunction> {
+        self.get_from_junction()
+    }
+    fn is_crossing(&self) -> bool {
+        self.is_crossing()
+    }
+    fn is_walking_area(&self) -> bool {
+        self.is_walking_area()
+    }
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        self.get_length_geometry_factor()
+    }
+    fn distance_to(&self, other: Ptr<MSEdge>, do_boundary_estimate: bool) -> f64 {
+        self.get_distance_to(other, do_boundary_estimate)
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<MSEdge>] {
+        self.get_successors(vclass)
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<MSEdge>, Ptr<MSEdge>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn predecessors(&self) -> &[Ptr<MSEdge>] {
+        self.get_predecessors()
+    }
+    fn lanes(&self) -> &[Ptr<MSLane>] {
+        self.get_lanes()
+    }
+    fn speed_limit(&self) -> f64 {
+        self.get_speed_limit()
+    }
+    fn preference(&self, pars: &SUMOVTypeParameter) -> f64 {
+        self.get_preference(pars)
+    }
+    fn travel_time_static(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>, time: f64) -> f64 {
+        MSEdge::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<MSEdge>, veh: Ptr<SUMOVehicle>, time: f64) -> f64 {
+        MSEdge::get_travel_time_aggregated(edge, veh, time)
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn is_taz_connector(&self) -> bool {
+        self.is_taz_connector()
+    }
+    // C++ MSEdge::prohibits(const SUMOVehicle*) takes no check_restrictions flag
+    fn prohibits(&self, veh: Ptr<SUMOVehicle>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<SUMOVehicle>) -> bool {
+        self.restricts(veh)
+    }
 }
 
 impl std::ops::Deref for MSEdge {

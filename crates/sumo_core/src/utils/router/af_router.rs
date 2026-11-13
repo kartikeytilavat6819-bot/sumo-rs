@@ -1,7 +1,7 @@
 //! Port of utils/router/AFRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 use utils::common::msg_handler::{with_instance, write_message, MsgType};
 use utils::common::to_string::to_string;
 use utils::geom::NUMERICAL_EPS;
@@ -467,7 +467,7 @@ impl<E, N, V, M> AFRouter<E, N, V, M> {
 
 }
 
-impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: RouterVehicle, N: RouterNode {
     /// C++: `int & AFRouter::flags(const E *)`
     /// Returns the arc flags of the passed edge
     // template<class E, class N, class V, class M>
@@ -633,7 +633,7 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         let mut sHARCLevel: i32 = 0; // lowest level with smallest cells
         let mut settledEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
         let mut targetEdgeCell: Ptr<KDTreePartition_Cell> = Ptr::null();
-        if !self.myLastSettledEdgeCell.is_null() && self.myLastSettledEdgeCell.contains(Self::edge_from_junction(settledEdge).cast()) {
+        if !self.myLastSettledEdgeCell.is_null() && self.myLastSettledEdgeCell.contains(Self::edge_from_junction(settledEdge)) {
             // exploit the partial locality of Dijkstra's algorithm: settled edge is still
             // in the same cell as the last one? Then we can simply return the
             // last flagContext tuple again.
@@ -645,12 +645,12 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
             // go through the cells of the level
             for iter in Self::cells_at_level(partitionLevel) {
                 // myPartition is assumed to partition a non-reversed (forward) graph
-                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge).cast()) {
+                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge)) {
                     settledEdgeCell = iter;
                 }
                 if targetEdgeCell.is_null() && !self.myTargetEdgeCellLevel0.is_null() {
                     targetEdgeCell = self.myTargetEdgeCellLevel0;
-                } else if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge).cast()) {
+                } else if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge)) {
                     self.myTargetEdgeCellLevel0 = iter;
                     targetEdgeCell = self.myTargetEdgeCellLevel0;
                 }
@@ -728,10 +728,10 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
             // go through the cells of the level
             for iter in levelCells {
                 // myPartition is assumed to partition a non-reversed (forward) graph
-                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge).cast()) {
+                if settledEdgeCell.is_null() && iter.contains(Self::edge_from_junction(settledEdge)) {
                     settledEdgeCell = iter;
                 }
-                if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge).cast()) {
+                if targetEdgeCell.is_null() && iter.contains(Self::edge_from_junction(targetEdge)) {
                     targetEdgeCell = iter;
                 }
                 if !settledEdgeCell.is_null() && !targetEdgeCell.is_null() {
@@ -1113,9 +1113,8 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         panic!("{}", ProcessError::new("Bulk mode is not supported by the arc flag router."));
     }
 
-    // shortcut: RouterEdge has no getFromJunction() accessor, add from_junction() -> Ptr<Self::Node> to router_edge.rs
     fn edge_from_junction(edge: Ptr<E>) -> Ptr<N> {
-        panic!("shortcut: RouterEdge has no getFromJunction accessor, add from_junction() to router_edge.rs")
+        edge.from_junction()
     }
 
     // shortcut: RouterEdge has no getMinimumTravelTime(nullptr) accessor, add minimum_travel_time() to router_edge.rs
