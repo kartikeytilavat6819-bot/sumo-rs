@@ -36,7 +36,25 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
-    todo!("port computeAllPairs")
+    OutputDevice::create_device_by_option("all-pairs-output", "", "", -1).unwrap_or_else(|e| panic!("{e}"));
+    let outFile = OutputDevice::get_device_by_option("all-pairs-output").unwrap_or_else(|e| panic!("{e}"));
+    // build the router
+    // shortcut: SUMOAbstractRouter::Operation is still () (Unmapped), so &getTravelTime is passed as () and the effort operation cannot be called, upgrade when the operation alias is typed
+    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), (), (), false, Ptr::null(), false, false);
+    let mut into: Vec<Ptr<ROEdge>> = Vec::new();
+    let numInternalEdges: i32 = net.get_internal_edge_number();
+    let numTotalEdges: i32 = net.get_edge_number();
+    for i in numInternalEdges..numTotalEdges {
+        let ei_edge: Ptr<ROEdge> = router.get_edge_info(i).edge.cast::<ROEdge>();
+        if !ei_edge.is_internal() {
+            router.compute(ei_edge, Ptr::null(), Ptr::null(), 0, &mut into, false);
+            let fromEffort: f64 = router.get_effort(ei_edge, Ptr::null(), 0.0);
+            for j in numInternalEdges..numTotalEdges {
+                let heuTT: f64 = router.get_edge_info(j).effort - fromEffort;
+                outFile.borrow_mut().write(&heuTT);
+            }
+        }
+    }
 }
 
 /// C++: `void (RONet &, OptionsCont &, ODMatrix &) computeRoutes`
@@ -257,6 +275,6 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
 // }
 #[allow(unused_variables)]
 pub fn get_travel_time(edge: Ptr<ROEdge>, arg1: Ptr<ROVehicle>, arg2: f64) -> f64 {
-    todo!("port getTravelTime")
+    edge.get_length() / edge.get_speed_limit()
 }
 
