@@ -1398,9 +1398,8 @@ impl NBOwnTLDef {
                     {
                         crossingTime.push(0);
                     } else {
-                        // shortcut: NBEdge::Connection::length is read through base2 (NBRouterEdge::getLength), which is still a todo in nb_edge.rs, upgrade: fill NBRouterEdge::get_length for connections
                         crossingTime.push(time2steps(
-                            (approached.base2.get_length() + approached.viaLength) / approached.vmax.max(NBOwnTLDef_MIN_SPEED_CROSSING_TIME),
+                            (approached.length + approached.viaLength) / approached.vmax.max(NBOwnTLDef_MIN_SPEED_CROSSING_TIME),
                         ));
                     }
                     if !approached.toEdge.is_null() {
