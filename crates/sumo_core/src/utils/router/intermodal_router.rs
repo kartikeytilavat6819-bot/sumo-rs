@@ -72,7 +72,19 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(callback: IntermodalRouter_CreateNetCallback, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
-        todo!("port IntermodalRouter::IntermodalRouter<E, L, N, V>")
+        Self {
+            base: SUMOAbstractRouter::new("IntermodalRouter", true, (), (), false, false),
+            myAmClone: false,
+            myInternalRouter: Ptr::null(),
+            myIntermodalNet: Ptr::null(),
+            myCallback: callback,
+            myCarWalkTransfer: carWalkTransfer,
+            myTaxiWait: taxiWait,
+            myRoutingAlgorithm: routingAlgorithm.to_string(),
+            myRoutingMode: routingMode,
+            myExternalEffort: calc,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void IntermodalRouter::~IntermodalRouter<E, L, N, V>()` [virtual]
@@ -85,7 +97,12 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port IntermodalRouter::~IntermodalRouter<E, L, N, V>")
+        if !self.myInternalRouter.is_null() {
+            drop(unsafe { Box::from_raw(self.myInternalRouter.as_raw()) });
+        }
+        if !self.myAmClone && !self.myIntermodalNet.is_null() {
+            drop(unsafe { Box::from_raw(self.myIntermodalNet.as_raw()) });
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, _IntermodalTrip> * IntermodalRouter::clone()`
@@ -235,7 +252,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
-        todo!("port IntermodalRouter::compute")
+        panic!("{}", ProcessError::new("Do not use this method"))
     }
 
     /// C++: `void IntermodalRouter::setBulkMode(const bool)`
@@ -412,7 +429,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &IntermodalRouter<E, L, N, V>) -> &mut IntermodalRouter<E, L, N, V> {
-        todo!("port IntermodalRouter::operator=")
+        panic!("IntermodalRouter::operator= is declared but not defined")
     }
 
 }
