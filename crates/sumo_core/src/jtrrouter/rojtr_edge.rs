@@ -240,7 +240,7 @@ impl ROJTREdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROJTREdge) -> Self {
-        todo!("port ROJTREdge::ROJTREdge")
+        panic!("ROJTREdge copy constructor is private and undefined in C++ (invalidated)")
     }
 
     /// C++: `ROJTREdge & ROJTREdge::operator=(const ROJTREdge &)` [private]
@@ -248,7 +248,7 @@ impl ROJTREdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROJTREdge) -> &mut ROJTREdge {
-        todo!("port ROJTREdge::operator=")
+        panic!("ROJTREdge assignment operator is private and undefined in C++ (invalidated)")
     }
 
 }

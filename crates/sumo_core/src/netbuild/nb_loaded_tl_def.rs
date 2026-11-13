@@ -567,7 +567,53 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBLoadedTLDef::collectLinks")
+        self.myControlledLinks.clear();
+        // build the list of links which are controlled by the traffic light
+        // local buffer: pushing into self while iterating myIncomingEdges through self is a borrow conflict
+        let mut controlled: NBConnectionVector = Vec::new();
+        for &incoming in self.myIncomingEdges.iter() {
+            let noLanes = incoming.get_num_lanes();
+            for j in 0..noLanes {
+                let elv = incoming.get_connections_from_lane(j, Ptr::null(), -1);
+                for el in elv {
+                    if !el.toEdge.is_null() {
+                        controlled.push(NBConnection::new_2(incoming, j, el.toEdge, el.toLane, NBCONNECTION_INVALID_TL_INDEX, NBCONNECTION_INVALID_TL_INDEX));
+                    }
+                }
+            }
+        }
+        self.myControlledLinks.extend(controlled);
+
+        // assign tl-indices to myControlledLinks
+        let mut pos: i32 = 0;
+        // local copy of the group pointers: the loop mutates myControlledLinks through self
+        let groups: Vec<Ptr<NBLoadedTLDef_SignalGroup>> = self.mySignalGroups.values().copied().collect();
+        for group in groups {
+            let linkNo = group.get_link_no();
+            for j in 0..linkNo {
+                let conn = group.get_connection(j);
+                debug_assert!(conn.get_from_lane() < 0 || conn.get_from().get_num_lanes() > conn.get_from_lane());
+                let mut tst = NBConnection::new_4(conn);
+                tst.set_tl_index(pos);
+                if tst.check(&*self.myEdgeCont) {
+                    if tst.get_from().may_be_tls_controlled(tst.get_from_lane(), tst.get_to(), tst.get_to_lane()) {
+                        for c in self.myControlledLinks.iter_mut() {
+                            if c.get_tl_index() == NBCONNECTION_INVALID_TL_INDEX
+                                && tst.get_from() == c.get_from()
+                                && tst.get_to() == c.get_to()
+                                && (tst.get_from_lane() < 0 || tst.get_from_lane() == c.get_from_lane())
+                                && (tst.get_to_lane() < 0 || tst.get_to_lane() == c.get_to_lane())
+                            {
+                                c.set_tl_index(pos);
+                            }
+                        }
+                        pos += 1;
+                    }
+                } else {
+                    write_warningf!("Could not set signal on connection (signal: %, group: %)", self.base.base.get_id(), group.get_id());
+                }
+            }
+        }
     }
 
     /// C++: `bool NBLoadedTLDef::mustBrake(const NBConnection &, const std::string &, int) const` [const, protected]
