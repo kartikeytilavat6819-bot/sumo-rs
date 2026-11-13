@@ -170,7 +170,22 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
-    todo!("port computeRoutes")
+    // initialise the loader
+    loader.open_routes(net);
+    // build the router
+    let measure = oc.get_string("weight-attribute").unwrap();
+    let routingAlgorithm = oc.get_string("routing-algorithm").unwrap();
+    let priorityFactor = oc.get_float("weights.priority-factor").unwrap();
+    let begin = string2time(&oc.get_string("begin").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+    let end = if oc.is_default("end") { SUMOTIME_MAX } else { string2time(&oc.get_string("end").unwrap()).unwrap_or_else(|e| panic!("{e}")) };
+    if oc.is_set("restriction-params", true).unwrap() && (routingAlgorithm == "CH" || routingAlgorithm == "CHWrapper") {
+        panic!("{}", ProcessError::Process(format!("Routing algorithm '{}' does not support restriction-params", routingAlgorithm)));
+    }
+    if measure == "traveltime" && priorityFactor != 0. {
+        ROEdge::init_priority_factor(priorityFactor);
+    }
+    // shortcut: router construction (the DijkstraRouter/AStar/CH/CCH/arcflag/railway instances, the operation selection and the RORouterProvider) needs SUMOAbstractRouter_Operation, which is Unmapped () in sumo_abstract_router.rs, so the rest of computeRoutes is not ported; upgrade once the operation alias is a typed function pointer
+    let _ = (net, measure, begin, end);
 }
 
 /// C++: `void (RONet &, ROLoader &, OptionsCont &) initNet`
