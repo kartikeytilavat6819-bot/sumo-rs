@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Zusammensetzungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Zusammensetzungsdefinition::NIVissimSingleTypeParser_Zusammensetzungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Zusammensetzungsdefinition::~NIVissimSingleTypeParser_Zusammensetzungsdefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Zusammensetzungsdefinition {
     // NIVissimSingleTypeParser_Zusammensetzungsdefinition::~NIVissimSingleTypeParser_Zusammensetzungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Zusammensetzungsdefinition::~NIVissimSingleTypeParser_Zusammensetzungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Zusammensetzungsdefinition::parse(std::istream &)` [virtual]
@@ -58,8 +58,23 @@ impl NIVissimSingleTypeParser_Zusammensetzungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Zusammensetzungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = self.my_read(from);
+        while tag != "fahrzeugtyp" {
+            tag = self.read_end_secure(from, "fahrzeugtyp");
+        }
+        loop {
+            tag = self.my_read(from); // id
+            tag = self.my_read(from); // "anteil"
+            tag = self.my_read(from); // value
+            tag = self.my_read(from); // "VWunsch"
+            tag = self.my_read(from); // value
+            tag = self.read_end_secure(from, "fahrzeugtyp"); // "fahrzeugtyp"?
+            if tag != "fahrzeugtyp" {
+                break;
+            }
+        }
+        true
     }
 
 }

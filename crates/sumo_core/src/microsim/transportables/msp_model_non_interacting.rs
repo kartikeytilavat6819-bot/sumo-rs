@@ -405,7 +405,7 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSPModel_NonInteracting_MoveToNextEdge) -> &mut MSPModel_NonInteracting_MoveToNextEdge {
-        todo!("port MoveToNextEdge::operator=")
+        panic!("MoveToNextEdge cannot be assigned: the assignment operator is invalidated in C++")
     }
 
 }
