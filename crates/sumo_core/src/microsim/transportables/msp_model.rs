@@ -35,7 +35,8 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel::add")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSPModel::add is pure virtual; call it on a concrete pedestrian model")
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel::loadState(MSTransportable *, MSStageMoving *, std::istringstream &)` [virtual]
@@ -56,7 +57,8 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSPModel::clearState")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSPModel::clearState is pure virtual; call it on a concrete pedestrian model")
     }
 
     /// C++: `void MSPModel::remove(MSTransportableStateAdapter *)` [virtual, pure virtual]
@@ -64,7 +66,8 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSPModel::remove")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSPModel::remove is pure virtual; call it on a concrete pedestrian model")
     }
 
     /// C++: `bool MSPModel::blockedAtDist(const SUMOTrafficObject *, const MSLane *, double, double, double, std::vector<const MSPerson *> *)` [virtual]
@@ -116,7 +119,8 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn using_internal_lanes(&mut self) -> bool {
-        todo!("port MSPModel::usingInternalLanes")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSPModel::usingInternalLanes is pure virtual; call it on a concrete pedestrian model")
     }
 
     /// C++: `bool MSPModel::usingShortcuts()` [virtual]
@@ -144,7 +148,8 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_active_number(&mut self) -> i32 {
-        todo!("port MSPModel::getActiveNumber")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSPModel::getActiveNumber is pure virtual; call it on a concrete pedestrian model")
     }
 
     /// C++: `int MSPModel::canTraverse(int, const ConstMSEdgeVector &, int &)` [static]
@@ -208,7 +213,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        todo!("port MSTransportableStateAdapter::getEdgePos")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getEdgePos is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `int MSTransportableStateAdapter::getDirection() const` [const, virtual, pure virtual]
@@ -216,7 +222,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        todo!("port MSTransportableStateAdapter::getDirection")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getDirection is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `Position MSTransportableStateAdapter::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual, pure virtual]
@@ -224,7 +231,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_position(&self, stage: &MSStageMoving, now: SUMOTime) -> Position {
-        todo!("port MSTransportableStateAdapter::getPosition")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getPosition is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `double MSTransportableStateAdapter::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual, pure virtual]
@@ -232,7 +240,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        todo!("port MSTransportableStateAdapter::getAngle")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getAngle is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `SUMOTime MSTransportableStateAdapter::getWaitingTime() const` [const, virtual, pure virtual]
@@ -240,7 +249,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        todo!("port MSTransportableStateAdapter::getWaitingTime")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getWaitingTime is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `SUMOTime MSTransportableStateAdapter::getTotalWaitingTime() const` [const, virtual]
@@ -257,7 +267,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_speed(&self, stage: &MSStageMoving) -> f64 {
-        todo!("port MSTransportableStateAdapter::getSpeed")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getSpeed is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `const MSEdge * MSTransportableStateAdapter::getNextEdge(const MSStageMoving &) const` [const, virtual, pure virtual]
@@ -265,7 +276,8 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        todo!("port MSTransportableStateAdapter::getNextEdge")
+        // (pure virtual in C++: no body; subclasses implement it)
+        panic!("MSTransportableStateAdapter::getNextEdge is pure virtual; call it on a concrete state adapter")
     }
 
     /// C++: `void MSTransportableStateAdapter::moveTo(MSPerson *, MSLane *, double, double, SUMOTime)` [virtual]
