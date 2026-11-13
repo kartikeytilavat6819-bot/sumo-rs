@@ -153,6 +153,9 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_person: ms_person_is_person,
     is_container: ms_person_is_container,
     get_parameter: ms_person_get_parameter,
+    // shortcut: MSPerson getEdge/getNumericalID are not ported yet, base pure-virtual panic kept, upgrade when persons are simulated
+    get_edge: crate::utils::vehicle::sumo_traffic_object::default_get_edge,
+    get_numerical_id: crate::utils::vehicle::sumo_traffic_object::default_get_numerical_id,
 };
 
 /// The class holds a simulated person together with her movement stages

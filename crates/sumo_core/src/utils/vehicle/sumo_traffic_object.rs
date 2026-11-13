@@ -16,6 +16,8 @@ pub struct SUMOTrafficObjectVt {
     pub is_person: fn(&SUMOTrafficObject) -> bool,
     pub is_container: fn(&SUMOTrafficObject) -> bool,
     pub get_parameter: for<'a> fn(&'a SUMOTrafficObject) -> &'a SUMOVehicleParameter,
+    pub get_edge: fn(&SUMOTrafficObject) -> Ptr<MSEdge>,
+    pub get_numerical_id: fn(&SUMOTrafficObject) -> SUMOTrafficObject_NumericalID,
 }
 
 fn default_is_false(_: &SUMOTrafficObject) -> bool {
@@ -26,11 +28,21 @@ fn default_get_parameter(_: &SUMOTrafficObject) -> &SUMOVehicleParameter {
     panic!("SUMOTrafficObject::getParameter is pure virtual")
 }
 
+pub fn default_get_edge(_: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    panic!("SUMOTrafficObject::getEdge is pure virtual")
+}
+
+pub fn default_get_numerical_id(_: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    panic!("SUMOTrafficObject::getNumericalID is pure virtual")
+}
+
 static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: default_is_false,
     is_person: default_is_false,
     is_container: default_is_false,
     get_parameter: default_get_parameter,
+    get_edge: default_get_edge,
+    get_numerical_id: default_get_numerical_id,
 };
 
 /// Representation of a vehicle, person, or container
@@ -107,7 +119,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> SUMOTrafficObject_NumericalID {
-        panic!("SUMOTrafficObject::getNumericalID is pure virtual")
+        (self.vt.get_numerical_id)(self)
     }
 
     /// C++: `long long SUMOTrafficObject::getRandomSeed() const` [const, virtual, pure virtual]
@@ -179,7 +191,7 @@ impl SUMOTrafficObject {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        panic!("SUMOTrafficObject::getEdge is pure virtual")
+        (self.vt.get_edge)(self)
     }
 
     /// C++: `const MSEdge * SUMOTrafficObject::getCurrentEdge() const` [const, virtual, pure virtual]
