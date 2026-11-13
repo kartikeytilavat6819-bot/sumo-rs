@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Stauzaehlerdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Stauzaehlerdefinition::NIVissimSingleTypeParser_Stauzaehlerdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Stauzaehlerdefinition::~NIVissimSingleTypeParser_Stauzaehlerdefinition() noexcept` [virtual]
@@ -36,7 +36,8 @@ impl NIVissimSingleTypeParser_Stauzaehlerdefinition {
     // NIVissimSingleTypeParser_Stauzaehlerdefinition::~NIVissimSingleTypeParser_Stauzaehlerdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Stauzaehlerdefinition::~NIVissimSingleTypeParser_Stauzaehlerdefinition")
+        // C++ body is empty; the base destructor runs next.
+        self.base.drop_();
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Stauzaehlerdefinition::parse(std::istream &)` [virtual]
@@ -46,8 +47,8 @@ impl NIVissimSingleTypeParser_Stauzaehlerdefinition {
     //     return skipOverreading(from, "strecke");
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Stauzaehlerdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        self.skip_overreading(from, "strecke")
     }
 
 }

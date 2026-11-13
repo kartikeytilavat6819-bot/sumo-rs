@@ -13,14 +13,15 @@ impl NIVissimClosedLaneDef {
     //     : myAssignedVehicles(assignedVehicles) {}
     #[allow(unused_variables)]
     pub fn new(assignedVehicles: &Vec<i32>) -> Self {
-        todo!("port NIVissimClosedLaneDef::NIVissimClosedLaneDef")
+        NIVissimClosedLaneDef {
+            myAssignedVehicles: assignedVehicles.clone(),
+        }
     }
 
     /// C++: `void NIVissimClosedLaneDef::~NIVissimClosedLaneDef()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimClosedLaneDef::~NIVissimClosedLaneDef")
     }
 
 }

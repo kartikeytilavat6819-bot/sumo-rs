@@ -452,7 +452,8 @@ impl PCPolyContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &PCPolyContainer) -> Self {
-        todo!("port PCPolyContainer::PCPolyContainer")
+        // shortcut: C++ declares this private copy constructor but never defines it (any call is a link error), so it can't be called; panic mirrors that
+        panic!("PCPolyContainer::PCPolyContainer(const PCPolyContainer&) is private and undefined")
     }
 
     /// C++: `PCPolyContainer & PCPolyContainer::operator=(const PCPolyContainer &)` [private]
@@ -460,7 +461,8 @@ impl PCPolyContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &PCPolyContainer) -> &mut PCPolyContainer {
-        todo!("port PCPolyContainer::operator=")
+        // shortcut: C++ declares operator= = delete, so it can't be called; panic mirrors that
+        panic!("PCPolyContainer::operator= is deleted")
     }
 
 }
