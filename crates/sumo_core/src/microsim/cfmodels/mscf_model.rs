@@ -73,6 +73,220 @@ pub enum MSCFModel_CalcReason {
     LANE_CHANGE = 3,
 }
 
+/// Virtual dispatch table for the polymorphic methods of MSCFModel.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct MSCFModelVt {
+    pub finalize_speed: fn(&MSCFModel, Ptr<MSVehicle>, f64) -> f64,
+    pub patch_speed_before_lc: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64) -> f64,
+    pub free_speed: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64, f64, bool, MSCFModel_CalcReason) -> f64,
+    pub follow_speed: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64, f64, f64, Ptr<MSVehicle>, MSCFModel_CalcReason) -> f64,
+    pub insertion_follow_speed: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64, f64, f64, Ptr<MSVehicle>) -> f64,
+    pub insertion_stop_speed: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64) -> f64,
+    pub stop_speed_2: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64, f64, MSCFModel_CalcReason) -> f64,
+    pub follow_speed_transient: fn(&MSCFModel, f64, Ptr<MSVehicle>, f64, f64, f64, f64) -> f64,
+    pub interaction_gap: fn(&MSCFModel, Ptr<MSVehicle>, f64) -> f64,
+    pub maximum_lane_speed_cf: fn(&MSCFModel, Ptr<MSVehicle>, f64, f64) -> f64,
+    pub get_model_id: fn(&MSCFModel) -> i32,
+    pub duplicate: fn(&MSCFModel, Ptr<MSVehicleType>) -> Ptr<MSCFModel>,
+    pub create_vehicle_variables: fn(&MSCFModel) -> Ptr<MSCFModel_VehicleVariables>,
+    pub get_headway_time: fn(&MSCFModel) -> f64,
+    pub set_headway_time: fn(&mut MSCFModel, f64),
+    pub get_imperfection: fn(&MSCFModel) -> f64,
+    pub set_imperfection: fn(&mut MSCFModel, f64),
+    pub set_max_decel: fn(&mut MSCFModel, f64),
+    pub startup_delay_stopped: fn(&MSCFModel) -> bool,
+    pub max_next_speed: fn(&MSCFModel, f64, Ptr<MSVehicle>) -> f64,
+    pub max_next_safe_min: fn(&MSCFModel, f64, Ptr<MSVehicle>) -> f64,
+    pub min_next_speed: fn(&MSCFModel, f64, Ptr<MSVehicle>) -> f64,
+    pub min_next_speed_emergency: fn(&MSCFModel, f64, Ptr<MSVehicle>) -> f64,
+    pub brake_gap_2: fn(&MSCFModel, f64, f64, f64) -> f64,
+    pub get_secure_gap: fn(&MSCFModel, Ptr<MSVehicle>, Ptr<MSVehicle>, f64, f64, f64) -> f64,
+}
+
+fn default_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    m.finalize_speed_base(veh, vPos)
+}
+fn default_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    m.patch_speed_before_lc_base(veh, vMin, vMax)
+}
+fn default_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    m.free_speed_base(veh, speed, seen, maxSpeed, onInsertion, usage)
+}
+fn default_follow_speed(_m: &MSCFModel, _veh: Ptr<MSVehicle>, _speed: f64, _gap2pred: f64, _predSpeed: f64, _predMaxDecel: f64, _pred: Ptr<MSVehicle>, _usage: MSCFModel_CalcReason) -> f64 {
+    panic!("MSCFModel::followSpeed is pure virtual")
+}
+fn default_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    m.insertion_follow_speed_base(veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+}
+fn default_insertion_stop_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
+    m.insertion_stop_speed_base(veh, speed, gap)
+}
+fn default_stop_speed_2(_m: &MSCFModel, _veh: Ptr<MSVehicle>, _speed: f64, _gap: f64, _decel: f64, _usage: MSCFModel_CalcReason) -> f64 {
+    panic!("MSCFModel::stopSpeed is pure virtual")
+}
+fn default_follow_speed_transient(m: &MSCFModel, duration: f64, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
+    m.follow_speed_transient_base(duration, veh, speed, gap2pred, predSpeed, predMaxDecel)
+}
+fn default_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+    m.interaction_gap_base(veh, vL)
+}
+fn default_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
+    m.maximum_lane_speed_cf_base(veh, maxSpeed, maxSpeedLane)
+}
+fn default_get_model_id(_m: &MSCFModel) -> i32 {
+    panic!("MSCFModel::getModelID is pure virtual")
+}
+fn default_duplicate(_m: &MSCFModel, _vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    panic!("MSCFModel::duplicate is pure virtual")
+}
+fn default_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    m.create_vehicle_variables_base()
+}
+fn default_get_headway_time(m: &MSCFModel) -> f64 {
+    m.get_headway_time_base()
+}
+fn default_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
+    m.set_headway_time_base(headwayTime)
+}
+fn default_get_imperfection(m: &MSCFModel) -> f64 {
+    m.get_imperfection_base()
+}
+fn default_set_imperfection(m: &mut MSCFModel, imperfection: f64) {
+    m.set_imperfection_base(imperfection)
+}
+fn default_set_max_decel(m: &mut MSCFModel, decel: f64) {
+    m.set_max_decel_base(decel)
+}
+fn default_startup_delay_stopped(m: &MSCFModel) -> bool {
+    m.startup_delay_stopped_base()
+}
+fn default_max_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    m.max_next_speed_base(speed, veh)
+}
+fn default_max_next_safe_min(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    m.max_next_safe_min_base(speed, veh)
+}
+fn default_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    m.min_next_speed_base(speed, veh)
+}
+fn default_min_next_speed_emergency(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    m.min_next_speed_emergency_base(speed, veh)
+}
+fn default_brake_gap_2(m: &MSCFModel, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+    m.brake_gap_2_base(speed, decel, headwayTime)
+}
+fn default_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+    m.get_secure_gap_base(veh, pred, speed, leaderSpeed, leaderMaxDecel)
+}
+
+/// C++ static_cast from `MSCFModel` to a derived class. Derived structs embed their base first (repr(C)),
+/// and the `vt` installed by the derived constructor guarantees the dynamic type.
+pub(crate) fn cf_cast<T>(cf: &MSCFModel) -> &T {
+    // SAFETY: T's first field chain starts with MSCFModel, and vt guarantees cf is a T
+    unsafe { &*(cf as *const MSCFModel as *const T) }
+}
+
+/// Mutable counterpart of `cf_cast`
+pub(crate) fn cf_cast_mut<T>(cf: &mut MSCFModel) -> &mut T {
+    // SAFETY: see cf_cast
+    unsafe { &mut *(cf as *mut MSCFModel as *mut T) }
+}
+
+/// Table installed by MSCFModel itself: every virtual runs the base body (pure ones panic)
+pub(crate) const DEFAULT_MSCF_MODEL_VT: MSCFModelVt = MSCFModelVt {
+    finalize_speed: default_finalize_speed,
+    patch_speed_before_lc: default_patch_speed_before_lc,
+    free_speed: default_free_speed,
+    follow_speed: default_follow_speed,
+    insertion_follow_speed: default_insertion_follow_speed,
+    insertion_stop_speed: default_insertion_stop_speed,
+    stop_speed_2: default_stop_speed_2,
+    follow_speed_transient: default_follow_speed_transient,
+    interaction_gap: default_interaction_gap,
+    maximum_lane_speed_cf: default_maximum_lane_speed_cf,
+    get_model_id: default_get_model_id,
+    duplicate: default_duplicate,
+    create_vehicle_variables: default_create_vehicle_variables,
+    get_headway_time: default_get_headway_time,
+    set_headway_time: default_set_headway_time,
+    get_imperfection: default_get_imperfection,
+    set_imperfection: default_set_imperfection,
+    set_max_decel: default_set_max_decel,
+    startup_delay_stopped: default_startup_delay_stopped,
+    max_next_speed: default_max_next_speed,
+    max_next_safe_min: default_max_next_safe_min,
+    min_next_speed: default_min_next_speed,
+    min_next_speed_emergency: default_min_next_speed_emergency,
+    brake_gap_2: default_brake_gap_2,
+    get_secure_gap: default_get_secure_gap,
+};
+
+impl MSCFModel {
+    pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+        (self.vt.finalize_speed)(self, veh, vPos)
+    }
+    pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+        (self.vt.patch_speed_before_lc)(self, veh, vMin, vMax)
+    }
+    pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+        (self.vt.free_speed)(self, veh, speed, seen, maxSpeed, onInsertion, usage)
+    }
+    pub fn insertion_follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+        (self.vt.insertion_follow_speed)(self, veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+    }
+    pub fn insertion_stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
+        (self.vt.insertion_stop_speed)(self, veh, speed, gap)
+    }
+    pub fn follow_speed_transient(&self, duration: f64, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
+        (self.vt.follow_speed_transient)(self, duration, veh, speed, gap2pred, predSpeed, predMaxDecel)
+    }
+    pub fn interaction_gap(&self, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+        (self.vt.interaction_gap)(self, veh, vL)
+    }
+    pub fn maximum_lane_speed_cf(&self, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
+        (self.vt.maximum_lane_speed_cf)(self, veh, maxSpeed, maxSpeedLane)
+    }
+    pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
+        (self.vt.create_vehicle_variables)(self)
+    }
+    pub fn get_headway_time(&self) -> f64 {
+        (self.vt.get_headway_time)(self)
+    }
+    pub fn set_headway_time(&mut self, headwayTime: f64) {
+        (self.vt.set_headway_time)(self, headwayTime)
+    }
+    pub fn get_imperfection(&self) -> f64 {
+        (self.vt.get_imperfection)(self)
+    }
+    pub fn set_imperfection(&mut self, imperfection: f64) {
+        (self.vt.set_imperfection)(self, imperfection)
+    }
+    pub fn set_max_decel(&mut self, decel: f64) {
+        (self.vt.set_max_decel)(self, decel)
+    }
+    pub fn startup_delay_stopped(&self) -> bool {
+        (self.vt.startup_delay_stopped)(self)
+    }
+    pub fn max_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+        (self.vt.max_next_speed)(self, speed, veh)
+    }
+    pub fn max_next_safe_min(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+        (self.vt.max_next_safe_min)(self, speed, veh)
+    }
+    pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+        (self.vt.min_next_speed)(self, speed, veh)
+    }
+    pub fn min_next_speed_emergency(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+        (self.vt.min_next_speed_emergency)(self, speed, veh)
+    }
+    pub fn brake_gap_2(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+        (self.vt.brake_gap_2)(self, speed, decel, headwayTime)
+    }
+    pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+        (self.vt.get_secure_gap)(self, veh, pred, speed, leaderSpeed, leaderMaxDecel)
+    }
+}
+
 /// The car-following model abstraction
 /// C++ class `MSCFModel` (microsim/cfmodels/MSCFModel.h)
 #[repr(C)]
@@ -98,6 +312,8 @@ pub struct MSCFModel {
     pub myMaxAccelProfile: LinearApproxMap,
     /// The vehicle's desired acceleration profile [m/s^2]
     pub myDesAccelProfile: LinearApproxMap,
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSCFModelVt,
 }
 
 impl MSCFModel {
@@ -142,6 +358,7 @@ impl MSCFModel {
             myStartupDelay,
             myMaxAccelProfile,
             myDesAccelProfile,
+            vt: &DEFAULT_MSCF_MODEL_VT,
         }
     }
 
@@ -224,7 +441,7 @@ impl MSCFModel {
     //     return vNext;
     // }
     #[allow(unused_variables)]
-    pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    pub fn finalize_speed_base(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
         let oldV = veh.get_speed();
         let vStop = min2(vPos, veh.m().process_next_stop(vPos));
         let vMinEmergency = self.min_next_speed_emergency(oldV, veh);
@@ -248,7 +465,7 @@ impl MSCFModel {
     //         return vMax;
     //     }
     #[allow(unused_variables)]
-    pub fn patch_speed_before_lc(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    pub fn patch_speed_before_lc_base(&self, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
         let _ = (veh, vMin);
         vMax
     }
@@ -339,7 +556,7 @@ impl MSCFModel {
     //     return vSafe;
     // }
     #[allow(unused_variables)]
-    pub fn free_speed(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    pub fn free_speed_base(&self, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
         if maxSpeed < 0. {
             // can occur for ballistic update (in context of driving at red light)
             return maxSpeed;
@@ -353,8 +570,7 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSCFModel::followSpeed is pure virtual; call it on a concrete car-following model")
+        (self.vt.follow_speed)(self, veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
     }
 
     /// C++: `double MSCFModel::insertionFollowSpeed(const MSVehicle *const, double, double, double, double, const MSVehicle *const) const` [const, virtual]
@@ -369,7 +585,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn insertion_follow_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    pub fn insertion_follow_speed_base(&self, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
         if g_semi_implicit_euler_update() {
             self.maximum_safe_follow_speed(gap2pred, speed, predSpeed, predMaxDecel, true)
         } else {
@@ -393,8 +609,7 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn stop_speed_2(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSCFModel::stopSpeed is pure virtual; call it on a concrete car-following model")
+        (self.vt.stop_speed_2)(self, veh, speed, gap, decel, usage)
     }
 
     /// C++: `double MSCFModel::insertionStopSpeed(const MSVehicle *const, double, double) const` [const, virtual]
@@ -408,7 +623,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn insertion_stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
+    pub fn insertion_stop_speed_base(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
         if g_semi_implicit_euler_update() {
             self.stop_speed(veh, speed, gap, MSCFModel_CalcReason::FUTURE)
         } else {
@@ -468,7 +683,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn follow_speed_transient(&self, duration: f64, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
+    pub fn follow_speed_transient_base(&self, duration: f64, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64) -> f64 {
         // minimium distance covered by the leader if braking
         let leaderMinDist = gap2pred + self.dist_after_time(duration, predSpeed, -predMaxDecel);
         // if ego would not brake it could drive with speed leaderMinDist / duration
@@ -522,7 +737,7 @@ impl MSCFModel {
     //     return MAX2(gap, SPEED2DIST(vNext));
     // }
     #[allow(unused_variables)]
-    pub fn interaction_gap(&self, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+    pub fn interaction_gap_base(&self, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
         // Resolve the vsafe equation to gap. Assume predecessor has
         // speed != 0 and that vsafe will be the current speed plus acceleration,
         // i.e that with this gap there will be no interaction.
@@ -540,7 +755,7 @@ impl MSCFModel {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn maximum_lane_speed_cf(&self, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
+    pub fn maximum_lane_speed_cf_base(&self, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
         let mut result = min2(maxSpeed, maxSpeedLane);
         self.apply_own_speed_perception_error(veh, &mut result);
         result
@@ -551,8 +766,7 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> i32 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSCFModel::getModelID is pure virtual; call it on a concrete car-following model")
+        (self.vt.get_model_id)(self)
     }
 
     /// C++: `MSCFModel * MSCFModel::duplicate(const MSVehicleType *) const` [const, virtual, pure virtual]
@@ -560,8 +774,7 @@ impl MSCFModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSCFModel::duplicate is pure virtual; call it on a concrete car-following model")
+        (self.vt.duplicate)(self, vtype)
     }
 
     /// C++: `VehicleVariables * MSCFModel::createVehicleVariables() const` [const, virtual]
@@ -570,7 +783,7 @@ impl MSCFModel {
     //         return 0;
     //     }
     #[allow(unused_variables)]
-    pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
+    pub fn create_vehicle_variables_base(&self) -> Ptr<MSCFModel_VehicleVariables> {
         // C++ returns 0 (no model-specific variables)
         Ptr::default()
     }
@@ -688,7 +901,7 @@ impl MSCFModel {
     //         return -1;
     //     }
     #[allow(unused_variables)]
-    pub fn get_imperfection(&self) -> f64 {
+    pub fn get_imperfection_base(&self) -> f64 {
         -1.
     }
 
@@ -698,7 +911,7 @@ impl MSCFModel {
     //         return myHeadwayTime;
     //     }
     #[allow(unused_variables)]
-    pub fn get_headway_time(&self) -> f64 {
+    pub fn get_headway_time_base(&self) -> f64 {
         self.myHeadwayTime
     }
 
@@ -708,7 +921,7 @@ impl MSCFModel {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn startup_delay_stopped(&self) -> bool {
+    pub fn startup_delay_stopped_base(&self) -> bool {
         false
     }
 
@@ -719,7 +932,7 @@ impl MSCFModel {
     //     return MIN2(speed + (double) ACCEL2SPEED(getCurrentAccel(speed)), myType->getMaxSpeed());
     // }
     #[allow(unused_variables)]
-    pub fn max_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    pub fn max_next_speed_base(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         min2(speed + accel2speed(self.get_current_accel(speed)), self.myType.get_max_speed())
     }
 
@@ -729,7 +942,7 @@ impl MSCFModel {
     //         return maxNextSpeed(speed, veh);
     //     }
     #[allow(unused_variables)]
-    pub fn max_next_safe_min(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    pub fn max_next_safe_min_base(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         self.max_next_speed(speed, veh)
     }
 
@@ -745,7 +958,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    pub fn min_next_speed_base(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         if g_semi_implicit_euler_update() {
             max2(speed - accel2speed(self.myDecel), 0.)
         } else {
@@ -766,7 +979,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn min_next_speed_emergency(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    pub fn min_next_speed_emergency_base(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         if g_semi_implicit_euler_update() {
             max2(speed - accel2speed(self.myEmergencyDecel), 0.)
         } else {
@@ -800,7 +1013,7 @@ impl MSCFModel {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn brake_gap_2(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+    pub fn brake_gap_2_base(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
         if g_semi_implicit_euler_update() {
             Self::brake_gap_euler(speed, decel, headwayTime)
         } else {
@@ -961,7 +1174,7 @@ impl MSCFModel {
     //     return secureGap;
     // }
     #[allow(unused_variables)]
-    pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, arg1: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+    pub fn get_secure_gap_base(&self, veh: Ptr<MSVehicle>, arg1: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
         // The solution approach leaderBrakeGap >= followerBrakeGap is not
         // secure when the follower can brake harder than the leader because the paths may still cross.
         // As a workaround we use a value of leaderDecel which errs on the side of caution
@@ -1666,7 +1879,7 @@ impl MSCFModel {
     //         myDecel = decel;
     //     }
     #[allow(unused_variables)]
-    pub fn set_max_decel(&mut self, decel: f64) {
+    pub fn set_max_decel_base(&mut self, decel: f64) {
         self.myDecel = decel;
     }
 
@@ -1726,7 +1939,7 @@ impl MSCFModel {
     //         UNUSED_PARAMETER(imperfection);
     //     }
     #[allow(unused_variables)]
-    pub fn set_imperfection(&mut self, imperfection: f64) {
+    pub fn set_imperfection_base(&mut self, imperfection: f64) {
         let _ = imperfection;
     }
 
@@ -1736,7 +1949,7 @@ impl MSCFModel {
     //         myHeadwayTime = headwayTime;
     //     }
     #[allow(unused_variables)]
-    pub fn set_headway_time(&mut self, headwayTime: f64) {
+    pub fn set_headway_time_base(&mut self, headwayTime: f64) {
         self.myHeadwayTime = headwayTime;
     }
 

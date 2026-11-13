@@ -107,7 +107,7 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Wiedemann_VehicleVariables);
         vars.m().accelSign = if vNext > veh.get_speed() { 1. } else { -1. };
         vNext
@@ -166,7 +166,7 @@ impl MSCFModel_Wiedemann {
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
         let bx = (1. + 7. * self.mySecurity) * speed.sqrt();
         let abx = self.myAX + bx - self.myType.get_length(); // abx is the brutto gap
-        max2(abx, self.base.get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel))
+        max2(abx, self.base.get_secure_gap_base(veh, pred, speed, leaderSpeed, leaderMaxDecel))
     }
 
     /// C++: `int MSCFModel_Wiedemann::getModelID() const` [const, virtual]

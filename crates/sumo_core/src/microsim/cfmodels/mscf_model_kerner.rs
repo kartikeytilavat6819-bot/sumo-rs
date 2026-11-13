@@ -72,7 +72,7 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Kerner_VehicleVariables);
         vars.m().rand = veh.get_rng().m().rand();
         vNext

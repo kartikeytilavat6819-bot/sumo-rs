@@ -380,7 +380,7 @@ impl MSCFModel_CC {
             }
             self.v(veh, gap2pred, speed, speed + relSpeed)
         } else {
-            self.base.free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+            self.base.free_speed_base(veh, speed, seen, maxSpeed, onInsertion, usage)
         }
     }
 
@@ -418,7 +418,7 @@ impl MSCFModel_CC {
     pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
         if vars.engineModel == 0 /* CC_ENGINE_MODEL_FOLM */ {
-            self.base.min_next_speed(speed, veh)
+            self.base.min_next_speed_base(speed, veh)
         } else {
             max2(0., speed - accel2speed(20.))
         }

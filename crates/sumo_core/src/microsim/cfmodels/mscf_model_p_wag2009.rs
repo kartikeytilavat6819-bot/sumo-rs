@@ -81,7 +81,7 @@ impl MSCFModel_PWag2009 {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_PWag2009_VehicleVariables);
         let apref = speed2accel(vNext - veh.get_speed());
         vars.m().aOld = apref;

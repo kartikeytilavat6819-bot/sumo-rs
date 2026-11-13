@@ -1111,14 +1111,14 @@ impl MSCFModel_EIDM {
     #[allow(unused_variables)]
     pub fn brake_gap(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
         if MSGlobals::compute_lc() {
-            self.base.brake_gap_2(speed, decel, headwayTime)
+            self.base.brake_gap_2_base(speed, decel, headwayTime)
         } else {
             // myDecel + 1.0 does not work correctly with the junction model and impatience > 0.
             // Vehicles may first be disregarded because their own arrivalTimeBraking is high (TIME2STEPS(30)).
             // This is amplified by this brakeGap-Term, because they "think" they could still brake in time (low brakeGap),
             // but actually 1.0 was only added for braking at traffic lights. But then when seen < brakeGap(v) happens (see MSVehicle: arrivalTimeBraking),
             // they realize, that they will soon arrive at the junction and other vehicles are notified to maybe then brake hard!
-            self.base.brake_gap_2(speed, max2(decel, self.myDecel + 1.0), headwayTime)
+            self.base.brake_gap_2_base(speed, max2(decel, self.myDecel + 1.0), headwayTime)
         }
     }
 

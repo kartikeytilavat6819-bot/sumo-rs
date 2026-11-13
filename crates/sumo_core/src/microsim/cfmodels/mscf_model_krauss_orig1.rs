@@ -31,6 +31,48 @@ impl std::ops::DerefMut for MSCFModel_KraussOrig1 {
     }
 }
 
+fn krauss_orig1_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_KraussOrig1>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn krauss_orig1_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_KraussOrig1>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn krauss_orig1_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_KraussOrig1>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+fn krauss_orig1_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_KraussOrig1>(m).get_model_id()
+}
+fn krauss_orig1_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_KraussOrig1>(m).duplicate(vtype)
+}
+fn krauss_orig1_get_imperfection(m: &MSCFModel) -> f64 {
+    cf_cast::<MSCFModel_KraussOrig1>(m).get_imperfection()
+}
+fn krauss_orig1_set_imperfection(m: &mut MSCFModel, imperfection: f64) {
+    cf_cast_mut::<MSCFModel_KraussOrig1>(m).set_imperfection(imperfection)
+}
+fn krauss_orig1_set_max_decel(m: &mut MSCFModel, decel: f64) {
+    cf_cast_mut::<MSCFModel_KraussOrig1>(m).set_max_decel(decel)
+}
+fn krauss_orig1_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
+    cf_cast_mut::<MSCFModel_KraussOrig1>(m).set_headway_time(headwayTime)
+}
+
+/// Virtual table of MSCFModel_KraussOrig1 (its overrides; the rest run the MSCFModel bodies)
+pub const KRAUSS_ORIG1_VT: MSCFModelVt = MSCFModelVt {
+    patch_speed_before_lc: krauss_orig1_patch_speed_before_lc,
+    follow_speed: krauss_orig1_follow_speed,
+    stop_speed_2: krauss_orig1_stop_speed_2,
+    get_model_id: krauss_orig1_get_model_id,
+    duplicate: krauss_orig1_duplicate,
+    get_imperfection: krauss_orig1_get_imperfection,
+    set_imperfection: krauss_orig1_set_imperfection,
+    set_max_decel: krauss_orig1_set_max_decel,
+    set_headway_time: krauss_orig1_set_headway_time,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl MSCFModel_KraussOrig1 {
     /// C++: `void MSCFModel_KraussOrig1::MSCFModel_KraussOrig1(const MSVehicleType *)`
     /// Constructor
@@ -44,7 +86,9 @@ impl MSCFModel_KraussOrig1 {
         let myDawdle = vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(vtype.get_parameter().vehicleClass));
         let base = MSCFModel::new(vtype);
         let myTauDecel = base.myDecel * base.myHeadwayTime;
-        MSCFModel_KraussOrig1 { base, myDawdle, myTauDecel }
+        let mut this = MSCFModel_KraussOrig1 { base, myDawdle, myTauDecel };
+        this.base.vt = &KRAUSS_ORIG1_VT;
+        this
     }
 
     /// C++: `void MSCFModel_KraussOrig1::~MSCFModel_KraussOrig1() noexcept` [virtual]
