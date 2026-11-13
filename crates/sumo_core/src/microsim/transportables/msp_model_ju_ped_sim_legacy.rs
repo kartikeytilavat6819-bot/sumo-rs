@@ -12,16 +12,18 @@ pub enum MSPModel_JuPedSim_legacy_JPS_Model {
     SocialForce = 3,
 }
 
-/// C++ typedef `int MSPModel_JuPedSim_legacy::WaypointDesc`
-pub type MSPModel_JuPedSim_legacy_WaypointDesc = i32;
+/// C++ typedef `std::tuple<JPS_StageId, Position, double> MSPModel_JuPedSim_legacy::WaypointDesc`
+pub type MSPModel_JuPedSim_legacy_WaypointDesc = (i64, Position, f64);
 
 /// Structure that keeps data related to vanishing areas (and other types of areas).
 /// C++ class `MSPModel_JuPedSim_legacy::AreaData` (microsim/transportables/MSPModel_JuPedSim_legacy.h)
 pub struct MSPModel_JuPedSim_legacy_AreaData {
     pub id: String,
     pub areaType: String,
-    pub areaBoundary: i32,
-    pub params: Ptr<Unmapped /* Parameterised::Map */>,
+    /// C++ `std::vector<JPS_Point>`, JPS_Point is {x, y}
+    pub areaBoundary: Vec<(f64, f64)>,
+    /// C++ `const Parameterised::Map&` (non-owning)
+    pub params: Ptr<ParameterisedMap>,
     /// The last time a pedestrian was removed in a vanishing area.
     pub lastRemovalTime: SUMOTime,
 }
@@ -33,6 +35,7 @@ impl MSPModel_JuPedSim_legacy_AreaData {
 #[repr(C)]
 pub struct MSPModel_JuPedSim_legacy_Event {
     /// C++ base class `Command`
+    // shortcut: Command has no Rust type yet, keep () until microsim Command is ported
     pub base: Unmapped /* Command */,
     pub myModel: Ptr<MSPModel_JuPedSim_legacy>,
 }
@@ -87,26 +90,33 @@ pub struct MSPModel_JuPedSim_legacy {
     pub myJPSDeltaT: SUMOTime,
     /// Threshold to decide if a pedestrian has ended its journey or not.
     pub myExitTolerance: f64,
-    pub myPedestrianStates: i32,
+    pub myPedestrianStates: Vec<Ptr<MSPModel_JuPedSim_legacy_PState>>,
     /// The GEOS polygon containing all computed connected components of the pedestrian network.
-    pub myGEOSPedestrianNetwork: Ptr<i32>,
+    // shortcut: owned GEOSGeometry* -> geos::Geometry (crate geos 11.3.1), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+    pub myGEOSPedestrianNetwork: Option<Box<dyn std::any::Any>>,
     /// The GEOS polygon representing the largest (by area) connected component of the pedestrian network.
-    pub myGEOSPedestrianNetworkLargestComponent: Ptr<i32>,
+    // shortcut: non-owning const GEOSGeometry* -> Ptr<geos::Geometry>, upgrade with the geos crate
+    pub myGEOSPedestrianNetworkLargestComponent: Option<Ptr<dyn std::any::Any>>,
     pub myHaveAdditionalWalkableAreas: bool,
     /// The JPS polygon representing the largest connected component of the pedestrian network.
-    pub myJPSGeometry: i32,
+    // shortcut: JPS_Geometry is an opaque jupedsim.h pointer; no jupedsim crate found on crates.io, bindgen over jupedsim/jupedsim.h when wiring it
+    pub myJPSGeometry: Option<Box<dyn std::any::Any>>,
     /// The JPS polygon representing the largest connected component plus carriages and ramps.
-    pub myJPSGeometryWithTrainsAndRamps: i32,
+    // shortcut: same as myJPSGeometry (JPS_Geometry opaque pointer), upgrade with the jupedsim bindings
+    pub myJPSGeometryWithTrainsAndRamps: Option<Box<dyn std::any::Any>>,
     pub myJPSModel: MSPModel_JuPedSim_JPS_Model,
-    pub myJPSOperationalModel: i32,
-    pub myJPSSimulation: i32,
+    // shortcut: JPS_OperationalModel opaque pointer, upgrade with the jupedsim bindings
+    pub myJPSOperationalModel: Option<Box<dyn std::any::Any>>,
+    // shortcut: JPS_Simulation opaque pointer, upgrade with the jupedsim bindings
+    pub myJPSSimulation: Option<Box<dyn std::any::Any>>,
     pub myPythonScript: Ptr<OutputDevice>,
     /// Array of special areas.
-    pub myAreas: i32,
+    pub myAreas: Vec<Box<MSPModel_JuPedSim_legacy_AreaData>>,
     /// Array of stopped trains, used to detect whether to add carriages and ramps to the geometry.
-    pub myAllStoppedTrainIDs: i32,
-    pub myCrossingWaits: i32,
-    pub myCrossings: i32,
+    pub myAllStoppedTrainIDs: Vec<SUMOTrafficObject_NumericalID>,
+    // determinism: C++ std::map ordered by ComparatorNumericalIdLess (lane numerical id); a Vec keeps insertion order, sort by lane id when iterating
+    pub myCrossingWaits: Vec<(Ptr<MSLane>, (i64, i64))>,
+    pub myCrossings: BTreeMap<i64, Ptr<MSLane>>,
 }
 
 impl std::ops::Deref for MSPModel_JuPedSim_legacy {
@@ -1025,7 +1035,7 @@ impl MSPModel_JuPedSim_legacy {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn add_waypoint(&mut self, journey: i32, predecessor: &mut i32, agentID: &str, waypoint: &MSPModel_JuPedSim_WaypointDesc) -> bool {
+    pub fn add_waypoint(&mut self, journey: i32, predecessor: &mut i32, agentID: &str, waypoint: &MSPModel_JuPedSim_legacy_WaypointDesc) -> bool {
         todo!("port MSPModel_JuPedSim_legacy::addWaypoint")
     }
 
@@ -1522,10 +1532,10 @@ pub struct MSPModel_JuPedSim_legacy_PState {
     /// C++ base class `MSPModel_InteractingState`
     pub base: MSPModel_InteractingState,
     /// id of the journey, needed for modifying it
-    pub myJourneyId: i32,
-    pub myStageId: i32,
-    pub myWaypoints: i32,
-    pub myAgentId: i32,
+    pub myJourneyId: i64,
+    pub myStageId: i64,
+    pub myWaypoints: Vec<MSPModel_JuPedSim_legacy_WaypointDesc>,
+    pub myAgentId: i64,
 }
 
 impl std::ops::Deref for MSPModel_JuPedSim_legacy_PState {
@@ -1550,7 +1560,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //     myDir = FORWARD;
     // }
     #[allow(unused_variables)]
-    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: i32, stageId: i32, waypoints: &i32) -> Self {
+    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: i64, stageId: i64, waypoints: &[MSPModel_JuPedSim_legacy_WaypointDesc]) -> Self {
         todo!("port PState::PState")
     }
 
@@ -1575,7 +1585,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //     myWaypoints = waypoints;
     // }
     #[allow(unused_variables)]
-    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: i32, stageId: i32, waypoints: &i32) {
+    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: i64, stageId: i64, waypoints: &[MSPModel_JuPedSim_legacy_WaypointDesc]) {
         todo!("port PState::reinit")
     }
 
