@@ -9744,7 +9744,7 @@ impl MSVehicle {
             panic!("{}", ProcessError::Process("Error: Invalid vehicles in state (may be a meso state)!".to_string()));
         }
         let mut ok = true;
-        let id = self.get_id();
+        let id = self.get_id().to_string();
         let state = attrs.get_string(SUMO_ATTR_STATE);
         let mut bis = state.split_whitespace();
         self.myParameter.m().parametersSet = stream_next(&mut bis);

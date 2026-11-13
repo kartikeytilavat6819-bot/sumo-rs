@@ -20,7 +20,7 @@ pub struct CHRouter<E, V> {
     pub myForwardSearch: CHRouter_Unidirectional,
     pub myBackwardSearch: CHRouter_Unidirectional,
     pub myHierarchyBuilder: Ptr<CHBuilder<E, V>>,
-    pub myHierarchy: Ptr<CHBuilder_Hierarchy>,
+    pub myHierarchy: Ptr<CHBuilder_Hierarchy<E>>,
     /// the validity duration of one weight interval
     pub myWeightPeriod: SUMOTime,
     /// the validity duration of the current hierarchy (exclusive)
@@ -81,7 +81,7 @@ impl<E, V> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         todo!("port CHRouter::CHRouter<E, V>")
     }
 

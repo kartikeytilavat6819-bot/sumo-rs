@@ -264,7 +264,7 @@ impl<E, V> CHBuilder<E, V> {
     //                 std::make_heap(queue.begin(), queue.end(), myCmp);
     //             }
     //             */
-    //             contractionRank++;
+    //             contractionRank += 1;
     //         }
     //         // reporting
     //         const long duration = SysUtils::getCurrentMillis() - startMillis;
@@ -359,7 +359,7 @@ impl<E, V> CHBuilder<E, V> {
                 std::make_heap(queue.begin(), queue.end(), myCmp);
             }
             */
-            contractionRank++;
+            contractionRank += 1;
         }
         // reporting
         let duration = current_millis() - startMillis;
