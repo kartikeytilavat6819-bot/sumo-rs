@@ -164,7 +164,7 @@ impl MSVTypeProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSVTypeProbe) -> Self {
-        todo!("port MSVTypeProbe::MSVTypeProbe")
+        panic!("MSVTypeProbe copy constructor is invalidated in SUMO")
     }
 
     /// C++: `MSVTypeProbe & MSVTypeProbe::operator=(const MSVTypeProbe &)` [private]
@@ -172,7 +172,7 @@ impl MSVTypeProbe {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSVTypeProbe) -> &mut MSVTypeProbe {
-        todo!("port MSVTypeProbe::operator=")
+        panic!("MSVTypeProbe assignment operator is invalidated in SUMO")
     }
 
 }
