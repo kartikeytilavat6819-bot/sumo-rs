@@ -996,7 +996,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn stops_at(&self, stop: Ptr<MSStoppingPlace>) -> bool {
-        todo!("port SUMOVehicle::stopsAt")
+        (self.vt.stops_at)(self, stop)
     }
 
     /// C++: `bool SUMOVehicle::stopsAtEdge(const MSEdge *) const` [const, virtual, pure virtual]
@@ -1004,7 +1004,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn stops_at_edge(&self, edge: Ptr<MSEdge>) -> bool {
-        todo!("port SUMOVehicle::stopsAtEdge")
+        (self.vt.stops_at_edge)(self, edge)
     }
 
     /// C++: `bool SUMOVehicle::hasStops() const` [const, virtual, pure virtual]
@@ -1012,7 +1012,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_stops(&self) -> bool {
-        todo!("port SUMOVehicle::hasStops")
+        (self.vt.has_stops)(self)
     }
 
     /// C++: `const std::list<MSStop> & SUMOVehicle::getStops() const` [const, virtual, pure virtual]
@@ -1020,7 +1020,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stops(&self) -> &VecDeque<MSStop> {
-        todo!("port SUMOVehicle::getStops")
+        (self.vt.get_stops)(self)
     }
 
     /// C++: `const MSStop & SUMOVehicle::getNextStop() const` [const, virtual, pure virtual]
@@ -1028,7 +1028,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_stop(&self) -> &MSStop {
-        todo!("port SUMOVehicle::getNextStop")
+        (self.vt.get_next_stop)(self)
     }
 
     /// C++: `MSStop & SUMOVehicle::getNextStopMutable()` [virtual, pure virtual]
@@ -1036,7 +1036,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_stop_mutable(&mut self) -> &mut MSStop {
-        todo!("port SUMOVehicle::getNextStopMutable")
+        (self.vt.get_next_stop_mutable)(self)
     }
 
     /// C++: `void SUMOVehicle::unregisterWaiting()` [virtual, pure virtual]
@@ -1044,7 +1044,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn unregister_waiting(&mut self) {
-        todo!("port SUMOVehicle::unregisterWaiting")
+        (self.vt.unregister_waiting)(self)
     }
 
     /// C++: `const SUMOVehicleParameter::Stop * SUMOVehicle::getNextStopParameter() const` [const, virtual, pure virtual]
@@ -1052,7 +1052,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_stop_parameter(&self) -> Ptr<SUMOVehicleParameter_Stop> {
-        todo!("port SUMOVehicle::getNextStopParameter")
+        (self.vt.get_next_stop_parameter)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getStopDuration() const` [const, virtual, pure virtual]
@@ -1060,7 +1060,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stop_duration(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getStopDuration")
+        (self.vt.get_stop_duration)(self)
     }
 
     /// C++: `bool SUMOVehicle::addTraciStop(SUMOVehicleParameter::Stop, std::string &)` [virtual, pure virtual]
@@ -1068,28 +1068,28 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_traci_stop(&mut self, stop: SUMOVehicleParameter_Stop, errorMsg: &mut String) -> bool {
-        todo!("port SUMOVehicle::addTraciStop")
+        (self.vt.add_traci_stop)(self, stop, errorMsg)
     }
 
     /// C++: `void SUMOVehicle::setChosenSpeedFactor(const double)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_chosen_speed_factor(&mut self, factor: f64) {
-        todo!("port SUMOVehicle::setChosenSpeedFactor")
+        (self.vt.set_chosen_speed_factor)(self, factor)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getDepartDelay() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_delay(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getDepartDelay")
+        (self.vt.get_depart_delay)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getTimeLoss() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_time_loss(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getTimeLoss")
+        (self.vt.get_time_loss)(self)
     }
 
     /// C++: `double SUMOVehicle::getBrakeGap(bool) const` [const, virtual, pure virtual]
@@ -1097,7 +1097,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_brake_gap(&self, delayed: bool) -> f64 {
-        todo!("port SUMOVehicle::getBrakeGap")
+        (self.vt.get_brake_gap)(self, delayed)
     }
 
     /// C++: `double SUMOVehicle::getImpatience() const` [const, virtual, pure virtual]
@@ -1105,7 +1105,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_impatience(&self) -> f64 {
-        todo!("port SUMOVehicle::getImpatience")
+        (self.vt.get_impatience)(self)
     }
 
     /// C++: `const std::vector<MSVehicleDevice *> & SUMOVehicle::getDevices() const` [const, virtual, pure virtual]
