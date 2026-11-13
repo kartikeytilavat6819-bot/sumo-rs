@@ -147,7 +147,7 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &FlippedEdge_ConstFlippedEdgePairVector {
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &FlippedEdge_ConstFlippedEdgePairVector<E, N, V> {
         // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the cache rebuild also needs Ptr::new(self).m()
         panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
     }

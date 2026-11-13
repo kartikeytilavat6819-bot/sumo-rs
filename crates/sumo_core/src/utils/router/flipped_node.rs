@@ -74,7 +74,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myIncoming;
     //     }
     #[allow(unused_variables)]
-    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector {
+    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V> {
         // shortcut: needs router trait bounds (lead), N::getOutgoing/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
         panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
     }
@@ -91,7 +91,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOutgoing;
     //     }
     #[allow(unused_variables)]
-    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector {
+    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V> {
         // shortcut: needs router trait bounds (lead), N::getIncoming/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
         panic!("shortcut: needs router trait bounds (lead), N::getIncoming")
     }

@@ -23,9 +23,9 @@ pub struct RailwayRouter<E, V> {
     pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
     pub myOriginal: Ptr<RailwayRouter<E, V>>,
     /// a RailEdge for every existing edge, filled on construction (but not in clones)
-    pub myInitialEdges: Vec<Ptr<RailEdge__RailEdge>>,
+    pub myInitialEdges: Vec<Ptr<RailEdge__RailEdge<E, V>>>,
     /// complete rail network filled on demand (but not in clones)
-    pub myRailEdges: Vec<Ptr<RailEdge__RailEdge>>,
+    pub myRailEdges: Vec<Ptr<RailEdge__RailEdge<E, V>>>,
     /// whether to suppress warning/error if no route was found
     pub mySilent: bool,
     pub myMaxTrainLength: f64,
@@ -314,7 +314,7 @@ impl<E, V> RailwayRouter<E, V> {
     //         return myRailEdges;
     //     }
     #[allow(unused_variables)]
-    pub fn get_rail_edges(&mut self) -> &Vec<Ptr<RailEdge__RailEdge>> {
+    pub fn get_rail_edges(&mut self) -> &Vec<Ptr<RailEdge__RailEdge<E, V>>> {
         todo!("port RailwayRouter::getRailEdges")
     }
 
