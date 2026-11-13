@@ -2056,6 +2056,66 @@ fn ms_vehicle_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
 fn ms_vehicle_is_on_road(v: &SUMOVehicle) -> bool {
     ms_vehicle_of(v).is_on_road()
 }
+fn ms_vehicle_get_lateral_position_on_lane(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_lateral_position_on_lane()
+}
+fn ms_vehicle_get_angle(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_angle()
+}
+fn ms_vehicle_get_route_position(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_route_position()
+}
+fn ms_vehicle_get_arrival_pos(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_arrival_pos()
+}
+fn ms_vehicle_is_parking(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_parking()
+}
+fn ms_vehicle_is_remote_controlled(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_remote_controlled()
+}
+fn ms_vehicle_is_rail(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_rail()
+}
+fn ms_vehicle_get_impatience(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_impatience()
+}
+fn ms_vehicle_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_time_loss()
+}
+fn ms_vehicle_get_depart_delay(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_depart_delay()
+}
+fn ms_vehicle_get_stops(v: &SUMOVehicle) -> &VecDeque<MSStop> {
+    ms_vehicle_of(v).get_stops()
+}
+fn ms_vehicle_get_next_stop(v: &SUMOVehicle) -> &MSStop {
+    ms_vehicle_of(v).get_next_stop()
+}
+fn ms_vehicle_get_current_route_edge(v: &SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_current_route_edge()
+}
+fn ms_vehicle_get_route_ptr(v: &SUMOVehicle) -> ConstMSRoutePtr {
+    ms_vehicle_of(v).get_route_ptr()
+}
+fn ms_vehicle_is_idling(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_idling()
+}
+fn ms_vehicle_get_number_reroutes(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_number_reroutes()
+}
+fn ms_vehicle_is_stopped_triggered(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_stopped_triggered()
+}
+fn ms_vehicle_get_reroute_origin(v: &SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator {
+    ms_vehicle_of(v).get_reroute_origin()
+}
+fn ms_vehicle_get_next_parking_area(v: &mut SUMOVehicle) -> Ptr<MSParkingArea> {
+    Ptr::from_mut(v).cast::<MSVehicle>().m().get_next_parking_area()
+}
+fn ms_vehicle_on_depart(v: &mut SUMOVehicle) {
+    Ptr::from_mut(v).cast::<MSVehicle>().m().on_depart()
+}
 static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: ms_vehicle_get_route,
     get_departure: ms_vehicle_get_departure,
@@ -2066,6 +2126,26 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_length: ms_vehicle_get_length,
     get_current_edge: ms_vehicle_get_current_edge,
     is_on_road: ms_vehicle_is_on_road,
+    get_lateral_position_on_lane: ms_vehicle_get_lateral_position_on_lane,
+    get_angle: ms_vehicle_get_angle,
+    get_route_position: ms_vehicle_get_route_position,
+    get_arrival_pos: ms_vehicle_get_arrival_pos,
+    is_parking: ms_vehicle_is_parking,
+    is_remote_controlled: ms_vehicle_is_remote_controlled,
+    is_rail: ms_vehicle_is_rail,
+    get_impatience: ms_vehicle_get_impatience,
+    get_time_loss: ms_vehicle_get_time_loss,
+    get_depart_delay: ms_vehicle_get_depart_delay,
+    get_stops: ms_vehicle_get_stops,
+    get_next_stop: ms_vehicle_get_next_stop,
+    get_current_route_edge: ms_vehicle_get_current_route_edge,
+    get_route_ptr: ms_vehicle_get_route_ptr,
+    is_idling: ms_vehicle_is_idling,
+    get_number_reroutes: ms_vehicle_get_number_reroutes,
+    is_stopped_triggered: ms_vehicle_is_stopped_triggered,
+    get_reroute_origin: ms_vehicle_get_reroute_origin,
+    get_next_parking_area: ms_vehicle_get_next_parking_area,
+    on_depart: ms_vehicle_on_depart,
 };
 
 impl MSVehicle {

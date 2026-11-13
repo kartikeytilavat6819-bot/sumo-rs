@@ -17,6 +17,26 @@ pub struct SUMOVehicleVt {
     pub get_length: fn(&SUMOVehicle) -> f64,
     pub get_current_edge: fn(&SUMOVehicle) -> Ptr<MSEdge>,
     pub is_on_road: fn(&SUMOVehicle) -> bool,
+    pub get_lateral_position_on_lane: fn(&SUMOVehicle) -> f64,
+    pub get_angle: fn(&SUMOVehicle) -> f64,
+    pub get_route_position: fn(&SUMOVehicle) -> i32,
+    pub get_arrival_pos: fn(&SUMOVehicle) -> f64,
+    pub is_parking: fn(&SUMOVehicle) -> bool,
+    pub is_remote_controlled: fn(&SUMOVehicle) -> bool,
+    pub is_rail: fn(&SUMOVehicle) -> bool,
+    pub get_impatience: fn(&SUMOVehicle) -> f64,
+    pub get_time_loss: fn(&SUMOVehicle) -> SUMOTime,
+    pub get_depart_delay: fn(&SUMOVehicle) -> SUMOTime,
+    pub get_stops: fn(&SUMOVehicle) -> &VecDeque<MSStop>,
+    pub get_next_stop: fn(&SUMOVehicle) -> &MSStop,
+    pub get_current_route_edge: fn(&SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator,
+    pub get_route_ptr: fn(&SUMOVehicle) -> ConstMSRoutePtr,
+    pub is_idling: fn(&SUMOVehicle) -> bool,
+    pub get_number_reroutes: fn(&SUMOVehicle) -> i32,
+    pub is_stopped_triggered: fn(&SUMOVehicle) -> bool,
+    pub get_reroute_origin: fn(&SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator,
+    pub get_next_parking_area: fn(&mut SUMOVehicle) -> Ptr<MSParkingArea>,
+    pub on_depart: fn(&mut SUMOVehicle),
 }
 
 fn default_get_route(_: &SUMOVehicle) -> &MSRoute {
@@ -46,6 +66,66 @@ fn default_get_current_edge(_: &SUMOVehicle) -> Ptr<MSEdge> {
 fn default_is_on_road(_: &SUMOVehicle) -> bool {
     todo!("port SUMOVehicle::isOnRoad")
 }
+fn default_get_lateral_position_on_lane(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getLateralPositionOnLane")
+}
+fn default_get_angle(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getAngle")
+}
+fn default_get_route_position(_: &SUMOVehicle) -> i32 {
+    todo!("port SUMOVehicle::getRoutePosition")
+}
+fn default_get_arrival_pos(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getArrivalPos")
+}
+fn default_is_parking(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::isParking")
+}
+fn default_is_remote_controlled(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::isRemoteControlled")
+}
+fn default_is_rail(_: &SUMOVehicle) -> bool {
+    todo!("port SUMOVehicle::isRail")
+}
+fn default_get_impatience(_: &SUMOVehicle) -> f64 {
+    todo!("port SUMOVehicle::getImpatience")
+}
+fn default_get_time_loss(_: &SUMOVehicle) -> SUMOTime {
+    todo!("port SUMOVehicle::getTimeLoss")
+}
+fn default_get_depart_delay(_: &SUMOVehicle) -> SUMOTime {
+    todo!("port SUMOVehicle::getDepartDelay")
+}
+fn default_get_stops(_: &SUMOVehicle) -> &VecDeque<MSStop> {
+    panic!("SUMOVehicle::getStops is pure virtual")
+}
+fn default_get_next_stop(_: &SUMOVehicle) -> &MSStop {
+    panic!("SUMOVehicle::getNextStop is pure virtual")
+}
+fn default_get_current_route_edge(_: &SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator {
+    panic!("SUMOVehicle::getCurrentRouteEdge is pure virtual")
+}
+fn default_get_route_ptr(_: &SUMOVehicle) -> ConstMSRoutePtr {
+    panic!("SUMOVehicle::getRoutePtr is pure virtual")
+}
+fn default_is_idling(_: &SUMOVehicle) -> bool {
+    panic!("SUMOVehicle::isIdling is pure virtual")
+}
+fn default_get_number_reroutes(_: &SUMOVehicle) -> i32 {
+    panic!("SUMOVehicle::getNumberReroutes is pure virtual")
+}
+fn default_is_stopped_triggered(_: &SUMOVehicle) -> bool {
+    panic!("SUMOVehicle::isStoppedTriggered is pure virtual")
+}
+fn default_get_reroute_origin(_: &SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator {
+    panic!("SUMOVehicle::getRerouteOrigin is pure virtual")
+}
+fn default_get_next_parking_area(_: &mut SUMOVehicle) -> Ptr<MSParkingArea> {
+    panic!("SUMOVehicle::getNextParkingArea is pure virtual")
+}
+fn default_on_depart(_: &mut SUMOVehicle) {
+    panic!("SUMOVehicle::onDepart is pure virtual")
+}
 
 static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: default_get_route,
@@ -57,6 +137,26 @@ static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_length: default_get_length,
     get_current_edge: default_get_current_edge,
     is_on_road: default_is_on_road,
+    get_lateral_position_on_lane: default_get_lateral_position_on_lane,
+    get_angle: default_get_angle,
+    get_route_position: default_get_route_position,
+    get_arrival_pos: default_get_arrival_pos,
+    is_parking: default_is_parking,
+    is_remote_controlled: default_is_remote_controlled,
+    is_rail: default_is_rail,
+    get_impatience: default_get_impatience,
+    get_time_loss: default_get_time_loss,
+    get_depart_delay: default_get_depart_delay,
+    get_stops: default_get_stops,
+    get_next_stop: default_get_next_stop,
+    get_current_route_edge: default_get_current_route_edge,
+    get_route_ptr: default_get_route_ptr,
+    is_idling: default_is_idling,
+    get_number_reroutes: default_get_number_reroutes,
+    is_stopped_triggered: default_is_stopped_triggered,
+    get_reroute_origin: default_get_reroute_origin,
+    get_next_parking_area: default_get_next_parking_area,
+    on_depart: default_on_depart,
 };
 
 /// Representation of a vehicle
@@ -103,7 +203,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_lateral_position_on_lane(&self) -> f64 {
-        todo!("port SUMOVehicle::getLateralPositionOnLane")
+        (self.vt.get_lateral_position_on_lane)(self)
     }
 
     /// C++: `double SUMOVehicle::getAngle() const` [const, virtual, pure virtual]
@@ -111,7 +211,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_angle(&self) -> f64 {
-        todo!("port SUMOVehicle::getAngle")
+        (self.vt.get_angle)(self)
     }
 
     /// C++: `const MSRoute & SUMOVehicle::getRoute() const` [const, virtual, pure virtual]
@@ -127,7 +227,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_route_ptr(&self) -> ConstMSRoutePtr {
-        todo!("port SUMOVehicle::getRoutePtr")
+        (self.vt.get_route_ptr)(self)
     }
 
     /// C++: `int SUMOVehicle::getRoutePosition() const` [const, virtual, pure virtual]
@@ -135,7 +235,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        todo!("port SUMOVehicle::getRoutePosition")
+        (self.vt.get_route_position)(self)
     }
 
     /// C++: `const MSEdge * SUMOVehicle::succEdge(int) const` [const, virtual, pure virtual]
@@ -151,7 +251,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> crate::microsim::ms_route::MSRouteIterator {
-        todo!("port SUMOVehicle::getRerouteOrigin")
+        (self.vt.get_reroute_origin)(self)
     }
 
     /// C++: `bool SUMOVehicle::replaceRouteEdges(ConstMSEdgeVector &, double, double, const std::string &, bool, bool, bool, std::string *)` [virtual, pure virtual]
@@ -207,7 +307,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_current_route_edge(&self) -> &crate::microsim::ms_route::MSRouteIterator {
-        todo!("port SUMOVehicle::getCurrentRouteEdge")
+        (self.vt.get_current_route_edge)(self)
     }
 
     /// C++: `const MSEdge * SUMOVehicle::getCurrentEdge() const` [const, virtual, pure virtual]
@@ -239,7 +339,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn on_depart(&mut self) {
-        todo!("port SUMOVehicle::onDepart")
+        (self.vt.on_depart)(self)
     }
 
     /// C++: `bool SUMOVehicle::isOnRoad() const` [const, virtual, pure virtual]
@@ -255,7 +355,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_idling(&self) -> bool {
-        todo!("port SUMOVehicle::isIdling")
+        (self.vt.is_idling)(self)
     }
 
     /// C++: `bool SUMOVehicle::isFrontOnLane(const MSLane *) const` [const, virtual, pure virtual]
@@ -271,7 +371,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_parking(&self) -> bool {
-        todo!("port SUMOVehicle::isParking")
+        (self.vt.is_parking)(self)
     }
 
     /// C++: `bool SUMOVehicle::isRemoteControlled() const` [const, virtual, pure virtual]
@@ -279,7 +379,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_remote_controlled(&self) -> bool {
-        todo!("port SUMOVehicle::isRemoteControlled")
+        (self.vt.is_remote_controlled)(self)
     }
 
     /// C++: `bool SUMOVehicle::wasRemoteControlled(SUMOTime) const` [const, virtual, pure virtual]
@@ -311,7 +411,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self) -> f64 {
-        todo!("port SUMOVehicle::getArrivalPos")
+        (self.vt.get_arrival_pos)(self)
     }
 
     /// C++: `void SUMOVehicle::setArrivalPos(double)` [virtual, pure virtual]
@@ -351,7 +451,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_number_reroutes(&self) -> i32 {
-        todo!("port SUMOVehicle::getNumberReroutes")
+        (self.vt.get_number_reroutes)(self)
     }
 
     /// C++: `bool SUMOVehicle::allowsBoarding(const MSTransportable *) const` [const, virtual, pure virtual]
@@ -463,7 +563,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_parking_area(&mut self) -> Ptr<MSParkingArea> {
-        todo!("port SUMOVehicle::getNextParkingArea")
+        (self.vt.get_next_parking_area)(self)
     }
 
     /// C++: `bool SUMOVehicle::replaceParkingArea(MSParkingArea *, std::string &)` [virtual, pure virtual]
@@ -502,7 +602,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_stopped_triggered(&self) -> bool {
-        todo!("port SUMOVehicle::isStoppedTriggered")
+        (self.vt.is_stopped_triggered)(self)
     }
 
     /// C++: `bool SUMOVehicle::isStoppedParking() const` [const, virtual, pure virtual]
@@ -550,7 +650,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stops(&self) -> &VecDeque<MSStop> {
-        todo!("port SUMOVehicle::getStops")
+        (self.vt.get_stops)(self)
     }
 
     /// C++: `const MSStop & SUMOVehicle::getNextStop() const` [const, virtual, pure virtual]
@@ -558,7 +658,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_stop(&self) -> &MSStop {
-        todo!("port SUMOVehicle::getNextStop")
+        (self.vt.get_next_stop)(self)
     }
 
     /// C++: `MSStop & SUMOVehicle::getNextStopMutable()` [virtual, pure virtual]
@@ -612,14 +712,14 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_delay(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getDepartDelay")
+        (self.vt.get_depart_delay)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getTimeLoss() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_time_loss(&self) -> SUMOTime {
-        todo!("port SUMOVehicle::getTimeLoss")
+        (self.vt.get_time_loss)(self)
     }
 
     /// C++: `double SUMOVehicle::getBrakeGap(bool) const` [const, virtual, pure virtual]
@@ -635,7 +735,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_impatience(&self) -> f64 {
-        todo!("port SUMOVehicle::getImpatience")
+        (self.vt.get_impatience)(self)
     }
 
     /// C++: `const std::vector<MSVehicleDevice *> & SUMOVehicle::getDevices() const` [const, virtual, pure virtual]
@@ -658,7 +758,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_rail(&self) -> bool {
-        todo!("port SUMOVehicle::isRail")
+        (self.vt.is_rail)(self)
     }
 
     /// C++: `SUMOTime SUMOVehicle::getLastActionTime() const` [const, virtual, pure virtual]
@@ -792,6 +892,26 @@ mod vt_dispatch_tests {
             get_length: default_get_length,
             get_current_edge: default_get_current_edge,
             is_on_road: default_is_on_road,
+            get_lateral_position_on_lane: default_get_lateral_position_on_lane,
+            get_angle: default_get_angle,
+            get_route_position: default_get_route_position,
+            get_arrival_pos: default_get_arrival_pos,
+            is_parking: default_is_parking,
+            is_remote_controlled: default_is_remote_controlled,
+            is_rail: default_is_rail,
+            get_impatience: default_get_impatience,
+            get_time_loss: default_get_time_loss,
+            get_depart_delay: default_get_depart_delay,
+            get_stops: default_get_stops,
+            get_next_stop: default_get_next_stop,
+            get_current_route_edge: default_get_current_route_edge,
+            get_route_ptr: default_get_route_ptr,
+            is_idling: default_is_idling,
+            get_number_reroutes: default_get_number_reroutes,
+            is_stopped_triggered: default_is_stopped_triggered,
+            get_reroute_origin: default_get_reroute_origin,
+            get_next_parking_area: default_get_next_parking_area,
+            on_depart: default_on_depart,
         };
         assert!(v.is_stopped());
     }
