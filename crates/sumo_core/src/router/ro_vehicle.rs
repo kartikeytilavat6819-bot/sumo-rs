@@ -47,6 +47,19 @@ impl std::ops::DerefMut for ROVehicle {
     }
 }
 
+impl ROVehicle {
+    /// C++ `RORoutable::getVClass()` (ROVehicle does not override it): the vehicle class of its type
+    pub fn get_v_class(&self) -> SUMOVehicleClass {
+        self.base.get_v_class()
+    }
+}
+
+impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
+    fn v_class(&self) -> SUMOVehicleClass {
+        self.get_v_class()
+    }
+}
+
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):
 //   static std::map<ConstROEdgeVector, std::string> ROVehicle::mySavedRoutes;
 /// C++ std::map keyed by edge vector: BTreeMap orders keys like std::map (lexicographic by pointer)

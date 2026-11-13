@@ -1,6 +1,7 @@
 //! Port of utils/router/AFBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `typename AFInfo<E>::FlagInfo AFBuilder::FlagInfo`
 pub type AFBuilder_FlagInfo = AFInfo_FlagInfo;
@@ -73,7 +74,7 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Box<Self> {
+    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Box<Self> where E: RouterEdge<V, Node = N> {
         let mut b = Box::new(Self {
             myEdges: Ptr::new(edges),
             myFlippedEdges: Vec::new(),
@@ -225,7 +226,6 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
 
 }
 
-// shortcut: needs router trait bounds (lead), E::getFlippedRoutingEdge is not callable on generic E
-fn e_flipped_routing_edge<E, N, V>(_e: Ptr<E>) -> Ptr<FlippedEdge<E, N, V>> {
-    panic!("shortcut: needs router trait bounds (lead), E::getFlippedRoutingEdge")
+fn e_flipped_routing_edge<E, N, V>(e: Ptr<E>) -> Ptr<FlippedEdge<E, N, V>> where E: RouterEdge<V, Node = N> {
+    e.flipped_routing_edge()
 }

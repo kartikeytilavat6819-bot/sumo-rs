@@ -1,6 +1,7 @@
 //! Port of router/ROEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `std::vector<std::pair<const ROEdge *, const ROEdge *>> ROConstEdgePairVector`
 pub type ROConstEdgePairVector = Vec<(Ptr<ROEdge>, Ptr<ROEdge>)>;
@@ -86,6 +87,65 @@ impl std::ops::Deref for ROEdge {
 impl std::ops::DerefMut for ROEdge {
     fn deref_mut(&mut self) -> &mut Named {
         &mut self.base
+    }
+}
+
+impl RouterEdge<ROVehicle> for ROEdge {
+    type Node = RONode;
+    type Lane = ROLane;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        self.get_length_geometry_factor()
+    }
+    fn distance_to(&self, other: Ptr<ROEdge>, do_boundary_estimate: bool) -> f64 {
+        self.get_distance_to(other, do_boundary_estimate)
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<ROEdge>] {
+        self.get_successors(vclass)
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<ROEdge>, Ptr<ROEdge>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn predecessors(&self) -> &[Ptr<ROEdge>] {
+        self.get_predecessors()
+    }
+    fn lanes(&self) -> &[Ptr<ROLane>] {
+        self.get_lanes()
+    }
+    fn speed_limit(&self) -> f64 {
+        self.get_speed_limit()
+    }
+    fn preference(&self, pars: &SUMOVTypeParameter) -> f64 {
+        self.get_preference(pars)
+    }
+    fn flipped_routing_edge(&self) -> Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>> {
+        self.get_flipped_routing_edge()
+    }
+    fn travel_time_static(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        ROEdge::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        ROEdge::get_travel_time_aggregated(edge, veh, time)
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn is_taz_connector(&self) -> bool {
+        self.is_taz_connector()
+    }
+    fn prohibits(&self, veh: Ptr<ROVehicle>, check_restrictions: bool) -> bool {
+        self.prohibits(veh, check_restrictions)
+    }
+    fn restricts(&self, veh: Ptr<ROVehicle>) -> bool {
+        self.restricts(veh)
     }
 }
 

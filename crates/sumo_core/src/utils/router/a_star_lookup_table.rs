@@ -4,6 +4,7 @@ use crate::prelude::*;
 use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::to_string::format_g;
 use utils::common::util_exceptions::ProcessError;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// Computes the shortest path through a network using the A* algorithm.
 /// C++ class `AbstractLookupTable` (utils/router/AStarLookupTable.h)
@@ -103,8 +104,8 @@ impl<E, V> FullLookupTable<E, V> {
     //         return myTable[from->getNumericalID()][to->getNumericalID()] / speedFactor;
     //     }
     #[allow(unused_variables)]
-    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, arg2: f64, speedFactor: f64, arg4: f64, arg5: f64) -> f64 {
-        self.myTable[e_numerical_id(from) as usize][e_numerical_id(to) as usize] / speedFactor
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, arg2: f64, speedFactor: f64, arg4: f64, arg5: f64) -> f64 where E: RouterEdge<V> {
+        self.myTable[e_numerical_id::<E, V>(from) as usize][e_numerical_id::<E, V>(to) as usize] / speedFactor
     }
 
     /// C++: `bool FullLookupTable::consistent() const` [const]
@@ -394,7 +395,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self {
+    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V> {
         let mut s = Self {
             base: AbstractLookupTable { _p: std::marker::PhantomData },
             myLandmarks: BTreeMap::new(),
@@ -406,14 +407,14 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
         let mut numericID: BTreeMap<String, i32> = BTreeMap::new();
         let mut haveTaz = false;
         for e in edges.iter() {
-            if !e_is_internal(*e) {
+            if !e_is_internal::<E, V>(*e) {
                 if s.myFirstNonInternal == -1 {
-                    s.myFirstNonInternal = e_numerical_id(*e);
+                    s.myFirstNonInternal = e_numerical_id::<E, V>(*e);
                 }
-                if e_is_taz_connector(*e) {
+                if e_is_taz_connector::<E, V>(*e) {
                     haveTaz = true;
                 }
-                numericID.insert(e_id(*e), e_numerical_id(*e) - s.myFirstNonInternal);
+                numericID.insert(e_id::<E, V>(*e), e_numerical_id::<E, V>(*e) - s.myFirstNonInternal);
             }
         }
         // shortcut: zstr (zlib) input for compressed landmark files is not ported; plain text only
@@ -463,7 +464,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                 if mapped.len() != 1 {
                     panic!("{}", ProcessError::new(format!("Invalid coordinate in landmark file, could not find edge at '{}'", line)));
                 }
-                let lm = e_id(mapped[0]);
+                let lm = e_id::<E, V>(mapped[0]);
                 let it = match numericID.get(&lm) {
                     Some(v) => *v,
                     None => panic!("{}", ProcessError::new(format!("Landmark edge '{}' does not exist in the network.", lm))),
@@ -518,10 +519,10 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                 let landmark = landmarks[i];
                 if haveData {
                     if s.myFromLandmarkDists[i].is_empty() {
-                        write_warning(&format!("No lookup table for landmark edge '{}', recalculating.", e_id(landmark)));
+                        write_warning(&format!("No lookup table for landmark edge '{}', recalculating.", e_id::<E, V>(landmark)));
                     } else {
                         let tazWarning = if haveTaz { " Make sure that any used taz or junction-taz definitions are loaded when generating the table" } else { "" };
-                        panic!("{}", ProcessError::new(format!("Not all network edges were found in the lookup table '{}' for landmark edge '{}'.{}", filename, e_id(landmark), tazWarning)));
+                        panic!("{}", ProcessError::new(format!("Not all network edges were found in the lookup table '{}' for landmark edge '{}'.{}", filename, e_id::<E, V>(landmark), tazWarning)));
                     }
                 }
             }
@@ -544,7 +545,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                         let sourceDestCost = lmCost + router.m().recompute_costs(&vec![edge], defaultVehicle, 0, Ptr::null());
                         let mut route: Vec<Ptr<E>> = Vec::new();
                         // compute from-distance (skip taz-sources and other unreachable edges)
-                        if e_predecessor_count(edge) > 0 && e_successor_count(landmark) > 0 {
+                        if e_predecessor_count::<E, V>(edge) > 0 && e_successor_count::<E, V>(landmark) > 0 {
                             if router.m().compute(landmark, edge, defaultVehicle, 0, &mut route, true) {
                                 let d = router.m().recompute_costs(&route, defaultVehicle, 0, Ptr::null()) - sourceDestCost;
                                 distFrom = max2(0.0, d);
@@ -552,7 +553,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                             }
                         }
                         // compute to-distance (skip unreachable landmarks)
-                        if e_predecessor_count(landmark) > 0 && e_successor_count(edge) > 0 {
+                        if e_predecessor_count::<E, V>(landmark) > 0 && e_successor_count::<E, V>(edge) > 0 {
                             if router.m().compute(edge, landmark, defaultVehicle, 0, &mut route, true) {
                                 let d = router.m().recompute_costs(&route, defaultVehicle, 0, Ptr::null()) - sourceDestCost;
                                 distTo = max2(0.0, d);
@@ -562,7 +563,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                     }
                     s.myFromLandmarkDists[i].push(distFrom);
                     s.myToLandmarkDists[i].push(distTo);
-                    if !e_is_taz_connector(edge) {
+                    if !e_is_taz_connector::<E, V>(edge) {
                         if distFrom == -1.0 {
                             unreachableFrom += 1;
                         }
@@ -572,7 +573,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
                     }
                 }
                 if unreachableFrom > 0 || unreachableTo > 0 {
-                    write_warning(&format!("Landmark {} is not reachable from {} edges and is unable to reach {} out of {} total edges.", e_id(landmark), unreachableFrom, unreachableTo, numericID.len()));
+                    write_warning(&format!("Landmark {} is not reachable from {} edges and is unable to reach {} out of {} total edges.", e_id::<E, V>(landmark), unreachableFrom, unreachableTo, numericID.len()));
                 }
             }
         }
@@ -590,7 +591,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
         ";
             }
             for j in 0..s.myFromLandmarkDists[0].len() {
-                out += &e_id(edges[(j as i32 + s.myFirstNonInternal) as usize]);
+                out += &e_id::<E, V>(edges[(j as i32 + s.myFirstNonInternal) as usize]);
                 for i in 0..(numLandMarks as usize) {
                     // ostream default formatting of doubles (precision 6)
                     out += &format!(" {} {}", format_g(s.myFromLandmarkDists[i][j], 6), format_g(s.myToLandmarkDists[i][j], 6));
@@ -660,18 +661,18 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
-        let mut result = e_distance_to(from, to) / speed;
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 where E: RouterEdge<V> {
+        let mut result = e_distance_to::<E, V>(from, to) / speed;
         for i in 0..(self.myLandmarks.len() as usize) {
             // a cost of -1 is used to encode unreachability.
-            let fl = self.myToLandmarkDists[i][(e_numerical_id(from) - self.myFirstNonInternal) as usize];
-            let tl = self.myToLandmarkDists[i][(e_numerical_id(to) - self.myFirstNonInternal) as usize];
+            let fl = self.myToLandmarkDists[i][(e_numerical_id::<E, V>(from) - self.myFirstNonInternal) as usize];
+            let tl = self.myToLandmarkDists[i][(e_numerical_id::<E, V>(to) - self.myFirstNonInternal) as usize];
             if fl >= 0.0 && tl >= 0.0 {
                 let bound = (fl - tl - toEffort) / speedFactor;
                 result = max2(result, bound);
             }
-            let lt = self.myFromLandmarkDists[i][(e_numerical_id(to) - self.myFirstNonInternal) as usize];
-            let lf = self.myFromLandmarkDists[i][(e_numerical_id(from) - self.myFirstNonInternal) as usize];
+            let lt = self.myFromLandmarkDists[i][(e_numerical_id::<E, V>(to) - self.myFirstNonInternal) as usize];
+            let lf = self.myFromLandmarkDists[i][(e_numerical_id::<E, V>(from) - self.myFirstNonInternal) as usize];
             if lt >= 0.0 && lf >= 0.0 {
                 let bound = (lt - lf - fromEffort) / speedFactor;
                 result = max2(result, bound);
@@ -731,39 +732,32 @@ fn to_double_or_throw(s: &str) -> f64 {
     }
 }
 
-// shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-fn e_numerical_id<E>(_e: Ptr<E>) -> i32 {
-    panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+fn e_numerical_id<E, V>(e: Ptr<E>) -> i32 where E: RouterEdge<V> {
+    e.numerical_id()
 }
 
-// shortcut: needs router trait bounds (lead), E::getID is not callable on generic E
-fn e_id<E>(_e: Ptr<E>) -> String {
-    panic!("shortcut: needs router trait bounds (lead), E::getID")
+fn e_id<E, V>(e: Ptr<E>) -> String where E: RouterEdge<V> {
+    e.id().to_string()
 }
 
-// shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
-fn e_is_internal<E>(_e: Ptr<E>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+fn e_is_internal<E, V>(e: Ptr<E>) -> bool where E: RouterEdge<V> {
+    e.is_internal()
 }
 
-// shortcut: needs router trait bounds (lead), E::isTazConnector is not callable on generic E
-fn e_is_taz_connector<E>(_e: Ptr<E>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
+fn e_is_taz_connector<E, V>(e: Ptr<E>) -> bool where E: RouterEdge<V> {
+    e.is_taz_connector()
 }
 
-// shortcut: needs router trait bounds (lead), E::getPredecessors().size() is not callable on generic E
-fn e_predecessor_count<E>(_e: Ptr<E>) -> usize {
-    panic!("shortcut: needs router trait bounds (lead), E::getPredecessors")
+fn e_predecessor_count<E, V>(e: Ptr<E>) -> usize where E: RouterEdge<V> {
+    e.predecessors().len()
 }
 
-// shortcut: needs router trait bounds (lead), E::getSuccessors().size() is not callable on generic E
-fn e_successor_count<E>(_e: Ptr<E>) -> usize {
-    panic!("shortcut: needs router trait bounds (lead), E::getSuccessors")
+fn e_successor_count<E, V>(e: Ptr<E>) -> usize where E: RouterEdge<V> {
+    e.successors(SVC_IGNORING).len()
 }
 
-// shortcut: needs router trait bounds (lead), E::getDistanceTo is not callable on generic E
-fn e_distance_to<E>(_from: Ptr<E>, _to: Ptr<E>) -> f64 {
-    panic!("shortcut: needs router trait bounds (lead), E::getDistanceTo")
+fn e_distance_to<E, V>(from: Ptr<E>, to: Ptr<E>) -> f64 where E: RouterEdge<V> {
+    from.distance_to(to, false)
 }
 
 // shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges is not callable on generic M

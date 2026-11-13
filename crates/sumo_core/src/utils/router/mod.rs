@@ -39,3 +39,5 @@ pub mod router_provider;
 pub mod sp_tree;
 pub mod stop_edge;
 pub mod sumo_abstract_router;
+pub mod router_edge;
+pub use router_edge::*;
