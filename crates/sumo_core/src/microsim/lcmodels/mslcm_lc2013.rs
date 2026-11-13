@@ -73,6 +73,202 @@ fn traffic_object_of(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
     Ptr::from_mut(&mut v.m().base.base.base)
 }
 
+fn lc2013_inform(lcm: &mut MSAbstractLaneChangeModel, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().inform(info, sender)
+}
+
+fn lc2013_patch_speed(lcm: &mut MSAbstractLaneChangeModel, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().patch_speed(min, wanted, max, cfModel)
+}
+
+fn lc2013_changed(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().changed()
+}
+
+fn lc2013_wants_change(lcm: &mut MSAbstractLaneChangeModel, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().wants_change(laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, lastBlocked, firstBlocked)
+}
+
+fn lc2013_prepare_step(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().prepare_step()
+}
+
+fn lc2013_compute_speed_lat(lcm: &MSAbstractLaneChangeModel, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().compute_speed_lat(latDist, maneuverDist, urgent)
+}
+
+fn lc2013_get_safety_factor(lcm: &MSAbstractLaneChangeModel) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().get_safety_factor()
+}
+
+fn lc2013_save_blocker_length(lcm: &mut MSAbstractLaneChangeModel, length: f64, foeLeftSpace: f64) -> bool {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().save_blocker_length(length, foeLeftSpace)
+}
+
+fn lc2013_set_parameter(lcm: &mut MSAbstractLaneChangeModel, key: &str, value: &str) {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().set_parameter(key, value)
+}
+
+fn lc2013_save_state(lcm: &MSAbstractLaneChangeModel, out: &mut OutputDevice) {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().save_state(out)
+}
+
+fn lc2013_load_state(lcm: &mut MSAbstractLaneChangeModel, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().load_state(attrs)
+}
+
+fn lc2013_reset_state(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_LC2013>().m().reset_state()
+}
+
+fn lc2013_get_opposite_safety_factor(lcm: &MSAbstractLaneChangeModel) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().get_opposite_safety_factor()
+}
+
+fn lc2013_debug_vehicle(lcm: &MSAbstractLaneChangeModel) -> bool {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().debug_vehicle()
+}
+
+fn lc2013_get_parameter(lcm: &MSAbstractLaneChangeModel, key: &str) -> String {
+    Ptr::new(lcm).cast::<MSLCM_LC2013>().m().get_parameter(key)
+}
+
+/// Virtual dispatch table of MSLCM_LC2013; MSLCM_LC2013_CC inherits it (it overrides no table entry)
+pub static MSLCM_LC2013_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: lc2013_inform,
+    patch_speed: lc2013_patch_speed,
+    changed: lc2013_changed,
+    wants_change: lc2013_wants_change,
+    wants_change_sublane: MSAbstractLaneChangeModel::wants_change_sublane_base,
+    update_expected_sublane_speeds: MSAbstractLaneChangeModel::update_expected_sublane_speeds_base,
+    decide_direction: MSAbstractLaneChangeModel::decide_direction_base,
+    set_own_state: MSAbstractLaneChangeModel::set_own_state_base,
+    prepare_step: lc2013_prepare_step,
+    reset_speed_lat: MSAbstractLaneChangeModel::reset_speed_lat_base,
+    update_safe_lat_dist: MSAbstractLaneChangeModel::update_safe_lat_dist_base,
+    get_safety_factor: lc2013_get_safety_factor,
+    compute_speed_lat: lc2013_compute_speed_lat,
+    save_blocker_length: lc2013_save_blocker_length,
+    get_extra_reservation: MSAbstractLaneChangeModel::get_extra_reservation_base,
+    set_parameter: lc2013_set_parameter,
+    avoid_overtake_right: MSAbstractLaneChangeModel::avoid_overtake_right_base,
+    save_state: lc2013_save_state,
+    load_state: lc2013_load_state,
+    reset_state: lc2013_reset_state,
+    get_opposite_safety_factor: lc2013_get_opposite_safety_factor,
+    debug_vehicle: lc2013_debug_vehicle,
+    get_parameter: lc2013_get_parameter,
+    get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+};
+
+#[cfg(test)]
+mod dispatch_tests {
+    use super::*;
+
+    // A model without a vehicle: MSVehicle::new needs global init that is not ported yet, see ms_vehicle.rs
+    fn detached_lc2013() -> MSLCM_LC2013 {
+        MSLCM_LC2013 {
+            base: MSAbstractLaneChangeModel {
+                vt: &MSLCM_LC2013_VT,
+                myVehicle: Ptr::null(),
+                myOwnState: 0,
+                myPreviousState: 0,
+                myPreviousState2: 0,
+                mySavedStateRight: (0, 0),
+                mySavedStateCenter: (0, 0),
+                mySavedStateLeft: (0, 0),
+                myCanceledStateRight: LCA_NONE,
+                myCanceledStateCenter: LCA_NONE,
+                myCanceledStateLeft: LCA_NONE,
+                myLeftFollowers: None,
+                myLeftLeaders: None,
+                myRightFollowers: None,
+                myRightLeaders: None,
+                mySpeedLat: 0.,
+                myAccelerationLat: 0.,
+                myAngleOffset: 0.,
+                myPreviousAngleOffset: 0.,
+                myCommittedSpeed: 0.,
+                myLaneChangeCompletion: 1.0,
+                myLaneChangeDirection: 0,
+                myAlreadyChanged: false,
+                myShadowLane: Ptr::null(),
+                myShadowFurtherLanes: Vec::new(),
+                myShadowFurtherLanesPosLat: Vec::new(),
+                myTargetLane: Ptr::null(),
+                myFurtherTargetLanes: Vec::new(),
+                myModel: LaneChangeModel::LC2013,
+                myPartiallyOccupatedByShadow: Vec::new(),
+                myNoPartiallyOccupatedByShadow: Vec::new(),
+                myLastLateralGapLeft: 0.,
+                myLastLateralGapRight: 0.,
+                myLastLeaderGap: 0.,
+                myLastFollowerGap: 0.,
+                myLastLeaderSecureGap: 0.,
+                myLastFollowerSecureGap: 0.,
+                myLastOrigLeaderGap: 0.,
+                myLastOrigLeaderSecureGap: 0.,
+                myLastLeaderSpeed: 0.,
+                myLastFollowerSpeed: 0.,
+                myLastOrigLeaderSpeed: 0.,
+                myDontResetLCGaps: false,
+                myStrategicLookahead: -1.,
+                myMaxSpeedLatStanding: 0.,
+                myMaxSpeedLatFactor: 1.,
+                myMaxDistLatStanding: 1.6,
+                mySigma: 0.,
+                myOvertakeRightParam: 0.,
+                myAssertive: 0.5,
+                myCooperativeHelpTime: 0,
+                myCooperativeHelpThreshold: -1.,
+                myCooperativeMinSpeed: 0.,
+                myHaveBlueLight: false,
+                myLCAccelerationAdvices: Vec::new(),
+                myLastLaneChangeOffset: 0,
+                myApproachedByShadow: std::cell::RefCell::new(Vec::new()),
+                myAmOpposite: false,
+                myManeuverDist: 0.,
+                myPreviousManeuverDist: 0.,
+            },
+            mySpeedGainProbabilityLeft: 0,
+            mySpeedGainProbabilityRight: 0,
+            myKeepRightProbability: 0,
+            myLeadingBlockerLength: 0.,
+            myLeftSpace: 0.,
+            myLookAheadSpeed: LOOK_AHEAD_MIN_SPEED,
+            myDontBrake: false,
+            myStrategicParam: 1.,
+            myCooperativeParam: 1.,
+            mySpeedGainParam: 1.,
+            myKeepRightParam: 1.,
+            myOppositeParam: 1.,
+            myLookaheadLeft: 2.,
+            mySpeedGainRight: 0.1,
+            mySpeedGainLookahead: 0.,
+            mySpeedGainRemainTime: 20.,
+            mySpeedGainUrgency: 50.,
+            myRoundaboutBonus: 1.,
+            myCooperativeSpeed: 1.,
+            myKeepRightAcceptanceTime: -1.,
+            myOvertakeDeltaSpeedFactor: 0.,
+            myExperimentalParam1: 0.,
+            myChangeProbThresholdRight: 0,
+            myChangeProbThresholdLeft: 0,
+        }
+    }
+
+    #[test]
+    fn base_pointer_reaches_lc2013_overrides() {
+        let mut m = detached_lc2013();
+        let base = Ptr::from_mut(&mut m.base);
+        assert!(std::ptr::eq(base.m().vt, &MSLCM_LC2013_VT));
+        // C++ MSLCM_LC2013::getSafetyFactor() = 1 / myAssertive; the base body would give 1.0
+        assert_eq!(base.m().get_safety_factor(), 2.0);
+        // wantsChange() itself needs a live MSNet and vehicle, so its routing is checked on the table entry
+        assert_eq!(base.m().vt.wants_change as usize, lc2013_wants_change as usize);
+    }
+}
+
 /// A lane change model developed by D. Krajzewicz, J. Erdmann et al. between 2004 and 2013
 /// C++ class `MSLCM_LC2013` (microsim/lcmodels/MSLCM_LC2013.h)
 #[repr(C)]
@@ -159,7 +355,8 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
-        let base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::LC2013);
+        let mut base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::LC2013);
+        base.vt = &MSLCM_LC2013_VT;
         let vt = v.get_vehicle_type();
         let p = vt.get_parameter();
         let myStrategicParam = p.get_lc_param(SUMO_ATTR_LCA_STRATEGIC_PARAM, 1.);
@@ -500,7 +697,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        self.base.prepare_step();
+        self.base.prepare_step_base();
         // keep information about strategic change direction
         if !self.is_changing_lanes() {
             self.myOwnState = if (self.myOwnState & LCA_STRATEGIC) != 0 { self.myOwnState & LCA_WANTS_LANECHANGE } else { 0 };
@@ -810,7 +1007,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
-        let mut result = self.base.compute_speed_lat(latDist, maneuverDist, urgent);
+        let mut result = self.base.compute_speed_lat_base(latDist, maneuverDist, urgent);
         if self.myLeftSpace > utils::geom::POSITION_EPS || !urgent {
             let mut speedBound = self.myMaxSpeedLatStanding + self.myMaxSpeedLatFactor * self.myVehicle.get_speed();
             if self.is_changing_lanes() {
@@ -836,7 +1033,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
-        self.base.save_state(out);
+        self.base.save_state_base(out);
         let lcState: Vec<i64> = vec![
             self.mySpeedGainProbabilityLeft,
             self.mySpeedGainProbabilityRight,
@@ -865,7 +1062,7 @@ impl MSLCM_LC2013 {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        self.base.load_state(attrs);
+        self.base.load_state_base(attrs);
         if attrs.has_attribute(SUMO_ATTR_LCSTATE2) {
             let s = attrs.get_string(SUMO_ATTR_LCSTATE2);
             // C++ `bis >> ...` reads whitespace-separated integers in order
