@@ -900,6 +900,7 @@ impl NBNodeTypeComputer {
                         .unwrap_or_else(|e| std::panic::panic_any(e));
                     let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(n.get_id(), n, 0, type_)));
                     let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                    n.m().add_traffic_light(tlDef);
                     n.m().myType = SumoXMLNodeType::TRAFFIC_LIGHT;
                     if !tlc.insert(tlDef, false) {
                         // actually, nothing should fail here

@@ -4853,6 +4853,7 @@ impl NIImporter_OpenDrive {
                 .unwrap_or_else(|e| std::panic::panic_any(e));
             let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(toNode.m().get_id(), toNode, 0, type_)));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            toNode.m().add_traffic_light(tlDef);
             if !nb.get_tl_logic_cont().insert(tlDef, false) {
                 // actually, nothing should fail here
                 drop(unsafe { Box::from_raw(raw) });

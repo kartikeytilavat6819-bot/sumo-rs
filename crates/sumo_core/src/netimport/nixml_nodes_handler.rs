@@ -680,6 +680,7 @@ impl NIXMLNodesHandler {
                 tlID = currentNode.base.get_id().to_string();
             }
             let tlDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new_2(&tlID, currentNode, 0, type_))));
+            currentNode.m().add_traffic_light(tlDef.cast());
             if !tlc.insert(tlDef.cast(), false) {
                 // actually, nothing should fail here
                 drop(unsafe { Box::from_raw(tlDef.as_raw()) });

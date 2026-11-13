@@ -2932,6 +2932,7 @@ impl NIImporter_OpenStreetMap {
                     .get(&utils::options::options_cont::get_string("tls.default-type"))
                     .unwrap_or(TrafficLightType::INVALID);
                 let tlDef: &mut NBOwnTLDef = Box::leak(Box::new(NBOwnTLDef::new_2(&id.to_string(), node, 0, type_)));
+                node.m().add_traffic_light(Ptr::from_mut(&mut tlDef.base));
                 if !tlsc.insert(Ptr::from_mut(&mut tlDef.base), false) {
                     // actually, nothing should fail here
                     panic!("Could not allocate tls '{id}'.");
