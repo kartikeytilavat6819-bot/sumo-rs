@@ -360,7 +360,7 @@ impl ShapeHandler {
         };
         // If the image file is set, change the default POI color to white.
         if imgFile != "" && !utils::common::file_helpers::is_absolute(&imgFile) {
-            imgFile = utils::common::file_helpers::get_configuration_relative({ panic!("shortcut: ShapeHandler base SUMOSAXHandler is unported, file name unavailable; upgrade when SAX base is wired") }, &imgFile);
+            imgFile = utils::common::file_helpers::get_configuration_relative(self.get_file_name(), &imgFile);
         }
         let width: f64 = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, id.as_str(), &mut ok, DEFAULT_IMG_WIDTH, true);
         let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, id.as_str(), &mut ok, DEFAULT_IMG_HEIGHT, true);
@@ -530,7 +530,7 @@ impl ShapeHandler {
             let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, id.as_str(), &mut ok, DEFAULT_ANGLE, true);
             let mut imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, id.as_str(), &mut ok, DEFAULT_IMG_FILE.to_string(), true);
             if imgFile != "" && !utils::common::file_helpers::is_absolute(&imgFile) {
-                imgFile = utils::common::file_helpers::get_configuration_relative({ panic!("shortcut: ShapeHandler base SUMOSAXHandler is unported, file name unavailable; upgrade when SAX base is wired") }, &imgFile);
+                imgFile = utils::common::file_helpers::get_configuration_relative(self.get_file_name(), &imgFile);
             }
             // check that shape's size is valid
             if shape.len() == 0 {

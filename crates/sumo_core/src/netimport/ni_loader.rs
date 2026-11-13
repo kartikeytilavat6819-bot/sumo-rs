@@ -285,9 +285,8 @@ impl NILoader {
 
         // load shapes for output formats that embed shape data
         if ok && oc.exists("polygon-files") {
-            // shortcut: NIXMLShapeHandler needs the SUMOSAXHandler base of ShapeHandler (utils/shapes, still todo), so polygon-files cannot be parsed yet; upgrade when ShapeHandler.base is a GenericSAXHandler
-            write_error("Polygon data cannot be loaded yet: the polygon shape handler is not ported.");
-            ok = false;
+            let mut shapeHandler = NIXMLShapeHandler::new(self.myNetBuilder.m().get_shape_cont(), self.myNetBuilder.m().get_edge_cont());
+            ok = NITypeLoader::load(&mut shapeHandler, throw(oc.get_string_vector("polygon-files")).as_slice(), "polygon data", false);
         }
         ok
     }
