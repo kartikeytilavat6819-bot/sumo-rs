@@ -11100,7 +11100,20 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_braking_signals(&mut self, vNext: f64) {
-        todo!("port MSVehicle::setBrakingSignals")
+        // To avoid casual blinking brake lights at high speeds due to dawdling of the
+        // leading vehicle, we don't show brake lights when the deceleration could be caused
+        // by frictional forces and air resistance (i.e. proportional to v^2, coefficient could be adapted further)
+        let pseudoFriction = (0.05 + 0.005 * self.get_speed()) * self.get_speed();
+        let mut brakelightsOn = vNext < self.get_speed() - accel2speed(pseudoFriction);
+
+        if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED {
+            brakelightsOn = true;
+        }
+        if brakelightsOn && !self.is_stopped() {
+            self.switch_on_signal(MSVehicle_Signalling::VEH_SIGNAL_BRAKELIGHT as i32);
+        } else {
+            self.switch_off_signal(MSVehicle_Signalling::VEH_SIGNAL_BRAKELIGHT as i32);
+        }
     }
 
     /// C++: `void MSVehicle::setBlinkerInformation()` [protected]
@@ -11249,7 +11262,14 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_emergency_blue_light(&mut self, currentTime: SUMOTime) {
-        todo!("port MSVehicle::setEmergencyBlueLight")
+        //TODO look if timestep ist SIMSTEP
+        if currentTime % 1000 == 0 {
+            if self.signal_set(MSVehicle_Signalling::VEH_SIGNAL_EMERGENCY_BLUE as i32) {
+                self.switch_off_signal(MSVehicle_Signalling::VEH_SIGNAL_EMERGENCY_BLUE as i32);
+            } else {
+                self.switch_on_signal(MSVehicle_Signalling::VEH_SIGNAL_EMERGENCY_BLUE as i32);
+            }
+        }
     }
 
     /// C++: `void MSVehicle::computeFurtherLanes(MSLane *, double, bool)` [protected]
@@ -11323,7 +11343,61 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn compute_further_lanes(&mut self, enteredLane: Ptr<MSLane>, pos: f64, collision: bool) {
-        todo!("port MSVehicle::computeFurtherLanes")
+        // build the list of lanes the vehicle is lapping into
+        if !self.myLaneChangeModel.m().is_opposite() {
+            let mut leftLength = self.get_vehicle_type().get_length() - pos;
+            let mut clane = enteredLane;
+            let mut routeIndex = self.get_route_position();
+            while leftLength > 0. {
+                let mut guessed = false;
+                if routeIndex > 0 && clane.get_edge().is_normal() {
+                    // get predecessor lane that corresponds to prior route
+                    routeIndex -= 1;
+                    let fromRouteEdge = self.myRoute.get_edges()[routeIndex as usize];
+                    let target = clane;
+                    clane = Ptr::null();
+                    for ili in target.get_incoming_lanes().iter() {
+                        if ili.lane.get_edge().get_normal_before() == fromRouteEdge {
+                            clane = ili.lane;
+                            break;
+                        }
+                    }
+                } else {
+                    // only the predecessor of a normal lane is a guess
+                    guessed = clane.get_edge().is_normal();
+                    clane = clane.get_logical_predecessor_lane();
+                }
+                if clane.is_null()
+                    || clane == self.myLane
+                    || clane == self.myLane.get_bidi_lane()
+                    || (guessed
+                        && clane.is_internal()
+                        && matches!(clane.get_link_cont()[0].get_direction(), LinkDirection::TURN | LinkDirection::TURN_LEFTHAND))
+                {
+                    break;
+                }
+                if !collision || !self.myFurtherLanes.contains(&clane) {
+                    self.myFurtherLanes.push(clane);
+                    self.myFurtherLanesPosLat.push(self.myState.myPosLat);
+                    clane.m().set_partial_occupation(Ptr::from_mut(self));
+                    if !clane.get_bidi_lane().is_null() && (!is_railway(self.get_v_class()) || (clane.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                        clane.get_bidi_lane().m().set_partial_occupation(Ptr::from_mut(self));
+                    }
+                }
+                leftLength -= clane.get_length();
+            }
+            self.myState.myBackPos = -leftLength;
+        } else {
+            // clear partial occupation
+            for further in self.myFurtherLanes.clone() {
+                further.m().reset_partial_occupation(Ptr::from_mut(self));
+                if !further.get_bidi_lane().is_null() && (!is_railway(self.get_v_class()) || (further.get_permissions() & !SVC_RAIL_CLASSES) != 0) {
+                    further.get_bidi_lane().m().reset_partial_occupation(Ptr::from_mut(self));
+                }
+            }
+            self.myFurtherLanes.clear();
+            self.myFurtherLanesPosLat.clear();
+        }
     }
 
     /// C++: `void MSVehicle::updateOccupancyAndCurrentBestLane(const MSLane *)` [protected]
