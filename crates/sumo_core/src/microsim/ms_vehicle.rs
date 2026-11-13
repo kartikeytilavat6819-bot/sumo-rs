@@ -2009,6 +2009,22 @@ impl std::ops::DerefMut for MSVehicle {
 //   static std::vector<MSLane *> MSVehicle::myEmptyLaneVector;
 const MY_EMPTY_LANE_VECTOR: &Vec<Ptr<MSLane>> = &Vec::new();
 
+// C++ virtual overrides of SUMOTrafficObject, dispatched through SUMOTrafficObject::vt
+fn ms_vehicle_is_vehicle(_: &SUMOTrafficObject) -> bool {
+    true
+}
+fn ms_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn ms_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
+    false
+}
+static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: ms_vehicle_is_vehicle,
+    is_person: ms_vehicle_is_person,
+    is_container: ms_vehicle_is_container,
+};
+
 impl MSVehicle {
     /// C++: `void MSVehicle::MSVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
     /// Constructor
@@ -2095,6 +2111,7 @@ impl MSVehicle {
             myInfluencer: Ptr::null(),
         };
         v.myCFVariables = type_.get_car_follow_model().create_vehicle_variables();
+        v.base.base.base.vt = &MS_VEHICLE_VT;
         v
     }
 
@@ -15619,5 +15636,42 @@ impl MSVehicle_WaitingTimeCollector {
         }
     }
 
+}
+
+#[cfg(test)]
+mod vt_dispatch_tests {
+    use super::*;
+
+    #[test]
+    fn installed_table_is_reached_through_base_pointer() {
+        let obj = SUMOTrafficObject { base: Named::new("v"), vt: &MS_VEHICLE_VT };
+        let p = Ptr::new(&obj);
+        assert!(p.is_vehicle());
+        assert!(!p.is_person());
+        assert!(!p.is_container());
+    }
+
+    // shortcut: MSVehicle::new needs global init that is not ported yet (MSFrame::fill_options panics on the missing 'Report' sub-topic, ms_frame.rs:1393; MSNet singleton; car-follow model on the vtype), remove #[ignore] once it runs
+    #[test]
+    #[ignore = "MSVehicle::new needs unported global init, see shortcut above"]
+    fn base_pointer_dispatches_is_vehicle_to_ms_vehicle() {
+        MSFrame::fill_options();
+        let ec = || Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new())));
+        let _net = MSNet::new(Ptr::from_raw(Box::into_raw(Box::new(MSVehicleControl::new()))), ec(), ec(), ec(), Ptr::default());
+        let vtp = SUMOVTypeParameter::new("passenger", utils::common::sumo_vehicle_class::SVC_PASSENGER);
+        let vtype = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&vtp))));
+        let idm = Ptr::from_mut(Box::leak(Box::new(MSCFModel_IDM::new(vtype, false))));
+        vtype.m().myCarFollowModel = idm.cast::<MSCFModel>();
+        let edge = Ptr::from_mut(Box::leak(Box::new(MSEdge::new("e", 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 1.0))));
+        let lane = Ptr::from_mut(Box::leak(Box::new(MSLane::new("e_0", 13.9, 1.0, 100.0, edge, 0, &PositionVector::new(), 3.2, utils::common::sumo_vehicle_class::SVC_PASSENGER, 0, 0, 0, false, "", &PositionVector::new()))));
+        edge.m().myLanes = std::rc::Rc::new(vec![lane]);
+        let route: ConstMSRoutePtr = std::rc::Rc::new(MSRoute::new("r", &vec![edge], true, Ptr::null(), &Vec::new(), -1, -1));
+        let pars = Ptr::from_mut(Box::leak(Box::new(SUMOVehicleParameter::new())));
+        let veh = MSVehicle::new(pars, route, vtype, 1.0);
+        let obj: Ptr<SUMOTrafficObject> = Ptr::new(&veh).cast::<SUMOTrafficObject>();
+        assert!(obj.is_vehicle());
+        assert!(!obj.is_person());
+        assert!(!obj.is_container());
+    }
 }
 
