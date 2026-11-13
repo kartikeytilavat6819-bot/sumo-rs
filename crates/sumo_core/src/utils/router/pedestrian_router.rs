@@ -21,8 +21,8 @@ pub struct PedestrianRouter<E, L, N, V> {
     /// C++ base class `SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>`
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,
     pub myAmClone: bool,
-    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
-    pub myPedNet: Ptr<PedestrianRouter__IntermodalNetwork>,
+    pub myInternalRouter: Ptr<DijkstraRouter<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>,
+    pub myPedNet: Ptr<IntermodalNetwork<E, L, N, V>>,
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
 
@@ -50,7 +50,8 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port PedestrianRouter::PedestrianRouter<E, L, N, V>")
+        // shortcut: needs router trait bounds (lead), E::getAllEdges is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getAllEdges")
     }
 
     /// C++: `void PedestrianRouter::PedestrianRouter<E, L, N, V>(_IntermodalNetwork *)`
@@ -62,8 +63,17 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //                                                nullptr, false, nullptr, true);
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(net: Ptr<PedestrianRouter__IntermodalNetwork>) -> Self {
-        todo!("port PedestrianRouter::PedestrianRouter<E, L, N, V>")
+    pub fn new_2(net: Ptr<IntermodalNetwork<E, L, N, V>>) -> Self {
+        // shortcut: SUMOAbstractRouter::Operation is Unmapped (fn pointer), so the travel-time function and nullptr are passed as ()
+        let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().iter().map(|e| (*e).cast()).collect();
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, (), (), false, Ptr::null(), true, false);
+        Self {
+            base: SUMOAbstractRouter::new("PedestrianRouterClone", true, (), (), false, false),
+            myAmClone: true,
+            myInternalRouter: Ptr::from_raw(Box::into_raw(Box::new(internal))),
+            myPedNet: net,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void PedestrianRouter::~PedestrianRouter<E, L, N, V>()` [virtual]
@@ -76,7 +86,10 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PedestrianRouter::~PedestrianRouter<E, L, N, V>")
+        drop(unsafe { Box::from_raw(self.myInternalRouter.as_raw()) });
+        if !self.myAmClone {
+            drop(unsafe { Box::from_raw(self.myPedNet.as_raw()) });
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, _IntermodalTrip> * PedestrianRouter::clone()` [virtual]
@@ -84,8 +97,8 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         return new PedestrianRouter<E, L, N, V>(myPedNet);
     //     }
     #[allow(unused_variables)]
-    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, PedestrianRouter__IntermodalTrip>> {
-        todo!("port PedestrianRouter::clone")
+    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>> {
+        Ptr::from_raw(Box::into_raw(Box::new(PedestrianRouter::new_2(self.myPedNet)))).cast()
     }
 
     /// C++: `double PedestrianRouter::compute(const E *, const E *, double, double, double, SUMOTime, const N *, const SUMOVTypeParameter &, std::vector<const E *> &, bool) const` [const]
@@ -129,7 +142,31 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute(&self, from: Ptr<E>, to: Ptr<E>, departPos: f64, arrivalPos: f64, speed: f64, msTime: SUMOTime, onlyNode: Ptr<N>, pars: &SUMOVTypeParameter, into: &mut Vec<Ptr<E>>, allEdges: bool) -> f64 {
-        todo!("port PedestrianRouter::compute")
+        if get_sidewalk::<E, L>(from, SVC_PEDESTRIAN).is_null() {
+            // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E for the warning text
+            panic!("shortcut: needs router trait bounds (lead), E::getID");
+        }
+        if get_sidewalk::<E, L>(to, SVC_PEDESTRIAN).is_null() {
+            // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E for the warning text
+            panic!("shortcut: needs router trait bounds (lead), E::getID");
+        }
+        let trip = IntermodalTrip::new(from, to, departPos, arrivalPos, speed, msTime, onlyNode, pars, Ptr::null(), SVC_PEDESTRIAN, Ptr::null(), 0.);
+        let mut intoPed: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = Vec::new();
+        let silent = allEdges; // no warning is needed when called from MSPModel_Striping
+        let success = self.myInternalRouter.m().compute(
+            self.myPedNet.get_depart_connector(from, 0).cast(),
+            self.myPedNet.get_arrival_connector(to, 0).cast(),
+            Ptr::new(&trip), msTime, &mut intoPed, silent);
+        let mut time = 0.;
+        if success {
+            for pedEdge in intoPed {
+                if pedEdge.include_in_route(allEdges) {
+                    into.push(pedEdge.get_edge());
+                }
+                time += self.myInternalRouter.m().get_effort(pedEdge, Ptr::new(&trip), time);
+            }
+        }
+        if success { time } else { -1. }
     }
 
     /// C++: `bool PedestrianRouter::compute(const E *, const E *, const _IntermodalTrip *const, SUMOTime, std::vector<const E *> &, bool)`
@@ -140,7 +177,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
-        todo!("port PedestrianRouter::compute")
+        panic!("{}", ProcessError::new("Do not use this method"))
     }
 
     /// C++: `void PedestrianRouter::prohibit(const std::map<const E *, RouterProhibition> &)`
@@ -154,7 +191,13 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &BTreeMap<Ptr<E>, RouterProhibition>) {
-        todo!("port PedestrianRouter::prohibit")
+        let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
+        for (edge, prohibition) in toProhibit {
+            let dirs = self.myPedNet.get_both_directions(*edge);
+            toProhibitPE.insert(dirs.0, *prohibition);
+            toProhibitPE.insert(dirs.1, *prohibition);
+        }
+        self.myInternalRouter.m().prohibit(&toProhibitPE);
     }
 
     /// C++: `double PedestrianRouter::recomputeWalkCosts(const std::vector<const E *> &, double, double, double, SUMOTime, const SUMOVTypeParameter &, double &) const` [const]
@@ -212,7 +255,16 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn recompute_walk_costs(&self, edges: &Vec<Ptr<E>>, speed: f64, fromPos: f64, toPos: f64, msTime: SUMOTime, pars: &SUMOVTypeParameter, length: &mut f64) -> f64 {
-        todo!("port PedestrianRouter::recomputeWalkCosts")
+        if edges.len() == 0 {
+            *length = 0.;
+            0.
+        } else if edges.len() == 1 {
+            *length = (toPos - fromPos).abs();
+            *length / speed
+        } else {
+            // shortcut: needs router trait bounds (lead), E::getLength / getToJunction / isCrossing / isWalkingArea are not callable on generic E
+            panic!("shortcut: needs router trait bounds (lead), E::getLength")
+        }
     }
 
     /// C++: `const N * PedestrianRouter::getCommonNode(const E *, const E *) const` [const, private]
@@ -227,7 +279,8 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_common_node(&self, from: Ptr<E>, to: Ptr<E>) -> Ptr<N> {
-        todo!("port PedestrianRouter::getCommonNode")
+        // shortcut: needs router trait bounds (lead), E::getToJunction / getFromJunction are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getToJunction")
     }
 
     /// C++: `PedestrianRouter<E, L, N, V> & PedestrianRouter::operator=(const PedestrianRouter<E, L, N, V> &)` [private]
@@ -235,7 +288,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &PedestrianRouter<E, L, N, V>) -> &mut PedestrianRouter<E, L, N, V> {
-        todo!("port PedestrianRouter::operator=")
+        panic!("PedestrianRouter::operator= is declared but not defined")
     }
 
 }
