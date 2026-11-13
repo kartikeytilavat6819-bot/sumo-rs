@@ -15,13 +15,13 @@ pub type IntermodalRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, 
 pub type IntermodalRouter__IntermodalTrip = Unmapped /* IntermodalTrip<E, N, V> */;
 
 /// C++ typedef `AStarRouter<_IntermodalEdge, _IntermodalTrip, _MapMatcher> IntermodalRouter::_InternalAStar`
-pub type IntermodalRouter__InternalAStar = AStarRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip, IntermodalRouter__MapMatcher>;
+pub type IntermodalRouter__InternalAStar<E, L, N, V> = AStarRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>, Unmapped>; // shortcut: MapMatcher<E, L, N> is not ported, Unmapped stands in for M, upgrade when map_matcher.rs exists
 
 /// C++ typedef `DijkstraRouter<_IntermodalEdge, _IntermodalTrip> IntermodalRouter::_InternalDijkstra`
-pub type IntermodalRouter__InternalDijkstra = DijkstraRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip>;
+pub type IntermodalRouter__InternalDijkstra<E, L, N, V> = DijkstraRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>>;
 
 /// C++ typedef `SUMOAbstractRouter<_IntermodalEdge, _IntermodalTrip> IntermodalRouter::_InternalRouter`
-pub type IntermodalRouter__InternalRouter = SUMOAbstractRouter<AccessEdge__IntermodalEdge, PedestrianRouter__IntermodalTrip>;
+pub type IntermodalRouter__InternalRouter<E, L, N, V> = SUMOAbstractRouter<AccessEdge__IntermodalEdge<E, L, N, V>, PedestrianRouter__IntermodalTrip<E, N, V>>;
 
 /// C++ typedef `MapMatcher<E, L, N> IntermodalRouter::_MapMatcher`
 pub type IntermodalRouter__MapMatcher = Unmapped /* MapMatcher<E, L, N> */;
@@ -36,7 +36,7 @@ pub struct IntermodalRouter<E, L, N, V> {
     /// C++ base class `SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>`
     pub base: SUMOAbstractRouter<E, IntermodalTrip<E, N, V>>,
     pub myAmClone: bool,
-    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
+    pub myInternalRouter: Ptr<IntermodalRouter__InternalRouter<E, L, N, V>>,
     pub myIntermodalNet: Ptr<IntermodalRouter_Network<E, L, N, V>>,
     pub myCallback: IntermodalRouter_CreateNetCallback,
     pub myCarWalkTransfer: i32,
@@ -72,7 +72,19 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(callback: IntermodalRouter_CreateNetCallback, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
-        todo!("port IntermodalRouter::IntermodalRouter<E, L, N, V>")
+        Self {
+            base: SUMOAbstractRouter::new("IntermodalRouter", true, (), (), false, false),
+            myAmClone: false,
+            myInternalRouter: Ptr::null(),
+            myIntermodalNet: Ptr::null(),
+            myCallback: callback,
+            myCarWalkTransfer: carWalkTransfer,
+            myTaxiWait: taxiWait,
+            myRoutingAlgorithm: routingAlgorithm.to_string(),
+            myRoutingMode: routingMode,
+            myExternalEffort: calc,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void IntermodalRouter::~IntermodalRouter<E, L, N, V>()` [virtual]
@@ -85,7 +97,12 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port IntermodalRouter::~IntermodalRouter<E, L, N, V>")
+        if !self.myInternalRouter.is_null() {
+            drop(unsafe { Box::from_raw(self.myInternalRouter.as_raw()) });
+        }
+        if !self.myAmClone && !self.myIntermodalNet.is_null() {
+            drop(unsafe { Box::from_raw(self.myIntermodalNet.as_raw()) });
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, _IntermodalTrip> * IntermodalRouter::clone()`
@@ -94,8 +111,11 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return new IntermodalRouter<E, L, N, V>(myIntermodalNet, myCarWalkTransfer, myTaxiWait, myRoutingAlgorithm, myRoutingMode, myExternalEffort);
     //     }
     #[allow(unused_variables)]
-    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, PedestrianRouter__IntermodalTrip>> {
-        todo!("port IntermodalRouter::clone")
+    pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, PedestrianRouter__IntermodalTrip<E, N, V>>> {
+        self.create_net();
+        // shortcut: the clone is leaked because C++ `delete` on the base router has no Rust equivalent yet
+        let clone = Box::leak(Box::new(Self::new_2(self.myIntermodalNet, self.myCarWalkTransfer, self.myTaxiWait, &self.myRoutingAlgorithm, self.myRoutingMode, self.myExternalEffort)));
+        Ptr::from_mut(clone).cast()
     }
 
     /// C++: `int IntermodalRouter::getCarWalkTransfer() const` [const]
@@ -104,7 +124,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_car_walk_transfer(&self) -> i32 {
-        todo!("port IntermodalRouter::getCarWalkTransfer")
+        self.myCarWalkTransfer
     }
 
     /// C++: `bool IntermodalRouter::compute(const E *, const E *, const double, const std::string &, const double, const std::string &, const double, const V *const, const SUMOVTypeParameter &, const SVCPermissions, const SUMOTime, std::vector<TripItem> &, const double)`
@@ -234,8 +254,8 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         throw ProcessError(TL("Do not use this method"));
     //     }
     #[allow(unused_variables)]
-    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
-        todo!("port IntermodalRouter::compute")
+    pub fn compute_2(&mut self, arg0: Ptr<E>, arg1: Ptr<E>, arg2: Ptr<PedestrianRouter__IntermodalTrip<E, N, V>>, arg3: SUMOTime, arg4: &mut Vec<Ptr<E>>, arg5: bool) -> bool {
+        panic!("{}", ProcessError::new("Do not use this method"))
     }
 
     /// C++: `void IntermodalRouter::setBulkMode(const bool)`
@@ -247,7 +267,10 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port IntermodalRouter::setBulkMode")
+        self.base.set_bulk_mode(mode);
+        if !self.myInternalRouter.is_null() {
+            self.myInternalRouter.m().set_bulk_mode(mode);
+        }
     }
 
     /// C++: `void IntermodalRouter::prohibit(const _Prohibitions &)`
@@ -263,7 +286,16 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &IntermodalRouter__Prohibitions) {
-        todo!("port IntermodalRouter::prohibit")
+        self.create_net();
+        let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
+        for (edge, prohibition) in toProhibit {
+            let edge: Ptr<E> = (*edge).cast();
+            // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
+            toProhibitPE.insert(self.myIntermodalNet.get_both_directions(edge).0.cast(), *prohibition);
+            toProhibitPE.insert(self.myIntermodalNet.get_both_directions(edge).1.cast(), *prohibition);
+            toProhibitPE.insert(self.myIntermodalNet.get_car_edge(edge).cast(), *prohibition);
+        }
+        self.myInternalRouter.m().prohibit(&toProhibitPE);
     }
 
     /// C++: `void IntermodalRouter::writeNetwork(OutputDevice &)`
@@ -280,7 +312,16 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn write_network(&mut self, dev: &mut OutputDevice) {
-        todo!("port IntermodalRouter::writeNetwork")
+        self.create_net();
+        for e in self.myIntermodalNet.m().get_all_edges().iter() {
+            dev.open_tag_id(SUMO_TAG_EDGE);
+            dev.write_attr(SUMO_ATTR_ID, &e.get_id());
+            dev.write_attr(SUMO_ATTR_LINE, e.get_line());
+            dev.write_attr(SUMO_ATTR_LENGTH, &e.get_length());
+            let successors = e.get_successors(SVC_IGNORING).iter().map(|s| s.get_id()).collect::<Vec<_>>().join(" ");
+            dev.write_attr("successors", successors.as_str());
+            dev.close_tag("");
+        }
     }
 
     /// C++: `void IntermodalRouter::writeWeights(OutputDevice &)`
@@ -299,7 +340,17 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn write_weights(&mut self, dev: &mut OutputDevice) {
-        todo!("port IntermodalRouter::writeWeights")
+        self.create_net();
+        let dummyVT = SUMOVTypeParameter::new(DEFAULT_PEDTYPE_ID, SVC_PEDESTRIAN);
+        // C++ DEFAULT_PEDESTRIAN_SPEED is 5. / 3.6 (SUMOVehicleClass.cpp), not ported as a const yet
+        let mut trip = IntermodalTrip::<E, N, V>::new(Ptr::null(), Ptr::null(), 0., 0., 5. / 3.6, 0, Ptr::null(), &dummyVT, Ptr::null(), SVC_PASSENGER | SVC_BICYCLE | SVC_BUS, Ptr::null(), 0.);
+        for e in self.myIntermodalNet.m().get_all_edges().iter() {
+            dev.open_tag_id(SUMO_TAG_EDGE);
+            dev.write_attr(SUMO_ATTR_ID, &e.get_id());
+            dev.write_attr("traveltime", &e.get_travel_time(Ptr::from_mut(&mut trip), 0.));
+            dev.write_attr("effort", &e.get_effort(Ptr::from_mut(&mut trip), 0.));
+            dev.close_tag("");
+        }
     }
 
     /// C++: `Network * IntermodalRouter::getNetwork() const` [const]
@@ -308,7 +359,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_network(&self) -> Ptr<IntermodalRouter_Network<E, L, N, V>> {
-        todo!("port IntermodalRouter::getNetwork")
+        self.myIntermodalNet
     }
 
     /// C++: `EffortCalculator * IntermodalRouter::getExternalEffort() const` [const]
@@ -317,7 +368,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_external_effort(&self) -> Ptr<EffortCalculator> {
-        todo!("port IntermodalRouter::getExternalEffort")
+        self.myExternalEffort
     }
 
     /// C++: `void IntermodalRouter::IntermodalRouter<E, L, N, V>(Network *, const int, double, const std::string &, const int, EffortCalculator *)` [private]
@@ -332,7 +383,21 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(net: Ptr<IntermodalRouter_Network<E, L, N, V>>, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
-        todo!("port IntermodalRouter::IntermodalRouter<E, L, N, V>")
+        let mut r = Self {
+            base: SUMOAbstractRouter::new("IntermodalRouterClone", true, (), (), false, false),
+            myAmClone: true,
+            myInternalRouter: Ptr::null(),
+            myIntermodalNet: net,
+            myCallback: Default::default(),
+            myCarWalkTransfer: carWalkTransfer,
+            myTaxiWait: taxiWait,
+            myRoutingAlgorithm: routingAlgorithm.to_string(),
+            myRoutingMode: routingMode,
+            myExternalEffort: calc,
+            _p: std::marker::PhantomData,
+        };
+        r.create_net();
+        r
     }
 
     /// C++: `double IntermodalRouter::getCombined(const _IntermodalEdge *const, const _IntermodalTrip *const, double)` [static, private]
@@ -340,8 +405,8 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return edge->getTravelTime(trip, time) + trip->externalFactor * trip->calc->getEffort(edge->getNumericalID());
     //     }
     #[allow(unused_variables)]
-    pub fn get_combined(edge: Ptr<AccessEdge__IntermodalEdge>, trip: Ptr<PedestrianRouter__IntermodalTrip>, time: f64) -> f64 {
-        todo!("port IntermodalRouter::getCombined")
+    pub fn get_combined(edge: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, trip: Ptr<PedestrianRouter__IntermodalTrip<E, N, V>>, time: f64) -> f64 {
+        edge.get_travel_time(trip, time) + trip.externalFactor * trip.calc.get_effort(edge.get_numerical_id())
     }
 
     /// C++: `void IntermodalRouter::createNet()` [private]
@@ -383,7 +448,14 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn create_net(&mut self) {
-        todo!("port IntermodalRouter::createNet")
+        if self.myIntermodalNet.is_null() {
+            // shortcut: needs E::getAllEdges() (static on the edge type, not on RouterEdge) and the myCallback invocation, upgrade when the edge trait exposes all edges
+            panic!("shortcut: IntermodalRouter::createNet cannot build the network without E::getAllEdges()");
+        }
+        if self.myInternalRouter.is_null() {
+            // shortcut: internal router needs the Operation/TT function pointers (Unmapped in sumo_abstract_router.rs) and MapMatcher for A*, upgrade with those types
+            panic!("shortcut: IntermodalRouter::createNet cannot construct the internal router yet");
+        }
     }
 
     /// C++: `bool IntermodalRouter::loopedLineTransfer(const _IntermodalEdge *, const _IntermodalEdge *, double, double)` [private]
@@ -400,8 +472,16 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn looped_line_transfer(&mut self, prev: Ptr<AccessEdge__IntermodalEdge>, cur: Ptr<AccessEdge__IntermodalEdge>, prevTime: f64, time: f64) -> bool {
-        todo!("port IntermodalRouter::loopedLineTransfer")
+    pub fn looped_line_transfer(&mut self, prev: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, cur: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, prevTime: f64, time: f64) -> bool {
+        assert!(!prev.is_null());
+        if self.myIntermodalNet.is_looped(cur.get_line().to_string()) {
+            let mut intended1 = String::new();
+            let mut intended2 = String::new();
+            prev.get_intended(prevTime, &mut intended1);
+            cur.get_intended(time, &mut intended2);
+            return intended1 != intended2;
+        }
+        false
     }
 
     /// C++: `IntermodalRouter<E, L, N, V> & IntermodalRouter::operator=(const IntermodalRouter<E, L, N, V> &)` [private]
@@ -409,7 +489,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &IntermodalRouter<E, L, N, V>) -> &mut IntermodalRouter<E, L, N, V> {
-        todo!("port IntermodalRouter::operator=")
+        panic!("IntermodalRouter::operator= is declared but not defined")
     }
 
 }
@@ -437,7 +517,21 @@ impl IntermodalRouter_TripItem {
     //             line(_line), intended(_line) {}
     #[allow(unused_variables)]
     pub fn new(_line: &str) -> Self {
-        todo!("port TripItem::TripItem")
+        Self {
+            line: _line.to_string(),
+            vType: String::new(),
+            destStop: String::new(),
+            intended: _line.to_string(),
+            depart: -1.,
+            edges: Vec::new(),
+            traveltime: 0.,
+            cost: 0.,
+            length: 0.,
+            departPos: utils::common::std_defs::INVALID_DOUBLE,
+            arrivalPos: utils::common::std_defs::INVALID_DOUBLE,
+            description: String::new(),
+            exitTimes: Vec::new(),
+        }
     }
 
 }

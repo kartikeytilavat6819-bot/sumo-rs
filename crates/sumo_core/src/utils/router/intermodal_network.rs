@@ -18,7 +18,7 @@ pub enum ModeChangeOptions {
 }
 
 /// C++ typedef `std::pair<_IntermodalEdge *, _IntermodalEdge *> IntermodalNetwork::EdgePair`
-pub type IntermodalNetwork_EdgePair = (Ptr<AccessEdge__IntermodalEdge>, Ptr<AccessEdge__IntermodalEdge>);
+pub type IntermodalNetwork_EdgePair<E, L, N, V> = (Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>);
 
 /// C++ typedef `AccessEdge<E, L, N, V> IntermodalNetwork::_AccessEdge`
 pub type IntermodalNetwork__AccessEdge = Unmapped /* AccessEdge<E, L, N, V> */;
@@ -36,23 +36,23 @@ pub type IntermodalNetwork__PedestrianEdge = Unmapped /* PedestrianEdge<E, L, N,
 /// C++ class `IntermodalNetwork` (utils/router/IntermodalNetwork.h)
 pub struct IntermodalNetwork<E, L, N, V> {
     /// the edge dictionary
-    pub myEdges: Vec<Ptr<AccessEdge__IntermodalEdge>>,
+    pub myEdges: Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
     /// retrieve the forward and backward edge for the given input edge E
-    pub myBidiLookup: BTreeMap<Ptr<E>, IntermodalNetwork_EdgePair>,
+    pub myBidiLookup: BTreeMap<Ptr<E>, IntermodalNetwork_EdgePair<E, L, N, V>>,
     /// retrieve the depart edges for the given input edge E
-    pub myDepartLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge>>>,
+    pub myDepartLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
     /// retrieve the arrival edges for the given input edge E
-    pub myArrivalLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge>>>,
+    pub myArrivalLookup: BTreeMap<Ptr<E>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
     /// the walking connector edge (fake walking area)
-    pub myWalkingConnectorLookup: BTreeMap<Ptr<N>, Ptr<AccessEdge__IntermodalEdge>>,
+    pub myWalkingConnectorLookup: BTreeMap<Ptr<N>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
     /// retrieve the car edge for the given input edge E
-    pub myCarLookup: BTreeMap<Ptr<E>, Ptr<AccessEdge__IntermodalEdge>>, // C++: std::map<const E *, _IntermodalEdge *, ComparatorNumericalIdLess>
+    pub myCarLookup: BTreeMap<Ptr<E>, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>, // C++: std::map<const E *, _IntermodalEdge *, ComparatorNumericalIdLess>
     /// retrieve the public transport edges for the given line
     pub myPTLines: BTreeMap<String, Vec<Ptr<IntermodalNetwork__PTEdge>>>,
     /// retrieve the representing edge for the given stopping place
-    pub myStopConnections: BTreeMap<String, Ptr<AccessEdge__IntermodalEdge>>,
+    pub myStopConnections: BTreeMap<String, Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>,
     /// retrieve the splitted edges for the given "original"
-    pub myAccessSplits: BTreeMap<Ptr<AccessEdge__IntermodalEdge>, Vec<Ptr<AccessEdge__IntermodalEdge>>>,
+    pub myAccessSplits: BTreeMap<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>>>,
     /// looped lines need extra checking when building itineraries
     pub myLoopedLines: BTreeSet<String>,
     pub myNumericalID: i32,
@@ -269,7 +269,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         myEdges[edge->getNumericalID()] = edge;
     //     }
     #[allow(unused_variables)]
-    pub fn add_edge(&mut self, edge: Ptr<AccessEdge__IntermodalEdge>) {
+    pub fn add_edge(&mut self, edge: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>) {
         todo!("port IntermodalNetwork::addEdge")
     }
 
@@ -281,7 +281,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         myArrivalLookup[arrConn->getEdge()].insert(myArrivalLookup[arrConn->getEdge()].begin() + index, arrConn);
     //     }
     #[allow(unused_variables)]
-    pub fn add_connectors(&mut self, depConn: Ptr<AccessEdge__IntermodalEdge>, arrConn: Ptr<AccessEdge__IntermodalEdge>, index: i32) {
+    pub fn add_connectors(&mut self, depConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, arrConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, index: i32) {
         todo!("port IntermodalNetwork::addConnectors")
     }
 
@@ -290,7 +290,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return myEdges;
     //     }
     #[allow(unused_variables)]
-    pub fn get_all_edges(&mut self) -> &Vec<Ptr<AccessEdge__IntermodalEdge>> {
+    pub fn get_all_edges(&mut self) -> &Vec<Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>> {
         todo!("port IntermodalNetwork::getAllEdges")
     }
 
@@ -305,7 +305,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return (*it).second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_both_directions(&self, e: Ptr<E>) -> &IntermodalNetwork_EdgePair {
+    pub fn get_both_directions(&self, e: Ptr<E>) -> &IntermodalNetwork_EdgePair<E, L, N, V> {
         todo!("port IntermodalNetwork::getBothDirections")
     }
 
@@ -344,7 +344,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getDepartEdge")
     }
 
@@ -361,7 +361,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second[splitIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_depart_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getDepartConnector")
     }
 
@@ -386,7 +386,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getArrivalEdge")
     }
 
@@ -396,7 +396,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return myArrivalLookup.find(e)->second[splitIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_arrival_connector(&self, e: Ptr<E>, splitIndex: i32) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getArrivalConnector")
     }
 
@@ -419,7 +419,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getWalkingConnector")
     }
 
@@ -522,7 +522,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_car_edge(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_car_edge(&self, e: Ptr<E>) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getCarEdge")
     }
 
@@ -536,7 +536,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_stop_edge(&self, stopId: &str) -> Ptr<AccessEdge__IntermodalEdge> {
+    pub fn get_stop_edge(&self, stopId: &str) -> Ptr<AccessEdge__IntermodalEdge<E, L, N, V>> {
         todo!("port IntermodalNetwork::getStopEdge")
     }
 
@@ -824,7 +824,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         access->addSuccessor(to);
     //     }
     #[allow(unused_variables)]
-    pub fn add_restricted_car_exit(&mut self, from: Ptr<AccessEdge__IntermodalEdge>, to: Ptr<AccessEdge__IntermodalEdge>, vehicleRestriction: SVCPermissions) {
+    pub fn add_restricted_car_exit(&mut self, from: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, to: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, vehicleRestriction: SVCPermissions) {
         todo!("port IntermodalNetwork::addRestrictedCarExit")
     }
 
@@ -860,7 +860,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return splitIndex;
     //     }
     #[allow(unused_variables)]
-    pub fn find_split_index(&self, toSplit: Ptr<AccessEdge__IntermodalEdge>, pos: f64, relPos: &mut f64, needSplit: &mut bool) -> i32 {
+    pub fn find_split_index(&self, toSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, pos: f64, relPos: &mut f64, needSplit: &mut bool) -> i32 {
         todo!("port IntermodalNetwork::findSplitIndex")
     }
 
@@ -916,7 +916,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn split_edge(&mut self, toSplit: Ptr<AccessEdge__IntermodalEdge>, splitIndex: i32, afterSplit: Ptr<AccessEdge__IntermodalEdge>, relPos: f64, length: f64, needSplit: bool, stopConn: Ptr<AccessEdge__IntermodalEdge>, forward: bool, addExit: bool, addEntry: bool) {
+    pub fn split_edge(&mut self, toSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, splitIndex: i32, afterSplit: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, relPos: f64, length: f64, needSplit: bool, stopConn: Ptr<AccessEdge__IntermodalEdge<E, L, N, V>>, forward: bool, addExit: bool, addEntry: bool) {
         todo!("port IntermodalNetwork::splitEdge")
     }
 
