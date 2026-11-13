@@ -128,7 +128,7 @@ impl MSTransportableDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportableDevice_FCD) -> Self {
-        todo!("port MSTransportableDevice_FCD::MSTransportableDevice_FCD")
+        panic!("MSTransportableDevice_FCD copy constructor is invalidated in SUMO")
     }
 
     /// C++: `MSTransportableDevice_FCD & MSTransportableDevice_FCD::operator=(const MSTransportableDevice_FCD &)` [private]
@@ -136,7 +136,7 @@ impl MSTransportableDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice_FCD) -> &mut MSTransportableDevice_FCD {
-        todo!("port MSTransportableDevice_FCD::operator=")
+        panic!("MSTransportableDevice_FCD assignment operator is invalidated in SUMO")
     }
 
 }
