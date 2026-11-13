@@ -42,7 +42,24 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(_from: Ptr<E>, _to: Ptr<E>, _departPos: f64, _arrivalPos: f64, _speed: f64, _departTime: SUMOTime, _node: Ptr<N>, _pars: &SUMOVTypeParameter, _vehicle: Ptr<V>, _modeSet: SVCPermissions, _calc: Ptr<EffortCalculator>, _externalFactor: f64) -> Self {
-        todo!("port IntermodalTrip::IntermodalTrip<E, N, V>")
+        // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
+        let departPos = if _departPos < 0. { panic!("shortcut: needs router trait bounds (lead), E::getLength") } else { _departPos };
+        let arrivalPos = if _arrivalPos < 0. { panic!("shortcut: needs router trait bounds (lead), E::getLength") } else { _arrivalPos };
+        Self {
+            from: _from,
+            to: _to,
+            departPos,
+            arrivalPos,
+            speed: _speed,
+            departTime: _departTime,
+            node: _node,
+            pars: Ptr::new(_pars),
+            vehicle: _vehicle,
+            modeSet: _modeSet,
+            calc: _calc,
+            externalFactor: _externalFactor,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `std::string IntermodalTrip::getID() const` [const]
@@ -51,7 +68,8 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> String {
-        todo!("port IntermodalTrip::getID")
+        // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getID")
     }
 
     /// C++: `SUMOVehicleClass IntermodalTrip::getVClass() const` [const]
@@ -60,7 +78,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_class(&self) -> SUMOVehicleClass {
-        todo!("port IntermodalTrip::getVClass")
+        if self.vehicle.is_null() {
+            SVC_PEDESTRIAN
+        } else {
+            // shortcut: needs router trait bounds (lead), V::getVClass is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::getVClass")
+        }
     }
 
     /// C++: `const SUMOVTypeParameter & IntermodalTrip::getVTypeParameter() const` [const]
@@ -69,7 +92,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_v_type_parameter(&self) -> &SUMOVTypeParameter {
-        todo!("port IntermodalTrip::getVTypeParameter")
+        if self.vehicle.is_null() {
+            &*self.pars
+        } else {
+            // shortcut: needs router trait bounds (lead), V::getVTypeParameter is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::getVTypeParameter")
+        }
     }
 
     /// C++: `bool IntermodalTrip::ignoreTransientPermissions() const` [const]
@@ -79,7 +107,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn ignore_transient_permissions(&self) -> bool {
-        todo!("port IntermodalTrip::ignoreTransientPermissions")
+        if self.vehicle.is_null() {
+            false
+        } else {
+            // shortcut: needs router trait bounds (lead), V::ignoreTransientPermissions is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::ignoreTransientPermissions")
+        }
     }
 
     /// C++: `double IntermodalTrip::getLength() const` [const]
@@ -89,7 +122,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port IntermodalTrip::getLength")
+        if self.vehicle.is_null() {
+            1.
+        } else {
+            // shortcut: needs router trait bounds (lead), V::getVehicleType().getLength is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::getVehicleType")
+        }
     }
 
     /// C++: `double IntermodalTrip::getMaxSpeed() const` [const]
@@ -98,7 +136,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed(&self) -> f64 {
-        todo!("port IntermodalTrip::getMaxSpeed")
+        if self.vehicle.is_null() {
+            self.speed
+        } else {
+            // shortcut: needs router trait bounds (lead), V::getMaxSpeed is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::getMaxSpeed")
+        }
     }
 
     /// C++: `double IntermodalTrip::getChosenSpeedFactor() const` [const]
@@ -107,7 +150,12 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        todo!("port IntermodalTrip::getChosenSpeedFactor")
+        if self.vehicle.is_null() {
+            1.0
+        } else {
+            // shortcut: needs router trait bounds (lead), V::getChosenSpeedFactor is not callable on generic V
+            panic!("shortcut: needs router trait bounds (lead), V::getChosenSpeedFactor")
+        }
     }
 
     /// C++: `IntermodalTrip<E, N, V> & IntermodalTrip::operator=(const IntermodalTrip<E, N, V> &)` [private]
@@ -115,7 +163,7 @@ impl<E, N, V> IntermodalTrip<E, N, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &IntermodalTrip<E, N, V>) -> &mut IntermodalTrip<E, N, V> {
-        todo!("port IntermodalTrip::operator=")
+        panic!("IntermodalTrip assignment operator is private and invalidated in C++")
     }
 
 }
