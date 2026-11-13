@@ -22,15 +22,17 @@ pub type MSPModel_JuPedSim_JPS_JourneyId = i64;
 pub type MSPModel_JuPedSim_JPS_StageId = i64;
 
 /// C++ typedef `std::tuple<JPS_StageId, const MSLane *, Position, double> MSPModel_JuPedSim::WaypointDesc`
-pub type MSPModel_JuPedSim_WaypointDesc = Unmapped /* std::tuple<JPS_StageId, const MSLane *, Position, double> */;
+pub type MSPModel_JuPedSim_WaypointDesc = (MSPModel_JuPedSim_JPS_StageId, Ptr<MSLane>, Position, f64);
 
 /// Structure that keeps data related to vanishing areas (and other types of areas).
 /// C++ class `MSPModel_JuPedSim::AreaData` (microsim/transportables/MSPModel_JuPedSim.h)
 pub struct MSPModel_JuPedSim_AreaData {
     pub id: String,
     pub areaType: String,
-    pub areaBoundary: i32,
-    pub params: Ptr<Unmapped /* Parameterised::Map */>,
+    // shortcut: C++ sumo_jupedsim_api::Polygon (protobuf) -> Vec<Position>, convert to the tonic-build generated Polygon at the gRPC call once gRPC is wired
+    pub areaBoundary: Vec<Position>,
+    /// C++ `const Parameterised::Map&` (non-owning)
+    pub params: Ptr<ParameterisedMap>,
     /// The last time a pedestrian was removed in a vanishing area.
     pub lastRemovalTime: SUMOTime,
 }
@@ -42,6 +44,7 @@ impl MSPModel_JuPedSim_AreaData {
 #[repr(C)]
 pub struct MSPModel_JuPedSim_Event {
     /// C++ base class `Command`
+    // shortcut: Command has no Rust type yet, keep () until microsim Command is ported
     pub base: Unmapped /* Command */,
     pub myModel: Ptr<MSPModel_JuPedSim>,
 }
@@ -86,7 +89,8 @@ pub struct MSPModel_JuPedSim {
     pub base: MSPModel_Interacting,
     /// C++ base class `ShapeListener`
     pub base2: ShapeListener,
-    pub myStopWatch: i32,
+    // shortcut: C++ std::vector<StopWatch<nanoseconds>>, StopWatch is unported; holds accumulated ns, upgrade to the ported StopWatch
+    pub myStopWatch: Vec<i64>,
     /// The random number generator for fluctuations on insertion
     pub myRNG: SumoRNG,
     /// The network on which the simulation runs.
@@ -97,11 +101,13 @@ pub struct MSPModel_JuPedSim {
     pub myJPSDeltaT: SUMOTime,
     /// Threshold to decide if a pedestrian has ended its journey or not.
     pub myExitTolerance: f64,
-    pub myPedestrianStates: i32,
+    pub myPedestrianStates: Vec<Ptr<MSPModel_JuPedSim_PState>>,
     /// The GEOS polygon containing all computed connected components of the pedestrian network.
-    pub myGEOSPedestrianNetwork: Ptr<i32>,
+    // shortcut: owned GEOSGeometry* -> geos::Geometry (crate geos 11.3.1), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+    pub myGEOSPedestrianNetwork: Option<Box<dyn std::any::Any>>,
     /// The GEOS polygon representing the largest (by area) connected component of the pedestrian network.
-    pub myGEOSPedestrianNetworkLargestComponent: Ptr<i32>,
+    // shortcut: non-owning const GEOSGeometry* -> Ptr<geos::Geometry>, upgrade with the geos crate
+    pub myGEOSPedestrianNetworkLargestComponent: Option<Ptr<dyn std::any::Any>>,
     pub myHaveAdditionalWalkableAreas: bool,
     /// The JPS polygon representing the largest connected component of the pedestrian network.
     pub myJPSGeometry: i64,
@@ -109,15 +115,19 @@ pub struct MSPModel_JuPedSim {
     pub myJPSGeometryWithTrainsAndRamps: i64,
     pub myJPSModel: String,
     pub myJPSSimulation: i64,
-    pub myGrpcChannel: i32,
-    pub myGrpcStub: i32,
+    // shortcut: std::shared_ptr<grpc::Channel> -> tonic::transport::Channel (crate tonic 0.14.9), upgrade when gRPC is wired
+    pub myGrpcChannel: Option<Box<dyn std::any::Any>>,
+    // shortcut: std::unique_ptr<JuPedSimService::Stub> -> tonic-build generated client over Channel (prost 0.14.6), generate from the .proto when gRPC is wired
+    pub myGrpcStub: Option<Box<dyn std::any::Any>>,
     /// Array of special areas.
-    pub myAreas: i32,
+    pub myAreas: Vec<Box<MSPModel_JuPedSim_AreaData>>,
     /// Array of stopped trains, used to detect whether to add carriages and ramps to the geometry.
-    pub myAllStoppedTrainIDs: i32,
-    pub myCrossingWaits: i32,
-    pub myCrossings: i32,
-    pub myLaneCenters: i32,
+    pub myAllStoppedTrainIDs: Vec<SUMOTrafficObject_NumericalID>,
+    // determinism: C++ std::map ordered by ComparatorNumericalIdLess (lane numerical id); a Vec keeps insertion order, sort by lane id when iterating
+    pub myCrossingWaits: Vec<(Ptr<MSLane>, (MSPModel_JuPedSim_JPS_StageId, MSPModel_JuPedSim_JPS_StageId))>,
+    pub myCrossings: BTreeMap<MSPModel_JuPedSim_JPS_StageId, (Ptr<MSLane>, bool)>,
+    // determinism: C++ std::map ordered by ComparatorNumericalIdLess (lane numerical id); same caveat as myCrossingWaits
+    pub myLaneCenters: Vec<(Ptr<MSLane>, MSPModel_JuPedSim_JPS_StageId)>,
 }
 
 impl std::ops::Deref for MSPModel_JuPedSim {
@@ -1409,7 +1419,7 @@ pub struct MSPModel_JuPedSim_PState {
     /// id of the journey, needed for modifying it
     pub myJourneyId: MSPModel_JuPedSim_JPS_JourneyId,
     pub myStageId: MSPModel_JuPedSim_JPS_StageId,
-    pub myWaypoints: i32,
+    pub myWaypoints: Vec<MSPModel_JuPedSim_WaypointDesc>,
     pub myAgentId: MSPModel_JuPedSim_JPS_AgentId,
 }
 
@@ -1435,7 +1445,7 @@ impl MSPModel_JuPedSim_PState {
     //     myDir = FORWARD;
     // }
     #[allow(unused_variables)]
-    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &i32) -> Self {
+    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &[MSPModel_JuPedSim_WaypointDesc]) -> Self {
         todo!("port PState::PState")
     }
 
@@ -1460,7 +1470,7 @@ impl MSPModel_JuPedSim_PState {
     //     myWaypoints = waypoints;
     // }
     #[allow(unused_variables)]
-    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &i32) {
+    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: MSPModel_JuPedSim_JPS_JourneyId, stageId: MSPModel_JuPedSim_JPS_StageId, waypoints: &[MSPModel_JuPedSim_WaypointDesc]) {
         todo!("port PState::reinit")
     }
 
