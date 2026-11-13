@@ -126,8 +126,17 @@ impl NILoader {
         // load types first
         let mut handler = NIXMLTypesHandler::new(self.myNetBuilder.m().get_type_cont());
         if !throw(oc.is_set("type-files", true)) {
-            // shortcut: built-in osm/opendrive/visum typemaps (generated typemap.h from data/typemap/*.typ.xml) are not ported, so none are loaded here; upgrade by embedding those XML files and pushing them into `files`
-            let files: Vec<String> = Vec::new();
+            // built-in typemaps: C++ compiles data/typemap/*.typ.xml into typemap.h; the same files are embedded here
+            let mut files: Vec<String> = Vec::new();
+            if throw(oc.is_set("osm-files", true)) {
+                files.push(include_str!("../../data/typemap/osmNetconvert.typ.xml").to_string());
+            }
+            if throw(oc.is_set("opendrive-files", true)) {
+                files.push(include_str!("../../data/typemap/opendriveNetconvert.typ.xml").to_string());
+            }
+            if throw(oc.is_set("visum-file", true)) {
+                files.push(include_str!("../../data/typemap/visumNetconvert.typ.xml").to_string());
+            }
             ok &= NITypeLoader::load(&mut handler, &files, "types", true);
         } else {
             ok &= NITypeLoader::load(&mut handler, throw(oc.get_string_vector("type-files")).as_slice(), "types", false);
