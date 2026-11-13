@@ -493,6 +493,16 @@ mod tests {
     }
 
     #[test]
+    fn simple_projection_round_trip() {
+        let s = GeoConvHelper::new("-", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(8.5, 49.5);
+        assert!(s.x2cartesian_const(&mut p));
+        s.cartesian2geo(&mut p);
+        assert!((p.x() - 8.5).abs() < 1e-6);
+        assert!((p.y() - 49.5).abs() < 1e-6);
+    }
+
+    #[test]
     fn init_from_options_projection_choice() {
         let mut oc = OptionsCont::new();
         GeoConvHelper::add_projection_options(&mut oc);
