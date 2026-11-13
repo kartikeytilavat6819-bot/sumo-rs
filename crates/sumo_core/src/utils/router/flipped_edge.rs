@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// C++ typedef `std::vector<std::pair<const FlippedEdge<E, N, V> *, const FlippedEdge<E, N, V> *>> FlippedEdge::ConstFlippedEdgePairVector`
-pub type FlippedEdge_ConstFlippedEdgePairVector = Unmapped /* std::vector<std::pair<const FlippedEdge<E, N, V> *, const FlippedEdge<E, N, V> *>> */;
+pub type FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec<(Ptr<FlippedEdge<E, N, V>>, Ptr<FlippedEdge<E, N, V>>)>;
 
 /// The edge type representing backward edges with flipped nodes
 /// C++ class `FlippedEdge` (utils/router/FlippedEdge.h)
@@ -15,8 +15,8 @@ pub struct FlippedEdge<E, N, V> {
     pub myFromJunction: Ptr<FlippedNode<E, N, V>>,
     pub myToJunction: Ptr<FlippedNode<E, N, V>>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, FlippedEdge_ConstFlippedEdgePairVector>,
-    pub myViaSuccessors: FlippedEdge_ConstFlippedEdgePairVector,
+    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, FlippedEdge_ConstFlippedEdgePairVector<E, N, V>>,
+    pub myViaSuccessors: FlippedEdge_ConstFlippedEdgePairVector<E, N, V>,
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
 
@@ -42,7 +42,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     {}
     #[allow(unused_variables)]
     pub fn new(originalEdge: Ptr<E>) -> Self {
-        todo!("port FlippedEdge::FlippedEdge<E, N, V>")
+        // shortcut: needs router trait bounds (lead), E::getToJunction/getFromJunction and N::getFlippedRoutingNode are not callable on generic E/N
+        panic!("shortcut: needs router trait bounds (lead), E::getToJunction")
     }
 
     /// C++: `void FlippedEdge::~FlippedEdge<E, N, V>()`
@@ -50,7 +51,7 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     // ~FlippedEdge() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FlippedEdge::~FlippedEdge<E, N, V>")
+
     }
 
     /// C++: `void FlippedEdge::init()`
@@ -73,7 +74,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port FlippedEdge::init")
+        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors/getFlippedRoutingEdge are not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
     }
 
     /// C++: `const FlippedNode<E, N, V> * FlippedEdge::getFromJunction() const` [const]
@@ -83,7 +85,7 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_from_junction(&self) -> Ptr<FlippedNode<E, N, V>> {
-        todo!("port FlippedEdge::getFromJunction")
+        self.myFromJunction
     }
 
     /// C++: `const FlippedNode<E, N, V> * FlippedEdge::getToJunction() const` [const]
@@ -93,7 +95,7 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_to_junction(&self) -> Ptr<FlippedNode<E, N, V>> {
-        todo!("port FlippedEdge::getToJunction")
+        self.myToJunction
     }
 
     /// C++: `double FlippedEdge::getTravelTimeStatic(const FlippedEdge<E, N, V> *const, const V *const, double)` [static]
@@ -103,7 +105,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<FlippedEdge<E, N, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port FlippedEdge::getTravelTimeStatic")
+        // shortcut: needs router trait bounds (lead), E::getTravelTime is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getTravelTime")
     }
 
     /// C++: `double FlippedEdge::getTravelTimeStaticRandomized(const FlippedEdge<E, N, V> *const, const V *const, double)` [static]
@@ -113,7 +116,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_randomized(edge: Ptr<FlippedEdge<E, N, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port FlippedEdge::getTravelTimeStaticRandomized")
+        // shortcut: needs router trait bounds (lead), E::getTravelTimeStaticRandomized is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getTravelTimeStaticRandomized")
     }
 
     /// C++: `const ConstFlippedEdgePairVector & FlippedEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -144,7 +148,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &FlippedEdge_ConstFlippedEdgePairVector {
-        todo!("port FlippedEdge::getViaSuccessors")
+        // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the cache rebuild also needs Ptr::new(self).m()
+        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
     }
 
     /// C++: `const FlippedEdge<E, N, V> * FlippedEdge::getBidiEdge() const` [const]
@@ -154,7 +159,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<FlippedEdge<E, N, V>> {
-        todo!("port FlippedEdge::getBidiEdge")
+        // shortcut: needs router trait bounds (lead), E::getBidiEdge is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getBidiEdge")
     }
 
     /// C++: `double FlippedEdge::getDistanceTo(const FlippedEdge<E, N, V> *, const bool) const` [const]
@@ -164,7 +170,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_distance_to(&self, other: Ptr<FlippedEdge<E, N, V>>, doBoundaryEstimate: bool) -> f64 {
-        todo!("port FlippedEdge::getDistanceTo")
+        // shortcut: needs router trait bounds (lead), E::getDistanceTo is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getDistanceTo")
     }
 
     /// C++: `double FlippedEdge::getMinimumTravelTime(const V *const) const` [const]
@@ -174,7 +181,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_minimum_travel_time(&self, veh: Ptr<V>) -> f64 {
-        todo!("port FlippedEdge::getMinimumTravelTime")
+        // shortcut: needs router trait bounds (lead), E::getMinimumTravelTime is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getMinimumTravelTime")
     }
 
     /// C++: `double FlippedEdge::getTimePenalty() const` [const]
@@ -184,7 +192,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_penalty(&self) -> f64 {
-        todo!("port FlippedEdge::getTimePenalty")
+        // shortcut: needs router trait bounds (lead), E::getTimePenalty is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getTimePenalty")
     }
 
     /// C++: `bool FlippedEdge::hasLoadedTravelTimes() const` [const]
@@ -194,7 +203,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn has_loaded_travel_times(&self) -> bool {
-        todo!("port FlippedEdge::hasLoadedTravelTimes")
+        // shortcut: needs router trait bounds (lead), E::hasLoadedTravelTimes is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::hasLoadedTravelTimes")
     }
 
     /// C++: `double FlippedEdge::getSpeedLimit() const` [const]
@@ -204,7 +214,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_speed_limit(&self) -> f64 {
-        todo!("port FlippedEdge::getSpeedLimit")
+        // shortcut: needs router trait bounds (lead), E::getSpeedLimit is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getSpeedLimit")
     }
 
     /// C++: `double FlippedEdge::getLengthGeometryFactor() const` [const]
@@ -214,7 +225,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length_geometry_factor(&self) -> f64 {
-        todo!("port FlippedEdge::getLengthGeometryFactor")
+        // shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor")
     }
 
     /// C++: `int FlippedEdge::getPriority() const` [const]
@@ -224,7 +236,8 @@ impl<E, N, V> FlippedEdge<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_priority(&self) -> i32 {
-        todo!("port FlippedEdge::getPriority")
+        // shortcut: needs router trait bounds (lead), E::getPriority is not callable on generic E
+        panic!("shortcut: needs router trait bounds (lead), E::getPriority")
     }
 
 }
