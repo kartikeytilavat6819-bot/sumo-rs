@@ -1228,7 +1228,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port SUMOVehicle::saveState")
+        (self.vt.save_state)(self, out)
     }
 
     /// C++: `void SUMOVehicle::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual, pure virtual]
@@ -1236,7 +1236,7 @@ impl SUMOVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
-        todo!("port SUMOVehicle::loadState")
+        (self.vt.load_state)(self, attrs, offset)
     }
 
 }
