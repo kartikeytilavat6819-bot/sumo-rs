@@ -105,7 +105,7 @@ impl AGActivityTripWriter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &AGActivityTripWriter) -> Self {
-        todo!("port AGActivityTripWriter::AGActivityTripWriter")
+        panic!("AGActivityTripWriter copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `AGActivityTripWriter & AGActivityTripWriter::operator=(const AGActivityTripWriter &)` [private]
@@ -113,7 +113,7 @@ impl AGActivityTripWriter {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &AGActivityTripWriter) -> &mut AGActivityTripWriter {
-        todo!("port AGActivityTripWriter::operator=")
+        panic!("AGActivityTripWriter assignment operator is private and undefined in C++; it cannot be called")
     }
 
 }
