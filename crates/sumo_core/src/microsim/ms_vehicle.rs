@@ -2056,6 +2056,36 @@ fn ms_vehicle_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
 fn ms_vehicle_is_on_road(v: &SUMOVehicle) -> bool {
     ms_vehicle_of(v).is_on_road()
 }
+fn ms_vehicle_get_lateral_position_on_lane(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_lateral_position_on_lane()
+}
+fn ms_vehicle_get_angle(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_angle()
+}
+fn ms_vehicle_get_route_position(v: &SUMOVehicle) -> i32 {
+    ms_vehicle_of(v).get_route_position()
+}
+fn ms_vehicle_get_arrival_pos(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_arrival_pos()
+}
+fn ms_vehicle_is_parking(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_parking()
+}
+fn ms_vehicle_is_remote_controlled(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_remote_controlled()
+}
+fn ms_vehicle_is_rail(v: &SUMOVehicle) -> bool {
+    ms_vehicle_of(v).is_rail()
+}
+fn ms_vehicle_get_impatience(v: &SUMOVehicle) -> f64 {
+    ms_vehicle_of(v).get_impatience()
+}
+fn ms_vehicle_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_time_loss()
+}
+fn ms_vehicle_get_depart_delay(v: &SUMOVehicle) -> SUMOTime {
+    ms_vehicle_of(v).get_depart_delay()
+}
 static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: ms_vehicle_get_route,
     get_departure: ms_vehicle_get_departure,
@@ -2066,6 +2096,16 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_length: ms_vehicle_get_length,
     get_current_edge: ms_vehicle_get_current_edge,
     is_on_road: ms_vehicle_is_on_road,
+    get_lateral_position_on_lane: ms_vehicle_get_lateral_position_on_lane,
+    get_angle: ms_vehicle_get_angle,
+    get_route_position: ms_vehicle_get_route_position,
+    get_arrival_pos: ms_vehicle_get_arrival_pos,
+    is_parking: ms_vehicle_is_parking,
+    is_remote_controlled: ms_vehicle_is_remote_controlled,
+    is_rail: ms_vehicle_is_rail,
+    get_impatience: ms_vehicle_get_impatience,
+    get_time_loss: ms_vehicle_get_time_loss,
+    get_depart_delay: ms_vehicle_get_depart_delay,
 };
 
 impl MSVehicle {
