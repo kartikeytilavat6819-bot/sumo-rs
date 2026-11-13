@@ -170,7 +170,22 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
-    todo!("port computeRoutes")
+    // initialise the loader
+    loader.open_routes(net);
+    // build the router
+    let measure = oc.get_string("weight-attribute").unwrap();
+    let routingAlgorithm = oc.get_string("routing-algorithm").unwrap();
+    let priorityFactor = oc.get_float("weights.priority-factor").unwrap();
+    let begin = string2time(&oc.get_string("begin").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+    let end = if oc.is_default("end") { SUMOTIME_MAX } else { string2time(&oc.get_string("end").unwrap()).unwrap_or_else(|e| panic!("{e}")) };
+    if oc.is_set("restriction-params", true).unwrap() && (routingAlgorithm == "CH" || routingAlgorithm == "CHWrapper") {
+        panic!("{}", ProcessError::Process(format!("Routing algorithm '{}' does not support restriction-params", routingAlgorithm)));
+    }
+    if measure == "traveltime" && priorityFactor != 0. {
+        ROEdge::init_priority_factor(priorityFactor);
+    }
+    // shortcut: router construction (the DijkstraRouter/AStar/CH/CCH/arcflag/railway instances, the operation selection and the RORouterProvider) needs SUMOAbstractRouter_Operation, which is Unmapped () in sumo_abstract_router.rs, so the rest of computeRoutes is not ported; upgrade once the operation alias is a typed function pointer
+    let _ = (net, measure, begin, end);
 }
 
 /// C++: `void (RONet &, ROLoader &, OptionsCont &) initNet`
@@ -193,6 +208,19 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
 // }
 #[allow(unused_variables)]
 pub fn init_net(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
-    todo!("port initNet")
+    // load the net
+    let mut builder = RODUAEdgeBuilder::new();
+    ROEdge::set_global_options(oc.get_bool("weights.interpolate").unwrap());
+    loader.load_net(net, &mut builder);
+    // load the weights when wished/available
+    if oc.is_set("weight-files", true).unwrap() {
+        loader.load_weights(net, "weight-files", &oc.get_string("weight-attribute").unwrap(), false, oc.get_bool("weights.expand").unwrap());
+    }
+    if oc.is_set("lane-weight-files", true).unwrap() {
+        loader.load_weights(net, "lane-weight-files", &oc.get_string("weight-attribute").unwrap(), true, oc.get_bool("weights.expand").unwrap());
+    }
+    if oc.get_bool("skip-new-routes").unwrap() {
+        RORouteDef::set_skip_new();
+    }
 }
 

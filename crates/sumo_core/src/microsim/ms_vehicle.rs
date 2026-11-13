@@ -9752,7 +9752,8 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn load_previous_approaching(&mut self, link: Ptr<MSLink>, setRequest: bool, arrivalTime: SUMOTime, arrivalSpeed: f64, arrivalSpeedBraking: f64, dist: f64, leaveSpeed: f64) {
-        todo!("port MSVehicle::loadPreviousApproaching")
+        // ensure that approach information is reset on the next call to setApproachingForAllLinks
+        self.myLFLinkLanes.push(MSVehicle_DriveProcessItem::new(link, 0., 0., setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed));
     }
 
     /// C++: `void MSVehicle::adaptLaneEntering2MoveReminder(const MSLane &)` [protected]
@@ -9778,7 +9779,17 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn adapt_lane_entering2_move_reminder(&mut self, enteredLane: &MSLane) {
-        todo!("port MSVehicle::adaptLaneEntering2MoveReminder")
+        // save the old work reminders, patching the position information
+        //  add the information about the new offset to the old lane reminders
+        let oldLaneLength = self.myLane.get_length();
+        for rem in self.myMoveReminders.iter_mut() {
+            rem.1 += oldLaneLength;
+            // _DEBUG-only reminder trace from the C++ is not compiled in release builds
+        }
+        let enteredReminders: Vec<Ptr<MSMoveReminder>> = enteredLane.get_move_reminders().clone();
+        for rem in enteredReminders {
+            self.add_reminder(rem, 0.);
+        }
     }
 
     /// C++: `void MSVehicle::processLinkApproaches(double &, double &, double &)` [protected]
