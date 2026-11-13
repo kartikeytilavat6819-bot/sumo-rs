@@ -218,7 +218,7 @@ impl MSDevice_Friction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Friction) -> Self {
-        todo!("port MSDevice_Friction::MSDevice_Friction")
+        panic!("MSDevice_Friction copy constructor is invalidated")
     }
 
     /// C++: `MSDevice_Friction & MSDevice_Friction::operator=(const MSDevice_Friction &)` [private]
@@ -226,7 +226,7 @@ impl MSDevice_Friction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Friction) -> &mut MSDevice_Friction {
-        todo!("port MSDevice_Friction::operator=")
+        panic!("MSDevice_Friction assignment operator is invalidated")
     }
 
 }

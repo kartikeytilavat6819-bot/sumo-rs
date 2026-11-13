@@ -37,7 +37,17 @@ impl RODFDetFlowLoader {
     //       myHaveWarnedAboutOverridingBoundaries(false), myHaveWarnedAboutPartialDefs(false) {}
     #[allow(unused_variables)]
     pub fn new(dets: &RODFDetectorCon, into: &mut RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, timeOffset: SUMOTime, timeScale: SUMOTime) -> Self {
-        todo!("port RODFDetFlowLoader::RODFDetFlowLoader")
+        RODFDetFlowLoader {
+            myStorage: Ptr::from_mut(into),
+            myTimeOffset: timeOffset,
+            myTimeScale: timeScale,
+            myStartTime: startTime,
+            myEndTime: endTime,
+            myLineHandler: NamedColumnsParser::new(),
+            myDetectorContainer: Ptr::new(dets),
+            myHaveWarnedAboutOverridingBoundaries: false,
+            myHaveWarnedAboutPartialDefs: false,
+        }
     }
 
     /// C++: `void RODFDetFlowLoader::~RODFDetFlowLoader() noexcept`
@@ -45,7 +55,7 @@ impl RODFDetFlowLoader {
     // RODFDetFlowLoader::~RODFDetFlowLoader() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFDetFlowLoader::~RODFDetFlowLoader")
+        // destructor: nothing to release explicitly, the fields drop with the struct
     }
 
     /// C++: `void RODFDetFlowLoader::read(const std::string &)`
@@ -112,7 +122,69 @@ impl RODFDetFlowLoader {
     // }
     #[allow(unused_variables)]
     pub fn read(&mut self, file: &str) {
-        todo!("port RODFDetFlowLoader::read")
+        let mut lr = LineReader::with_file(file);
+        // parse first line
+        let first = lr.read_line();
+        self.myLineHandler.reinit(&first, ";", ";", true, true);
+        // parse values
+        while lr.has_more() {
+            let line = lr.read_line();
+            if !line.contains(';') {
+                continue;
+            }
+            self.myLineHandler.parse_line(&line);
+            let res: Result<(), ProcessError> = (|| -> Result<(), ProcessError> {
+                let detName = self.myLineHandler.get("detector", false)?;
+                if !self.myDetectorContainer.knows(&detName) {
+                    return Ok(());
+                }
+                let time = (utils::common::string_utils::to_double(&self.myLineHandler.get("time", false)?)? * (self.myTimeScale as f64) + 0.5) as SUMOTime - self.myTimeOffset;
+                // parsing as float to handle values which would cause int overflow
+                if time < self.myStartTime || time >= self.myEndTime {
+                    if !self.myHaveWarnedAboutOverridingBoundaries {
+                        self.myHaveWarnedAboutOverridingBoundaries = true;
+                        utils::common::msg_handler::write_warning("At least one value lies beyond given time boundaries.");
+                    }
+                    return Ok(());
+                }
+                // C++ leaves fLKW and firstSet uninitialised here
+                let mut fd = FlowDef { qPKW: 0., qLKW: 0., vPKW: 0., vLKW: 0., fLKW: 0., isLKW: 0., firstSet: false };
+                fd.isLKW = 0.;
+                fd.qPKW = utils::common::string_utils::to_double(&self.myLineHandler.get("qpkw", false)?)?;
+                fd.vPKW = 0.;
+                if self.myLineHandler.know("vPKW") {
+                    fd.vPKW = utils::common::string_utils::to_double(&self.myLineHandler.get("vpkw", false)?)?;
+                }
+                fd.qLKW = 0.;
+                if self.myLineHandler.know("qLKW") {
+                    fd.qLKW = utils::common::string_utils::to_double(&self.myLineHandler.get("qlkw", false)?)?;
+                }
+                fd.vLKW = 0.;
+                if self.myLineHandler.know("vLKW") {
+                    fd.vLKW = utils::common::string_utils::to_double(&self.myLineHandler.get("vlkw", false)?)?;
+                }
+                if fd.qLKW < 0. {
+                    fd.qLKW = 0.;
+                }
+                if fd.qPKW < 0. {
+                    fd.qPKW = 0.;
+                }
+                self.myStorage.m().add_flow(&detName, time, &fd);
+                if !self.myHaveWarnedAboutPartialDefs && !self.myLineHandler.has_full_definition() {
+                    self.myHaveWarnedAboutPartialDefs = true;
+                    utils::common::msg_handler::write_warning("At least one line does not contain the correct number of columns.");
+                }
+                Ok(())
+            })();
+            if let Err(e) = res {
+                panic!(
+                    "{} in '{}', line {};\n The following values must be supplied : 'Detector', 'Time', 'qPKW'\n The according column names must be given in the first line of the file.",
+                    e,
+                    lr.get_file_name(),
+                    lr.get_line_number()
+                );
+            }
+        }
     }
 
     /// C++: `void RODFDetFlowLoader::RODFDetFlowLoader(const RODFDetFlowLoader &)` [private]
@@ -140,7 +212,7 @@ impl RODFDetFlowLoader {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFDetFlowLoader) -> &mut RODFDetFlowLoader {
-        todo!("port RODFDetFlowLoader::operator=")
+        panic!("RODFDetFlowLoader assignment operator is invalidated")
     }
 
 }

@@ -94,7 +94,23 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSVehicleContainer::add")
+        let finder = MSVehicleContainer_DepartFinder::new(veh.get_parameter().depart);
+        let i = if self.currentSize == 0 {
+            None
+        } else {
+            self.array[1..=self.currentSize as usize].iter().position(|e| finder.call_op(e))
+        };
+        match i {
+            None => {
+                let delay = veh.get_parameter().depart % delta_t();
+                let depart = veh.get_parameter().depart + (if delay == 0 { 0 } else { delta_t() - delay });
+                let newElem: MSVehicleContainer_VehicleDepartureVector = (depart, vec![veh]);
+                self.add_replacing(&newElem);
+            }
+            Some(k) => {
+                self.array[k + 1].1.push(veh);
+            }
+        }
     }
 
     /// C++: `void MSVehicleContainer::remove(SUMOVehicle *)`
@@ -112,7 +128,15 @@ impl MSVehicleContainer {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, veh: Ptr<SUMOVehicle>) {
-        todo!("port MSVehicleContainer::remove")
+        let finder = MSVehicleContainer_DepartFinder::new(veh.get_parameter().depart);
+        let i = if self.currentSize == 0 {
+            None
+        } else {
+            self.array[1..=self.currentSize as usize].iter().position(|e| finder.call_op(e))
+        };
+        if let Some(k) = i {
+            self.array[k + 1].1.retain(|v| *v != veh);
+        }
     }
 
     /// C++: `void MSVehicleContainer::add(SUMOTime, const VehicleVector &)`
@@ -409,8 +433,16 @@ impl MSVehicleContainer_VehicleDepartureVectorSortCrit {
 //     return strm;
 // }
 #[allow(unused_variables)]
-pub fn shl_op(strm: &mut Unmapped /* std::ostream */, cont: &mut MSVehicleContainer) -> &'static mut Unmapped /* std::ostream */ {
-    todo!("port operator<<")
+pub fn shl_op<'a>(strm: &'a mut String /* std::ostream */, cont: &mut MSVehicleContainer) -> &'a mut String /* std::ostream */ {
+    strm.push_str("------------------------------------\n");
+    while !cont.is_empty() {
+        let v = cont.top();
+        for i in v.iter() {
+            strm.push_str(&format!("{}\n", i.get_parameter().depart));
+        }
+        cont.pop();
+    }
+    strm
 }
 
 #[cfg(test)]
