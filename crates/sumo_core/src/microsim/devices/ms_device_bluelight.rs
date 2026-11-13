@@ -426,7 +426,17 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, reactionDist: f64, minGapFactor: f64) -> Self {
-        unreachable!("MSDevice_Bluelight copy constructor is private and undefined in C++")
+        let mut device = MSDevice_Bluelight {
+            base: MSVehicleDevice::new(holder, id),
+            myInfluencedVehicles: BTreeSet::new(),
+            myInfluencedTypes: utils::common::parameterised::ParameterisedMap::new(),
+            myReactionDist: reactionDist,
+            myMinGapFactor: minGapFactor,
+        };
+        // set only once to permit TraCI override
+        let veh = Ptr::from_mut(holder).cast::<MSVehicle>();
+        veh.m().get_influencer().set_speed_mode(7);
+        device
     }
 
     /// C++: `void MSDevice_Bluelight::resetVehicle(MSVehicle *, const std::string &)` [private]
@@ -463,7 +473,7 @@ impl MSDevice_Bluelight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Bluelight) -> Self {
-        todo!("port MSDevice_Bluelight::MSDevice_Bluelight")
+        panic!("MSDevice_Bluelight copy constructor is private and undefined in C++; it cannot be called")
     }
 
     /// C++: `MSDevice_Bluelight & MSDevice_Bluelight::operator=(const MSDevice_Bluelight &)` [private]

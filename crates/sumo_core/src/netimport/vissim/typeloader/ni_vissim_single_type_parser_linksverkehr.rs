@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Linksverkehr {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Linksverkehr::NIVissimSingleTypeParser_Linksverkehr")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Linksverkehr::~NIVissimSingleTypeParser_Linksverkehr() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Linksverkehr {
     // NIVissimSingleTypeParser_Linksverkehr::~NIVissimSingleTypeParser_Linksverkehr() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Linksverkehr::~NIVissimSingleTypeParser_Linksverkehr")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Linksverkehr::parse(std::istream &)` [virtual]
@@ -46,8 +46,8 @@ impl NIVissimSingleTypeParser_Linksverkehr {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Linksverkehr::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        true
     }
 
 }

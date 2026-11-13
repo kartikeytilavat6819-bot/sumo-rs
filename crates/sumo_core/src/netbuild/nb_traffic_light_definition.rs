@@ -1172,7 +1172,73 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn collect_all_links(&mut self, into: &mut NBConnectionVector) {
-        todo!("port NBTrafficLightDefinition::collectAllLinks")
+        let mut tlIndex: i32 = 0;
+        // build the list of links which are controlled by the traffic light
+        let mut indirectLeft: Vec<i32> = Vec::new();
+        for incoming in self.myIncomingEdges.iter() {
+            let incoming = *incoming;
+            let noLanes = incoming.get_num_lanes();
+            for j in 0..noLanes {
+                let connected = incoming.get_connections_from_lane(j, Ptr::null(), -1);
+                for el in connected.iter() {
+                    if incoming.may_be_tls_controlled(el.fromLane, el.toEdge, el.toLane) {
+                        if !el.toEdge.is_null() && el.toLane >= el.toEdge.get_num_lanes() {
+                            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(format!(
+                                "Connection '{}_{}->{}_{}' yields in a not existing lane.",
+                                incoming.get_id(),
+                                j,
+                                el.toEdge.get_id(),
+                                el.toLane
+                            )));
+                        }
+                        if incoming.get_to_node().get_type() == SumoXMLNodeType::RAIL_CROSSING && utils::common::sumo_vehicle_class::is_railway(incoming.get_permissions(-1)) {
+                            // railways stay uncontrolled at rail crossing but they
+                            // must be registered in MSRailCrossing
+                            into.push(NBConnection::new_2(incoming, el.fromLane, el.toEdge, el.toLane, -1, NBCONNECTION_INVALID_TL_INDEX));
+                        } else if incoming.get_to_node().get_type() == SumoXMLNodeType::RAIL_SIGNAL
+                            && incoming.get_to_node().get_direction(incoming, el.toEdge, false) == LinkDirection::TURN
+                            // assume explicit connections at sharp turn-arounds are either for reversal or due to a geometry glitch
+                            // (the might also be due to faulty connection
+                            // input but they would not come from guessing)
+                            && (incoming.get_bidi_edge() == el.toEdge)
+                        {
+                            // turnarounds stay uncontrolled at rail signal
+                        } else if incoming.get_to_node().get_type() == SumoXMLNodeType::RAIL_SIGNAL && Self::rail_signal_uncontrolled(incoming, el.toEdge) {
+                            // rail signals may stay uncontrolled in a particular direction
+                        } else {
+                            into.push(NBConnection::new_2(incoming, el.fromLane, el.toEdge, el.toLane, tlIndex, NBCONNECTION_INVALID_TL_INDEX));
+                            tlIndex += 1;
+                            if el.indirectLeft {
+                                indirectLeft.push(into.len() as i32 - 1);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if indirectLeft.len() > 0 {
+            // assign linkIndex2 to indirect left turns
+            // determinism: C++ edits `into` in place while scanning it; the scan only reads getTo/getFrom/getTLIndex, which setTLIndex2 never changes, so a snapshot gives the same result
+            let snapshot = into.clone();
+            for i in indirectLeft.iter() {
+                let i = *i as usize;
+                let c = &snapshot[i];
+                // find straight connection with the same toEdge
+                for c2 in snapshot.iter() {
+                    if c2.get_to() == c.get_to() && c2.get_from() != c.get_from() {
+                        let dir = c.get_from().get_to_node().get_direction(c2.get_from(), c2.get_to(), false);
+                        if dir == LinkDirection::STRAIGHT {
+                            into[i].set_tl_index2(c2.get_tl_index());
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+
+        if into.len() > 0 && tlIndex == 0 {
+            utils::write_warningf!("The rail crossing '%' does not have any roads.", self.base.get_id());
+        }
     }
 
     /// C++: `std::set<NBEdge *> NBTrafficLightDefinition::collectReachable(EdgeVector, const EdgeVector &, bool)` [static, private]
@@ -1197,7 +1263,21 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn collect_reachable(outer: EdgeVector, within: &EdgeVector, checkControlled: bool) -> BTreeSet<Ptr<NBEdge>> {
-        todo!("port NBTrafficLightDefinition::collectReachable")
+        let mut outer = outer;
+        // determinism: std::set<NBEdge*> is ordered by address in C++ too, so Ptr's address ordering matches
+        let mut reachable: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        while outer.len() > 0 {
+            let from = outer.pop().unwrap();
+            let cons = from.get_connections();
+            for k in cons.iter() {
+                let to = k.toEdge;
+                if !reachable.contains(&to) && within.contains(&to) && (!checkControlled || from.may_be_tls_controlled(k.fromLane, to, k.toLane)) {
+                    reachable.insert(to);
+                    outer.push(to);
+                }
+            }
+        }
+        reachable
     }
 
     /// C++: `bool NBTrafficLightDefinition::railSignalUncontrolled(const NBEdge *, const NBEdge *)` [static, private]
