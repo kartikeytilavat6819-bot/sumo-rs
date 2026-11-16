@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::traci::traci_constants::*;
-use utils::common::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::Junction` (libsumo/Junction.h)
 pub struct Junction {

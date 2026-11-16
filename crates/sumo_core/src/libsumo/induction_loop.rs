@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
 use utils::common::time::delta_t;
-use utils::common::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::InductionLoop` (libsumo/InductionLoop.h)
 pub struct InductionLoop {

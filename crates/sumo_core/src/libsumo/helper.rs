@@ -4,7 +4,7 @@ use crate::prelude::*;
 use std::cell::Cell;
 use utils::geom::geom_helper;
 use utils::common::named::NamedStoringVisitor;
-use utils::common::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 // shortcut: C++ `throw TraCIException(msg)` is `panic!("{}", msg)` in this file (the TraCI server catches panics per command).
 

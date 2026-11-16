@@ -7,8 +7,8 @@
 //! determinism: the tree shape (and so the order of Search hits) depends on the insertion order
 //! and on the volumes; both are kept identical to C++ (callers insert in the same container order).
 //! Search hits are stored in a std::set ordered by address, so their output order does not depend on it.
-use super::named::Named;
-use super::ptr::Ptr;
+use utils::common::named::Named;
+use utils::common::ptr::Ptr;
 use foreign::rtree::rtree::{Float2DVolume, RTree};
 
 /// C++ `class NamedRTree`
@@ -29,7 +29,7 @@ pub fn delete_named_rtree(tree: Ptr<NamedRTree>) {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::common::named::NamedStoringVisitor;
+    use utils::common::named::NamedStoringVisitor;
     use std::collections::BTreeSet;
 
     #[test]

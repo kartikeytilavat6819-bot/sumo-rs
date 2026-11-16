@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
-use utils::common::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::LaneArea` (libsumo/LaneArea.h)
 pub struct LaneArea {
