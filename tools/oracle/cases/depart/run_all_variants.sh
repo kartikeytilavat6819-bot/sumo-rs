@@ -23,7 +23,8 @@ for r in "$D"/*.rou; do
     --seed 42 --end 120 --no-step-log >"$o/stdout.txt" 2>"$o/stderr.txt"
   rc=$?
   if grep -q '^Error:' "$ref/stderr.txt"; then
-    if [ $rc -ne 0 ] && [ "$(grep -m1 '^Error:' "$o/stderr.txt")" = "$(grep -m1 '^Error:' "$ref/stderr.txt")" ]; then
+    # shortcut: CR stripped because the committed ref stderr has CRLF (GNU grep keeps it, MSYS grep drops it), upgrade when refs are LF
+    if [ $rc -ne 0 ] && [ "$(grep -m1 '^Error:' "$o/stderr.txt" | tr -d '\r')" = "$(grep -m1 '^Error:' "$ref/stderr.txt" | tr -d '\r')" ]; then
       v=PASS; d="error parity"
     else
       v=FAIL; d="ref: $(grep -m1 '^Error:' "$ref/stderr.txt" | cut -c1-70) / ours rc=$rc"
