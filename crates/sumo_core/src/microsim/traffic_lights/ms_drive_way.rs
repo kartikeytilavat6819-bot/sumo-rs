@@ -5378,8 +5378,7 @@ mod tests {
 
 
 /// C++ MSDriveWay overrides of MSMoveReminder (notifyEnter, notifyLeave, notifyLeaveBack, notifyReroute):
-/// the port dispatches through the reminder's vtables, so the driveway installs these in 
-ew.
+/// the port dispatches through the reminder's vtables, so the driveway installs these in its constructor.
 fn mr_dw_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
     Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_enter(veh, reason, enteredLane)
 }
