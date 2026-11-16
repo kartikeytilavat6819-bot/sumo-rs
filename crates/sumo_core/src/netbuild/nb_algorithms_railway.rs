@@ -3062,8 +3062,8 @@ pub struct NBRailwayTopologyAnalyzer_Track {
     pub successors: Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>,
     pub viaSuccessors: Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>,
     pub minPermissions: SVCPermissions,
-    pub svcSuccessors: BTreeMap<SUMOVehicleClass, Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>>,
-    pub svcViaSuccessors: BTreeMap<SUMOVehicleClass, Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const Track *, const Track *>>>
+    pub svcSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>>>,
+    pub svcViaSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const Track *, const Track *>>>
 }
 
 impl NBRailwayTopologyAnalyzer_Track {
@@ -3085,8 +3085,8 @@ impl NBRailwayTopologyAnalyzer_Track {
             successors: Vec::new(),
             viaSuccessors: Vec::new(),
             minPermissions: e.get_permissions(-1),
-            svcSuccessors: BTreeMap::new(),
-            svcViaSuccessors: BTreeMap::new(),
+            svcSuccessors: std::cell::RefCell::new(BTreeMap::new()),
+            svcViaSuccessors: std::cell::RefCell::new(BTreeMap::new()),
         }
     }
 
@@ -3107,45 +3107,41 @@ impl NBRailwayTopologyAnalyzer_Track {
     /// C++: `const std::vector<Track *> & Track::getSuccessors(SUMOVehicleClass) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    #[allow(invalid_reference_casting)]
-    pub fn get_successors(&self, svc: SUMOVehicleClass) -> &Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> {
+    pub fn get_successors(&self, svc: SUMOVehicleClass) -> Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> {
         if (self.minPermissions & svc) != 0 {
-            return &self.successors;
+            return self.successors.clone();
         }
-        // C++ `mutable` cache, filled on first use. shortcut: written through &self like Ptr::m(); replace with UnsafeCell/RefCell when Track is ported fully
-        let cache = unsafe { &mut *(self as *const Self as *mut Self) };
-        if !cache.svcSuccessors.contains_key(&svc) {
+        // C++ `mutable` cache, filled on first use. Returns a copy: a RefCell cannot lend a reference out of the cache
+        if !self.svcSuccessors.borrow().contains_key(&svc) {
             let mut succ: Vec<Ptr<NBRailwayTopologyAnalyzer_Track>> = Vec::new();
             for t in self.successors.iter() {
                 if (t.edge.get_permissions(-1) & svc) != 0 {
                     succ.push(*t);
                 }
             }
-            cache.svcSuccessors.insert(svc, succ);
+            self.svcSuccessors.borrow_mut().insert(svc, succ);
         }
-        &cache.svcSuccessors[&svc]
+        self.svcSuccessors.borrow()[&svc].clone()
     }
 
     /// C++: `const std::vector<std::pair<const Track *, const Track *>> & Track::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    #[allow(invalid_reference_casting)]
-    pub fn get_via_successors(&self, svc: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> {
+    pub fn get_via_successors(&self, svc: SUMOVehicleClass, ignoreTransientPermissions: bool) -> Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> {
         if (self.minPermissions & svc) != 0 {
-            return &self.viaSuccessors;
+            return self.viaSuccessors.clone();
         }
-        // C++ `mutable` cache, filled on first use
-        let cache = unsafe { &mut *(self as *const Self as *mut Self) };
-        if !cache.svcViaSuccessors.contains_key(&svc) {
+        // C++ `mutable` cache, filled on first use. Returns a copy: a RefCell cannot lend a reference out of the cache
+        if !self.svcViaSuccessors.borrow().contains_key(&svc) {
             let mut succ: Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)> = Vec::new();
             for t in self.successors.iter() {
                 if (t.edge.get_permissions(-1) & svc) != 0 {
                     succ.push((*t, Ptr::null()));
                 }
             }
-            cache.svcViaSuccessors.insert(svc, succ);
+            self.svcViaSuccessors.borrow_mut().insert(svc, succ);
         }
-        &cache.svcViaSuccessors[&svc]
+        self.svcViaSuccessors.borrow()[&svc].clone()
     }
 
     /// C++: `const std::string & Track::getID() const` [const]
