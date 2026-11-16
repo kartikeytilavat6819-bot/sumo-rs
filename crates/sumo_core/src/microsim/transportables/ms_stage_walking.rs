@@ -172,7 +172,36 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn proceed(&mut self, net: Ptr<MSNet>, person: Ptr<MSTransportable>, now: SUMOTime, previous: Ptr<MSStage>) -> bool {
-        panic!("MSStageWalking::proceed needs the pedestrian movement model (MSTransportableControl::getMovementModel, MSPModel::add), which is not ported yet");
+        let pControl = net.m().get_person_control();
+        self.base.myDeparted = now;
+        self.base.myRouteStep = 0;
+        self.myLastEdgeEntryTime = now;
+        if self.myWalkingTime == 0 {
+            return person.m().proceed(net, now, false);
+        }
+        if previous.get_edge_pos(now) >= 0. && previous.get_edge() == self.base.myRoute[self.base.myRouteStep] {
+            // we need to adapt to the arrival position of the vehicle unless we have an explicit access
+            self.base.myDepartPos = previous.get_edge_pos(now);
+            if pControl.get_movement_model().m().using_doors() {
+                self.base.myDepartPosLat = previous.get_edge_pos_lat(now);
+            }
+            if self.myWalkingTime > 0 {
+                self.base.mySpeed = self.compute_average_speed();
+            }
+        }
+        self.base.myPState = pControl.get_movement_model().m().add(person, Ptr::from_mut(&mut self.base), now);
+        if self.base.myPState.is_null() {
+            return false;
+        }
+        if previous.get_stage_type() != MSStageType::WALKING || previous.get_edge() != self.base.get_edge() {
+            // we only need new move reminders if we are walking a different edge (else it is probably a rerouting)
+            self.base.activate_entry_reminders(person, true);
+        }
+        if utils::options::options_cont::get_bool("vehroute-output.exit-times") {
+            self.myExitTimes = Ptr::from_mut(Box::leak(Box::new(Vec::new())));
+        }
+        self.base.myRoute[self.base.myRouteStep].add_transportable(person);
+        true
     }
 
     /// C++: `void MSStageWalking::abort(MSTransportable *)` [virtual]

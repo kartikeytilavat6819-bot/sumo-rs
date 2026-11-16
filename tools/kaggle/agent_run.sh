@@ -38,6 +38,7 @@ run_side() {  # $1=label $2=sumo binary
     "$2" -n net.xml --load-state "$STATE" --no-step-log --end 200 --tripinfo-output "$1_load_ti.xml" --personinfo-output "$1_load_pi.xml" >"$1_load.log" 2>&1
     echo "$1 load exit $?"
     tail -n 3 "$1_load.log"
+    grep -q -E 'Error|Quitting' "$1_load.log" && { echo "$1 state lines 50-56:"; sed -n 50,56p "$STATE" | cut -c1-300; }
 }
 run_side cpp "$C/sumo"
 run_side ours "$OURS"
