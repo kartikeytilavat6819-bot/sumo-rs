@@ -1,3 +1,5 @@
+references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation only
+
 # Handover — current state, main `c599e28`, 2026-11-16
 
 Read `tools/oracle/SCOREBOARD.md` for the case table, the known gaps and the Kaggle gate.
