@@ -1,6 +1,8 @@
 //! Port of microsim/MSRightOfWayJunction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_bit_set_logic::MSBitSetLogic;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 
 /// A junction with right-of-way - rules
 /// C++ class `MSRightOfWayJunction` (microsim/MSRightOfWayJunction.h)
@@ -193,10 +195,8 @@ impl MSRightOfWayJunction {
     // }
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
-        // shortcut: linkResponse.test(c) / linkFoes.test(c) read a std::bitset that MSLogicJunction::LinkBits (unit placeholder) cannot expose, and MSJunctionLogic is not virtually dispatched to MSBitSetLogic, so every bit reads as unset; upgrade when LinkBits is mapped to a typed bitset
-        fn link_bits_test(_bits: &MSLogicJunction_LinkBits, _c: i32) -> bool {
-            false
-        }
+        // myLogic is always the MSBitSetLogic built by NLJunctionControlBuilder::build_logic_junction
+        let logicBits = self.myLogic.cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
         // inform links where they have to report approaching vehicles to
         let mut requestPos: i32 = 0;
         // going through the incoming lanes...
@@ -214,7 +214,7 @@ impl MSRightOfWayJunction {
             }
         }
 
-        let hasFoes = self.myLogic.has_foes();
+        let hasFoes = logicBits.m().has_foes();
         for lane in incomingLanes.iter().copied() {
             // ... set information for every link
             let mut walkingAreaFoe: Ptr<MSLane> = Ptr::null();
@@ -236,9 +236,9 @@ impl MSRightOfWayJunction {
                         self.myLogic.get_logic_size()
                     )));
                 }
-                let linkResponse = self.myLogic.get_response_for(requestPos);
-                let linkFoes = self.myLogic.get_foes_for(requestPos);
-                let cont = self.myLogic.get_is_cont(requestPos);
+                let linkResponse = logicBits.m().get_response_for(requestPos);
+                let linkFoes = logicBits.m().get_foes_for(requestPos);
+                let cont = logicBits.m().get_is_cont(requestPos);
                 for c in 0..maxNo {
                     if link_bits_test(linkResponse, c) {
                         let foe = sortedLinks[c as usize].1;
@@ -383,5 +383,36 @@ impl MSRightOfWayJunction {
         panic!("MSRightOfWayJunction assignment operator is invalidated")
     }
 
+}
+
+/// `std::bitset<SUMO_MAX_CONNECTIONS>::test` on a request row of `MSBitSetLogic`
+fn link_bits_test(bits: &[bool; SUMO_MAX_CONNECTIONS], c: i32) -> bool {
+    bits[c as usize]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn foe_bits_are_read_through_the_bitset_logic_not_the_dummy_base() {
+        // a foes row with bits 0 and 3 set, read through the MSJunctionLogic cast as postload_init does
+        let mut foes = [false; SUMO_MAX_CONNECTIONS];
+        foes[0] = true;
+        foes[3] = true;
+        let logic = Box::new(MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(
+            1,
+            &vec![[false; SUMO_MAX_CONNECTIONS]],
+            &vec![foes],
+            [false; SUMO_MAX_CONNECTIONS],
+        ));
+        let base = Ptr::from_box(&logic).cast::<MSJunctionLogic>();
+        let back = base.cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
+        let row = back.m().get_foes_for(0);
+        assert!(link_bits_test(row, 0));
+        assert!(!link_bits_test(row, 1));
+        assert!(link_bits_test(row, 3));
+        assert!(!back.m().has_foes());
+    }
 }
 
