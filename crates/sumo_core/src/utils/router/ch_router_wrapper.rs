@@ -1,6 +1,7 @@
 //! Port of utils/router/CHRouterWrapper.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::ch_router::v_class;
 use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `CHRouter<E, V> CHRouterWrapper::CHRouterType`
@@ -10,10 +11,14 @@ pub type CHRouterWrapper_CHRouterType<E, V> = CHRouter<E, V>;
 /// determinism: the key is (SUMOVehicleClass, max speed bits); max speeds are non-negative, so the bit order matches the C++ double order
 pub type CHRouterWrapper_RouterMap<E, V> = std::collections::BTreeMap<(SUMOVehicleClass, u64), Ptr<CHRouter<E, V>>>;
 
-// shortcut: needs router trait bounds (lead), V::getMaxSpeed is not callable on the generic V
 #[allow(unused_variables)]
-fn v_max_speed<V>(v: Ptr<V>) -> f64 {
-    panic!("shortcut: needs router trait bounds (lead), V::getMaxSpeed")
+fn v_max_speed<V: RouterVehicle>(v: Ptr<V>) -> f64 {
+    v.get_max_speed()
+}
+
+/// The `CHRouterWrapper::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn wrapper_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
 }
 
 /// Computes the shortest path through a contracted network
@@ -46,6 +51,12 @@ impl<E, V> std::ops::DerefMut for CHRouterWrapper<E, V> {
 }
 
 impl<E: RouterEdge<V>, V: RouterVehicle> CHRouterWrapper<E, V> {
+    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(wrapper_compute::<E, V>);
+        self
+    }
+
     /// C++: `void CHRouterWrapper::CHRouterWrapper<E, V>(const int &, const bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOTime, const SUMOTime, const SUMOTime, bool, const int)`
     /// Constructor
     // CHRouterWrapper(const std::vector<E*>& edges, const bool ignoreErrors, typename SUMOAbstractRouter<E, V>::Operation operation,
