@@ -13904,7 +13904,7 @@ impl MSVehicle {
                     ||
                     // slow down to finish lane change before the shadow lane ends
                     (!self.myLaneChangeModel.get_shadow_lane().is_null()
-                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), false).is_null())
+                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), true).is_null())
                 {
                     // XXX maybe this is too harsh. Vehicles could cut some corners here
                     let timeRemaining = steps2time(self.myLaneChangeModel.remaining_time());
