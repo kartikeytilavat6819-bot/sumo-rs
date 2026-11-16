@@ -530,7 +530,9 @@ impl MSTLLogicControl {
                 // signals so they should ignore tls.all-off
                 continue;
             }
-            let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSOffTrafficLightLogic::new(self, &id))) as *mut MSTrafficLightLogic);
+            let mut offLogic = Box::new(MSOffTrafficLightLogic::new(self, &id));
+            offLogic.base.schedule_switch_command(self, 0);
+            let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(offLogic) as *mut MSTrafficLightLogic);
             variants.m().add_logic("off", off, true, true);
         }
     }
@@ -1175,10 +1177,9 @@ impl MSTLLogicControl_TLSLogicVariants {
         if !self.myVariants.contains_key(programID) {
             if programID == "off" {
                 // build an off-tll if this switch indicates it
-                let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSOffTrafficLightLogic::new(
-                    tlc,
-                    self.myCurrentProgram.get_id(),
-                ))) as *mut MSTrafficLightLogic);
+                let mut offLogic = Box::new(MSOffTrafficLightLogic::new(tlc, self.myCurrentProgram.get_id()));
+                offLogic.base.schedule_switch_command(tlc, 0);
+                let off: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(offLogic) as *mut MSTrafficLightLogic);
                 if !self.add_logic("off", off, true, true) {
                     // inform the user if this fails
                     panic!("{}", utils::tlf!("Could not build an off-state for tls '%'.", self.myCurrentProgram.get_id()));
@@ -1230,7 +1231,7 @@ impl MSTLLogicControl_TLSLogicVariants {
             phase.earliestEnd = SUMOTIME_DAY; // prevent immediate switch
             let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(phase)))];
             let now = MSNet::get_instance().get_current_time_step();
-            let newLogic: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(
+            let mut simple = Box::new(MSSimpleTrafficLightLogic::new(
                 tlc,
                 self.myCurrentProgram.get_id(),
                 TRACI_PROGRAM,
@@ -1240,7 +1241,9 @@ impl MSTLLogicControl_TLSLogicVariants {
                 0,
                 now + delta_t(),
                 &ParameterisedMap::new(),
-            ))) as *mut MSTrafficLightLogic);
+            ));
+            simple.schedule_initial_switch(tlc, now + delta_t());
+            let newLogic: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(simple) as *mut MSTrafficLightLogic);
             if self.add_logic(TRACI_PROGRAM, newLogic, true, true) {
                 MSNet::get_instance().m().create_tl_wrapper(newLogic);
             }
