@@ -5,7 +5,7 @@ only loses its own row. Usage:
   python tools/oracle/cases/traci_basic/client.py                # both cases, both sides, one table each
   python tools/oracle/cases/traci_basic/client.py --case signal --only ours
 Options: --ours <sumo.exe> (default: $CARGO_TARGET_DIR/debug/sumo.exe)  --port <n> (default 8813)
-The C++ side runs in WSL: $HOME/sumo-src/bin/sumo with SUMO_HOME=$HOME/sumo-src.
+The C++ side runs in WSL: $HOME/sumo-pristine/bin/sumo with SUMO_HOME=$HOME/sumo-pristine.
 """
 import argparse
 import json
@@ -63,7 +63,7 @@ def sumo_command(side, port, net, rou, ours):
     if side == "ours":
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
                 "--no-step-log", "true", "--no-warnings", "true"]
-    inner = (f"SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
+    inner = (f"SUMO_HOME=$HOME/sumo-pristine $HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
              f"--remote-port {port} --no-step-log true --no-warnings true")
     return ["wsl", "-e", "bash", "-lc", inner]
 
@@ -218,7 +218,297 @@ def probes(lane, tl_id):
         x, y = t.vehicle.getPosition("v0")
         return t.simulation.getDistance2D(x, y, x + 3.0, y + 4.0)
 
+    def run_n(t, n):
+        t0 = int(t.simulation.getTime())
+        for s in range(t0 + 1, t0 + n + 1):
+            t.simulationStep(s)
+
+    def summary(t):
+        ids = sorted(t.vehicle.getIDList())
+        return ([(i, t.vehicle.getPosition(i), t.vehicle.getSpeed(i), t.vehicle.getLaneID(i)) for i in ids],
+                t.simulation.getArrivedNumber(), sorted(t.simulation.getArrivedIDList()))
+
+    def spawn(t):
+        t.vehicle.add("vfx", t.route.getIDList()[0])
+        run_n(t, 1)
+
+    def trace_tl(t, n):
+        out = []
+        for _ in range(n):
+            run_n(t, 1)
+            out.append((t.trafficlight.getRedYellowGreenState(tl), t.trafficlight.getPhase(tl),
+                        t.trafficlight.getNextSwitch(tl)))
+        return out
+
+    def lane_close(t):
+        t.lane.setDisallowed(lane, ["all"])
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_close_reopen(t):
+        t.lane.setDisallowed(lane, ["all"])
+        run_n(t, 15)
+        t.lane.setDisallowed(lane, [])
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_disallow_passenger(t):
+        t.lane.setDisallowed(lane, ["passenger"])
+        run_n(t, 30)
+        return summary(t)
+
+    def edge_max_speed_5_30(t):
+        t.edge.setMaxSpeed(edge, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def edge_max_speed_20_30(t):
+        t.edge.setMaxSpeed(edge, 20.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_max_speed_3_30(t):
+        t.lane.setMaxSpeed(lane, 3.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_max_speed_reset(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        run_n(t, 10)
+        t.lane.setMaxSpeed(lane, 30.0)
+        run_n(t, 20)
+        return summary(t)
+
+    def tl_set_program_30(t):
+        t.trafficlight.setProgram(tl, "0")
+        return trace_tl(t, 30)
+
+    def tl_set_phase_held(t):
+        t.trafficlight.setPhase(tl, 1)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_then_duration(t):
+        t.trafficlight.setPhase(tl, 2)
+        t.trafficlight.setPhaseDuration(tl, 20.0)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_duration_7(t):
+        t.trafficlight.setPhaseDuration(tl, 7.0)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_0_trace(t):
+        t.trafficlight.setPhase(tl, 0)
+        return trace_tl(t, 30)
+
+    def tl_set_state_all_g_held(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        out = []
+        for _ in range(30):
+            t.trafficlight.setRedYellowGreenState(tl, "G" * len(s))
+            run_n(t, 1)
+            out.append(t.trafficlight.getRedYellowGreenState(tl))
+        return out
+
+    def tl_set_state_all_r_held(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        out = []
+        for _ in range(30):
+            t.trafficlight.setRedYellowGreenState(tl, "r" * len(s))
+            run_n(t, 1)
+            out.append(t.trafficlight.getRedYellowGreenState(tl))
+        return out
+
+    def tl_set_state_wrong_len(t):
+        t.trafficlight.setRedYellowGreenState(tl, "G")
+        return trace_tl(t, 5)
+
+    def veh_speed_mode_30(t):
+        spawn(t)
+        t.vehicle.setSpeedMode("vfx", 0)
+        t.vehicle.setSpeed("vfx", 20.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_speed_release(t):
+        spawn(t)
+        t.vehicle.setSpeed("vfx", 0.0)
+        run_n(t, 10)
+        t.vehicle.setSpeed("vfx", -1.0)
+        run_n(t, 20)
+        return summary(t)
+
+    def veh_lane_change_mode_off(t):
+        spawn(t)
+        t.vehicle.setLaneChangeMode("vfx", 0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_change_lane_after_mode_off(t):
+        spawn(t)
+        t.vehicle.setLaneChangeMode("vfx", 0)
+        t.vehicle.changeLane("vfx", t.vehicle.getLaneIndex("vfx") ^ 1, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_slow_down_30(t):
+        spawn(t)
+        t.vehicle.slowDown("vfx", 3.0, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_change_target_30(t):
+        spawn(t)
+        t.vehicle.changeTarget("vfx", t.vehicle.getRoute("vfx")[-1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_set_route_prefix(t):
+        spawn(t)
+        t.vehicle.setRoute("vfx", t.vehicle.getRoute("vfx")[:1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_set_route_reversed(t):
+        spawn(t)
+        t.vehicle.setRoute("vfx", t.vehicle.getRoute("vfx")[::-1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_move_keep_route(keep):
+        def run(t):
+            spawn(t)
+            x, y = t.vehicle.getPosition("vfx")
+            t.vehicle.moveToXY("vfx", t.vehicle.getRoadID("vfx"), t.vehicle.getLaneIndex("vfx"), x + 1.0, y,
+                               keepRoute=keep)
+            run_n(t, 30)
+            return summary(t)
+        return run
+
+    def veh_add_depart_args(t):
+        t.vehicle.add("vnew", t.route.getIDList()[0], departLane=0, departSpeed=5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_add_depart_best_max(t):
+        t.vehicle.add("vnew", t.route.getIDList()[0], departLane="best", departSpeed="max")
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_remove_in_crossing(t):
+        chosen = None
+        for _ in range(200):
+            run_n(t, 1)
+            cross = sorted(i for i in t.vehicle.getIDList() if t.vehicle.getRoadID(i).startswith(":"))
+            if cross:
+                chosen = cross[0]
+                t.vehicle.remove(chosen)
+                break
+        run_n(t, 30)
+        return (chosen, summary(t))
+
+    def veh_remove_v0_30(t):
+        t.vehicle.remove("v0")
+        run_n(t, 30)
+        return summary(t)
+
+    def sim_step_jump(t):
+        r = t.simulationStep(40)
+        return (r, t.simulation.getTime(), summary(t))
+
+    def sim_step_fraction(t):
+        t.simulationStep(25.25)
+        return (t.simulation.getTime(), summary(t))
+
+    def veh_subscribe_stream_50(t):
+        spawn(t)
+        t.vehicle.subscribe("vfx", [tc.VAR_SPEED, tc.VAR_POSITION, tc.VAR_LANE_ID, tc.VAR_ROAD_ID])
+        out = []
+        for _ in range(50):
+            run_n(t, 1)
+            out.append(t.vehicle.getSubscriptionResults("vfx"))
+        return out
+
+    def sim_subscribe_stream_50(t):
+        t.simulation.subscribe([tc.VAR_DEPARTED_VEHICLES_IDS, tc.VAR_ARRIVED_VEHICLES_IDS])
+        out = []
+        for _ in range(50):
+            run_n(t, 1)
+            out.append(t.simulation.getSubscriptionResults())
+        return out
+
+    def edge_subscribe_stream_30(t):
+        t.edge.subscribe(edge, [tc.LAST_STEP_VEHICLE_NUMBER, tc.LAST_STEP_MEAN_SPEED])
+        out = []
+        for _ in range(30):
+            run_n(t, 1)
+            out.append(t.edge.getSubscriptionResults(edge))
+        return out
+
+    def veh_context_stream_20(t):
+        spawn(t)
+        t.vehicle.subscribeContext("vfx", tc.CMD_GET_VEHICLE_VARIABLE, 50.0, [tc.VAR_SPEED])
+        out = []
+        for _ in range(20):
+            run_n(t, 1)
+            out.append(t.vehicle.getContextSubscriptionResults("vfx"))
+        return out
+
+    def veh_context_stream_20_wide(t):
+        spawn(t)
+        t.vehicle.subscribeContext("vfx", tc.CMD_GET_VEHICLE_VARIABLE, 100.0, [tc.VAR_POSITION, tc.VAR_SPEED])
+        out = []
+        for _ in range(20):
+            run_n(t, 1)
+            out.append(t.vehicle.getContextSubscriptionResults("vfx"))
+        return out
+
+    def vtype_max_speed_30(t):
+        t.vehicletype.setMaxSpeed("DEFAULT_VEHTYPE", 20.0)
+        run_n(t, 30)
+        return summary(t)
+
     return {
+        "effect: lane.setDisallowed(all) +30 + summary": lane_close,
+        "effect: lane.setDisallowed(all) +15, reopen +30": lane_close_reopen,
+        "effect: lane.setDisallowed(passenger) +30": lane_disallow_passenger,
+        "effect: lane.setDisallowed(nope, all)": lambda t: t.lane.setDisallowed("nope", ["all"]),
+        "effect: edge.setMaxSpeed(5) +30 + summary": edge_max_speed_5_30,
+        "effect: edge.setMaxSpeed(20) +30 + summary": edge_max_speed_20_30,
+        "effect: lane.setMaxSpeed(3) +30 + summary": lane_max_speed_3_30,
+        "effect: lane.setMaxSpeed(5)+10, (30)+20": lane_max_speed_reset,
+        "effect: trafficlight.setProgram(0) +30 trace": tl_set_program_30,
+        "effect: trafficlight.setProgram(nope)": lambda t: t.trafficlight.setProgram(tl, "nope"),
+        "effect: trafficlight.setPhase(1) held +30": tl_set_phase_held,
+        "effect: setPhase(2)+setPhaseDuration(20) +30": tl_set_phase_then_duration,
+        "effect: trafficlight.setPhaseDuration(7) +30": tl_set_phase_duration_7,
+        "effect: trafficlight.setPhase(0) +30 trace": tl_set_phase_0_trace,
+        "effect: setRedYellowGreenState(all G) held 30": tl_set_state_all_g_held,
+        "effect: setRedYellowGreenState(all r) held 30": tl_set_state_all_r_held,
+        "effect: setRedYellowGreenState(wrong len) +5": tl_set_state_wrong_len,
+        "effect: trafficlight.setPhase(tl, 99)": lambda t: t.trafficlight.setPhase(tl, 99),
+        "effect: vehicle.setSpeedMode(0)+setSpeed(20) +30": veh_speed_mode_30,
+        "effect: setSpeed(0)+10, setSpeed(-1)+20": veh_speed_release,
+        "effect: setLaneChangeMode(0) +30": veh_lane_change_mode_off,
+        "effect: setLaneChangeMode(0)+changeLane +30": veh_change_lane_after_mode_off,
+        "effect: vehicle.slowDown(3,5) +30": veh_slow_down_30,
+        "effect: vehicle.changeTarget(last) +30": veh_change_target_30,
+        "effect: vehicle.setRoute(prefix) +30": veh_set_route_prefix,
+        "effect: vehicle.setRoute(reversed) +30": veh_set_route_reversed,
+        "effect: moveToXY(keepRoute=0) +30": veh_move_keep_route(0),
+        "effect: moveToXY(keepRoute=1) +30": veh_move_keep_route(1),
+        "effect: moveToXY(keepRoute=2) +30": veh_move_keep_route(2),
+        "effect: vehicle.add(departLane=0,speed=5) +30": veh_add_depart_args,
+        "effect: vehicle.add(best, max) +30": veh_add_depart_best_max,
+        "effect: vehicle.remove in crossing +30": veh_remove_in_crossing,
+        "effect: vehicle.remove(v0) +30": veh_remove_v0_30,
+        "effect: simulationStep(40) jump": sim_step_jump,
+        "effect: simulationStep(25.25) fractional": sim_step_fraction,
+        "effect: vehicle.subscribe stream 50": veh_subscribe_stream_50,
+        "effect: simulation.subscribe stream 50": sim_subscribe_stream_50,
+        "effect: edge.subscribe stream 30": edge_subscribe_stream_30,
+        "effect: vehicle.subscribeContext(50) stream 20": veh_context_stream_20,
+        "effect: vehicle.subscribeContext(100) stream 20": veh_context_stream_20_wide,
+        "effect: vehicletype.setMaxSpeed(20) +30": vtype_max_speed_30,
         "getVersion": lambda t: t.getVersion(),
         "simulationStep(11) returns": lambda t: t.simulationStep(11),
         "simulation.getTime": lambda t: t.simulation.getTime(),
