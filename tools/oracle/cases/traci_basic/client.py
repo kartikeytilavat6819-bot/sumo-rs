@@ -373,7 +373,7 @@ def run_side(side, port, ours, case):
         extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
         out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
-            subprocess.run(["wsl", "-e", "bash", "-lc", "pkill -f 'bin/sumo' || true"], capture_output=True)
+            subprocess.run(["wsl", "-e", "bash", "-lc", f"pkill -f -- '--remote-port {port + i} ' || true"], capture_output=True)
         time.sleep(0.5)
     return out
 

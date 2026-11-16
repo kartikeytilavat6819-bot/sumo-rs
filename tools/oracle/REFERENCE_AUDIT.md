@@ -1,141 +1,400 @@
 # Reference audit: committed vs pristine SUMO 1.28.0
 
-Pristine binary: `eclipse-sumo==1.28.0` from PyPI, installed in WSL at `~/sumo-pristine`
-(`sumo`/`netconvert` report `Eclipse SUMO ... 1.28.0`, sha256 of `sumo` = `450cb887af6a08dac1f9bd0454effa6dea2bb4e9f19e67adcb64ca36ce490c3a`).
+Pristine: `eclipse-sumo==1.28.0` from PyPI in WSL, `~/sumo-pristine` (`sumo --version`: `Eclipse SUMO sumo 1.28.0`;
+sha256 of `sumo` = `450cb887af6a08dac1f9bd0454effa6dea2bb4e9f19e67adcb64ca36ce490c3a`).
 `SUMO_HOME=~/sumo-pristine/lib/python3.12/site-packages/sumo`.
 
-Method. Every committed reference was regenerated into a temp copy with the exact flags of
-`run_all.sh`: net = `--osm-files input.osm --simple-projection` (or `net.args` alone) with `net.args`;
-sim = `-n ref_simple.net.xml -r routes.rou <sim*.args> --no-step-log true` plus `--fcd-output`/`--statistic-output`
-(as run_all does); depart via `cases/depart/run_ref.sh`; cf via `cases/vtypes/run_cf_models.sh`.
-A file is IDENTICAL when its content equals the pristine output after removing: the `generated on` header line,
-path-valued `<configuration>` echo lines (they record where the command ran), `<performance>` wall-clock lines,
-and CR characters (the working copy is CRLF, the index is LF).
+## Method
 
-Summary: 102 IDENTICAL, 1 DIFFERENT, 8 NOT-REGENERATED
-(file keys below; a key is one case/variant, grouping its tripinfo/fcd/stat).
+1. Scope: every git-tracked file under `tools/oracle/cases/` whose name starts with `ref`, sits under a `ref/` or `ref_out*` directory,
+   or is a cf `*.ref.*` file. 341 files: tripinfo, fcd, stat, net (`ref_simple.net.xml`, `ref.net.xml`), `ref_out/*.xml`,
+   `depart/ref/*/{tripinfo.xml,statistic.xml,stdout.txt,stderr.txt}`, `vtypes/cf/*.ref.{tripinfo.xml,stdout.txt,stderr.txt}`,
+   logs (`ref*.log`), `ref*.stdout.txt`, `ref*.stderr.txt`.
+2. Regeneration into a temp copy (`out/`), never into the worktree. Flags exactly as the harness uses them:
+   nets = `--osm-files input.osm --simple-projection` + `net.args`, or `net.args` alone; sims = `-n ref_simple.net.xml -r routes.rou`
+   + `sim*.args` + `--tripinfo/--fcd/--statistic-output` + `--no-step-log true`; `ref_out` = the `run_outputs.sh` rows;
+   depart = 15 variants with `--seed 42 --end 120`; cf = the `run_cf_models.sh` flags.
+3. Run guard (added after truncations were found): every SUMO run is started with `setsid --wait`, stdin from `/dev/null`;
+   a run counts only if exit 0 and its output has no `Interrupt signal` line (SUMO exits 0 after a graceful interrupt with a short,
+   well-formed file); one retry on a signal exit; outputs of a failed run are deleted, so a failure shows as NOT-REGENERATED.
+4. Completeness (`tools/oracle/check_ref_complete.py`): every XML parses (closing root tag); a stat file's `performance@end` equals
+   the case's `--end`; the FCD's last timestep reaches `--end` (else the largest tripinfo arrival), within 1 s.
+   Applied to every generated output, and to every committed tag with its own `--end`.
+5. Comparison, per file:
+   - tripinfo / fcd: `compare_sim.py`; stat: `compare_stat.py`; net: `compare_net.py`; `ref_out`: `compare_xml.py`
+     (element-wise, the project comparators). Semantic equal, bytes differ: FORMAT-ONLY. Semantic different: DIFFERENT.
+   - Text captures (stdout, stderr, logs) and anything without a comparator: byte compare.
+   - Both sides first drop: the `generated on` header line, `<configuration>` path options (they record where the command ran),
+     `<performance clockBegin=...>` wall-clock lines, and CR (checkout CRLF; the index is LF).
+   - IDENTICAL: bytes equal after that normalization.
 
-| case/variant | files | committed vs pristine | first diff / note |
-|---|---|---|---|
-| `city_munich/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `city_munich/net` | net | IDENTICAL | |
-| `city_plano/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `city_plano/net` | net | IDENTICAL | |
-| `closed_edge/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `closed_edge/net` | net | IDENTICAL | |
-| `depart/lane_1` | statistic, tripinfo | IDENTICAL (both abort) | Pristine exit 1: `Invalid departLane definition for vehicle 'v3'`. Committed output equals it (0 trips). Reference encodes a run official SUMO rejects. |
-| `depart/lane_allowed` | statistic, tripinfo | IDENTICAL | |
-| `depart/lane_best` | statistic, tripinfo | IDENTICAL | |
-| `depart/lane_first` | statistic, tripinfo | IDENTICAL | |
-| `depart/lane_random` | statistic, tripinfo | IDENTICAL | |
-| `depart/pos_5` | statistic, tripinfo | IDENTICAL | |
-| `depart/pos_base` | statistic, tripinfo | IDENTICAL | |
-| `depart/pos_free` | statistic, tripinfo | IDENTICAL | |
-| `depart/pos_max` | statistic, tripinfo | IDENTICAL (both abort) | Pristine exit 1: `Invalid departPos definition for vehicle 'v0'` (`max` is not valid in 1.28.0). Committed output equals it (0 trips). Reference encodes a run official SUMO rejects. |
-| `depart/pos_random` | statistic, tripinfo | IDENTICAL | |
-| `depart/speed_0` | statistic, tripinfo | IDENTICAL | |
-| `depart/speed_desired` | statistic, tripinfo | IDENTICAL | |
-| `depart/speed_last` | statistic, tripinfo | IDENTICAL | |
-| `depart/speed_max` | statistic, tripinfo | IDENTICAL | |
-| `depart/speed_speedLimit` | statistic, tripinfo | IDENTICAL | |
-| `detectors/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `detectors/net` | net | IDENTICAL | |
-| `junction/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `junction/net` | net | IDENTICAL | |
-| `lanechange/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `lanechange/ref_lat04` | fcd, stat, tripinfo | IDENTICAL | |
-| `lanechange/ref_lcdur3` | fcd, stat, tripinfo | IDENTICAL | |
-| `lanechange/net` | net | IDENTICAL | |
-| `lefthand/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `lefthand/net` | net | IDENTICAL | |
-| `real/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `real/ref_actstep` | fcd, stat, tripinfo | IDENTICAL | |
-| `real/ref_ballistic` | fcd, stat, tripinfo | IDENTICAL | |
-| `real/ref_reroute` | fcd, stat, tripinfo | DIFFERENT (replaced) | fcd: line 52: committed='        <vehicle id="v2" x="184.51" y="224.68" angle="235.00" type="DEFAULT_VEHTYPE" speed="10.96" pos="36.37" lane="682360554#1_3" slope="0; stat: line 24: committed='    <vehicleTripStatistics count="6" routeLength="107.40" speed="15.31" duration="7.67" waitingTime="0.00" timeLoss="0.59" departDelay="0.00; tripinfo: line 20: committed='    <tripinfo id="v0" depart="0.00" departLane="397795464#0_0" departPos="2.26" departSpeed="11.85" departDelay="0.00" arrival="8.00" arriva |
-| `real/net` | net | IDENTICAL | |
-| `real/ref_speeddev` | fcd, stat, tripinfo | IDENTICAL | |
-| `real/ref_step01` | fcd, stat, tripinfo | IDENTICAL | |
-| `real/ref_step05` | fcd, stat, tripinfo | IDENTICAL | |
-| `real_dense/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `real_dense/net` | net | IDENTICAL (semantic) | compare_net.py: 0 differences over 1165 elements. Committed net is one unwrapped line; byte form differs, so not replaced. |
-| `reroute/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute/ref_closing` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute/ref_device` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute/net` | net | NOT-REGENERATED | no pristine output |
-| `reroute_alt/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_alt/ref_astar` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_alt/ref_ch` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_alt/ref_chwrapper` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_alt/net` | net | IDENTICAL | |
-| `reroute_bypass/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_bypass/net` | net | IDENTICAL | |
-| `reroute_bypass_p1/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_bypass_p1/net` | net | NOT-REGENERATED | no pristine output |
-| `reroute_contention/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_contention/ref_adapt` | fcd, stat, tripinfo | IDENTICAL | |
-| `reroute_contention/net` | net | IDENTICAL | |
-| `roundabout/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `roundabout/net` | net | IDENTICAL | |
-| `route_check/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `route_check/net` | net | NOT-REGENERATED | no pristine output |
-| `routes_forms/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `routes_forms/net` | net | NOT-REGENERATED | no pristine output |
-| `sigma_seed/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `sigma_seed/ref_seed7` | fcd, stat, tripinfo | IDENTICAL | |
-| `sigma_seed/net` | net | IDENTICAL | |
-| `signal/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal/ref_actstep` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal/ref_ballistic` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal/net` | net | IDENTICAL | |
-| `signal/ref_step01` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal/ref_step05` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal_actuated/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal_actuated/net` | net | IDENTICAL | |
-| `signal_delay/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal_delay/net` | net | IDENTICAL | |
-| `signal_nema/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `signal_nema/net` | net | IDENTICAL | |
-| `stops/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `stops/net` | net | NOT-REGENERATED | no pristine output |
-| `stops_parking/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `stops_parking/net` | net | IDENTICAL | |
-| `stress/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `stress/ref_collision` | fcd, stat, tripinfo | IDENTICAL | |
-| `stress/ref_mdd5` | fcd, stat, tripinfo | IDENTICAL | |
-| `stress/net` | net | NOT-REGENERATED | no pristine output |
-| `stress/ref_ttt30` | fcd, stat, tripinfo | IDENTICAL | |
-| `stress/ref_ttt_m1` | fcd, stat, tripinfo | IDENTICAL | |
-| `sublanes/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `sublanes/net` | net | IDENTICAL | |
-| `teleport/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `teleport/net` | net | IDENTICAL | |
-| `trips/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `trips/net` | net | NOT-REGENERATED | no pristine output |
-| `vtypes/cf/acc` | tripinfo | IDENTICAL | |
-| `vtypes/cf/cacc` | tripinfo | IDENTICAL | |
-| `vtypes/cf/cc` | tripinfo | IDENTICAL | |
-| `vtypes/cf/daniel1` | tripinfo | IDENTICAL | |
-| `vtypes/cf/eidm` | tripinfo | IDENTICAL | |
-| `vtypes/cf/idm` | tripinfo | IDENTICAL | |
-| `vtypes/cf/kerner` | tripinfo | IDENTICAL | |
-| `vtypes/cf/nasch` | tripinfo | IDENTICAL | |
-| `vtypes/cf/pwag2009` | tripinfo | IDENTICAL | |
-| `vtypes/cf/rail` | tripinfo | IDENTICAL | |
-| `vtypes/cf/smartsk` | tripinfo | IDENTICAL | |
-| `vtypes/cf/w99` | tripinfo | IDENTICAL | |
-| `vtypes/cf/wiedemann` | tripinfo | IDENTICAL | |
-| `vtypes/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `vtypes/net` | net | NOT-REGENERATED | no pristine output |
-| `zipper/ref` | fcd, stat, tripinfo | IDENTICAL | |
-| `zipper/net` | net | IDENTICAL | |
+## Result
 
-## Not regenerated
+341 files: **312 IDENTICAL, 7 FORMAT-ONLY, 0 DIFFERENT, 22 NOT-REGENERATED.**
+Committed references failing the completeness check: 0. Malformed committed XML: 0.
 
-- `<case>/ref_simple.net.xml` for `reroute`, `reroute_bypass_p1`, `route_check`, `routes_forms`, `stops`, `stress`, `trips`, `vtypes`:
-  no `input.osm` and no `net.args`, so run_all has no rule to rebuild the net. Their sim refs were regenerated on the committed net and are compared above.
-- `junction`, `roundabout`, `signal`: `ref.net.xml` (not `ref_simple`) is not produced by run_all; not covered here.
-- Logs and stdout/stderr captures (`ref.log`, `ref*.stdout.txt`, `ref*.stderr.txt`) are not compared.
+Replaced from pristine (all time): `real/ref_reroute.{tripinfo,fcd,stat}.xml` (commit `8aae63bd`). No other reference was DIFFERENT or truncated.
 
-## Replaced in this commit series
+## Why the first audit missed things
 
-- `real/ref_reroute`
+- Its file list was built from `ref*.tripinfo/fcd/stat.xml` and nets at the top of each case. It never looked at `ref_out/`, depart stdout/stderr,
+  cf stdout/stderr, or logs, and it declared those out of scope.
+- Its runs had no interrupt gate and no completeness check. A run that SUMO ended early but with exit 0 looked like a valid reference.
+- The mirror that the cf/depart outputs were copied from started as a copy of the committed tree, so a failed run could leave
+  the committed file in place and compare as identical. Fixed: outputs are deleted before each run and on failure.
+- `traci_basic/client.py` ran `pkill -f 'bin/sumo'` in WSL, which matches every SUMO binary on the machine, including other agents' runs.
+  Narrowed to the probe's own port.
+
+## Not regenerated (and why)
+
+- `depart/ref/lane_1`, `depart/ref/pos_max`: pristine rejects the route files (exit 1). The committed files encode runs official SUMO refuses.
+- `stress/ref_out/full.xml`: pristine interrupts on `--full-output` for this case (see notes). Committed one is complete.
+- `city_munich/*`: pristine runs interrupted. Other agents regenerate the city cases.
+- `emissions/*`: no generator rule in the tree.
+- 8 `ref_simple.net.xml` files without `input.osm` / `net.args`: no rule to rebuild the net.
+
+## Per-file verdicts
+
+| file (relative to `tools/oracle/cases/`) | committed vs pristine | note |
+|---|---|---|
+| `city_munich/ref.fcd.xml` | NOT-REGENERATED | pristine runs were interrupted (no complete output). Committed FCD runs to t=599, complete. City cases regenerated by other agents; not touched. |
+| `city_munich/ref.stat.xml` | NOT-REGENERATED | pristine runs were interrupted (no complete output). Committed FCD runs to t=599, complete. City cases regenerated by other agents; not touched. |
+| `city_munich/ref.tripinfo.xml` | NOT-REGENERATED | pristine runs were interrupted (no complete output). Committed FCD runs to t=599, complete. City cases regenerated by other agents; not touched. |
+| `city_munich/ref_simple.net.xml` | IDENTICAL | pristine runs were interrupted (no complete output). Committed FCD runs to t=599, complete. City cases regenerated by other agents; not touched. |
+| `city_plano/ref.fcd.xml` | IDENTICAL |  |
+| `city_plano/ref.stat.xml` | IDENTICAL |  |
+| `city_plano/ref.tripinfo.xml` | IDENTICAL |  |
+| `city_plano/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `closed_edge/ref.fcd.xml` | IDENTICAL |  |
+| `closed_edge/ref.stat.xml` | IDENTICAL |  |
+| `closed_edge/ref.tripinfo.xml` | IDENTICAL |  |
+| `closed_edge/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `depart/ref/lane_1/statistic.xml` | NOT-REGENERATED | pristine exit 1: `Invalid departLane definition for vehicle 'v3'`. Committed run encodes an input official 1.28.0 rejects. No valid pristine reference; kept, flagged. |
+| `depart/ref/lane_1/stderr.txt` | NOT-REGENERATED | pristine exit 1: `Invalid departLane definition for vehicle 'v3'`. Committed run encodes an input official 1.28.0 rejects. No valid pristine reference; kept, flagged. |
+| `depart/ref/lane_1/stdout.txt` | NOT-REGENERATED | pristine exit 1: `Invalid departLane definition for vehicle 'v3'`. Committed run encodes an input official 1.28.0 rejects. No valid pristine reference; kept, flagged. |
+| `depart/ref/lane_1/tripinfo.xml` | NOT-REGENERATED | pristine exit 1: `Invalid departLane definition for vehicle 'v3'`. Committed run encodes an input official 1.28.0 rejects. No valid pristine reference; kept, flagged. |
+| `depart/ref/lane_allowed/statistic.xml` | IDENTICAL |  |
+| `depart/ref/lane_allowed/stderr.txt` | IDENTICAL |  |
+| `depart/ref/lane_allowed/stdout.txt` | IDENTICAL |  |
+| `depart/ref/lane_allowed/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/lane_best/statistic.xml` | IDENTICAL |  |
+| `depart/ref/lane_best/stderr.txt` | IDENTICAL |  |
+| `depart/ref/lane_best/stdout.txt` | IDENTICAL |  |
+| `depart/ref/lane_best/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/lane_first/statistic.xml` | IDENTICAL |  |
+| `depart/ref/lane_first/stderr.txt` | IDENTICAL |  |
+| `depart/ref/lane_first/stdout.txt` | IDENTICAL |  |
+| `depart/ref/lane_first/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/lane_random/statistic.xml` | IDENTICAL |  |
+| `depart/ref/lane_random/stderr.txt` | IDENTICAL |  |
+| `depart/ref/lane_random/stdout.txt` | IDENTICAL |  |
+| `depart/ref/lane_random/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/pos_5/statistic.xml` | IDENTICAL |  |
+| `depart/ref/pos_5/stderr.txt` | IDENTICAL |  |
+| `depart/ref/pos_5/stdout.txt` | IDENTICAL |  |
+| `depart/ref/pos_5/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/pos_base/statistic.xml` | IDENTICAL |  |
+| `depart/ref/pos_base/stderr.txt` | IDENTICAL |  |
+| `depart/ref/pos_base/stdout.txt` | IDENTICAL |  |
+| `depart/ref/pos_base/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/pos_free/statistic.xml` | IDENTICAL |  |
+| `depart/ref/pos_free/stderr.txt` | IDENTICAL |  |
+| `depart/ref/pos_free/stdout.txt` | IDENTICAL |  |
+| `depart/ref/pos_free/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/pos_max/statistic.xml` | NOT-REGENERATED | pristine exit 1: `Invalid departPos definition for vehicle 'v0'` (`max` is not valid in 1.28.0). No valid pristine reference; kept, flagged. |
+| `depart/ref/pos_max/stderr.txt` | NOT-REGENERATED | pristine exit 1: `Invalid departPos definition for vehicle 'v0'` (`max` is not valid in 1.28.0). No valid pristine reference; kept, flagged. |
+| `depart/ref/pos_max/stdout.txt` | NOT-REGENERATED | pristine exit 1: `Invalid departPos definition for vehicle 'v0'` (`max` is not valid in 1.28.0). No valid pristine reference; kept, flagged. |
+| `depart/ref/pos_max/tripinfo.xml` | NOT-REGENERATED | pristine exit 1: `Invalid departPos definition for vehicle 'v0'` (`max` is not valid in 1.28.0). No valid pristine reference; kept, flagged. |
+| `depart/ref/pos_random/statistic.xml` | IDENTICAL |  |
+| `depart/ref/pos_random/stderr.txt` | IDENTICAL |  |
+| `depart/ref/pos_random/stdout.txt` | IDENTICAL |  |
+| `depart/ref/pos_random/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/speed_0/statistic.xml` | IDENTICAL |  |
+| `depart/ref/speed_0/stderr.txt` | IDENTICAL |  |
+| `depart/ref/speed_0/stdout.txt` | IDENTICAL |  |
+| `depart/ref/speed_0/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/speed_desired/statistic.xml` | IDENTICAL |  |
+| `depart/ref/speed_desired/stderr.txt` | IDENTICAL |  |
+| `depart/ref/speed_desired/stdout.txt` | IDENTICAL |  |
+| `depart/ref/speed_desired/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/speed_last/statistic.xml` | IDENTICAL |  |
+| `depart/ref/speed_last/stderr.txt` | IDENTICAL |  |
+| `depart/ref/speed_last/stdout.txt` | IDENTICAL |  |
+| `depart/ref/speed_last/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/speed_max/statistic.xml` | IDENTICAL |  |
+| `depart/ref/speed_max/stderr.txt` | IDENTICAL |  |
+| `depart/ref/speed_max/stdout.txt` | IDENTICAL |  |
+| `depart/ref/speed_max/tripinfo.xml` | IDENTICAL |  |
+| `depart/ref/speed_speedLimit/statistic.xml` | IDENTICAL |  |
+| `depart/ref/speed_speedLimit/stderr.txt` | IDENTICAL |  |
+| `depart/ref/speed_speedLimit/stdout.txt` | IDENTICAL |  |
+| `depart/ref/speed_speedLimit/tripinfo.xml` | IDENTICAL |  |
+| `detectors/ref.fcd.xml` | IDENTICAL |  |
+| `detectors/ref.stat.xml` | IDENTICAL |  |
+| `detectors/ref.tripinfo.xml` | IDENTICAL |  |
+| `detectors/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `emissions/ref.emission.xml` | NOT-REGENERATED | no generator rule in the tree (no input.osm / net.args / sim.args for emissions). Not regenerable. |
+| `emissions/ref.fcd.xml` | IDENTICAL | no generator rule in the tree (no input.osm / net.args / sim.args for emissions). Not regenerable. |
+| `emissions/ref.stat.xml` | IDENTICAL | no generator rule in the tree (no input.osm / net.args / sim.args for emissions). Not regenerable. |
+| `emissions/ref.tripinfo.xml` | IDENTICAL | no generator rule in the tree (no input.osm / net.args / sim.args for emissions). Not regenerable. |
+| `emissions/ref_simple.net.xml` | NOT-REGENERATED | no generator rule in the tree (no input.osm / net.args / sim.args for emissions). Not regenerable. |
+| `junction/ref.fcd.xml` | IDENTICAL |  |
+| `junction/ref.net.xml` | IDENTICAL |  |
+| `junction/ref.stat.xml` | IDENTICAL |  |
+| `junction/ref.tripinfo.xml` | IDENTICAL |  |
+| `junction/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `lanechange/ref.fcd.xml` | IDENTICAL |  |
+| `lanechange/ref.stat.xml` | IDENTICAL |  |
+| `lanechange/ref.tripinfo.xml` | IDENTICAL |  |
+| `lanechange/ref_dur3.fcd.xml` | IDENTICAL |  |
+| `lanechange/ref_dur3.stat.xml` | IDENTICAL |  |
+| `lanechange/ref_dur3.tripinfo.xml` | IDENTICAL |  |
+| `lanechange/ref_lat04.fcd.xml` | IDENTICAL |  |
+| `lanechange/ref_lat04.stat.xml` | IDENTICAL |  |
+| `lanechange/ref_lat04.tripinfo.xml` | IDENTICAL |  |
+| `lanechange/ref_lcdur3.fcd.xml` | IDENTICAL |  |
+| `lanechange/ref_lcdur3.stat.xml` | IDENTICAL |  |
+| `lanechange/ref_lcdur3.tripinfo.xml` | IDENTICAL |  |
+| `lanechange/ref_out/lanechange.xml` | IDENTICAL |  |
+| `lanechange/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `lefthand/ref.fcd.xml` | IDENTICAL |  |
+| `lefthand/ref.stat.xml` | IDENTICAL |  |
+| `lefthand/ref.tripinfo.xml` | IDENTICAL |  |
+| `lefthand/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `real/ref.fcd.xml` | IDENTICAL |  |
+| `real/ref.stat.xml` | IDENTICAL |  |
+| `real/ref.tripinfo.xml` | IDENTICAL |  |
+| `real/ref_actstep.fcd.xml` | IDENTICAL |  |
+| `real/ref_actstep.stat.xml` | IDENTICAL |  |
+| `real/ref_actstep.tripinfo.xml` | IDENTICAL |  |
+| `real/ref_ballistic.fcd.xml` | IDENTICAL |  |
+| `real/ref_ballistic.stat.xml` | IDENTICAL |  |
+| `real/ref_ballistic.tripinfo.xml` | IDENTICAL |  |
+| `real/ref_out/amitran.xml` | IDENTICAL |  |
+| `real/ref_out/edgedata.xml` | IDENTICAL |  |
+| `real/ref_out/full.xml` | IDENTICAL |  |
+| `real/ref_out/link.xml` | IDENTICAL |  |
+| `real/ref_out/netstate.xml` | IDENTICAL |  |
+| `real/ref_out/person.xml` | FORMAT-ONLY | same content, different bytes () |
+| `real/ref_out/queue.xml` | IDENTICAL |  |
+| `real/ref_out/summary.xml` | FORMAT-ONLY | same content, different bytes () |
+| `real/ref_out/vehroute.xml` | IDENTICAL |  |
+| `real/ref_out/vehroute_exit.xml` | IDENTICAL |  |
+| `real/ref_reroute.fcd.xml` | IDENTICAL | was DIFFERENT (v0 arrival 8.00 committed vs 10.00 pristine); replaced in commit 8aae63bd. Now IDENTICAL. |
+| `real/ref_reroute.stat.xml` | IDENTICAL | was DIFFERENT (v0 arrival 8.00 committed vs 10.00 pristine); replaced in commit 8aae63bd. Now IDENTICAL. |
+| `real/ref_reroute.tripinfo.xml` | IDENTICAL | was DIFFERENT (v0 arrival 8.00 committed vs 10.00 pristine); replaced in commit 8aae63bd. Now IDENTICAL. |
+| `real/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `real/ref_speeddev.fcd.xml` | IDENTICAL |  |
+| `real/ref_speeddev.stat.xml` | IDENTICAL |  |
+| `real/ref_speeddev.tripinfo.xml` | IDENTICAL |  |
+| `real/ref_step01.fcd.xml` | IDENTICAL |  |
+| `real/ref_step01.stat.xml` | IDENTICAL |  |
+| `real/ref_step01.tripinfo.xml` | IDENTICAL |  |
+| `real/ref_step05.fcd.xml` | IDENTICAL |  |
+| `real/ref_step05.stat.xml` | IDENTICAL |  |
+| `real/ref_step05.tripinfo.xml` | IDENTICAL |  |
+| `real_dense/ref.fcd.xml` | IDENTICAL |  |
+| `real_dense/ref.stat.xml` | IDENTICAL |  |
+| `real_dense/ref.tripinfo.xml` | IDENTICAL |  |
+| `real_dense/ref_simple.net.xml` | FORMAT-ONLY | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `reroute/ref.fcd.xml` | IDENTICAL |  |
+| `reroute/ref.stat.xml` | IDENTICAL |  |
+| `reroute/ref.tripinfo.xml` | IDENTICAL |  |
+| `reroute/ref_closing.fcd.xml` | IDENTICAL |  |
+| `reroute/ref_closing.stat.xml` | IDENTICAL |  |
+| `reroute/ref_closing.tripinfo.xml` | IDENTICAL |  |
+| `reroute/ref_device.fcd.xml` | IDENTICAL |  |
+| `reroute/ref_device.stat.xml` | IDENTICAL |  |
+| `reroute/ref_device.tripinfo.xml` | IDENTICAL |  |
+| `reroute/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `reroute_alt/ref.fcd.xml` | IDENTICAL |  |
+| `reroute_alt/ref.stat.xml` | IDENTICAL |  |
+| `reroute_alt/ref.tripinfo.xml` | IDENTICAL |  |
+| `reroute_alt/ref_astar.fcd.xml` | IDENTICAL |  |
+| `reroute_alt/ref_astar.stat.xml` | IDENTICAL |  |
+| `reroute_alt/ref_astar.tripinfo.xml` | IDENTICAL |  |
+| `reroute_alt/ref_ch.fcd.xml` | IDENTICAL |  |
+| `reroute_alt/ref_ch.stat.xml` | IDENTICAL |  |
+| `reroute_alt/ref_ch.tripinfo.xml` | IDENTICAL |  |
+| `reroute_alt/ref_chwrapper.fcd.xml` | IDENTICAL |  |
+| `reroute_alt/ref_chwrapper.stat.xml` | IDENTICAL |  |
+| `reroute_alt/ref_chwrapper.tripinfo.xml` | IDENTICAL |  |
+| `reroute_alt/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `reroute_bypass/ref.fcd.xml` | IDENTICAL |  |
+| `reroute_bypass/ref.stat.xml` | IDENTICAL |  |
+| `reroute_bypass/ref.tripinfo.xml` | IDENTICAL |  |
+| `reroute_bypass/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `reroute_bypass_p1/ref.fcd.xml` | IDENTICAL |  |
+| `reroute_bypass_p1/ref.stat.xml` | IDENTICAL |  |
+| `reroute_bypass_p1/ref.tripinfo.xml` | IDENTICAL |  |
+| `reroute_bypass_p1/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `reroute_contention/ref.fcd.xml` | IDENTICAL |  |
+| `reroute_contention/ref.stat.xml` | IDENTICAL |  |
+| `reroute_contention/ref.tripinfo.xml` | IDENTICAL |  |
+| `reroute_contention/ref_adapt.fcd.xml` | IDENTICAL |  |
+| `reroute_contention/ref_adapt.stat.xml` | IDENTICAL |  |
+| `reroute_contention/ref_adapt.tripinfo.xml` | IDENTICAL |  |
+| `reroute_contention/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `roundabout/ref.fcd.xml` | IDENTICAL |  |
+| `roundabout/ref.net.xml` | IDENTICAL |  |
+| `roundabout/ref.stat.xml` | IDENTICAL |  |
+| `roundabout/ref.tripinfo.xml` | IDENTICAL |  |
+| `roundabout/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `route_check/ref.fcd.xml` | IDENTICAL |  |
+| `route_check/ref.stat.xml` | IDENTICAL |  |
+| `route_check/ref.tripinfo.xml` | IDENTICAL |  |
+| `route_check/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `routes_forms/ref.fcd.xml` | IDENTICAL |  |
+| `routes_forms/ref.stat.xml` | IDENTICAL |  |
+| `routes_forms/ref.tripinfo.xml` | IDENTICAL |  |
+| `routes_forms/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `sigma_seed/ref.fcd.xml` | IDENTICAL |  |
+| `sigma_seed/ref.log` | IDENTICAL |  |
+| `sigma_seed/ref.stat.xml` | IDENTICAL |  |
+| `sigma_seed/ref.tripinfo.xml` | IDENTICAL |  |
+| `sigma_seed/ref_seed7.fcd.xml` | IDENTICAL |  |
+| `sigma_seed/ref_seed7.log` | IDENTICAL |  |
+| `sigma_seed/ref_seed7.stat.xml` | IDENTICAL |  |
+| `sigma_seed/ref_seed7.tripinfo.xml` | IDENTICAL |  |
+| `sigma_seed/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `signal/ref.fcd.xml` | IDENTICAL |  |
+| `signal/ref.net.xml` | IDENTICAL |  |
+| `signal/ref.stat.xml` | IDENTICAL |  |
+| `signal/ref.tripinfo.xml` | IDENTICAL |  |
+| `signal/ref_actstep.fcd.xml` | IDENTICAL |  |
+| `signal/ref_actstep.stat.xml` | IDENTICAL |  |
+| `signal/ref_actstep.tripinfo.xml` | IDENTICAL |  |
+| `signal/ref_ballistic.fcd.xml` | IDENTICAL |  |
+| `signal/ref_ballistic.stat.xml` | IDENTICAL |  |
+| `signal/ref_ballistic.tripinfo.xml` | IDENTICAL |  |
+| `signal/ref_out/amitran.xml` | IDENTICAL |  |
+| `signal/ref_out/edgedata.xml` | IDENTICAL |  |
+| `signal/ref_out/full.xml` | IDENTICAL |  |
+| `signal/ref_out/link.xml` | IDENTICAL |  |
+| `signal/ref_out/netstate.xml` | IDENTICAL |  |
+| `signal/ref_out/person.xml` | FORMAT-ONLY | same content, different bytes () |
+| `signal/ref_out/queue.xml` | IDENTICAL |  |
+| `signal/ref_out/summary.xml` | FORMAT-ONLY | same content, different bytes () |
+| `signal/ref_out/vehroute.xml` | IDENTICAL |  |
+| `signal/ref_out/vehroute_exit.xml` | IDENTICAL |  |
+| `signal/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `signal/ref_step01.fcd.xml` | IDENTICAL |  |
+| `signal/ref_step01.stat.xml` | IDENTICAL |  |
+| `signal/ref_step01.tripinfo.xml` | IDENTICAL |  |
+| `signal/ref_step05.fcd.xml` | IDENTICAL |  |
+| `signal/ref_step05.stat.xml` | IDENTICAL |  |
+| `signal/ref_step05.tripinfo.xml` | IDENTICAL |  |
+| `signal_actuated/ref.fcd.xml` | IDENTICAL |  |
+| `signal_actuated/ref.stat.xml` | IDENTICAL |  |
+| `signal_actuated/ref.tripinfo.xml` | IDENTICAL |  |
+| `signal_actuated/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `signal_delay/ref.fcd.xml` | IDENTICAL |  |
+| `signal_delay/ref.stat.xml` | IDENTICAL |  |
+| `signal_delay/ref.tripinfo.xml` | IDENTICAL |  |
+| `signal_delay/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `signal_nema/ref.fcd.xml` | IDENTICAL |  |
+| `signal_nema/ref.stat.xml` | IDENTICAL |  |
+| `signal_nema/ref.tripinfo.xml` | IDENTICAL |  |
+| `signal_nema/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `stops/ref.fcd.xml` | IDENTICAL |  |
+| `stops/ref.log` | IDENTICAL |  |
+| `stops/ref.stat.xml` | IDENTICAL |  |
+| `stops/ref.tripinfo.xml` | IDENTICAL |  |
+| `stops/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `stops_parking/ref.fcd.xml` | IDENTICAL |  |
+| `stops_parking/ref.log` | IDENTICAL |  |
+| `stops_parking/ref.stat.xml` | IDENTICAL |  |
+| `stops_parking/ref.tripinfo.xml` | IDENTICAL |  |
+| `stops_parking/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `stress/ref.fcd.xml` | IDENTICAL |  |
+| `stress/ref.log` | IDENTICAL |  |
+| `stress/ref.stat.xml` | IDENTICAL |  |
+| `stress/ref.tripinfo.xml` | IDENTICAL |  |
+| `stress/ref_collision.fcd.xml` | IDENTICAL |  |
+| `stress/ref_collision.stat.xml` | IDENTICAL |  |
+| `stress/ref_collision.tripinfo.xml` | IDENTICAL |  |
+| `stress/ref_mdd5.fcd.xml` | IDENTICAL |  |
+| `stress/ref_mdd5.stat.xml` | IDENTICAL |  |
+| `stress/ref_mdd5.tripinfo.xml` | IDENTICAL |  |
+| `stress/ref_out/amitran.xml` | IDENTICAL |  |
+| `stress/ref_out/collision.xml` | IDENTICAL |  |
+| `stress/ref_out/edgedata.xml` | IDENTICAL |  |
+| `stress/ref_out/full.xml` | NOT-REGENERATED | pristine prints `Interrupt signal received` on `--full-output` for this case (reproduced with and without setsid, rc 0). Committed file is complete (200 `<data timestep>` blocks, 0.00-199.00). Kept. |
+| `stress/ref_out/link.xml` | IDENTICAL |  |
+| `stress/ref_out/netstate.xml` | IDENTICAL |  |
+| `stress/ref_out/person.xml` | FORMAT-ONLY | same content, different bytes () |
+| `stress/ref_out/queue.xml` | IDENTICAL |  |
+| `stress/ref_out/summary.xml` | FORMAT-ONLY | same content, different bytes () |
+| `stress/ref_out/vehroute.xml` | IDENTICAL |  |
+| `stress/ref_out/vehroute_exit.xml` | IDENTICAL |  |
+| `stress/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `stress/ref_ttt30.fcd.xml` | IDENTICAL |  |
+| `stress/ref_ttt30.stat.xml` | IDENTICAL |  |
+| `stress/ref_ttt30.tripinfo.xml` | IDENTICAL |  |
+| `stress/ref_ttt_m1.fcd.xml` | IDENTICAL |  |
+| `stress/ref_ttt_m1.stat.xml` | IDENTICAL |  |
+| `stress/ref_ttt_m1.tripinfo.xml` | IDENTICAL |  |
+| `sublanes/ref.fcd.xml` | IDENTICAL |  |
+| `sublanes/ref.stat.xml` | IDENTICAL |  |
+| `sublanes/ref.tripinfo.xml` | IDENTICAL |  |
+| `sublanes/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `teleport/ref.fcd.xml` | IDENTICAL |  |
+| `teleport/ref.log` | IDENTICAL |  |
+| `teleport/ref.stat.xml` | IDENTICAL |  |
+| `teleport/ref.tripinfo.xml` | IDENTICAL |  |
+| `teleport/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `trips/ref.fcd.xml` | IDENTICAL |  |
+| `trips/ref.log` | IDENTICAL |  |
+| `trips/ref.stat.xml` | IDENTICAL |  |
+| `trips/ref.tripinfo.xml` | IDENTICAL |  |
+| `trips/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `vtypes/cf/acc.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/acc.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/acc.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cacc.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cacc.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cacc.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cc.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cc.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/cc.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/daniel1.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/daniel1.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/daniel1.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/eidm.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/eidm.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/eidm.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/idm.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/idm.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/idm.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/kerner.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/kerner.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/kerner.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/nasch.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/nasch.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/nasch.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/pwag2009.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/pwag2009.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/pwag2009.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/rail.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/rail.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/rail.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/smartsk.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/smartsk.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/smartsk.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/w99.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/w99.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/w99.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/wiedemann.ref.stderr.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/wiedemann.ref.stdout.txt` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/cf/wiedemann.ref.tripinfo.xml` | IDENTICAL | cfmodels (13 tracked models). Matches pristine incl. stdout/stderr. The 20-variant set named in the scope (W99_cc1, KraussPS, CACC + 17) is not in this tree; not audited here. |
+| `vtypes/ref.fcd.xml` | IDENTICAL |  |
+| `vtypes/ref.stat.xml` | IDENTICAL |  |
+| `vtypes/ref.stderr.txt` | IDENTICAL |  |
+| `vtypes/ref.stdout.txt` | IDENTICAL |  |
+| `vtypes/ref.tripinfo.xml` | IDENTICAL |  |
+| `vtypes/ref_simple.net.xml` | NOT-REGENERATED | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
+| `zipper/ref.fcd.xml` | IDENTICAL |  |
+| `zipper/ref.log` | IDENTICAL |  |
+| `zipper/ref.stat.xml` | IDENTICAL |  |
+| `zipper/ref.tripinfo.xml` | IDENTICAL |  |
+| `zipper/ref_simple.net.xml` | IDENTICAL | no input.osm and no net.args: no run_all rule to rebuild the net. Its sim refs are regenerated and compared on the committed net. |
