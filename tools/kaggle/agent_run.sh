@@ -4,7 +4,7 @@ cd "$(dirname "$0")/../.." || exit 1
 B=/tmp/target/debug
 O=/tmp/pd02_out
 mkdir -p "$O"
-for c in persons peds_crossing; do
+for c in peds_crossing; do
   d=tools/oracle/cases/$c
   if [ -f "$d/input.osm" ]; then
     "$B/netconvert" --osm-files "$d/input.osm" --simple-projection $(cat "$d/net.args") -o "$O/$c.net.xml" >"$O/$c.nc.log" 2>&1

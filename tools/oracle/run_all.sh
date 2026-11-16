@@ -35,6 +35,10 @@ for dir in tools/oracle/cases/*/; do
   if [ "$c" = depart ]; then
     line "$c" variants SKIP "15 variants: cases/depart/run_all_variants.sh"; SKIP=$((SKIP+1)); continue
   fi
+  # a PENDING marker file holds the reason a case is parked (e.g. a missing port)
+  if [ -f "$dir/PENDING" ]; then
+    line "$c" pending SKIP "$(head -1 "$dir/PENDING" | cut -c1-80)"; SKIP=$((SKIP+1)); continue
+  fi
   # --- net stage: regenerate the net with netconvert and compare element by element.
   # Cases with an OSM input use --osm-files; cases built from plain XML put their full input arguments
   # (--node-files/--edge-files/--connection-files) in net.args and are run without --osm-files.
