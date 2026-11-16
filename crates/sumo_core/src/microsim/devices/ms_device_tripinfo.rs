@@ -1133,6 +1133,7 @@ impl MSDevice_Tripinfo {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+        if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE tripinfo notify {} departed={} sv={}", veh.get_id(), matches!(reason, MSMoveReminder_Notification::NOTIFICATION_DEPARTED), veh.get_speed()); }
         if matches!(reason, MSMoveReminder_Notification::NOTIFICATION_DEPARTED) {
             if !crate::microsim::ms_globals::use_meso_sim() {
                 // C++ static_cast<MSVehicle&>(veh): the notified object is the holder vehicle
