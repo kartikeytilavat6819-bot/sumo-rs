@@ -10236,8 +10236,12 @@ impl MSVehicle {
         // save parameters and device states
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            // shortcut: virtual dispatch to MSVehicleDevice subclasses is not available, only the base MSDevice::saveState runs
-            dev.m().base2.save_state(out);
+            // shortcut: no device vtable yet, the concrete type is recovered from the id prefix assigned by its constructor; other device types still only run the base MSDevice::saveState (warning)
+            if dev.m().base2.get_id().starts_with("tripinfo_") {
+                dev.cast::<MSDevice_Tripinfo>().m().save_state(out);
+            } else {
+                dev.m().base2.save_state(out);
+            }
         }
         if !self.myCFVariables.is_null() {
             self.myCFVariables.save_state(out, self.get_car_follow_model());

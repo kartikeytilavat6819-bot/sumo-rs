@@ -5,8 +5,8 @@ use crate::prelude::*;
 use utils::common::std_defs::{g_precision, set_g_precision};
 
 /// version written into saved states (C++ VERSION_STRING)
-// shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with the release version
-const STATE_VERSION_STRING: &str = "1.28.0";
+// shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with crates/sumo/src/main.rs VERSION_STRING
+const STATE_VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// keep a copy of the attributes for later use (C++ `attrs.clone()`); the C++ owner deletes it, here it is leaked
 // shortcut: cached attribute clones are leaked, upgrade when the owner holds a typed Box
@@ -636,9 +636,14 @@ impl MSStateHandler {
                 if attrs.has_attribute(SUMO_ATTR_RNG_DEVICE) {
                     MSDevice::get_equipment_rng().m().load_state(&attrs.get_string(SUMO_ATTR_RNG_DEVICE));
                 }
-                if attrs.has_attribute(SUMO_ATTR_RNG_DEVICE_BT) || attrs.has_attribute(SUMO_ATTR_RNG_DRIVERSTATE) || attrs.has_attribute(SUMO_ATTR_RNG_DEVICE_TOC) {
-                    // shortcut: BTreceiver, OUProcess and ToC RNG states are not ported, loading them is refused
-                    panic!("shortcut: BTreceiver/OUProcess/ToC RNG states are not ported");
+                if attrs.has_attribute(SUMO_ATTR_RNG_DEVICE_BT) {
+                    MSDevice_BTreceiver::get_rng().m().load_state(&attrs.get_string(SUMO_ATTR_RNG_DEVICE_BT));
+                }
+                if attrs.has_attribute(SUMO_ATTR_RNG_DRIVERSTATE) {
+                    OUProcess::get_rng().m().load_state(&attrs.get_string(SUMO_ATTR_RNG_DRIVERSTATE));
+                }
+                if attrs.has_attribute(SUMO_ATTR_RNG_DEVICE_TOC) {
+                    MSDevice_ToC::get_response_time_rng().m().load_state(&attrs.get_string(SUMO_ATTR_RNG_DEVICE_TOC));
                 }
             }
             SUMO_TAG_RNGLANE => {
@@ -1028,7 +1033,12 @@ impl MSStateHandler {
         out.open_tag_id(SUMO_TAG_RNGSTATE);
         out.write_attr(SUMO_ATTR_DEFAULT, &utils::common::rand_helper::with_default(|rng| rng.save_state()));
         out.write_attr(SUMO_ATTR_RNG_ROUTEHANDLER, &SUMORouteHandler::get_parsing_rng().m().save_state());
-        // shortcut: FlowRNG (MSInsertionControl::getFlowRNG), MSDevice/BTreceiver/OUProcess/ToC RNGs and MSLane::saveRNGStates are not ported, their states are not written yet
+        out.write_attr(SUMO_ATTR_RNG_INSERTIONCONTROL, &MSNet::get_instance().m().get_insertion_control().get_flow_rng().m().save_state());
+        out.write_attr(SUMO_ATTR_RNG_DEVICE, &MSDevice::get_equipment_rng().m().save_state());
+        out.write_attr(SUMO_ATTR_RNG_DEVICE_BT, &MSDevice_BTreceiver::get_rng().m().save_state());
+        out.write_attr(SUMO_ATTR_RNG_DRIVERSTATE, &OUProcess::get_rng().m().save_state());
+        out.write_attr(SUMO_ATTR_RNG_DEVICE_TOC, &MSDevice_ToC::get_response_time_rng().m().save_state());
+        MSLane::save_rng_states(out);
         out.close_tag("");
     }
 
