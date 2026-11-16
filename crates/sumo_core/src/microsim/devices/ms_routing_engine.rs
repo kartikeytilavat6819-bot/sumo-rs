@@ -1109,8 +1109,25 @@ impl MSRoutingEngine {
         }
         // CCH customization barrier (myCCHLive->atBarrier) is skipped: myCCHLive is never created in this port
         if utils::options::options_cont::is_set("device.rerouting.output") {
-            // shortcut: the device.rerouting.output interval (traveltime per edge via myEffortFunc) is not ported, upgrade with the OutputDevice::getDeviceByOption port
-            panic!("shortcut: device.rerouting.output writing is not ported");
+            let dev = utils::iodevices::output_device::OutputDevice::get_device_by_option("device.rerouting.output").unwrap_or_else(|e| std::panic::panic_any(e));
+            let mut dev = dev.borrow_mut();
+            let bike = state().myBikeSpeeds;
+            let interval = state().myAdaptationInterval;
+            dev.open_tag_id(SUMO_TAG_INTERVAL);
+            dev.write_attr(SUMO_ATTR_ID, "device.rerouting");
+            dev.write_attr(SUMO_ATTR_BEGIN, &steps2time(currentTime));
+            dev.write_attr(SUMO_ATTR_END, &steps2time(currentTime + interval));
+            for e in edges.iter() {
+                dev.open_tag_id(SUMO_TAG_EDGE);
+                dev.write_attr(SUMO_ATTR_ID, e.get_id());
+                dev.write_attr("traveltime", &effort_func(*e, Ptr::null(), steps2time(currentTime)));
+                if bike {
+                    // @note edge-priority is not included here
+                    dev.write_attr("traveltimeBike", &MSRoutingEngine::get_effort_bike(*e, Ptr::null(), steps2time(currentTime)));
+                }
+                dev.close_tag("");
+            }
+            dev.close_tag("");
         }
         state().myAdaptationInterval
     }
@@ -1511,19 +1528,16 @@ fn e_len_of(e: Ptr<MSEdge>) -> f64 {
     e.get_length()
 }
 
-// shortcut: SUMOVehicle does not expose getRandomSeed yet, upgrade when the vehicle base type gains it
-fn v_random_seed(_v: Ptr<SUMOVehicle>) -> i64 {
-    panic!("shortcut: SUMOVehicle::getRandomSeed is not exposed yet")
+fn v_random_seed(v: Ptr<SUMOVehicle>) -> i64 {
+    v.m().get_random_seed()
 }
 
-// shortcut: SUMOVehicle does not expose getVClass yet, upgrade when the vehicle base type gains it
-fn v_vclass(_v: Ptr<SUMOVehicle>) -> SUMOVehicleClass {
-    panic!("shortcut: SUMOVehicle::getVClass is not exposed yet")
+fn v_vclass(v: Ptr<SUMOVehicle>) -> SUMOVehicleClass {
+    v.m().get_v_class()
 }
 
-// shortcut: SUMOVehicle does not expose getVTypeParameter yet, upgrade when the vehicle base type gains it
-fn v_vtype_parameter<'a>(_v: Ptr<SUMOVehicle>) -> &'a SUMOVTypeParameter {
-    panic!("shortcut: SUMOVehicle::getVTypeParameter is not exposed yet")
+fn v_vtype_parameter<'a>(v: Ptr<SUMOVehicle>) -> &'a SUMOVTypeParameter {
+    v.get().expect("null vehicle").get_v_type_parameter()
 }
 
 /// patchSpeedForTurns on an already locked state (the C++ function body)
