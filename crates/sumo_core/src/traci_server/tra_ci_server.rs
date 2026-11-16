@@ -2326,11 +2326,13 @@ impl TraCIServer {
         let outp = Ptr::from_mut(&mut self.myOutputStorage);
         let mut success = false;
         // dispatch commands
-        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here
+        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here.
+        // A ProcessError is not caught by C++ and unwinds to main, so it is re-raised here too.
         if self.myExecutors.contains_key(&commandId) {
             let exec = self.myExecutors[&commandId];
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| exec(self, inp.m(), outp.m()))) {
                 Ok(s) => success = s,
+                Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
                 Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
             }
         } else if (commandId >= CMD_GET_INDUCTIONLOOP_VARIABLE && commandId <= CMD_GET_BUSSTOP_VARIABLE)
@@ -2341,6 +2343,7 @@ impl TraCIServer {
             } else {
                 match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_get(commandId, inp.m(), outp.m()))) {
                     Ok(s) => success = s,
+                    Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
                     Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
                 }
             }
