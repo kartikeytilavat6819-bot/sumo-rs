@@ -10,10 +10,8 @@ pub struct MSJunctionLogic {
 
 // C++ static members of MSJunctionLogic (port as module-level statics, see AGENTS.md):
 //   static MSLogicJunction::LinkBits MSJunctionLogic::myDummyFoes;
-// shortcut: MSLogicJunction::LinkBits is still Unmapped (= ()) in ms_logic_junction.rs, so the dummy
-// foe set is a unit placeholder; upgrade to an empty std::bitset<256> equivalent once that typedef is mapped.
 #[allow(non_upper_case_globals)]
-static myDummyFoes: MSLogicJunction_LinkBits = ();
+static myDummyFoes: MSLogicJunction_LinkBits = MSLogicJunction_LinkBits::new();
 
 impl MSJunctionLogic {
     /// C++: `void MSJunctionLogic::~MSJunctionLogic()` [virtual]

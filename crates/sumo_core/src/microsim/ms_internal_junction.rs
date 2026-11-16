@@ -295,7 +295,7 @@ impl MSInternalJunction {
 }
 
 /// `std::bitset::test` on the parent's response row (MSLogicJunction::LinkBits)
-fn response_test(response: &[bool; SUMO_MAX_CONNECTIONS], index: i32) -> bool {
-    response[index as usize]
+fn response_test(response: &LinkBits, index: i32) -> bool {
+    response.test(index)
 }
 
