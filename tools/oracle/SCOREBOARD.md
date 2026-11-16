@@ -37,19 +37,22 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=19 FAIL=4 SKIP=6** after the four new cases (lanechange, lefthand, sublanes,
-reroute_alt) were added. The four failures are the honest ones:
+Exact totals: **`run_all.sh` PASS=20 FAIL=5 SKIP=8** over 17 cases. The five failures are the honest ones:
 
 | Row | Symptom | Owner |
 |---|---|---|
+| `closed_edge/ref` | a lane closed **after** a vehicle departs is ignored — we drive through it; C++ reroutes the committed vehicle at t=8 | unowned |
+| `reroute_alt/ref` | `v0` not rerouted; `initRouter` is a stub so `myRouterProvider` is never built | rr02 |
 | `sublanes/ref` | **PANIC** `ms_leader_info.rs:503` index out of bounds — any `--lateral-resolution` run crashes | sl01 |
-| `reroute_alt/ref` | `v0` stays on the closed edge `11` at t=8; C++ detours to `12` — rerouting never runs | rr01 |
 | `real_dense/ref` | `v15.arrivalSpeed` 5.29 vs 7.60 | op02 |
-| `vtypes/ref` | `EIDM_1` timeLoss 4.05 vs 4.02 | unowned |
+| `vtypes/ref` | `EIDM_1` timeLoss 4.05 vs 4.02 (0.10 m at t=62) | op02 |
 
-`lanechange` and `lefthand` PASS — so the `gComputeLC`/`change_lanes` fix and left-hand-traffic net
-generation (`--lefthand` via `net.args`) are now proven rather than asserted. `sublanes` net also PASSES;
-only the simulation crashes.
+`closed_edge` proves **enforcement** rather than routing-around: `closingLaneReroute disallow="all"` closes
+`11_0` at t=5 while `v0` is already committed to `10 11 13`. Every other closure in this suite is a router
+prohibition, so SUMO routes around it at departure and the enforcement path is never reached.
+
+`lanechange` and `lefthand` PASS, so the `gComputeLC`/`change_lanes` fix and left-hand-traffic net generation
+(`--lefthand` via `net.args`) are proven rather than asserted. `sublanes` **net** passes; only the sim crashes.
 
 Before this change: **PASS=8 FAIL=2 SKIP=0**
 (measured with the original script on the same binaries; stress, reroute, vtypes, ref_closing and depart were invisible).
