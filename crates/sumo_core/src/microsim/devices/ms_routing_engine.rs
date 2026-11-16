@@ -1318,8 +1318,8 @@ impl MSRoutingEngine {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_thread_rng() -> Ptr<SumoRNG> {
-        // shortcut: getThreadRNG has no C++ body in the sources scanned, upgrade with the per-thread RNG port
-        panic!("shortcut: MSRoutingEngine::getThreadRNG is not ported")
+        // shortcut: C++ declares getThreadRNG() in MSRoutingEngine.h but never defines or calls it (dead declaration), so this is unreachable; delete it, not port it
+        panic!("shortcut: MSRoutingEngine::getThreadRNG is a dead C++ declaration with no definition")
     }
 
     /// C++: `SUMOVehicle * MSRoutingEngine::buildCCHRefVehicle(const MSVehicleType *, int)` [static, private]
