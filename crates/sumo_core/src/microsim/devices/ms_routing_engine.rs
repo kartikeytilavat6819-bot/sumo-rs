@@ -133,7 +133,7 @@ impl MSRoutingEngine {
     #[allow(unused_variables)]
     pub fn init_weight_update(lastAdaption: SUMOTime) {
         if state().myAdaptationInterval == -1 {
-            // myEdgeWeightSettingCommand = nullptr (the StaticCommand is not modelled, see has_edge_updates)
+            state().myEdgeWeightSettingCommand = false;
             state().myLastAdaptation = lastAdaption;
             let withTaz = get_bool("device.rerouting.with-taz");
             let interval = string2time(&get_string("device.rerouting.adaptation-interval")).unwrap_or_else(|e| std::panic::panic_any(e));
@@ -146,8 +146,13 @@ impl MSRoutingEngine {
                 st.myAdaptationWeight = weight;
             }
             if weight < 1. && interval > 0 {
-                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so edge weights are never adapted; no reroute runs yet either (periodic reroute command unported), upgrade together with the reroute command port
-
+                let mut nextAdaptation: SUMOTime = -1;
+                if lastAdaption >= 0 {
+                    nextAdaptation = lastAdaption + interval;
+                }
+                let cmd: Ptr<dyn crate::microsim::ms_event_control::Command> = Ptr::from_raw(Box::into_raw(Box::new(MSRoutingEngine_StaticCommand { f: MSRoutingEngine::adapt_edge_efforts })) as *mut dyn crate::microsim::ms_event_control::Command);
+                state().myEdgeWeightSettingCommand = true;
+                MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(cmd, nextAdaptation);
             } else if period > 0 {
                 utils::common::msg_handler::write_warning("Rerouting is useless if the edge weights do not get updated!");
             }
@@ -204,8 +209,7 @@ impl MSRoutingEngine {
     //     }
     #[allow(unused_variables)]
     pub fn has_edge_updates() -> bool {
-        // shortcut: myEdgeWeightSettingCommand (StaticCommand) is never set in this port because its scheduling is not ported, upgrade with the event port
-        false
+        state().myEdgeWeightSettingCommand
     }
 
     /// C++: `SUMOTime MSRoutingEngine::getLastAdaptation()` [static]
@@ -1449,7 +1453,7 @@ impl MSRoutingEngine {
 // ---- helpers (file-private) ----
 
 /// The numeric MSRoutingEngine statics. Statics that hold unported types (the router provider, the CCH families,
-/// the edge-weight StaticCommand and the route cache) are not modelled here (see the shortcut notes at their uses).
+/// and the route cache) are not modelled here; the edge-weight StaticCommand is owned by the event queue (see the shortcut notes at their uses).
 struct RoutingEngineState {
     myEdgeSpeeds: Vec<f64>,
     myEdgeBikeSpeeds: Vec<f64>,
@@ -1470,6 +1474,8 @@ struct RoutingEngineState {
     myHaveExtras: bool,
     /// true when myEffortFunc points at getEffortExtra, false for getEffort (the C++ static default)
     myEffortFuncIsExtra: bool,
+    /// C++ `myEdgeWeightSettingCommand != nullptr` (the command itself is owned by the end-of-timestep event queue)
+    myEdgeWeightSettingCommand: bool,
 }
 
 // determinism: all routing-engine statics live behind one lock; callers must not hold it across another call that locks it
@@ -1492,6 +1498,7 @@ static ROUTING_ENGINE_STATE: std::sync::Mutex<RoutingEngineState> = std::sync::M
     myDynamicRandomness: false,
     myHaveExtras: false,
     myEffortFuncIsExtra: false,
+    myEdgeWeightSettingCommand: false,
 });
 
 fn state() -> std::sync::MutexGuard<'static, RoutingEngineState> {
