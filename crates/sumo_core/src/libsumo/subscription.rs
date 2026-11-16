@@ -23,7 +23,7 @@ pub enum SubscriptionFilterType {
 }
 
 /// C++ typedef `bool (*)(const std::string &, const int, VariableWrapper *, tcpip::Storage *) VariableWrapper::SubscriptionHandler`
-pub type VariableWrapper_SubscriptionHandler = Unmapped /* bool (*)(const std::string &, const int, VariableWrapper *, tcpip::Storage *) */;
+pub type VariableWrapper_SubscriptionHandler = Option<fn(&str, i32, Ptr<VariableWrapper>, Ptr<Storage>) -> bool>;
 
 /// Representation of a subscription
 /// C++ class `libsumo::Subscription` (libsumo/Subscription.h)
