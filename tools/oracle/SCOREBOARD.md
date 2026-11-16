@@ -33,7 +33,7 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=11 FAIL=3 SKIP=6**. Before this change: **PASS=8 FAIL=2 SKIP=0**
+Exact totals: **`run_all.sh` PASS=12 FAIL=2 SKIP=6** (after the Euler fix; PASS=11 FAIL=3 before it). Before this change: **PASS=8 FAIL=2 SKIP=0**
 (measured with the original script on the same binaries; stress, reroute, vtypes, ref_closing and depart were invisible).
 Gate: all 8 previous PASS rows still PASS.
 
@@ -51,23 +51,30 @@ Outputs go to `/c/Users/karti/Temp/score/depart`, not the tracked `ours/` direct
 | roundabout | PASS | PASS | |
 | real | PASS | PASS | |
 | real_dense | FAIL | CLOSE | `v15.arrivalSpeed` 5.29 vs 7.6; stat diffs 0.03 |
-| signal | CLOSE | CLOSE | unchanged from previous measurement (`v1` timeLoss, FCD t=34) |
+| signal | **PASS** | **PASS** | now exact: the t=34 divergence was explicit-vs-semi-implicit Euler, not RNG |
 | stress | PASS | PASS | new |
-| reroute | PASS | PASS | new; does not exercise rerouting (see below) |
-| vtypes | CLOSE | — | new; no statistics reference |
+| reroute `/ref` and `/ref_closing` | PASS | PASS | new; both variants exact, see below |
+| vtypes | CLOSE | — | `EIDM_1` timeLoss 4.05 vs 4.02; arrival now matches |
 
 ## Newly visible cases: first differences
 
+- **signal: now exact.** The divergence at t=34 was `semi_implicit_euler_update()` in `ms_vehicle.rs`
+  hardcoded to `false` instead of reading `MSGlobals` (C++ default: true). Explicit Euler integrates
+  position from the old speed, so every vehicle drifted slightly and the car-following model amplified it
+  to 0.26 m by t=34. The dawdle draw *looked* wrong because the speed history was already wrong; the RNG
+  stream was never the cause. tripinfo, FCD and statistics now all MATCH.
 - **stress**: no difference. Tripinfo, FCD and statistics all match the C++ reference exactly. `stress/REPORT.md`
   (first diff `s24` depart 43 vs 48, 107 vs 93 arrivals) does not reproduce with the current binary. The prebuilt
   binary from Nov 15 22:52 also matches, so the report predates both builds.
 - **reroute**: no difference. The `--additional-files` panic in `reroute/REPORT.md` no longer reproduces. The case
   still does not test rerouting: the C++ reference shows `rerouteNo=0` for every vehicle because SUMO 1.28 ignores
   `device.rerouting.*` given as vType attributes. Not measured: `ref_closing.*` (closing-only variant).
-- **vtypes: FAIL.** First difference `EIDM_1 arrival` ref 77.00 vs ours 76.00. Full list (checked with a
-  non-stopping script): `EIDM_1` arrival 77 vs 76, duration 27 vs 26, timeLoss 4.05 vs 3.74, arrivalSpeed
-  13.89 vs 14.04; `Wiedemann_0` timeLoss 1.31 vs 1.33; `Wiedemann_1` timeLoss 1.46 vs 1.45. The other 7 vehicles
-  match. Not a flag mismatch: make_sim_refs.sh reproduces the committed reference from C++ with the same flags.
+- **vtypes: CLOSE.** `EIDM_1` arrival now matches; remaining `timeLoss 4.05 vs 4.02` and small `Wiedemann_0/1`
+  timeLoss deltas (0.02/0.01). Not a flag mismatch: make_sim_refs.sh reproduces the committed reference from
+  C++ with the same flags.
+- **reroute**: both variants exact (`ref` and `ref_closing`). The case does not exercise rerouting: the C++
+  reference shows `rerouteNo=0` for every vehicle because SUMO 1.28 ignores `device.rerouting.*` given as
+  vType attributes — a genuine test-design limitation, recorded rather than papered over.
 - **depart**: 15/15. The two failures in `depart/REPORT.md` (`departLane=1` silently dropping `v3`, `departSpeed=0`
   arriving 1 s late) no longer reproduce; the current binary errors on `departLane=1` exactly like C++.
 
@@ -79,16 +86,20 @@ roundabout, signal, real, real_dense, stress, reroute; tripinfo MATCH for vtypes
 
 ## What is left, in order
 
-1. `vtypes` `EIDM_1` arrives 1 s early (the one new FAIL). Extended-IDM path; no `vtypes`-specific owner yet.
-2. `real_dense` `v15` arrival speed (agent rd02).
-3. `signal` t=34: RNG stream one draw out of phase (agent rng01).
-4. Stale MSGlobals accessors: 38 local `fn g_*()` across 18 files, 6 fixed. Proven wrong:
-   `g_using_internal_lanes()` = false in `ms_full_export.rs` (true elsewhere), `g_compute_lc()` = false
-   in `mscf_model.rs` (C++ default true) (agent op01).
-5. `libsumo` API surface: 102 `panic!("shortcut:")` bodies, mostly wiring (agent ls01).
-6. Router/rail/intermodal stubs: 164, mostly off the car path (agent rt02).
-7. UB writes through `&self`: ~20 sites, release-only risk (agent ub01).
-8. Reroute: a rerouting case needs `<param key="device.rerouting.probability" value="1"/>` form; not yet tested.
+1. `real_dense` `v15` arrival speed 5.29 vs 7.6 — the only exact-comparator FAIL (agent op02). Diverges at
+   t=98 on internal lane `:42428297_1_3`, +0.22 m/s inherited from `v09`; we accelerate 0.2–0.5 m/s faster
+   on junction-internal lanes.
+2. Stale MSGlobals accessors: 38 local `fn g_*()` across 18 files. Four proven wrong and fixed:
+   `g_ignore_junction_blocker` (0), `g_using_internal_lanes` (false in `ms_full_export.rs`, true elsewhere),
+   `g_compute_lc` (false), `semi_implicit_euler_update` (false — this one alone made `signal` exact).
+   This is the highest-yield bug class in the port; finish the sweep (agent op01).
+3. `vtypes` `EIDM_1` timeLoss 4.05 vs 4.02 — CLOSE, not exact (agent vt01).
+4. `libsumo` API surface: 102 `panic!("shortcut:")` bodies, mostly wiring (agent ls01).
+5. Router/rail/intermodal stubs: 164, mostly off the car path (agent rt02).
+6. `devices/` stubs: 24 (agent rng01).
+7. UB writes through `&self`: ~20 remaining, release-only risk (agent ub01).
+8. Reroute: a rerouting case needs `<param key="device.rerouting.probability" value="1"/>` form; the current
+   case proves the rerouter *loads* but never proves rerouting happens (`rerouteNo=0` on both sides).
 
 ## Traps that have cost real time here
 
