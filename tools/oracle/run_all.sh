@@ -85,6 +85,11 @@ for dir in tools/oracle/cases/*/; do
       if [ -f "$dir/$tag.stat.xml" ]; then
         python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
       fi
+      # edgeData output: the variant's additional file writes out_edgedata.xml next to itself (C++ resolves the path that way)
+      if [ -f "$dir/$tag.edge.xml" ]; then
+        python tools/oracle/compare_xml.py "$dir/$tag.edge.xml" "$dir/out_edgedata.xml" >"$OUT/$c.$tag.edge.log" 2>&1 || r="FAIL"
+        rm -f "$dir/out_edgedata.xml"
+      fi
       if [ "$r" = "PASS" ]; then
         line "$c/$tag" sim PASS; PASS=$((PASS+1))
       else
