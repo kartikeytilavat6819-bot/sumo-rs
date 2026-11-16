@@ -1,6 +1,9 @@
 //! Port of utils/router/IntermodalEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::access_edge::AccessEdge;
+use crate::utils::router::car_edge::CarEdge;
+use crate::utils::router::pedestrian_edge::PedestrianEdge;
 use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterVehicle};
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
