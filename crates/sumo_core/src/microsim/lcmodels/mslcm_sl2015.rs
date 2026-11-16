@@ -196,6 +196,7 @@ pub static MSLCM_SL2015_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeMo
     debug_vehicle: sl2015_debug_vehicle,
     get_parameter: sl2015_get_parameter,
     get_desired_alignment: sl2015_get_desired_alignment,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
 };
 
 /// A lane change model developed by J. Erdmann

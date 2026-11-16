@@ -481,6 +481,9 @@ static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficL
     save_state: MSTrafficLightLogic::save_state_base,
     load_state: MSTrafficLightLogic::load_state_base,
     map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
 };
 
 impl MSRailSignal {

@@ -295,6 +295,26 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, customValue1: f64, customValue2: f64, customValue3: f64) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, customValue1, customValue2, customValue3);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, customValue1: f64, customValue2: f64, customValue3: f64) -> Self {
         println!("initialized device '{}' with myCustomValue1={}, myCustomValue2={}, myCustomValue3={}", id, f64_to_string_default(customValue1), f64_to_string_default(customValue2), f64_to_string_default(customValue3));
         MSDevice_Example {
             base: MSVehicleDevice::new(holder, id),

@@ -24,6 +24,8 @@ impl MSDevice_DefaultAssignment {
 pub struct MSDevice {
     /// C++ base class `Named`
     pub base: Named,
+    /// the value of the virtual `deviceName()` of the most derived class
+    pub name: String,
 }
 
 impl std::ops::Deref for MSDevice {
@@ -253,10 +255,22 @@ impl MSDevice {
     /// C++: `const std::string MSDevice::deviceName() const` [const, virtual, pure virtual]
     /// return the name for this type of device
     // (pure virtual: no C++ body; subclasses implement it)
-    // shortcut: base-class calls cannot dispatch to the subclass override (no vtable), so overrides must be called directly
+    // Port note: the name is stored in `name` at construction (no vtable), so base-class calls see the subclass name.
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        panic!("MSDevice::deviceName is pure virtual and must be overridden by the device class")
+        self.name.clone()
+    }
+
+    /// C++: `MSDevice * MSVehicle::getDevice(typeid(T))` [type-keyed lookup, emulated by device kind]
+    /// returns the first device of the given kind (its deviceName), or null
+    // shortcut: matches the device kind by deviceName instead of typeid, upgrade when devices carry a type tag
+    pub fn get_device_by_name(devices: &[Ptr<MSVehicleDevice>], name: &str) -> Ptr<MSVehicleDevice> {
+        for dev in devices.iter() {
+            if dev.base2.device_name() == name {
+                return *dev;
+            }
+        }
+        Ptr::default()
     }
 
     /// C++: `void MSDevice::cleanupAll()` [static]
@@ -289,7 +303,8 @@ impl MSDevice {
     //     }
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        MSDevice { base: Named::new(id) }
+        // default name from the id prefix; subclasses whose id prefix differs from deviceName() overwrite it
+        MSDevice { base: Named::new(id), name: Self::get_device_name(id) }
     }
 
     /// C++: `void MSDevice::~MSDevice() noexcept` [virtual]
@@ -596,6 +611,13 @@ mod tests {
         assert!(!MSDevice::equipped_by_default_assignment_options(&oc, "rerouting", "v1", &holder, &vtype, false, false));
         vtype.set_parameter("device.rerouting.probability", "1");
         assert!(MSDevice::equipped_by_default_assignment_options(&oc, "rerouting", "v1", &holder, &vtype, false, false));
+    }
+
+    #[test]
+    fn device_name_from_id_matches_cpp_get_device_name() {
+        assert_eq!(MSDevice::new("routing_v1").device_name(), "rerouting");
+        assert_eq!(MSDevice::new("driverstate7").device_name(), "driverstate");
+        assert_eq!(MSDevice::new("battery_v1").device_name(), "battery");
     }
 }
 

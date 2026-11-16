@@ -1,6 +1,20 @@
 //! Port of microsim/traffic_lights/MSSOTLCongestionPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn congestion_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLCongestionPolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+fn congestion_decide_next_phase(p: &mut MSSOTLPolicy, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
+    Ptr::from_mut(p).cast::<MSSOTLCongestionPolicy>().m().decide_next_phase(elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
+}
+
+static MS_SOTL_CONGESTION_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: congestion_can_release,
+    decide_next_phase: congestion_decide_next_phase,
+    ..MSSOTL_POLICY_BASE_VT
+};
 
 /// Class for low-level congestion policy.
 /// C++ class `MSSOTLCongestionPolicy` (microsim/traffic_lights/MSSOTLCongestionPolicy.h)
@@ -30,7 +44,9 @@ impl MSSOTLCongestionPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(parameters: &ParameterisedMap) -> Self {
-        Self { base: MSSOTLPolicy::new("Congestion".to_string(), parameters) }
+        let mut base = MSSOTLPolicy::new("Congestion".to_string(), parameters);
+        base.vt = &MS_SOTL_CONGESTION_POLICY_VT;
+        Self { base }
     }
 
     /// C++: `void MSSOTLCongestionPolicy::MSSOTLCongestionPolicy(MSSOTLPolicyDesirability *)`
@@ -42,6 +58,7 @@ impl MSSOTLCongestionPolicy {
     #[allow(unused_variables)]
     pub fn new_2(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
         let mut base = MSSOTLPolicy::new_2("Congestion".to_string(), desirabilityAlgorithm);
+        base.vt = &MS_SOTL_CONGESTION_POLICY_VT;
         base.get_desirability_algorithm().m().set_key_prefix("CONGESTION".to_string());
         Self { base }
     }
@@ -57,6 +74,7 @@ impl MSSOTLCongestionPolicy {
     #[allow(unused_variables)]
     pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
         let mut base = MSSOTLPolicy::new_3("Congestion".to_string(), desirabilityAlgorithm, parameters);
+        base.vt = &MS_SOTL_CONGESTION_POLICY_VT;
         base.get_desirability_algorithm().m().set_key_prefix("CONGESTION".to_string());
         Self { base }
     }

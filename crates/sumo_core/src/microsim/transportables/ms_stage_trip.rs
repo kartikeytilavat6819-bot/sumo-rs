@@ -761,7 +761,7 @@ impl MSStageTrip {
     // }
     #[allow(unused_variables)]
     pub fn set_arrived(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, vehicleArrived: bool) -> String {
-        self.base.set_arrived(net, transportable, now, vehicleArrived);
+        self.base.myArrived = now;
         let mut stages: Vec<Ptr<MSStage>> = Vec::new();
         let mut result: String;
         if !self.myComputedStages.is_empty() {

@@ -29,6 +29,7 @@ pub struct MSAbstractLaneChangeModelVt {
     pub debug_vehicle: fn(&MSAbstractLaneChangeModel) -> bool,
     pub get_parameter: fn(&MSAbstractLaneChangeModel, &str) -> String,
     pub get_desired_alignment: fn(&MSAbstractLaneChangeModel) -> LatAlignmentDefinition,
+    pub check_change_before_committing: fn(&MSAbstractLaneChangeModel, Ptr<MSVehicle>, i32) -> i32,
 }
 
 fn default_inform(_: &mut MSAbstractLaneChangeModel, _: Ptr<()>, _: Ptr<MSVehicle>) -> Ptr<()> {
@@ -68,6 +69,7 @@ static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = M
     debug_vehicle: MSAbstractLaneChangeModel::debug_vehicle_base,
     get_parameter: MSAbstractLaneChangeModel::get_parameter_base,
     get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
 };
 
 /// Interface for lane-change models
@@ -312,8 +314,12 @@ impl MSAbstractLaneChangeModel {
     //         UNUSED_PARAMETER(state);
     //         return 0;
     //     }
-    #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
+        (self.vt.check_change_before_committing)(self, veh, state)
+    }
+
+    #[allow(unused_variables)]
+    pub fn check_change_before_committing_base(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
         0
     }
 

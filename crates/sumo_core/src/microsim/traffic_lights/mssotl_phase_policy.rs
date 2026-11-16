@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLPhasePolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn phase_policy_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLPhasePolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_PHASE_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: phase_policy_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
 use utils::common::msg_handler::write_message;
 
 /// Class for low-level phase policy.
@@ -42,6 +52,7 @@ impl MSSOTLPhasePolicy {
             base3: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
             m_useVehicleTypesWeights: false,
         };
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
         s.init();
         s
     }
@@ -61,6 +72,7 @@ impl MSSOTLPhasePolicy {
             m_useVehicleTypesWeights: false,
         };
         s.get_desirability_algorithm().m().set_key_prefix("PHASE".to_string());
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
         s.init();
         s
     }
@@ -81,6 +93,7 @@ impl MSSOTLPhasePolicy {
             m_useVehicleTypesWeights: false,
         };
         s.get_desirability_algorithm().m().set_key_prefix("PHASE".to_string());
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
         s.init();
         s
     }

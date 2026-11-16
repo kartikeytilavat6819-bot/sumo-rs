@@ -6,11 +6,13 @@ param(
     [Parameter(Mandatory = $true)][string]$Branch,
     [int]$Slot = 1,
     [string]$Repo = "C:\Users\karti\sumo-rs",
-    [int]$TimeoutMin = 90
+    [int]$TimeoutMin = 90,
+    # gate_token = account kartikey6819, gate_token_acct3 = kartikey5656 (both have notebook internet)
+    [string]$TokenFile = "$HOME\.kaggle\gate_token"
 )
 # Continue: the kaggle CLI writes expected errors (e.g. 403 for a dataset that does not exist yet) to stderr
 $ErrorActionPreference = "Continue"
-$env:KAGGLE_API_TOKEN = (Get-Content "$HOME\.kaggle\gate_token" -Raw).Trim()
+$env:KAGGLE_API_TOKEN = (Get-Content $TokenFile -Raw).Trim()
 $user = ((python -m kaggle config view 2>&1 | Select-String 'username') -split ':')[-1].Trim()
 $work = Join-Path $env:TEMP "kaggle_gate_$Slot"
 Remove-Item -Recurse -Force $work -ErrorAction SilentlyContinue

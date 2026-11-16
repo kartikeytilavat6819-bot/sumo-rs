@@ -1873,6 +1873,23 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Taxi>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Taxi>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str) -> Self {
         let mut defaultServiceEnd = utils::common::to_string::to_string(&1e15_f64);
         let algo = holder.get_string_param("device.taxi.idle-algorithm", false, "");
         let idle: Ptr<MSIdling>;
@@ -1901,7 +1918,7 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Idle algorithm '{}' is not known for vehicle '{}'", algo, holder.get_id())));
         }
         let serviceEnd = string2time_or_die(&holder.get_string_param("device.taxi.end", false, &defaultServiceEnd));
-        let routing = holder.get_device(&()).cast::<MSDevice_Routing>();
+        let routing = MSDevice::get_device_by_name(&Ptr::from_mut(holder).cast::<MSVehicle>().m().myDevices, "rerouting").cast::<MSDevice_Routing>();
         MSDevice_Taxi {
             base: MSVehicleDevice::new(holder, id),
             myState: MSDevice_Taxi_TaxiState::EMPTY as i32,

@@ -387,8 +387,7 @@ impl MSDevice_Bluelight {
                 continue;
             }
             if upcomingEdges.contains(&Ptr::from_mut(veh2.get_lane().get_edge())) {
-                // shortcut: MSBaseVehicle::get_device has no device-type key yet, so an emergency vehicle is never recognized here
-                if !veh2.get_device(&()).is_null() {
+                if !MSDevice::get_device_by_name(&veh2.myDevices, "bluelight").is_null() {
                     // emergency vehicles should not react
                     continue;
                 }
@@ -491,8 +490,7 @@ impl MSDevice_Bluelight {
                 let dist = ego.get_position(0.).distance_to2d(&foe.get_position(0.));
                 if dist < self.myReactionDist {
                     let microFoe = foe.cast::<MSVehicle>();
-                    // shortcut: MSBaseVehicle::get_device has no device-type key yet, so an emergency vehicle is never recognized here
-                    if !microFoe.get_device(&()).is_null() {
+                    if !MSDevice::get_device_by_name(&microFoe.myDevices, "bluelight").is_null() {
                         // emergency vehicles should not react
                         continue;
                     }
@@ -636,6 +634,26 @@ impl MSDevice_Bluelight {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, reactionDist: f64, minGapFactor: f64) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Bluelight>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Bluelight>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Bluelight>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, reactionDist, minGapFactor);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, reactionDist: f64, minGapFactor: f64) -> Self {
         let mut device = MSDevice_Bluelight {
             base: MSVehicleDevice::new(holder, id),
             myInfluencedVehicles: BTreeSet::new(),
