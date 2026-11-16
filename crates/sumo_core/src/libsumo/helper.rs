@@ -2246,6 +2246,17 @@ impl Helper {
         }
     }
 
+    /// Identifies the Helper listener for MSNet's dispatch: the base listener has no vtable, so MSNet cannot
+    /// reach the Helper override through the base pointer; the Helper base sits at offset 0 (repr(C)).
+    pub fn is_vehicle_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+        std::ptr::eq(listener, &mut my_vehicle_state_listener().base)
+    }
+
+    /// C++: `Helper::VehicleStateListener::vehicleStateChanged` [virtual], reached by MSNet via `is_vehicle_state_listener`
+    pub fn vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+        my_vehicle_state_listener().vehicle_state_changed(vehicle, to, info);
+    }
+
     /// C++: `const std::vector<std::string> & Helper::getVehicleStateChanges(const MSNet::VehicleState)` [static]
     // const std::vector<std::string>&
     // Helper::getVehicleStateChanges(const MSNet::VehicleState state) {
