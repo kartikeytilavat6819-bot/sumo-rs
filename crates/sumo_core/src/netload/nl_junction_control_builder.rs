@@ -940,7 +940,6 @@ impl NLJunctionControlBuilder {
                     firstEventOffset,
                     &self.myAdditionalParameter,
                 ));
-                // the C++ constructor schedules the first SwitchCommand itself; without it the signal never leaves phase 0
                 simple.m().schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
                 tlLogic = simple.cast::<MSTrafficLightLogic>();
             }

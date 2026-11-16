@@ -1230,7 +1230,7 @@ impl MSTLLogicControl_TLSLogicVariants {
             phase.earliestEnd = SUMOTIME_DAY; // prevent immediate switch
             let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(phase)))];
             let now = MSNet::get_instance().get_current_time_step();
-            let newLogic: Ptr<MSTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(
+            let simple: Ptr<MSSimpleTrafficLightLogic> = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(
                 tlc,
                 self.myCurrentProgram.get_id(),
                 TRACI_PROGRAM,
@@ -1240,7 +1240,9 @@ impl MSTLLogicControl_TLSLogicVariants {
                 0,
                 now + delta_t(),
                 &ParameterisedMap::new(),
-            ))) as *mut MSTrafficLightLogic);
+            ))));
+            simple.m().schedule_initial_switch(tlc, now + delta_t());
+            let newLogic: Ptr<MSTrafficLightLogic> = simple.cast::<MSTrafficLightLogic>();
             if self.add_logic(TRACI_PROGRAM, newLogic, true, true) {
                 MSNet::get_instance().m().create_tl_wrapper(newLogic);
             }
