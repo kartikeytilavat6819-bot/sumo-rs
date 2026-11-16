@@ -2084,7 +2084,11 @@ impl TraCIServer {
             let s = Ptr::from_mut(&mut self.mySubscriptions[i]);
             let mut into = Storage::new();
             let mut errors = String::new();
-            let ok = self.process_single_subscription(s.m(), &mut into, &mut errors);
+            // shortcut: C++ lets a TraCIException escape the step; here the failing subscription is dropped so the step still completes
+            let ok = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(s.m(), &mut into, &mut errors))) {
+                Ok(ok) => ok,
+                Err(_) => false,
+            };
             self.mySubscriptionCache.write_storage(&into);
             if ok {
                 i += 1;
@@ -3021,8 +3025,17 @@ impl TraCIServer {
         let mut writeInto = Storage::new();
         let mut errors = String::new();
         let mut modifiedSubscription: Ptr<Subscription> = Ptr::null();
-        // shortcut: C++ catches libsumo::TraCIException and answers with writeStatusCmd(RTYPE_ERR, e.what()); libsumo has no TraCIException mapping yet, so that catch is not reproduced
-        if self.process_single_subscription(s, &mut writeInto, &mut errors) {
+        // C++ `catch (libsumo::TraCIException& e)` -> writeStatusCmd(RTYPE_ERR, e.what()); a panic from libsumo unwinds to here
+        let sp = Ptr::from_mut(s);
+        let processed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(sp.m(), &mut writeInto, &mut errors)));
+        let processed = match processed {
+            Ok(ok) => ok,
+            Err(p) => {
+                self.write_status_cmd_2(s.commandId, RTYPE_ERR, &panic_text(p));
+                return;
+            }
+        };
+        if processed {
             if s.endTime < MSNet::get_instance().get_current_time_step() {
                 self.write_status_cmd_2(s.commandId, RTYPE_ERR, "Subscription has ended.");
             } else {
