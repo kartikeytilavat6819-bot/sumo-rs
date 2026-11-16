@@ -6017,9 +6017,42 @@ impl MSVehicle {
             }
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
-            // shortcut: the C++ while-loop over myStops also compares front().edge (MSStop::edge is an Unmapped MSRouteIterator, see ms_route.rs) with myCurrEdge; the stop-handling body is not ported, so this panics where the loop would run; upgrade when MSRouteIterator is mapped
-            if !self.myStops.is_empty() && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
-                panic!("leaveLane: stop handling on the same edge needs MSRouteIterator, which is not ported yet");
+            while !self.myStops.is_empty() && self.myStops.front().unwrap().edge == self.myCurrEdge && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
+                if self.myStops.front().unwrap().get_speed() <= 0.0 {
+                    write_warningf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops.front().unwrap().lane.get_id(), time2string(MSNet::get_instance().get_current_time_step()));
+                    self.cleanup_parking_reservation();
+                    if MSStopOut::active() {
+                        // clean up if stopBlocked was called
+                        MSStopOut::get_instance().m().stop_not_started(Ptr::from_mut(self).cast::<SUMOVehicle>());
+                    }
+                    self.myStops.pop_front();
+                } else {
+                    let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+                    let stop: Ptr<MSStop> = Ptr::from_mut(self.myStops.front_mut().unwrap());
+                    // passed waypoint at the end of the lane
+                    if !stop.reached {
+                        if MSStopOut::active() {
+                            MSStopOut::get_instance().m().stop_started(me.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), MSNet::get_instance().get_current_time_step());
+                        }
+                        stop.m().reached = true;
+                        // enter stopping place so leaveFrom works as expected
+                        if !stop.busstop.is_null() {
+                            // let the bus stop know the vehicle
+                            stop.busstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        if !stop.containerstop.is_null() {
+                            // let the container stop know the vehicle
+                            stop.containerstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        // do not enter parkingarea!
+                        if !stop.chargingStation.is_null() {
+                            // let the container stop know the vehicle
+                            stop.chargingStation.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                    }
+                    self.resume_from_stopping();
+                }
+                self.myStopDist = f64::MAX;
             }
         }
     }

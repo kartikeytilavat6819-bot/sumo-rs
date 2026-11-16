@@ -1,6 +1,7 @@
 //! Port of microsim/MSBaseVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
 /// C++ enum `MSBaseVehicle::RouteValidity`
@@ -177,6 +178,10 @@ pub const VEHPARS_PARKING_BADGES_SET: i64 = (2i64) << 30;
 pub const VEHPARS_INSERTION_CHECKS_SET: i64 = (2i64) << 31;
 /// C++ `STOP_INDEX_FIT` (SUMOVehicleParameter.h), not yet ported elsewhere
 pub const STOP_INDEX_FIT: i32 = -2;
+/// C++ `STOP_INDEX_END` (SUMOVehicleParameter.h)
+const STOP_INDEX_END: i32 = -1;
+/// C++ `STOP_INDEX_REPEAT` (SUMOVehicleParameter.h)
+const STOP_INDEX_REPEAT: i32 = -3;
 /// C++ `SPEED_EPS` (config.h.cmake), not yet ported elsewhere
 pub const SPEED_EPS: f64 = 0.01;
 thread_local! {
@@ -3645,8 +3650,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the parking-area / bus-stop / container-stop / charging-station length and access checks,
-        // the meso segment lookup and the insertion after searchStart are not ported; stops are appended
+        // shortcut: the parking-area access, too-short-stop warning, meso segment lookup, departPos-before-stop check and
+        // stopPar.tripId registration are not ported, upgrade with the parking area and departPos port
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3674,12 +3679,162 @@ impl MSBaseVehicle {
         if stopPar.arrival != -1 {
             stop.pars.arrival += untilOffset;
         }
-        let errorMsgStart = if stopPar.edge == "" { "stop".to_string() } else { format!("stop '{}'", stopPar.edge) };
+        let mut stopType = "stop".to_string();
+        let mut stopID = String::new();
+        if !stop.busstop.is_null() {
+            stopType = if stop.busstop.get_element() == SUMO_TAG_TRAIN_STOP { "trainStop".to_string() } else { "busStop".to_string() };
+            stopID = stop.busstop.get_id().to_string();
+        } else if !stop.containerstop.is_null() {
+            stopType = "containerStop".to_string();
+            stopID = stop.containerstop.get_id().to_string();
+        } else if !stop.chargingStation.is_null() {
+            stopType = "chargingStation".to_string();
+            stopID = stop.chargingStation.get_id().to_string();
+        } else if !stop.overheadWireSegment.is_null() {
+            stopType = "overheadWireSegment".to_string();
+            stopID = stop.overheadWireSegment.get_id().to_string();
+        } else if !stop.parkingarea.is_null() {
+            stopType = "parkingArea".to_string();
+            stopID = stop.parkingarea.get_id().to_string();
+        }
+        let errorMsgStart = if stopID == "" { stopType.clone() } else { format!("{} '{}'", stopType, stopID) };
+
         if stop.pars.startPos < 0.0 || stop.pars.endPos > stop.lane.get_length() {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
         }
-        self.myStops.push_back(stop);
+        if stopType == "parkingArea" && !stop.parkingarea.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
+            // forbid access in case the parking requests other badges
+            *errorMsg = format!("{}on lane '{}' forbids access because vehicle '{}' does not provide any valid badge.", errorMsgStart, stop.lane.get_id(), self.myParameter.id);
+            return false;
+        }
+        let stopLaneEdge: Ptr<MSEdge> = Ptr::new(stop.lane.get_edge());
+        let stopEdge: Ptr<MSEdge>;
+        let oppositeEdge: Ptr<MSEdge> = stopLaneEdge.get_opposite_edge();
+        if !oppositeEdge.is_null() && oppositeEdge.get_id() == stopPar.edge {
+            // stop lane is on the opposite side
+            stopEdge = oppositeEdge;
+            stop.isOpposite = true;
+        } else {
+            // if stop is on an internal edge the normal edge before the intersection is used
+            stopEdge = stopLaneEdge.get_normal_before();
+        }
+        let edges: Vec<Ptr<MSEdge>> = self.myRoute.get_edges().to_vec();
+        let nEdges = edges.len();
+        let findEdge = |from: usize, to: usize, e: Ptr<MSEdge>| -> usize { (from..to).find(|&i| edges[i] == e).unwrap_or(to) };
+        let succ: usize = self.myCurrEdge + 1;
+        // we're using the address but only within the scope of this function (and recursive calls)
+        let searchStartIdx: usize = match searchStart.get() {
+            Some(s) => *s,
+            None => {
+                if stopLaneEdge.is_normal() && !self.get_lane().is_null() && self.get_lane().is_internal() {
+                    // already on the intersection but myCurrEdge is before it
+                    succ
+                } else {
+                    self.myCurrEdge
+                }
+            }
+        };
+        stop.edge = findEdge(searchStartIdx, nEdges, stopEdge);
+        let mut prevStopEdge: usize = self.myCurrEdge;
+        let mut prevEdge: Ptr<MSEdge> = if self.get_lane().is_null() { self.get_edge() } else { Ptr::new(self.get_lane().get_edge()) };
+        let mut prevStopPos: f64 = self.get_position_on_lane();
+        // where to insert the stop
+        let mut iter: usize = 0;
+        let nStops = self.myStops.len();
+        if stopPar.index == STOP_INDEX_END || stopPar.index >= nStops as i32 || stopPar.index == STOP_INDEX_REPEAT {
+            iter = nStops;
+            if nStops > 0 && self.myStops.back().unwrap().edge >= searchStartIdx {
+                prevStopEdge = self.myStops.back().unwrap().edge;
+                prevEdge = Ptr::new(self.myStops.back().unwrap().lane.get_edge());
+                prevStopPos = self.myStops.back().unwrap().pars.endPos;
+                stop.edge = findEdge(prevStopEdge, nEdges, stopEdge);
+                if prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && (prevStopPos > stop.pars.endPos || (prevStopPos == stop.pars.endPos && stopPar.index == STOP_INDEX_REPEAT)) {
+                    stop.edge = findEdge(prevStopEdge + 1, nEdges, stopEdge);
+                }
+            }
+            // skip a number of occurences of stopEdge in looped route
+            let skipLooped = stopPar.index - nStops as i32;
+            for _j in 0..skipLooped {
+                let nextIt = findEdge(stop.edge + 1, nEdges, stopEdge);
+                if nextIt == nEdges {
+                    if findEdge(0, stop.edge, stopEdge) != stop.edge {
+                        // only warn if the route loops over the stop edge at least once
+                        *errorMsg = format!("{} for vehicle '{}' could not skip {} occurences of stop edge '{}' in looped route.", errorMsgStart, self.myParameter.id, skipLooped, stopEdge.get_id());
+                    }
+                    break;
+                } else {
+                    stop.edge = nextIt;
+                }
+            }
+        } else {
+            if stopPar.index == STOP_INDEX_FIT {
+                while iter < nStops && (self.myStops[iter].edge < stop.edge || (self.myStops[iter].pars.endPos < stop.pars.endPos && self.myStops[iter].edge == stop.edge) || (stop.lane.get_edge().is_internal() && self.myStops[iter].edge == stop.edge)) {
+                    prevStopEdge = self.myStops[iter].edge;
+                    prevStopPos = self.myStops[iter].pars.endPos;
+                    iter += 1;
+                }
+            } else {
+                let mut index = stopPar.index;
+                while index > 0 {
+                    prevStopEdge = self.myStops[iter].edge;
+                    prevStopPos = self.myStops[iter].pars.endPos;
+                    iter += 1;
+                    index -= 1;
+                }
+                stop.edge = findEdge(prevStopEdge, nEdges, stopEdge);
+            }
+        }
+        let wasTooClose = !errorMsg.is_empty() && errorMsg.contains("too close");
+        if stop.edge == nEdges {
+            if !wasTooClose {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' is not downstream the current route.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
+            }
+            return false;
+        }
+
+        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
+
+        if prevStopEdge > stop.edge
+            // a collision-stop happens after vehicle movement and may move the
+            // vehicle backwards on its lane (prevStopPos is the vehicle position)
+            || (tooClose && !stop.pars.collision)
+            || (stop.lane.get_edge().is_internal() && edges.get(stop.edge + 1).map_or(true, |next| stop.lane.get_next_normal() != *next))
+        {
+            // check if the edge occurs again later in the route
+            if tooClose && prevStopPos <= stop.pars.endPos + POSITION_EPS {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' is too close to brake.", errorMsgStart, self.myParameter.id, stopPar.lane);
+            }
+            let mut next: usize = stop.edge + 1;
+            return self.add_stop(stopPar, errorMsg, untilOffset, Ptr::from_mut(&mut next));
+        }
+        // shortcut: the departPos check for a stop on the current edge before departure is not ported
+        let endPosOffset = if stop.lane.get_edge().is_internal() { edges[stop.edge].get_length() } else { 0.0 };
+        let distToStop = stop.pars.endPos + endPosOffset - self.get_position_on_lane();
+        if stop.pars.collision && !self.handle_collision_stop(&mut stop, distToStop) {
+            return false;
+        }
+        if iter > 0 {
+            let iter2 = iter - 1;
+            if stop.get_until() >= 0 && self.myStops[iter2].get_until() > stop.get_until() && (!use_stop_ended() || self.myStops[iter2].pars.ended < 0 || stop.pars.ended >= 0) {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than previous stop at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(self.myStops[iter2].get_until()));
+            }
+            if stop.pars.arrival >= 0 && self.myStops[iter2].pars.arrival > stop.pars.arrival {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to start at {} earlier than previous stop end at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.pars.arrival), time2string(self.myStops[iter2].get_until()));
+            }
+            if stop.pars.arrival >= 0 && self.myStops[iter2].pars.arrival > stop.pars.arrival {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to start at {} earlier than previous stop arrival at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.pars.arrival), time2string(self.myStops[iter2].pars.arrival));
+            }
+        } else {
+            if stop.get_until() >= 0 && self.myParameter.depart > stop.get_until() && (!use_stop_ended() || stop.pars.ended < 0) {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than departure at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(self.myParameter.depart));
+            }
+        }
+        if stop.get_until() >= 0 && stop.get_arrival() > stop.get_until() && *errorMsg == "" {
+            *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than arrival at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(stop.get_arrival()));
+        }
+        self.set_skips(&mut stop, nStops as i32);
+        self.myStops.insert(iter, stop);
         true
     }
 
@@ -4754,8 +4909,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        // shortcut: MSRoutingEngine::getRouterTT (aggregated mode) and MSNet::getRouterTT are not ported
-        panic!("getRouterTT() needs MSRoutingEngine / MSNet router access, which is not ported yet")
+        if self.myRoutingMode == utils::traci::traci_constants::ROUTING_MODE_AGGREGATED {
+            MSRoutingEngine::get_router_tt(self.get_rng_index(), self.get_v_class(), &Default::default())
+        } else {
+            MSNet::get_instance().get_mut().unwrap().get_router_tt(self.get_rng_index(), &Default::default())
+        }
     }
 
     /// C++: `const MSEdgeWeightsStorage & MSBaseVehicle::getWeightsStorage() const` [const]
