@@ -66,28 +66,48 @@ impl std::ops::DerefMut for MEVehicle {
 use crate::utils::vehicle::sumo_traffic_object::{DEFAULT_SUMO_TRAFFIC_OBJECT_VT, SUMOTrafficObject, SUMOTrafficObjectVt};
 use crate::utils::vehicle::sumo_vehicle::{DEFAULT_SUMO_VEHICLE_VT, SUMOVehicle, SUMOVehicleVt};
 
-// SUMOTrafficObject vtable for MEVehicle (mirrors MS_VEHICLE_VT); getters not listed keep the default
+// SUMOTrafficObject vtable for MEVehicle: every entry of MS_VEHICLE_VT, routed to the MEVehicle override
+// where MEVehicle.h declares one and to the MSBaseVehicle method otherwise (the C++ override chain)
 static ME_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: me_vehicle_is_vehicle,
+    is_person: me_vehicle_is_person,
+    is_container: me_vehicle_is_container,
+    get_parameter: me_vehicle_get_parameter,
     get_edge: me_vehicle_get_edge,
     get_lane: me_vehicle_get_lane,
     get_speed: me_vehicle_get_speed,
     get_position: me_vehicle_get_position,
+    get_numerical_id: me_vehicle_get_numerical_id,
+    get_random_seed: me_vehicle_get_random_seed,
+    get_vehicle_type: me_vehicle_get_vehicle_type,
+    get_v_type_parameter: me_vehicle_get_v_type_parameter,
+    replace_vehicle_type: me_vehicle_replace_vehicle_type,
+    get_rng: me_vehicle_get_rng,
+    get_rng_index: me_vehicle_get_rng_index,
+    is_stopped: me_vehicle_is_stopped,
     get_current_edge: me_vehicle_get_current_edge,
     get_next_edge_ptr: me_vehicle_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: me_vehicle_get_upcoming_edge_i_ds,
     get_back_lane: me_vehicle_get_back_lane,
+    get_route_position: me_vehicle_get_route_position,
     get_reroute_destination: me_vehicle_get_reroute_destination,
+    replace_route: me_vehicle_replace_route,
     get_slope: me_vehicle_get_slope,
+    get_chosen_speed_factor: me_vehicle_get_chosen_speed_factor,
     get_v_class: me_vehicle_get_v_class,
+    get_routing_mode: me_vehicle_get_routing_mode,
+    set_routing_mode: me_vehicle_set_routing_mode,
     get_max_speed: me_vehicle_get_max_speed,
     get_waiting_time: me_vehicle_get_waiting_time,
+    get_previous_speed: me_vehicle_get_previous_speed,
     get_acceleration: me_vehicle_get_acceleration,
     get_position_on_lane: me_vehicle_get_position_on_lane,
     get_back_position_on_lane: me_vehicle_get_back_position_on_lane,
     get_angle: me_vehicle_get_angle,
     has_arrived: me_vehicle_has_arrived,
     has_influencer: me_vehicle_has_influencer,
-    ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT
+    is_selected: me_vehicle_is_selected,
+    get_device: me_vehicle_get_device,
 };
 
 // SUMOVehicle vtable for MEVehicle: the C++ virtuals MEVehicle overrides at SUMOVehicle level
@@ -124,6 +144,69 @@ fn me_vehicle_ref(o: &SUMOTrafficObject) -> &MEVehicle {
 }
 fn me_vehicle_is_vehicle(_: &SUMOTrafficObject) -> bool {
     true
+}
+fn me_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn me_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn me_vehicle_ref_mut(o: &mut SUMOTrafficObject) -> &mut MEVehicle {
+    Ptr::from_mut(o).cast::<MEVehicle>().get_mut().unwrap()
+}
+fn me_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    MSBaseVehicle::get_parameter(me_vehicle_ref(o))
+}
+fn me_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    me_vehicle_ref(o).get_numerical_id()
+}
+fn me_vehicle_get_random_seed(o: &SUMOTrafficObject) -> i64 {
+    me_vehicle_ref(o).get_random_seed()
+}
+fn me_vehicle_get_vehicle_type(o: &SUMOTrafficObject) -> &MSVehicleType {
+    me_vehicle_ref(o).get_vehicle_type()
+}
+fn me_vehicle_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    me_vehicle_ref(o).get_v_type_parameter()
+}
+fn me_vehicle_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    me_vehicle_ref_mut(o).replace_vehicle_type(type_)
+}
+fn me_vehicle_get_rng(o: &SUMOTrafficObject) -> Ptr<SumoRNG> {
+    me_vehicle_ref(o).get_rng()
+}
+fn me_vehicle_get_rng_index(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_rng_index()
+}
+fn me_vehicle_is_stopped(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).is_stopped()
+}
+fn me_vehicle_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    me_vehicle_ref(o).get_upcoming_edge_i_ds()
+}
+fn me_vehicle_get_route_position(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_route_position()
+}
+fn me_vehicle_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    me_vehicle_ref_mut(o).replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn me_vehicle_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_chosen_speed_factor()
+}
+fn me_vehicle_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_routing_mode()
+}
+fn me_vehicle_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    me_vehicle_ref_mut(o).set_routing_mode(value)
+}
+fn me_vehicle_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_previous_speed()
+}
+fn me_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).is_selected()
+}
+fn me_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
+    me_vehicle_ref(o).get_device(type_)
 }
 fn me_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
     me_vehicle_ref(o).get_edge()

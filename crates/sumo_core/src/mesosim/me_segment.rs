@@ -1228,13 +1228,7 @@ impl MESegment {
                 let leaderOut = self.myQueues[qi].myVehicles[0].get_event_time();
                 if !isDepart && leaderOut > tleave && self.overtake() {
                     if self.myQueues[qi].myVehicles.len() == 1 {
-                        // the overtaken car is no longer the leader and must not block foes
-                        let car0 = self.myQueues[qi].myVehicles[0];
-                        let link = self.get_link(car0, false);
-                        if !link.is_null() {
-                            link.m().remove_approaching(car0.cast::<SUMOVehicle>());
-                        }
-                        meso_net().m().remove_leader_car(car0);
+                        meso_net().m().remove_leader_car(self.myQueues[qi].myVehicles[0]);
                         newLeader = veh;
                     }
                     self.myQueues[qi].myVehicles.insert(1, veh);
