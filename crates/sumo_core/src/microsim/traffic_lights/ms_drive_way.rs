@@ -408,10 +408,6 @@ impl MSDriveWay {
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         let sveh: Ptr<SUMOVehicle> = Ptr::from_mut(veh).cast::<SUMOVehicle>();
         let mveh: Ptr<MSVehicle> = sveh.cast::<MSVehicle>();
-        if std::env::var_os("RB01_NE").is_some() {
-            let entered = if enteredLane.is_null() { String::new() } else { enteredLane.get_id().to_string() };
-            println!("NE t={} dw={} veh={} reason={} entered={} myLane={} isVeh={} usingDW={}", MSNet::get_instance().get_current_time_step(), self.base2.get_id(), sveh.get_id(), reason as i32, entered, self.myLane.get_id(), mveh.is_vehicle() as u8, MSRailSignalControl::is_using_drive_ways(mveh.get_v_class()) as u8);
-        }
         if mveh.is_vehicle() && MSRailSignalControl::is_using_drive_ways(mveh.get_v_class()) {
             let my_lane = self.myLane;
             if (enteredLane == my_lane
