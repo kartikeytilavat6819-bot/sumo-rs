@@ -47,6 +47,19 @@ pub struct MSTrafficLightLogicVt {
     pub save_state: fn(&MSTrafficLightLogic, &mut OutputDevice),
     pub load_state: fn(&mut MSTrafficLightLogic, &mut MSTLLogicControl, SUMOTime, i32, SUMOTime, SUMOTime, SUMOTime, bool),
     pub map_time_in_cycle: fn(&MSTrafficLightLogic, SUMOTime) -> SUMOTime,
+    pub decide_next_phase: fn(&mut MSTrafficLightLogic) -> i32,
+    pub can_release: fn(&mut MSTrafficLightLogic) -> bool,
+    pub compute_return_time: fn(&mut MSTrafficLightLogic) -> SUMOTime,
+}
+
+pub(crate) fn default_decide_next_phase(_: &mut MSTrafficLightLogic) -> i32 {
+    panic!("MSSOTLTrafficLightLogic::decideNextPhase is pure virtual; call it on a concrete traffic light logic")
+}
+pub(crate) fn default_can_release(_: &mut MSTrafficLightLogic) -> bool {
+    panic!("MSSOTLTrafficLightLogic::canRelease is pure virtual; call it on a concrete traffic light logic")
+}
+pub(crate) fn default_compute_return_time(_: &mut MSTrafficLightLogic) -> SUMOTime {
+    panic!("MSSOTLTrafficLightLogic::computeReturnTime is not available on this traffic light logic")
 }
 
 fn default_try_switch(_: &mut MSTrafficLightLogic) -> SUMOTime {
@@ -105,6 +118,9 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLight
     save_state: MSTrafficLightLogic::save_state_base,
     load_state: MSTrafficLightLogic::load_state_base,
     map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+    decide_next_phase: default_decide_next_phase,
+    can_release: default_can_release,
+    compute_return_time: default_compute_return_time,
 };
 
 /// The parent class for traffic light logics

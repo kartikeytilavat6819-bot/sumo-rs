@@ -2,6 +2,20 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_message;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn policy_based_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSOTLPolicyBasedTrafficLightLogic>().m().can_release()
+}
+fn policy_based_decide_next_phase(l: &mut MSTrafficLightLogic) -> i32 {
+    Ptr::from_mut(l).cast::<MSSOTLPolicyBasedTrafficLightLogic>().m().decide_next_phase()
+}
+
+static MS_SOTL_POLICY_BASED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    can_release: policy_based_can_release,
+    decide_next_phase: policy_based_decide_next_phase,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// A self-organizing traffic light logic based on a particular policy
 /// C++ class `MSSOTLPolicyBasedTrafficLightLogic` (microsim/traffic_lights/MSSOTLPolicyBasedTrafficLightLogic.h)
@@ -69,6 +83,7 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, policy: Ptr<MSSOTLPolicy>) -> Self {
         let mut base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, parameters);
+        base.base.base.vt = &MS_SOTL_POLICY_BASED_TRAFFIC_LIGHT_LOGIC_VT;
         let res = MSSOTLPolicyBasedTrafficLightLogic { base, myPolicy: policy };
         write_message(&format!("*** Intersection {} will run using MSSOTL{}TrafficLightLogic ***", id, policy.m().get_name()));
         res
@@ -87,6 +102,7 @@ impl MSSOTLPolicyBasedTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, policy: Ptr<MSSOTLPolicy>, sensors: Ptr<MSSOTLSensors>) -> Self {
         let mut base = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, parameters, sensors);
+        base.base.base.vt = &MS_SOTL_POLICY_BASED_TRAFFIC_LIGHT_LOGIC_VT;
         MSSOTLPolicyBasedTrafficLightLogic { base, myPolicy: policy }
     }
 

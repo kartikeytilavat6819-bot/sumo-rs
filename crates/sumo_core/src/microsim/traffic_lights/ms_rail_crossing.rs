@@ -1,6 +1,24 @@
 //! Port of microsim/traffic_lights/MSRailCrossing.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn rail_crossing_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().try_switch()
+}
+fn rail_crossing_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().init(nb)
+}
+fn rail_crossing_add_link(l: &mut MSTrafficLightLogic, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().add_link(link, lane, pos)
+}
+
+static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: rail_crossing_try_switch,
+    init: rail_crossing_init,
+    add_link: rail_crossing_add_link,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// A signal for rails
 /// C++ class `MSRailCrossing` (microsim/traffic_lights/MSRailCrossing.h)
@@ -53,6 +71,7 @@ impl MSRailCrossing {
         // dummy phase, used to avoid crashing in MSTrafficLightLogic::setTrafficLightSignals()
         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS), "")))));
         base.myDefaultCycleTime = 1;
+        base.base.vt = &MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT;
         Self {
             base,
             myIncomingRailLinks: Vec::new(),
@@ -178,7 +197,7 @@ self.myPhases.push(mk(openingTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_str
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
         if pos >= 0 {
-            self.base.add_link(link, lane, pos);
+            self.base.base.add_link_base(link, lane, pos);
         } else {
             self.myIncomingRailLinks.push(link);
         }

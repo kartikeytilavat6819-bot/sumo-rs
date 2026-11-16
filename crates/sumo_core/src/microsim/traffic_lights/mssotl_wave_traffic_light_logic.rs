@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLWaveTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn wave_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSOTLWaveTrafficLightLogic>().m().can_release()
+}
+
+static MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    can_release: wave_can_release,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// C++ class `MSSOTLWaveTrafficLightLogic` (microsim/traffic_lights/MSSOTLWaveTrafficLightLogic.h)
 #[repr(C)]
@@ -41,7 +51,8 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
-        let base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters);
+        let mut base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters);
+        base.base.base.vt = &MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT;
         utils::common::msg_handler::write_message(&format!("*** Intersection {} will run using MSSOTLWaveTrafficLightLogic ***", id));
         let mut s = Self { base };
         for i in 0..s.get_phase_number() {
@@ -67,7 +78,9 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, sensors: Ptr<MSSOTLSensors>) -> Self {
-        let mut s = Self { base: MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters, sensors) };
+        let mut base = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters, sensors);
+        base.base.base.vt = &MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT;
+        let mut s = Self { base };
         for i in 0..s.get_phase_number() {
             let phase = s.myPhases[i as usize];
             phase.m().lastDuration = phase.duration;

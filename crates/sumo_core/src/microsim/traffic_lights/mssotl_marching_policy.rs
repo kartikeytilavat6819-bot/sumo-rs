@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLMarchingPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn marching_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLMarchingPolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_MARCHING_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: marching_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
 
 /// Class for low-level marching policy.
 /// C++ class `MSSOTLMarchingPolicy` (microsim/traffic_lights/MSSOTLMarchingPolicy.h)
@@ -37,6 +47,7 @@ impl MSSOTLMarchingPolicy {
             base: MSSOTLPolicy::new("Marching".to_string(), parameters),
             base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
         };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
         s.init();
         s
     }
@@ -56,6 +67,7 @@ impl MSSOTLMarchingPolicy {
             base,
             base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
         };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
         s.init();
         s
     }
@@ -76,6 +88,7 @@ impl MSSOTLMarchingPolicy {
             base,
             base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
         };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
         s.init();
         s
     }
