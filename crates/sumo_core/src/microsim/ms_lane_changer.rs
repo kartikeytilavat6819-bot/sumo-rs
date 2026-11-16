@@ -156,9 +156,25 @@ impl MSLaneChanger_ChangeElem {
 
 }
 
+/// Virtual dispatch table for the polymorphic methods of MSLaneChanger.
+/// MSLaneChangerSublane installs its own table in `vt`; the base methods forward through it.
+pub struct MSLaneChangerVt {
+    pub check_change_opposite: fn(&mut MSLaneChanger, Ptr<MSVehicle>, i32, Ptr<MSLane>, &(Ptr<MSVehicle>, f64), &(Ptr<MSVehicle>, f64), &(Ptr<MSVehicle>, f64), &Vec<MSVehicle_LaneQ>) -> bool,
+}
+
+fn default_check_change_opposite(lc: &mut MSLaneChanger, vehicle: Ptr<MSVehicle>, laneOffset: i32, targetLane: Ptr<MSLane>, leader: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), preb: &Vec<MSVehicle_LaneQ>) -> bool {
+    lc.check_change_opposite_base(vehicle, laneOffset, targetLane, leader, neighLead, neighFollow, preb)
+}
+
+static DEFAULT_MS_LANE_CHANGER_VT: MSLaneChangerVt = MSLaneChangerVt {
+    check_change_opposite: default_check_change_opposite,
+};
+
 /// Performs lane changing of vehicles
 /// C++ class `MSLaneChanger` (microsim/MSLaneChanger.h)
 pub struct MSLaneChanger {
+    /// Virtual dispatch table; first field because this root class has no base
+    pub vt: &'static MSLaneChangerVt,
     /// Container for ChangeElemements, one for every lane in the edge.
     pub myChanger: MSLaneChanger_Changer,
     /// Change-candidate. Last of the vehicles in changer. Only this one will try to change. Every vehicle on the edge will be a candidate once in the change-process.
@@ -205,6 +221,7 @@ impl MSLaneChanger {
     #[allow(unused_variables)]
     pub fn new(lanes: Ptr<Vec<Ptr<MSLane>>>, allowChanging: bool) -> Self {
         let mut changer = MSLaneChanger {
+            vt: &DEFAULT_MS_LANE_CHANGER_VT,
             myChanger: Vec::with_capacity(lanes.len()),
             myCandi: 0,
             myAllowsChanging: allowChanging,
@@ -2341,8 +2358,12 @@ impl MSLaneChanger {
     // #endif
     //     return false;
     // }
-    #[allow(unused_variables)]
     pub fn check_change_opposite(&mut self, vehicle: Ptr<MSVehicle>, laneOffset: i32, targetLane: Ptr<MSLane>, leader: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), preb: &Vec<MSVehicle_LaneQ>) -> bool {
+        (self.vt.check_change_opposite)(self, vehicle, laneOffset, targetLane, leader, neighLead, neighFollow, preb)
+    }
+
+    #[allow(unused_variables)]
+    pub fn check_change_opposite_base(&mut self, vehicle: Ptr<MSVehicle>, laneOffset: i32, targetLane: Ptr<MSLane>, leader: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), preb: &Vec<MSVehicle_LaneQ>) -> bool {
         let isOpposite = vehicle.get_lane_change_model_2().is_opposite();
         let source = vehicle.get_mutable_lane();
         let follower: (Ptr<MSVehicle>, f64) = (Ptr::null(), -1.0);
@@ -4225,6 +4246,7 @@ impl MSLaneChanger {
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
         MSLaneChanger {
+            vt: &DEFAULT_MS_LANE_CHANGER_VT,
             myChanger: Vec::new(),
             myCandi: 0,
             myAllowsChanging: false,
@@ -4241,6 +4263,7 @@ impl MSLaneChanger {
         // shortcut: private C++ copy constructor is never called; ChangeElem is not Clone in this port, so the copy starts with an empty changer
         let _ = arg0;
         MSLaneChanger {
+            vt: &DEFAULT_MS_LANE_CHANGER_VT,
             myChanger: Vec::new(),
             myCandi: 0,
             myAllowsChanging: arg0.myAllowsChanging,
