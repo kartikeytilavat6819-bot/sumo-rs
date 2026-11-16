@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/reroute_contention/bypass.nod.xml --edge-files tools/oracle/cases/reroute_contention/bypass.edg.xml --connection-files tools/oracle/cases/reroute_contention/bypass.con.xml
