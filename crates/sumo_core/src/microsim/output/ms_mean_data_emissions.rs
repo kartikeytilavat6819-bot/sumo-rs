@@ -248,11 +248,10 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
             return;
         }
         if veh.is_vehicle() {
-            // shortcut: static_cast<const SUMOVehicle&>(veh) needs a SUMOTrafficObject downcast (not ported); uses the vehicle type's energy parameters, upgrade when that downcast exists
             self.sampleSeconds += arg1;
             self.travelledDistance += travelledDistanceFrontOnLane;
             let a = veh.get_acceleration();
-            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), arg3, a, veh.get_slope(), veh.get_vehicle_type().get_emission_parameters());
+            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), arg3, a, veh.get_slope(), Ptr::new(veh).cast::<SUMOVehicle>().m().get_emission_parameters());
             self.myEmissions.add_scaled(&e, arg1);
         }
     }
@@ -271,8 +270,7 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     #[allow(unused_variables)]
     pub fn notify_idle(&mut self, veh: &mut SUMOTrafficObject) -> bool {
         if veh.is_vehicle() {
-            // shortcut: static_cast<const SUMOVehicle&>(veh) needs a SUMOTrafficObject downcast (not ported); uses the vehicle type's energy parameters, upgrade when that downcast exists
-            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), 0.0, 0.0, 0.0, veh.get_vehicle_type().get_emission_parameters());
+            let e = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), 0.0, 0.0, 0.0, Ptr::from_mut(veh).cast::<SUMOVehicle>().m().get_emission_parameters());
             self.myEmissions.add_scaled(&e, ts());
         }
         true
