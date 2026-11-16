@@ -2627,7 +2627,7 @@ impl MSLaneChanger {
         // or a follower which is partially lapping into the target lane
         neighFollow = MSLaneChanger::get_closer_follower(candiPos, neighFollow, targetLane.get_partial_behind(vehicle));
         if neighFollow.is_null() {
-            let consecutiveFollower = targetLane.get_followers_on_consecutive(vehicle, vehicle.get_back_position_on_lane_2(), true, -1.0, MSLane_MinorLinkMode::FOLLOW_NEVER, false).index_op(0);
+            let consecutiveFollower = targetLane.get_followers_on_consecutive(vehicle, vehicle.get_back_position_on_lane_2(), true, -1.0, MSLane_MinorLinkMode::FOLLOW_ALWAYS, false).index_op(0);
             return (consecutiveFollower.0, consecutiveFollower.1);
         } else {
             return (neighFollow, vehicle.get_position_on_lane() - vehicle.get_vehicle_type().get_length() - neighFollow.get_position_on_lane() - neighFollow.get_vehicle_type().get_min_gap());
