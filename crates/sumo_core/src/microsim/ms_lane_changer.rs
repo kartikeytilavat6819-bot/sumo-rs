@@ -2392,10 +2392,16 @@ impl MSLaneChanger {
                 }
             }
         }
+        // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) is not ported; upgrade with MSLink approach API
+        let oldstate = state;
+        // let TraCI influence the wish to change lanes and the security to take
+        state = vehicle.m().influence_change_decision(state);
+        blocked = state & LCA_BLOCKED;
         if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
             blocked = vehicle.get_lane_change_model_2().check_change_before_committing(vehicle, state);
             state |= blocked;
         }
+        vehicle.m().get_lane_change_model().save_lc_state(laneOffset, oldstate, state);
         if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
             // this lane change will be executed, save gaps
             let lcm = vehicle.m().get_lane_change_model();
@@ -2406,7 +2412,6 @@ impl MSLaneChanger {
         if laneOffset != 0 {
             vehicle.m().get_lane_change_model().save_neighbors_2(laneOffset, neighFollow, neighLead);
         }
-        // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) is not ported; upgrade with MSLink approach API
         state
     }
 

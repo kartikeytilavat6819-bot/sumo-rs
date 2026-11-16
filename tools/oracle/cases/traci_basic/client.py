@@ -22,6 +22,8 @@ from traci.exceptions import TraCIException
 CASE = Path(__file__).resolve().parent
 CASES_DIR = CASE.parent
 DEFAULT_OURS = Path(os.environ.get("CARGO_TARGET_DIR", "C:/Users/karti/sumo-rs-target")) / "debug" / "sumo.exe"
+# Linux runner (Kaggle): official binary dir, run directly instead of through WSL
+PRISTINE_BIN = os.environ.get("SUMO_PRISTINE_BIN")
 
 
 def warn_if_stale(ours: Path) -> None:
@@ -62,6 +64,9 @@ def wsl_path(p):
 def sumo_command(side, port, net, rou, ours):
     if side == "ours":
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
+                "--no-step-log", "true", "--no-warnings", "true"]
+    if PRISTINE_BIN:
+        return [f"{PRISTINE_BIN}/sumo", "-n", str(net), "-r", str(rou), "--remote-port", str(port),
                 "--no-step-log", "true", "--no-warnings", "true"]
     # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
     inner = (f"SUMO_HOME=$($HOME/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)') "
@@ -648,15 +653,24 @@ def run_probe(side, port, net, rou, ours, fn):
                 proc.kill()
 
 
-def run_side(side, port, ours, case):
+def kill_cpp():
+    cmd = "pkill -f 'bin/sumo' || true"
+    if PRISTINE_BIN:
+        subprocess.run(["bash", "-c", cmd], capture_output=True)
+    else:
+        subprocess.run(["wsl", "-e", "bash", "-lc", cmd], capture_output=True)
+
+
+def run_side(side, port, ours, case, flt=()):
     net, rou = CASES_DIR / case / "ref_simple.net.xml", CASES_DIR / case / "routes.rou"
     lane, tl_id = CASE_PARAMS[case]
     out = {}
-    for i, (label, fn) in enumerate(probes(lane, tl_id).items()):
+    picked = [(l, f) for l, f in probes(lane, tl_id).items() if not flt or any(s in l for s in flt)]
+    for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
         out[label] = run_probe(side, port + i, net, rou, ours, fn)
         if side == "cpp":
-            subprocess.run(["wsl", "-e", "bash", "-lc", "pkill -f 'bin/sumo' || true"], capture_output=True)
+            kill_cpp()
         time.sleep(0.5)
     return out
 
@@ -667,17 +681,19 @@ def main():
     ap.add_argument("--case", default="all", choices=sorted(CASE_PARAMS) + ["all"])
     ap.add_argument("--ours", default=str(DEFAULT_OURS))
     ap.add_argument("--port", type=int, default=8813)
+    ap.add_argument("--filter", default="", help="comma-separated substrings; only probes whose label contains one run")
     a = ap.parse_args()
     warn_if_stale(Path(a.ours))
+    flt = tuple(s for s in a.filter.split(",") if s)
 
     if a.only:
-        print(json.dumps(run_side(a.only, a.port, a.ours, a.case), indent=2))
+        print(json.dumps(run_side(a.only, a.port, a.ours, a.case, flt), indent=2))
         return 0
 
     total = bad_total = 0
     for case in ([a.case] if a.case != "all" else sorted(CASE_PARAMS)):
-        cpp = run_side("cpp", a.port, a.ours, case)
-        ours = run_side("ours", a.port, a.ours, case)
+        cpp = run_side("cpp", a.port, a.ours, case, flt)
+        ours = run_side("ours", a.port, a.ours, case, flt)
         print(f"[{case}] {'command':<42} {'C++':<38} {'ours':<38} verdict")
         bad = 0
         for label in cpp:
