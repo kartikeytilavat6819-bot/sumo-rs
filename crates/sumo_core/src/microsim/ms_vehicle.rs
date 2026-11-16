@@ -14976,18 +14976,13 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn ignore_red(&self, link: Ptr<MSLink>, canBrake: bool) -> bool {
-        let ignoreRedTime = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME, -1.0);
-        if ignoreRedTime < 0.0 {
-            // always drive at yellow when ignoring red
+        if !self.myInfluencer.is_null() && !self.myInfluencer.get_emergency_brake_red_light() {
             return true;
-        } else if link.have_red() {
-            debug_assert!(!link.get_tl_logic().is_null());
-            let redDuration = steps2time(MSNet::get_instance().get_current_time_step() - link.get_last_state_change());
-            // when activating ignoreRed behavior, vehicles will always drive if they cannot brake
-            return !canBrake || ignoreRedTime > redDuration;
-        } else {
-            return false;
         }
+        let ignoreRedTime = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME, -1.0);
+        let ignoreYellowTime = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME, 0.0);
+        let elapsed = steps2time(MSNet::get_instance().get_current_time_step() - link.get_last_state_change());
+        ignore_red_decision(ignoreRedTime, ignoreYellowTime, link.have_yellow(), link.have_red(), elapsed, canBrake)
     }
 
     /// C++: `bool MSVehicle::ignoreFoe(const SUMOTrafficObject *) const` [const]
@@ -16945,6 +16940,45 @@ impl MSVehicle_WaitingTimeCollector {
         }
     }
 
+}
+
+/// Branch logic of C++ `MSVehicle::ignoreRed(link, canBrake)` after the influencer check
+fn ignore_red_decision(ignoreRedTime: f64, ignoreYellowTime: f64, haveYellow: bool, haveRed: bool, elapsed: f64, canBrake: bool) -> bool {
+    if ignoreRedTime < 0. {
+        if ignoreYellowTime > 0. && haveYellow {
+            // when activating ignoreYellow behavior, vehicles will drive if they cannot brake
+            return !canBrake || ignoreYellowTime > elapsed;
+        }
+        false
+    } else if haveYellow {
+        // always drive at yellow when ignoring red
+        true
+    } else if haveRed {
+        // when activating ignoreRed behavior, vehicles will always drive if they cannot brake
+        !canBrake || ignoreRedTime > elapsed
+    } else {
+        false
+    }
+}
+
+#[cfg(test)]
+mod ignore_red_tests {
+    use super::*;
+
+    #[test]
+    fn unset_drive_after_red_time_does_not_ignore_non_tl_link() {
+        // C++ default jmDriveAfterRedTime=-1 on a priority link without a traffic light: must brake, not drive
+        assert!(!ignore_red_decision(-1., 0., false, false, 0., true));
+    }
+
+    #[test]
+    fn ignore_red_time_drives_through_yellow_and_red_only_when_unable_to_brake_or_expired() {
+        assert!(ignore_red_decision(5., 0., true, false, 0., true));
+        assert!(ignore_red_decision(5., 0., false, true, 2., true));
+        assert!(ignore_red_decision(5., 0., false, true, 2., false));
+        assert!(!ignore_red_decision(5., 0., false, true, 6., true));
+        assert!(ignore_red_decision(5., 0., false, true, 6., false));
+    }
 }
 
 #[cfg(test)]
