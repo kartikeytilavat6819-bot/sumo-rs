@@ -456,7 +456,7 @@ impl NBLoadedTLDef {
         logic.m().close_building(true);
 
         // initialize myNeedsContRelation
-        self.myNeedsContRelation.clear();
+        self.myNeedsContRelation.borrow_mut().clear();
         let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
         let states: Vec<String> = logic.get_phases().iter().map(|p| p.state.clone()).collect();
         let links = Ptr::new(&self.myControlledLinks);
@@ -484,7 +484,7 @@ impl NBLoadedTLDef {
                             c2.get_from_lane(),
                         );
                         if self.forbids(c2.get_from(), c2.get_to(), c1.get_from(), c1.get_to(), true, controlledWithin) || rightTurnConflict {
-                            self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                            self.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(
                                 c1.get_from(),
                                 c1.get_to(),
                                 c2.get_from(),
