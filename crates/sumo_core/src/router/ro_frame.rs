@@ -263,7 +263,7 @@ impl ROFrame {
         oc.add_description("phemlight-path", "Input", "Determines where to load PHEMlight definitions from");
 
         oc.do_register("phemlight-year", SumoOption::integer(0));
-        oc.add_description("phemlight-year", "Input", "Enable fleet age modeling with the given reference year in PHEMlight5");
+        oc.add_description("phemlight-year", "Input", "Enable fleet age modelling with the given reference year in PHEMlight5");
 
         oc.do_register("phemlight-temperature", SumoOption::float(utils::common::std_defs::INVALID_DOUBLE));
         oc.add_description("phemlight-temperature", "Input", "Set ambient temperature to correct NOx emissions in PHEMlight5");
