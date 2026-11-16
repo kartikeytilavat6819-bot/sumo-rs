@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-// shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so E2 detectors cannot be looked up by id yet; upgrade when detector control is ported
+// shortcut: the lookup is get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR)[id] downcast from MSDetectorFileOutput to MSE2Collector, but MSDetectorFileOutput is MSE2Collector's second base (MSMoveReminder is first), so a plain Ptr::cast is wrong; upgrade when a base-offset-aware downcast exists
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
     panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
 }
