@@ -320,11 +320,12 @@ pub struct MSLane {
     pub myRestrictions: Ptr<BTreeMap<SUMOVehicleClass, f64>>,
     /// All direct predecessor lanes
     pub myIncomingLanes: Vec<MSLane_IncomingLaneInfo>,
-    pub myLogicalPredecessorLane: Ptr<MSLane>,
+    /// Lazily cached by get_logical_predecessor_lane(&self), hence Cell (interior mutability).
+    pub myLogicalPredecessorLane: std::cell::Cell<Ptr<MSLane>>,
     /// Similar to LogicalPredecessorLane,
-    pub myCanonicalPredecessorLane: Ptr<MSLane>,
+    pub myCanonicalPredecessorLane: std::cell::Cell<Ptr<MSLane>>,
     /// Main successor lane,
-    pub myCanonicalSuccessorLane: Ptr<MSLane>,
+    pub myCanonicalSuccessorLane: std::cell::Cell<Ptr<MSLane>>,
     /// The current length of all vehicles on this lane, including their minGaps
     pub myBruttoVehicleLengthSum: f64,
     /// The current length of all vehicles on this lane, excluding their minGaps
@@ -587,9 +588,9 @@ impl MSLane {
             myOriginalPermissions: permissions,
             myRestrictions: Ptr::null(),
             myIncomingLanes: Vec::new(),
-            myLogicalPredecessorLane: Ptr::null(),
-            myCanonicalPredecessorLane: Ptr::null(),
-            myCanonicalSuccessorLane: Ptr::null(),
+            myLogicalPredecessorLane: std::cell::Cell::new(Ptr::null()),
+            myCanonicalPredecessorLane: std::cell::Cell::new(Ptr::null()),
+            myCanonicalSuccessorLane: std::cell::Cell::new(Ptr::null()),
             myBruttoVehicleLengthSum: 0.,
             myNettoVehicleLengthSum: 0.,
             myBruttoVehicleLengthSumToRemove: 0.,
@@ -6672,8 +6673,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_logical_predecessor_lane(&self) -> Ptr<MSLane> {
-        if self.myLogicalPredecessorLane.is_null() {
-            let me = Ptr::new(self);
+        if self.myLogicalPredecessorLane.get().is_null() {
             let mut pred: MSEdgeVector = self.myEdge.get_predecessors().clone();
             // get only those edges which connect to this lane
             pred.retain(|i| {
@@ -6695,10 +6695,10 @@ impl MSLane {
                 });
                 let best = pred[0];
                 let j = self.myIncomingLanes.iter().find(|ili| MSLane_edge_finder::new(best).call_op(ili)).unwrap();
-                me.m().myLogicalPredecessorLane = j.lane;
+                self.myLogicalPredecessorLane.set(j.lane);
             }
         }
-        self.myLogicalPredecessorLane
+        self.myLogicalPredecessorLane.get()
     }
 
     /// C++: `const MSLane * MSLane::getNormalPredecessorLane() const` [const]
@@ -6786,8 +6786,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_canonical_predecessor_lane(&self) -> Ptr<MSLane> {
-        if !self.myCanonicalPredecessorLane.is_null() {
-            return self.myCanonicalPredecessorLane;
+        if !self.myCanonicalPredecessorLane.get().is_null() {
+            return self.myCanonicalPredecessorLane.get();
         }
         if self.myIncomingLanes.is_empty() {
             return Ptr::null();
@@ -6804,7 +6804,7 @@ impl MSLane {
         }
         // shortcut: C++ takes myLeaderInfoMutex (ScopedLocker) here, omitted as the port runs single-threaded, upgrade when gNumSimThreads > 1 is supported
         let bestLane = self.myIncomingLanes[best].lane;
-        Ptr::new(self).m().myCanonicalPredecessorLane = bestLane;
+        self.myCanonicalPredecessorLane.set(bestLane);
         bestLane
     }
 
@@ -6831,8 +6831,8 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_canonical_successor_lane(&self) -> Ptr<MSLane> {
-        if !self.myCanonicalSuccessorLane.is_null() {
-            return self.myCanonicalSuccessorLane;
+        if !self.myCanonicalSuccessorLane.get().is_null() {
+            return self.myCanonicalSuccessorLane.get();
         }
         if self.myLinks.is_empty() {
             return Ptr::null();
@@ -6847,7 +6847,7 @@ impl MSLane {
             }
         }
         let bestLane = self.myLinks[best].get_via_lane_or_lane();
-        Ptr::new(self).m().myCanonicalSuccessorLane = bestLane;
+        self.myCanonicalSuccessorLane.set(bestLane);
         bestLane
     }
 

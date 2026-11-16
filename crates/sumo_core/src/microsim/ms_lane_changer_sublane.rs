@@ -1082,7 +1082,7 @@ impl MSLaneChangerSublane {
         for p in vehicle.m().myFurtherLanesPosLat.iter_mut() {
             *p += latDist * sign;
         }
-        vehicle.m().myCachedPosition = Position::INVALID;
+        vehicle.m().myCachedPosition.set(Position::INVALID);
         vehicle.m().get_lane_change_model().set_speed_lat(dist2speed(latDist));
 
         let completedPriorManeuver = vehicle.get_lane_change_model_2().get_previous_maneuver_dist().abs() < utils::geom::NUMERICAL_EPS;

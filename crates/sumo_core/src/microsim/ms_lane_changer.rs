@@ -2468,7 +2468,7 @@ impl MSLaneChanger {
         let pastMidpoint = lcm.update_completion(); // computes lcm.mySpeedLat as a side effect
         let speedLat = if lcm.is_opposite() { -lcm.get_speed_lat() } else { lcm.get_speed_lat() };
         vehicle.m().myState.myPosLat += speed2dist(speedLat);
-        vehicle.m().myCachedPosition = Position::INVALID;
+        vehicle.m().myCachedPosition.set(Position::INVALID);
         if pastMidpoint {
             let source = self.myChanger[self.myCandi].lane;
             let target = source.get_parallel_lane(direction, true);
