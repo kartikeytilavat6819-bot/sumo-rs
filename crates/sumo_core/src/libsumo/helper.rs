@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use std::cell::Cell;
 use utils::geom::geom_helper;
+use crate::libsumo::variable_wrapper::VariableWrapperSink;
 
 // shortcut: C++ `throw TraCIException(msg)` is `panic!("{}", msg)` in this file (the TraCI server catches panics per command).
 
@@ -83,7 +84,7 @@ fn copy_subscription(s: &Subscription) -> Subscription {
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (std::make_shared<TraCIDouble>(...) stored as a base pointer)
 // shortcut: relies on #[repr(C)] with `base: TraCIResult` first on the TraCIResult subclasses in tra_ci_defs.rs, add it there
-fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
+pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }
 }
@@ -121,6 +122,15 @@ pub struct Helper {
 //   static std::map<std::string, MSPerson *> Helper::myRemoteControlledPersons;
 
 impl Helper {
+    /// C++: `std::make_shared<Helper::SubscriptionWrapper>(handler, into, context)`; the wrapper is its own sink
+    pub fn make_subscription_wrapper(handler: VariableWrapper_SubscriptionHandler, into: &mut SubscriptionResults, context: &mut ContextSubscriptionResults) -> Rc<VariableWrapper> {
+        let mut rc = Rc::new(Helper_SubscriptionWrapper::new(handler, into, context));
+        let raw: *mut Helper_SubscriptionWrapper = Rc::get_mut(&mut rc).unwrap();
+        unsafe { (*raw).base.set_sink(raw as *mut dyn VariableWrapperSink) };
+        let p = Rc::into_raw(rc) as *const VariableWrapper;
+        unsafe { Rc::from_raw(p) }
+    }
+
     /// C++: `void Helper::subscribe(const int, const std::string &, const std::vector<int> &, const double, const double, const libsumo::TraCIResults &, const int, const double)` [static]
     // void
     // Helper::subscribe(const int commandId, const std::string& id, const std::vector<int>& variables,
@@ -3328,8 +3338,11 @@ impl Helper {
                         container.m().empty(objID);
                     } else {
                         Ptr::new(&*s.parameters[k]).m().reset_pos();
-                        // shortcut: VariableWrapper::handle is Unmapped (), the variable handler dispatch is not ported yet
-                        panic!("shortcut: VariableWrapper::handle is Unmapped, cannot dispatch variable {}", to_hex(variable as u64, 2, 8));
+                        let handle = handler.handle.expect("VariableWrapper::handle is nullptr");
+                        if !handle(objID, variable, container, Ptr::new(&*s.parameters[k])) {
+                            panic!("Unsupported variable {} specified", to_hex(variable as u64, 2, 8));
+                        }
+                        k += 1;
                     }
                 }
             } else if s.contextDomain > 0 {
@@ -3466,6 +3479,88 @@ impl std::ops::Deref for Helper_SubscriptionWrapper {
 impl std::ops::DerefMut for Helper_SubscriptionWrapper {
     fn deref_mut(&mut self) -> &mut VariableWrapper {
         &mut self.base
+    }
+}
+
+/// The `VariableWrapper::wrap*` virtuals of C++ `Helper::SubscriptionWrapper`; slice arguments are copied into the Vec-typed inherent methods
+impl VariableWrapperSink for Helper_SubscriptionWrapper {
+    fn set_context(&mut self, refID: Ptr<String>) {
+        Helper_SubscriptionWrapper::set_context(self, refID)
+    }
+    fn clear(&mut self) {
+        Helper_SubscriptionWrapper::clear(self)
+    }
+    fn empty(&mut self, objID: &str) {
+        Helper_SubscriptionWrapper::empty(self, objID)
+    }
+    fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &[TraCIConnection]) -> bool {
+        Helper_SubscriptionWrapper::wrap_connection_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        Helper_SubscriptionWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        Helper_SubscriptionWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        Helper_SubscriptionWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &[String]) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &[f64]) -> bool {
+        Helper_SubscriptionWrapper::wrap_double_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
+        Helper_SubscriptionWrapper::wrap_position(self, objID, variable, value)
+    }
+    fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
+        Helper_SubscriptionWrapper::wrap_position_vector(self, objID, variable, value)
+    }
+    fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
+        Helper_SubscriptionWrapper::wrap_color(self, objID, variable, value)
+    }
+    fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_double_pair(self, objID, variable, value)
+    }
+    fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &[(String, f64)]) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_double_pair_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_pair(self, objID, variable, value)
+    }
+    fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
+        Helper_SubscriptionWrapper::wrap_int_pair(self, objID, variable, value)
+    }
+    fn wrap_stage(&mut self, objID: &str, variable: i32, value: &TraCIStage) -> bool {
+        Helper_SubscriptionWrapper::wrap_stage(self, objID, variable, value)
+    }
+    fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &[TraCIReservation]) -> bool {
+        Helper_SubscriptionWrapper::wrap_reservation_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &[TraCILogic]) -> bool {
+        Helper_SubscriptionWrapper::wrap_logic_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &[Vec<TraCILink>]) -> bool {
+        Helper_SubscriptionWrapper::wrap_link_vector_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &[TraCISignalConstraint]) -> bool {
+        Helper_SubscriptionWrapper::wrap_signal_constraint_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &[TraCIJunctionFoe]) -> bool {
+        Helper_SubscriptionWrapper::wrap_junction_foe_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextStopData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_next_stop_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIVehicleData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_vehicle_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIBestLanesData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_best_lanes_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextTLSData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_next_tls_data_vector(self, objID, variable, &value.to_vec())
     }
 }
 
