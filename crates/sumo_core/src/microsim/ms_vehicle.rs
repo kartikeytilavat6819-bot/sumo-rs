@@ -9992,6 +9992,7 @@ impl MSVehicle {
                         response = logic.get_response_for(link.get_index()).test(foeLink.get_index());
                         response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index());
                     }
+                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 303000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("ISLR t={} veh={} response={} response2={} linkIdx={} foeLinkIdx={} entryPrio={} foePrio={} entryRed={} foeRed={} entryYel={} foeYel={}", MSNet::get_instance().get_current_time_step(), veh.get_id(), response, response2, link.get_index(), foeLink.get_index(), entry.have_priority(), foeEntry.have_priority(), entry.have_red(), foeEntry.have_red(), entry.have_yellow(), foeEntry.have_yellow()); }
                     if !response {
                         // if we have right of way over the foe, entryTime does not matter
                         foeET = veh.myJunctionConflictEntryTime;
