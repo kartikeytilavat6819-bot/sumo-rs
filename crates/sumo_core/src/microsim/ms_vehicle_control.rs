@@ -1720,9 +1720,12 @@ impl MSVehicleControl {
     pub fn init_vehicle(&mut self, built: Ptr<MSBaseVehicle>, ignoreStopErrors: bool, addRouteStops: bool, source: MSVehicleControl_VehicleDefinitionSource) {
         self.myLoadedVehNo += 1;
         // shortcut: C++ catches ProcessError here only to delete `built` and rethrow; the error propagates unchanged and `built` is leaked
-        // C++ calls the virtual initDevices(); there is no MSBaseVehicle vtable yet, and every object in this
-        // control is an MSVehicle, so the cast is the same dispatch the virtual would perform.
-        built.cast::<MSVehicle>().m().init_devices();
+        // C++ calls the virtual initDevices(); MEVehicle does not override it, so meso vehicles get MSBaseVehicle's
+        if crate::microsim::ms_globals::use_meso_sim() {
+            built.m().init_devices();
+        } else {
+            built.cast::<MSVehicle>().m().init_devices();
+        }
         if source != MSVehicleControl_VehicleDefinitionSource::STATE {
             built.m().add_stops(ignoreStopErrors, Ptr::null(), addRouteStops);
         }

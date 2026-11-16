@@ -18,6 +18,7 @@ d=tools/oracle/cases/meso_junction
 echo "--- junction trace (first 30 TRACE lines)"
 mkdir -p /tmp/mo/trace
 MESO_TRACE=1 timeout 60 $BIN/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --no-step-log true $(cat $d/sim.args) \
+    --tripinfo-output /tmp/mo/trace/ti.xml \
     --end 4 > /tmp/mo/trace/log 2>&1
 grep TRACE /tmp/mo/trace/log | head -30 | cut -c1-220
 echo "--- junction trace panics/errors"
