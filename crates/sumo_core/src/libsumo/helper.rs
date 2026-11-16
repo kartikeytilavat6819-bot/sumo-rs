@@ -875,8 +875,8 @@ impl Helper {
     // }
     #[allow(unused_variables)]
     pub fn build_stop_parameters(edgeOrStoppingPlaceID: &str, pos: f64, laneIndex: i32, startPos: f64, flags: i32, duration: f64, until: f64) -> SUMOVehicleParameter_Stop {
-        // shortcut: SUMOVehicleParameter::Stop has no Rust default constructor yet (C++ `Stop newStop;`), add one in sumo_vehicle_parameter.rs
-    let mut newStop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter::Stop default constructor is not ported yet");
+        let mut startPos = startPos;
+        let mut newStop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
         if !check_time_bounds(duration) || !check_time_bounds(until) {
             panic!("Duration or until parameter exceed the time value range.");
         }

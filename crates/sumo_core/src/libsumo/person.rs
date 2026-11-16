@@ -516,8 +516,15 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: MSTransportableControl::loadedBegin/End return an Unmapped map iterator, so the id list cannot be built yet; upgrade when the transportable dict iterator is mapped
-        panic!("getIDList not yet ported: MSTransportableControl loaded iterator is unmapped")
+        let mut ids = Vec::new();
+        let net = MSNet::get_instance();
+        let c = net.m().get_person_control();
+        for (id, t) in c.myTransportables.iter() {
+            if t.get_current_stage_type() != MSStageType::WAITING_FOR_DEPART {
+                ids.push(id.clone());
+            }
+        }
+        ids
     }
 
     /// C++: `int Person::getIDCount()` [static]

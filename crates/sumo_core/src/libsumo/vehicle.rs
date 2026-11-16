@@ -1595,8 +1595,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn get_loaded_id_list() -> Vec<String> {
-        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
-        panic!("getLoadedIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        c.myVehicleDict.keys().cloned().collect()
     }
 
     /// C++: `std::vector<std::string> Vehicle::getTeleportingIDList()` [static]
@@ -1614,8 +1615,15 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn get_teleporting_id_list() -> Vec<String> {
-        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
-        panic!("getTeleportingIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
+        let mut ids = Vec::new();
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        for veh in c.myVehicleDict.values() {
+            if veh.has_departed() && !Self::is_visible(*veh) {
+                ids.push(veh.get_id().to_string());
+            }
+        }
+        ids
     }
 
     /// C++: `std::vector<std::string> Vehicle::getIDList()` [static]
@@ -1633,8 +1641,15 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: MSVehicleControl::loadedVehBegin/End return an Unmapped map iterator (ms_vehicle_control.rs), so the id list cannot be built yet; upgrade when the vehicle dict iterator is mapped
-        panic!("getIDList not yet ported: MSVehicleControl loaded vehicle iterator is unmapped")
+        let mut ids = Vec::new();
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        for (id, veh) in c.myVehicleDict.iter() {
+            if Self::is_visible(*veh) {
+                ids.push(id.clone());
+            }
+        }
+        ids
     }
 
     /// C++: `int Vehicle::getIDCount()` [static]
