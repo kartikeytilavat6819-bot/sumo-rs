@@ -1,6 +1,7 @@
 //! Port of utils/router/AStarLookupTable.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterVehicle;
 use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::to_string::format_g;
 use utils::common::util_exceptions::ProcessError;
@@ -143,7 +144,7 @@ impl<E, V, M> std::ops::DerefMut for LandmarkLookupTable<E, V, M> {
     }
 }
 
-impl<E, V, M> LandmarkLookupTable<E, V, M> {
+impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
     /// C++: `void LandmarkLookupTable::LandmarkLookupTable<E, V, M>(const std::string &, const std::vector<E *> &, SUMOAbstractRouter<E, V> *, SUMOAbstractRouter<ReversedEdge<E, V>, V> *, const V *, const std::string &, const int, M *)`
     // LandmarkLookupTable(const std::string& filename, const std::vector<E*>& edges, SUMOAbstractRouter<E, V>* router,
     //                         SUMOAbstractRouter<ReversedEdge<E, V>, V>* reverseRouter,
@@ -395,7 +396,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V>, V: crate::utils::router::router_edge::RouterVehicle {
+    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V> {
         let mut s = Self {
             base: AbstractLookupTable { _p: std::marker::PhantomData },
             myLandmarks: BTreeMap::new(),
@@ -721,7 +722,7 @@ pub enum AStarLookupTableKind<E, V, M> {
     Landmark(LandmarkLookupTable<E, V, M>),
 }
 
-impl<E: RouterEdge<V>, V, M> AStarLookupTableKind<E, V, M> {
+impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarLookupTableKind<E, V, M> {
     pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
         match self {
             AStarLookupTableKind::Full(t) => t.lower_bound(from, to, speed, speedFactor, fromEffort, toEffort),

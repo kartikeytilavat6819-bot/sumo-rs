@@ -875,8 +875,8 @@ impl Helper {
     // }
     #[allow(unused_variables)]
     pub fn build_stop_parameters(edgeOrStoppingPlaceID: &str, pos: f64, laneIndex: i32, startPos: f64, flags: i32, duration: f64, until: f64) -> SUMOVehicleParameter_Stop {
-        // shortcut: SUMOVehicleParameter::Stop has no Rust default constructor yet (C++ `Stop newStop;`), add one in sumo_vehicle_parameter.rs
-    let mut newStop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter::Stop default constructor is not ported yet");
+        let mut startPos = startPos;
+        let mut newStop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
         if !check_time_bounds(duration) || !check_time_bounds(until) {
             panic!("Duration or until parameter exceed the time value range.");
         }
@@ -2244,6 +2244,17 @@ impl Helper {
             MSNet::get_instance().m().add_vehicle_state_listener(Ptr::from_mut(&mut my_vehicle_state_listener().base));
             MSNet::get_instance().m().add_transportable_state_listener(Ptr::from_mut(&mut my_transportable_state_listener().base));
         }
+    }
+
+    /// Identifies the Helper listener for MSNet's dispatch: the base listener has no vtable, so MSNet cannot
+    /// reach the Helper override through the base pointer; the Helper base sits at offset 0 (repr(C)).
+    pub fn is_vehicle_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+        std::ptr::eq(listener, &mut my_vehicle_state_listener().base)
+    }
+
+    /// C++: `Helper::VehicleStateListener::vehicleStateChanged` [virtual], reached by MSNet via `is_vehicle_state_listener`
+    pub fn vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+        my_vehicle_state_listener().vehicle_state_changed(vehicle, to, info);
     }
 
     /// C++: `const std::vector<std::string> & Helper::getVehicleStateChanges(const MSNet::VehicleState)` [static]

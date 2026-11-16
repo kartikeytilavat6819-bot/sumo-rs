@@ -21,6 +21,7 @@ pub mod route_probe;
 pub mod simulation;
 pub mod storage_helper;
 pub mod subscription;
+pub mod variable_wrapper;
 pub mod tra_ci_defs;
 pub mod traffic_light;
 pub mod variable_speed_sign;

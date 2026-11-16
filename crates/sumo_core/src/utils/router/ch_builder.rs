@@ -1,6 +1,7 @@
 //! Port of utils/router/CHBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterVehicle;
 use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 
 /// C++ typedef `std::pair<const CHConnection *, const CHConnection *> CHBuilder::CHConnectionPair`
@@ -118,7 +119,7 @@ pub struct CHBuilder<E, V> {
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
-impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
+impl<E: RouterEdge<V>, V: RouterVehicle> CHBuilder<E, V> {
     /// C++: `void CHBuilder::CHBuilder<E, V>(const int &, bool, const SUMOVehicleClass, bool)`
     /// Constructor
     // CHBuilder(const std::vector<E*>& edges, bool unbuildIsWarning,
@@ -247,7 +248,7 @@ impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn build_contraction_hierarchy(&mut self, time: SUMOTime, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) -> Ptr<CHBuilder_Hierarchy<E>> where V: crate::utils::router::router_edge::RouterVehicle {
+    pub fn build_contraction_hierarchy(&mut self, time: SUMOTime, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) -> Ptr<CHBuilder_Hierarchy<E>> {
         let result = Ptr::from_raw(Box::into_raw(Box::new(CHBuilder_Hierarchy {
             shortcuts: std::collections::BTreeMap::new(),
             forwardUplinks: Vec::new(),
@@ -385,7 +386,7 @@ impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
     //         // @todo: check whether we even need to save approaching in ROEdge;
     //     }
     #[allow(unused_variables)]
-    pub fn synchronize(&mut self, info: &mut CHBuilder_CHInfo<E>, time: f64, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) where V: crate::utils::router::router_edge::RouterVehicle {
+    pub fn synchronize(&mut self, info: &mut CHBuilder_CHInfo<E>, time: f64, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) {
         let prune = !self.mySPTree.m().validate_permissions();
         let edge = info.edge;
         if prune && ((e_permissions(edge) & self.mySVC) != self.mySVC) {

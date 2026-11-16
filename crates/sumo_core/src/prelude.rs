@@ -220,6 +220,7 @@ pub use crate::libsumo::route_probe::*;
 pub use crate::libsumo::simulation::*;
 pub use crate::libsumo::storage_helper::*;
 pub use crate::libsumo::subscription::*;
+pub use crate::libsumo::variable_wrapper::*;
 pub use crate::libsumo::tra_ci_defs::*;
 pub use crate::libsumo::traffic_light::*;
 pub use crate::libsumo::variable_speed_sign::*;

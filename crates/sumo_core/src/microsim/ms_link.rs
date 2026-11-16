@@ -32,10 +32,17 @@ fn msveh_to_sumo_vehicle(v: Ptr<MSVehicle>) -> Ptr<SUMOVehicle> {
     Ptr::from_mut(&mut v.m().base.base)
 }
 
-/// C++ `MSLane::AnyVehicleIterator` range: myVehicles followed by myPartialVehicles
-// shortcut: MSLane::AnyVehicleIterator is not iterable in Rust yet (its constructor is still todo), this walks myVehicles then myPartialVehicles directly, upgrade when AnyVehicleIterator is ported
+/// C++ `for (it = lane->anyVehiclesBegin(); it != lane->anyVehiclesEnd(); ++it)`: myVehicles, then
+/// myTmpVehicles (vehicles the lane changer already processed this step), merged by position with myPartialVehicles
 fn any_vehicles_of(lane: Ptr<MSLane>) -> Vec<Ptr<MSVehicle>> {
-    lane.myVehicles.iter().chain(lane.myPartialVehicles.iter()).cloned().collect()
+    let end = lane.any_vehicles_end();
+    let mut it = lane.any_vehicles_begin();
+    let mut result = Vec::new();
+    while it.ne_op(&end) {
+        result.push(it.op_());
+        it.op__2();
+    }
+    result
 }
 
 // shortcut: dynamic_cast<const MSVehicle*>(SUMOTrafficObject*) has no Rust equivalent in this port, no foe can be downcast so getZipperSpeed ignores all foes until the downcast is ported; upgrade when SUMOTrafficObject can be downcast to MSVehicle
@@ -4404,3 +4411,26 @@ impl MSLink {
 
 }
 
+
+#[cfg(test)]
+mod any_vehicles_tests {
+    use super::*;
+
+    // shortcut: MSLane::new -> init_restrictions needs the MSNet singleton, which unit tests cannot build yet
+    // (see ms_vehicle.rs vt_dispatch_tests); real_dense in run_all.sh guards this meanwhile, remove #[ignore] once MSNet can be built
+    #[test]
+    #[ignore = "MSLane::new needs the MSNet singleton, see shortcut above"]
+    fn any_vehicles_includes_vehicles_already_processed_by_the_lane_changer() {
+        // real_dense v41 t=92: the foe on a sibling internal lane sat in myTmpVehicles while its edge was
+        // lane-changing; C++ AnyVehicleIterator still yields it as a link leader, the old helper did not
+        MSLane::init_one_rng_for_tests();
+        let edge = Ptr::from_mut(Box::leak(Box::new(MSEdge::new(":j_0", 0, SumoXMLEdgeFunc::INTERNAL, "", "", "", 0, 1.0))));
+        let lane = Ptr::from_mut(Box::leak(Box::new(MSLane::new(":j_0_4", 13.9, 1.0, 12.0, edge, 0, &PositionVector::new(), 3.2, utils::common::sumo_vehicle_class::SVC_PASSENGER, 0, 0, 0, false, "", &PositionVector::new()))));
+        // never dereferenced: without partial vehicles the iterator only hands the pointers out
+        let a: Ptr<MSVehicle> = Ptr::from_raw(0x10 as *mut MSVehicle);
+        let b: Ptr<MSVehicle> = Ptr::from_raw(0x20 as *mut MSVehicle);
+        lane.m().myVehicles.push(a);
+        lane.m().myTmpVehicles.push(b);
+        assert_eq!(any_vehicles_of(lane), vec![a, b]);
+    }
+}

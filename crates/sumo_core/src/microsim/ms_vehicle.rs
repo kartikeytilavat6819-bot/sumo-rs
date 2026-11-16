@@ -2663,8 +2663,12 @@ impl MSVehicle {
             base: MSBaseVehicle::new(pars, route, type_, speedFactor),
             myManoeuvre: MSVehicle_Manoeuvre::new(),
             myWaitingTime: 0,
-            // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used
-            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(300 * 1000),
+            // C++: MSGlobals::gWaitingTimeMemory = string2time(oc.getString("waiting-time-memory"))
+            // (MSFrame.cpp:1213, option default "100" seconds). Was hardcoded to 300 s, which made the
+            // saved waitingTime three times C++'s.
+            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(
+                string2time(&utils::options::options_cont::get_string("waiting-time-memory")).unwrap_or(100 * 1000),
+            ),
             myTimeLoss: 0.0,
             myState: MSVehicle_State::new(0.0, 0.0, 0.0, 0.0, 0.0),
             myDriverState: Ptr::null(),
@@ -10232,8 +10236,12 @@ impl MSVehicle {
         // save parameters and device states
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            // shortcut: virtual dispatch to MSVehicleDevice subclasses is not available, only the base MSDevice::saveState runs
-            dev.m().base2.save_state(out);
+            // shortcut: no device vtable yet, the concrete type is recovered from the id prefix assigned by its constructor; other device types still only run the base MSDevice::saveState (warning)
+            if dev.m().base2.get_id().starts_with("tripinfo_") {
+                dev.cast::<MSDevice_Tripinfo>().m().save_state(out);
+            } else {
+                dev.m().base2.save_state(out);
+            }
         }
         if !self.myCFVariables.is_null() {
             self.myCFVariables.save_state(out, self.get_car_follow_model());
@@ -17015,3 +17023,13 @@ mod vt_dispatch_tests {
     }
 }
 
+
+#[cfg(test)]
+mod globals_tests {
+    #[test]
+    fn semi_implicit_euler_follows_ms_globals() {
+        // was a local stub hardcoded to false (ballistic), C++ defaults to the Euler update
+        assert_eq!(super::semi_implicit_euler_update(), crate::microsim::ms_globals::semi_implicit_euler_update());
+        assert!(super::semi_implicit_euler_update());
+    }
+}

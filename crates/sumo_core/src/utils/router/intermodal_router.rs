@@ -373,7 +373,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         myInternalRouter->prohibit(toProhibitPE);
     //     }
     #[allow(unused_variables)]
-    pub fn prohibit(&mut self, toProhibit: &IntermodalRouter__Prohibitions) where E: RouterEdge<V> {
+    pub fn prohibit(&mut self, toProhibit: &IntermodalRouter__Prohibitions) {
         self.create_net();
         let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {

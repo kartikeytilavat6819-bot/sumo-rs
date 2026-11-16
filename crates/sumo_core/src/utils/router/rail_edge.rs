@@ -406,6 +406,20 @@ impl<E, V> RailEdge<E, V> {
 
 }
 
+impl<E: crate::utils::router::router_edge::RouterEdgeInfo, V> crate::utils::router::router_edge::RouterEdgeInfo for RailEdge<E, V> {
+    fn edge_numerical_id(&self) -> i32 {
+        self.myNumericalID
+    }
+    /// C++ `RailEdge::getID()`: the original edge's id, or the turnaround's own id when there is no original
+    fn edge_id(&self) -> String {
+        if self.myOriginal.is_null() { self.myID.clone() } else { self.myOriginal.edge_id() }
+    }
+    // shortcut: C++ RailEdge has no getPermissions, only its original edge does; upgrade when the railway router needs CH/CCH arc permissions
+    fn edge_permissions(&self) -> SVCPermissions {
+        panic!("shortcut: C++ RailEdge has no getPermissions")
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

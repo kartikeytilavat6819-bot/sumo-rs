@@ -188,10 +188,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
             // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
             toProhibitRE.insert(edge.railway_routing_edge().cast(), *prohibition);
         }
-        // shortcut: RailEdge does not implement RouterEdge yet, so the internal router can only be prohibited while nothing is prohibited; upgrade when RailEdge gets the trait
-        if !toProhibitRE.is_empty() || self.myInternalRouter.has_prohibitions() {
-            panic!("shortcut: RailEdge does not implement RouterEdge, RailwayRouter::prohibit cannot forward prohibitions");
-        }
+        self.myInternalRouter.m().prohibit(&toProhibitRE);
         self.base.myProhibited = toProhibit.clone();
     }
 
