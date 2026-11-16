@@ -3126,7 +3126,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter/AStarRouter/CCHRouter cannot be created yet (SUMOAbstractRouter_Operation and the lookup tables are Unmapped), so a router is only returned if one was already created
+        // shortcut: DijkstraRouter/AStarRouter/CCHRouter::new need SUMOAbstractRouter_Operation (Unmapped fn-pointer type in sumo_abstract_router.rs) and the CCH lookup types, upgrade when that operation type is typed; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myRouterTT.get(&rngIndex).copied() {
@@ -3152,7 +3152,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter cannot be created yet (SUMOAbstractRouter_Operation is Unmapped), so a router is only returned if one was already created
+        // shortcut: DijkstraRouter::new needs SUMOAbstractRouter_Operation (Unmapped fn-pointer type in sumo_abstract_router.rs) for the effort and tt operations, upgrade when that type is typed; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myRouterEffort.get(&rngIndex).copied() {
@@ -3178,7 +3178,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
-        // shortcut: PedestrianRouter::new is not ported yet, so a router is only returned if one was already created
+        // shortcut: PedestrianRouter::new (utils/router/pedestrian_router.rs) is a stub needing E::getAllEdges via the router trait bounds, upgrade when those bounds land; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myPedestrianRouter.get(&rngIndex).copied() {
@@ -3213,7 +3213,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
-        // shortcut: IntermodalRouter::new (routing callback and effort calculator are Unmapped), so a router is only returned if one was already created
+        // shortcut: IntermodalRouter::new needs the IntermodalRouter_CreateNetCallback (Unmapped fn-pointer type in intermodal_router.rs), upgrade when that is typed; until then only an already-created router is returned
         let key = rngIndex * get_int("thread-rngs") + routingMode;
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
