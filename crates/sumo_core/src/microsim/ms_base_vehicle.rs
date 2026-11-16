@@ -1495,7 +1495,7 @@ impl MSBaseVehicle {
                     continue;
                 } else if stops[idx].isSink {
                     edges.clear();
-                    if source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
+                    if onInit && source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
                         edges.push(stopEdge);
                         utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%' with departPos %.",
                             self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id(), sourcePos));
