@@ -26,15 +26,16 @@ $wpos = ($work -replace '\\', '/') -replace '^C:', '/c'
 $sha = (git -C $Repo rev-parse --short $Branch).Trim()
 Set-Content "$work\GATE_BRANCH.txt" "$Branch $sha"
 git -C $Repo archive --format=tar --prefix= -o "$work\src.tar" $Branch
-& 'C:\Program Files\Git\usr\bin\tar.exe' -rf "$wpos/src.tar" -C "$wpos" GATE_BRANCH.txt
-& 'C:\Program Files\Git\usr\bin\gzip.exe' -f "$wpos/src.tar"
-Move-Item "$work\src.tar.gz" "$work\data\src.tgz"
-
-# 1b. PHEMlight data for SUMO_HOME (sumo_data/data/emissions/PHEMlight{,5})
-$emis = "$work\data\sumo_data\data\emissions"
+# 1b. PHEMlight data for SUMO_HOME (sumo_data/data/emissions/PHEMlight{,5}), shipped inside src.tgz
+# (a dataset folder with only subdirectories did not reach Kaggle, so it travels in the tarball instead)
+$emis = "$work\stage\sumo_data\data\emissions"
 New-Item -ItemType Directory -Force $emis | Out-Null
 Copy-Item -Recurse "$PhemData\PHEMlight", "$PhemData\PHEMlight5" $emis
 if (-not (Test-Path "$emis\PHEMlight\PC_G_EU4.csv")) { "NO PHEMlight data in $PhemData"; exit 1 }
+& 'C:\Program Files\Git\usr\bin\tar.exe' -rf "$wpos/src.tar" -C "$wpos/stage" sumo_data
+& 'C:\Program Files\Git\usr\bin\tar.exe' -rf "$wpos/src.tar" -C "$wpos" GATE_BRANCH.txt
+& 'C:\Program Files\Git\usr\bin\gzip.exe' -f "$wpos/src.tar"
+Move-Item "$work\src.tar.gz" "$work\data\src.tgz"
 
 # 2. upload as a private dataset (create on first use, new version afterwards)
 $ds = "$user/srg-src-$Slot"
