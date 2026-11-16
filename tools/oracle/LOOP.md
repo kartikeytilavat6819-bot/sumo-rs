@@ -46,14 +46,20 @@ A panic is reported as `sim-PANIC` with the first message line.
 
 ## Known failing rows and their owners
 
-Current state, 2026-11-16 — **three** rows fail. Everything else in that old table is fixed and must not
+Current state, 2026-11-16 late — **four** rows fail. Everything else in the old table is fixed and must not
 be re-investigated:
 
 | Row | Symptom | Owner |
 |---|---|---|
-| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.6 | op02 |
-| vtypes/ref sim | `EIDM_1` timeLoss 4.05 vs 4.02 (arrival now matches) | vt01 |
-| reroute/ref_device sim | `devices` ref has `routing_v1`, ours does not — device never created | rr01 |
+| sublanes/ref sim | **PANIC** `ms_leader_info.rs:503` index out of bounds — any `--lateral-resolution` run crashes | sl01 |
+| reroute_alt/ref sim | `v0` stays on the closed edge `11` at t=8; C++ detours to `12` — rerouting never runs | rr01 |
+| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.60 | op02 |
+| vtypes/ref sim | `EIDM_1` timeLoss 4.05 vs 4.02 (0.10 m at t=62) | rt03 |
+
+Newly PASSING and now covered by a case (these were unverifiable this morning):
+
+- `lanechange` — `MSEdgeControl::change_lanes` / `gComputeLC` fix
+- `lefthand` net + sim — LHT net generation is element-identical to C++ given `net.args` = `--lefthand`
 
 Fixed since the table below was written, do **not** reopen:
 
@@ -66,8 +72,13 @@ Fixed since the table below was written, do **not** reopen:
   actuated / delay_based / NEMA / SOTL / swarm / deterministic / wave / off
 - signal t=34 divergence — was `semi_implicit_euler_update()` hardcoded `false`; the RNG-stream
   hypothesis was investigated and eliminated, do not repeat it
+- `reroute/ref_device` — the routing device was never created because `init_devices` in
+  `ms_base_vehicle.rs` built only tripinfo and FCD. Fixed; the device is now present but its
+  *behaviour* is still inert, which `reroute_alt` now measures
 - `stress` "107 vs 93 arrivals", `depart` "15 variants failing", `reroute` both variants panicking —
   all three were stale reports; each now measures exact or 15/15 PASS
+- the "556 `todo!()`" figure — all of it is prose in `GENERATED SKELETON` file headers. Real `todo!()`
+  calls: **0**. Use the counter the merge script prints, not a raw grep.
 
 <details>
 <summary>Original table (2026-11-15, historical)</summary>
