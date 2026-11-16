@@ -1095,9 +1095,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn save_state(fileName: &str) {
-        // shortcut: MSStateHandler::saveState is not ported yet
-        let _ = fileName;
-        panic!("shortcut: MSStateHandler::saveState is not ported yet");
+        MSStateHandler::save_state(fileName, MSNet::get_instance().get_current_time_step(), true);
     }
 
     /// C++: `double Simulation::loadState(const std::string &)` [static]
