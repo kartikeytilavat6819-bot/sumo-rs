@@ -2187,8 +2187,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(typeID: &str) -> f64 {
-        // shortcut: MSVehicleType::getSpeedFactor() returns an Unmapped Distribution_Parameterized (ms_vehicle_type.rs), so getParameter(1) cannot be read; upgrade when that type is mapped
-        panic!("getSpeedDeviation not yet ported: VehicleType speed factor distribution is unmapped")
+        Helper::get_vehicle_type(typeID).get_speed_factor().get_parameter(1)
     }
 
     /// C++: `double Vehicle::getBoardingDuration(const std::string &)` [static]
@@ -2874,13 +2873,29 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
             write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is internal.", routeID));
         }
-        let route = MSRoute::dictionary_3(routeID, Ptr::null());
+        let mut route = MSRoute::dictionary_3(routeID, Ptr::null());
         if !MSRoute::has_route(routeID) {
             if routeID.is_empty() {
-                // shortcut: an empty routeID builds a DUMMY_ROUTE_<vclass> route from SumoVehicleClassStrings, which is not ported; upgrade with the vclass string table
-                panic!("shortcut: vehicle.add with an empty route needs SumoVehicleClassStrings, not ported");
+                // assume, route was intentionally left blank because the caller
+                // intends to control the vehicle remotely
+                let vclass = vehicleType.get_vehicle_class();
+                let dummyRouteID = format!("DUMMY_ROUTE_{}", SUMO_VEHICLE_CLASS_STRINGS.get_string(vclass).unwrap());
+                if !MSRoute::has_route(&dummyRouteID) {
+                    for e in MSEdge::get_all_edges().iter() {
+                        if e.get_function() == SumoXMLEdgeFunc::NORMAL && (e.get_permissions() & vclass) == vclass {
+                            let edges: Vec<String> = vec![e.get_id().to_string()];
+                            super::route::Route::add(&dummyRouteID, &edges);
+                            break;
+                        }
+                    }
+                }
+                route = MSRoute::dictionary_3(&dummyRouteID, Ptr::null());
+                if !MSRoute::has_route(&dummyRouteID) {
+                    panic!("{}", format!("Could not build dummy route for vehicle class: '{}'", SUMO_VEHICLE_CLASS_STRINGS.get_string(vehicleType.get_vehicle_class()).unwrap()));
+                }
+            } else {
+                panic!("{}", format!("Invalid route '{}' for vehicle '{}'.", routeID, vehID));
             }
-            panic!("{}", format!("Invalid route '{}' for vehicle '{}'.", routeID, vehID));
         }
         // check if the route implies a trip
         if route.size() == 2 {
