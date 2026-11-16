@@ -289,8 +289,7 @@ impl MSVehicleTransfer {
                     MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::ENDING_PARKING, "");
                     lane.m().remove_parking(Ptr::from_mut(&mut desc.myVeh.m().base));
                     // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre
-                    // shortcut: MSGlobals::gModelParkingManoeuver not ported, treated as false, upgrade when ms_globals statics are ported
-                    let gModelParkingManoeuver = false;
+                    let gModelParkingManoeuver = crate::microsim::ms_globals::model_parking_manoeuver();
                     if gModelParkingManoeuver && desc.myVeh.m().set_exit_manoeuvre() {
                         MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::MANEUVERING, "");
                     }
@@ -301,8 +300,7 @@ impl MSVehicleTransfer {
                     desc.myVeh.m().work_on_idle_reminders();
                     if !desc.myVeh.signal_set(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 | MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32) {
                         // signal wish to re-enter the road
-                        // shortcut: MSGlobals::gLefthand not ported, treated as false, upgrade when ms_globals statics are ported
-                        let gLefthand = false;
+                        let gLefthand = crate::microsim::ms_globals::lefthand();
                         desc.myVeh.m().switch_on_signal(if gLefthand { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 } else { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 });
                         if !pa.is_null() {
                             // update freePosition so other vehicles can help with insertion

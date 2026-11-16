@@ -1571,7 +1571,7 @@ impl MSVehicleType {
             let warning2;
             if is_default("step-method.ballistic") {
                 warning2 = " Setting it now to avoid collisions.";
-                // shortcut: MSGlobals::gSemiImplicitEulerUpdate cannot be written (MSGlobals not ported), so the flag is not switched off here
+                MSGlobals::set_semi_implicit_euler_update(false);
             } else {
                 warning2 = " This may cause collisions.";
             }

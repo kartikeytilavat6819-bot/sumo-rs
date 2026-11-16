@@ -4,15 +4,42 @@ use crate::prelude::*;
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
-// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty). These return the values MSFrame
-// sets for default options. The mesoscopic branches (gUseMesoSim, gMesoNet) are not ported, so the
-// micro code path is always used. Upgrade when ms_globals.rs and mesosim/ are wired in.
+// shortcut: the mesoscopic branches (gMesoNet, MESegment) are not ported; ms_net refuses mesosim runs, so the micro path is taken
 fn g_use_meso_sim() -> bool {
-    false
+    crate::microsim::ms_globals::use_meso_sim()
 }
 fn g_using_internal_lanes() -> bool {
-    true
+    crate::microsim::ms_globals::using_internal_lanes()
 }
+#[cfg(test)]
+mod msglobals_stub_tests {
+    // Stale-stub guard: these files must read MSGlobals (ms_globals.rs), not hardcode its defaults.
+    #[test]
+    fn no_hardcoded_msglobals_stand_ins() {
+        let sources = [
+            ("ms_edge.rs", include_str!("../ms_edge.rs")),
+            ("ms_lane.rs", include_str!("../ms_lane.rs")),
+            ("ms_link.rs", include_str!("../ms_link.rs")),
+            ("ms_leader_info.rs", include_str!("../ms_leader_info.rs")),
+            ("cfmodels/mscf_model.rs", include_str!("../cfmodels/mscf_model.rs")),
+        ];
+        let stand_ins = [
+            "fn g_lateral_resolution() -> f64 {\n    -1.",
+            "fn g_use_meso_sim() -> bool {\n    false",
+            "fn g_using_internal_lanes() -> bool {\n    true",
+            "fn g_compute_lc() -> bool {\n    false",
+            "fn g_semi_implicit_euler_update() -> bool {\n    true",
+            "const G_",
+        ];
+        for (name, src) in sources {
+            let src = src.replace("\r\n", "\n");
+            for pat in stand_ins {
+                assert!(!src.contains(pat), "{name} still hardcodes an MSGlobals value: {pat:?}");
+            }
+        }
+    }
+}
+
 // MIN2/MAX2/MIN4 from StdDefs.h
 fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }

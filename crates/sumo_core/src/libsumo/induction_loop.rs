@@ -22,9 +22,9 @@ thread_local! {
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
 }
 
-/// C++ `MSGlobals::gUseMesoSim`. shortcut: MSGlobals is not ported, so this always reports the microscopic mode; upgrade when ms_globals.rs ports the static.
+/// C++ `MSGlobals::gUseMesoSim`
 fn use_meso_sim() -> bool {
-    false
+    crate::microsim::ms_globals::use_meso_sim()
 }
 
 impl InductionLoop {
@@ -145,7 +145,6 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_occupancy(loopID: &str) -> f64 {
-        // shortcut: MSGlobals::gUseMesoSim is not ported (ms_globals.rs keeps it as a comment), so the micro branch is always taken; upgrade when MSGlobals is ported
         if use_meso_sim() {
             let det = Self::get_me_detector(loopID);
             let meanData = det.get_mean_data();
