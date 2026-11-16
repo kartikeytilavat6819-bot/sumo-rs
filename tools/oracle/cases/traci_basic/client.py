@@ -59,13 +59,18 @@ def wsl_path(p):
     return "/mnt/" + p[0].lower() + p[2:]
 
 
-def sumo_command(side, port, net, rou, ours):
+def sumo_command(side, port, net, rou, ours, extra=()):
     if side == "ours":
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
-                "--no-step-log", "true", "--no-warnings", "true"]
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
+    flags = "".join(f" {x}" for x in extra)
     inner = (f"SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
-             f"--remote-port {port} --no-step-log true --no-warnings true")
+             f"--remote-port {port} --no-step-log true --no-warnings true{flags}")
     return ["wsl", "-e", "bash", "-lc", inner]
+
+
+# the tripinfo device exists only when tripinfo-output or duration-log.statistics is set (C++ buildVehicleDevices)
+TRIPINFO_PROBE = "vehicle.getParameter(v0, device.tripinfo.waitingTime)"
 
 
 def probes(lane, tl_id):
@@ -227,6 +232,7 @@ def probes(lane, tl_id):
         "vehicle.getIDList": lambda t: t.vehicle.getIDList(),
         "vehicle.getPosition(v0)": lambda t: t.vehicle.getPosition("v0"),
         "vehicle.getSpeed(v0)": lambda t: t.vehicle.getSpeed("v0"),
+        TRIPINFO_PROBE: lambda t: t.vehicle.getParameter("v0", "device.tripinfo.waitingTime"),
         "lane.getLastStepVehicleNumber": lambda t: t.lane.getLastStepVehicleNumber(lane),
         "lane.getLength": lambda t: t.lane.getLength(lane),
         "trafficlight.getIDList": lambda t: t.trafficlight.getIDList(),
@@ -328,11 +334,11 @@ def probes(lane, tl_id):
     }
 
 
-def run_probe(side, port, net, rou, ours, fn):
+def run_probe(side, port, net, rou, ours, fn, extra=()):
     """One fresh server for one probe. Returns {"type", "value"}."""
     log = Path(os.environ.get("TEMP", ".")) / f"traci_{side}_{net.parent.name}.log"
     with open(log, "a") as fh:
-        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours, extra), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
         try:
             traci.init(port=port, numRetries=20, host="localhost")
             try:
@@ -362,7 +368,8 @@ def run_side(side, port, ours, case):
     out = {}
     for i, (label, fn) in enumerate(probes(lane, tl_id).items()):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
-        out[label] = run_probe(side, port + i, net, rou, ours, fn)
+        extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
+        out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
             subprocess.run(["wsl", "-e", "bash", "-lc", "pkill -f 'bin/sumo' || true"], capture_output=True)
         time.sleep(0.5)

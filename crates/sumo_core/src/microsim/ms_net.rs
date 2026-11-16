@@ -2191,7 +2191,13 @@ impl MSNet {
             MSEmissionExport::write(&mut device_by_option("emission-output").borrow_mut(), self.myStep);
         }
 
-        // shortcut: the battery, chargingstations (aggregated), elechybrid and vtk exports are not ported yet
+        // battery dumps
+        if is_set("battery-output") {
+            MSBatteryExport::write(&mut device_by_option("battery-output").borrow_mut(), self.myStep, get_int("battery-output.precision"));
+        }
+
+        // shortcut: the chargingstations (aggregated), elechybrid and vtk exports are not ported yet
+        // check full dumps
         if is_set("full-output") {
             MSGlobals::set_have_emissions(true);
             MSFullExport::write(&mut device_by_option("full-output").borrow_mut(), self.myStep);
@@ -2671,8 +2677,7 @@ impl MSNet {
             let output = device_by_option("chargingstations-output");
             let mut output = output.borrow_mut();
             for (_, stop) in places.iter() {
-                // shortcut: MSChargingStation::writeChargingStationOutput is not ported yet, the static_cast is not safe until it is
-                let _ = (stop, &mut output);
+                stop.cast::<MSChargingStation>().m().write_charging_station_output(&mut output);
             }
         }
     }
@@ -2903,6 +2908,8 @@ impl MSNet {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
                 TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
+                crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }

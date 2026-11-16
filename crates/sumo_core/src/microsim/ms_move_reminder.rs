@@ -36,6 +36,14 @@ pub struct MSMoveReminderVt {
     pub notify_leave: fn(&mut MSMoveReminder, &mut SUMOTrafficObject, f64, MSMoveReminder_Notification, Ptr<MSLane>) -> bool,
 }
 
+/// Virtual dispatch table for the idle, parking and stop-ended notifications; kept apart from
+/// `MSMoveReminderVt` so the existing per-subclass tables stay valid.
+pub struct MSMoveReminderIdleVt {
+    pub notify_idle: fn(&mut MSMoveReminder, &mut SUMOTrafficObject) -> bool,
+    pub notify_parking: fn(&mut MSMoveReminder),
+    pub notify_stop_ended: fn(&mut MSMoveReminder),
+}
+
 /// Something on a lane to be noticed about vehicle movement
 /// C++ class `MSMoveReminder` (microsim/MSMoveReminder.h)
 #[repr(C)]
@@ -47,6 +55,8 @@ pub struct MSMoveReminder {
     pub myLastVehicleUpdateValues: BTreeMap<i64, (SUMOTime, f64)>, // C++: std::map<long long, std::pair<SUMOTime, double>>
     /// Virtual dispatch table; installed by the most derived constructor
     pub vt: &'static MSMoveReminderVt,
+    /// Virtual dispatch table for idle/parking/stop-ended; installed by the most derived constructor
+    pub idle_vt: &'static MSMoveReminderIdleVt,
 }
 
 // C++ static members of MSMoveReminder (port as module-level statics, see AGENTS.md):
@@ -77,6 +87,7 @@ impl MSMoveReminder {
             myDescription: description.to_string(),
             myLastVehicleUpdateValues: BTreeMap::new(),
             vt: &DEFAULT_MSMOVE_REMINDER_VT,
+            idle_vt: &DEFAULT_MSMOVE_REMINDER_IDLE_VT,
         }
     }
 
@@ -136,8 +147,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_idle(&mut self, veh: &mut SUMOTrafficObject) -> bool {
-        // UNUSED_PARAMETER(veh)
-        true
+        (self.idle_vt.notify_idle)(self, veh)
     }
 
     /// C++: `void MSMoveReminder::notifyParking()` [virtual]
@@ -145,7 +155,7 @@ impl MSMoveReminder {
     // virtual void notifyParking() {}
     #[allow(unused_variables)]
     pub fn notify_parking(&mut self) {
-        // C++ body is empty.
+        (self.idle_vt.notify_parking)(self)
     }
 
     /// C++: `void MSMoveReminder::notifyStopEnded()` [virtual]
@@ -153,7 +163,7 @@ impl MSMoveReminder {
     // virtual void notifyStopEnded() {}
     #[allow(unused_variables)]
     pub fn notify_stop_ended(&mut self) {
-        // C++ body is empty.
+        (self.idle_vt.notify_stop_ended)(self)
     }
 
     /// C++: `bool MSMoveReminder::notifyLeave(SUMOTrafficObject &, double, Notification, const MSLane *)` [virtual]
@@ -391,9 +401,21 @@ pub(crate) fn default_notify_leave(_: &mut MSMoveReminder, _: &mut SUMOTrafficOb
     true
 }
 
+pub(crate) fn default_notify_idle(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject) -> bool {
+    true
+}
+pub(crate) fn default_notify_parking(_: &mut MSMoveReminder) {}
+pub(crate) fn default_notify_stop_ended(_: &mut MSMoveReminder) {}
+
 static DEFAULT_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
     notify_enter: default_notify_enter,
     notify_move: default_notify_move,
     notify_leave: default_notify_leave,
+};
+
+static DEFAULT_MSMOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+    notify_idle: default_notify_idle,
+    notify_parking: default_notify_parking,
+    notify_stop_ended: default_notify_stop_ended,
 };
 

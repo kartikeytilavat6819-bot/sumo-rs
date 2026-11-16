@@ -89,7 +89,56 @@ impl MSBatteryExport {
         of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, utils::common::time::time2string(timestep).as_str());
         of.set_precision(precision);
 
-        // shortcut: the vehicle rows need static_cast<const MSVehicle*> on each loaded vehicle and getDevice(typeid(MSDevice_Battery)), and neither has a Rust equivalent yet (no downcast, type-keyed getDevice unported), so only the timestep frame is written; upgrade when both exist
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        for (_, veh) in vc.myVehicleDict.iter() {
+            let mveh: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
+            if !(mveh.is_on_road() || mveh.is_parking() || mveh.is_remote_controlled()) {
+                continue;
+            }
+            // shortcut: C++ getDevice(typeid(MSDevice_Battery)) is matched by device name
+            let dev = MSDevice::get_device_by_name(&mveh.myDevices, "battery");
+            if dev.is_null() {
+                continue;
+            }
+            let battery = dev.cast::<MSDevice_Battery>();
+            if battery.get_maximum_battery_capacity() > 0. {
+                of.open_tag_id(SUMO_TAG_VEHICLE);
+                of.write_attr(SUMO_ATTR_ID, &mveh.get_id().to_string());
+                of.write_attr(SUMO_ATTR_ENERGYCONSUMED, &battery.get_consum());
+                of.write_attr(SUMO_ATTR_TOTALENERGYCONSUMED, &battery.get_total_consumption());
+                of.write_attr(SUMO_ATTR_TOTALENERGYREGENERATED, &battery.get_total_regenerated());
+                of.write_attr(SUMO_ATTR_ACTUALBATTERYCAPACITY, &battery.get_actual_battery_capacity());
+                of.write_attr(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, &battery.get_maximum_battery_capacity());
+                if !battery.get_charging_station().is_null() {
+                    of.write_attr(SUMO_ATTR_CHARGINGSTATIONID, &battery.get_charging_station_id());
+                }
+                of.write_attr(SUMO_ATTR_ENERGYCHARGED, &battery.get_energy_charged());
+                if battery.is_charging_in_transit() {
+                    of.write_attr(SUMO_ATTR_ENERGYCHARGEDINTRANSIT, &battery.get_energy_charged());
+                } else {
+                    of.write_attr(SUMO_ATTR_ENERGYCHARGEDINTRANSIT, &0.00);
+                }
+                if battery.is_charging_stopped() {
+                    of.write_attr(SUMO_ATTR_ENERGYCHARGEDSTOPPED, &battery.get_energy_charged());
+                } else {
+                    of.write_attr(SUMO_ATTR_ENERGYCHARGEDSTOPPED, &0.00);
+                }
+                of.write_attr(SUMO_ATTR_SPEED, &mveh.get_speed());
+                of.write_attr(SUMO_ATTR_ACCELERATION, &mveh.get_acceleration());
+                let pos = mveh.get_position(0.);
+                of.write_attr(SUMO_ATTR_X, &pos.x());
+                of.write_attr(SUMO_ATTR_Y, &pos.y());
+                if crate::microsim::ms_globals::use_meso_sim() {
+                    of.write_attr(SUMO_ATTR_EDGE, &mveh.get_edge().get_id().to_string());
+                } else {
+                    of.write_attr(SUMO_ATTR_LANE, &mveh.get_lane().get_id().to_string());
+                }
+                of.write_attr(SUMO_ATTR_POSONLANE, &mveh.get_position_on_lane());
+                of.write_attr(SUMO_ATTR_TIMESTOPPED, &battery.get_vehicle_stopped());
+                of.close_tag("");
+            }
+        }
 
         of.close_tag("");
     }
