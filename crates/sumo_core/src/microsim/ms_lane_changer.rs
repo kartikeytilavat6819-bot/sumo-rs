@@ -317,21 +317,13 @@ impl MSLaneChanger {
     // std::pair<double, SUMOTime>
     // MSLaneChanger::getLastBlocked(int index) const {
     //     assert(index >= 0 && index < (int)myChanger.size());
-    //     if (myChanger[index].lane->empty()) {
-    //         return std::make_pair(-1, -1);
-    //     } else {
-    //         return std::make_pair(
-    //                 myChanger[index].lastBlockedBackPos,
-    //                 myChanger[index].lastBlockedWaitingTime);
-    //     }
+    //     return std::make_pair(
+    //                myChanger[index].lastBlockedBackPos,
+    //                myChanger[index].lastBlockedWaitingTime);
     // }
     #[allow(unused_variables)]
     pub fn get_last_blocked(&self, index: i32) -> (f64, SUMOTime) {
-        if self.myChanger[index as usize].lane.empty() {
-            (-1.0, -1)
-        } else {
-            (self.myChanger[index as usize].lastBlockedBackPos, self.myChanger[index as usize].lastBlockedWaitingTime)
-        }
+        (self.myChanger[index as usize].lastBlockedBackPos, self.myChanger[index as usize].lastBlockedWaitingTime)
     }
 
     /// C++: `void MSLaneChanger::postloadInitLC()`

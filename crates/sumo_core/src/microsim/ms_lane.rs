@@ -1159,32 +1159,22 @@ impl MSLane {
     //             && isRailwayOrShared(myPermissions)) {
     //         const MSDriveWay* dw = MSDriveWay::getDepartureDriveway(aVehicle);
     //         MSEdgeVector occupied;
-    //         bool dwBlocked = false;
     // #ifdef DEBUG_INSERTION
     //         gDebugFlag4 = DEBUG_COND2(aVehicle) || DEBUG_COND;
     // #endif
     //         if (dw->foeDriveWayOccupied(false, aVehicle, occupied)) {
-    //             dwBlocked = true;
+    //             setParameter("insertionBlocked:" + aVehicle->getID(), dw->getID());
     // #ifdef DEBUG_INSERTION
     //             if (DEBUG_COND2(aVehicle) || DEBUG_COND) {
     //                 std::cout << "   foe of driveway " + dw->getID() + " has occupied edges " + toString(occupied) << "\n";
     //             }
+    //             gDebugFlag4 = false;
     // #endif
-    //         } else if (dw->sidingDeadlock(aVehicle)) {
-    //             dwBlocked = true;
-    // #ifdef DEBUG_INSERTION
-    //             if (DEBUG_COND2(aVehicle) || DEBUG_COND) {
-    //                 std::cout << "   insertion on driveway " + dw->getID() + " would cause deadlock\n";
-    //             }
-    // #endif
+    //             return false;
     //         }
     // #ifdef DEBUG_INSERTION
     //         gDebugFlag4 = false;
     // #endif
-    //         if (dwBlocked) {
-    //             setParameter("insertionBlocked:" + aVehicle->getID(), dw->getID());
-    //             return false;
-    //         }
     //     }
     //     if (getBidiLane() != nullptr && isRail) {
     //         // do not insert if the bidirectional edge is occupied
@@ -1730,13 +1720,7 @@ impl MSLane {
             && utils::common::sumo_vehicle_class::is_railway_or_shared(self.myPermissions) {
             let dw = MSDriveWay::get_departure_driveway(aVehicle.cast::<SUMOVehicle>(), false);
             let mut occupied: MSEdgeVector = Vec::new();
-            let mut dwBlocked = false;
             if dw.foe_drive_way_occupied(false, aVehicle.cast::<SUMOVehicle>(), &mut occupied) {
-                dwBlocked = true;
-            } else if dw.siding_deadlock(aVehicle.cast::<SUMOVehicle>()) {
-                dwBlocked = true;
-            }
-            if dwBlocked {
                 self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.base2.get_id());
                 return false;
             }
@@ -4781,11 +4765,9 @@ impl MSLane {
     /// Sets the permissions to the given value. If a transientID is given, the permissions are recored as temporary
     // void
     // MSLane::setPermissions(SVCPermissions permissions, long long transientID) {
-    //     const SVCPermissions oldPermissions = myPermissions;
     //     if (transientID == CHANGE_PERMISSIONS_PERMANENT) {
     //         myPermissions = permissions;
     //         myOriginalPermissions = permissions;
-    //         updateInternalLanePermissions(oldPermissions);
     //     } else {
     //         myPermissionChanges[transientID] = permissions;
     //         resetPermissions(CHANGE_PERMISSIONS_PERMANENT);
@@ -4793,11 +4775,9 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, permissions: SVCPermissions, transientID: i64) {
-        let oldPermissions = self.myPermissions;
         if transientID == MSLane_CHANGE_PERMISSIONS_PERMANENT {
             self.myPermissions = permissions;
             self.myOriginalPermissions = permissions;
-            self.update_internal_lane_permissions(oldPermissions);
         } else {
             self.myPermissionChanges.insert(transientID, permissions);
             self.reset_permissions(MSLane_CHANGE_PERMISSIONS_PERMANENT);
@@ -4807,7 +4787,6 @@ impl MSLane {
     /// C++: `void MSLane::resetPermissions(long long)`
     // void
     // MSLane::resetPermissions(long long transientID) {
-    //     const SVCPermissions oldPermissions = myPermissions;
     //     myPermissionChanges.erase(transientID);
     //     if (myPermissionChanges.empty()) {
     //         myPermissions = myOriginalPermissions;
@@ -4818,11 +4797,9 @@ impl MSLane {
     //             myPermissions &= item.second;
     //         }
     //     }
-    //     updateInternalLanePermissions(oldPermissions);
     // }
     #[allow(unused_variables)]
     pub fn reset_permissions(&mut self, transientID: i64) {
-        let oldPermissions = self.myPermissions;
         self.myPermissionChanges.remove(&transientID);
         if self.myPermissionChanges.is_empty() {
             self.myPermissions = self.myOriginalPermissions;
@@ -4833,7 +4810,6 @@ impl MSLane {
                 self.myPermissions &= *item;
             }
         }
-        self.update_internal_lane_permissions(oldPermissions);
     }
 
     /// C++: `bool MSLane::hadPermissionChanges() const` [const]
@@ -4844,39 +4820,6 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn had_permission_changes(&self) -> bool {
         !self.myPermissionChanges.is_empty()
-    }
-
-    /// C++: `void MSLane::updateInternalLanePermissions(SVCPermissions)`
-    /// Propagate a permission change of this lane to internal lanes that mirror it
-    // void
-    // MSLane::updateInternalLanePermissions(SVCPermissions oldPermissions) {
-    //     if (isInternal()) {
-    //         return;
-    //     }
-    //     for (MSLink* const link : getLinkCont()) {
-    //         MSLane* const internal = link->getViaLane();
-    //         // only update internal lanes that mirror the permissions of this lane;
-    //         // lanes with connection-specific permissions are left untouched
-    //         if (internal != nullptr && internal->getPermissions() == oldPermissions) {
-    //             internal->setPermissions(myPermissions, CHANGE_PERMISSIONS_PERMANENT);
-    //             internal->getEdge().rebuildAllowedLanes(false, false);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn update_internal_lane_permissions(&mut self, oldPermissions: SVCPermissions) {
-        if self.is_internal() {
-            return;
-        }
-        for link in self.myLinks.iter() {
-            let internal = link.get_via_lane();
-            // only update internal lanes that mirror the permissions of this lane;
-            // lanes with connection-specific permissions are left untouched
-            if !internal.is_null() && internal.get_permissions() == oldPermissions {
-                internal.m().set_permissions(self.myPermissions, MSLane_CHANGE_PERMISSIONS_PERMANENT);
-                internal.get_edge().rebuild_allowed_lanes(false, false);
-            }
-        }
     }
 
     /// C++: `void MSLane::setChangeLeft(SVCPermissions)`
@@ -6661,7 +6604,7 @@ impl MSLane {
     //         // get only those edges which connect to this lane
     //         for (MSEdgeVector::iterator i = pred.begin(); i != pred.end();) {
     //             std::vector<IncomingLaneInfo>::const_iterator j = find_if(myIncomingLanes.begin(), myIncomingLanes.end(), edge_finder(*i));
-    //             if (j == myIncomingLanes.end() || myEdge->getBidiEdge() == *i || ((*i)->isInternal() && myEdge->getBidiEdge() == (*i)->getNormalBefore())) {
+    //             if (j == myIncomingLanes.end()) {
     //                 i = pred.erase(i);
     //             } else {
     //                 ++i;
@@ -6682,10 +6625,7 @@ impl MSLane {
         if self.myLogicalPredecessorLane.get().is_null() {
             let mut pred: MSEdgeVector = self.myEdge.get_predecessors().clone();
             // get only those edges which connect to this lane
-            pred.retain(|i| {
-                let connects = self.myIncomingLanes.iter().any(|ili| MSLane_edge_finder::new(*i).call_op(ili));
-                !(!connects || self.myEdge.get_bidi_edge() == *i || (i.is_internal() && self.myEdge.get_bidi_edge() == i.get_normal_before()))
-            });
+            pred.retain(|i| self.myIncomingLanes.iter().any(|ili| MSLane_edge_finder::new(*i).call_op(ili)));
             // get the lane with the "straightest" connection
             if !pred.is_empty() {
                 let sorter = MSLane_by_connections_to_sorter::new(self.myEdge);
