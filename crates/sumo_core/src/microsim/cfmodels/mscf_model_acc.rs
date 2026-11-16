@@ -7,6 +7,30 @@ use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2ac
 use utils::common::to_string::f64_to_string_prec;
 use utils::geom::NUMERICAL_EPS;
 
+fn acc_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_ACC>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
+fn acc_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 { cf_cast::<MSCFModel_ACC>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred) }
+fn acc_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_ACC>(m).stop_speed(veh, speed, gap, decel, usage) }
+fn acc_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 { cf_cast::<MSCFModel_ACC>(m).interaction_gap(veh, vL) }
+fn acc_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 { cf_cast::<MSCFModel_ACC>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel) }
+fn acc_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 { cf_cast::<MSCFModel_ACC>(m).maximum_lane_speed_cf(veh, maxSpeed, maxSpeedLane) }
+fn acc_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_ACC>(m).get_model_id() }
+fn acc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_ACC>(m).duplicate(vtype) }
+fn acc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_ACC>(m).create_vehicle_variables() }
+
+/// Virtual table of MSCFModel_ACC: its overrides on top of the MSCFModel default table
+pub const ACC_VT: MSCFModelVt = MSCFModelVt {
+    follow_speed: acc_follow_speed,
+    insertion_follow_speed: acc_insertion_follow_speed,
+    stop_speed_2: acc_stop_speed_2,
+    interaction_gap: acc_interaction_gap,
+    get_secure_gap: acc_get_secure_gap,
+    maximum_lane_speed_cf: acc_maximum_lane_speed_cf,
+    get_model_id: acc_get_model_id,
+    duplicate: acc_duplicate,
+    create_vehicle_variables: acc_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 // C++ #defines in MSCFModel_ACC.cpp
 const DEFAULT_SC_GAIN: f64 = -0.4;
 const DEFAULT_GCC_GAIN_SPEED: f64 = 0.8;
@@ -158,6 +182,7 @@ impl MSCFModel_ACC {
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
         let p = vtype.get_parameter();
         let mut base = MSCFModel::new(vtype);
+        base.vt = &ACC_VT;
         let mySpeedControlGain = p.get_cf_param(SUMO_ATTR_SC_GAIN, DEFAULT_SC_GAIN);
         let myGapClosingControlGainSpeed = p.get_cf_param(SUMO_ATTR_GCC_GAIN_SPEED, DEFAULT_GCC_GAIN_SPEED);
         let myGapClosingControlGainSpace = p.get_cf_param(SUMO_ATTR_GCC_GAIN_SPACE, DEFAULT_GCC_GAIN_SPACE);
