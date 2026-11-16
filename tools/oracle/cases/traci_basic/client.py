@@ -659,6 +659,9 @@ def run_probe(side, port, net, rou, ours, fn, extra=()):
                 proc.kill()
 
 
+SHARD = [0, 1]  # (index, count) set by --shard; the default runs every probe
+
+
 def kill_cpp(port):
     # per-port only: other agents run harnesses concurrently and must not lose their sumo
     cmd = f"pkill -f -- '--remote-port {port} ' || true"
@@ -674,6 +677,7 @@ def run_side(side, port, ours, case, flt=(), skip=()):
     out = {}
     picked = [(l, f) for l, f in probes(lane, tl_id).items()
               if (not flt or any(s in l for s in flt)) and not any(s in l for s in skip)]
+    picked = [p for k, p in enumerate(picked) if k % SHARD[1] == SHARD[0]]
     for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
         extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
@@ -692,10 +696,13 @@ def main():
     ap.add_argument("--port", type=int, default=8813)
     ap.add_argument("--filter", default="", help="comma-separated substrings; only probes whose label contains one run")
     ap.add_argument("--skip", default="", help="comma-separated substrings; probes whose label contains one are not run")
+    ap.add_argument("--shard", default="0/1", help="i/n: run only every n-th probe, starting at i (parallel runs)")
     a = ap.parse_args()
     warn_if_stale(Path(a.ours))
     flt = tuple(s for s in a.filter.split(",") if s)
     skip = tuple(s for s in a.skip.split(",") if s)
+    shard, shards = (int(x) for x in a.shard.split("/"))
+    SHARD[:] = [shard, shards]
 
     if a.only:
         print(json.dumps(run_side(a.only, a.port, a.ours, a.case, flt, skip), indent=2))
