@@ -230,8 +230,7 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: equippedByDefaultAssignmentOptions needs the holder parameter and vtype parameter (SUMOVehicle exposes no Parameterised yet), so it cannot be evaluated; upgrade when SUMOVehicle implements Parameterised
-        let equip: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions(oc, \"stationfinder\", v, ...) needs holder parameters that SUMOVehicle does not expose yet");
+        let equip: bool = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "stationfinder", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false));
         if equip {
             into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_StationFinder::new(v))) as *mut MSVehicleDevice));
         }

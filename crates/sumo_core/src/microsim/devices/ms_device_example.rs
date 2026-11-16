@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice_Example.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::string_utils::to_double;
 use utils::common::to_string::{f64_to_string_default, to_string};
 use utils::options::options_cont::get_float;
@@ -91,8 +92,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "example", v, false) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "example", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             // get custom vehicle parameter
             let mut customParameter2 = -1.0;
             if v.get_parameter().has_parameter("example") {

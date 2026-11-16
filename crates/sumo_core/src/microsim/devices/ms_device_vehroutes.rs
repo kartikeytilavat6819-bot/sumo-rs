@@ -700,9 +700,8 @@ impl MSDevice_Vehroutes {
             // C++ `bis >> myCurrentValid` reads a 0/1 integer
             self.myCurrentValid = next_as::<i32>(&mut bis) != 0;
 
-            // shortcut: MSRoute::dictionary(id) lookup (returns the route) is not ported yet, only the insert form
-            let foundRoute: Option<ConstMSRoutePtr> = panic!("shortcut: MSRoute::dictionary(id) getter is not ported yet, only the insert form exists");
-            if let Some(route) = foundRoute {
+            let route: ConstMSRoutePtr = MSRoute::dictionary_3(&routeID, Ptr::null());
+            if !crate::microsim::ms_route::is_null_route(&route) {
                 let edge = MSEdge::dictionary_2(&edgeID);
                 self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(edge, time, route, &info, lastIndex, newIndex, self.myCurrentValid));
             }
@@ -1234,8 +1233,7 @@ impl MSDevice_Vehroutes {
         if routeOut.is_xml() {
             od.m().write(&self.myStopOut.get_string());
         }
-        // shortcut: Parameterised::writeParams is not ported yet, upgrade with utils/common/Parameterised
-        panic!("shortcut: writeParams(dev) not ported");
+        self.myHolder.get_parameter().write_params(od.m());
         od.m().close_tag("");
         od.m().lf();
         if MY_SORTED.load(Relaxed) && routeOut.is_xml() {

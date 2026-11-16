@@ -393,8 +393,7 @@ impl MSDevice_FCD {
             };
             for name in edge_filter_names(&content) {
                 let name = if starts_with(name, "edge:") { &name[5..] } else { name };
-                // shortcut: MSEdge::dictionary(const std::string&) is declared in ms_edge.rs as dictionary_2(&Unmapped string_view), so edge names cannot be resolved yet (name: {name}), upgrade when ms_edge.rs maps the string overload
-                panic!("shortcut: fcd-output.filter-edges.input-file cannot be used until MSEdge::dictionary(name) is ported (edge '{name}')");
+                MY_EDGE_FILTER.with(|c| c.borrow_mut().insert(MSEdge::dictionary_2(name)));
             }
         }
         let mut emissions = SumoXMLAttrMask::default();
@@ -633,8 +632,18 @@ impl MSDevice_FCD {
     #[allow(unused_variables)]
     pub fn build_shape_filter() {
         if is_set("fcd-output.filter-shapes") {
-            // shortcut: ShapeContainer::getPolygons() is Unmapped in utils/shapes/shape_container.rs (NamedObjectCont<SUMOPolygon*> unported), so the loaded polygons cannot be looked up (and the empty-container and missing-shape branches cannot run), upgrade when shape_container.rs maps myPolygons
-            panic!("shortcut: fcd-output.filter-shapes cannot be used until ShapeContainer polygons are ported");
+            let net = MSNet::get_instance();
+            let loadedShapes = net.m().get_shape_container();
+            if loadedShapes.get_polygons().len() > 0 {
+                for attrName in get_string_vector("fcd-output.filter-shapes") {
+                    match loadedShapes.get_polygons().get(&attrName).copied() {
+                        None => utils::common::msg_handler::write_error(&utils::tlf!("Specified shape '%' for filtering fcd-output could not be found.", attrName)),
+                        // store the PositionVector, not reference, as traci can manipulate / detete the polygons
+                        Some(poly) => MY_SHAPE4_FILTERS.with(|f| f.borrow_mut().push(poly.get_shape().clone())),
+                    }
+                }
+                MY_SHAPE_FILTER_INITIALIZED.set(true);
+            }
         } else {
             MY_SHAPE_FILTER_INITIALIZED.set(true);
         }

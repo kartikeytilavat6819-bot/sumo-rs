@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice_Taxi.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::to_string::{f64_to_string_prec, join_to_string_sorting};
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
@@ -76,10 +77,41 @@ impl std::ops::DerefMut for MSDevice_Taxi {
 //   static SUMOTime MSDevice_Taxi::myNextDispatchTime;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedCustomers;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedReservations;
+/// C++ template `StaticCommand<T>` (utils/common/StaticCommand.h), instantiated for `MSDevice_Taxi`:
+/// a Command that calls a static function on execute(), unless it was descheduled.
+pub struct MSDevice_Taxi_StaticCommand {
+    myOperation: fn(SUMOTime) -> SUMOTime,
+    myAmDescheduledByParent: bool,
+}
+
+impl MSDevice_Taxi_StaticCommand {
+    /// C++: `StaticCommand(Operation operation)`
+    pub fn new(operation: fn(SUMOTime) -> SUMOTime) -> Self {
+        MSDevice_Taxi_StaticCommand { myOperation: operation, myAmDescheduledByParent: false }
+    }
+
+    /// C++: `void StaticCommand::deschedule()`
+    pub fn deschedule(&mut self) {
+        self.myAmDescheduledByParent = true;
+    }
+}
+
+impl Command for MSDevice_Taxi_StaticCommand {
+    /// C++: `SUMOTime StaticCommand::execute(SUMOTime currentTime)`
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        // do not execute if the command was descheduled
+        if self.myAmDescheduledByParent {
+            return 0;
+        }
+        // execute if stil valid
+        (self.myOperation)(currentTime)
+    }
+}
+
 thread_local! {
     static MY_DISPATCH_PERIOD: std::cell::RefCell<SUMOTime> = std::cell::RefCell::new(0);
     static MY_DISPATCHER: std::cell::RefCell<Ptr<MSDispatch>> = std::cell::RefCell::new(Ptr::null());
-    static MY_DISPATCH_COMMAND: std::cell::RefCell<Ptr<Unmapped>> = std::cell::RefCell::new(Ptr::null());
+    static MY_DISPATCH_COMMAND: std::cell::RefCell<Ptr<MSDevice_Taxi_StaticCommand>> = std::cell::RefCell::new(Ptr::null());
     static MY_FLEET: std::cell::RefCell<Vec<Ptr<MSDevice_Taxi>>> = std::cell::RefCell::new(Vec::new());
     static MY_MAX_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
     static MY_MAX_CONTAINER_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
@@ -219,8 +251,7 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
-        if panic!("shortcut: equipped_by_default_assignment_options not ported") {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "taxi", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             // build the device
             let device: Ptr<MSDevice_Taxi> = Ptr::from_mut(Box::leak(Box::new(MSDevice_Taxi::new(v, &format!("taxi_{}", v.get_id())))));
             into.push(device.cast::<MSVehicleDevice>());
@@ -498,7 +529,7 @@ impl MSDevice_Taxi {
             MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
         });
         // delete myIdleAlgorithm
-        drop(unsafe { Box::from_raw(self.myIdleAlgorithm.as_raw()) });
+        delete_idle_algorithm(self.myIdleAlgorithm);
         // base class destructor runs after the derived one in C++
         self.base.drop_();
     }
@@ -1777,9 +1808,8 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
         };
         MY_DISPATCHER.with(|d| *d.borrow_mut() = dispatcher);
-        // shortcut: C++ `new StaticCommand<MSDevice_Taxi>(&MSDevice_Taxi::triggerDispatch)` is not ported (no Command type); a non-null marker keeps the "already initialised" check working, upgrade when StaticCommand is ported and scheduled via addEvent
-        let command: Ptr<Unmapped> = Ptr::from_mut(Box::leak(Box::new(())));
-        MY_DISPATCH_COMMAND.with(|c| *c.borrow_mut() = command);
+        let command: &mut MSDevice_Taxi_StaticCommand = Box::leak(Box::new(MSDevice_Taxi_StaticCommand::new(MSDevice_Taxi::trigger_dispatch)));
+        MY_DISPATCH_COMMAND.with(|c| *c.borrow_mut() = Ptr::from_mut(command));
         // round to next multiple of myDispatchPeriod
         if next < 0 {
             let now = MSNet::get_instance().get_current_time_step();
@@ -1789,9 +1819,7 @@ impl MSDevice_Taxi {
             next = now + delay;
         }
         MY_NEXT_DISPATCH_TIME.with(|t| *t.borrow_mut() = next);
-        // shortcut: the dispatch StaticCommand is not ported (command is a placeholder), so it cannot be scheduled; upgrade with StaticCommand
-        let _ = (command, next);
-        panic!("shortcut: triggerDispatch scheduling not ported");
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(command as &mut dyn Command), next);
     }
 
     /// C++: `void MSDevice_Taxi::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -1849,9 +1877,9 @@ impl MSDevice_Taxi {
         let algo = holder.get_string_param("device.taxi.idle-algorithm", false, "");
         let idle: Ptr<MSIdling>;
         if algo == "stop" {
-            idle = { panic!("shortcut: MSIdling_Stop constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_Stop::new()))).cast::<MSIdling>();
         } else if algo == "randomCircling" {
-            idle = { panic!("shortcut: MSIdling_RandomCircling constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_RandomCircling::new()))).cast::<MSIdling>();
             // make sure simulation terminates
             let depart = if holder.get_parameter().departProcedure == DepartDefinition::GIVEN {
                 holder.get_parameter().depart
