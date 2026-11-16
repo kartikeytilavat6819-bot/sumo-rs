@@ -345,9 +345,9 @@ pub struct MSLane {
     /// followers on all sublanes as seen by vehicles on consecutive lanes (cached)
     pub myFollowerInfo: MSLeaderInfo,
     /// time step for which myLeaderInfo was last updated
-    pub myLeaderInfoTime: SUMOTime,
+    pub myLeaderInfoTime: std::cell::Cell<SUMOTime>,
     /// time step for which myFollowerInfo was last updated
-    pub myFollowerInfoTime: SUMOTime,
+    pub myFollowerInfoTime: std::cell::Cell<SUMOTime>,
     /// precomputed myShape.length / myLength
     pub myLengthGeometryFactor: f64,
     /// whether this lane is an acceleration lane
@@ -600,8 +600,8 @@ impl MSLane {
             myApproachingLanes: BTreeMap::new(),
             myLeaderInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
             myFollowerInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
-            myLeaderInfoTime: SUMOTIME_MIN,
-            myFollowerInfoTime: SUMOTIME_MIN,
+            myLeaderInfoTime: std::cell::Cell::new(SUMOTIME_MIN),
+            myFollowerInfoTime: std::cell::Cell::new(SUMOTIME_MIN),
             myLengthGeometryFactor: utils::geom::POSITION_EPS.max(shape.length()) / length,
             myIsRampAccel: isRampAccel,
             myLaneType: type_.to_string(),
@@ -2556,7 +2556,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_last_vehicle_information(&self, ego: Ptr<MSVehicle>, latOffset: f64, minPos: f64, allowCached: bool, ignore: Ptr<MSVehicle>) -> MSLeaderInfo {
-        if self.myLeaderInfoTime < MSNet::get_instance().get_current_time_step() || !ego.is_null() || minPos > 0.0 || !allowCached {
+        if self.myLeaderInfoTime.get() < MSNet::get_instance().get_current_time_step() || !ego.is_null() || minPos > 0.0 || !allowCached {
             let mut leaderTmp = MSLeaderInfo::new(self.myWidth, ego, latOffset);
             let mut last = self.any_vehicles_begin();
             let mut freeSublanes: i32 = 1; // number of sublanes for which no leader was found
@@ -2571,7 +2571,7 @@ impl MSLane {
             if ego.is_null() && minPos == 0.0 {
                 // update cached value
                 Ptr::new(self).m().myLeaderInfo = leader_info_copy(&leaderTmp);
-                Ptr::new(self).m().myLeaderInfoTime = MSNet::get_instance().get_current_time_step();
+                self.myLeaderInfoTime.set(MSNet::get_instance().get_current_time_step());
             }
             return leaderTmp;
         }
@@ -2634,7 +2634,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn get_first_vehicle_information(&self, ego: Ptr<MSVehicle>, latOffset: f64, onlyFrontOnLane: bool, maxPos: f64, allowCached: bool) -> MSLeaderInfo {
-        if self.myFollowerInfoTime < MSNet::get_instance().get_current_time_step() || !ego.is_null() || maxPos < self.myLength || !allowCached || onlyFrontOnLane {
+        if self.myFollowerInfoTime.get() < MSNet::get_instance().get_current_time_step() || !ego.is_null() || maxPos < self.myLength || !allowCached || onlyFrontOnLane {
             let mut followerTmp = MSLeaderInfo::new(self.myWidth, ego, latOffset);
             let mut first = self.any_vehicles_upstream_begin();
             let mut freeSublanes: i32 = 1; // number of sublanes for which no leader was found
@@ -2649,7 +2649,7 @@ impl MSLane {
             if ego.is_null() && maxPos == f64::MAX {
                 // update cached value
                 Ptr::new(self).m().myFollowerInfo = leader_info_copy(&followerTmp);
-                Ptr::new(self).m().myFollowerInfoTime = MSNet::get_instance().get_current_time_step();
+                self.myFollowerInfoTime.set(MSNet::get_instance().get_current_time_step());
             }
             return followerTmp;
         }
@@ -7698,8 +7698,8 @@ impl MSLane {
         self.myNettoVehicleLengthSum = 0.;
         self.myBruttoVehicleLengthSumToRemove = 0.;
         self.myNettoVehicleLengthSumToRemove = 0.;
-        self.myLeaderInfoTime = utils::common::time::SUMOTIME_MIN;
-        self.myFollowerInfoTime = utils::common::time::SUMOTIME_MIN;
+        self.myLeaderInfoTime.set(utils::common::time::SUMOTIME_MIN);
+        self.myFollowerInfoTime.set(utils::common::time::SUMOTIME_MIN);
         for link in self.myLinks.iter() {
             link.m().clear_state();
         }

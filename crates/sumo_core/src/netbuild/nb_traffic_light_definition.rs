@@ -90,9 +90,9 @@ pub struct NBTrafficLightDefinition {
     /// The algorithm type for the traffic light
     pub myType: TrafficLightType,
     pub myNeedsContRelation: NBTrafficLightDefinition_NeedsContRelation,
-    pub myNeedsContRelationReady: bool,
+    pub myNeedsContRelationReady: std::cell::Cell<bool>,
     pub myExtraConflicts: NBTrafficLightDefinition_ExtraConflicts,
-    pub myExtraConflictsReady: bool,
+    pub myExtraConflictsReady: std::cell::Cell<bool>,
 }
 
 impl std::ops::Deref for NBTrafficLightDefinition {
@@ -180,9 +180,9 @@ impl NBTrafficLightDefinition {
             myOffset: offset,
             myType: type_,
             myNeedsContRelation: BTreeSet::new(),
-            myNeedsContRelationReady: false,
+            myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: BTreeSet::new(),
-            myExtraConflictsReady: false,
+            myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
 
@@ -214,9 +214,9 @@ impl NBTrafficLightDefinition {
             myOffset: offset,
             myType: type_,
             myNeedsContRelation: BTreeSet::new(),
-            myNeedsContRelationReady: false,
+            myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: BTreeSet::new(),
-            myExtraConflictsReady: false,
+            myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
 
@@ -246,9 +246,9 @@ impl NBTrafficLightDefinition {
             myOffset: offset,
             myType: type_,
             myNeedsContRelation: BTreeSet::new(),
-            myNeedsContRelationReady: false,
+            myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: BTreeSet::new(),
-            myExtraConflictsReady: false,
+            myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
 
@@ -854,7 +854,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn needs_cont(&self, fromE: Ptr<NBEdge>, toE: Ptr<NBEdge>, otherFromE: Ptr<NBEdge>, otherToE: Ptr<NBEdge>) -> bool {
-        if !self.myNeedsContRelationReady {
+        if !self.myNeedsContRelationReady.get() {
             self.init_needs_cont_relation();
             // assert(myNeedsContRelationReady)
         }
@@ -898,7 +898,7 @@ impl NBTrafficLightDefinition {
                 node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
             }
         }
-        Ptr::new(self).m().myNeedsContRelationReady = true;
+        self.myNeedsContRelationReady.set(true);
     }
 
     /// C++: `void NBTrafficLightDefinition::initExtraConflicts() const` [const, virtual]
@@ -922,7 +922,7 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn init_extra_conflicts(&self) {
-        if !self.myExtraConflictsReady {
+        if !self.myExtraConflictsReady.get() {
             let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
             dummy.set_participants_information();
             let tllDummy = dummy.compute_logic_and_conts(0, true);
@@ -933,7 +933,7 @@ impl NBTrafficLightDefinition {
             for node in self.myControlledNodes.clone() {
                 node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
             }
-            Ptr::new(self).m().myExtraConflictsReady = true;
+            self.myExtraConflictsReady.set(true);
         }
     }
 

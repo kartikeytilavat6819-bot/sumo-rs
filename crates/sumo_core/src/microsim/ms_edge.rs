@@ -49,7 +49,7 @@ pub struct MSEdge {
     /// Vaporizer counter
     pub myVaporizationRequests: i32,
     /// The time of last insertion failure
-    pub myLastFailedInsertionTime: SUMOTime,
+    pub myLastFailedInsertionTime: std::cell::Cell<SUMOTime>,
     /// A cache for the rejected insertion attempts. Used to assure that no further insertion attempts are made on a lane where an attempt has already failed in the current time step if MSInsertionControl::myEagerInsertionCheck is off.
     pub myFailedInsertionMemory: BTreeSet<i32>,
     /// The crossed edges id for a crossing edge. On not crossing edges it is empty
@@ -103,7 +103,7 @@ pub struct MSEdge {
     /// flat penalty when computing traveltime
     pub myTimePenalty: f64,
     /// whether this edge had a vehicle with less than max speed on it
-    pub myAmDelayed: bool,
+    pub myAmDelayed: std::cell::Cell<bool>,
     /// whether this edge belongs to a roundabout
     pub myAmRoundabout: bool,
     /// whether this edge is at the network fringe
@@ -299,7 +299,7 @@ impl MSEdge {
             myLaneChanger: Ptr::null(),
             myFunction: function,
             myVaporizationRequests: 0,
-            myLastFailedInsertionTime: -1,
+            myLastFailedInsertionTime: std::cell::Cell::new(-1),
             myFailedInsertionMemory: BTreeSet::new(),
             myCrossingEdges: Vec::new(),
             mySuccessors: Vec::new(),
@@ -328,7 +328,7 @@ impl MSEdge {
             myLength: 0.,
             myEmptyTraveltime: 0.,
             myTimePenalty: 0.,
-            myAmDelayed: false,
+            myAmDelayed: std::cell::Cell::new(false),
             myAmRoundabout: false,
             myAmFringe: true,
             mySublaneSides: Vec::new(),
@@ -1807,7 +1807,7 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn get_current_travel_time(&self, minSpeed: f64) -> f64 {
         assert!(minSpeed > 0.);
-        if !self.myAmDelayed {
+        if !self.myAmDelayed.get() {
             return self.myEmptyTraveltime;
         }
         // MAX2(minSpeed, getMeanSpeed())
@@ -2021,7 +2021,7 @@ impl MSEdge {
             }
         }
         if MSGlobals::use_meso_sim() {
-            if !forceCheck && self.myLastFailedInsertionTime == time {
+            if !forceCheck && self.myLastFailedInsertionTime.get() == time {
                 return false;
             }
             let mut pos: f64 = 0.0;
@@ -2099,7 +2099,7 @@ impl MSEdge {
         // determinism: the failed-insertion memory is a set of lane indices, so iteration order does not matter
         let me: Ptr<MSEdge> = Ptr::new(self);
         if !forceCheck {
-            if self.myLastFailedInsertionTime == time {
+            if self.myLastFailedInsertionTime.get() == time {
                 if self.myFailedInsertionMemory.contains(&insertionLane.get_index()) {
                     // A vehicle was already rejected for the proposed insertionLane in this timestep
                     return false;
@@ -2537,7 +2537,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_last_failed_insertion_time(&self) -> SUMOTime {
-        self.myLastFailedInsertionTime
+        self.myLastFailedInsertionTime.get()
     }
 
     /// C++: `void MSEdge::setLastFailedInsertionTime(SUMOTime) const` [const]
@@ -2548,7 +2548,7 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn set_last_failed_insertion_time(&self, time: SUMOTime) {
         // C++ field is mutable; the setter is const
-        Ptr::new(self).m().myLastFailedInsertionTime = time;
+        self.myLastFailedInsertionTime.set(time);
     }
 
     /// C++: `void MSEdge::changeLanes(SUMOTime) const` [const]
@@ -3286,7 +3286,7 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn mark_delayed(&self) {
         // C++ field is mutable; the marker is const
-        Ptr::new(self).m().myAmDelayed = true;
+        self.myAmDelayed.set(true);
     }
 
     /// C++: `bool MSEdge::isDelayed() const` [const]
@@ -3295,7 +3295,7 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_delayed(&self) -> bool {
-        self.myAmDelayed || (!self.myBidiEdge.is_null() && self.myBidiEdge.myAmDelayed)
+        self.myAmDelayed.get() || (!self.myBidiEdge.is_null() && self.myBidiEdge.myAmDelayed.get())
     }
 
     /// C++: `bool MSEdge::hasLaneChanger() const` [const]

@@ -1865,9 +1865,9 @@ impl NBOwnTLDef {
                 }
             }
         }
-        self.myExtraConflictsReady = true;
+        self.myExtraConflictsReady.set(true);
         if self.myControlledNodes.len() == 1 {
-            self.myNeedsContRelationReady = true;
+            self.myNeedsContRelationReady.set(true);
         }
         if totalDuration > 0 {
             if totalDuration > 3 * (greenTime + 2 * brakingTime + leftTurnTime) && !isNEMA && self.get_id() != NBTrafficLightDefinition_DummyID {
@@ -1914,7 +1914,7 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        if !self.myNeedsContRelationReady {
+        if !self.myNeedsContRelationReady.get() {
             if self.myControlledNodes.len() > 0 {
                 // we use a dummy node just to maintain const-correctness
                 Ptr::new(self).m().myNeedsContRelation.clear();
@@ -1929,7 +1929,7 @@ impl NBOwnTLDef {
                     n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
                 }
             }
-            Ptr::new(self).m().myNeedsContRelationReady = true;
+            self.myNeedsContRelationReady.set(true);
         }
     }
 
