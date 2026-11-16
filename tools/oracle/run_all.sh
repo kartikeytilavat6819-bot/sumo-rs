@@ -37,33 +37,40 @@ for dir in tools/oracle/cases/*/; do
   else
     line "$c" net SKIP "no reference net"; SKIP=$((SKIP+1))
   fi
-  # --- sim stage
+  # --- sim stage; one run per committed reference variant (ref.*, ref_<v>.*)
   if [ -f "$dir/routes.rou" ] && [ -f "$dir/ref_simple.net.xml" ] && [ -f "$dir/ref.tripinfo.xml" ]; then
-    EXTRA=""
-    [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
-    "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-        --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
-        --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
-        >"$OUT/$c.sumo.log" 2>&1
-    rc=$?
-    if [ $rc -ne 0 ]; then
-      line "$c" sim-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.sumo.log" | cut -c1-90)"; FAIL=$((FAIL+1))
-      continue
-    fi
-    r="PASS"
-    python tools/oracle/compare_sim.py --tripinfo "$dir/ref.tripinfo.xml" "$OUT/$c.ti.xml" >"$OUT/$c.ti.log" 2>&1 || r="FAIL"
-    if [ -f "$dir/ref.fcd.xml" ]; then
-      python tools/oracle/compare_sim.py --fcd "$dir/ref.fcd.xml" "$OUT/$c.fcd.xml" >"$OUT/$c.fcd.log" 2>&1 || r="FAIL"
-    fi
-    if [ -f "$dir/ref.stat.xml" ]; then
-      python tools/oracle/compare_stat.py "$dir/ref.stat.xml" "$OUT/$c.stat.xml" >"$OUT/$c.stat.log" 2>&1 || r="FAIL"
-    fi
-    if [ "$r" = "PASS" ]; then
-      line "$c" sim PASS; PASS=$((PASS+1))
-    else
-      d=$( (head -1 "$OUT/$c.ti.log"; head -1 "$OUT/$c.fcd.log"; tail -1 "$OUT/$c.stat.log") 2>/dev/null | grep -vE '^$' | head -1 | cut -c1-90)
-      line "$c" sim FAIL "$d"; FAIL=$((FAIL+1))
-    fi
+    for ref in "$dir"ref*.tripinfo.xml; do
+      tag=$(basename "$ref" .tripinfo.xml)          # ref or ref_<v>
+      if [ "$tag" = "ref" ]; then
+        EXTRA=""; [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
+      else
+        argsf="$dir/sim_${tag#ref_}.args"
+        [ -f "$argsf" ] || { line "$c/$tag" sim SKIP "no ${argsf##*/}"; SKIP=$((SKIP+1)); continue; }
+        EXTRA=$(cat "$argsf")
+      fi
+      "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+          --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \
+          --statistic-output "$OUT/$c.$tag.stat.xml" --no-step-log true $EXTRA \
+          >"$OUT/$c.$tag.sumo.log" 2>&1
+      if [ $? -ne 0 ]; then
+        line "$c/$tag" sim-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.$tag.sumo.log" | cut -c1-90)"; FAIL=$((FAIL+1))
+        continue
+      fi
+      r="PASS"
+      python tools/oracle/compare_sim.py --tripinfo "$ref" "$OUT/$c.$tag.ti.xml" >"$OUT/$c.$tag.ti.log" 2>&1 || r="FAIL"
+      if [ -f "$dir/$tag.fcd.xml" ]; then
+        python tools/oracle/compare_sim.py --fcd "$dir/$tag.fcd.xml" "$OUT/$c.$tag.fcd.xml" >"$OUT/$c.$tag.fcd.log" 2>&1 || r="FAIL"
+      fi
+      if [ -f "$dir/$tag.stat.xml" ]; then
+        python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
+      fi
+      if [ "$r" = "PASS" ]; then
+        line "$c/$tag" sim PASS; PASS=$((PASS+1))
+      else
+        d=$( (head -1 "$OUT/$c.$tag.ti.log"; head -1 "$OUT/$c.$tag.fcd.log"; tail -1 "$OUT/$c.$tag.stat.log") 2>/dev/null | grep -vE '^$' | head -1 | cut -c1-90)
+        line "$c/$tag" sim FAIL "$d"; FAIL=$((FAIL+1))
+      fi
+    done
   else
     line "$c" sim SKIP "no routes/refs"; SKIP=$((SKIP+1))
   fi
