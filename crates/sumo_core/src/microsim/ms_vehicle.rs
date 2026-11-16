@@ -372,8 +372,7 @@ impl Influencer_GapControlState {
     // }
     #[allow(unused_variables)]
     pub fn activate(&mut self, tauOriginal: f64, tauTarget: f64, additionalGap: f64, duration: f64, changeRate: f64, maxDecel: f64, refVeh: Ptr<MSVehicle>) {
-        // shortcut: MSGlobals::gUseMesoSim is not ported yet (always false), upgrade when MSGlobals statics land
-        if false {
+        if crate::microsim::ms_globals::use_meso_sim() {
             utils::common::msg_handler::write_error("No gap control available for meso.");
         } else {
             // always deactivate control before activating (triggers clean-up of refVehMap)
@@ -3154,8 +3153,7 @@ impl MSVehicle {
         self.plan_move_internal(t, ahead, lfLinks.m(), stopDist.m(), stopSpeed.m(), nextTurn.m());
         self.check_rewind_link_lanes(lengthsInFront, lfLinks.m());
         self.myNextDriveItem = 0;
-        // shortcut: MSGlobals::gModelParkingManoeuver is not ported, always false until it is
-        let gModelParkingManoeuver = false;
+        let gModelParkingManoeuver = crate::microsim::ms_globals::model_parking_manoeuver();
         if gModelParkingManoeuver {
             if self.get_manoeuvre_type() == MSVehicle_ManoeuvreType::MANOEUVRE_EXIT && self.manoeuvre_is_complete() {
                 self.set_manoeuvre_type(MSVehicle_ManoeuvreType::MANOEUVRE_NONE);
@@ -5023,8 +5021,7 @@ impl MSVehicle {
         if !accumulated {
             return self.myWaitingTime;
         }
-        // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used (same as the collector constructor)
-        self.myWaitingTimeCollector.cumulated_waiting_time(300 * 1000)
+        self.myWaitingTimeCollector.cumulated_waiting_time(crate::microsim::ms_globals::waiting_time_memory())
     }
 
     /// C++: `SUMOTime MSVehicle::getWaitingTimeFor(const MSLink *) const` [const]

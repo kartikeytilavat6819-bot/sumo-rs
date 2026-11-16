@@ -397,9 +397,9 @@ impl std::ops::DerefMut for MSLane {
 //   static DepartSpeedDefinition MSLane::myDefaultDepartSpeedDefinition;
 //   static double MSLane::myDefaultDepartSpeed;
 
-// shortcut: MSGlobals::gLateralResolution is not ported yet, uses the C++ default of -1 (disabled)
+/// C++: `MSGlobals::gLateralResolution`
 fn g_lateral_resolution() -> f64 {
-    -1.
+    crate::microsim::ms_globals::lateral_resolution()
 }
 
 /// C++: `MSPModel::SAFETY_GAP`
@@ -407,7 +407,7 @@ const MSP_MODEL_SAFETY_GAP: f64 = 1.0;
 
 /// C++: `MSGlobals::gEmergencyInsert`
 fn g_emergency_insert() -> bool {
-    utils::options::options_cont::get_bool("emergency-insert")
+    crate::microsim::ms_globals::emergency_insert()
 }
 
 /// C++: `MSGlobals::gCheckRoutes` (set from the inverse of `ignore-route-errors`)
@@ -768,8 +768,7 @@ impl MSLane {
     pub fn set_bidi_lane(&mut self, bidyLane: Ptr<MSLane>) {
         self.myBidiLane = bidyLane;
         if !self.myBidiLane.is_null() && self.get_length() > self.myBidiLane.get_length() {
-            // shortcut: MSGlobals::gUsingInternalLanes is not ported yet, treated as false
-            if self.is_normal() || false {
+            if self.is_normal() || crate::microsim::ms_globals::using_internal_lanes() {
                 utils::write_warningf!("Unequal lengths of bidi lane '%' and lane '%' (% != %).", self.get_id(), self.myBidiLane.get_id(), self.get_length(), self.myBidiLane.get_length());
             }
         }
