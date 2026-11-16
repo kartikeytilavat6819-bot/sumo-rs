@@ -2562,7 +2562,7 @@ impl MSBaseVehicle {
         let checkJumps = Rc::ptr_eq(&route, &self.myRoute);
         // the edge iterators in the stops are invalid for other routes
         let start = if checkJumps { self.myCurrEdge } else { 0 };
-        self.has_valid_route_2(msg, start, route.size() as usize, checkJumps)
+        self.has_valid_route_2(msg, route.get_edges(), start, route.size() as usize, checkJumps)
     }
 
     /// C++: `bool MSBaseVehicle::hasValidRoute(std::string &, MSRouteIterator, MSRouteIterator, bool) const` [const]
@@ -2592,9 +2592,8 @@ impl MSBaseVehicle {
     //     return true;
     // }
     #[allow(unused_variables)]
-    /// `start`/`last` are indices into myRoute's edges (MSRouteIterator is Unmapped)
-    pub fn has_valid_route_2(&self, msg: &mut String, start: usize, last: usize, checkJumps: bool) -> bool {
-        let edges = self.myRoute.get_edges();
+    /// `start`/`last` are indices into `edges`, the edges of the route being checked (MSRouteIterator is Unmapped)
+    pub fn has_valid_route_2(&self, msg: &mut String, edges: &ConstMSEdgeVector, start: usize, last: usize, checkJumps: bool) -> bool {
         let vclass = self.myType.get_vehicle_class();
         // check connectivity, first
         let lastValid = last as i64 - 1;
