@@ -852,4 +852,135 @@ fn call_op<E, V>(op: Option<SUMOAbstractRouter_TypedOperation<E, V>>, e: Ptr<E>,
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::router::dijkstra_router::DijkstraRouter;
+
+    /// The router reads only the class and the ignore flag of the vehicle; a null vehicle is used in the tests.
+    struct TestVeh;
+
+    impl RouterVehicle for TestVeh {
+        fn v_class(&self) -> SUMOVehicleClass {
+            SVC_IGNORING
+        }
+        fn get_id(&self) -> String {
+            "veh".to_string()
+        }
+        fn get_max_speed(&self) -> f64 {
+            0.
+        }
+        fn get_chosen_speed_factor(&self) -> f64 {
+            1.
+        }
+        fn ignore_transient_permissions(&self) -> bool {
+            false
+        }
+        fn length(&self) -> f64 {
+            0.
+        }
+    }
+
+    /// Network edge with the accessors the router reads: id, numerical id, length and the via successors.
+    struct TestEdge {
+        id: String,
+        numericalID: i32,
+        length: f64,
+        viaSuccessors: Vec<(Ptr<TestEdge>, Ptr<TestEdge>)>,
+    }
+
+    impl RouterEdgeInfo for TestEdge {
+        fn edge_numerical_id(&self) -> i32 {
+            self.numericalID
+        }
+        fn edge_id(&self) -> String {
+            self.id.clone()
+        }
+        fn edge_permissions(&self) -> SVCPermissions {
+            SVC_ALL
+        }
+    }
+
+    impl RouterEdge<TestVeh> for TestEdge {
+        type Node = ();
+        type Lane = ();
+        fn id(&self) -> &str {
+            &self.id
+        }
+        fn numerical_id(&self) -> i32 {
+            self.numericalID
+        }
+        fn length(&self) -> f64 {
+            self.length
+        }
+        fn length_geometry_factor(&self) -> f64 {
+            1.
+        }
+        fn distance_to(&self, _other: Ptr<Self>, _doBoundaryEstimate: bool) -> f64 {
+            0.
+        }
+        fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+            &[]
+        }
+        fn via_successors(&self, _vclass: SUMOVehicleClass, _ignoreTransient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+            &self.viaSuccessors
+        }
+        fn speed_limit(&self) -> f64 {
+            1.
+        }
+        fn minimum_travel_time(&self, _veh: Ptr<TestVeh>) -> f64 {
+            self.length
+        }
+        fn bidi_edge(&self) -> Ptr<Self> {
+            Ptr::null()
+        }
+        fn travel_time_static(_edge: Ptr<Self>, _veh: Ptr<TestVeh>, _time: f64) -> f64 {
+            0.
+        }
+        fn travel_time_aggregated(_edge: Ptr<Self>, _veh: Ptr<TestVeh>, _time: f64) -> f64 {
+            0.
+        }
+        fn is_internal(&self) -> bool {
+            false
+        }
+        fn prohibits(&self, _veh: Ptr<TestVeh>, _checkRestrictions: bool) -> bool {
+            false
+        }
+        fn restricts(&self, _veh: Ptr<TestVeh>) -> bool {
+            false
+        }
+    }
+
+    /// Effort of an edge is its length, as in a plain shortest-path query
+    fn length_effort(e: Ptr<TestEdge>, _v: Ptr<TestVeh>, _t: f64) -> f64 {
+        e.length
+    }
+
+    fn edge(id: &str, numericalID: i32, length: f64) -> Box<TestEdge> {
+        Box::new(TestEdge { id: id.to_string(), numericalID, length, viaSuccessors: Vec::new() })
+    }
+
+    /// Diamond A -> {B, C} -> D with lengths A=10, B=20, C=5, D=10.
+    /// A-B-D costs 10 + 20 + 10 = 40 and A-C-D costs 10 + 5 + 10 = 25, so the route must be A, C, D.
+    #[test]
+    fn compute_picks_cheapest_route_on_diamond() {
+        let boxes = vec![edge("A", 0, 10.), edge("B", 1, 20.), edge("C", 2, 5.), edge("D", 3, 10.)];
+        let ptrs: Vec<Ptr<TestEdge>> = boxes.iter().map(|b| Ptr::from_box(b)).collect();
+        for (from, to) in [(0usize, 1usize), (0, 2), (1, 3), (2, 3)] {
+            ptrs[from].m().viaSuccessors.push((ptrs[to], Ptr::null()));
+        }
+        let op: SUMOAbstractRouter_TypedOperation<TestEdge, TestVeh> = length_effort;
+        let mut router = DijkstraRouter::new(&ptrs, true, Some(op), None, true, Ptr::null(), false, false);
+
+        let mut route: Vec<Ptr<TestEdge>> = Vec::new();
+        assert!(router.compute(ptrs[0], ptrs[3], Ptr::null(), 0, &mut route, true));
+        let ids: Vec<String> = route.iter().map(|e| e.id.clone()).collect();
+        assert_eq!(ids, vec!["A", "C", "D"]);
+
+        let mut none: Vec<Ptr<TestEdge>> = Vec::new();
+        assert!(!router.compute(ptrs[3], ptrs[0], Ptr::null(), 0, &mut none, true));
+        assert!(none.is_empty());
+    }
+}
+
 
