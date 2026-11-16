@@ -343,8 +343,9 @@ impl MSBaseVehicle {
         let self_ptr = self as *mut MSBaseVehicle;
         let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
         let mut devices: Vec<Ptr<MSVehicleDevice>> = Vec::new();
-        // shortcut: only tripinfo device is built here; full MSDevice::build_vehicle_devices panics on unported devices (rerouting/emissions/example/...). Upgrade to full build once those are ported.
+        // shortcut: only tripinfo, routing and fcd devices are built here; full MSDevice::build_vehicle_devices still panics on unported devices (vehroutes/emissions/example/...). Upgrade to full build once those are ported.
         crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo::build_vehicle_devices(v, &mut devices);
+        crate::microsim::devices::ms_device_routing::MSDevice_Routing::build_vehicle_devices(v, &mut devices);
         crate::microsim::devices::ms_device_fcd::MSDevice_FCD::build_vehicle_devices(v, &mut devices);
         self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
         self.myDevices = devices;

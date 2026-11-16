@@ -135,8 +135,8 @@ impl MSRoutingEngine {
                 st.myAdaptationWeight = weight;
             }
             if weight < 1. && interval > 0 {
-                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so the periodic weight update cannot be scheduled, upgrade with the event port
-                panic!("shortcut: the end-of-timestep event for adaptEdgeEfforts is not ported");
+                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so edge weights are never adapted; no reroute runs yet either (periodic reroute command unported), upgrade together with the reroute command port
+
             } else if period > 0 {
                 utils::common::msg_handler::write_warning("Rerouting is useless if the edge weights do not get updated!");
             }
