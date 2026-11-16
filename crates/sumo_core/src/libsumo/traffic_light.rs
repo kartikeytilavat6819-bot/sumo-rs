@@ -965,8 +965,14 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_by_trip_id(tripOrVehID: String) -> Ptr<SUMOVehicle> {
-        // shortcut: needs iteration over MSVehicleControl loaded vehicles, whose loadedVehBegin/loadedVehEnd are still unported in ms_vehicle_control.rs, upgrade when those are ported
-        panic!("shortcut: TrafficLight::getVehicleByTripId needs MSVehicleControl::loadedVehBegin/End")
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        for (_, veh) in c.myVehicleDict.iter() {
+            if veh.get_parameter().base.get_parameter("tripId", &veh.get_id().to_string()) == tripOrVehID {
+                return *veh;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getFutureTripIds(const std::string)` [static, private]
@@ -989,8 +995,22 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_future_trip_ids(vehID: String) -> Vec<String> {
-        // shortcut: needs dynamic_cast SUMOVehicle -> MSBaseVehicle, which needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
-        panic!("shortcut: TrafficLight::getFutureTripIds needs dynamic_cast to MSBaseVehicle")
+        let mut result: Vec<String> = Vec::new();
+        // shortcut: dynamic_cast<MSBaseVehicle*> is not checked at runtime, the vehicle is assumed to be a base vehicle, upgrade with a typed vehicle check
+        let sumoVeh = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&vehID);
+        if !sumoVeh.is_null() {
+            let veh = sumoVeh.cast::<MSBaseVehicle>();
+            let tripId = veh.get_parameter().base.get_parameter("tripId", "");
+            if tripId != "" {
+                result.push(tripId);
+            }
+            for stop in veh.get_stops().iter() {
+                if stop.pars.tripId != "" {
+                    result.push(stop.pars.tripId.clone());
+                }
+            }
+        }
+        result
     }
 
     /// C++: `void TrafficLight::swapParameters(MSRailSignalConstraint *)` [static, private]
