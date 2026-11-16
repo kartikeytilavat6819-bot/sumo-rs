@@ -222,6 +222,46 @@ fn ms_person_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice
     ms_person_of(o).base.get_device(type_)
 }
 
+fn ms_person_of_mut(o: &mut SUMOTrafficObject) -> &mut MSPerson {
+    Ptr::from_mut(o).cast::<MSPerson>().get_mut().unwrap()
+}
+fn ms_person_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    ms_person_of(o).base.get_v_type_parameter()
+}
+fn ms_person_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    ms_person_of_mut(o).base.replace_vehicle_type(type_)
+}
+fn ms_person_is_stopped(o: &SUMOTrafficObject) -> bool {
+    ms_person_of(o).base.is_stopped()
+}
+fn ms_person_get_next_edge_ptr(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_person_of(o).get_next_edge_ptr()
+}
+fn ms_person_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    ms_person_of(o).base.get_upcoming_edge_i_ds()
+}
+fn ms_person_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    ms_person_of_mut(o).base.replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn ms_person_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    ms_person_of(o).get_chosen_speed_factor()
+}
+fn ms_person_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
+    ms_person_of(o).base.get_routing_mode()
+}
+fn ms_person_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    ms_person_of_mut(o).base.set_routing_mode(value)
+}
+fn ms_person_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_person_of(o).base.get_previous_speed()
+}
+fn ms_person_has_influencer(o: &SUMOTrafficObject) -> bool {
+    ms_person_of(o).has_influencer()
+}
+fn ms_person_is_selected(o: &SUMOTrafficObject) -> bool {
+    ms_person_of(o).is_selected()
+}
+
 static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: ms_person_is_vehicle,
     is_person: ms_person_is_person,
@@ -234,33 +274,33 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     get_numerical_id: ms_person_get_numerical_id,
     get_random_seed: ms_person_get_random_seed,
     get_vehicle_type: ms_person_get_vehicle_type,
-    get_v_type_parameter: crate::utils::vehicle::sumo_traffic_object::default_get_v_type_parameter,
-    replace_vehicle_type: crate::utils::vehicle::sumo_traffic_object::default_replace_vehicle_type,
+    get_v_type_parameter: ms_person_get_v_type_parameter,
+    replace_vehicle_type: ms_person_replace_vehicle_type,
     get_rng: ms_person_get_rng,
     get_rng_index: ms_person_get_rng_index,
-    is_stopped: crate::utils::vehicle::sumo_traffic_object::default_is_stopped,
+    is_stopped: ms_person_is_stopped,
     get_current_edge: ms_person_get_current_edge,
-    get_next_edge_ptr: crate::utils::vehicle::sumo_traffic_object::default_get_next_edge_ptr,
-    get_upcoming_edge_i_ds: crate::utils::vehicle::sumo_traffic_object::default_get_upcoming_edge_i_ds,
+    get_next_edge_ptr: ms_person_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: ms_person_get_upcoming_edge_i_ds,
     get_back_lane: ms_person_get_back_lane,
     get_route_position: ms_person_get_route_position,
     get_reroute_destination: ms_person_get_reroute_destination,
-    replace_route: crate::utils::vehicle::sumo_traffic_object::default_replace_route,
+    replace_route: ms_person_replace_route,
     get_slope: ms_person_get_slope,
-    get_chosen_speed_factor: crate::utils::vehicle::sumo_traffic_object::default_get_chosen_speed_factor,
+    get_chosen_speed_factor: ms_person_get_chosen_speed_factor,
     get_v_class: ms_person_get_v_class,
-    get_routing_mode: crate::utils::vehicle::sumo_traffic_object::default_get_routing_mode,
-    set_routing_mode: crate::utils::vehicle::sumo_traffic_object::default_set_routing_mode,
+    get_routing_mode: ms_person_get_routing_mode,
+    set_routing_mode: ms_person_set_routing_mode,
     get_max_speed: ms_person_get_max_speed,
     get_waiting_time: ms_person_get_waiting_time,
-    get_previous_speed: crate::utils::vehicle::sumo_traffic_object::default_get_previous_speed,
+    get_previous_speed: ms_person_get_previous_speed,
     get_acceleration: ms_person_get_acceleration,
     get_position_on_lane: ms_person_get_position_on_lane,
     get_back_position_on_lane: ms_person_get_back_position_on_lane,
     get_angle: ms_person_get_angle,
     has_arrived: ms_person_has_arrived,
-    has_influencer: crate::utils::vehicle::sumo_traffic_object::default_has_influencer,
-    is_selected: crate::utils::vehicle::sumo_traffic_object::default_is_selected,
+    has_influencer: ms_person_has_influencer,
+    is_selected: ms_person_is_selected,
     get_device: ms_person_get_device,
 };
 
