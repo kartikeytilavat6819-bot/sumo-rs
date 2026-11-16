@@ -26,6 +26,8 @@ pub struct SUMORouteHandler {
     pub base: GenericSAXHandler,
     /// Virtual dispatch table; must stay after `base`
     pub vt: &'static SUMORouteHandlerVt,
+    /// C++ virtual `myStartElement` override of a subclass (MSRouteHandler), reached from the SAX trait impl
+    pub start_element_override: Option<fn(&mut SUMORouteHandler, i32, &SUMOSAXAttributes)>,
     /// flag to enable or disable hard fails
     pub myHardFail: bool,
     /// Parameter of the current vehicle, trip, person, container or flow
@@ -276,6 +278,7 @@ impl SUMORouteHandler {
         SUMORouteHandler {
             base: utils::xml::sumo_sax_handler::new(file, expectedRoot),
             vt: &DEFAULT_SUMO_ROUTE_HANDLER_VT,
+            start_element_override: None,
             myHardFail: hardFail,
             myVehicleParameter: Ptr::null(),
             myParamStack: Vec::new(),
@@ -1547,7 +1550,10 @@ impl SUMORouteHandler {
 impl utils::xml::generic_sax_handler::SaxHandler for SUMORouteHandler {
     fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
-        self.my_start_element(element, attrs);
+        match self.start_element_override {
+            Some(f) => f(self, element, attrs),
+            None => self.my_start_element(element, attrs),
+        }
         Ok(())
     }
     fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {

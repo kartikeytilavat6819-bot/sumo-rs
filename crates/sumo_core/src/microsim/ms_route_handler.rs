@@ -170,6 +170,10 @@ fn ms_get_v_type_parameter(d: &mut SUMORouteHandler, refid: &str) -> Ptr<SUMOVTy
     Ptr::from_mut(d).cast::<MSRouteHandler>().m().get_v_type_parameter(refid)
 }
 
+fn ms_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().my_start_element(element, attrs)
+}
+
 /// C++ MSRouteHandler overrides, installed in SUMORouteHandler::vt by MSRouteHandler::new
 pub const MS_ROUTE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
     open_vehicle_type_distribution: ms_open_vehicle_type_distribution,
@@ -309,6 +313,7 @@ impl MSRouteHandler {
             myStartTriggeredInFlow: false,
         };
         h.base.vt = &MS_ROUTE_HANDLER_VT;
+        h.base.start_element_override = Some(ms_my_start_element);
         h
     }
 
@@ -2369,8 +2374,7 @@ impl MSRouteHandler {
             } else {
                 format!(" in route '{}'", self.myActiveRouteID)
             };
-            // shortcut: SUMOVehicleParameter::Stop default ctor is not ported, upgrade when SUMOVehicleParameter_Stop gets a new()
-            let mut stop: SUMOVehicleParameter_Stop = panic!("SUMOVehicleParameter::Stop() ctor not ported");
+            let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
             let ok = self.parse_stop(&mut stop, attrs, errorSuffix.clone(), Ptr::null());
             // shortcut: MsgHandler::getErrorInstance() has no accessor yet, parseStop reports to a null handler until it does
             if !ok {
