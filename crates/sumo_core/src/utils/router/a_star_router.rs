@@ -76,8 +76,8 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarRouter<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        let mut base = SUMOAbstractRouter::new("AStarRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions);
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        let mut base = SUMOAbstractRouter::new("AStarRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions);
         let mut myMaxSpeed = utils::geom::NUMERICAL_EPS;
         for edge in edges.iter() {
             base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(edge.cast::<()>()));
@@ -104,8 +104,8 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarRouter<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        let mut base = SUMOAbstractRouter::new("AStarRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions);
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        let mut base = SUMOAbstractRouter::new("AStarRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions);
         let mut myMaxSpeed = utils::geom::NUMERICAL_EPS;
         for edgeInfo in edgeInfos.iter() {
             base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(edgeInfo.edge));

@@ -6,6 +6,11 @@ use utils::common::time::steps2time;
 use utils::common::msg_handler::{with_instance, MsgType};
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
+/// Typed for the generic router. The bare `SUMOAbstractRouter_Operation` stays a placeholder for the
+/// microsim/logging bindings, whose C++ operation is a pointer-to-member, not a router function.
+pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f64;
+
+/// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
 
 /// C++ typedef `std::map<const E *, RouterProhibition> SUMOAbstractRouter::Prohibitions`
@@ -88,10 +93,10 @@ impl RouterProhibition {
 pub struct SUMOAbstractRouter<E, V> {
     /// the handler for routing errors
     pub myErrorMsgHandler: Ptr<MsgHandler>,
-    /// The object's operation to perform.
-    pub myOperation: SUMOAbstractRouter_Operation,
-    /// The object's operation to perform for travel times
-    pub myTTOperation: SUMOAbstractRouter_Operation,
+    /// The object's operation to perform (null in C++ for the intermodal and pedestrian bases; calling it then is a crash there too)
+    pub myOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
+    /// The object's operation to perform for travel times (null in C++ means the effort is used as is)
+    pub myTTOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -140,7 +145,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //         myQueryTimeSum(0) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(type_: &str, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(type_: &str, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         Self {
             myErrorMsgHandler: msg_instance(unbuildIsWarning),
             myOperation: operation,
@@ -429,8 +434,10 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, e: Ptr<E>, v: Ptr<V>, t: f64, effort: f64) -> f64 {
-        // shortcut: SUMOAbstractRouter_Operation is Unmapped (), so myTTOperation == nullptr and (*myTTOperation)(e, v, t) cannot be expressed, upgrade when the operation alias is typed
-        panic!("shortcut: myTTOperation is not typed yet (SUMOAbstractRouter_Operation is Unmapped)")
+        match self.myTTOperation {
+            None => effort,
+            Some(op) => op(e, v, t),
+        }
     }
 
     /// C++: `void SUMOAbstractRouter::updateViaEdgeCost(const E *, const V *const, double &, double &, double &) const` [const]
@@ -680,10 +687,10 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             if info.prohibitionEnd > t && info.prohibitionBegin <= t && (info.prohibitedPermissions & v_vclass(v)) != v_vclass(v) {
                 // pass edge after prohibition ends
                 let end = info.prohibitionEnd;
-                return (end - t) + call_operation(&self.myOperation, e, v, end);
+                return (end - t) + call_op(self.myOperation, e, v, end);
             }
         }
-        call_operation(&self.myOperation, e, v, t)
+        call_op(self.myOperation, e, v, t)
     }
 
     /// C++: `void SUMOAbstractRouter::startQuery()`
@@ -853,12 +860,17 @@ fn e_via_successors<E>(_e: Ptr<E>, _v_class: SUMOVehicleClass) -> Vec<(Ptr<E>, P
     panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
 }
 
+/// C++ `(*myOperation)(e, v, t)`. A null operation is dereferenced by C++ too, so it is a crash here as well.
+fn call_op<E, V>(op: Option<SUMOAbstractRouter_TypedOperation<E, V>>, e: Ptr<E>, v: Ptr<V>, t: f64) -> f64 {
+    match op {
+        Some(f) => f(e, v, t),
+        None => panic!("SUMOAbstractRouter: null operation called (C++ dereferences nullptr here)"),
+    }
+}
+
 // shortcut: needs router trait bounds (lead), V::getVClass is not callable on the generic V
 fn v_vclass<V>(_v: Ptr<V>) -> SUMOVehicleClass {
     panic!("shortcut: needs router trait bounds (lead), V::getVClass")
 }
 
-// shortcut: needs router trait bounds (lead), (*myOperation)(e, v, t) cannot be called: SUMOAbstractRouter_Operation is Unmapped
-fn call_operation<E, V>(_op: &SUMOAbstractRouter_Operation, _e: Ptr<E>, _v: Ptr<V>, _t: f64) -> f64 {
-    panic!("shortcut: needs router trait bounds (lead), the Operation function pointer is Unmapped")
-}
+

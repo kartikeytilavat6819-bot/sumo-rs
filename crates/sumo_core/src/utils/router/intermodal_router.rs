@@ -74,7 +74,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn new(callback: IntermodalRouter_CreateNetCallback, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
         Self {
-            base: SUMOAbstractRouter::new("IntermodalRouter", true, (), (), false, false),
+            base: SUMOAbstractRouter::new("IntermodalRouter", true, None, None, false, false),
             myAmClone: false,
             myInternalRouter: Ptr::null(),
             myIntermodalNet: Ptr::null(),
@@ -472,7 +472,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn new_2(net: Ptr<IntermodalRouter_Network<E, L, N, V>>, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
         let mut r = Self {
-            base: SUMOAbstractRouter::new("IntermodalRouterClone", true, (), (), false, false),
+            base: SUMOAbstractRouter::new("IntermodalRouterClone", true, None, None, false, false),
             myAmClone: true,
             myInternalRouter: Ptr::null(),
             myIntermodalNet: net,
@@ -566,9 +566,14 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     }
 
     /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
-    // shortcut: the effort and travel-time function pointers are Unmapped (SUMOAbstractRouter_Operation), passed as ()
     fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, calc: Ptr<EffortCalculator>) {
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, (), (), false, calc, true, false);
+        // shortcut: with an external effort C++ passes &getCombined (over myExternalEffort), but getCombined takes AccessEdge__IntermodalEdge, not IntermodalEdge; upgrade with a typed combined effort
+        let effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>> = if calc.is_null() {
+            Some(IntermodalEdge::<E, L, N, V>::get_effort_static)
+        } else {
+            panic!("shortcut: IntermodalRouter combined effort (getCombined) is not wired yet")
+        };
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), false, calc, true, false);
         self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 

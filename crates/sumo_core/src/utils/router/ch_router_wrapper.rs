@@ -59,9 +59,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouterWrapper<E, V> {
     //         myMaxNumInstances(numThreads) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, ignoreErrors: bool, operation: SUMOAbstractRouter_Operation, begin: SUMOTime, end: SUMOTime, weightPeriod: SUMOTime, havePermissions: bool, numThreads: i32) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, ignoreErrors: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, begin: SUMOTime, end: SUMOTime, weightPeriod: SUMOTime, havePermissions: bool, numThreads: i32) -> Self {
         Self {
-            base: SUMOAbstractRouter::new("CHRouterWrapper", ignoreErrors, operation, (), havePermissions, false),
+            base: SUMOAbstractRouter::new("CHRouterWrapper", ignoreErrors, operation, None, havePermissions, false),
             myRouters: std::collections::BTreeMap::new(),
             myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
             myIgnoreErrors: ignoreErrors,

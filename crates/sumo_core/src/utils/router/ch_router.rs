@@ -69,9 +69,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, weightPeriod: SUMOTime, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, svc: SUMOVehicleClass, weightPeriod: SUMOTime, havePermissions: bool, haveRestrictions: bool) -> Self {
         Self {
-            base: SUMOAbstractRouter::new("CHRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            base: SUMOAbstractRouter::new("CHRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
             myForwardSearch: CHRouter_Unidirectional::new(edges, true),
             myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
@@ -101,9 +101,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     //         mySVC(svc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, svc: SUMOVehicleClass, hierarchy: Ptr<CHBuilder_Hierarchy<E>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         Self {
-            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            base: SUMOAbstractRouter::new("CHRouterClone", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myEdges: Ptr::from_raw(edges as *const Vec<Ptr<E>> as *mut Vec<Ptr<E>>),
             myForwardSearch: CHRouter_Unidirectional::new(edges, true),
             myBackwardSearch: CHRouter_Unidirectional::new(edges, false),
