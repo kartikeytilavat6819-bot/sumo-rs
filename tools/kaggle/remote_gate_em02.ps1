@@ -1,15 +1,15 @@
 # Copy of remote_gate.ps1 for the emissions branch: uploads the PHEMlight data (sumo_data/) next to the
 # source snapshot and runs gate_kernel_em02.py, which sets SUMO_HOME to it. The shared gate is unchanged.
 #   powershell -File C:\Users\karti\sumo-rs\tools\kaggle\remote_gate_em02.ps1 -Branch worktree-agent-em02
-# PHEMlight data source: the pristine SUMO install (WSL), copied to the temp dir below. Re-copy it there if missing:
-#   wsl -e bash -lc 'D=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo/data/emissions; cp -r $D/PHEMlight $D/PHEMlight5 /mnt/c/Users/karti/AppData/Local/Temp/opencode/em02_phem/'
+# SUMO data source: the pristine SUMO install (WSL) data dir, copied to the temp dir below. Re-copy if missing:
+#   wsl -e bash -lc 'S=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo/data; T=/mnt/c/Users/karti/AppData/Local/Temp/opencode/em02_sumo_data; mkdir -p $T && cp -r $S $T/data && rm -rf $T/data/tests'
 param(
     [Parameter(Mandatory = $true)][string]$Branch,
     [string]$Slot = "",
     [string]$Repo = "C:\Users\karti\sumo-rs",
     [int]$TimeoutMin = 90,
     [string]$TokenFile = "$HOME\.kaggle\gate_token",
-    [string]$PhemData = "C:\Users\karti\AppData\Local\Temp\opencode\em02_phem"
+    [string]$PhemData = "C:\Users\karti\AppData\Local\Temp\opencode\em02_sumo_data"
 )
 $ErrorActionPreference = "Continue"
 if ($Slot -eq "") { $Slot = $Branch }
@@ -26,15 +26,15 @@ $wpos = ($work -replace '\\', '/') -replace '^C:', '/c'
 $sha = (git -C $Repo rev-parse --short $Branch).Trim()
 Set-Content "$work\GATE_BRANCH.txt" "$Branch $sha"
 git -C $Repo archive --format=tar --prefix= -o "$work\src.tar" $Branch
+# 1b. SUMO_HOME data tree (sumo_data/data = the pristine SUMO data dir, incl. typemap for netconvert),
+# shipped inside src.tgz (a dataset folder with only subdirectories did not reach Kaggle)
+New-Item -ItemType Directory -Force "$work\stage\sumo_data" | Out-Null
+Copy-Item -Recurse "$PhemData\data" "$work\stage\sumo_data\"
+if (-not (Test-Path "$work\stage\sumo_data\data\emissions\PHEMlight\PC_G_EU4.csv")) { "NO SUMO data in $PhemData"; exit 1 }
+& 'C:\Program Files\Git\usr\bin\tar.exe' -rf "$wpos/src.tar" -C "$wpos/stage" sumo_data
 & 'C:\Program Files\Git\usr\bin\tar.exe' -rf "$wpos/src.tar" -C "$wpos" GATE_BRANCH.txt
 & 'C:\Program Files\Git\usr\bin\gzip.exe' -f "$wpos/src.tar"
 Move-Item "$work\src.tar.gz" "$work\data\src.tgz"
-
-# 1b. PHEMlight data for SUMO_HOME (sumo_data/data/emissions/PHEMlight{,5})
-$emis = "$work\data\sumo_data\data\emissions"
-New-Item -ItemType Directory -Force $emis | Out-Null
-Copy-Item -Recurse "$PhemData\PHEMlight", "$PhemData\PHEMlight5" $emis
-if (-not (Test-Path "$emis\PHEMlight\PC_G_EU4.csv")) { "NO PHEMlight data in $PhemData"; exit 1 }
 
 # 2. upload as a private dataset (create on first use, new version afterwards)
 $ds = "$user/srg-src-$Slot"
