@@ -1,6 +1,7 @@
 //! Port of microsim/MSBaseVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_globals::MSGlobals;
 
 /// C++ enum `MSBaseVehicle::RouteValidity`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -2675,9 +2676,10 @@ impl MSBaseVehicle {
         }
         // insertion check must be done in any case
         let mut msg = String::new();
-        if !self.has_valid_route_start(&mut msg) {
-            // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-            if !silent {
+        if !SUMOVehicle::has_valid_route_start(self, &mut msg) {
+            if MSGlobals::check_routes() {
+                std::panic::panic_any(ProcessError::new(msg));
+            } else if !silent {
                 // vehicle will be discarded
                 utils::common::msg_handler::write_warning(&msg);
             } else if !msgReturn.is_null() {

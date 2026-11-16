@@ -46,7 +46,6 @@ const NBEDGE_TURN_SIGN_SHIFT_BUS: i32 = 8;
 const NBEDGE_TURN_SIGN_SHIFT_TAXI: i32 = 16;
 const NBEDGE_TURN_SIGN_SHIFT_BICYCLE: i32 = 24;
 
-/// SAX reader results: a ProcessError is thrown in C++ and propagates to the caller, so panic here.
 // C++ MAX2/MIN2 macros (ties return the second operand for MAX2, as in the macro)
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
@@ -56,8 +55,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
+/// SAX reader results: C++ lets the ProcessError propagate, so rethrow it as one (netconvert reports it)
 fn sax_result(r: Result<bool, ProcessError>) -> bool {
-    r.unwrap_or_else(|e| panic!("{e}"))
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
 /// SysUtils::getCurrentMillis()
