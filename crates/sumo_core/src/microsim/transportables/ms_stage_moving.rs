@@ -126,7 +126,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        panic!("MSStageMoving::getNextRouteEdge is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::new(self).cast::<MSStageWalking>().get().unwrap().get_next_route_edge(),
+            MSStageType::TRANSHIP => Ptr::new(self).cast::<MSStageTranship>().get().unwrap().get_next_route_edge(),
+            _ => panic!("MSStageMoving::getNextRouteEdge is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `MSTransportableStateAdapter * MSStageMoving::getPState() const` [const]
@@ -335,7 +339,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_speed(&self, transportable: Ptr<MSTransportable>) -> f64 {
-        panic!("MSStageMoving::getMaxSpeed is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::new(self).cast::<MSStageWalking>().get().unwrap().get_max_speed(transportable),
+            MSStageType::TRANSHIP => Ptr::new(self).cast::<MSStageTranship>().get().unwrap().get_max_speed(transportable),
+            _ => panic!("MSStageMoving::getMaxSpeed is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `bool MSStageMoving::moveToNextEdge(MSTransportable *, SUMOTime, int, MSEdge *, const bool)` [virtual, pure virtual]
@@ -343,7 +351,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, transportable: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
-        panic!("MSStageMoving::moveToNextEdge is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::from_mut(self).cast::<MSStageWalking>().m().move_to_next_edge(transportable, currentTime, prevDir, nextInternal, isReplay),
+            MSStageType::TRANSHIP => Ptr::from_mut(self).cast::<MSStageTranship>().m().move_to_next_edge(transportable, currentTime, prevDir, nextInternal, isReplay),
+            _ => panic!("MSStageMoving::moveToNextEdge is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `void MSStageMoving::activateEntryReminders(MSTransportable *, const bool)` [virtual]
