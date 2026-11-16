@@ -2784,7 +2784,7 @@ impl NIImporter_OpenStreetMap {
         // revise pt stops; remove stops on deleted edges (but assign them to the
         // opposite direction if possible
         let ec: Ptr<NBEdgeCont> = Ptr::from_mut(nb.get_edge_cont());
-        nb.get_pt_stop_cont().cleanup_deleted(ec.m(), true);
+        nb.get_pt_stop_cont().cleanup_deleted(ec.m());
 
         // load relations (after edges are built since we want to apply
         // turn-restrictions directly to NBEdges)
