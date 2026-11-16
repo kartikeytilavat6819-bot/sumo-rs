@@ -76,7 +76,7 @@ impl MSRailSignal_LinkInfo {
     //         // because first is short or the step-length is high)
     //         // lets look backward along the route
     //         // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
-    //         double lookBack = SPEED2DIST(veh->getSpeed() + 10) + veh->getLength();
+    //         double lookBack = SPEED2DIST(veh->getSpeed() + 10);
     //         int routeIndex = veh->getRoutePosition() - 1;
     //         while (lookBack > 0 && routeIndex > 0) {
     //             const MSEdge* prevEdge = veh->getRoute().getEdges()[routeIndex];
@@ -123,7 +123,7 @@ impl MSRailSignal_LinkInfo {
             // because first is short or the step-length is high)
             // lets look backward along the route
             // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
-            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10.0) + veh.get_length();
+            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10.0);
             let mut route_index = veh.get_route_position() - 1;
             while look_back > 0.0 && route_index > 0 {
                 let prev_edge = edges[route_index as usize];
