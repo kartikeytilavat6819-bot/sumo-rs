@@ -3,3 +3,5 @@ target/
 __pycache__/
 .claude/
 tools/skeleton/.parse_cache_*.pkl
+tools/oracle/cases/detectors/det_il.xml
+tools/oracle/cases/detectors/det_lad.xml

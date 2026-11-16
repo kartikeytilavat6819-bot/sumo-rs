@@ -1,0 +1,4 @@
+<additional>
+    <inductionLoop id="il_det" lane="-103224#1_0" pos="20" freq="10" file="det_il.xml"/>
+    <laneAreaDetector id="lad_det" lane="-103224#1_0" pos="10" endPos="50" freq="10" file="det_lad.xml"/>
+</additional>
