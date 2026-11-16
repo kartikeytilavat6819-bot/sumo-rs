@@ -783,10 +783,14 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        if self.get_waiting_time(false) > 0 || self.is_stopped() {
+        let w = self.get_waiting_time(false);
+        let st = self.is_stopped();
+        let avg = self.get_average_speed();
+        if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE get_speed {} seg_null={} que={} w={} stopped={} avg={} ev={} le={}", self.get_id(), self.mySegment.is_null(), self.myQueIndex, w, st, avg, self.myEventTime, self.myLastEntryTime); }
+        if w > 0 || st {
             0.
         } else {
-            self.get_average_speed()
+            avg
         }
     }
 
