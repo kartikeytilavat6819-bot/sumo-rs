@@ -20,6 +20,57 @@ pub struct MSCFModel_Rail {
     pub myTrainParams: MSCFModel_Rail_TrainParams,
 }
 
+fn rail_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn rail_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_Rail>(m).get_model_id()
+}
+fn rail_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_Rail>(m).duplicate(vtype)
+}
+fn rail_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_Rail>(m).create_vehicle_variables()
+}
+fn rail_max_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).max_next_speed(speed, veh)
+}
+fn rail_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).min_next_speed(speed, veh)
+}
+fn rail_min_next_speed_emergency(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).min_next_speed_emergency(speed, veh)
+}
+fn rail_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).finalize_speed(veh, vPos)
+}
+fn rail_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+}
+fn rail_startup_delay_stopped(m: &MSCFModel) -> bool {
+    cf_cast::<MSCFModel_Rail>(m).startup_delay_stopped()
+}
+
+fn rail_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Rail>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_Rail: its overrides on top of the MSCFModel table
+pub const RAIL_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: rail_stop_speed_2,
+    follow_speed: rail_follow_speed,
+    get_model_id: rail_get_model_id,
+    duplicate: rail_duplicate,
+    create_vehicle_variables: rail_create_vehicle_variables,
+    max_next_speed: rail_max_next_speed,
+    min_next_speed: rail_min_next_speed,
+    min_next_speed_emergency: rail_min_next_speed_emergency,
+    finalize_speed: rail_finalize_speed,
+    free_speed: rail_free_speed,
+    startup_delay_stopped: rail_startup_delay_stopped,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_Rail {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -134,6 +185,7 @@ impl MSCFModel_Rail {
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
         let base = MSCFModel::new(vtype);
         let mut this = MSCFModel_Rail { base, myTrainParams: MSCFModel_Rail_TrainParams::default() };
+        this.base.vt = &RAIL_VT;
         let trainType = vtype.get_parameter().get_cf_param_string(SUMO_ATTR_TRAIN_TYPE, "NGT400".to_string());
         if trainType == "RB425" {
             this.myTrainParams = this.init_rb425_params();

@@ -2597,6 +2597,44 @@ mod tests {
     }
 
     #[test]
+    fn wired_models_report_their_own_id_through_base_pointer() {
+        use crate::microsim::cfmodels::mscf_model_acc::MSCFModel_ACC;
+        use crate::microsim::cfmodels::mscf_model_cacc::MSCFModel_CACC;
+        use crate::microsim::cfmodels::mscf_model_cc::MSCFModel_CC;
+        use crate::microsim::cfmodels::mscf_model_daniel1::MSCFModel_Daniel1;
+        use crate::microsim::cfmodels::mscf_model_eidm::MSCFModel_EIDM;
+        use crate::microsim::cfmodels::mscf_model_idm::MSCFModel_IDM;
+        use crate::microsim::cfmodels::mscf_model_kerner::MSCFModel_Kerner;
+        use crate::microsim::cfmodels::mscf_model_na_sch::MSCFModel_NaSch;
+        use crate::microsim::cfmodels::mscf_model_p_wag2009::MSCFModel_PWag2009;
+        use crate::microsim::cfmodels::mscf_model_rail::MSCFModel_Rail;
+        use crate::microsim::cfmodels::mscf_model_smart_sk::MSCFModel_SmartSK;
+        use crate::microsim::cfmodels::mscf_model_w99::MSCFModel_W99;
+        use crate::microsim::cfmodels::mscf_model_wiedemann::MSCFModel_Wiedemann;
+        let mut vtp = SUMOVTypeParameter::new("passenger", utils::common::sumo_vehicle_class::SVC_PASSENGER);
+        vtp.cfParameter.insert(SUMO_ATTR_CF_CC_LANES_COUNT, "2".to_string());
+        let vtype = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(&vtp))));
+        let cases: Vec<(Ptr<MSCFModel>, i32)> = vec![
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_IDM::new(vtype, false)))).cast::<MSCFModel>(), SUMO_TAG_CF_IDM as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_EIDM::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_EIDM as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_ACC::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_ACC as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_CACC::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_CACC as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_CC::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_CC as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_Wiedemann::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_WIEDEMANN as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_W99::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_W99 as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_Kerner::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_BKERNER as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_NaSch::new(vtype, 0.5)))).cast::<MSCFModel>(), SUMO_TAG_CF_NASCH as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_PWag2009::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_PWAGNER2009 as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_SmartSK::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_SMART_SK as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_Rail::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_RAIL as i32),
+            (Ptr::from_mut(Box::leak(Box::new(MSCFModel_Daniel1::new(vtype)))).cast::<MSCFModel>(), SUMO_TAG_CF_DANIEL1 as i32),
+        ];
+        for (cf, id) in cases {
+            assert_eq!(cf.m().get_model_id(), id);
+        }
+    }
+
+    #[test]
     fn brake_gap_euler_matches_c_formula() {
         // TS = 1 s (default DELTA_T): speedReduction = 4.5, steps = int(10/4.5) = 2
         // SPEED2DIST(2*10 - 4.5*2*3/2) + 10*1.0 = 6.5 + 10 = 16.5

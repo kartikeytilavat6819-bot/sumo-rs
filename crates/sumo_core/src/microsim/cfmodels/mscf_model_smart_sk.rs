@@ -31,6 +31,57 @@ pub struct MSCFModel_SmartSK {
     pub maxDeltaGap: f64,
 }
 
+fn smart_sk_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_SmartSK>(m).finalize_speed(veh, vPos)
+}
+fn smart_sk_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_SmartSK>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn smart_sk_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_SmartSK>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn smart_sk_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_SmartSK>(m).get_model_id()
+}
+fn smart_sk_get_imperfection(m: &MSCFModel) -> f64 {
+    cf_cast::<MSCFModel_SmartSK>(m).get_imperfection()
+}
+fn smart_sk_set_max_decel(m: &mut MSCFModel, decel: f64) {
+    cf_cast_mut::<MSCFModel_SmartSK>(m).set_max_decel(decel)
+}
+fn smart_sk_set_imperfection(m: &mut MSCFModel, imperfection: f64) {
+    cf_cast_mut::<MSCFModel_SmartSK>(m).set_imperfection(imperfection)
+}
+fn smart_sk_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
+    cf_cast_mut::<MSCFModel_SmartSK>(m).set_headway_time(headwayTime)
+}
+fn smart_sk_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_SmartSK>(m).duplicate(vtype)
+}
+fn smart_sk_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_SmartSK>(m).create_vehicle_variables()
+}
+
+fn smart_sk_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_SmartSK>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_SmartSK: its overrides on top of the MSCFModel table
+pub const SMART_SK_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: smart_sk_stop_speed_2,
+    finalize_speed: smart_sk_finalize_speed,
+    follow_speed: smart_sk_follow_speed,
+    patch_speed_before_lc: smart_sk_patch_speed_before_lc,
+    get_model_id: smart_sk_get_model_id,
+    get_imperfection: smart_sk_get_imperfection,
+    set_max_decel: smart_sk_set_max_decel,
+    set_imperfection: smart_sk_set_imperfection,
+    set_headway_time: smart_sk_set_headway_time,
+    duplicate: smart_sk_duplicate,
+    create_vehicle_variables: smart_sk_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_SmartSK {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -102,7 +153,9 @@ impl MSCFModel_SmartSK {
         let maxDeltaGap = -0.5 * (base.myDecel + base.myAccel) * ts() * ts();
         let myTmp2 = ts() / myTmp2;
         let myTmp3 = ts().sqrt() * myTmp3;
-        MSCFModel_SmartSK { base, myDawdle, myTauDecel, myTmp1, myTmp2, myTmp3, myTmp4, myTmp5, myS2Sspeed, maxDeltaGap }
+        let mut this = MSCFModel_SmartSK { base, myDawdle, myTauDecel, myTmp1, myTmp2, myTmp3, myTmp4, myTmp5, myS2Sspeed, maxDeltaGap };
+        this.base.vt = &SMART_SK_VT;
+        this
     }
 
     /// C++: `void MSCFModel_SmartSK::~MSCFModel_SmartSK() noexcept` [virtual]

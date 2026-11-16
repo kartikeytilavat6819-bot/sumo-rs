@@ -1,0 +1,8 @@
+Warning: Teleporting vehicle 'v1'; waited too long (jam), lane='-103227#1_0', time=324.00.
+Warning: Vehicle 'v1' ends teleporting on edge '-103227#2', time=324.00.
+Warning: Teleporting vehicle 'v0'; waited too long (jam), lane='-103224#2_0', time=325.00.
+Warning: Teleporting vehicle 'v2'; waited too long (jam), lane='-103227#1_0', time=325.00.
+Warning: Vehicle 'v0' ends teleporting on edge '-103224#3', time=325.00.
+Warning: Vehicle 'v2' ends teleporting on edge '-103227#2', time=325.00.
+Warning: Teleporting vehicle 'v4'; waited too long (jam), lane='-103224#2_1', time=329.00.
+Warning: Vehicle 'v4' ends teleporting on edge '-103224#3', time=329.00.
