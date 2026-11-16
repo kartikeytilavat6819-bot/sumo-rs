@@ -2,9 +2,9 @@
 
 Each probe runs in its own server session (prelude: two simulation steps), so one crash on our side
 only loses its own row. Usage:
-  python tools/oracle/cases/traci_basic/client.py                # junction + signal, both sides, table
+  python tools/oracle/cases/traci_basic/client.py                # both cases, both sides, one table each
   python tools/oracle/cases/traci_basic/client.py --case signal --only ours
-Options: --ours <sumo.exe> (default: $CARGO_TARGET_DIR/debug/sumo.exe)  --port <n>
+Options: --ours <sumo.exe> (default: $CARGO_TARGET_DIR/debug/sumo.exe)  --port <n> (default 8813)
 The C++ side runs in WSL: $HOME/sumo-src/bin/sumo with SUMO_HOME=$HOME/sumo-src.
 """
 import argparse
@@ -114,7 +114,7 @@ def run_side(side, port, ours, case):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", choices=["ours", "cpp"])
-    ap.add_argument("--case", default="junction", choices=sorted(CASE_PARAMS))
+    ap.add_argument("--case", default="all", choices=sorted(CASE_PARAMS) + ["all"])
     ap.add_argument("--ours", default=str(DEFAULT_OURS))
     ap.add_argument("--port", type=int, default=8813)
     a = ap.parse_args()
@@ -123,17 +123,22 @@ def main():
         print(json.dumps(run_side(a.only, a.port, a.ours, a.case), indent=2))
         return 0
 
-    cpp = run_side("cpp", a.port, a.ours, a.case)
-    ours = run_side("ours", a.port, a.ours, a.case)
-    print(f"[{a.case}] {'command':<42} {'C++':<38} {'ours':<38} verdict")
-    bad = 0
-    for label in cpp:
-        c, o = cpp[label], ours[label]
-        same = c == o
-        bad += not same
-        print(f"{label:<42} {(c['type'] + ' ' + c['value'])[:38]:<38} {(o['type'] + ' ' + o['value'])[:38]:<38} {'MATCH' if same else 'DIFF'}")
-    print(f"\n{len(cpp) - bad}/{len(cpp)} match")
-    return 1 if bad else 0
+    total = bad_total = 0
+    for case in ([a.case] if a.case != "all" else sorted(CASE_PARAMS)):
+        cpp = run_side("cpp", a.port, a.ours, case)
+        ours = run_side("ours", a.port, a.ours, case)
+        print(f"[{case}] {'command':<42} {'C++':<38} {'ours':<38} verdict")
+        bad = 0
+        for label in cpp:
+            c, o = cpp[label], ours[label]
+            same = c == o
+            bad += not same
+            print(f"{label:<42} {(c['type'] + ' ' + c['value'])[:38]:<38} {(o['type'] + ' ' + o['value'])[:38]:<38} {'MATCH' if same else 'DIFF'}")
+        print(f"[{case}] {len(cpp) - bad}/{len(cpp)} match\n")
+        total += len(cpp)
+        bad_total += bad
+    print(f"TOTAL {total - bad_total}/{total} match")
+    return 1 if bad_total else 0
 
 
 if __name__ == "__main__":

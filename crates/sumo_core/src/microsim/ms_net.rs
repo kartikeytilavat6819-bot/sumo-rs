@@ -1088,6 +1088,10 @@ impl MSNet {
             }
         }
         self.myBeginOfTimestepEvents.m().execute(self.myStep);
+        // C++ schedules MSTriggeredRerouter::setPermissions on the begin-of-timestep events for every
+        // interval that closes edges or lanes. WrappingCommand is not ported, so the instances are
+        // applied here instead; setPermissions only acts at an interval begin or end.
+        crate::microsim::trigger::ms_triggered_rerouter::MSTriggeredRerouter::apply_scheduled_permissions(self.myStep);
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().update_signals(self.myStep);
         }

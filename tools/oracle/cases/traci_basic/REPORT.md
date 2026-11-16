@@ -5,15 +5,16 @@ branch `worktree-agent-tc01`, private target dir `sumo-rs-target-tc01`, because 
 `debug/sumo.exe` was being overwritten by other worktrees during this run). Client: Python `traci` 1.28.0.
 Each probe runs in a fresh server session after two `simulationStep` calls.
 
-**Result: 9 of 32 probes match** (junction 5/16, signal 4/16).
+**Result: 13 of 32 probes match** (junction 7/16, signal 6/16). Previous run: 9/32.
+Rows marked *(fixed 1e33a68)* changed since the first run.
 
 ## Junction (`junction/ref_simple.net.xml`, lane `-103224#1_0`, no traffic light)
 
 | command | C++ | ours | verdict |
 |---|---|---|---|
-| getVersion | `(22, 'SUMO v1.28.0-0000000000')` | `(22, 'SUMO 1.28.0')` | DIFF (version string shortcut) |
+| getVersion | `(22, 'SUMO v1.28.0-0000000000')` | same | MATCH *(fixed 1e33a68)* |
 | simulationStep(11) | None | None | MATCH |
-| simulation.getTime | `10.0` | connection closed: **segfault** | DIFF |
+| simulation.getTime | `10.0` | `10.0` | MATCH *(fixed 1e33a68: was a segfault)* |
 | simulation.getLoadedNumber | `3` | `0` | DIFF |
 | simulation.getArrivedNumber | `0` | `0` | MATCH |
 | vehicle.getIDList | 5 ids | `TraCIException: Vehicle::handleVariable not yet ported` | DIFF |
@@ -32,9 +33,9 @@ Each probe runs in a fresh server session after two `simulationStep` calls.
 
 | command | C++ | ours | verdict |
 |---|---|---|---|
-| getVersion | `(22, 'SUMO v1.28.0-0000000000')` | `(22, 'SUMO 1.28.0')` | DIFF |
+| getVersion | `(22, 'SUMO v1.28.0-0000000000')` | same | MATCH *(fixed 1e33a68)* |
 | simulationStep(11) | None | None | MATCH |
-| simulation.getTime | `10.0` | segfault | DIFF |
+| simulation.getTime | `10.0` | `10.0` | MATCH *(fixed 1e33a68)* |
 | simulation.getLoadedNumber | `3` | `0` | DIFF |
 | simulation.getArrivedNumber | `0` | `0` | MATCH |
 | vehicle.getIDList / getPosition / getSpeed | tuples / float | `Vehicle::handleVariable not yet ported` | DIFF |
@@ -48,11 +49,9 @@ Each probe runs in a fresh server session after two `simulationStep` calls.
 
 ## What the mismatches are
 
-1. **Segfault on `simulation.getTime`** (and every simulation/vehicle getter that goes through
-   `Simulation::handle_variable`). `TraCIServer` passes its bare `base2: VariableWrapper` to
-   `libsumo::Simulation::handle_variable`, which casts it to `Helper_SubscriptionWrapper`. The cast is
-   wrong, so the process dies with access violation `0xC0000005`. Not catchable with `catch_unwind`.
-   Owner: `libsumo/simulation.rs` (ls01). Fix: pass the server as a real `VariableWrapper` with virtual dispatch.
+1. **Segfault on `simulation.getTime`: fixed (1e33a68).** `Simulation::handle_variable` cast its wrapper
+   to `Helper_SubscriptionWrapper`, but `TraCIServer` passed its bare `base2` field. The handler is now
+   generic over `SimVariableWrapper`, and the server passes itself. No cast remains.
 2. **`pure virtual VariableWrapper::wrapX` for lane and traffic-light getters.** In C++ `TraCIServer`
    overrides `wrapInt/wrapDouble/wrapString/wrapStringList` (`TraCIServer.h:59`). In the port,
    `libsumo::VariableWrapper` is a concrete struct whose `wrap*` bodies are `panic!`, and the
@@ -62,8 +61,7 @@ Each probe runs in a fresh server session after two `simulationStep` calls.
 4. **`getLoadedNumber` 0 vs 3.** `BUILT` is informed in `ms_vehicle_control.rs:1724`, and the server's
    listener is registered in `open_socket`. The count is still 0 at step 10, so the per-step state
    read/reset in `process_commands` (`tra_ci_server.rs:470`) or listener wiring is suspect. Not isolated.
-5. **`getVersion` text.** C++ uses the generated `VERSION_STRING` (`v1.28.0-0000000000`), ours uses
-   the fallback in the existing shortcut (`tra_ci_server.rs:49`).
+5. **`getVersion` text: fixed (1e33a68).** Both `TraCIServer` and `Simulation` now use `v1.28.0-0000000000`.
 6. **Error text for `vehicle.getSpeed('nope')`** comes from the stub, not the C++ message.
 
 ## Fixed in this branch

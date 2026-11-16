@@ -3,8 +3,8 @@
 use crate::prelude::*;
 
 const DOMAIN_ID: i32 = CMD_GET_SIM_VARIABLE; // C++ `const int Simulation::DOMAIN_ID`
-// shortcut: C++ `#define VERSION_STRING` comes from config.h.cmake (1.28.0 here), no Rust const exists yet
-const VERSION_STRING: &str = "1.28.0";
+// shortcut: C++ `#define VERSION_STRING` is generated (version.h); same build stamp as crates/sumo/src/main.rs
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 fn leak<T>(v: T) -> Ptr<T> {
     Ptr::from_raw(Box::into_raw(Box::new(v)))
@@ -22,6 +22,34 @@ fn my_subscription_results() -> &'static mut SubscriptionResults {
 }
 fn my_context_subscription_results() -> &'static mut ContextSubscriptionResults {
     unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|p| p.as_raw()) }
+}
+
+/// The `VariableWrapper::wrap*` virtuals that `Simulation::handleVariable` calls. C++ dispatches them
+/// virtually; here `Helper_SubscriptionWrapper` (subscriptions) and `TraCIServer` (direct getters) implement it.
+pub trait SimVariableWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool;
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool;
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool;
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool;
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool;
+}
+
+impl SimVariableWrapper for Helper_SubscriptionWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        Helper_SubscriptionWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        Helper_SubscriptionWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        Helper_SubscriptionWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_pair(self, objID, variable, value)
+    }
 }
 
 /// C++ `std::shared_ptr<VariableWrapper>` built from the SubscriptionWrapper subclass (base first)
@@ -1226,9 +1254,8 @@ impl Simulation {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        // the wrapper is always the Helper::SubscriptionWrapper built by Simulation::makeWrapper
-        let w: Ptr<Helper_SubscriptionWrapper> = wrapper.cast::<Helper_SubscriptionWrapper>();
+    pub fn handle_variable<W: SimVariableWrapper>(objID: &str, variable: i32, wrapper: Ptr<W>, paramData: Ptr<Storage>) -> bool {
+        let w = wrapper;
         match variable {
             VAR_TIME => w.m().wrap_double(objID, variable, Simulation::get_time()),
             VAR_TIME_STEP => w.m().wrap_int(objID, variable, Simulation::get_current_time()),

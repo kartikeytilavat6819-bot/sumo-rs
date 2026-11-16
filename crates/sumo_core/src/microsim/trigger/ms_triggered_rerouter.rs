@@ -1758,6 +1758,42 @@ impl MSTriggeredRerouter {
         Ptr::default()
     }
 
+    /// Apply interval-begin/end closures for every rerouter instance.
+    ///
+    /// C++ schedules `WrappingCommand<MSTriggeredRerouter>(this, &setPermissions)` on the
+    /// begin-of-timestep event control for each interval that closes edges or lanes, and
+    /// `setPermissions` re-schedules itself at the interval end. `WrappingCommand` is not ported, so
+    /// `MSNet` calls this once per step instead: `setPermissions` only acts when `currentTime` equals an
+    /// interval begin or end, so the observable behaviour is identical.
+    ///
+    /// Without this the closures never reach the lanes: the rerouter is registered as a move reminder and
+    /// fires `trigger_routing`, but `nProh` stays empty because the permissions are never changed.
+    pub fn apply_scheduled_permissions(currentTime: SUMOTime) {
+        let instances = Self::get_instances();
+        for (_, r) in instances.iter() {
+            r.m().set_permissions(currentTime);
+        }
+    }
+
+    /// Register a rerouter that has been placed at its final address.
+    ///
+    /// C++ does this inside the constructor: `myInstances[id] = this` plus `MSLane::addMoveReminder(this)`
+    /// for every lane of every rerouter edge. A Rust `new` that returns by value cannot hand out its own
+    /// address, so the caller must call this after the object is placed (see the `shortcut:` in `new`).
+    /// Without it the rerouter never receives `notify_enter`, so its closures and reroutes never fire —
+    /// which is why closing rerouters silently did nothing.
+    pub fn register_at(&mut self, this_ptr: Ptr<MSTriggeredRerouter>) {
+        MY_INSTANCES.with(|m| {
+            m.borrow_mut().insert(self.base.get_id().to_string(), this_ptr);
+        });
+        for e in self.myEdges.clone().iter() {
+            for l in e.get_lanes().iter() {
+                let rem = Ptr::from_mut(&mut self.base2);
+                l.m().add_move_reminder(rem, true);
+            }
+        }
+    }
+
     /// C++: `const std::map<std::string, MSTriggeredRerouter *> & MSTriggeredRerouter::getInstances()` [static]
     /// return all rerouter instances
     // static const std::map<std::string, MSTriggeredRerouter*>& getInstances() {

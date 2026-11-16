@@ -23,7 +23,7 @@ else
     echo "MISSING BINARY: $BIN/sumo.exe — build first (--build)."
   fi
 fi
-OUT=/c/Users/karti/Temp/score
+OUT=${SCORE_OUT:-/c/Users/karti/Temp/score}/run-$$
 mkdir -p "$OUT"
 PASS=0; FAIL=0; SKIP=0
 
