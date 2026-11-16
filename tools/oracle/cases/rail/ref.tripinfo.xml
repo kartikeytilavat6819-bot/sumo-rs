@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T10:51:10.352211-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="tools/oracle/cases/rail/ref.fcd.xml"/>
+        <tripinfo-output value="tools/oracle/cases/rail/ref.tripinfo.xml"/>
+        <statistic-output value="tools/oracle/cases/rail/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="trainEast" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="42.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_trainEast fcd_trainEast" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="trainWest" depart="42.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="39.00" arrival="84.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_trainWest fcd_trainWest" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>
