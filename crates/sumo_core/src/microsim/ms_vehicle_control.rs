@@ -283,6 +283,18 @@ impl MSVehicleControl {
         let speedFactor = type_.compute_chosen_speed_deviation(defs.speedFactor, rng, -1.);
         let built: Ptr<MSVehicle> = Ptr::from_mut(Box::leak(Box::new(MSVehicle::new(defs, route, type_, speedFactor))));
         self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        // C++ MSDevice_Routing ctor schedules preInsertionReroute for trips (VEHPARS_FORCE_REROUTE); it runs before insertion
+        // shortcut: the event is run directly here instead of through MSEventControl, periodic pre-insertion rescheduling is not done
+        let forceReroute = built.m().base.get_parameter().was_set(crate::microsim::ms_base_vehicle::VEHPARS_FORCE_REROUTE);
+        let devices: Vec<Ptr<MSVehicleDevice>> = built.m().base.get_devices().clone();
+        for dev in devices {
+            if crate::microsim::devices::ms_device::MSDevice::get_device_name(dev.base2.get_id()) == "rerouting" {
+                let routing = dev.cast::<crate::microsim::devices::ms_device_routing::MSDevice_Routing>();
+                if forceReroute || routing.m().myPreInsertionPeriod > 0 {
+                    routing.m().pre_insertion_reroute(MSNet::get_instance().get_current_time_step());
+                }
+            }
+        }
         Ptr::from_mut(&mut built.m().base.base)
     }
 
