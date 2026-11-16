@@ -219,8 +219,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
-        panic!("shortcut: Lane::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
+        Self::get_lane(laneID).get_harmonoise_noise_emissions()
     }
 
     /// C++: `double Lane::getElectricityConsumption(const std::string &)` [static]

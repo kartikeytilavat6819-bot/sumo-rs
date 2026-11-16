@@ -227,8 +227,14 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
-        panic!("shortcut: Edge::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
+        let mut sum: f64 = 0.0;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += 10f64.powf(lane.get_harmonoise_noise_emissions() / 10.);
+        }
+        if sum != 0.0 {
+            return crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::sum(sum);
+        }
+        sum
     }
 
     /// C++: `double Edge::getElectricityConsumption(const std::string &)` [static]
@@ -334,8 +340,17 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_length(edgeID: &str) -> f64 {
-        // shortcut: C++ dynamic_cast<const MSBaseVehicle*> from SUMOVehicle needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
-        panic!("shortcut: Edge::getLastStepLength needs dynamic_cast to MSBaseVehicle")
+        // shortcut: dynamic_cast<const MSBaseVehicle*> is not checked at runtime, every vehicle on the edge is assumed to be an MSBaseVehicle, upgrade with a typed vehicle check
+        let mut lengthSum: f64 = 0.0;
+        let mut numVehicles: i32 = 0;
+        for veh in Self::get_edge(edgeID).get_vehicles().iter() {
+            numVehicles += 1;
+            lengthSum += veh.cast::<MSBaseVehicle>().get_vehicle_type().get_length();
+        }
+        if numVehicles == 0 {
+            return 0.0;
+        }
+        lengthSum / numVehicles as f64
     }
 
     /// C++: `int Edge::getLaneNumber(const std::string &)` [static]
