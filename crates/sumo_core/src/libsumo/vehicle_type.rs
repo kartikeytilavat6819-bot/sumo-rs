@@ -388,7 +388,10 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        panic!("shortcut: VehicleType::setParameter needs mutable access to MSVehicleType::getParameter, which is not ported")
+        if starts_with(key, "junctionModel.") {
+            panic!("shortcut: VehicleType::setParameter junctionModel branch needs SUMOXMLDefinitions::Attrs lookup and SUMOVTypeParameter::AllowedJMAttrs, which are not ported")
+        }
+        Self::get_v_type(objectID.to_string()).m().myParameter.set_parameter(key, value);
     }
 
     /// C++: `void VehicleType::setLength(const std::string &, double)` [static]
