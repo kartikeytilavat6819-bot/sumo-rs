@@ -565,7 +565,7 @@ impl Vehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_junction_foes(vehID: &str, dist: f64) -> Vec<TraCIJunctionFoe> {
-        // shortcut: getJunctionFoes needs MSLink::ConflictInfo, getUpcomingLanesUntil and the junction logic, not ported in this pass
+        // shortcut: egoResponse/foeResponse need MSJunctionLogic::getResponseFor(...).test(), and MSLogicJunction::LinkBits is Unmapped (= ()) in microsim/ms_logic_junction.rs; upgrade when that typedef is a bitset
         panic!("Vehicle::getJunctionFoes not yet ported")
     }
 
