@@ -337,7 +337,7 @@ pub struct MSPModel_InteractingState {
     /// remote-controlled position
     pub myRemoteXYPos: Position,
     /// cached angle
-    pub myAngle: f64,
+    pub myAngle: std::cell::Cell<f64>,
 }
 
 impl std::ops::Deref for MSPModel_InteractingState {
@@ -380,7 +380,7 @@ impl MSPModel_InteractingState {
             myTotalWaitingTime: 0,
             myAmJammed: false,
             myRemoteXYPos: Position::INVALID,
-            myAngle: f64::MAX,
+            myAngle: std::cell::Cell::new(f64::MAX),
         }
     }
 
@@ -546,7 +546,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_angle(&self, arg0: &MSStageMoving, arg1: SUMOTime) -> f64 {
-        self.myAngle
+        self.myAngle.get()
     }
 
     /// C++: `MSPModel_InteractingState & MSPModel_InteractingState::operator=(const MSPModel_InteractingState &)` [private]

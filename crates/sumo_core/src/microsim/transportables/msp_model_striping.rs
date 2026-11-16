@@ -138,7 +138,7 @@ fn copy_pstate(p: &MSPModel_Striping_PState) -> MSPModel_Striping_PState {
             myTotalWaitingTime: p.myTotalWaitingTime,
             myAmJammed: p.myAmJammed,
             myRemoteXYPos: p.myRemoteXYPos,
-            myAngle: p.myAngle,
+            myAngle: std::cell::Cell::new(p.myAngle.get()),
         },
         myNLI: MSPModel_Striping_NextLaneInfo::new(p.myNLI.lane, p.myNLI.link, p.myNLI.dir),
         myWalkingAreaPath: p.myWalkingAreaPath,
@@ -2605,7 +2605,7 @@ impl MSPModel_Striping_PState {
                 myTotalWaitingTime: 0,
                 myAmJammed: false,
                 myRemoteXYPos: Position::INVALID,
-                myAngle: f64::MAX,
+                myAngle: std::cell::Cell::new(f64::MAX),
             },
             myNLI: MSPModel_Striping_NextLaneInfo::new_2(),
             myWalkingAreaPath: Ptr::null(),
@@ -2841,8 +2841,8 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        if self.myAngle != f64::MAX {
-            return self.myAngle;
+        if self.myAngle.get() != f64::MAX {
+            return self.myAngle.get();
         }
         if self.myLane.is_null() {
             // pedestrian has already finished
@@ -2864,7 +2864,7 @@ impl MSPModel_Striping_PState {
             angle -= 2. * std::f64::consts::PI;
         }
         // C++ `mutable` cache
-        Ptr::new(self).m().myAngle = angle;
+        self.myAngle.set(angle);
         angle
     }
 
@@ -3105,7 +3105,7 @@ impl MSPModel_Striping_PState {
         self.myEdgePos = oldX;
         let oldPos = self.get_position(&*self.myStage, t);
         self.myEdgePos = tmp;
-        self.myAngle = utils::geom::geom_helper::from_navi_degree(angle);
+        self.myAngle.set(utils::geom::geom_helper::from_navi_degree(angle));
         if lane != self.myLane && !self.myLane.is_null() && !lane.is_null() {
             pm.m().remove(Ptr::from_mut(self).cast::<MSTransportableStateAdapter>());
             pm.m().register_active();
@@ -3493,7 +3493,7 @@ impl MSPModel_Striping_PState {
                     oldDir != self.myDir && MSPModel_Striping::num_stripes(self.myLane) < MSPModel_Striping::num_stripes(oldLane));
                 self.myPosLat += offset as f64 * stripe_width();
             }
-            self.myAngle = f64::MAX; // see #9014
+            self.myAngle.set(f64::MAX); // see #9014
             true
         } else {
             false
@@ -3973,7 +3973,7 @@ impl MSPModel_Striping_PState {
             self.myWaitingTime += utils::common::time::delta_t();
             self.myTotalWaitingTime += utils::common::time::delta_t();
         }
-        self.myAngle = f64::MAX; // set on first access or via remote control
+        self.myAngle.set(f64::MAX); // set on first access or via remote control
     }
 
     /// C++: `double PState::getImpatience() const` [const]
@@ -4399,7 +4399,7 @@ impl MSPModel_Striping_PState {
                 myTotalWaitingTime: 0,
                 myAmJammed: false,
                 myRemoteXYPos: Position::INVALID,
-                myAngle: f64::MAX,
+                myAngle: std::cell::Cell::new(f64::MAX),
             },
             myNLI: MSPModel_Striping_NextLaneInfo::new_2(),
             myWalkingAreaPath: Ptr::null(),

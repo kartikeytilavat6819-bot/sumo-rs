@@ -1566,7 +1566,7 @@ impl MSPModel_JuPedSim_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_angle(&mut self, angle: f64) {
-        self.myAngle = angle;
+        self.myAngle.set(angle);
     }
 
     /// C++: `void PState::setStage(MSStageMoving *const)`

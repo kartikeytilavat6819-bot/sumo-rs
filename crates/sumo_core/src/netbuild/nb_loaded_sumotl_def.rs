@@ -515,9 +515,9 @@ impl NBLoadedSUMOTLDef {
         if self.am_invalid() {
             return false;
         }
-        if !self.base.myExtraConflictsReady {
+        if !self.base.myExtraConflictsReady.get() {
             self.base.init_extra_conflicts();
-            assert!(self.base.myExtraConflictsReady);
+            assert!(self.base.myExtraConflictsReady.get());
         }
         self.base.myExtraConflicts.contains(&(index, foeIndex))
     }
@@ -1271,7 +1271,7 @@ impl NBLoadedSUMOTLDef {
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
         let me = Ptr::new(self);
-        if !self.am_invalid() && !self.base.myNeedsContRelationReady {
+        if !self.am_invalid() && !self.base.myNeedsContRelationReady.get() {
             me.m().base.myNeedsContRelation.clear();
             me.m().base.myExtraConflicts.clear();
             if self.base.myType == TrafficLightType::NEMA {
@@ -1331,8 +1331,8 @@ impl NBLoadedSUMOTLDef {
                 }
             }
         }
-        me.m().base.myNeedsContRelationReady = true;
-        me.m().base.myExtraConflictsReady = true;
+        me.base.myNeedsContRelationReady.set(true);
+        me.base.myExtraConflictsReady.set(true);
     }
 
     /// C++: `int NBLoadedSUMOTLDef::getMaxIndex()` [virtual, protected]

@@ -23,7 +23,7 @@ pub struct CCHGraph<E, V> {
     /// per-arc CONNECTION-level permission bitmask, accumulated per primed class (see primeClassMask); mutable lazy cache
     pub myArcPerm: Vec<SVCPermissions>,
     /// the classes already primed into myArcPerm
-    pub myPrimedClasses: SVCPermissions,
+    pub myPrimedClasses: std::cell::Cell<SVCPermissions>,
     /// edge numerical id -> arcs whose weight reads that edge (head + folded via edges); the reverse image of computeArcWeightRaw's inputs
     pub myEdgeToArcs: Vec<Vec<u32>>,
     /// TAZ-source connector edge -> its entry-edge road node ids
@@ -361,7 +361,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     #[allow(unused_variables)]
     pub fn invalidate_class_masks(&self) {
         Ptr::new(self).m().myArcPerm.fill(0);
-        Ptr::new(self).m().myPrimedClasses = 0;
+        self.myPrimedClasses.set(0);
     }
 
     /// C++: `bool CCHGraph::isStarConnector(const E *)` [static, private]
@@ -397,7 +397,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prime_class_mask(&self, vClass: SUMOVehicleClass) {
-        if vClass == utils::common::sumo_vehicle_class::SVC_IGNORING || (self.myPrimedClasses & vClass) == vClass {
+        if vClass == utils::common::sumo_vehicle_class::SVC_IGNORING || (self.myPrimedClasses.get() & vClass) == vClass {
             return;
         }
         let this = Ptr::new(self);
@@ -412,7 +412,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
                 }
             }
         }
-        this.m().myPrimedClasses |= vClass;
+        self.myPrimedClasses.set(self.myPrimedClasses.get() | vClass);
     }
 
     /// C++: `unsigned int CCHGraph::computeArcWeightRaw(unsigned int, EffortOperation, const V *, double) const` [const, private]
@@ -448,7 +448,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
             myArcVia: arg0.myArcVia.clone(),
             myArcOf: arg0.myArcOf.clone(),
             myArcPerm: arg0.myArcPerm.clone(),
-            myPrimedClasses: arg0.myPrimedClasses,
+            myPrimedClasses: std::cell::Cell::new(arg0.myPrimedClasses.get()),
             myEdgeToArcs: arg0.myEdgeToArcs.clone(),
             myTazSrcNodes: arg0.myTazSrcNodes.clone(),
             myTazSnkNodes: arg0.myTazSnkNodes.clone(),

@@ -311,7 +311,7 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        if !self.myNeedsContRelationReady {
+        if !self.myNeedsContRelationReady.get() {
             panic!("{}", ProcessError::new("myNeedsContRelation was not properly initialized\n"));
         }
     }
@@ -495,7 +495,7 @@ impl NBLoadedTLDef {
                 }
             }
         }
-        self.myNeedsContRelationReady = true;
+        self.myNeedsContRelationReady.set(true);
         logic
     }
 
