@@ -386,8 +386,8 @@ impl MSRightOfWayJunction {
 }
 
 /// `std::bitset<SUMO_MAX_CONNECTIONS>::test` on a request row of `MSBitSetLogic`
-fn link_bits_test(bits: &[bool; SUMO_MAX_CONNECTIONS], c: i32) -> bool {
-    bits[c as usize]
+fn link_bits_test(bits: &LinkBits, c: i32) -> bool {
+    bits.test(c)
 }
 
 #[cfg(test)]
@@ -397,14 +397,14 @@ mod tests {
     #[test]
     fn foe_bits_are_read_through_the_bitset_logic_not_the_dummy_base() {
         // a foes row with bits 0 and 3 set, read through the MSJunctionLogic cast as postload_init does
-        let mut foes = [false; SUMO_MAX_CONNECTIONS];
-        foes[0] = true;
-        foes[3] = true;
+        let mut foes = LinkBits::new();
+        foes.set(0, true);
+        foes.set(3, true);
         let logic = Box::new(MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(
             1,
-            &vec![[false; SUMO_MAX_CONNECTIONS]],
+            &vec![LinkBits::new()],
             &vec![foes],
-            [false; SUMO_MAX_CONNECTIONS],
+            LinkBits::new(),
         ));
         let base = Ptr::from_box(&logic).cast::<MSJunctionLogic>();
         let back = base.cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
