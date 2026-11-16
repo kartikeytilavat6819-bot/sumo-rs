@@ -39,4 +39,25 @@ sh(env + " bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1", 3
 sh(env + " OUT=/tmp/score/outputs BIN=/tmp/target/debug/sumo REFS=committed bash tools/oracle/run_outputs.sh 2>&1 | tail -40", 45)
 sh("cat /tmp/score/outputs/results.tsv", 60)
 sh(env + " cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10", 12)
+# debug probe (not committed): dump the vehicle list the lane noise sum iterates, for the lane that differs in `full`
+DBG_LANE = "397795464#1_0"
+p = f"{SRC}/crates/sumo_core/src/microsim/ms_lane.rs"
+s = open(p).read()
+nl = "\r\n" if "\r\n" in s else "\n"
+anchor = "        let vehs = self.get_vehicles_secure();" + nl + "        if vehs.len() == 0 {"
+dbg = nl.join([
+    f'        if self.get_id() == "{DBG_LANE}" {{',
+    '            eprintln!("DBG t={} lane={} myVehicles={} partial={} tmp={}", steps2time(MSNet::get_instance().get_current_time_step()), self.get_id(), self.myVehicles.len(), self.myPartialVehicles.len(), self.myTmpVehicles.len());',
+    '            for v in self.myVehicles.iter() { eprintln!("DBG  veh={} pos={} speed={} noise={}", v.get_id(), v.get_position_on_lane(), v.get_speed(), v.get_harmonoise_noise_emissions()); }',
+    '            for v in self.myPartialVehicles.iter() { eprintln!("DBG  PARTIAL veh={} pos={} noise={}", v.get_id(), v.get_position_on_lane(), v.get_harmonoise_noise_emissions()); }',
+    '            for v in self.myTmpVehicles.iter() { eprintln!("DBG  TMP veh={} noise={}", v.get_id(), v.get_harmonoise_noise_emissions()); }',
+    '        }',
+    '',
+])
+if anchor not in s:
+    LOG.write("DBG anchor not found\n")
+else:
+    open(p, "w").write(s.replace(anchor, dbg + anchor, 1))
+    sh(env + " cargo build -p sumo --message-format short 2>&1 | grep -E ': error' | head -20", 20)
+    sh(f"cd {SRC} && /tmp/target/debug/sumo -n tools/oracle/cases/real/ref_simple.net.xml -r tools/oracle/cases/real/routes.rou --full-output /tmp/score/dbg_full.xml --no-step-log true 2> {W}/noise_dbg.txt >/dev/null; grep -c DBG {W}/noise_dbg.txt", 5)
 LOG.write("GATE DONE\n")
