@@ -1,28 +1,22 @@
-# Overnight session state — 2026-11-16 (final)
+# Handover — current state, main `c599e28`, 2026-11-16
 
-Read `tools/oracle/SCOREBOARD.md` for the numbers and `tools/oracle/LOOP.md` for the procedure.
-This file is the situational picture and the handover.
+Read `tools/oracle/SCOREBOARD.md` for the case table, the known gaps and the Kaggle gate.
+Read `tools/oracle/LOOP.md` for the procedure.
 
 ## Verified state
 
+Lead's run on main (this worktree did not re-run the harness; the x07 binary is older than main's sources):
+
 ```
-run_all.sh        PASS=28 FAIL=1 SKIP=9      over 19 cases
+run_all.sh        PASS=71 FAIL=4 SKIP=13
 depart            15/15 variants
-netconvert        5 networks + 10 edge cases + 3 option variants + --lefthand + --tls.* + one plain-XML net: MATCH
-unit tests        175 passing (2 ignored)
-release == debug  identical on junction, roundabout, real, signal
-TraCI             58/62 probes
+FAIL rows         city_munich net (nc03); reroute_alt/ref_astar, ref_ch, ref_chwrapper (rr04 branch fixes)
 ```
 
-The single failing row is a **recorded C++ quirk**, not a broken test: with `device.rerouting.period=1`, C++
-reverts a detour and sends the vehicle back onto the closed edge (`rerouteNo=2`), because its periodic device
-reroute replans without the rerouter's prohibitions. Ours keeps the bypass. The periodic reroute is
-implemented on branch `worktree-agent-pr01`; merging it fixes that row but breaks `reroute_alt` on a
-Dijkstra tie-break, which is why it is not merged.
+Outputs (non-tripinfo): **4/32 pass** on `worktree-agent-out01`, not main. Branch triage: **0 useful**; never merge
+`fix-a60ca9556cae1357c`.
 
-See the coverage-gap table in `SCOREBOARD.md` before treating the board as "done": rerouting has no
-multi-vehicle contention case, meso and rail have no cases, TraCI is 58/62, and `gCheckRoutes` is still a
-`shortcut:` treated as false.
+TraCI counts disagree across docs (58/62 and 44/62). Treat both as stale until `TRAci_STATUS.md` is re-measured.
 
 ## The bug classes that mattered (read this before debugging anything)
 
@@ -58,19 +52,25 @@ multi-vehicle contention case, meso and rail have no cases, TraCI is 58/62, and 
 - References regenerated with different flags than the harness runs look like product bugs: `real_dense`
   (`--end 125`) and `vtypes` (missing `--fcd-output`) both wasted hours.
 - `compare_sim.py` ignored the `devices` attribute, hiding a missing routing device.
+- **Stale case reports**: several `REPORT.md` verdicts (closed_edge, sublanes, zipper, reroute_alt `ref`, detectors)
+  disagree with the lead's main run. Re-measure before acting on any of them.
 
 ## What is left
 
-1. `reroute/ref_device`'s one-step offset (quantified above).
-2. **Rerouting is only exercised on tiny networks.** `reroute_alt`/`closed_edge` prove the mechanism; no
-   case exercises a reroute on the real Times Square network.
-3. **TraCI: 44/62.** Failing/unknown: subscription + arrival crash, `setRoute` index-out-of-bounds at
-   `ms_base_vehicle.rs:2581`, `changeTarget` (needs the router), `vehicle.add`, `getJunctionFoes` (`LinkBits`
-   is `Unmapped`). Subscriptions are what a Unity client polls vehicles with.
-4. `has_device()` panics for any device whose `device_name` is not wired (pure virtual, no vtable); it is on
-   the parameter-output path at `ms_base_vehicle.rs:509`.
-5. Genuinely blocked, documented: emissions (`utils/emissions`, ~16 k lines), CCH/RoutingKit, meso
-   (loud error, engine not ported), rail constraint `dynamic_cast`, `NamedRTree`, `saveState`'s `loadState`.
+Taken from the lead's list, in this order:
+
+1. The 4 FAIL rows above. `city_munich` net (nc03); `reroute_alt` stack overflow and shortcut panics (rr04 branch).
+2. Outputs: 22 FAIL and 6 PANIC of 32 (`OUTPUTS.md` on `worktree-agent-out01`; owners ou02, dv02, cf02, pd01).
+   The worst is silent empty output: queue, netstate, vehroute, full, amitran.
+3. `battery` and `devices` never built (dv02).
+4. OSM import requires `--simple-projection` (pj01, UTM).
+5. Car-following: W99 `cc1`, KraussPS, CACC (cf03).
+6. `left_before_right` junction (jt01).
+7. TraCI (`tools/oracle/TRAci_STATUS.md`); loadState (st01); meso (ms01, scoping); rail (rb01); persons (pd01); emissions (em01).
+8. `reroute_bypass_p1`: CASE.md says expected FAIL, the lead's run does not list it. Verify.
+9. `reroute/ref_device` (`routing_v1` device never created) and `real_dense` `v15` (arrival 5.29 vs 7.6, op02):
+   both FAIL in older docs, not in the lead's list. Re-measure.
+10. Depart CRLF fix (`worktree-agent-px01`): needed for the Linux gate to pass lane_1 and pos_max.
 
 ## Fleet protocol that produced results
 

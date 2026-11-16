@@ -1,210 +1,157 @@
 # Scoreboard — current state
 
-Re-measured 2026-11-16 with the harness that now runs every sim case. Binaries: `cargo build -p sumo -p netconvert`
-from this branch (code = main `c4dcf59`, harness-only change), shared target `/c/Users/karti/sumo-rs-target`.
-Reproduce with:
+Main `c599e28` ("Merge branch 'wave2'"), 2026-11-16.
+
+Numbers from the lead's run on main: **`run_all.sh` PASS=71 FAIL=4 SKIP=13; depart 15/15.**
+This worktree did not re-run the harness. `C:\Users\karti\sumo-rs-target-x07\debug\sumo.exe` (10:49) is older than
+the newest source on main (`crates/sumo_core/src/netbuild/nbpt_line_cont.rs`, 10:50), so `run_all.sh` would print
+`STALE BINARY`. Per-case verdicts below use the lead's FAIL list. Where a case has a per-case `REPORT.md`, its
+date and verdict are quoted. Those reports can disagree with the lead's run; they are marked as such.
+
+Reproduce (Git Bash, a binary built from the tree under test):
 
 ```bash
-CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target bash tools/oracle/run_all.sh          # exact comparator
-bash tools/oracle/cases/depart/run_all_variants.sh                                    # 15 depart variants
-python tools/oracle/acceptance.py <case> <cand.ti.xml> <cand.stat.xml>                # tolerance: PASS/CLOSE/FAIL
+CARGO_TARGET_DIR=/c/Users/karti/sumo-rs-target-x07 bash tools/oracle/run_all.sh     # exact comparator; prints STALE BINARY if stale
+bash tools/oracle/cases/depart/run_all_variants.sh                                   # 15 depart variants
+python tools/oracle/acceptance.py <case> <cand.ti.xml> <cand.stat.xml>               # tolerance: PASS/CLOSE/FAIL
 ```
 
 `run_all.sh` runs the checkout it lives in. The sim stage runs whenever `ref_simple.net.xml`, `routes.rou` and
-`ref.tripinfo.xml` exist; it appends `cases/<case>/sim.args` to the sumo call. The net stage runs only with
-`input.osm`, and appends `cases/<case>/net.args` to the netconvert call (that is how `lefthand` gets
-`--lefthand`; without it the mirrored net can never match).
+`ref.tripinfo.xml` exist, and appends `cases/<case>/sim.args` to the sumo call. The net stage runs only with
+`input.osm`, and appends `cases/<case>/net.args` to the netconvert call.
 
-## Exact comparator (`run_all.sh`)
+## FAIL rows on main
 
-| case | net | sim | flags (`sim.args`) |
-|---|---|---|---|
-| junction | PASS | PASS | — |
-| roundabout | PASS | PASS | — |
-| real (Times Square) | PASS | PASS — byte-identical | — |
-| real_dense | PASS | FAIL — 1 tripinfo diff, FCD diff (see below) | `--end 125` |
-| signal | PASS | FAIL — 1 tripinfo diff, FCD first diff t=34 | — |
-| stress | SKIP (no input.osm) | **PASS** (new) | `--end 200` |
-| reroute `/ref` | SKIP (no input.osm) | **PASS** (new) | `--end 200 --additional-files tools/oracle/cases/reroute/reroute.add.xml` |
-| reroute `/ref` | SKIP (no input.osm) | **PASS** | `--end 200 --additional-files …reroute.add.xml` |
-| reroute `/ref_closing` | SKIP (no input.osm) | **PASS** | `sim_closing.args`: closing rerouter only |
-| reroute `/ref_device` | SKIP (no input.osm) | **FAIL** | `sim_device.args`: `<param>`-form rerouting device. Diff is exactly `devices`: ref has `routing_v1`, we do not. FCD matches, so the traffic is identical — the device is never created. Silent defect, caught only because `devices` is now compared. |
-| vtypes | SKIP (no input.osm) | **FAIL** (new) | `--end 120 --additional-files tools/oracle/cases/vtypes/vtypes.add.xml` |
-| depart | — | SKIP: 15 variants, see below | none (one reference per route file) |
-| netconv_edge | SKIP | SKIP (no sim refs; its own `run_all.sh` checks netconvert) | — |
-
-The sim stage now runs **once per committed reference variant**: `ref.tripinfo.xml` uses `sim.args`,
-`ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
-closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
-
-Exact totals: **`run_all.sh` PASS=28 FAIL=1 SKIP=9** over 19 cases. The single failure is a **recorded
-behavioural divergence**, not a broken test:
-
-| Row | Symptom | Cause |
+| row | symptom | cause / owner |
 |---|---|---|
-| `reroute_bypass_p1/ref` | with `device.rerouting.period=1`, C++ **reverts** the detour and sends the vehicle back onto the closed edge (`rerouteNo=2`, arrival 53.00); we keep the bypass (61.00) | C++'s periodic device reroute replans **without** the rerouter's prohibitions (`nProh=0`, measured), while a rerouter-triggered reroute honours them (`nProh=1`). Ours never fired the periodic reroute at all — the event was unscheduled and `MSRoutingEngine::reroute` was a panic stub |
+| `city_munich` net | 12 junction-classification diffs | agent nc03 |
+| `reroute_alt/ref_astar` | stack overflow | fixed on branch `rr04`, not on main |
+| `reroute_alt/ref_ch` | shortcut panic | fixed on branch `rr04`, not on main |
+| `reroute_alt/ref_chwrapper` | shortcut panic | fixed on branch `rr04`, not on main |
 
-### Open question on that row (do not chase the heap)
+## Case directories (`tools/oracle/cases/`)
 
-Measured 2026-11-16, so nobody repeats it: **the Dijkstra tie-break is not the cause.**
-`DijkstraRouter::EdgeInfoByEffortComparator` (`DijkstraRouter.h:73`) compares effort and then
-`getNumericalID()` — never pointers — and our heap matches that. At t=5 edges 11 and 12 do tie exactly
-(`7.7773927`), but edge 11 reaches the destination more cheaply (`20.16434` vs `20.16578`), so the path does
-not depend on pop order.
+"Main" is the lead's run: FAIL only if listed above, otherwise not FAIL. Where an older doc says FAIL, the doc is
+quoted, and that row needs a re-measure before anyone trusts it.
 
-The real question: **why is the closure's edge permission honoured at t=0 but not at t=5?** That is the
-difference between `reroute_alt` (must take 12) and `reroute_bypass_p1` (must go back to 11). Branch
-`worktree-agent-pr01` (`69ac3fc`) implements the periodic reroute as a real `WrappingCommand`, the device
-reminder vtable and `MSRoutingEngine::reroute`; merging it fixes `p1` and breaks `reroute_alt` for exactly
-this reason, which is why it is not merged.
-
-`reroute_bypass` (same net, `period=1000`) PASSES and proves a genuine mid-route detour:
-`LEAD IN AB OUT` → `LEAD IN AC CB OUT`, `rerouteNo=1`, matching C++ on tripinfo, FCD and statistics. Its net
-is built from plain XML (`net.args`) and is re-verified against C++ netconvert on every sweep: 0 differences
-in 42 elements.
-
-**Every other row matches C++ 1.28.0 on tripinfo, FCD and statistics.** A zero in the FAIL column would not
-mean zero untested surface — see the coverage-gap table below.
-
-- **`reroute_alt`** — `v0` rerouted at t=0 to `10 → 12 → 13`, arrival 30.00
-- **`closed_edge`** — a lane closed **after** departure; `v0` rerouted off it at t=8
-- **`real/ref_reroute`** — mid-route closure on the Times Square network; C++ `rerouteNo=1` for `v0`, ours
-  matches on tripinfo, FCD and statistics. Note the limit: the closed edge is `v0`'s destination, so SUMO
-  terminates its route rather than detouring — the Times Square extracts have no bypass. The mechanism fires
-  at real-network scale; a genuine detour is still unproven.
-
-Getting rerouting to work required **four** missing-dispatch fixes, any one of which silently disabled the
-feature:
-1. the rerouter was never registered as a move reminder (`register_at`),
-2. its `MSMoveReminder` vtable was never installed, so `notify_enter` went to the base no-op,
-3. `setPermissions` had no scheduler (C++ uses an unported `WrappingCommand`),
-4. `replace_route_edges` called the base `replace_route`, skipping `MSVehicle`'s best-lane refresh.
-
-`lanechange` and `lefthand` PASS, so the `gComputeLC`/`change_lanes` fix and left-hand-traffic net generation
-(`--lefthand` via `net.args`) are proven rather than asserted. `sublanes` passes too, after `ms_edge.rs` was found
-to hardcode a second copy of the lateral-resolution global.
-
-Before this change: **PASS=8 FAIL=2 SKIP=0**
-(measured with the original script on the same binaries; stress, reroute, vtypes, ref_closing and depart were invisible).
-Gate: all 8 previous PASS rows still PASS.
-
-### depart (`cases/depart/run_all_variants.sh`)
-
-15 variants (`lane_*`, `pos_*`, `speed_*`), each with its own C++ reference in `depart/ref/<variant>/`:
-**PASS=15 FAIL=0** (`lane_1` and `pos_max` pass by error parity: both sides exit with the same `Error:` line).
-Outputs go to `/c/Users/karti/Temp/score/depart`, not the tracked `ours/` directory.
-
-The 15 references were **re-derived from C++ sumo 1.28.0 on 2026-11-16** into a scratch directory and compared
-with the committed ones using the same comparators: tripinfo MATCH for all 15, statistics MATCH for all 15,
-and the `Error:` text matches for the two error-parity variants. So the 15/15 verdict measures genuine C++
-output, not a stale reference. (Do not validate them with a raw `diff` — the `<configuration>` block records
-the input paths, so re-deriving from a different directory always differs there.)
-
-## Product gate (`acceptance.py`)
-
-| case | tripinfo | statistics | note |
+| case | what it tests | main | notes |
 |---|---|---|---|
-| junction | PASS | PASS | |
-| roundabout | PASS | PASS | |
-| real | PASS | PASS | |
-| real_dense | FAIL | CLOSE | `v15.arrivalSpeed` 5.29 vs 7.6; stat diffs 0.03 |
-| signal | **PASS** | **PASS** | now exact: the t=34 divergence was explicit-vs-semi-implicit Euler, not RNG |
-| stress | PASS | PASS | new |
-| reroute `/ref` and `/ref_closing` | PASS | PASS | new; both variants exact, see below |
-| vtypes | CLOSE | — | `EIDM_1` timeLoss 4.05 vs 4.02; arrival now matches |
+| city_munich | central Munich old-town grid, net + sim | FAIL (net) | net: 12 junction-classification diffs (nc03) |
+| city_plano | US suburban arterial, net + sim | not FAIL | REPORT (2026-11-16): net 7378/7378 exact, tripinfo 137 entries MATCH, fcd and stat PASS |
+| closed_edge | lane closed after departure; `v0` reroutes off it at t=8 | not FAIL | SCOREBOARD says PASS; `REPORT.md` says sim FAIL (`v0` arrival 30.00 ref, 31.00 ours). Re-measure |
+| depart | 15 departure variants: `lane_*`, `pos_*`, `speed_*` | 15/15 PASS | Linux gave lane_1 and pos_max FAIL: CRLF in the reference stderr (see Kaggle section). Fix is on `worktree-agent-px01`; not on main |
+| detectors | detector output files plus sim | not FAIL | REPORT: sim PASS (tripinfo, fcd, stat); `det_lad.xml` (laneAreaDetector) FAIL; detector files PARTIAL |
+| junction | junction net and sim | not FAIL | SCOREBOARD: PASS |
+| lanechange | lane change, `lcdur3` and `lat04` variants | not FAIL | REPORT: net exact, sim PASS. Its `<change>` output FAIL (see Outputs) |
+| lefthand | left-hand traffic; needs `--lefthand` via `net.args` | not FAIL | sim PASS. Net stage needs the flag |
+| netconv_edge | netconvert on bad and unusual OSM | not FAIL | REPORT: 7 nets MATCH, 3 SKIP. Error cases panic: truncated OSM, zero-byte file |
+| real | Times Square net and sim | not FAIL | SCOREBOARD: byte-identical. `ref_reroute` PASS (closure hits the destination, so no real detour) |
+| real_dense | congested Times Square, `--end 125` | not FAIL | SCOREBOARD (older): FAIL, `v15` arrival 5.29 vs 7.6 (op02). Re-measure |
+| reroute | rerouter and device: `ref`, `ref_closing`, `ref_device` | not FAIL | `ref` and `ref_closing` PASS. SCOREBOARD (older): `ref_device` FAIL (`routing_v1` device never created). Re-measure |
+| reroute_alt | `v0` reroutes at t=0 to `10 → 12 → 13` | FAIL (`ref_astar`, `ref_ch`, `ref_chwrapper`) | `ref` itself: REPORT says FAIL (30.00 vs 31.00), not in the lead's list. Re-measure |
+| reroute_bypass | mid-route detour through a bypass, `period=1000` | not FAIL | REPORT: PASS (`LEAD IN AB OUT` → `LEAD IN AC CB OUT`) |
+| reroute_bypass_p1 | same net, `period=1`; C++ reverts the detour | not FAIL per lead | CASE.md says **expected FAIL**. Lead's 4-row list does not include it. Verify before trusting |
+| reroute_contention | many vehicles reroute at once and compete for a bypass | not FAIL | REPORT: net, `ref` and `ref_adapt` PASS. SCOREBOARD's "no contention case" gap is stale |
+| roundabout | roundabout net and sim | not FAIL | SCOREBOARD: PASS |
+| route_check | disconnected route: what C++ does (`gCheckRoutes`) | not FAIL | ignore variant PASS. Default error path PASS after fix, via `run_error.sh` |
+| routes_forms | route file syntax forms | not FAIL | no REPORT; no recorded verdict |
+| sigma_seed | RNG parity: `sigma` and `speedFactor` draws under `--seed` | not FAIL | REPORT: PASS for both seeds (exit 0, no panic) |
+| signal | signal case; t=34 divergence was explicit vs semi-implicit Euler | not FAIL | SCOREBOARD: tripinfo, FCD and statistics all exact |
+| signal_actuated | actuated signal control | not FAIL | REPORT: net and sim PASS |
+| signal_delay | signal delay | not FAIL | REPORT: net and sim PASS |
+| signal_nema | NEMA signal control | not FAIL | REPORT: net and sim PASS |
+| stops | stops | not FAIL | no REPORT; no recorded verdict |
+| stops_parking | lane stop, `until` stop, parking-area stop, multi-stop | not FAIL | REPORT has a verdict section; read it there |
+| stress | 120 vehicles oversaturating Times Square | not FAIL | SCOREBOARD: tripinfo, FCD, stat match exactly |
+| sublanes | sublane model | not FAIL | SCOREBOARD: PASS. REPORT (2026-11-16): sim PANIC at `ms_leader_info.rs:503`. Re-measure |
+| teleport | blocked jam triggers `--time-to-teleport 20` | not FAIL | REPORT has a verdict section; read it there |
+| traci_basic | TraCI command probes | not FAIL | see `tools/oracle/TRAci_STATUS.md`. Probe counts disagree across docs (58/62 and 44/62) |
+| trips | trips input | not FAIL | no REPORT; no recorded verdict |
+| vtypes | vType and car-following: EIDM, Wiedemann | not FAIL | SCOREBOARD (older): run_all FAIL (`--end 120`); acceptance CLOSE (`EIDM_1` timeLoss 4.05 vs 4.02). Re-measure |
+| zipper | 2-lane edge into a zipper merge | not FAIL | REPORT: FAIL, FCD t=19 `z2` x 220.25 ref vs 220.81 ours. Re-measure |
 
-## Newly visible cases: first differences
+Sim-stage verdicts with no reference (`ref.tripinfo.xml` missing) count as SKIP. The lead's SKIP count is 13.
+The lead's run did not give per-row SKIP names.
 
-- **netconv_edge: every generated network now matches.** The harness compares the two nets with
-  `compare_net.py` (element level — a raw diff always differs because the header carries the generation
-  stamp and the recorded input/output paths). Result: `net=MATCH` on all 7 cases that produce a network,
-  `net=skip` on the 3 that error on both sides, and `net=MATCH` on the three `real` option variants
-  (`real_base`, `real_noturn`, `real_corner3`) — 1165 elements, Times Square OSM.
-  Both runners were pointing at another agent's worktree (`agent-rb06`) and were repointed to derive paths
-  from their own location.
-- **netconvert message text still differs** (owner mp01): C++ aggregates repeated messages —
-  `Warning: 6 total messages of type: Could not build program '%' for traffic light '%'` — while we print
-  each occurrence; and one warning is written without a trailing newline, so ours reads
-  `...it will not be build.Success.` with the run-completion text glued on. Both are output-text fidelity,
-  not network correctness.
+## Outputs (non-tripinfo)
 
-  Warning **counts** already agree: with a working `SUMO_HOME` (copy `data/{xsd,typemap}` out of WSL and point
-  the variable at it — a UNC path to the WSL filesystem does not work) both sides emit **15** warnings on
-  `real/input.osm`, and our net still matches C++ exactly (0 differences, 1165 elements). Running the Windows
-  exe from WSL without a usable `SUMO_HOME` adds two `Environment variable SUMO_HOME is not set` lines; those
-  are artefacts, not defects. With `SUMO_HOME` set the XML-validation warning disappears and the typemap is
-  loaded from file (the `Discarding unknown compound ...` lines only come from typemap processing).
-- **signal: now exact.** The divergence at t=34 was `semi_implicit_euler_update()` in `ms_vehicle.rs`
-  hardcoded to `false` instead of reading `MSGlobals` (C++ default: true). Explicit Euler integrates
-  position from the old speed, so every vehicle drifted slightly and the car-following model amplified it
-  to 0.26 m by t=34. The dawdle draw *looked* wrong because the speed history was already wrong; the RNG
-  stream was never the cause. tripinfo, FCD and statistics now all MATCH.
-- **stress**: no difference. Tripinfo, FCD and statistics all match the C++ reference exactly. `stress/REPORT.md`
-  (first diff `s24` depart 43 vs 48, 107 vs 93 arrivals) does not reproduce with the current binary. The prebuilt
-  binary from Nov 15 22:52 also matches, so the report predates both builds.
-- **reroute**: no difference. The `--additional-files` panic in `reroute/REPORT.md` no longer reproduces. The case
-  still does not test rerouting: the C++ reference shows `rerouteNo=0` for every vehicle because SUMO 1.28 ignores
-  `device.rerouting.*` given as vType attributes. Not measured: `ref_closing.*` (closing-only variant).
-- **vtypes: CLOSE.** `EIDM_1` arrival now matches; remaining `timeLoss 4.05 vs 4.02` and small `Wiedemann_0/1`
-  timeLoss deltas (0.02/0.01). Not a flag mismatch: make_sim_refs.sh reproduces the committed reference from
-  C++ with the same flags.
-- **reroute**: both variants exact (`ref` and `ref_closing`). The case does not exercise rerouting: the C++
-  reference shows `rerouteNo=0` for every vehicle because SUMO 1.28 ignores `device.rerouting.*` given as
-  vType attributes — a genuine test-design limitation, recorded rather than papered over.
-- **depart**: 15/15. The two failures in `depart/REPORT.md` (`departLane=1` silently dropping `v3`, `departSpeed=0`
-  arriving 1 s late) no longer reproduce; the current binary errors on `departLane=1` exactly like C++.
+Full page: `tools/oracle/OUTPUTS.md` on branch `worktree-agent-out01` (not on main). Measured 2026-11-16 against the
+x07 debug build, which was not rebuilt. **PASS 4, FAIL 22, PANIC 6** over 32 rows.
 
-## References
+- **Silent empty output.** `queue`, `netstate`, `vehroute`, `full` and `amitran` exit 0 and write a header with no
+  data elements. No warning.
+- **Panics.** `<edgeData>` in `--additional-files` panics in `MSDetectorFileOutput` (pure virtual
+  `writeXMLDetectorProlog`). `--person-summary-output` panics in `MSPModel::getActiveNumber` (pure virtual).
+- **`lanechange` output.** Ours drops nine gap attributes that C++ writes on every `<change>`.
+- **`link` output.** C++ writes `willPass="1"`; ours writes `"true"`.
+- **`summary`** passes after ignoring the wall-clock `@duration`.
+- **`collision`** is a vacuous PASS: the stress case never collides.
 
-Nothing regenerated. `make_sim_refs.sh` (now reads every case's `sim.args`) re-derived the committed sim references
-from C++ sumo 1.28.0 with the documented flags into a scratch dir: tripinfo, FCD and statistics MATCH for junction,
-roundabout, signal, real, real_dense, stress, reroute; tripinfo MATCH for vtypes.
+Owners as given by the lead: ou02, dv02, cf02, pd01.
 
-## What is left, in order
+## Known gaps (owner)
 
-1. `real_dense` `v15` arrival speed 5.29 vs 7.6 — the only exact-comparator FAIL (agent op02). Diverges at
-   t=98 on internal lane `:42428297_1_3`, +0.22 m/s inherited from `v09`; we accelerate 0.2–0.5 m/s faster
-   on junction-internal lanes.
-2. Stale MSGlobals accessors: 38 local `fn g_*()` across 18 files; 18 were stale/wrong, 12 fixed.
-   Proven wrong and fixed: `g_ignore_junction_blocker` (0), `g_lateral_resolution` (-1, which through the
-   shared prelude also reached `ms_link.rs` so sublane foe checks never ran), `g_using_internal_lanes`
-   (false in `ms_full_export.rs`), `mslcm_sl2015`'s left-hand flag (always off), the taxi device's own copy
-   of the taxi-classes value (separate from the router's, started at 0).
-   **`gComputeLC` is NOT default-true** — C++ sets it true only while lane changes are being applied and back
-   to false afterwards. `MSEdgeControl::change_lanes` never set it, so it was permanently false and lane
-   changing never ran the C++ path. Corrected 2026-11-16; do not "fix" it to a constant `true`.
-   This is the highest-yield bug class in the port; 6 stale accessors remain in files owned by other agents.
-3. `vtypes` `EIDM_1` timeLoss 4.05 vs 4.02 — CLOSE, not exact (agent vt01).
-4. `libsumo` API surface: 102 `panic!("shortcut:")` bodies, mostly wiring (agent ls01).
-5. Router/rail/intermodal stubs: 164, mostly off the car path (agent rt02).
-6. `devices/` stubs: 24 (agent rng01).
-7. UB writes through `&self`: ~20 remaining, release-only risk (agent ub01).
-8. Reroute: a rerouting case needs `<param key="device.rerouting.probability" value="1"/>` form; the current
-   case proves the rerouter *loads* but never proves rerouting happens (`rerouteNo=0` on both sides).
+| gap | owner |
+|---|---|
+| Outputs: 4/32 pass (see above) | ou02, dv02, cf02, pd01 |
+| battery and devices never built | dv02 |
+| OSM import requires `--simple-projection` (UTM) | pj01 |
+| car-following: W99 `cc1`, KraussPS, CACC | cf03 |
+| `left_before_right` junction | jt01 |
+| TraCI | `tools/oracle/TRAci_STATUS.md` |
+| `loadState` | st01 |
+| meso (`--mesosim`) | ms01 (scoping) |
+| rail | rb01 |
+| persons | pd01 |
+| emissions | em01 |
 
-## Coverage gaps that are known, not accidental
+Meso is a loud error (`mesoscopic simulation is not wired into MSNet yet`, `ms_net.rs:401`), not a silent
+fallback. That is correct for a missing subsystem.
 
-| Gap | Why it matters | What would cover it |
+## Coverage gaps
+
+Taken from the 2026-11-16 SCOREBOARD. Not re-checked today.
+
+| gap | why it matters | what would cover it |
 |---|---|---|
-| **closed-edge enforcement is never exercised** | every closure in our cases exists only as a *router prohibition*; SUMO never holds a vehicle for it, so "can a vehicle drive through a closed edge" has never been tested. A closure with `disallow="all"` on an edge a vehicle is already committed to would test it. | a new case: `keepClear`/`disallow="all"` closure on an edge an inserted vehicle must traverse |
-| **meso** | `--mesosim` is a separate engine (see the loud-unsupported table) | would need the meso port first |
-| **rail** | rail signal constraints need a `dynamic_cast` audit; no case uses a rail network | a small rail net + `--railsignal-moving-block` |
-| **TraCI writes** | the 32-probe harness exercises `setSpeed`; `changeLane`, `moveToXY`, route setting and subscriptions are unmeasured | extend `cases/traci_basic/client.py` |
-| **`depart` variants** | 15/15 pass, but they are compared to references that are only re-derived on demand | re-run `run_ref.sh` periodically |
+| closed-edge enforcement is never exercised | every closure in our cases is a router prohibition; SUMO never holds a vehicle for it | a case with `disallow="all"` on an edge a vehicle must traverse |
+| meso | separate engine | meso port first |
+| rail | no rail net in any case | small rail net with `--railsignal-moving-block` |
+| TraCI writes | `changeLane`, `moveToXY`, route setting and subscriptions unmeasured | extend `cases/traci_basic/client.py` |
+| `depart` references | re-derived on demand only | re-run `run_ref.sh` periodically |
 
-## Known unsupported features — loud, not silentMeasured on 2026-11-16, so nobody has to rediscover them:
+## Kaggle gate
 
-| Feature | Our behaviour | C++ | Status |
-|---|---|---|---|
-| `--mesosim true` | **hard error**: `mesoscopic simulation is not wired into MSNet yet` (`ms_net.rs:401`) | runs (5 tripinfo entries on the junction case) | meso is not ported. It fails loudly, which is the correct behaviour for a missing subsystem — a silent fallback to microsim would be worse. The eight `g_use_meso_sim() -> false` stubs are consistent with this: meso can never be reached. |
-| `--lateral-resolution` | crashed (index out of bounds) | runs | being fixed by sl01 — this one is a *bug*, not a missing feature |
-| emissions output | `shortcut:` panic on the typed getters | implements `utils/emissions` (~16 k lines) | unported module, documented |
-| `saveState`/`loadState` | panic | works | `MSStateHandler` being ported by sh01 |
-| CCH routing | `shortcut:` (needs RoutingKit types) | works | unported dependency |
+`tools/kaggle/remote_gate.ps1` runs the full oracle gate for one git branch on a Kaggle CPU notebook, so the work
+runs off this machine's RAM.
 
-Reproduce the meso result: run our `sumo.exe` on any case with `--mesosim true`; it exits 1 with that message.
-C++ on the same case exits 0. Meso is a separate simulation mode, so it does not affect the microsim path that
-every other row on this page measures.
+```powershell
+powershell -File tools/kaggle/remote_gate.ps1 -Branch worktree-agent-x -Slot 1
+```
+
+What it does:
+
+1. `git archive` of the branch, plus a `GATE_BRANCH.txt` marker with the branch name and short sha.
+2. Uploads that as a private dataset `<user>/sumo-rs-gate-src-<slot>`. Creates it on first use, then new versions.
+3. Pushes a private, internet-enabled CPU kernel `<user>/sumo-rs-gate-<slot>` running `gate_kernel.py`.
+4. Polls status up to `-TimeoutMin` (default 90), then fetches the output and prints `gate.txt`.
+
+- **Slots 1 to 5.** Each is a separate dataset and kernel pair, so up to five gates run at once.
+- **Token.** `-TokenFile` defaults to `%USERPROFILE%\.kaggle\gate_token` (a Kaggle `KGAT_...` token). The script
+  comment names a second file, `gate_token_acct3`, for another account. The script reads the token value into
+  `KAGGLE_API_TOKEN`. Do not paste token values anywhere. The `.kaggle` folder, checked from this shell, was empty.
+- **Result.** Linux and Windows agree. The only difference found (`tools/oracle/PLATFORM_DIFF.md` on branch
+  `worktree-agent-px01`) was CRLF in the depart reference `stderr.txt` files. GNU grep keeps the `\r`; MSYS2 grep
+  strips it. The fix is one `tr -d '\r'` on line 26 of `cases/depart/run_all_variants.sh`. It is not on main.
+
+## Branch triage
+
+`tools/oracle/BRANCH_TRIAGE.md` (copied from `worktree-agent-br01`). **0 useful, 12 unknown, 12 superseded.**
+
+- **Never merge `fix-a60ca9556cae1357c`.** It replaces main's real `libsumo/vehicle.rs::add` body with a
+  `panic!("... not yet ported")` stub, and would regress about 3,674 spots.
+- The other branches are mostly behind main. Merging them would regress main.
+- The 12 "unknown" branches add new functions that still need a C++ check. Nothing was merged, deleted or pushed.
 
 ## Traps that have cost real time here
 
