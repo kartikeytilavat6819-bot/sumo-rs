@@ -632,7 +632,8 @@ impl MSDevice_FCD {
     #[allow(unused_variables)]
     pub fn build_shape_filter() {
         if is_set("fcd-output.filter-shapes") {
-            let loadedShapes = MSNet::get_instance().m().get_shape_container();
+            let net = MSNet::get_instance();
+            let loadedShapes = net.m().get_shape_container();
             if loadedShapes.get_polygons().len() > 0 {
                 for attrName in get_string_vector("fcd-output.filter-shapes") {
                     match loadedShapes.get_polygons().get(&attrName).copied() {

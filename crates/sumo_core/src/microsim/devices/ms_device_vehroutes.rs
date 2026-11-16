@@ -701,7 +701,7 @@ impl MSDevice_Vehroutes {
             self.myCurrentValid = next_as::<i32>(&mut bis) != 0;
 
             let route: ConstMSRoutePtr = MSRoute::dictionary_3(&routeID, Ptr::null());
-            if !route.is_null() {
+            if !crate::microsim::ms_route::is_null_route(&route) {
                 let edge = MSEdge::dictionary_2(&edgeID);
                 self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(edge, time, route, &info, lastIndex, newIndex, self.myCurrentValid));
             }

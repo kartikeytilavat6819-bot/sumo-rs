@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice_Example.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::string_utils::to_double;
 use utils::common::to_string::{f64_to_string_default, to_string};
 use utils::options::options_cont::get_float;
