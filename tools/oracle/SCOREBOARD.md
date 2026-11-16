@@ -80,6 +80,13 @@ the input paths, so re-deriving from a different directory always differs there.
   each occurrence; and one warning is written without a trailing newline, so ours reads
   `...it will not be build.Success.` with the run-completion text glued on. Both are output-text fidelity,
   not network correctness.
+
+  Warning **counts** already agree: with a working `SUMO_HOME` (copy `data/{xsd,typemap}` out of WSL and point
+  the variable at it — a UNC path to the WSL filesystem does not work) both sides emit **15** warnings on
+  `real/input.osm`, and our net still matches C++ exactly (0 differences, 1165 elements). Running the Windows
+  exe from WSL without a usable `SUMO_HOME` adds two `Environment variable SUMO_HOME is not set` lines; those
+  are artefacts, not defects. With `SUMO_HOME` set the XML-validation warning disappears and the typemap is
+  loaded from file (the `Discarding unknown compound ...` lines only come from typemap processing).
 - **signal: now exact.** The divergence at t=34 was `semi_implicit_euler_update()` in `ms_vehicle.rs`
   hardcoded to `false` instead of reading `MSGlobals` (C++ default: true). Explicit Euler integrates
   position from the old speed, so every vehicle drifted slightly and the car-following model amplified it
