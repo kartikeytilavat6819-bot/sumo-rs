@@ -199,6 +199,14 @@ fn rand_helper_get_seed() -> i32 {
 }
 
 impl MSBaseVehicle {
+    // Downcast of this base to the concrete vehicle: micro sim is always MSVehicle, meso always MEVehicle.
+    fn as_ms_vehicle(&self) -> &crate::microsim::ms_vehicle::MSVehicle {
+        Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap()
+    }
+    fn as_me_vehicle(&self) -> &crate::mesosim::me_vehicle::MEVehicle {
+        Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap()
+    }
+
     /// C++: `double MSBaseVehicle::getPreviousSpeed() const` [const, virtual]
     /// Returns the vehicle's previous speed
     // double
@@ -207,7 +215,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        if MSGlobals::use_meso_sim() {
+            panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        }
+        self.as_ms_vehicle().get_previous_speed()
     }
 
     /// C++: `void MSBaseVehicle::MSBaseVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
@@ -850,7 +861,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        self.get_edge()
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().get_current_edge();
+        }
+        self.as_ms_vehicle().get_current_edge()
     }
 
     /// C++: `const std::set<SUMOTrafficObject::NumericalID> MSBaseVehicle::getUpcomingEdgeIDs() const` [const, virtual]
@@ -930,7 +944,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        Ptr::default()
+        if MSGlobals::use_meso_sim() {
+            return Ptr::default();
+        }
+        self.as_ms_vehicle().get_next_edge_ptr()
     }
 
     /// C++: `bool MSBaseVehicle::isOnRoad() const` [const, virtual]
@@ -940,7 +957,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        true
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().is_on_road();
+        }
+        self.as_ms_vehicle().is_on_road()
     }
 
     /// C++: `bool MSBaseVehicle::isRemoteControlled() const` [const, virtual]
@@ -981,7 +1001,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lateral_position_on_lane(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_lateral_position_on_lane()
     }
 
     /// C++: `double MSBaseVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
@@ -1002,7 +1025,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
-        self.myCurrEdge
+        if MSGlobals::use_meso_sim() {
+            return self.myCurrEdge;
+        }
+        self.as_ms_vehicle().get_reroute_origin()
     }
 
     /// C++: `const MSEdge * MSBaseVehicle::getRerouteDestination() const` [const, virtual]
@@ -1023,8 +1049,11 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss_seconds(&self) -> f64 {
-        // better timeLoss for meso?
-        0.0
+        if MSGlobals::use_meso_sim() {
+            // better timeLoss for meso?
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_time_loss_seconds()
     }
 
     /// C++: `double MSBaseVehicle::getWaitingSeconds() const` [const]
@@ -1966,7 +1995,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_acceleration()
     }
 
     /// C++: `void MSBaseVehicle::onDepart()` [virtual]

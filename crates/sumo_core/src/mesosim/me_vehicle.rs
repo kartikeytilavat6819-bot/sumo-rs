@@ -63,6 +63,123 @@ impl std::ops::DerefMut for MEVehicle {
     }
 }
 
+use crate::utils::vehicle::sumo_traffic_object::{DEFAULT_SUMO_TRAFFIC_OBJECT_VT, SUMOTrafficObject, SUMOTrafficObjectVt};
+use crate::utils::vehicle::sumo_vehicle::{DEFAULT_SUMO_VEHICLE_VT, SUMOVehicle, SUMOVehicleVt};
+
+// SUMOTrafficObject vtable for MEVehicle (mirrors MS_VEHICLE_VT); getters not listed keep the default
+static ME_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: me_vehicle_is_vehicle,
+    get_edge: me_vehicle_get_edge,
+    get_lane: me_vehicle_get_lane,
+    get_speed: me_vehicle_get_speed,
+    get_position: me_vehicle_get_position,
+    get_current_edge: me_vehicle_get_current_edge,
+    get_next_edge_ptr: me_vehicle_get_next_edge_ptr,
+    get_back_lane: me_vehicle_get_back_lane,
+    get_reroute_destination: me_vehicle_get_reroute_destination,
+    get_slope: me_vehicle_get_slope,
+    get_v_class: me_vehicle_get_v_class,
+    get_max_speed: me_vehicle_get_max_speed,
+    get_waiting_time: me_vehicle_get_waiting_time,
+    get_acceleration: me_vehicle_get_acceleration,
+    get_position_on_lane: me_vehicle_get_position_on_lane,
+    get_back_position_on_lane: me_vehicle_get_back_position_on_lane,
+    get_angle: me_vehicle_get_angle,
+    has_arrived: me_vehicle_has_arrived,
+    has_influencer: me_vehicle_has_influencer,
+    ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT
+};
+
+// SUMOVehicle vtable for MEVehicle: the C++ virtuals MEVehicle overrides at SUMOVehicle level
+static ME_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
+    is_on_road: me_sv_is_on_road,
+    is_idling: me_sv_is_idling,
+    get_angle: me_sv_get_angle,
+    get_time_loss: me_sv_get_time_loss,
+    get_current_edge: me_sv_get_current_edge,
+    ..DEFAULT_SUMO_VEHICLE_VT
+};
+
+fn me_sv_ref(v: &SUMOVehicle) -> &MEVehicle {
+    Ptr::new(v).cast::<MEVehicle>().get().unwrap()
+}
+fn me_sv_is_on_road(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_on_road()
+}
+fn me_sv_is_idling(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_idling()
+}
+fn me_sv_get_angle(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_angle()
+}
+fn me_sv_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_time_loss()
+}
+fn me_sv_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
+    me_sv_ref(v).get_current_edge()
+}
+
+fn me_vehicle_ref(o: &SUMOTrafficObject) -> &MEVehicle {
+    Ptr::new(o).cast::<MEVehicle>().get().unwrap()
+}
+fn me_vehicle_is_vehicle(_: &SUMOTrafficObject) -> bool {
+    true
+}
+fn me_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    me_vehicle_ref(o).get_edge()
+}
+fn me_vehicle_get_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    me_vehicle_ref(o).get_lane()
+}
+fn me_vehicle_get_speed(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_speed()
+}
+fn me_vehicle_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
+    me_vehicle_ref(o).get_position(offset)
+}
+fn me_vehicle_get_current_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    me_vehicle_ref(o).get_current_edge()
+}
+fn me_vehicle_get_next_edge_ptr(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    me_vehicle_ref(o).get_next_edge_ptr()
+}
+fn me_vehicle_get_back_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    me_vehicle_ref(o).get_back_lane()
+}
+fn me_vehicle_get_reroute_destination(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    me_vehicle_ref(o).get_reroute_destination()
+}
+fn me_vehicle_get_slope(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_slope()
+}
+fn me_vehicle_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    me_vehicle_ref(o).get_v_class()
+}
+fn me_vehicle_get_max_speed(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_max_speed()
+}
+fn me_vehicle_get_waiting_time(o: &SUMOTrafficObject, accumulated: bool) -> SUMOTime {
+    me_vehicle_ref(o).get_waiting_time(accumulated)
+}
+fn me_vehicle_get_acceleration(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_acceleration()
+}
+fn me_vehicle_get_position_on_lane(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_position_on_lane()
+}
+fn me_vehicle_get_back_position_on_lane(o: &SUMOTrafficObject, lane: Ptr<MSLane>) -> f64 {
+    me_vehicle_ref(o).get_back_position_on_lane(lane)
+}
+fn me_vehicle_get_angle(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_angle()
+}
+fn me_vehicle_has_arrived(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).has_arrived()
+}
+fn me_vehicle_has_influencer(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).has_influencer()
+}
+
 impl MEVehicle {
     /// C++: `void MEVehicle::MEVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
     /// Constructor
@@ -81,7 +198,7 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, speedFactor: f64) -> Self {
-        MEVehicle {
+        let mut v = MEVehicle {
             base: MSBaseVehicle::new(pars, route, type_, speedFactor),
             mySegment: Ptr::null(),
             myQueIndex: 0,
@@ -92,7 +209,10 @@ impl MEVehicle {
             myUnqueuedEventTime: SUMOTIME_MIN,
             myWasJammed: false,
             myInfluencer: Ptr::null(),
-        }
+        };
+        v.base.base.base.vt = &ME_VEHICLE_VT;
+        v.base.base.vt = &ME_SUMO_VEHICLE_VT;
+        v
     }
 
     /// C++: `double MEVehicle::getPositionOnLane() const` [const, virtual]
