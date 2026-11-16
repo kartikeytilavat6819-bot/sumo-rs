@@ -5571,7 +5571,7 @@ impl MSLCM_SL2015 {
                     let rightVehSide = self.myVehicle.get_right_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let leftVehSide = self.myVehicle.get_left_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let res = if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { next.get_width() };
-                    if rightVehSide < -res && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    if rightVehSide < -res && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -rightVehSide;
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
