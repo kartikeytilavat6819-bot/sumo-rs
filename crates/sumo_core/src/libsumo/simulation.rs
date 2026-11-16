@@ -512,8 +512,11 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_bus_stop_id_list() -> Vec<String> {
-        // shortcut: MSNet::getStoppingPlaces returns Unmapped (NamedObjectCont), its keys cannot be listed yet
-        panic!("shortcut: MSNet::getStoppingPlaces is not mapped yet, cannot list bus stops");
+        let mut result: Vec<String> = Vec::new();
+        for (id, _) in MSNet::get_instance().get_stopping_places(SUMO_TAG_BUS_STOP).iter() {
+            result.push(id.clone());
+        }
+        result
     }
 
     /// C++: `int Simulation::getBusStopWaiting(const std::string &)` [static]
@@ -565,8 +568,23 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_collisions() -> Vec<TraCICollision> {
-        // shortcut: MSNet::getCollisions() (the collision map of MSNet::Collision records) is not ported yet
-        panic!("shortcut: MSNet::getCollisions is not mapped yet, cannot list collisions");
+        let mut result: Vec<TraCICollision> = Vec::new();
+        for (item_first, item_second) in MSNet::get_instance().get_collisions().iter() {
+            for c in item_second.iter() {
+                result.push(TraCICollision {
+                    collider: item_first.clone(),
+                    victim: c.victim.clone(),
+                    colliderType: c.colliderType.clone(),
+                    victimType: c.victimType.clone(),
+                    colliderSpeed: c.colliderSpeed,
+                    victimSpeed: c.victimSpeed,
+                    type_: c.type_.clone(),
+                    lane: c.lane.get_id().to_string(),
+                    pos: c.pos,
+                });
+            }
+        }
+        result
     }
 
     /// C++: `double Simulation::getScale()` [static]

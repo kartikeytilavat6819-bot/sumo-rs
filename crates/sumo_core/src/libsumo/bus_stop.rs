@@ -124,8 +124,12 @@ impl BusStop {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: needs MSNet::getStoppingPlaces, which is an unmapped NamedObjectCont in ms_net.rs, iterate it sorted by id once typed
-        panic!("shortcut: BusStop::getIDList needs MSNet::getStoppingPlaces (unmapped type)")
+        let mut ids: Vec<String> = Vec::new();
+        for (id, _) in MSNet::get_instance().get_stopping_places(SUMO_TAG_BUS_STOP).iter() {
+            ids.push(id.clone());
+        }
+        ids.sort();
+        ids
     }
 
     /// C++: `int BusStop::getIDCount()` [static]

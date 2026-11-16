@@ -80,8 +80,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: MSNet junction control has no insertIDs yet (MSJunctionControl is a skeleton), upgrade when MSJunctionControl is ported
-        panic!("shortcut: Junction::getIDList needs MSJunctionControl::insertIDs")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_junction_control().base.keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int Junction::getIDCount()` [static]
@@ -309,8 +312,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_junction(id: &str) -> Ptr<MSJunction> {
-        // shortcut: MSJunctionControl::get is not mapped yet, and C++ throws TraCIException for unknown ids (here it panics), upgrade when MSJunctionControl is ported
-        panic!("shortcut: Junction '{id}' lookup needs MSJunctionControl::get")
+        // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
+        match MSNet::get_instance().m().get_junction_control().base.get(id) {
+            Some(j) => *j,
+            None => panic!("Junction '{id}' is not known"),
+        }
     }
 
     /// C++: `void Junction::Junction()` [private]

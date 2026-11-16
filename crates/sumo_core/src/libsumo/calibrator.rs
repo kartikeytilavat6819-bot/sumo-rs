@@ -141,8 +141,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_v_types(calibratorID: &str) -> Vec<String> {
-        // shortcut: MSCalibrator::getVehicleTypes is not mapped in ms_calibrator.rs, upgrade when it is
-        panic!("shortcut: Calibrator::getVTypes needs MSCalibrator::getVehicleTypes")
+        // C++ MSCalibrator inherits getVehicleTypes() from MSDetectorFileOutput (std::set, already sorted)
+        Self::get_calibrator(calibratorID).m().base3.get_vehicle_types().iter().cloned().collect()
     }
 
     /// C++: `int Calibrator::getPassed(const std::string &)` [static]
@@ -213,8 +213,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
-        panic!("shortcut: Calibrator::getParameter needs the Parameterised base of MSCalibrator")
+        // Parameterised is reached through MSDetectorFileOutput (MSCalibrator : MSDetectorFileOutput)
+        Self::get_calibrator(objectID).m().base3.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Calibrator::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -232,8 +232,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
-        panic!("shortcut: Calibrator::setParameter needs the Parameterised base of MSCalibrator")
+        Self::get_calibrator(objectID).m().base3.base2.set_parameter(key, value);
     }
 
     /// C++: `void Calibrator::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
