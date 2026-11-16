@@ -2260,9 +2260,6 @@ impl MSLaneChanger {
         if !leader.0.is_null() {
             secureOrigFrontGap = vehicle.get_car_follow_model().get_secure_gap(vehicle, leader.0, vehicle.get_speed(), leader.0.get_speed(), leader.0.get_car_follow_model().get_max_decel());
         }
-        let _ = secureOrigFrontGap;
-        let _ = secureBackGap;
-        let _ = secureFrontGap;
 
         let mut msg = MSAbstractLaneChangeModel_MSLCMessager::new(leader.0, neighLead.0, neighFollow.0);
         let mut state = blocked | vehicle.m().get_lane_change_model().wants_change(
@@ -2398,6 +2395,16 @@ impl MSLaneChanger {
         if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
             blocked = vehicle.get_lane_change_model_2().check_change_before_committing(vehicle, state);
             state |= blocked;
+        }
+        if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
+            // this lane change will be executed, save gaps
+            let lcm = vehicle.m().get_lane_change_model();
+            lcm.set_follower_gaps(*neighFollow, secureBackGap);
+            lcm.set_leader_gaps(*neighLead, secureFrontGap);
+            lcm.set_orig_leader_gaps(*leader, secureOrigFrontGap);
+        }
+        if laneOffset != 0 {
+            vehicle.m().get_lane_change_model().save_neighbors_2(laneOffset, neighFollow, neighLead);
         }
         // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) is not ported; upgrade with MSLink approach API
         state

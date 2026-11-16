@@ -4887,7 +4887,8 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     pub fn get_harmonoise_noise_emissions(&self) -> f64 {
         if self.is_on_road() || self.is_idling() {
-            crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::compute_noise(self.get_vehicle_type().get_emission_class(), self.get_speed(), self.get_acceleration())
+            // virtual getAcceleration(): the MSBaseVehicle stub returns 0, so go through the SUMOVehicle vtable
+            crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::compute_noise(self.get_vehicle_type().get_emission_class(), self.get_speed(), self.base.get_acceleration())
         } else {
             0.
         }
