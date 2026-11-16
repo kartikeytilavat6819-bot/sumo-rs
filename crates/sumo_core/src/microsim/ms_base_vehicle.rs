@@ -348,17 +348,12 @@ impl MSBaseVehicle {
         let self_ptr = self as *mut MSBaseVehicle;
         let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
         let mut devices: Vec<Ptr<MSVehicleDevice>> = Vec::new();
-        // shortcut: only tripinfo, routing, emissions and fcd devices are built here; full MSDevice::build_vehicle_devices still panics on unported devices (vehroutes/example/...). Upgrade to full build once those are ported.
-        crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo::build_vehicle_devices(v, &mut devices);
-        let beforeRouting = devices.len();
-        crate::microsim::devices::ms_device_routing::MSDevice_Routing::build_vehicle_devices(v, &mut devices);
-        if devices.len() > beforeRouting {
-            // C++ records this in createDevice; the device-build path here bypasses it, and the rerouter
-            // uses it to tell a vehicle with a routing device from one without (see has_rerouting_device).
+        MSDevice::build_vehicle_devices(v, &mut devices);
+        if !MSDevice::get_device_by_name(&devices, "rerouting").is_null() {
+            // C++ records this in createDevice; the rerouter uses it to tell a vehicle with a routing device
+            // from one without (see has_rerouting_device).
             self.myParameter.m().set_parameter("has.rerouting.device", "true");
         }
-        crate::microsim::devices::ms_device_emissions::MSDevice_Emissions::build_vehicle_devices(v, &mut devices);
-        crate::microsim::devices::ms_device_fcd::MSDevice_FCD::build_vehicle_devices(v, &mut devices);
         self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
         self.myDevices = devices;
         if MSGlobals::have_emissions() {

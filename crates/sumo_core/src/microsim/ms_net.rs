@@ -2653,8 +2653,7 @@ impl MSNet {
             let output = device_by_option("chargingstations-output");
             let mut output = output.borrow_mut();
             for (_, stop) in places.iter() {
-                // shortcut: MSChargingStation::writeChargingStationOutput is not ported yet, the static_cast is not safe until it is
-                let _ = (stop, &mut output);
+                stop.cast::<MSChargingStation>().m().write_charging_station_output(&mut output);
             }
         }
     }

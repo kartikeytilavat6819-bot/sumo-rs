@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="EV" vClass="passenger" emissionClass="Energy/unknown" accel="2.6" decel="4.5" length="4" maxSpeed="20">
+    <param key="has.battery.device" value="true"/>
+    <param key="device.battery.capacity" value="35000"/>
+    <param key="device.battery.chargeLevel" value="10000"/>
+    <param key="device.battery.maximumChargeRate" value="150000"/>
+    <param key="device.battery.stoppingThreshold" value="0.1"/>
+  </vType>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <vehicle id="ev_charge" type="EV" route="r0" depart="0">
+    <stop chargingStation="cs0" duration="40"/>
+  </vehicle>
+  <vehicle id="ev_drive" type="EV" route="r1" depart="5"/>
+</routes>
