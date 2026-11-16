@@ -17,7 +17,7 @@ echo "== build"
 cargo build -q -p sumo -p netconvert 2>&1 | grep -v warning | tail -3
 
 echo "== reference (C++)"
-wsl -e bash -lc "SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo \
+wsl -e bash -lc "SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo \
   -n $CASE_WSL/ref_simple.net.xml -r $CASE_WSL/routes.rou \
   --tripinfo-output $CASE_WSL/../${CASE}_ref_ti.xml --fcd-output $CASE_WSL/../${CASE}_ref_fcd.xml \
   --statistic-output $CASE_WSL/../${CASE}_ref_stat.xml --no-step-log true" >"$OUT/ref.log" 2>&1

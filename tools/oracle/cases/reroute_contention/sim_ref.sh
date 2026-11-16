@@ -7,6 +7,6 @@ cd "$(dirname "$0")/../../../.." || exit 1
 C=tools/oracle/cases/reroute_contention
 TAG=ref; ARGS=$C/sim.args
 if [ "${1:-}" = adapt ]; then TAG=ref_adapt; ARGS=$C/sim_adapt.args; fi
-SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
+SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo ${SUMO_ORACLE_BIN:-$HOME/sumo-pristine/bin}/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
     --tripinfo-output $C/$TAG.tripinfo.xml --fcd-output $C/$TAG.fcd.xml \
     --statistic-output $C/$TAG.stat.xml --no-step-log true $(cat $ARGS)

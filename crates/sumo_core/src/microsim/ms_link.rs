@@ -3166,7 +3166,7 @@ impl MSLink {
                 od.write_attr("arrivalSpeed", &f64_to_string(avi.arrivalSpeed));
                 od.write_attr("arrivalSpeedBraking", &f64_to_string(avi.arrivalSpeedBraking));
                 od.write_attr("leaveSpeed", &f64_to_string(avi.leaveSpeed));
-                od.write_attr("willPass", &avi.willPass.to_string());
+                od.write_attr("willPass", &avi.willPass);
                 od.close_tag("");
             }
             od.close_tag("");

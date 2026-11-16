@@ -4,6 +4,6 @@
 # Usage: wsl -e bash /mnt/c/.../agent-gd01/tools/oracle/cases/reroute_bypass_p1/sim_ref.sh
 cd "$(dirname "$0")/../../../.." || exit 1
 C=tools/oracle/cases/reroute_bypass_p1
-SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
+SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo ${SUMO_ORACLE_BIN:-$HOME/sumo-pristine/bin}/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
     --tripinfo-output $C/ref.tripinfo.xml --fcd-output $C/ref.fcd.xml \
     --statistic-output $C/ref.stat.xml --no-step-log true $(cat $C/sim.args)

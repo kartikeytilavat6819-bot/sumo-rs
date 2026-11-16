@@ -6,6 +6,6 @@
 cd "$(dirname "$0")/../../../.." || exit 1
 C=tools/oracle/cases/sigma_seed
 V=${1:+_$1}
-SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
+SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo ${SUMO_ORACLE_BIN:-$HOME/sumo-pristine/bin}/sumo -n $C/ref_simple.net.xml -r $C/routes.rou \
     --tripinfo-output $C/ref$V.tripinfo.xml --fcd-output $C/ref$V.fcd.xml \
     --statistic-output $C/ref$V.stat.xml --no-step-log true $(cat $C/sim${V:-}.args) > $C/ref$V.log 2>&1
