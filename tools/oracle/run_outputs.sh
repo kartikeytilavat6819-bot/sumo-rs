@@ -1,13 +1,16 @@
 #!/bin/bash
-# Output-file oracle: for each output option, run C++ sumo (WSL) and our sumo.exe on the same case with
+# Output-file oracle: for each output option, run C++ sumo (WSL) and our sumo on the same case with
 # the case's sim.args, then compare the produced XML element by element (compare_xml.py).
 # Usage: bash tools/oracle/run_outputs.sh [case ...]     default: real signal stress lanechange
-# Writes $OUT/<case>/<output>/{ref,cand}/ and $OUT/results.tsv (truncated each run). Never writes into cases/.
+# REFS=committed (default): the reference is cases/<case>/ref_out/<output>.xml, no WSL, no C++ needed.
+# REFS=gen: run C++ sumo (WSL) and store each reference as cases/<case>/ref_out/<output>.xml. No candidate run.
+# Writes $OUT/<case>/<output>/{ref,cand}/ and $OUT/results.tsv (truncated each run). Never writes outside ref_out/.
 # BIN selects our binary (default: the x07 debug build, not rebuilt here).
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 W=/mnt/c${ROOT#/c}
+REFS=${REFS:-committed}
 OUT=${OUT:-/c/Users/karti/Temp/score/outputs}
 BIN=${BIN:-/c/Users/karti/sumo-rs-target-x07/debug/sumo.exe}
 RESULTS=$OUT/results.tsv
@@ -27,21 +30,34 @@ row() {
       printf '%s\n' '<additional>' '    <edgeData id="ed" freq="60" file="edge.xml"/>' '</additional>' > "$d/edgedata.add.xml"
     done
   fi
-  local sim base
-  sim=$(cat "cases/$c/sim.args" 2>/dev/null)
-  base="-n tools/oracle/cases/$c/ref_simple.net.xml -r tools/oracle/cases/$c/routes.rou $sim"
+  local sim base cdir=tools/oracle/cases/$c
+  sim=$(cat "$cdir/sim.args" 2>/dev/null)
+  base="-n $cdir/ref_simple.net.xml -r $cdir/routes.rou $sim"
   local rargs=${extra//@DIR@//mnt/c${dr#/c}}
   local cargs=${extra//@DIR@/$dc}
-  # C++ sometimes exits 15 (SIGTERM) or gets "Interrupt signal received" with a truncated file (seen
-  # 2026-11-16, not reproducible on demand): retry up to 3 times, keep the last attempt.
-  local rrc=0 try
-  for try in 1 2 3; do
-    wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo $base $rargs --no-step-log true" \
-        </dev/null >"$sub/ref.log" 2>&1
-    rrc=$?
-    [ $rrc -eq 0 ] && ! grep -q 'Interrupt signal' "$sub/ref.log" && break
-  done
-  [ "$try" -gt 1 ] && echo "  (C++ needed $try attempts for $name $c)"
+  local rrc=0 try missing=0
+  if [ "$REFS" = committed ]; then
+    if [ -f "$cdir/ref_out/$name.xml" ]; then cp "$cdir/ref_out/$name.xml" "$dr/$file"; else missing=1; fi
+  else
+    # C++ sometimes exits 15 (SIGTERM) or gets "Interrupt signal received" with a truncated file (seen
+    # 2026-11-16, not reproducible on demand): retry up to 3 times, keep the last attempt.
+    for try in 1 2 3; do
+      wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo $base $rargs --no-step-log true" \
+          </dev/null >"$sub/ref.log" 2>&1
+      rrc=$?
+      [ $rrc -eq 0 ] && ! grep -q 'Interrupt signal' "$sub/ref.log" && break
+    done
+    [ "$try" -gt 1 ] && echo "  (C++ needed $try attempts for $name $c)"
+  fi
+  if [ "$REFS" = gen ]; then
+    local genv=REFERR
+    if [ $rrc -eq 0 ] && [ -f "$dr/$file" ] && ! grep -q 'Interrupt signal' "$sub/ref.log"; then
+      mkdir -p "$cdir/ref_out" && cp "$dr/$file" "$cdir/ref_out/$name.xml" && genv=REFGEN
+    fi
+    printf '%s\t%s\t%s\t%s\t%s\t%s\n' "$name" "$c" "$genv" "$rrc" "-" "" >> "$RESULTS"
+    echo "$name $c $genv ref_rc=$rrc"
+    return 0
+  fi
   "$BIN" $base $cargs --no-step-log true >"$sub/cand.log" 2>&1
   local crc=$?
   local verdict detail=""
@@ -49,6 +65,8 @@ row() {
     verdict=PANIC; detail=$(grep -m1 -A1 'panicked at' "$sub/cand.log" | tr -d '\r' | tr '\n' ' ' | cut -c1-140)
   elif [ $crc -ne 0 ]; then
     verdict=ERROR; detail="cand exit $crc: $(grep -m1 -E 'Error|error' "$sub/cand.log" | tr -d '\r' | cut -c1-120)"
+  elif [ $missing -eq 1 ]; then
+    verdict=REFERR; detail="no committed reference $cdir/ref_out/$name.xml (run REFS=gen)"
   elif [ $rrc -ne 0 ] || grep -q 'Interrupt signal' "$sub/ref.log"; then
     verdict=REFERR; detail="C++ exit $rrc: reference is not a valid oracle, rerun ($(grep -m1 -i 'interrupt' "$sub/ref.log" | cut -c1-60))"
   elif [ ! -f "$dr/$file" ] && [ ! -f "$dc/$file" ]; then

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T10:56:13.326711-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lanechange/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lanechange/routes.rou"/>
+    </input>
+
+    <output>
+        <lanechange-output value="/mnt/c/Users/karti/Temp/score/outputs-ou02/lanechange/lanechange/ref/lanechange.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<lanechanges>
+    <change id="blocker" type="slow" time="7.00" from="100_1" to="100_0" dir="-1" speed="1.99" pos="45.69" reason="keepRight" leaderGap="4.16" leaderSecureGap="0.00" leaderSpeed="12.39" followerGap="None" followerSecureGap="None" followerSpeed="None" origLeaderGap="None" origLeaderSecureGap="None" origLeaderSpeed="None"/>
+</lanechanges>
