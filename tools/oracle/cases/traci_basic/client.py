@@ -120,6 +120,104 @@ def probes(lane, tl_id):
         t.simulationStep(11)
         return t.vehicle.getIDList()
 
+    edge = lane.rsplit("_", 1)[0]
+    tl = tl_id or "none"
+
+    def edge_set_max_speed(t):
+        t.edge.setMaxSpeed(edge, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def lane_set_max_speed(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        t.simulationStep(11)
+        return t.lane.getMaxSpeed(lane)
+
+    def lane_set_max_speed_effect(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def slow_down(t):
+        t.vehicle.slowDown("v0", 3.0, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def move_to_lane(t):
+        t.vehicle.moveTo("v0", lane, t.vehicle.getLanePosition("v0"))
+        t.simulationStep(11)
+        return t.vehicle.getLaneID("v0")
+
+    def set_color(t):
+        t.vehicle.setColor("v0", (255, 0, 0, 255))
+        return t.vehicle.getColor("v0")
+
+    def set_type(t):
+        t.vehicle.setType("v0", "DEFAULT_VEHTYPE")
+        return t.vehicle.getTypeID("v0")
+
+    def change_lane_effect(t):
+        t.vehicle.changeLane("v0", t.vehicle.getLaneIndex("v0") ^ 1, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getLaneID("v0")
+
+    def vtype_set_max_speed(t):
+        t.vehicletype.setMaxSpeed("DEFAULT_VEHTYPE", 20.0)
+        t.simulationStep(11)
+        return t.vehicletype.getMaxSpeed("DEFAULT_VEHTYPE")
+
+    def tl_set_phase(t):
+        t.trafficlight.setPhase(tl, 1)
+        return t.trafficlight.getPhase(tl)
+
+    def tl_set_phase_duration(t):
+        t.trafficlight.setPhaseDuration(tl, 7.0)
+        t.simulationStep(11)
+        return t.trafficlight.getPhaseDuration(tl)
+
+    def tl_set_state(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        t.trafficlight.setRedYellowGreenState(tl, "G" * len(s))
+        t.simulationStep(11)
+        return t.trafficlight.getRedYellowGreenState(tl)
+
+    def poi_add(t):
+        t.poi.add("p0", 1.0, 2.0, (255, 0, 0, 255))
+        return t.poi.getPosition("p0")
+
+    def sim_subscribe_departed_3(t):
+        t.simulation.subscribe([tc.VAR_DEPARTED_VEHICLES_IDS])
+        for s in (11, 12, 13):
+            t.simulationStep(s)
+        return t.simulation.getSubscriptionResults()
+
+    def veh_subscribe_3(t):
+        t.vehicle.subscribe("v0", [tc.VAR_SPEED, tc.VAR_POSITION])
+        for s in (11, 12, 13):
+            t.simulationStep(s)
+        return t.vehicle.getSubscriptionResults("v0")
+
+    def veh_subscribe_context(t):
+        t.vehicle.subscribeContext("v0", tc.CMD_GET_VEHICLE_VARIABLE, 0.0, [tc.VAR_SPEED])
+        t.simulationStep(11)
+        return t.vehicle.getContextSubscriptionResults("v0")
+
+    def edge_subscribe(t):
+        t.edge.subscribe(edge, [tc.LAST_STEP_VEHICLE_NUMBER])
+        t.simulationStep(11)
+        return t.edge.getSubscriptionResults(edge)
+
+    def sim_find_route(t):
+        return t.simulation.findRoute(edge, t.vehicle.getRoute("v0")[-1]).edges
+
+    def sim_convert_road(t):
+        x, y = t.vehicle.getPosition("v0")
+        return t.simulation.convertRoad(x, y)
+
+    def sim_distance_2d(t):
+        x, y = t.vehicle.getPosition("v0")
+        return t.simulation.getDistance2D(x, y, x + 3.0, y + 4.0)
+
     return {
         "getVersion": lambda t: t.getVersion(),
         "simulationStep(11) returns": lambda t: t.simulationStep(11),
@@ -152,6 +250,81 @@ def probes(lane, tl_id):
         "vehicle.remove(v0) + step + getIDList": remove_vehicle,
         "vehicle.remove(nope)": lambda t: t.vehicle.remove("nope"),
         "vehicle.getJunctionFoes(v0)": lambda t: t.vehicle.getJunctionFoes("v0"),
+        "edge.getIDList": lambda t: t.edge.getIDList(),
+        "edge.getLastStepVehicleNumber(edge)": lambda t: t.edge.getLastStepVehicleNumber(edge),
+        "edge.getLastStepMeanSpeed(edge)": lambda t: t.edge.getLastStepMeanSpeed(edge),
+        "edge.getLastStepVehicleIDs(edge)": lambda t: t.edge.getLastStepVehicleIDs(edge),
+        "edge.getTraveltime(edge)": lambda t: t.edge.getTraveltime(edge),
+        "edge.getWaitingTime(edge)": lambda t: t.edge.getWaitingTime(edge),
+        "edge.setMaxSpeed(edge,5) + step + getSpeed(v0)": edge_set_max_speed,
+        "edge.getLastStepVehicleNumber(nope)": lambda t: t.edge.getLastStepVehicleNumber("nope"),
+        "edge.getTraveltime(nope)": lambda t: t.edge.getTraveltime("nope"),
+        "edge.getWaitingTime(nope)": lambda t: t.edge.getWaitingTime("nope"),
+        "edge.setMaxSpeed(nope, 5)": lambda t: t.edge.setMaxSpeed("nope", 5.0),
+        "edge.subscribe(edge, lastStepVehicleNumber) + step": edge_subscribe,
+        "lane.setMaxSpeed(lane,5) + step + getMaxSpeed": lane_set_max_speed,
+        "lane.setMaxSpeed(lane,5) + step + getSpeed(v0)": lane_set_max_speed_effect,
+        "lane.getMaxSpeed(lane)": lambda t: t.lane.getMaxSpeed(lane),
+        "lane.getWidth(lane)": lambda t: t.lane.getWidth(lane),
+        "lane.getLastStepVehicleIDs(lane)": lambda t: t.lane.getLastStepVehicleIDs(lane),
+        "lane.setMaxSpeed(nope, 5)": lambda t: t.lane.setMaxSpeed("nope", 5.0),
+        "lane.getMaxSpeed(nope)": lambda t: t.lane.getMaxSpeed("nope"),
+        "vehicle.getLaneID(v0)": lambda t: t.vehicle.getLaneID("v0"),
+        "vehicle.getLanePosition(v0)": lambda t: t.vehicle.getLanePosition("v0"),
+        "vehicle.getAngle(v0)": lambda t: t.vehicle.getAngle("v0"),
+        "vehicle.getRoadID(v0)": lambda t: t.vehicle.getRoadID("v0"),
+        "vehicle.getRouteID(v0)": lambda t: t.vehicle.getRouteID("v0"),
+        "vehicle.getAcceleration(v0)": lambda t: t.vehicle.getAcceleration("v0"),
+        "vehicle.getSignals(v0)": lambda t: t.vehicle.getSignals("v0"),
+        "vehicle.getLeader(v0)": lambda t: t.vehicle.getLeader("v0"),
+        "vehicle.getLeader(v0, 200)": lambda t: t.vehicle.getLeader("v0", 200.0),
+        "vehicle.getDistance(v0)": lambda t: t.vehicle.getDistance("v0"),
+        "vehicle.getTypeID(v0)": lambda t: t.vehicle.getTypeID("v0"),
+        "vehicle.getLaneID(nope)": lambda t: t.vehicle.getLaneID("nope"),
+        "vehicle.getLanePosition(nope)": lambda t: t.vehicle.getLanePosition("nope"),
+        "vehicle.getAngle(nope)": lambda t: t.vehicle.getAngle("nope"),
+        "vehicle.getRouteID(nope)": lambda t: t.vehicle.getRouteID("nope"),
+        "vehicle.getLeader(nope)": lambda t: t.vehicle.getLeader("nope"),
+        "vehicle.slowDown(v0,3,5) + step + getSpeed": slow_down,
+        "vehicle.slowDown(nope,3,5)": lambda t: t.vehicle.slowDown("nope", 3.0, 5.0),
+        "vehicle.moveTo(v0, lane, pos) + step + getLaneID": move_to_lane,
+        "vehicle.moveTo(nope, lane, 0)": lambda t: t.vehicle.moveTo("nope", lane, 0.0),
+        "vehicle.setColor(v0) + getColor": set_color,
+        "vehicle.getColor(v0)": lambda t: t.vehicle.getColor("v0"),
+        "vehicle.getColor(nope)": lambda t: t.vehicle.getColor("nope"),
+        "vehicle.setType(v0, DEFAULT) + getTypeID": set_type,
+        "vehicle.setType(v0, nope)": lambda t: t.vehicle.setType("v0", "nope"),
+        "vehicle.changeLane(v0) + step + getLaneID": change_lane_effect,
+        "vehicle.subscribe(v0) 3 steps + results": veh_subscribe_3,
+        "vehicle.subscribeContext(v0, speed) + step": veh_subscribe_context,
+        "vehicletype.getIDList": lambda t: t.vehicletype.getIDList(),
+        "vehicletype.getMaxSpeed(DEFAULT)": lambda t: t.vehicletype.getMaxSpeed("DEFAULT_VEHTYPE"),
+        "vehicletype.setMaxSpeed(DEFAULT,20) + step + getMaxSpeed": vtype_set_max_speed,
+        "vehicletype.getLength(DEFAULT)": lambda t: t.vehicletype.getLength("DEFAULT_VEHTYPE"),
+        "vehicletype.getMaxSpeed(nope)": lambda t: t.vehicletype.getMaxSpeed("nope"),
+        "vehicletype.getLength(nope)": lambda t: t.vehicletype.getLength("nope"),
+        "simulation.getDepartedIDList": lambda t: t.simulation.getDepartedIDList(),
+        "simulation.getArrivedIDList": lambda t: t.simulation.getArrivedIDList(),
+        "simulation.getCollidingVehiclesIDList": lambda t: t.simulation.getCollidingVehiclesIDList(),
+        "simulation.subscribe(departedIDs) 3 steps": sim_subscribe_departed_3,
+        "simulation.convert2D(edge, 0)": lambda t: t.simulation.convert2D(edge, 0.0),
+        "simulation.convert2D(nope, 0)": lambda t: t.simulation.convert2D("nope", 0.0),
+        "simulation.convertRoad(v0 pos)": sim_convert_road,
+        "simulation.findRoute(edge, v0 last).edges": sim_find_route,
+        "simulation.findRoute(nope, edge)": lambda t: t.simulation.findRoute("nope", edge).edges,
+        "simulation.getDistance2D(3,4 offset)": sim_distance_2d,
+        "simulation.getDeltaT": lambda t: t.simulation.getDeltaT(),
+        "simulation.getCurrentTime": lambda t: t.simulation.getCurrentTime(),
+        "trafficlight.setPhase(tl,1) + getPhase": tl_set_phase,
+        "trafficlight.setPhaseDuration(tl,7) + step + get": tl_set_phase_duration,
+        "trafficlight.getNextSwitch(tl)": lambda t: t.trafficlight.getNextSwitch(tl),
+        "trafficlight.setRedYellowGreenState(all G) + step": tl_set_state,
+        "trafficlight.setPhase(nope, 0)": lambda t: t.trafficlight.setPhase("nope", 0),
+        "trafficlight.getNextSwitch(nope)": lambda t: t.trafficlight.getNextSwitch("nope"),
+        "junction.getPosition(first)": lambda t: t.junction.getPosition(t.junction.getIDList()[0]),
+        "junction.getPosition(nope)": lambda t: t.junction.getPosition("nope"),
+        "poi.add(p0) + getPosition": poi_add,
+        "poi.getPosition(nope)": lambda t: t.poi.getPosition("nope"),
     }
 
 
