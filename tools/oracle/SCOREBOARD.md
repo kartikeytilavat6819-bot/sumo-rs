@@ -42,7 +42,21 @@ behavioural divergence**, not a broken test:
 
 | Row | Symptom | Cause |
 |---|---|---|
-| `reroute_bypass_p1/ref` | with `device.rerouting.period=1`, C++ **reverts** the detour and sends the vehicle back onto the closed edge (`rerouteNo=2`, arrival 53.00); we keep the bypass (61.00) | C++'s periodic device reroute replans **without** the rerouter's prohibitions, while a rerouter-triggered reroute honours them. Ours propagates the prohibition to both paths |
+| `reroute_bypass_p1/ref` | with `device.rerouting.period=1`, C++ **reverts** the detour and sends the vehicle back onto the closed edge (`rerouteNo=2`, arrival 53.00); we keep the bypass (61.00) | C++'s periodic device reroute replans **without** the rerouter's prohibitions (`nProh=0`, measured), while a rerouter-triggered reroute honours them (`nProh=1`). Ours never fired the periodic reroute at all — the event was unscheduled and `MSRoutingEngine::reroute` was a panic stub |
+
+### Open question on that row (do not chase the heap)
+
+Measured 2026-11-16, so nobody repeats it: **the Dijkstra tie-break is not the cause.**
+`DijkstraRouter::EdgeInfoByEffortComparator` (`DijkstraRouter.h:73`) compares effort and then
+`getNumericalID()` — never pointers — and our heap matches that. At t=5 edges 11 and 12 do tie exactly
+(`7.7773927`), but edge 11 reaches the destination more cheaply (`20.16434` vs `20.16578`), so the path does
+not depend on pop order.
+
+The real question: **why is the closure's edge permission honoured at t=0 but not at t=5?** That is the
+difference between `reroute_alt` (must take 12) and `reroute_bypass_p1` (must go back to 11). Branch
+`worktree-agent-pr01` (`69ac3fc`) implements the periodic reroute as a real `WrappingCommand`, the device
+reminder vtable and `MSRoutingEngine::reroute`; merging it fixes `p1` and breaks `reroute_alt` for exactly
+this reason, which is why it is not merged.
 
 `reroute_bypass` (same net, `period=1000`) PASSES and proves a genuine mid-route detour:
 `LEAD IN AB OUT` → `LEAD IN AC CB OUT`, `rerouteNo=1`, matching C++ on tripinfo, FCD and statistics. Its net
