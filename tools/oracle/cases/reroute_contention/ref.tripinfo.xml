@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T10:02:40.988529-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/reroute_contention/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/reroute_contention/routes.rou"/>
+        <additional-files value="tools/oracle/cases/reroute_contention/closing.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="tools/oracle/cases/reroute_contention/ref.fcd.xml"/>
+        <tripinfo-output value="tools/oracle/cases/reroute_contention/ref.tripinfo.xml"/>
+        <statistic-output value="tools/oracle/cases/reroute_contention/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="f.0" depart="0.00" departLane="LEAD_0" departPos="5.10" departSpeed="14.72" departDelay="0.00" arrival="61.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="13.46" duration="61.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.38" rerouteNo="1" devices="tripinfo_f.0 routing_f.0 fcd_f.0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="f.1" depart="2.00" departLane="LEAD_0" departPos="5.10" departSpeed="13.03" departDelay="0.50" arrival="71.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="12.18" duration="69.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.11" rerouteNo="1" devices="tripinfo_f.1 routing_f.1 fcd_f.1" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="f.2" depart="3.00" departLane="LEAD_0" departPos="5.10" departSpeed="9.42" departDelay="0.00" arrival="73.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="14.03" duration="70.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="13.60" rerouteNo="1" devices="tripinfo_f.2 routing_f.2 fcd_f.2" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="f.3" depart="5.00" departLane="LEAD_0" departPos="5.10" departSpeed="11.09" departDelay="0.50" arrival="75.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="14.70" duration="70.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="17.05" rerouteNo="1" devices="tripinfo_f.3 routing_f.3 fcd_f.3" vType="DEFAULT_VEHTYPE" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="f.4" depart="6.00" departLane="LEAD_0" departPos="5.10" departSpeed="7.55" departDelay="0.00" arrival="78.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="13.45" duration="72.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="16.72" rerouteNo="1" devices="tripinfo_f.4 routing_f.4 fcd_f.4" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="f.5" depart="8.00" departLane="LEAD_0" departPos="5.10" departSpeed="8.58" departDelay="0.50" arrival="88.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="11.25" duration="80.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="10.73" rerouteNo="1" devices="tripinfo_f.5 routing_f.5 fcd_f.5" vType="DEFAULT_VEHTYPE" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="f.6" depart="9.00" departLane="LEAD_0" departPos="5.10" departSpeed="3.96" departDelay="0.00" arrival="89.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="13.30" duration="80.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="25.23" rerouteNo="1" devices="tripinfo_f.6 routing_f.6 fcd_f.6" vType="DEFAULT_VEHTYPE" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="f.7" depart="11.00" departLane="LEAD_0" departPos="5.10" departSpeed="2.98" departDelay="0.50" arrival="93.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="12.26" duration="82.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="17.22" rerouteNo="1" devices="tripinfo_f.7 routing_f.7 fcd_f.7" vType="DEFAULT_VEHTYPE" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="f.8" depart="14.00" departLane="LEAD_0" departPos="5.10" departSpeed="6.02" departDelay="2.00" arrival="95.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="12.67" duration="81.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="20.03" rerouteNo="1" devices="tripinfo_f.8 routing_f.8 fcd_f.8" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="f.9" depart="16.00" departLane="LEAD_0" departPos="5.10" departSpeed="5.78" departDelay="2.50" arrival="101.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="11.58" duration="85.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="17.75" rerouteNo="1" devices="tripinfo_f.9 routing_f.9 fcd_f.9" vType="DEFAULT_VEHTYPE" speedFactor="0.86" vaporized=""/>
+    <tripinfo id="f.10" depart="18.00" departLane="LEAD_0" departPos="5.10" departSpeed="6.25" departDelay="3.00" arrival="102.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="13.34" duration="84.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="31.43" rerouteNo="1" devices="tripinfo_f.10 routing_f.10 fcd_f.10" vType="DEFAULT_VEHTYPE" speedFactor="1.09" vaporized=""/>
+    <tripinfo id="f.11" depart="20.00" departLane="LEAD_0" departPos="5.10" departSpeed="6.96" departDelay="3.50" arrival="104.00" arrivalLane="OUT_0" arrivalPos="197.02" arrivalSpeed="13.96" duration="84.00" routeLength="777.08" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="28.23" rerouteNo="1" devices="tripinfo_f.11 routing_f.11 fcd_f.11" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized=""/>
+</tripinfos>
