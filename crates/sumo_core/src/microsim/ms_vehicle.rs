@@ -28,9 +28,8 @@ fn as_traffic_object(v: &mut MSVehicle) -> &mut SUMOTrafficObject {
     unsafe { &mut *(v as *mut MSVehicle as *mut SUMOTrafficObject) }
 }
 
-#[allow(dead_code)]
 fn semi_implicit_euler_update() -> bool {
-    false
+    MSGlobals::semi_implicit_euler_update()
 }
 
 /// C++ enum `MSVehicle::ChangeRequest`
@@ -16957,6 +16956,18 @@ fn ignore_red_decision(ignoreRedTime: f64, ignoreYellowTime: f64, haveYellow: bo
         !canBrake || ignoreRedTime > elapsed
     } else {
         false
+    }
+}
+
+#[cfg(test)]
+mod semi_implicit_tests {
+    use super::*;
+
+    #[test]
+    fn vehicle_update_method_follows_msglobals_default() {
+        // C++ MSGlobals::gSemiImplicitEulerUpdate defaults to true; a local stub returning false sent vSafeMin down the ballistic branch
+        assert!(semi_implicit_euler_update());
+        assert_eq!(semi_implicit_euler_update(), MSGlobals::semi_implicit_euler_update());
     }
 }
 
