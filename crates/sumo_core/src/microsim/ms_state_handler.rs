@@ -1122,8 +1122,9 @@ impl MSStateHandler {
             let mut ok = true;
             while let Some(attrs) = self.myReminderAttrs.pop() {
                 let attrID = attrs.get_string(SUMO_ATTR_ID);
-                let time = attrs.get::<i64>(SUMO_ATTR_TIME, "", &mut ok, false);
-                let pos = attrs.get::<f64>(SUMO_ATTR_POSITION, "", &mut ok, false);
+                let rattrs: &SUMOSAXAttributes = &*attrs;
+                let time = rattrs.get::<i64>(SUMO_ATTR_TIME, "", &mut ok, false);
+                let pos = rattrs.get::<f64>(SUMO_ATTR_POSITION, "", &mut ok, false);
                 let net = MSNet::get_instance();
                 let remDict = net.m().get_detector_control().get_all_reminders();
                 if let Some(rem) = remDict.get(&attrID) {
