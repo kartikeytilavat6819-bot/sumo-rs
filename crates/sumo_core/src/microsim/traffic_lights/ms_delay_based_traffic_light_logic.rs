@@ -252,8 +252,7 @@ impl MSDelayBasedTrafficLightLogic {
         // check if the actual phase should be prolonged
         let currentPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
         let actDuration = MSNet::get_instance().get_current_time_step() - currentPhase.myLastSwitch;
-        // shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs), read the static once MSGlobals is ported
-        let useMesoSim = false;
+        let useMesoSim = crate::microsim::ms_globals::use_meso_sim();
         // flag whether to prolong or not
         if currentPhase.is_green_phase() && !useMesoSim {
             let mut othersEmpty = true; // whether no vehicles are present on concurrent approaches

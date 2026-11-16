@@ -16,7 +16,6 @@ fn mask_reset(m: &mut SumoXMLAttrMask, bit: i32) {
     m.0 &= !(1u128 << bit);
 }
 
-/// shortcut: MSGlobals is unported (no accessors); gUseMesoSim is set from the "mesosim" option in MSFrame::init, so read it from there
 /// Names read by `while (strm.good()) { strm >> name; ... }`: whitespace-separated tokens, plus one
 /// empty name when the stream hits EOF on a `>>` (trailing whitespace or an empty file)
 fn edge_filter_names(content: &str) -> Vec<&str> {

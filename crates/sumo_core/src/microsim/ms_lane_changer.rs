@@ -1209,8 +1209,7 @@ impl MSLaneChanger {
             return false;
         }
         if !isOpposite && !oppositeChangeByTraci && !isEmergency && !leader.0.is_null() {
-            // shortcut: MSGlobals::gLefthand is not ported; right-hand traffic is assumed
-            let signal = MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32;
+            let signal = if crate::microsim::ms_globals::lefthand() { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 } else { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 };
             if leader.0.signal_set(signal) {
                 // do not try to overtake a vehicle that is about to turn left or wants
                 // to change left itself
@@ -2970,13 +2969,12 @@ impl MSLaneChanger {
         let u = if leader.get_acceleration() > 0.0 { leader.get_lane().get_vehicle_max_speed(traffic_object(leader)) } else { leader.get_speed() };
         let a = vehicle.get_car_follow_model().get_max_accel();
         let d = vehicle.get_car_follow_model().get_max_decel();
-        // shortcut: MSGlobals::gSublane is not ported and defaults to false, so the sublane term is 0
         let g = max2(0.0, (
             gap + vehicle.get_vehicle_type().get_min_gap()
             + leader.get_vehicle_type().get_length_with_gap()
             + vehicle.get_vehicle_type().get_length()
             + leader.get_car_follow_model().get_secure_gap(leader, vehicle, u, vMax, d))
-            + 0.0);
+            + if crate::microsim::ms_globals::sublane() { vMax * vehicle.get_lane().get_width() / vehicle.get_vehicle_type().get_max_speed_lat() } else { 0.0 });
         let sign: f64 = -1.0; // XXX recheck
         let mut t = (u - v - (4.0 * (u - v) * (u - v) + 8.0 * a * g).sqrt() * sign * 0.5) / a;
         debug_assert!(t >= 0.0);
@@ -3453,8 +3451,13 @@ impl MSLaneChanger {
         let bestOffset = preb[laneIndex as usize].bestLaneOffset;
         let spaceToStop = vehicle.next_stop_dist();
         let timeToStopForward = spaceToStop / max2(vehicle.get_speed(), vehicle.get_car_follow_model().get_max_accel());
-        // shortcut: MSGlobals::gLaneChangeDuration and gLateralResolution are not ported; both default to 0, so the lateral term is 0
-        let timeToStopLateral = 0.0_f64;
+        let timeToStopLateral = if crate::microsim::ms_globals::lane_change_duration() > 0 {
+            utils::common::time::steps2time(crate::microsim::ms_globals::lane_change_duration()) * bestOffset as f64
+        } else if crate::microsim::ms_globals::lateral_resolution() > 0. {
+            bestOffset as f64 * utils::common::std_defs::SUMO_CONST_LANE_WIDTH / vehicle.get_vehicle_type().get_max_speed_lat()
+        } else {
+            0.
+        };
         let timeToStop = max2(timeToStopForward, timeToStopLateral);
         if !isOpposite {
             let searchDist = timeToStop * oncomingLane.get_speed_limit() * 2.0 + spaceToStop;

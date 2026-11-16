@@ -553,9 +553,19 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute(vehicle: &mut SUMOVehicle, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderreroute needs myRouterProvider->getVehicleRouter and SUMOVehicle::reroute
-        let _ = (vehicle, currentTime, info, onInit, silent, prohibited);
-        panic!("shortcut: reroute needs MSRouterProvider")
+        if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
+            Self::init_router(Ptr::from_mut(vehicle));
+        }
+        let provider = ROUTER_PROVIDER.with(|p| p.get()).unwrap();
+        let router = provider.get_mut().unwrap().get_vehicle_router(vehicle.get_v_class());
+        if !prohibited.is_empty() {
+            router.prohibit(prohibited);
+        }
+        // shortcut: C++ hands the task to the thread pool when one is configured; this port always routes synchronously, and a silent reroute does not swallow ProcessError (no ported caller passes silent=true), upgrade with the thread pool
+        vehicle.reroute(currentTime, info, router, onInit, Self::with_taz(), silent, Ptr::default());
+        if !prohibited.is_empty() {
+            router.prohibit(&Default::default());
+        }
     }
 
     /// C++: `void MSRoutingEngine::reroute(MSTransportable &, const SUMOTime, const std::string &, const bool, const bool, const Prohibitions &)` [static]

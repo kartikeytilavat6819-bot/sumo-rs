@@ -1,0 +1,1 @@
+--end 200 --additional-files tools/oracle/cases/reroute_contention/closing.add.xml --device.rerouting.adaptation-steps 3 --device.rerouting.adaptation-interval 2
