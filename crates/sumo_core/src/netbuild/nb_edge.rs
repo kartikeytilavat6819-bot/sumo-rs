@@ -1,6 +1,7 @@
 //! Port of netbuild/NBEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 use utils::common::to_string::f64_to_string;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
@@ -203,7 +204,7 @@ impl NBEdge_Connection {
         let id = if toEdge_.is_null() { String::new() } else { toEdge_.get_from_node().get_id().to_string() };
         NBEdge_Connection {
             base: Parameterised::new(),
-            base2: NBRouterEdge {},
+            base2: NBRouterEdge { kind: NBRouterEdgeKind::Connection },
             fromLane: fromLane_,
             toEdge: toEdge_,
             toLane: toLane_,
@@ -787,7 +788,7 @@ impl NBEdge {
         NBEdge {
             base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
             base2: Parameterised::new(),
-            base3: NBRouterEdge {},
+            base3: NBRouterEdge { kind: NBRouterEdgeKind::Edge },
             myStep: NBEdge_EdgeBuildingStep::INIT,
             myType: utils::common::string_utils::convert_umlaute(&type_),
             myTurnSignTarget: String::new(),
@@ -10476,11 +10477,39 @@ impl NBEdge {
 
 /// Superclass for NBEdge and NBEdge::Connection to initialize Router
 /// C++ class `NBRouterEdge` (netbuild/NBEdge.h)
+/// C++ dynamic type of an NBRouterEdge base subobject
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NBRouterEdgeKind {
+    /// NBEdge (its `base3` subobject)
+    Edge,
+    /// NBEdge::Connection (its `base2` subobject)
+    Connection,
+}
+
+/// Superclass for NBEdge and NBEdge::Connection to initialize Router
+/// C++ class `NBRouterEdge` (netbuild/NBEdge.h)
+/// `kind` replaces the C++ vtable: the owning subclass is recovered from this subobject's offset.
 #[derive(Clone)]
 pub struct NBRouterEdge {
+    /// which subclass embeds this base
+    pub kind: NBRouterEdgeKind,
 }
 
 impl NBRouterEdge {
+    /// The NBEdge that embeds this base as `base3`; only valid when `kind == Edge`
+    fn owner_edge(&self) -> &NBEdge {
+        debug_assert!(self.kind == NBRouterEdgeKind::Edge);
+        // SAFETY: kind == Edge means self is NBEdge::base3, a field of a repr(C) NBEdge
+        unsafe { &*((self as *const NBRouterEdge as *const u8).sub(std::mem::offset_of!(NBEdge, base3)) as *const NBEdge) }
+    }
+
+    /// The NBEdge::Connection that embeds this base as `base2`; only valid when `kind == Connection`
+    fn owner_connection(&self) -> &NBEdge_Connection {
+        debug_assert!(self.kind == NBRouterEdgeKind::Connection);
+        // SAFETY: kind == Connection means self is NBEdge_Connection::base2, a field of a repr(C) Connection
+        unsafe { &*((self as *const NBRouterEdge as *const u8).sub(std::mem::offset_of!(NBEdge_Connection, base2)) as *const NBEdge_Connection) }
+    }
+
     /// C++: `void NBRouterEdge::~NBRouterEdge() noexcept` [virtual]
     // virtual ~NBRouterEdge() {}
     #[allow(unused_variables)]
@@ -10493,48 +10522,69 @@ impl NBRouterEdge {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        // shortcut: pure virtual in C++ and NBRouterEdge is a data-less base with no vtable or type tag, so the NBEdge / NBEdge::Connection override cannot be reached from here; upgrade when NBRouterEdge carries a type tag or becomes a trait
-        panic!("NBRouterEdge::getID is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_id(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_id(),
+        }
     }
 
     /// C++: `double NBRouterEdge::getSpeed() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getSpeed is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_speed(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_speed(),
+        }
     }
 
     /// C++: `double NBRouterEdge::getLength() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getLength is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_length(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_length(),
+        }
     }
 
     /// C++: `const NBRouterEdge * NBRouterEdge::getBidiEdge() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<NBRouterEdge> {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getBidiEdge is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => match self.owner_edge().get_bidi_edge().get() {
+                Some(e) => Ptr::new(&e.base3),
+                None => Ptr::null(),
+            },
+            NBRouterEdgeKind::Connection => Ptr::null(),
+        }
     }
 
     /// C++: `int NBRouterEdge::getNumericalID() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getNumericalID is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_numerical_id(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_numerical_id(),
+        }
     }
 
     /// C++: `const ConstRouterEdgePairVector & NBRouterEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getViaSuccessors is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => {
+                let edge = self.owner_edge();
+                // C++ returns a reference to the edge's mutable myViaSuccessors cache, which this call refills
+                edge.get_via_successors(vClass, ignoreTransientPermissions);
+                // SAFETY: the RefCell is only borrowed inside get_via_successors, which has returned; the slice lives until the next refill, as in C++
+                unsafe { &*edge.myViaSuccessors.as_ptr() }
+            }
+            NBRouterEdgeKind::Connection => self.owner_connection().get_via_successors(vClass, ignoreTransientPermissions),
+        }
     }
 
     /// C++: `bool NBRouterEdge::isInternal() const` [const, virtual]
@@ -10543,8 +10593,10 @@ impl NBRouterEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        // C++ base default: virtual bool isInternal() const { return false; }
-        false
+        match self.kind {
+            NBRouterEdgeKind::Edge => false,
+            NBRouterEdgeKind::Connection => self.owner_connection().is_internal(),
+        }
     }
 
     /// C++: `bool NBRouterEdge::prohibits(const NBVehicle *const) const` [const]
@@ -10573,10 +10625,81 @@ impl NBRouterEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<NBRouterEdge>, arg1: Ptr<NBVehicle>, arg2: f64) -> f64 {
-        // faithful body; edge.get_length() / edge.get_speed() are the pure virtuals (see the getID shortcut)
         edge.get_length() / edge.get_speed()
     }
 
+}
+
+impl RouterEdge<NBVehicle> for NBRouterEdge {
+    type Node = NBNode;
+    type Lane = NBEdge_Lane;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    // shortcut: NBRouterEdge has no getLengthGeometryFactor in C++, upgrade when a netbuild router calls it
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getLengthGeometryFactor")
+    }
+    // shortcut: NBRouterEdge has no getDistanceTo in C++, upgrade when a netbuild router calls it
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getDistanceTo")
+    }
+    // shortcut: C++ NBRouterEdge has no getSuccessors, routers use getViaSuccessors, upgrade when a netbuild router needs it
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("shortcut: NBRouterEdge has no getSuccessors in C++")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        self.get_via_successors(vclass, ignore_transient).as_slice()
+    }
+    // shortcut: C++ NBRouterEdge has no getSpeedLimit, upgrade when a netbuild router needs it
+    fn speed_limit(&self) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getSpeedLimit in C++")
+    }
+    // shortcut: C++ NBRouterEdge has no getMinimumTravelTime, upgrade when a netbuild router needs it
+    fn minimum_travel_time(&self, veh: Ptr<NBVehicle>) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getMinimumTravelTime in C++")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        self.get_bidi_edge()
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<NBVehicle>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<NBVehicle>) -> bool {
+        self.restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
+        NBRouterEdge::get_travel_time_static(edge, veh, time)
+    }
+    // shortcut: C++ NBRouterEdge has no getTravelTimeAggregated, upgrade when a netbuild router needs it
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getTravelTimeAggregated in C++")
+    }
+}
+
+impl RouterEdgeInfo for NBRouterEdge {
+    fn edge_numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.get_id().to_string()
+    }
+    // shortcut: only NBEdge has getPermissions in C++, the Connection branch is unreachable from the router paths; upgrade if a netbuild router reads Connection permissions
+    fn edge_permissions(&self) -> SVCPermissions {
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_permissions(-1),
+            NBRouterEdgeKind::Connection => panic!("shortcut: NBEdge::Connection has no getPermissions in C++"),
+        }
+    }
 }
 
 /// A class that being a bresenham-callback assigns the incoming lanes to the edges
