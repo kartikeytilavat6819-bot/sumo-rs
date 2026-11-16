@@ -8729,7 +8729,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_time_gap_on_lane(&self) -> f64 {
         // calling getLeader with 0 would induce a dist calculation but we only want to look for the leaders on the current lane
-        let leaderInfo = self.get_leader(-1.0, false);
+        let leaderInfo = self.get_leader(-1.0, true);
         if leaderInfo.0.is_null() || self.get_speed() == 0.0 {
             return -1.0;
         }
@@ -9185,7 +9185,7 @@ impl MSVehicle {
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
         if self.myCurrEdge == stop.edge && distToStop + POSITION_EPS < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
             if distToStop < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_emergency_decel(), 0.0) {
-                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, false);
+                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, true);
                 self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
                 self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
                 self.myCachedPosition.set(Position::INVALID);
@@ -11871,7 +11871,7 @@ impl MSVehicle {
                 let front = self.myStops.front().unwrap();
                 let brakeGap = self.get_car_follow_model().brake_gap_2(self.myLane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()), self.get_car_follow_model().get_max_decel(), 3.0);
                 let nearStop = front.reached || (self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) && self.myStopDist < brakeGap);
-                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, false).allows_vehicle_class(self.get_v_class());
+                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, true).allows_vehicle_class(self.get_v_class());
                 (nearStop, notStoppingRight, !front.reached && front.pars.parking == ParkingType::OFFROAD)
             };
             if reached {
@@ -13904,7 +13904,7 @@ impl MSVehicle {
                     ||
                     // slow down to finish lane change before the shadow lane ends
                     (!self.myLaneChangeModel.get_shadow_lane().is_null()
-                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), false).is_null())
+                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), true).is_null())
                 {
                     // XXX maybe this is too harsh. Vehicles could cut some corners here
                     let timeRemaining = steps2time(self.myLaneChangeModel.remaining_time());

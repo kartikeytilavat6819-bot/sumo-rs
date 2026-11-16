@@ -5571,11 +5571,11 @@ impl MSLCM_SL2015 {
                     let rightVehSide = self.myVehicle.get_right_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let leftVehSide = self.myVehicle.get_left_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let res = if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { next.get_width() };
-                    if rightVehSide < -res && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    if rightVehSide < -res && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -rightVehSide;
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
-                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -(leftVehSide - next.get_width());
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
@@ -5775,7 +5775,7 @@ impl MSLCM_SL2015 {
         let mut leftmost: i32 = 0;
         let curHasStopped = !stoppedLeader.is_null();
         let dir = if latLaneDist < 0. { -1 } else { 1 };
-        let neighBeyond = neighLane.get_parallel_lane(dir, false);
+        let neighBeyond = neighLane.get_parallel_lane(dir, true);
         let hasLaneBeyond = checkCurrent && !neighBeyond.is_null() && neighBeyond.allows_vehicle_class(self.myVehicle.get_v_class());
         let _ = hasLaneBeyond; // UNUSED_PARAMETER in C++
         if curHasStopped || self.has_bidi_leader(leaders, conts) {
@@ -6750,9 +6750,9 @@ impl MSLCM_SL2015 {
         let side = i as f64 * MSGlobals::lateral_resolution() + shift;
         let vclass = self.myVehicle.get_vehicle_type().get_vehicle_class();
         (side < -utils::geom::NUMERICAL_EPS
-            && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(vclass)))
+            && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(vclass)))
             || (side + MSGlobals::lateral_resolution() > next.get_width()
-                && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(vclass)))
+                && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(vclass)))
     }
 
     /// C++: `double MSLCM_SL2015::forecastAverageSpeed(double, double, double, double) const` [const, protected]

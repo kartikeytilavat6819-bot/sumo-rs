@@ -66,19 +66,17 @@ const UNSPECIFIED_SPEED: f64 = -1.;
 const UNSPECIFIED_FRICTION: f64 = 1.;
 const UNSPECIFIED_CONTPOS: f64 = -1.;
 const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-// shortcut: C++ uses NBEdge::myDefaultConnectionLength (static, settable); the static is not ported yet, so the unspecified default -1 is used
-const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 const UNSPECIFIED_WIDTH: f64 = -1.;
 const UNSPECIFIED_OFFSET: f64 = 0.;
 
 /// C++ `addLane2LaneConnection(from, dest, toLane, type, mayUseSameDestination)` with the header defaults filled in
 fn add_lane2_lane_connection_validated(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayUseSameDestination: bool) -> bool {
-    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, mayUseSameDestination, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, mayUseSameDestination, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
 /// C++ `addLane2LaneConnection(from, dest, toLane, COMPUTED)` with the header defaults filled in
 fn add_lane2_lane_connection_computed(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32) -> bool {
-    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
 /// C++ typedef `std::map<std::string, NBEdge *> NBEdgeCont::EdgeCont`
@@ -1661,7 +1659,7 @@ impl NBEdgeCont {
             if edge.is_bidi_rail(false) && (stopEdgeIDs.contains(itemName) || stopEdgeIDs.contains(edge.get_turn_destination(true).get_id())) {
                 let to = edge.get_turn_destination(true);
                 assert!(!to.is_null());
-                edge.m().set_connection(edge.get_num_lanes() - 1, to, to.get_num_lanes() - 1, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+                edge.m().set_connection(edge.get_num_lanes() - 1, to, to.get_num_lanes() - 1, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
                 // finalize connections to prevent removal during recheck
                 edge.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::LANES2LANES_USER);
             }

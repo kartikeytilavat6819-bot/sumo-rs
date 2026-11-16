@@ -3649,7 +3649,7 @@ impl MSEdge {
         for vehicle in waiting.iter() {
             let vehicle = *vehicle;
             if transportable.is_waiting_for(vehicle) {
-                if vehicle.is_stopped_in_range(position, crate::microsim::ms_globals::stop_tolerance(), true)
+                if vehicle.is_stopped_in_range(position, crate::microsim::ms_globals::stop_tolerance(), false)
                     || (!vehicle.has_departed()
                         && (vehicle.get_parameter().departProcedure == DepartDefinition::TRIGGERED
                             || vehicle.get_parameter().departProcedure == DepartDefinition::CONTAINER_TRIGGERED))

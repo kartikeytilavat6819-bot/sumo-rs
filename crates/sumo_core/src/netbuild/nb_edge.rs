@@ -91,7 +91,7 @@ pub const UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
 const SUMO_const_laneWidth: f64 = 3.2;
 // C++ `static double NBEdge::myDefaultConnectionLength`, stored as bits so it is a plain global like the C++ static
 static MY_DEFAULT_CONNECTION_LENGTH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(UNSPECIFIED_LOADED_LENGTH.to_bits());
-fn my_default_connection_length() -> f64 {
+pub fn my_default_connection_length() -> f64 {
     f64::from_bits(MY_DEFAULT_CONNECTION_LENGTH.load(std::sync::atomic::Ordering::Relaxed))
 }
 // C++ `static ConstRouterEdgePairVector Connection::myViaSuccessors` (always empty)
