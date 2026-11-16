@@ -45,9 +45,9 @@ fn any_vehicles_of(lane: Ptr<MSLane>) -> Vec<Ptr<MSVehicle>> {
     result
 }
 
-// shortcut: dynamic_cast<const MSVehicle*>(SUMOTrafficObject*) has no Rust equivalent in this port, no foe can be downcast so getZipperSpeed ignores all foes until the downcast is ported; upgrade when SUMOTrafficObject can be downcast to MSVehicle
-fn zipper_foe_as_vehicle(_item: Ptr<SUMOTrafficObject>) -> Option<Ptr<MSVehicle>> {
-    None
+/// C++ `if (!item->isVehicle()) continue; dynamic_cast<const MSVehicle*>(item)`
+fn zipper_foe_as_vehicle(item: Ptr<SUMOTrafficObject>) -> Option<Ptr<MSVehicle>> {
+    if item.is_vehicle() { Some(item.cast::<MSVehicle>()) } else { None }
 }
 use utils::common::to_string::f64_to_string;
 use utils::common::std_defs::INVALID_DOUBLE;
@@ -3050,7 +3050,7 @@ impl MSLink {
             let vMax = ego.get_lane().get_vehicle_max_speed(ego.cast::<SUMOTrafficObject>());
             let vAccel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), ego.get_car_follow_model().get_max_accel());
             let vDecel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), -ego.get_car_follow_model().get_max_decel());
-            let vEnd = min2(min2(vMax, vAccel), max2(uEnd, vDecel));
+            let vEnd = min2(max2(uEnd, vDecel), min2(vMax, vAccel));
             let vAvg = (ego.get_speed() + vEnd) / 2.;
             let te0 = dist / max2(NUMERICAL_EPS, vAvg);
             let te = max2(1.0, (te0 / ts()).ceil() * ts());
