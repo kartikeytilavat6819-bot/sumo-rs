@@ -23,6 +23,45 @@ pub struct MSCFModel_PWag2009 {
     pub myActionPointProbability: f64,
 }
 
+fn pwag2009_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_PWag2009>(m).finalize_speed(veh, vPos)
+}
+fn pwag2009_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_PWag2009>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn pwag2009_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_PWag2009>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn pwag2009_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_PWag2009>(m).get_model_id()
+}
+fn pwag2009_get_imperfection(m: &MSCFModel) -> f64 {
+    cf_cast::<MSCFModel_PWag2009>(m).get_imperfection()
+}
+fn pwag2009_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_PWag2009>(m).duplicate(vtype)
+}
+fn pwag2009_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_PWag2009>(m).create_vehicle_variables()
+}
+
+fn pwag2009_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_PWag2009>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_PWag2009: its overrides on top of the MSCFModel table
+pub const PWAG2009_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: pwag2009_stop_speed_2,
+    finalize_speed: pwag2009_finalize_speed,
+    patch_speed_before_lc: pwag2009_patch_speed_before_lc,
+    follow_speed: pwag2009_follow_speed,
+    get_model_id: pwag2009_get_model_id,
+    get_imperfection: pwag2009_get_imperfection,
+    duplicate: pwag2009_duplicate,
+    create_vehicle_variables: pwag2009_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_PWag2009 {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -58,7 +97,9 @@ impl MSCFModel_PWag2009 {
         let myActionPointProbability = vtype.get_parameter().get_cf_param(SUMO_ATTR_CF_PWAGNER2009_APPROB, 0.5);
         // PWag2009 does not drive very precise and may violate minGap on occasion
         base.myCollisionMinGapFactor = vtype.get_parameter().get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
-        MSCFModel_PWag2009 { base, myDawdle, myTauDecel, myDecelDivTau, myTauLastDecel, myActionPointProbability }
+        let mut this = MSCFModel_PWag2009 { base, myDawdle, myTauDecel, myDecelDivTau, myTauLastDecel, myActionPointProbability };
+        this.base.vt = &PWAG2009_VT;
+        this
     }
 
     /// C++: `void MSCFModel_PWag2009::~MSCFModel_PWag2009() noexcept` [virtual]

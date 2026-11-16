@@ -17,6 +17,49 @@ pub struct MSCFModel_NaSch {
     pub myCellSpeed: f64,
 }
 
+fn na_sch_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn na_sch_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+}
+fn na_sch_patch_speed_before_lc(m: &MSCFModel, veh: Ptr<MSVehicle>, vMin: f64, vMax: f64) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).patch_speed_before_lc(veh, vMin, vMax)
+}
+fn na_sch_min_next_speed_emergency(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).min_next_speed_emergency(speed, veh)
+}
+fn na_sch_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_NaSch>(m).get_model_id()
+}
+fn na_sch_get_imperfection(m: &MSCFModel) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).get_imperfection()
+}
+fn na_sch_set_imperfection(m: &mut MSCFModel, imperfection: f64) {
+    cf_cast_mut::<MSCFModel_NaSch>(m).set_imperfection(imperfection)
+}
+fn na_sch_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_NaSch>(m).duplicate(vtype)
+}
+
+fn na_sch_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_NaSch>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_NaSch: its overrides on top of the MSCFModel table
+pub const NA_SCH_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: na_sch_stop_speed_2,
+    follow_speed: na_sch_follow_speed,
+    insertion_follow_speed: na_sch_insertion_follow_speed,
+    patch_speed_before_lc: na_sch_patch_speed_before_lc,
+    min_next_speed_emergency: na_sch_min_next_speed_emergency,
+    get_model_id: na_sch_get_model_id,
+    get_imperfection: na_sch_get_imperfection,
+    set_imperfection: na_sch_set_imperfection,
+    duplicate: na_sch_duplicate,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_NaSch {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -45,7 +88,9 @@ impl MSCFModel_NaSch {
     pub fn new(vtype: Ptr<MSVehicleType>, dawdle: f64) -> Self {
         let base = MSCFModel::new(vtype);
         let myCellSpeed = accel2speed(base.myAccel);
-        MSCFModel_NaSch { base, myDawdle: dawdle, myCellSpeed }
+        let mut this = MSCFModel_NaSch { base, myDawdle: dawdle, myCellSpeed };
+        this.base.vt = &NA_SCH_VT;
+        this
     }
 
     /// C++: `void MSCFModel_NaSch::~MSCFModel_NaSch() noexcept` [virtual]

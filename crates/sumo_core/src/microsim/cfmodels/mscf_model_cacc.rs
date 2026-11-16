@@ -198,6 +198,57 @@ impl MSCFModel_CACC_CACCVehicleVariables {
 
 }
 
+fn cacc_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+}
+fn cacc_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn cacc_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel)
+}
+fn cacc_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+}
+fn cacc_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).interaction_gap(veh, vL)
+}
+fn cacc_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
+    cf_cast_mut::<MSCFModel_CACC>(m).set_headway_time(headwayTime)
+}
+fn cacc_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).maximum_lane_speed_cf(veh, maxSpeed, maxSpeedLane)
+}
+fn cacc_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_CACC>(m).get_model_id()
+}
+fn cacc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_CACC>(m).duplicate(vtype)
+}
+fn cacc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_CACC>(m).create_vehicle_variables()
+}
+
+fn cacc_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CACC>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_CACC: its overrides on top of the MSCFModel table
+pub const CACC_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: cacc_stop_speed_2,
+    free_speed: cacc_free_speed,
+    follow_speed: cacc_follow_speed,
+    get_secure_gap: cacc_get_secure_gap,
+    insertion_follow_speed: cacc_insertion_follow_speed,
+    interaction_gap: cacc_interaction_gap,
+    set_headway_time: cacc_set_headway_time,
+    maximum_lane_speed_cf: cacc_maximum_lane_speed_cf,
+    get_model_id: cacc_get_model_id,
+    duplicate: cacc_duplicate,
+    create_vehicle_variables: cacc_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 /// The CACC car-following model
 /// C++ class `MSCFModel_CACC` (microsim/cfmodels/MSCFModel_CACC.h)
 #[repr(C)]
@@ -287,6 +338,7 @@ impl MSCFModel_CACC {
             mySpeedControlMinGap,
         };
         cfm.acc_CFM.set_headway_time(myHeadwayTimeACC);
+        cfm.base.vt = &CACC_VT;
         cfm
     }
 

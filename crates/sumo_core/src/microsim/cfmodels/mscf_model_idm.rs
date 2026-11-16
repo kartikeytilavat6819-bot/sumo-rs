@@ -39,6 +39,61 @@ use utils::geom::NUMERICAL_EPS;
 
 /// The Intelligent Driver Model (IDM) car-following model
 /// C++ class `MSCFModel_IDM` (microsim/cfmodels/MSCFModel_IDM.h)
+fn idm_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).finalize_speed(veh, vPos)
+}
+fn idm_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+}
+fn idm_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn idm_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).interaction_gap(veh, vL)
+}
+fn idm_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+}
+fn idm_insertion_stop_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).insertion_stop_speed(veh, speed, gap)
+}
+fn idm_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel)
+}
+fn idm_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_IDM>(m).get_model_id()
+}
+fn idm_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).min_next_speed(speed, veh)
+}
+fn idm_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_IDM>(m).duplicate(vtype)
+}
+fn idm_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_IDM>(m).create_vehicle_variables()
+}
+
+fn idm_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_IDM>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_IDM: its overrides on top of the MSCFModel table
+pub const IDM_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: idm_stop_speed_2,
+    finalize_speed: idm_finalize_speed,
+    free_speed: idm_free_speed,
+    follow_speed: idm_follow_speed,
+    interaction_gap: idm_interaction_gap,
+    insertion_follow_speed: idm_insertion_follow_speed,
+    insertion_stop_speed: idm_insertion_stop_speed,
+    get_secure_gap: idm_get_secure_gap,
+    get_model_id: idm_get_model_id,
+    min_next_speed: idm_min_next_speed,
+    duplicate: idm_duplicate,
+    create_vehicle_variables: idm_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 #[repr(C)]
 pub struct MSCFModel_IDM {
     /// C++ base class `MSCFModel`
@@ -103,7 +158,9 @@ impl MSCFModel_IDM {
         if ts() / myIterations as f64 > 0.25 {
             utils::common::msg_handler::write_warning(&format!("Stepping duration of {} for {} model in vType {} is unsafe", f64_to_string_prec(ts() / myIterations as f64, 6), if myIDMM { "IDMM" } else { "IDM" }, base.myType.get_id()));
         }
-        MSCFModel_IDM { base, myIDMM, myDelta, myAdaptationFactor, myAdaptationTime, myIterations, myTwoSqrtAccelDecel }
+        let mut this = MSCFModel_IDM { base, myIDMM, myDelta, myAdaptationFactor, myAdaptationTime, myIterations, myTwoSqrtAccelDecel };
+        this.base.vt = &IDM_VT;
+        this
     }
 
     /// C++: `void MSCFModel_IDM::MSCFModel_IDM(const MSVehicleType *, double, double, double, double, double, double, double, double)`
