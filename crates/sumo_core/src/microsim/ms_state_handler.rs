@@ -37,8 +37,8 @@ pub struct MSStateHandler {
     /// cached attrs for delayed loading of MSVehicleControl state
     pub myVCAttrs: Ptr<SUMOSAXAttributes>,
     /// cached device and reminder attrs (used when loading vehicles)
-    pub myDeviceAttrs: i32,
-    pub myReminderAttrs: i32,
+    pub myDeviceAttrs: Vec<Ptr<SUMOSAXAttributes>>,
+    pub myReminderAttrs: Vec<Ptr<SUMOSAXAttributes>>,
     pub myCFMAttrs: Ptr<SUMOSAXAttributes>,
     /// the last object that potentially carries parameters
     pub myLastParameterised: Ptr<Parameterised>,
@@ -52,8 +52,8 @@ pub struct MSStateHandler {
     pub myFlowIndex: i32,
     /// rail signal for which constraints are being loaded
     pub myConstrainedSignal: Ptr<MSRailSignal>,
-    /// vehicles that have arrived
-    pub myArrived: i32,
+    /// vehicles that have arrived (C++ std::set<SUMOVehicle*>, kept as a duplicate-free Vec)
+    pub myArrived: Vec<Ptr<SUMOVehicle>>,
 }
 
 impl std::ops::Deref for MSStateHandler {
@@ -113,8 +113,8 @@ impl MSStateHandler {
             myQueIndex: 0,
             myAttrs: Ptr::null(),
             myVCAttrs: Ptr::null(),
-            myDeviceAttrs: 0,
-            myReminderAttrs: 0,
+            myDeviceAttrs: Vec::new(),
+            myReminderAttrs: Vec::new(),
             myCFMAttrs: Ptr::null(),
             myLastParameterised: Ptr::null(),
             myVehiclesToRemove: utils::options::options_cont::get_string_vector("load-state.remove-vehicles")
@@ -124,7 +124,7 @@ impl MSStateHandler {
             myMesoEventCounter: -1,
             myFlowIndex: -1,
             myConstrainedSignal: Ptr::null(),
-            myArrived: 0,
+            myArrived: Vec::new(),
         };
         sh.myAmLoadingState = true;
         sh.myAllowInternalRoutes = true;
@@ -138,7 +138,7 @@ impl MSStateHandler {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // C++ body only frees the attribute holders (myDeviceAttrs, myReminderAttrs, myAttrs); not owned here yet
-        // shortcut: the attribute holders are i32 placeholders in the skeleton, so nothing is freed until they are typed
+        // shortcut: the attribute clones are leaked (leak_attrs), so nothing is freed here
     }
 
     /// C++: `void MSStateHandler::saveState(const std::string &, SUMOTime, bool)` [static]
@@ -652,8 +652,16 @@ impl MSStateHandler {
                 MSLane::load_rng_state(index, &state);
             }
             SUMO_TAG_EDGECONTROL => {
-                // shortcut: lane lookup by id (MSLane::dictionary) returns bool only, so the active-lane list cannot be built yet
-                panic!("shortcut: edgeControl state needs a lane lookup by id, not ported");
+                let laneIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_LANES, "", &mut ok, false);
+                let mut activeLanes: VecDeque<Ptr<MSLane>> = VecDeque::new();
+                for laneID in laneIDs.iter() {
+                    let lane = MSLane::dictionary_2(laneID);
+                    if lane.is_null() {
+                        panic!("{}", ProcessError::new(utils::tlf!("Unknown lane '%' in loaded state.", laneID)));
+                    }
+                    activeLanes.push_back(lane);
+                }
+                MSNet::get_instance().m().get_edge_control().set_active_lanes(activeLanes);
             }
             SUMO_TAG_ROUTINGENGINE => {
                 let lastAdaptation = attrs.get::<i64>(SUMO_ATTR_LAST, "", &mut ok, true);
@@ -688,9 +696,11 @@ impl MSStateHandler {
                 self.myLastParameterised = self.myVehicleParameter.cast::<Parameterised>();
                 self.myAttrs = leak_attrs(attrs);
             }
-            SUMO_TAG_DEVICE | SUMO_TAG_REMINDER => {
-                // shortcut: myDeviceAttrs and myReminderAttrs are i32 placeholders, so device and reminder states cannot be stored yet
-                panic!("shortcut: device and reminder states need typed attribute holders");
+            SUMO_TAG_DEVICE => {
+                self.myDeviceAttrs.push(leak_attrs(attrs));
+            }
+            SUMO_TAG_REMINDER => {
+                self.myReminderAttrs.push(leak_attrs(attrs));
             }
             SUMO_TAG_CFM_VARIABLES => {
                 self.myCFMAttrs = leak_attrs(attrs);
@@ -704,7 +714,34 @@ impl MSStateHandler {
                 // shortcut: meso segment lookup needs MSEdge::dictionary by id and MESegment chain walking, meso state is not ported
                 panic!("shortcut: meso segment state is not ported");
             }
-            SUMO_TAG_LANE | SUMO_TAG_VIEWSETTINGS_VEHICLES | SUMO_TAG_LINK | SUMO_TAG_APPROACHING => {
+            SUMO_TAG_LANE => {
+                let laneID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                self.myCurrentLane = MSLane::dictionary_2(&laneID);
+                if self.myCurrentLane.is_null() {
+                    panic!("{}", ProcessError::new(utils::tlf!("Unknown lane '%' in loaded state.", laneID)));
+                }
+            }
+            SUMO_TAG_VIEWSETTINGS_VEHICLES => {
+                let vehIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_VALUE, "", &mut ok, false);
+                let net = MSNet::get_instance();
+                let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
+                let mut vehs: Vec<Ptr<SUMOVehicle>> = Vec::new();
+                for id in vehIDs.iter() {
+                    let v = vc.get_vehicle(id);
+                    // vehicle could be removed due to options
+                    if !v.is_null() {
+                        vehs.push(v);
+                        self.myArrived.retain(|a| *a != v);
+                    }
+                }
+                if use_meso_sim() {
+                    // shortcut: meso segment loadState and queue state need the MESegment chain, not ported
+                    panic!("shortcut: meso view-settings state is not ported");
+                } else {
+                    self.myCurrentLane.m().load_state(&vehs);
+                }
+            }
+            SUMO_TAG_LINK | SUMO_TAG_APPROACHING => {
                 // shortcut: lane/link lookup by id and vehicle-by-id state loading for these tags need APIs that are not ported
                 panic!("shortcut: lane, link, view-settings and approaching state is not ported");
             }
@@ -852,7 +889,10 @@ impl MSStateHandler {
                     utils::common::msg_handler::write_message(&format!("Removed {} vehicles while loading state.", self.myRemoved));
                     vc.discount_state_removed(self.myRemoved);
                 }
-                // shortcut: myArrived is an i32 placeholder, so kept-after-arrival vehicles are not deleted here
+                for v in self.myArrived.iter() {
+                    // state was created with active option --keep-after-arrival
+                    vc.delete_kept_vehicle(*v);
+                }
                 if !use_meso_sim() {
                     // shortcut: the updateBestLanes pass over loaded vehicles needs the loadedVehBegin/End iterator, not ported
                     panic!("shortcut: updateBestLanes pass after loading state is not ported");
@@ -1000,14 +1040,19 @@ impl MSStateHandler {
                 MSNet::get_instance().m().get_insertion_control().already_departed(v);
                 // shortcut: the rail-signal vehicleStateChanged registration is skipped, its signature is not verified
                 vc.handle_triggered_depart(v, false);
-                if base.has_arrived() {
-                    // shortcut: myArrived is an i32 placeholder, arrived vehicles are not recorded
+                if base.has_arrived() && !self.myArrived.contains(&v) {
+                    self.myArrived.push(v);
                 }
+            }
+            // device and reminder loops below are not ported; refuse rather than silently drop the states
+            if !self.myDeviceAttrs.is_empty() || !self.myReminderAttrs.is_empty() {
+                panic!("shortcut: device and reminder state restore is not ported");
             }
         } else {
             self.myVehicleParameter = Ptr::null();
             self.myRemoved += 1;
-            // shortcut: device and reminder attribute holders are i32 placeholders, nothing to delete
+            self.myDeviceAttrs.clear();
+            self.myReminderAttrs.clear();
             self.myAttrs = Ptr::null();
         }
     }
