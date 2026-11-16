@@ -8,6 +8,34 @@ use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2ac
 use utils::common::to_string::f64_to_string_prec;
 use utils::geom::NUMERICAL_EPS;
 
+fn cacc_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_CACC>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage) }
+fn cacc_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_CACC>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
+fn cacc_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 { cf_cast::<MSCFModel_CACC>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred) }
+fn cacc_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_CACC>(m).stop_speed(veh, speed, gap, decel, usage) }
+fn cacc_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 { cf_cast::<MSCFModel_CACC>(m).interaction_gap(veh, vL) }
+fn cacc_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 { cf_cast::<MSCFModel_CACC>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel) }
+fn cacc_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 { cf_cast::<MSCFModel_CACC>(m).maximum_lane_speed_cf(veh, maxSpeed, maxSpeedLane) }
+fn cacc_set_headway_time(m: &mut MSCFModel, headwayTime: f64) { cf_cast_mut::<MSCFModel_CACC>(m).set_headway_time(headwayTime) }
+fn cacc_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_CACC>(m).get_model_id() }
+fn cacc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_CACC>(m).duplicate(vtype) }
+fn cacc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_CACC>(m).create_vehicle_variables() }
+
+/// Virtual table of MSCFModel_CACC (C++ subclass of MSCFModel_ACC): its overrides on top of the MSCFModel default table
+pub const CACC_VT: MSCFModelVt = MSCFModelVt {
+    free_speed: cacc_free_speed,
+    follow_speed: cacc_follow_speed,
+    insertion_follow_speed: cacc_insertion_follow_speed,
+    stop_speed_2: cacc_stop_speed_2,
+    interaction_gap: cacc_interaction_gap,
+    get_secure_gap: cacc_get_secure_gap,
+    maximum_lane_speed_cf: cacc_maximum_lane_speed_cf,
+    set_headway_time: cacc_set_headway_time,
+    get_model_id: cacc_get_model_id,
+    duplicate: cacc_duplicate,
+    create_vehicle_variables: cacc_create_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 // C++ #defines in MSCFModel_CACC.cpp
 const DEFAULT_SC_GAIN_CACC: f64 = -0.4;
 const DEFAULT_GCC_GAIN_GAP_CACC: f64 = 0.005;
@@ -229,6 +257,7 @@ impl MSCFModel_CACC {
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
         let p = vtype.get_parameter();
         let mut base = MSCFModel::new(vtype);
+        base.vt = &CACC_VT;
         let acc_CFM = MSCFModel_ACC::new(vtype);
         let mySpeedControlGain = p.get_cf_param(SUMO_ATTR_SC_GAIN_CACC, DEFAULT_SC_GAIN_CACC);
         let myGapClosingControlGainGap = p.get_cf_param(SUMO_ATTR_GCC_GAIN_GAP_CACC, DEFAULT_GCC_GAIN_GAP_CACC);

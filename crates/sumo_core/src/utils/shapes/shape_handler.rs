@@ -84,7 +84,7 @@ impl ShapeHandler {
     #[allow(unused_variables)]
     pub fn load_files(files: &Vec<String>, sh: &mut ShapeHandler) -> bool {
         for fileIt in files.iter() {
-            let parsed = utils::xml::xml_sub_sys::run_parser(sh, fileIt, false, false, false, true).unwrap_or(false);
+            let parsed: bool = utils::xml::xml_sub_sys::run_parser(&mut *sh, fileIt, false, false, false, true).unwrap_or(false);
             if !parsed {
                 write_messagef!("Loading of shapes from % failed.", fileIt);
                 return false;
@@ -585,10 +585,10 @@ impl ShapeHandler {
 }
 
 impl utils::xml::generic_sax_handler::SaxHandler for ShapeHandler {
-    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
         &mut self.base
     }
-    fn my_start_element(&mut self, element: i32, attrs: &utils::xml::sumo_sax_attributes::SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
         ShapeHandler::my_start_element(self, element, attrs);
         Ok(())
     }

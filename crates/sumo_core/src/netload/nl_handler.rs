@@ -976,7 +976,7 @@ impl NLHandler {
             }
             _ => {}
         }
-        self.base.my_end_element(element);
+        let _ = utils::xml::generic_sax_handler::SaxHandler::my_end_element(&mut self.base, element);
     }
 
     /// C++: `void NLHandler::addParam(const SUMOSAXAttributes &)` [protected]
