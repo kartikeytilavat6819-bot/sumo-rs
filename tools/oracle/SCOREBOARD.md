@@ -149,9 +149,17 @@ roundabout, signal, real, real_dense, stress, reroute; tripinfo MATCH for vtypes
 8. Reroute: a rerouting case needs `<param key="device.rerouting.probability" value="1"/>` form; the current
    case proves the rerouter *loads* but never proves rerouting happens (`rerouteNo=0` on both sides).
 
-## Known unsupported features — loud, not silent
+## Coverage gaps that are known, not accidental
 
-Measured on 2026-11-16, so nobody has to rediscover them:
+| Gap | Why it matters | What would cover it |
+|---|---|---|
+| **closed-edge enforcement is never exercised** | every closure in our cases exists only as a *router prohibition*; SUMO never holds a vehicle for it, so "can a vehicle drive through a closed edge" has never been tested. A closure with `disallow="all"` on an edge a vehicle is already committed to would test it. | a new case: `keepClear`/`disallow="all"` closure on an edge an inserted vehicle must traverse |
+| **meso** | `--mesosim` is a separate engine (see the loud-unsupported table) | would need the meso port first |
+| **rail** | rail signal constraints need a `dynamic_cast` audit; no case uses a rail network | a small rail net + `--railsignal-moving-block` |
+| **TraCI writes** | the 32-probe harness exercises `setSpeed`; `changeLane`, `moveToXY`, route setting and subscriptions are unmeasured | extend `cases/traci_basic/client.py` |
+| **`depart` variants** | 15/15 pass, but they are compared to references that are only re-derived on demand | re-run `run_ref.sh` periodically |
+
+## Known unsupported features — loud, not silentMeasured on 2026-11-16, so nobody has to rediscover them:
 
 | Feature | Our behaviour | C++ | Status |
 |---|---|---|---|
