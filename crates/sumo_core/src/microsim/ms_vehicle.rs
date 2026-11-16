@@ -11528,9 +11528,9 @@ impl MSVehicle {
     //         //if (isSelected()) std::cout << "   check1 passed\n";
     //
     //         // ensure that the vehicle is fully on bidi edges that allow reversal
-    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks()
-    //                                                 ? ceil((double)myFurtherLanes.size() / 2.0)
-    //                                                 : myFurtherLanes.size());
+    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes
+    //                                                 ? myFurtherLanes.size()
+    //                                                 : ceil((double)myFurtherLanes.size() / 2.0));
     //         const int remainingRoute = int(myRoute->end() - myCurrEdge) - 1;
     //         if (remainingRoute < neededFutureRoute) {
     // #ifdef DEBUG_REVERSE_BIDI
@@ -11660,10 +11660,10 @@ impl MSVehicle {
             && stopOk
         {
             // ensure that the vehicle is fully on bidi edges that allow reversal
-            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
-                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
-            } else {
+            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() {
                 self.myFurtherLanes.len() as f64
+            } else {
+                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
             }) as i32;
             let remainingRoute = (self.myRoute.size() as i32 - self.myCurrEdge as i32) - 1;
             if remainingRoute < neededFutureRoute {
