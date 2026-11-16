@@ -59,5 +59,5 @@ if anchor not in s:
 else:
     open(p, "w").write(s.replace(anchor, dbg + anchor, 1))
     sh(env + " cargo build -p sumo --message-format short 2>&1 | grep -E ': error' | head -20", 20)
-    sh(f"cd {SRC} && /tmp/target/debug/sumo -n tools/oracle/cases/real/ref_simple.net.xml -r tools/oracle/cases/real/routes.rou --full-output /tmp/score/dbg_full.xml --no-step-log true 2> {W}/noise_dbg.txt >/dev/null; grep -c DBG {W}/noise_dbg.txt", 5)
+    sh(f"cd {SRC} && /tmp/target/debug/sumo -n tools/oracle/cases/real/ref_simple.net.xml -r tools/oracle/cases/real/routes.rou --full-output /tmp/score/dbg_full.xml --no-step-log true 2> {W}/noise_dbg.txt >/dev/null; grep -c DBG {W}/noise_dbg.txt; cp /tmp/score/dbg_full.xml {W}/dbg_full.xml", 5)
 LOG.write("GATE DONE\n")
