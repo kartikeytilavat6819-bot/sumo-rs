@@ -638,7 +638,16 @@ impl MSTriggeredRerouter {
         }
         // if we have a closingLaneReroute it may still affect the network topology (i.e. by closing a turning lane).
         // shortcut: C++ tObject.getDevice(typeid(MSDevice_Routing)); get_device takes an Unmapped type_info, so this is only a presence check on `&()`; upgrade when type-keyed device lookup is ported
-        let hasReroutingDevice = !tObject.get_device(&()).is_null();
+        // C++ uses tObject.getDevice(typeid(MSDevice_Routing)) != nullptr. Our get_device takes an
+        // Unmapped type_info and always yields null, so check the device by name instead (the name
+        // MSBaseVehicle::createDevice compares against is "rerouting"). Without this the rerouter
+        // believed no vehicle had a routing device and rerouted vehicles where C++ would not.
+        let hasReroutingDevice = if tObject.is_vehicle() {
+            let bv = Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>();
+            bv.get().map(|x| x.has_rerouting_device()).unwrap_or(false)
+        } else {
+            false
+        };
         let lastEdge = tObject.get_reroute_destination();
 
         if rerouteDef.parkProbs.get_overall_prob() > 0.0 {
@@ -1790,25 +1799,6 @@ impl MSTriggeredRerouter {
         let instances = Self::get_instances();
         for (_, r) in instances.iter() {
             r.m().set_permissions(currentTime);
-        }
-    }
-
-    /// Register a rerouter that has been placed at its final address.
-    ///
-    /// C++ does this inside the constructor: `myInstances[id] = this` plus `MSLane::addMoveReminder(this)`
-    /// for every lane of every rerouter edge. A Rust `new` that returns by value cannot hand out its own
-    /// address, so the caller must call this after the object is placed (see the `shortcut:` in `new`).
-    /// Without it the rerouter never receives `notify_enter`, so its closures and reroutes never fire —
-    /// which is why closing rerouters silently did nothing.
-    pub fn register_at(&mut self, this_ptr: Ptr<MSTriggeredRerouter>) {
-        MY_INSTANCES.with(|m| {
-            m.borrow_mut().insert(self.base.get_id().to_string(), this_ptr);
-        });
-        for e in self.myEdges.clone().iter() {
-            for l in e.get_lanes().iter() {
-                let rem = Ptr::from_mut(&mut self.base2);
-                l.m().add_move_reminder(rem, true);
-            }
         }
     }
 

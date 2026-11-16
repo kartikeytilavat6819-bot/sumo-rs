@@ -573,6 +573,14 @@ impl MSBaseVehicle {
     //     }
     //     return false;
     // }
+    /// C++: `tObject.getDevice(typeid(MSDevice_Routing)) != nullptr`.
+    ///
+    /// The port has no type-keyed device lookup and `MSDevice::device_name` is pure virtual with no vtable,
+    /// so ask the parameter that `createDevice` records for exactly this purpose (`has.rerouting.device`).
+    pub fn has_rerouting_device(&self) -> bool {
+        self.myParameter.get_parameter("has.rerouting.device", "false") == "true"
+    }
+
     #[allow(unused_variables)]
     pub fn has_device(&self, deviceName: &str) -> bool {
         for dev in self.myDevices.iter() {
