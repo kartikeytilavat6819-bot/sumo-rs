@@ -177,6 +177,20 @@ impl MSTriggeredRerouter {
         this
     }
 
+    /// The `this`-registering half of the C++ constructor (myInstances[id] = this; lane->addMoveReminder(this)),
+    /// run once the rerouter has its final address. Also installs the MSMoveReminder overrides.
+    pub fn register_at(&mut self, this_ptr: Ptr<MSTriggeredRerouter>) {
+        self.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        MY_INSTANCES.with(|m| m.borrow_mut().insert(self.base.get_id().to_string(), this_ptr));
+        // shortcut: the meso segment registration (gUseMesoSim) is skipped, meso is not ported
+        let rem = Ptr::from_mut(&mut self.base2);
+        for e in self.myEdges.iter() {
+            for lane in e.get_lanes().iter() {
+                lane.m().add_move_reminder(rem, true);
+            }
+        }
+    }
+
     /// C++: `void MSTriggeredRerouter::~MSTriggeredRerouter() noexcept` [virtual]
     /// Destructor
     // MSTriggeredRerouter::~MSTriggeredRerouter() {
@@ -814,10 +828,14 @@ impl MSTriggeredRerouter {
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
+                if std::env::var_os("SUMO_TRACE_RR").is_some() {
+                    eprintln!("RR rerouter.closing t={} veh={} nProh={} edges={:?} device={} newEdge={}", now, v.get_id(), prohibited.len(), prohibited.keys().map(|e| e.get_id().to_string()).collect::<Vec<_>>(), hasReroutingDevice as i32, if newEdge.is_null() { "null".to_string() } else { newEdge.get_id().to_string() });
+                }
+                let routerProhibited: SUMOAbstractRouter_Prohibitions = prohibited.iter().map(|(e, p)| (e.cast(), p.clone())).collect();
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &Default::default())
+                    net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 let mut ok = false;
                 // C++ try { ... } catch (ProcessError&) {}: reroute() reports failure through its return value here
@@ -2558,3 +2576,24 @@ impl MSTriggeredRerouter_RerouteInterval {
 
 }
 
+
+fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
+    // base2 is not the first field: step back from the embedded MSMoveReminder to the enclosing rerouter
+    let p = (mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter;
+    unsafe { &mut *p }
+}
+fn ms_triggered_rerouter_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    rerouter_of(mr).notify_enter(veh, reason, enteredLane)
+}
+fn ms_triggered_rerouter_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    rerouter_of(mr).notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_triggered_rerouter_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    rerouter_of(mr).notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_triggered_rerouter_notify_enter,
+    notify_move: ms_triggered_rerouter_notify_move,
+    notify_leave: ms_triggered_rerouter_notify_leave,
+};

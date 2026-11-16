@@ -629,6 +629,12 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
+        // C++ registerParent made the rerouter the active SAX handler; NLHandler sees nothing until </rerouter>
+        let child = self.myTriggerBuilder.m().myChildRerouter;
+        if !child.is_null() {
+            child.m().my_start_element(element, attrs);
+            return;
+        }
         let result = try_catch_args(|| match element {
             SUMO_TAG_NET => {
                 let mut ok = true;
@@ -894,6 +900,15 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
+        let child = self.myTriggerBuilder.m().myChildRerouter;
+        if !child.is_null() {
+            child.m().my_end_element(element);
+            if element == SUMO_TAG_REROUTER {
+                // GenericSAXHandler::endElement: XMLSubSys::setHandler(*myParentHandler)
+                self.myTriggerBuilder.m().myChildRerouter = Ptr::null();
+            }
+            return;
+        }
         match element {
             SUMO_TAG_EDGE => self.close_edge(),
             SUMO_TAG_LANE => {
