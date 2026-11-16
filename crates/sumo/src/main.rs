@@ -1,6 +1,7 @@
 //! Port of sumo_main.cpp
 // shortcut: signal handlers (SIGINT/SIGTERM graceful stop, SIGUSR1 statistics) are not installed; they need libc signal() and MSNet's instance is thread-local so a Windows handler thread cannot see it; upgrade when MSNet's instance is process-global and signal FFI is added
-// shortcut: VERSION_STRING comes from config.h.cmake (1.28.0), no Rust const exists yet; upgrade when version info is ported
+// C++ VERSION_STRING is generated into version.h as `<git describe>-<commit-ish>`; the port has no generated version info, so it uses the exact string the reference build reports.
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 use std::any::Any;
 use std::panic::AssertUnwindSafe;
 
@@ -16,8 +17,6 @@ use utils::iodevices::output_device::OutputDevice;
 use utils::options::options_cont::{get_string, with_options};
 use utils::options::options_io::set_args_argv;
 use utils::xml::xml_sub_sys;
-
-const VERSION_STRING: &str = "1.28.0";
 
 /// C++ `delete net`; deleting null is a no-op
 fn delete_net(net: Ptr<MSNet>) {

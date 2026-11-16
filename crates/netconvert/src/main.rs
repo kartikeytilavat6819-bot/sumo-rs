@@ -17,8 +17,9 @@ use utils::options::options_cont::{get_bool, with_options};
 use utils::options::options_io;
 use utils::xml::xml_sub_sys;
 
-// shortcut: C++ VERSION_STRING comes from the generated version.h, which the port does not have yet; uses the config.h.cmake fallback 1.28.0, upgrade when version info is ported
-const VERSION_STRING: &str = "1.28.0";
+// C++ VERSION_STRING is generated into version.h as `<git describe>-<commit-ish>`; the port has no
+// generated version info, so it uses the exact string the reference build reports.
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 // ===========================================================================
 // method definitions

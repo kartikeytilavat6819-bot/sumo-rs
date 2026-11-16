@@ -1,8 +1,9 @@
 #!/bin/bash
 # Runs C++ and Rust netconvert on every netconv_edge case with --simple-projection true (Rust has no PROJ binding).
 # Writes <case>/{cpp,rust}.{log,net.xml} and an exit-code summary.
-B=/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb06/tools/oracle/cases/netconv_edge
-RUST=/mnt/c/Users/karti/sumo-rs-target-main/debug/netconvert.exe
+# Paths derive from this script's location so the runner works from any worktree.
+B=$(cd "$(dirname "$0")" && pwd)
+RUST=${RUST_NETCONVERT:-/mnt/c/Users/karti/sumo-rs-target-main/debug/netconvert.exe}
 CPP=$HOME/sumo-src/bin/netconvert
 OPTS="--simple-projection true"
 run_case() {

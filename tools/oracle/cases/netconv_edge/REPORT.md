@@ -1,5 +1,38 @@
 # netconvert robustness: bad and unusual OSM input
 
+**Status as of 2026-11-16** (re-run with the current binary, `run_all.sh` repointed at its own tree):
+
+| # | Case | Now |
+|---|------|-----|
+| 1 | truncated OSM | **MATCH on exit code** (1/1); no longer a panic. Message TEXT differs, see below. |
+| 2a | zero-byte file | **MATCH on exit code** (1/1); no longer a panic. Message TEXT differs, see below. |
+| 2b, 3, 4a, 4b, 5a, 5b, 6 | | still MATCH |
+| 0 | default projection | still DIFFERS (no PROJ binding), documented `shortcut:` |
+| 7a/7b/7c | `real` variants | generated net now matches C++ line-for-line apart from the `generated on` stamp and the recorded input/output paths (verified on `base_ok`: 0 differing lines once those are excluded). The old "ours is 18 B larger" note was the version banner. |
+
+Two things were fixed after this table was written:
+
+1. **The panics are gone.** `sax_result` no longer panics; malformed XML exits 1 like C++.
+2. **The version string was wrong**, which is why every generated net was a constant 19 bytes smaller:
+   C++ writes `v1.28.0-0000000000` (from `version.h`), ours wrote `1.28.0`. Both binaries now use the
+   exact reference string, so it matches in `--version`, in the net header and in every sim output.
+
+**Remaining, unfixed and real:** the malformed-XML *message text* differs, because our XML parser
+reports its own diagnostics instead of SUMO's SAX messages:
+
+| | C++ | ours |
+|---|---|---|
+| truncated | `Error: unexpected end of input` + `In file '...'` + `At line/column 10/1.` | `Error: syntax error: attribute value not closed: `"` not found before end of input` |
+| zero-byte | `Error: invalid document structure` + `In file '...'` + `At line/column 2/1.` | `Error: Unexpected end of file` |
+
+Same exit code and same refusal to continue; different words, and ours omits the file and position.
+Fixing it means mapping parser errors onto SUMO's messages in the SAX layer — not string-patching the
+call sites — so it stays a documented difference for now.
+
+<details>
+<summary>Original report (historical)</summary>
+
+
 Binaries: C++ `netconvert` (WSL, `/home/karti/sumo-src/bin/netconvert`, `SUMO_HOME` set) vs Rust `netconvert.exe` (prebuilt, `C:\Users\karti\sumo-rs-target-main\debug`).
 All runs used `--simple-projection true`, because the Rust port has no PROJ binding (see row 0).
 Scripts: `run_all.sh` (cases 1-6), `run_real.sh` (case 7). Logs: `<case>/{cpp,rust}.log`.
@@ -33,3 +66,5 @@ Scripts: `run_all.sh` (cases 1-6), `run_real.sh` (case 7). Logs: `<case>/{cpp,ru
 - Rows 1-2 are the same error class (XML parse error) with different text and positions. The panic is the real defect.
 - Row 7: sizes and the traffic-light message aggregation differ. Only exit codes were compared; the nets were not diffed.
 - Rust prints each traffic-light warning, then `'%'` for the summary line. C++ prints the summary with `Could not build program '%'`.
+
+</details>
