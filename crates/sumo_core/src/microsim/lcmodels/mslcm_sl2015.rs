@@ -6750,7 +6750,7 @@ impl MSLCM_SL2015 {
         let side = i as f64 * MSGlobals::lateral_resolution() + shift;
         let vclass = self.myVehicle.get_vehicle_type().get_vehicle_class();
         (side < -utils::geom::NUMERICAL_EPS
-            && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(vclass)))
+            && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(vclass)))
             || (side + MSGlobals::lateral_resolution() > next.get_width()
                 && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(vclass)))
     }
