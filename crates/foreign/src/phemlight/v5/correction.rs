@@ -27,7 +27,7 @@ fn read_json_file(data_path: &[String], file_name: &str, err_msg: &mut String) -
     };
     let mut text = String::new();
     let parsed = match reader.read_to_string(&mut text) {
-        Ok(_) => serde_json::from_str::<Value>(&text).ok(),
+        Ok(_) => json::parse(&text),
         Err(_) => None,
     };
     if parsed.is_none() {

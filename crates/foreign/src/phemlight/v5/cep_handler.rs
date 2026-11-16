@@ -91,7 +91,7 @@ fn read_vehicle_file(data_path: &[String], emission_class: &str, helper: &mut He
 
     // **** VEH Datei einlesen ****
     let mut text = String::new();
-    let root: Value = match reader.read_to_string(&mut text).ok().and_then(|_| serde_json::from_str(&text).ok()) {
+    let root: Value = match reader.read_to_string(&mut text).ok().and_then(|_| json::parse(&text)) {
         Some(root) => root,
         None => {
             helper.set_err_msg(&format!("Error during file read! ({})", file_name));
