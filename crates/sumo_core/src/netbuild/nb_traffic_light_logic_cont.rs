@@ -494,7 +494,7 @@ impl NBTrafficLightLogicCont {
         // build program
         let built = def.m().compute(oc);
         if built.is_null() {
-            utils::common::msg_handler::write_warning(&format!("Could not build program '{}' for traffic light '{}'", programID, id));
+            utils::write_warningf!("Could not build program '%' for traffic light '%'", programID, id);
             return false;
         }
         // compute offset
