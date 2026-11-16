@@ -1,0 +1,538 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T11:09:30.745545-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/real/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/real/routes.rou"/>
+    </input>
+
+    <output>
+        <link-output value="/mnt/c/Users/karti/Temp/score/outputs-ou02/real/link/ref/link.xml"/>
+    </output>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<link-output>
+    <timestep id="0.00"/>
+    <timestep id="1.00">
+        <link from=":3974095826_0_0" via="" to="397795464#1_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="0.52" leaveTime="0.94" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#0_0" via=":3974095826_0_0" to="397795464#1_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="0.00" leaveTime="0.94" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.19" leaveTime="7.64" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="2.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.21" leaveTime="7.64" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.01" leaveTime="8.43" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.19" leaveTime="7.64" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.98" leaveTime="8.43" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="3.00">
+        <link from=":10224024800_0_0" via="" to="1117867029#1_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.39" leaveTime="2.78" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.16" leaveTime="2.54" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from=":12055677931_0_0" via="" to="1117867029#2_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.81" leaveTime="3.19" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.31" leaveTime="7.74" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.11" leaveTime="8.53" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":6598535230_0_0" via="" to="1117867029#3_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="3.20" leaveTime="3.58" arrivalSpeed="13.03" arrivalSpeedBraking="12.10" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.00" leaveTime="2.54" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from="1117867029#0_0" via=":10224024800_0_0" to="1117867029#1_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.17" leaveTime="2.78" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from="1117867029#1_0" via=":12055677931_0_0" to="1117867029#2_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.41" leaveTime="3.19" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from="1117867029#2_0" via=":6598535230_0_0" to="1117867029#3_0">
+            <approaching id="v1" impatience="0.00" arrivalTime="2.83" leaveTime="3.58" arrivalSpeed="13.03" arrivalSpeedBraking="13.03" leaveSpeed="13.03" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.29" leaveTime="7.73" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.08" leaveTime="8.53" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="4.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.31" leaveTime="7.74" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.11" leaveTime="8.53" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.29" leaveTime="7.73" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.08" leaveTime="8.53" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="5.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.35" leaveTime="7.77" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.14" leaveTime="8.56" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":6597464486_0_3" via="" to="682360554#1_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="4.59" leaveTime="5.03" arrivalSpeed="11.30" arrivalSpeedBraking="11.30" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.32" leaveTime="7.77" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.12" leaveTime="8.56" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="682360554#0_3" via=":6597464486_0_3" to="682360554#1_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="4.00" leaveTime="5.03" arrivalSpeed="11.30" arrivalSpeedBraking="11.30" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.02" leaveTime="13.22" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="6.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.69" leaveTime="14.11" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.36" leaveTime="7.79" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.16" leaveTime="8.58" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.82" leaveTime="13.26" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.14" leaveTime="15.00" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.82" leaveTime="14.43" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.34" leaveTime="7.79" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.13" leaveTime="8.58" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.06" leaveTime="13.26" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.16" leaveTime="14.64" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="7.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.84" leaveTime="14.26" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.41" leaveTime="7.83" arrivalSpeed="11.85" arrivalSpeedBraking="9.83" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.20" leaveTime="8.63" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.93" leaveTime="13.38" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42432697_0_0" via="" to="46522008#2_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="8.06" leaveTime="8.23" arrivalSpeed="30.08" arrivalSpeedBraking="24.85" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.25" leaveTime="15.12" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from=":5522182777_2_0" via="" to="46522008#1_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="7.06" leaveTime="7.22" arrivalSpeed="30.08" arrivalSpeedBraking="29.83" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from=":6598535204_0_0" via="" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.27" leaveTime="11.44" arrivalSpeed="30.08" arrivalSpeedBraking="0.00" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.94" leaveTime="14.55" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.39" leaveTime="7.83" arrivalSpeed="11.85" arrivalSpeedBraking="9.97" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.18" leaveTime="8.63" arrivalSpeed="11.85" arrivalSpeedBraking="0.00" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="46522008#0_0" via=":5522182777_2_0" to="46522008#1_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="6.74" leaveTime="7.22" arrivalSpeed="30.08" arrivalSpeedBraking="30.08" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="46522008#1_0" via=":42432697_0_0" to="46522008#2_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="7.90" leaveTime="8.23" arrivalSpeed="30.08" arrivalSpeedBraking="25.74" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="46522008#2_0" via=":6598535204_0_0" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.26" leaveTime="11.44" arrivalSpeed="30.08" arrivalSpeedBraking="0.00" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.18" leaveTime="13.38" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.28" leaveTime="14.76" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="8.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.88" leaveTime="14.31" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.43" leaveTime="7.85" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.22" leaveTime="8.64" arrivalSpeed="11.85" arrivalSpeedBraking="10.82" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.94" leaveTime="13.38" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42432697_0_0" via="" to="46522008#2_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="8.06" leaveTime="8.23" arrivalSpeed="30.08" arrivalSpeedBraking="29.79" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.26" leaveTime="15.12" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from=":5522182777_2_0" via="" to="46522008#1_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="7.06" leaveTime="7.23" arrivalSpeed="30.08" arrivalSpeedBraking="30.08" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from=":6598535204_0_0" via="" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.28" leaveTime="11.44" arrivalSpeed="30.08" arrivalSpeedBraking="0.00" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.95" leaveTime="14.56" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="7.40" leaveTime="7.85" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.19" leaveTime="8.64" arrivalSpeed="11.85" arrivalSpeedBraking="10.94" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="46522008#1_0" via=":42432697_0_0" to="46522008#2_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="7.90" leaveTime="8.23" arrivalSpeed="30.08" arrivalSpeedBraking="30.08" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="46522008#2_0" via=":6598535204_0_0" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.27" leaveTime="11.44" arrivalSpeed="30.08" arrivalSpeedBraking="0.00" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.19" leaveTime="13.38" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.28" leaveTime="14.77" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="9.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.95" leaveTime="14.38" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":3974095825_0_0" via="" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.31" leaveTime="8.74" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.97" leaveTime="13.41" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":3974095832_0_0" via="" to="1117867039#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="8.17" leaveTime="8.35" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":42432697_0_0" via="" to="46522008#2_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="8.07" leaveTime="8.23" arrivalSpeed="30.08" arrivalSpeedBraking="30.08" leaveSpeed="30.08" willPass="1"/>
+            <approaching id="v4" impatience="0.00" arrivalTime="10.54" leaveTime="10.71" arrivalSpeed="28.62" arrivalSpeedBraking="20.57" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.29" leaveTime="15.15" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from=":5522182777_2_0" via="" to="46522008#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="9.48" leaveTime="9.66" arrivalSpeed="28.62" arrivalSpeedBraking="26.37" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":6597464445_0_0" via="" to="46522008#0_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="8.19" leaveTime="8.37" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":6598535204_0_0" via="" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.28" leaveTime="11.45" arrivalSpeed="30.08" arrivalSpeedBraking="16.96" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.98" leaveTime="14.59" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="1117867039#0_0" via=":3974095832_0_0" to="1117867039#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="8.00" leaveTime="8.35" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="1117867039#1_0" via=":6597464445_0_0" to="46522008#0_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="8.18" leaveTime="8.37" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="397795464#2_0" via=":3974095825_0_0" to="397795464#3_0">
+            <approaching id="v0" impatience="0.00" arrivalTime="8.29" leaveTime="8.74" arrivalSpeed="11.85" arrivalSpeedBraking="11.85" leaveSpeed="11.85" willPass="1"/>
+        </link>
+        <link from="46522008#0_0" via=":5522182777_2_0" to="46522008#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="9.15" leaveTime="9.66" arrivalSpeed="28.62" arrivalSpeedBraking="27.94" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="46522008#1_0" via=":42432697_0_0" to="46522008#2_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="10.36" leaveTime="10.71" arrivalSpeed="28.62" arrivalSpeedBraking="21.64" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="46522008#2_0" via=":6598535204_0_0" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.27" leaveTime="11.45" arrivalSpeed="30.08" arrivalSpeedBraking="17.04" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.21" leaveTime="13.41" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.31" leaveTime="14.80" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="10.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.06" leaveTime="14.48" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.04" leaveTime="13.49" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42432697_0_0" via="" to="46522008#2_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="10.55" leaveTime="10.73" arrivalSpeed="28.62" arrivalSpeedBraking="26.02" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.36" leaveTime="15.23" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from=":5522182777_2_0" via="" to="46522008#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="9.50" leaveTime="9.67" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":6598535204_0_0" via="" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.30" leaveTime="11.47" arrivalSpeed="30.08" arrivalSpeedBraking="23.50" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.06" leaveTime="14.67" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="46522008#0_0" via=":5522182777_2_0" to="46522008#1_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="9.16" leaveTime="9.67" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="46522008#1_0" via=":42432697_0_0" to="46522008#2_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="10.38" leaveTime="10.73" arrivalSpeed="28.62" arrivalSpeedBraking="26.87" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="46522008#2_0" via=":6598535204_0_0" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.29" leaveTime="11.47" arrivalSpeed="30.08" arrivalSpeedBraking="23.55" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.29" leaveTime="13.49" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.39" leaveTime="14.87" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="11.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.13" leaveTime="14.55" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.07" leaveTime="13.52" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42432697_0_0" via="" to="46522008#2_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="10.57" leaveTime="10.74" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.39" leaveTime="15.26" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from=":6598535204_0_0" via="" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.31" leaveTime="11.47" arrivalSpeed="30.08" arrivalSpeedBraking="28.67" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.10" leaveTime="14.70" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="46522008#1_0" via=":42432697_0_0" to="46522008#2_0">
+            <approaching id="v4" impatience="0.00" arrivalTime="10.39" leaveTime="10.74" arrivalSpeed="28.62" arrivalSpeedBraking="28.62" leaveSpeed="28.62" willPass="1"/>
+        </link>
+        <link from="46522008#2_0" via=":6598535204_0_0" to="46522008#3_0">
+            <approaching id="v3" impatience="0.00" arrivalTime="11.30" leaveTime="11.47" arrivalSpeed="30.08" arrivalSpeedBraking="28.72" leaveSpeed="30.08" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.32" leaveTime="13.52" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.42" leaveTime="14.90" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="12.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.17" leaveTime="14.59" arrivalSpeed="11.75" arrivalSpeedBraking="0.00" leaveSpeed="11.75" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.08" leaveTime="13.52" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.39" leaveTime="15.26" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.10" leaveTime="14.71" arrivalSpeed="11.34" arrivalSpeedBraking="0.00" leaveSpeed="11.80" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.32" leaveTime="13.52" arrivalSpeed="11.30" arrivalSpeedBraking="9.76" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.42" leaveTime="14.90" arrivalSpeed="11.30" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="13.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.41" leaveTime="14.87" arrivalSpeed="10.90" arrivalSpeedBraking="0.00" leaveSpeed="10.90" willPass="1"/>
+        </link>
+        <link from=":3974095826_0_0" via="" to="397795464#1_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="12.66" leaveTime="13.20" arrivalSpeed="9.29" arrivalSpeedBraking="9.29" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.10" leaveTime="13.54" arrivalSpeed="11.30" arrivalSpeedBraking="10.84" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.53" leaveTime="15.39" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.31" leaveTime="14.97" arrivalSpeed="10.45" arrivalSpeedBraking="0.00" leaveSpeed="10.94" willPass="1"/>
+        </link>
+        <link from="397795464#0_0" via=":3974095826_0_0" to="397795464#1_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="12.00" leaveTime="13.20" arrivalSpeed="9.29" arrivalSpeedBraking="9.29" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.17" leaveTime="21.74" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="682360554#1_3" via=":3974095829_0_3" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="12.34" leaveTime="13.54" arrivalSpeed="11.30" arrivalSpeedBraking="11.30" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.44" leaveTime="14.92" arrivalSpeed="11.30" arrivalSpeedBraking="9.08" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="14.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.28" leaveTime="15.98" arrivalSpeed="7.18" arrivalSpeedBraking="0.00" leaveSpeed="7.18" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.25" leaveTime="21.78" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from=":3974095829_0_3" via="" to="682360554#2_3">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.22" leaveTime="13.67" arrivalSpeed="11.30" arrivalSpeedBraking="11.30" leaveSpeed="11.30" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.20" leaveTime="16.06" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.20" leaveTime="16.22" arrivalSpeed="6.49" arrivalSpeedBraking="0.00" leaveSpeed="7.26" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.21" leaveTime="21.78" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="13.57" leaveTime="15.05" arrivalSpeed="11.30" arrivalSpeedBraking="11.30" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="15.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.60" leaveTime="16.35" arrivalSpeed="6.64" arrivalSpeedBraking="0.00" leaveSpeed="6.64" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.38" leaveTime="21.92" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.43" leaveTime="16.29" arrivalSpeed="5.79" arrivalSpeedBraking="0.00" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.44" leaveTime="16.55" arrivalSpeed="5.88" arrivalSpeedBraking="0.00" leaveSpeed="6.71" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.35" leaveTime="21.92" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="682360554#2_3" via=":42439984_4_0" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="14.07" leaveTime="15.83" arrivalSpeed="8.59" arrivalSpeedBraking="8.59" leaveSpeed="5.79" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="16.00">
+        <link from=":10224024816_0_0" via="" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.90" leaveTime="16.66" arrivalSpeed="6.64" arrivalSpeedBraking="5.75" leaveSpeed="6.64" willPass="1"/>
+        </link>
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.45" leaveTime="21.98" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from=":42439984_4_0" via="" to="1117867028_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.63" leaveTime="16.49" arrivalSpeed="5.79" arrivalSpeedBraking="5.79" leaveSpeed="5.79" willPass="1"/>
+        </link>
+        <link from="1117867028_0" via=":10224024816_0_0" to="1117867029#0_0">
+            <approaching id="v2" impatience="0.00" arrivalTime="15.65" leaveTime="16.77" arrivalSpeed="5.88" arrivalSpeedBraking="5.88" leaveSpeed="6.71" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.41" leaveTime="21.98" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="17.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.58" leaveTime="22.12" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.55" leaveTime="22.12" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="18.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.60" leaveTime="22.14" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.57" leaveTime="22.14" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="19.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.67" leaveTime="22.21" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.64" leaveTime="22.21" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="20.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.74" leaveTime="22.28" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.71" leaveTime="22.28" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="21.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.83" leaveTime="22.37" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.80" leaveTime="22.37" arrivalSpeed="9.29" arrivalSpeedBraking="0.00" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="22.00">
+        <link from=":12055680089_0_0" via="" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.93" leaveTime="22.47" arrivalSpeed="9.29" arrivalSpeedBraking="9.29" leaveSpeed="9.29" willPass="1"/>
+        </link>
+        <link from="397795464#1_0" via=":12055680089_0_0" to="397795464#2_0">
+            <approaching id="v5" impatience="0.00" arrivalTime="21.89" leaveTime="22.46" arrivalSpeed="9.29" arrivalSpeedBraking="9.29" leaveSpeed="9.29" willPass="1"/>
+        </link>
+    </timestep>
+    <timestep id="23.00"/>
+</link-output>

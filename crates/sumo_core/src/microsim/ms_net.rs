@@ -2164,6 +2164,11 @@ impl MSNet {
         // update detector values
         self.myDetectorControl.m().update_detectors(self.myStep);
 
+        // check state dumps
+        if is_set("netstate-dump") {
+            MSXMLRawOut::write(&mut device_by_option("netstate-dump").borrow_mut(), &self.myEdges, self.myStep, get_int("netstate-dump.precision"));
+        }
+
         // check fcd dumps
         if is_set("fcd-output") {
             // init before borrowing the device: initOnce borrows it too
@@ -2181,12 +2186,20 @@ impl MSNet {
             MSEmissionExport::write(&mut device_by_option("emission-output").borrow_mut(), self.myStep);
         }
 
-        // check full dumps
+        // shortcut: the battery, chargingstations (aggregated), elechybrid and vtk exports are not ported yet
         if is_set("full-output") {
             MSGlobals::set_have_emissions(true);
+            MSFullExport::write(&mut device_by_option("full-output").borrow_mut(), self.myStep);
         }
 
-        // shortcut: the netstate, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        if is_set("queue-output") {
+            MSQueueExport::write(&mut device_by_option("queue-output").borrow_mut(), self.myStep);
+        }
+
+        if is_set("amitran-output") {
+            MSAmitranTrajectories::write(&mut device_by_option("amitran-output").borrow_mut(), self.myStep);
+        }
+
         self.write_summary_output(false);
 
         // write detector values

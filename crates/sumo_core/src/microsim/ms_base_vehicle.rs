@@ -4886,8 +4886,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_harmonoise_noise_emissions(&self) -> f64 {
-        // shortcut: HelpersHarmonoise::computeNoise (used when on road or idling) is not ported yet
-        0.0
+        if self.is_on_road() || self.is_idling() {
+            crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::compute_noise(self.get_vehicle_type().get_emission_class(), self.get_speed(), self.get_acceleration())
+        } else {
+            0.
+        }
     }
 
     /// C++: `BaseInfluencer & MSBaseVehicle::getBaseInfluencer()` [virtual, pure virtual]
