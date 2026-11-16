@@ -37,7 +37,7 @@ thread_local! {
     // static std::map<std::string, MSPerson *> Helper::myRemoteControlledPersons
     static MY_REMOTE_CONTROLLED_PERSONS: Ptr<BTreeMap<String, Ptr<MSPerson>>> = leak(BTreeMap::new());
 }
-// shortcut: static myLaneTree (RTree<MSLane*>) is not ported yet, lane searches panic in collectObjectsInRange
+// shortcut: static myLaneTree (RTree<MSLane*>) is not ported yet, lane searches scan all lanes in collectObjectsInRange
 
 fn my_subscriptions() -> &'static mut Vec<Subscription> {
     unsafe { &mut *MY_SUBSCRIPTIONS.with(|p| p.as_raw()) }
@@ -1251,8 +1251,13 @@ impl Helper {
                 panic!("shortcut: NamedRTree is Unmapped, Search not available yet");
             }
             CMD_GET_EDGE_VARIABLE | CMD_GET_LANE_VARIABLE | CMD_GET_PERSON_VARIABLE | CMD_GET_VEHICLE_VARIABLE => {
-                // shortcut: the MSLane R-tree (myLaneTree) is not ported yet
-                panic!("shortcut: MSLane R-tree is not ported yet, cannot search lanes in range");
+                // shortcut: linear scan over all lanes instead of the cached MSLane R-tree (myLaneTree); same bbox-overlap set, upgrade when the R-tree port merges
+                let lsv = MSLane_StoringVisitor::new(into, shape, range, domain);
+                MSLane::fill(|lmin, lmax, l| {
+                    if lmin[0] <= cmax[0] && cmin[0] <= lmax[0] && lmin[1] <= cmax[1] && cmin[1] <= lmax[1] {
+                        l.visit(&lsv);
+                    }
+                });
             }
             _ => panic!("Infeasible context domain ({})", domain),
         }

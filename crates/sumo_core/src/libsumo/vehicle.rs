@@ -533,7 +533,8 @@ impl Vehicle {
     pub fn get_leader(vehID: &str, dist: f64) -> (String, f64) {
         let veh = Helper::get_vehicle(vehID);
         if veh.is_on_road() {
-            let (leader, mut gap) = veh.get_leader(dist, false);
+            // C++ MSBaseVehicle::getLeader is virtual; MSVehicle overrides it, so dispatch to the micro override
+            let (leader, mut gap) = micro_veh(veh).get_leader(dist, false);
             let leaderID = if !leader.is_null() { leader.get_id().to_string() } else { String::new() };
             if !leader.is_null()
                 && !leader.get_lane().is_null()
