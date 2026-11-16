@@ -2,6 +2,8 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::intermodal_edge::get_sidewalk;
+use crate::utils::router::intermodal_network::IntermodalNetwork;
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> PedestrianRouter::_IntermodalEdge`
 pub type PedestrianRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
@@ -50,9 +52,17 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //                                                nullptr, false, nullptr, true);
     //     }
     #[allow(unused_variables)]
-    pub fn new() -> Self {
-        // shortcut: needs router trait bounds (lead), E::getAllEdges is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getAllEdges")
+    pub fn new() -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        let net: Ptr<IntermodalNetwork<E, L, N, V>> = Ptr::from_raw(Box::into_raw(Box::new(IntermodalNetwork::new(&E::all_edges(), true, 0))));
+        let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().clone();
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false);
+        Self {
+            base: SUMOAbstractRouter::new("PedestrianRouter", true, None, None, false, false),
+            myAmClone: false,
+            myInternalRouter: Ptr::from_raw(Box::into_raw(Box::new(internal))),
+            myPedNet: net,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void PedestrianRouter::PedestrianRouter<E, L, N, V>(_IntermodalNetwork *)`
@@ -147,11 +157,11 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
         E: RouterEdge<V>,
         V: RouterVehicle,
     {
-        if get_sidewalk::<E, L>(from, SVC_PEDESTRIAN).is_null() {
+        if get_sidewalk::<E, L, V>(from, SVC_PEDESTRIAN).is_null() {
             utils::common::msg_handler::write_warning(&format!("Departure edge '{}' does not allow pedestrians.", from.edge_id()));
             return 0.;
         }
-        if get_sidewalk::<E, L>(to, SVC_PEDESTRIAN).is_null() {
+        if get_sidewalk::<E, L, V>(to, SVC_PEDESTRIAN).is_null() {
             utils::common::msg_handler::write_warning(&format!("Destination edge '{}' does not allow pedestrians.", to.edge_id()));
             return 0.;
         }
@@ -260,7 +270,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn recompute_walk_costs(&self, edges: &Vec<Ptr<E>>, speed: f64, fromPos: f64, toPos: f64, msTime: SUMOTime, pars: &SUMOVTypeParameter, length: &mut f64) -> f64 {
+    pub fn recompute_walk_costs(&self, edges: &Vec<Ptr<E>>, speed: f64, fromPos: f64, toPos: f64, msTime: SUMOTime, pars: &SUMOVTypeParameter, length: &mut f64) -> f64 where E: RouterEdge<V>, V: RouterVehicle {
         if edges.len() == 0 {
             *length = 0.;
             0.
@@ -268,8 +278,47 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
             *length = (toPos - fromPos).abs();
             *length / speed
         } else {
-            // shortcut: needs router trait bounds (lead), E::getLength / getToJunction / isCrossing / isWalkingArea are not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getLength")
+            let mut cost = 0.;
+            let last = edges.len() as i32 - 1;
+            for i in 0..last {
+                let mut into: Vec<Ptr<E>> = Vec::new();
+                let from = edges[i as usize];
+                let to = edges[(i + 1) as usize];
+                let fp = if i == 0 { fromPos } else { from.length() / 2. };
+                let tp = if i == last - 1 { toPos } else { to.length() / 2. };
+                let node = self.get_common_node(from, to);
+                if i == 0 {
+                    if node == from.to_junction() {
+                        *length += from.length() - fromPos;
+                    } else {
+                        *length += fromPos;
+                    }
+                } else {
+                    *length += from.length();
+                }
+                if i == last - 1 {
+                    if node == to.from_junction() {
+                        *length += toPos;
+                    } else {
+                        *length += to.length() - toPos;
+                    }
+                }
+                let time = self.compute(from, to, fp, tp, speed, msTime, node, pars, &mut into, true);
+                if time >= 0. {
+                    cost += time;
+                    for edge in into {
+                        if edge.is_crossing() {
+                            *length += edge.length();
+                        } else if edge.is_walking_area() {
+                            // this is wrong because the length is path-dependent
+                            *length += edge.length();
+                        }
+                    }
+                } else {
+                    panic!("{}", ProcessError::new(format!("Could not compute cost between edge '{}' and edge '{}'.", from.edge_id(), to.edge_id())));
+                }
+            }
+            cost
         }
     }
 
@@ -284,9 +333,14 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_common_node(&self, from: Ptr<E>, to: Ptr<E>) -> Ptr<N> {
-        // shortcut: needs router trait bounds (lead), E::getToJunction / getFromJunction are not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getToJunction")
+    pub fn get_common_node(&self, from: Ptr<E>, to: Ptr<E>) -> Ptr<N> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+        if from.to_junction() == to.from_junction() || from.to_junction() == to.to_junction() {
+            from.to_junction()
+        } else if from.from_junction() == to.from_junction() || from.from_junction() == to.to_junction() {
+            from.from_junction()
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `PedestrianRouter<E, L, N, V> & PedestrianRouter::operator=(const PedestrianRouter<E, L, N, V> &)` [private]
