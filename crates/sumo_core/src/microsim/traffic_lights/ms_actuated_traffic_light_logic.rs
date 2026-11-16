@@ -391,7 +391,6 @@ impl MSActuatedTrafficLightLogic {
     //                 ilpos = length - inductLoopPosition;
     //                 MSLane* placementLane = lane;
     //                 while (ilpos < 0 && placementLane->getIncomingLanes().size() == 1
-    //                         && placementLane->getLogicalPredecessorLane() != nullptr
     //                         && placementLane->getIncomingLanes().front().viaLink->getCorrespondingEntryLink()->getTLLogic() == nullptr) {
     //                     placementLane = placementLane->getLogicalPredecessorLane();
     //                     ilpos += placementLane->getLength();
@@ -745,7 +744,6 @@ impl MSActuatedTrafficLightLogic {
                     ilpos = length - inductLoopPosition;
                     let mut placementLane: Ptr<MSLane> = lane;
                     while ilpos < 0.0 && placementLane.get_incoming_lanes().len() == 1
-                        && !placementLane.get_logical_predecessor_lane().is_null()
                         && placementLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null() {
                         placementLane = placementLane.get_logical_predecessor_lane();
                         ilpos += placementLane.get_length();
