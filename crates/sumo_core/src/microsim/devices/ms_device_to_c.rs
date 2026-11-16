@@ -888,8 +888,7 @@ impl MSDevice_ToC {
         self.deschedule_mrm();
         // Start MRM process
         if self.myMRMSafeSpot != "" {
-            // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
-        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
+            let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
             let s = MSNet::get_instance().m().get_stopping_place(&self.myMRMSafeSpot, SUMO_TAG_PARKING_AREA);
             if s.is_null() {
                 write_warningf!("Ignoring unknown safe spot '%' for vehicle '%'.", self.myMRMSafeSpot, self.myHolder.get_id());
