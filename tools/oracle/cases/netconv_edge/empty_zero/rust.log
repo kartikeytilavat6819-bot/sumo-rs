@@ -1,0 +1,14 @@
+Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.
+Warning: Environment variable SUMO_HOME is not set, using built in type maps.
+
+thread 'main' (8680) panicked at crates\sumo_core\src\netimport\ni_importer_open_street_map.rs:60:26:
+Unexpected end of file
+ In file 'C:\Users\karti\sumo-rs\.claude\worktrees\agent-rb06\tools\oracle\cases\netconv_edge\empty_zero\input.osm'
+ At line/column 2/1.
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+Error: Unexpected end of file
+ In file 'C:\Users\karti\sumo-rs\.claude\worktrees\agent-rb06\tools\oracle\cases\netconv_edge\empty_zero\input.osm'
+ At line/column 2/1.
+
+Quitting (on error).

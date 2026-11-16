@@ -1,0 +1,4 @@
+Warning: Skipping edge '10' because it has speed -8.33.
+Warning: New value for oneway found: reversible
+Warning: Skipping edge '12' because it has zero lanes.
+Success.
