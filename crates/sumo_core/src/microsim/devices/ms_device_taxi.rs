@@ -2118,8 +2118,7 @@ impl MSDevice_Taxi {
             edges.push(stopEdge);
         }
         *lastPos = stopPos;
-        // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
-        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
+        let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
         stop.lane = self.get_stop_lane(stopEdge, action).get_id().to_string();
         if !stopPlace.is_null() && stopPlaceEdge == stopEdge {
             stop.startPos = stopPlace.get_begin_lane_position();
