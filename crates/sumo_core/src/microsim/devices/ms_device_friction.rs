@@ -204,6 +204,20 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, stdDev: f64, offset: f64) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Friction>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, stdDev, offset);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, stdDev: f64, offset: f64) -> Self {
         MSDevice_Friction {
             base: MSVehicleDevice::new(holder, id),
             myMeasuredFrictionCoefficient: 1.,
