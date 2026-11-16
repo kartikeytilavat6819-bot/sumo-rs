@@ -781,8 +781,7 @@ impl NLDetectorBuilder {
         self.check_sample_interval(frequency, SUMO_TAG_VTYPEPROBE, id);
         let dev = output_device_of(device);
         let probe = Box::new(MSVTypeProbe::new(id, vtype, dev.m(), frequency));
-        // shortcut: C++ addEvent(this) on the end-of-timestep events is not done, MSVTypeProbe's base2 is still an Unmapped Command; register the probe when msv_type_probe.rs maps Command
-        // the probe lives until the simulation ends, like the C++ `new`
+        // the probe lives until the simulation ends, like the C++ `new`; MSVTypeProbe::new registers it at the end-of-timestep events
         Box::leak(probe);
     }
 

@@ -50,11 +50,17 @@ fn unwrap_or_throw<T>(r: Result<T, ProcessError>) -> T {
 
 /// C++ implicit `MSStoppingPlace*` -> `Parameterised*` conversion (base2 is the Parameterised part)
 fn stopping_place_as_parameterised(p: Ptr<MSStoppingPlace>) -> Ptr<Parameterised> {
+    if p.is_null() {
+        return Ptr::null();
+    }
     Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
 }
 
 /// C++ implicit `MSLane*` -> `Parameterised*` conversion (base2 is the Parameterised part)
 fn lane_as_parameterised(p: Ptr<MSLane>) -> Ptr<Parameterised> {
+    if p.is_null() {
+        return Ptr::null();
+    }
     Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
 }
 
@@ -70,6 +76,15 @@ fn parse_vehicle_classes_v(allowed: &str, disallowed: &str, network_version: (i3
         parse_vehicle_classes(allowed)
     } else {
         invert_permissions(extra_disallowed(parse_vehicle_classes(disallowed), network_version))
+    }
+}
+
+/// C++ `dynamic_cast<MSRailSignal*>(tll)`: only RAIL_SIGNAL logics are MSRailSignal instances, so the type is checked before the cast
+fn as_rail_signal(tll: Ptr<MSTrafficLightLogic>) -> Ptr<MSRailSignal> {
+    if !tll.is_null() && tll.m().get_logic_type() == TrafficLightType::RAIL_SIGNAL {
+        tll.cast::<MSRailSignal>()
+    } else {
+        Ptr::null()
     }
 }
 
@@ -379,8 +394,7 @@ impl NLHandler {
         if !tlsControl.knows(&signalID) {
             throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
         }
-        // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, so a non-rail-signal TLS is not rejected, upgrade when MSTrafficLightLogic exposes its subtype
-        let signal: Ptr<MSRailSignal> = tlsControl.get(&signalID).get_default().cast::<MSRailSignal>();
+        let signal: Ptr<MSRailSignal> = as_rail_signal(tlsControl.get(&signalID).get_default());
         if signal.is_null() {
             throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
         }
@@ -805,8 +819,7 @@ impl NLHandler {
                 if !tls.knows(&signalID) {
                     throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
                 }
-                // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
-                self.myConstrainedSignal = tls.get(&signalID).get_default().cast::<MSRailSignal>();
+                self.myConstrainedSignal = as_rail_signal(tls.get(&signalID).get_default());
                 if self.myConstrainedSignal.is_null() {
                     throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
                 }
@@ -2012,8 +2025,7 @@ impl NLHandler {
         let mut signals: Vec<Ptr<MSRailSignal>> = Vec::new();
         for id in signalIDs {
             let tll = self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().get_active(&id);
-            // shortcut: dynamic_cast<const MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
-            let rs = tll.cast::<MSRailSignal>();
+            let rs = as_rail_signal(tll);
             if !rs.is_null() {
                 signals.push(rs);
             } else {
