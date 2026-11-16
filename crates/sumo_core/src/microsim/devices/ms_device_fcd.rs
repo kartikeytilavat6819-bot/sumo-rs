@@ -5,7 +5,7 @@ use std::cell::{Cell, RefCell};
 use utils::common::string_utils::starts_with;
 use utils::common::time::string2time;
 use utils::iodevices::output_device::OutputDevice;
-use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set};
+use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 /// shortcut: SumoXMLAttrMask has no reset()/all() in utils (bitset<96> semantics), local helpers mirror them, upgrade when the utils mask gains these methods
@@ -133,12 +133,23 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "fcd", v, isSet("fcd-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
-            let id = format!("fcd_{}", v.get_id());
+        let vp = Ptr::from_mut(v);
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "fcd",
+                &vp.get_id(),
+                &vp.get_parameter().base,
+                &vp.get_v_type_parameter().base,
+                is_set("fcd-output"),
+                false,
+            )
+        });
+        if equipped {
+            let id = format!("fcd_{}", vp.get_id());
             // the device is owned by the vehicle's device list for the rest of the run, as in C++
-            let device: &mut MSDevice_FCD = Box::leak(Box::new(MSDevice_FCD::new(v, &id)));
-            into.push(Ptr::from_mut(&mut device.base));
+            let device: Ptr<MSDevice_FCD> = Ptr::from_mut(Box::leak(Box::new(MSDevice_FCD::new(vp.m(), &id))));
+            into.push(device.cast::<MSVehicleDevice>());
         }
     }
 

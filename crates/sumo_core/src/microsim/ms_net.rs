@@ -2172,7 +2172,19 @@ impl MSNet {
         // update detector values
         self.myDetectorControl.m().update_detectors(self.myStep);
 
-        // shortcut: the netstate, fcd, emission, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        // check fcd dumps
+        if is_set("fcd-output") {
+            // init before borrowing the device: initOnce borrows it too
+            MSDevice_FCD::init_once();
+            if is_set("person-fcd-output") {
+                MSFCDExport::write(&mut device_by_option("fcd-output").borrow_mut(), self.myStep, SUMO_TAG_VEHICLE);
+                MSFCDExport::write(&mut device_by_option("person-fcd-output").borrow_mut(), self.myStep, SUMO_TAG_PERSON);
+            } else {
+                MSFCDExport::write(&mut device_by_option("fcd-output").borrow_mut(), self.myStep, SUMO_TAG_NOTHING);
+            }
+        }
+
+        // shortcut: the netstate, emission, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
         self.write_summary_output(false);
 
         // write detector values
