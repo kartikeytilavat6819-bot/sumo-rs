@@ -1,0 +1,43 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='hand'>
+  <node id='1' visible='true' lat='0.0000' lon='0.0000' />
+  <node id='2' visible='true' lat='0.0000' lon='0.0009' />
+  <node id='3' visible='true' lat='0.0006' lon='0.0014' />
+  <node id='4' visible='true' lat='0.0000' lon='0.0018' />
+  <node id='5' visible='true' lat='-0.0006' lon='0.0014' />
+  <node id='6' visible='true' lat='0.0000' lon='0.0027' />
+  <way id='10' visible='true'>
+    <nd ref='1' />
+    <nd ref='2' />
+    <tag k='highway' v='primary' />
+    <tag k='oneway' v='yes' />
+    <tag k='lanes' v='1' />
+    <tag k='maxspeed' v='50' />
+  </way>
+  <way id='11' visible='true'>
+    <nd ref='2' />
+    <nd ref='3' />
+    <nd ref='4' />
+    <tag k='highway' v='primary' />
+    <tag k='oneway' v='yes' />
+    <tag k='lanes' v='1' />
+    <tag k='maxspeed' v='50' />
+  </way>
+  <way id='12' visible='true'>
+    <nd ref='2' />
+    <nd ref='5' />
+    <nd ref='4' />
+    <tag k='highway' v='primary' />
+    <tag k='oneway' v='yes' />
+    <tag k='lanes' v='1' />
+    <tag k='maxspeed' v='50' />
+  </way>
+  <way id='13' visible='true'>
+    <nd ref='4' />
+    <nd ref='6' />
+    <tag k='highway' v='primary' />
+    <tag k='oneway' v='yes' />
+    <tag k='lanes' v='1' />
+    <tag k='maxspeed' v='50' />
+  </way>
+</osm>
