@@ -2,10 +2,11 @@
 # rb01 variant of remote_gate.ps1: pushes gate_kernel_rb01.py (also copies the rail case outputs).
 #   powershell -File tools/kaggle/remote_gate_rb01.ps1 -Branch worktree-agent-x -Slot 1
 # Token: put the Kaggle API token (KGAT_...) for an internet-enabled account in $HOME\.kaggle\gate_token.
-# Slots (1-5) are separate dataset+kernel pairs so up to five gates run at once.
+# -Slot is the agent id (default rb01): names the dataset and kernel, so runs never share them.
+# gate.txt must contain "<branch> <sha>" from the snapshot; the summary below is checked by hand.
 param(
     [Parameter(Mandatory = $true)][string]$Branch,
-    [int]$Slot = 1,
+    [string]$Slot = "rb01",
     [string]$Repo = "C:\Users\karti\sumo-rs",
     [int]$TimeoutMin = 90,
     # gate_token = account kartikey6819, gate_token_acct3 = kartikey5656 (both have notebook internet)
