@@ -1,6 +1,9 @@
 //! Port of microsim/MSInternalJunction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_bit_set_logic::MSBitSetLogic;
+use crate::microsim::ms_right_of_way_junction::MSRightOfWayJunction;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 
 /// A class which realises junctions that do regard any kind of a right-of-way. The rules for the right-of-way themselves are stored within the associated "MSJunctionLogic" - structure.
 /// C++ class `MSInternalJunction` (microsim/MSInternalJunction.h)
@@ -155,6 +158,8 @@ impl MSInternalJunction {
             return;
         }
         let ownLinkIndex = specialLane.get_incoming_lanes()[0].viaLink.get_index();
+        let logicBits = parent.cast::<MSRightOfWayJunction>().m().get_logic().cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
+        let response = *logicBits.m().get_response_for(ownLinkIndex);
         // inform links where they have to report approaching vehicles to
         for lane in self.base.myInternalLanes.iter().copied() {
             for link in lane.get_link_cont().iter().copied() {
@@ -166,7 +171,7 @@ impl MSInternalJunction {
                     // Indirect left turns for bicycles are a special case
                     // because they both intersect on their second part with the first part of the other one
                     // and only one of them has priority
-                    if response_test(foeIndex) || self.indirect_bicycle_turn(specialLane, thisLink, lane, link) {
+                    if response_test(&response, foeIndex) || self.indirect_bicycle_turn(specialLane, thisLink, lane, link) {
                         self.myInternalLaneFoes.push(lane);
                     }
                     if !self.myInternalLaneFoes.contains(&link.get_via_lane()) {
@@ -187,7 +192,7 @@ impl MSInternalJunction {
                 // link indices of internal junctions may not be initialized yet
                 let linkIndex = link.get_corresponding_entry_link().get_index();
                 // links that target a shared walkingarea always have index -1
-                if linkIndex != -1 && response_test(linkIndex) {
+                if linkIndex != -1 && response_test(&response, linkIndex) {
                     self.myInternalLinkFoes.push(link);
                     let via = link.get_via_lane();
                     if !via.is_null() && !via.get_link_cont()[0].get_via_lane().is_null() {
@@ -289,10 +294,8 @@ impl MSInternalJunction {
 
 }
 
-// shortcut: C++ bitset test on MSRightOfWayJunction::getLogic()->getResponseFor(i); the LinkBits bitset
-// (MSLogicJunction::LinkBits) and the downcast are not ported, so no response bit is ever set here.
-// Upgrade when ms_logic_junction and the right-of-way junction logic are ported.
-fn response_test(_index: i32) -> bool {
-    false
+/// `std::bitset::test` on the parent's response row (MSLogicJunction::LinkBits)
+fn response_test(response: &[bool; SUMO_MAX_CONNECTIONS], index: i32) -> bool {
+    response[index as usize]
 }
 
