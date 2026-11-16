@@ -5020,8 +5020,7 @@ impl MSBaseVehicle {
         if self.get_parameter().was_set(VEHPARS_INSERTION_CHECKS_SET) {
             self.get_parameter().insertionChecks
         } else {
-            // shortcut: MSGlobals::gInsertionChecks is not ported; the default of 0 is used
-            0
+            MSGlobals::insertion_checks()
         }
     }
 
@@ -5594,3 +5593,16 @@ impl MSBaseVehicle_StopEdgeInfo {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn insertion_checks_fallback_is_option_default_all_not_none() {
+        // the fallback of get_insertion_checks is MSGlobals::insertion_checks(), which MSFrame sets from the "insertion-checks" option (default "all")
+        MSGlobals::set_insertion_checks(SUMOVehicleParameter::parse_insertion_checks("all"));
+        assert_eq!(MSGlobals::insertion_checks(), InsertionCheck::ALL as i32);
+        assert_ne!(MSGlobals::insertion_checks(), InsertionCheck::NONE as i32);
+    }
+}
