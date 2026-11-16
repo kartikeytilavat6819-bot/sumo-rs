@@ -410,6 +410,79 @@ fn drive_way_vector_to_string(driveways: &Vec<Ptr<MSDriveWay>>) -> String {
     driveways.iter().map(|d| d.base2.get_id().to_string()).collect::<Vec<_>>().join(" ")
 }
 
+fn rail_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().try_switch()
+}
+fn rail_get_phase_number(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_phase_number()
+}
+fn rail_get_phases(l: &MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_phases()
+}
+fn rail_get_phase(l: &MSTrafficLightLogic, givenstep: i32) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_phase(givenstep)
+}
+fn rail_get_current_phase_index(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_current_phase_index()
+}
+fn rail_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_current_phase_def()
+}
+fn rail_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().reset_last_switch(t)
+}
+fn rail_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_phase_index_at_time(simStep)
+}
+fn rail_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_offset_from_index(index)
+}
+fn rail_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().get_index_from_offset(offset)
+}
+fn rail_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+fn rail_add_link(l: &mut MSTrafficLightLogic, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().add_link(link, lane, pos)
+}
+fn rail_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().init(nb)
+}
+fn rail_adapt_link_information_from(l: &mut MSTrafficLightLogic, logic: &MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().adapt_link_information_from(logic)
+}
+fn rail_gets_major_green(l: &MSTrafficLightLogic, linkIndex: i32) -> bool {
+    Ptr::new(l).cast::<MSRailSignal>().get().unwrap().gets_major_green(linkIndex)
+}
+fn rail_get_blocking_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_blocking_vehicles(linkIndex)
+}
+
+static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: rail_try_switch,
+    get_phase_number: rail_get_phase_number,
+    get_phases: rail_get_phases,
+    get_phase: rail_get_phase,
+    get_current_phase_index: rail_get_current_phase_index,
+    get_current_phase_def: rail_get_current_phase_def,
+    reset_last_switch: rail_reset_last_switch,
+    get_phase_index_at_time: rail_get_phase_index_at_time,
+    get_offset_from_index: rail_get_offset_from_index,
+    get_index_from_offset: rail_get_index_from_offset,
+    change_step_and_duration: rail_change_step_and_duration,
+    add_link: rail_add_link,
+    init: rail_init,
+    adapt_link_information_from: rail_adapt_link_information_from,
+    gets_major_green: rail_gets_major_green,
+    get_detector_states: MSTrafficLightLogic::get_detector_states_base,
+    get_conditions: MSTrafficLightLogic::get_conditions_base,
+    get_blocking_vehicles: rail_get_blocking_vehicles,
+    save_state: MSTrafficLightLogic::save_state_base,
+    load_state: MSTrafficLightLogic::load_state_base,
+    map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+};
+
 impl MSRailSignal {
     /// C++: `void MSRailSignal::MSRailSignal(MSTLLogicControl &, const std::string &, const std::string &, SUMOTime, const Parameterised::Map &)`
     /// Constructor
@@ -427,7 +500,8 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
-        let base = MSTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_SIGNAL, delay, parameters);
+        let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_SIGNAL, delay, parameters);
+        base.vt = &MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT;
         let numerical_id = MY_RS_INDEX.with(|c| {
             let value = c.get();
             c.set(value + 1);
@@ -577,7 +651,7 @@ impl MSRailSignal {
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
         if pos >= 0 {
-            self.base.add_link(link, lane, pos);
+            self.base.add_link_base(link, lane, pos);
         } // ignore uncontrolled link
     }
 
@@ -590,7 +664,7 @@ impl MSRailSignal {
     // }
     #[allow(unused_variables)]
     pub fn adapt_link_information_from(&mut self, logic: &MSTrafficLightLogic) {
-        self.base.adapt_link_information_from(logic);
+        self.base.adapt_link_information_from_base(logic);
         self.update_current_phase();
     }
 

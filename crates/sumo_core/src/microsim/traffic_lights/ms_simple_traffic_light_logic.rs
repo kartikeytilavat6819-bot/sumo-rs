@@ -28,6 +28,74 @@ impl std::ops::DerefMut for MSSimpleTrafficLightLogic {
     }
 }
 
+pub(crate) fn simple_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().try_switch()
+}
+pub(crate) fn simple_get_phase_number(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase_number()
+}
+pub(crate) fn simple_get_phases(l: &MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phases()
+}
+pub(crate) fn simple_get_phase(l: &MSTrafficLightLogic, givenstep: i32) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase(givenstep)
+}
+pub(crate) fn simple_get_current_phase_index(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_current_phase_index()
+}
+pub(crate) fn simple_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_current_phase_def()
+}
+pub(crate) fn simple_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().reset_last_switch(t)
+}
+pub(crate) fn simple_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase_index_at_time(simStep)
+}
+pub(crate) fn simple_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_offset_from_index(index)
+}
+pub(crate) fn simple_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_index_from_offset(offset)
+}
+pub(crate) fn simple_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+
+pub(crate) fn simple_save_state(l: &MSTrafficLightLogic, out: &mut OutputDevice) {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().save_state(out)
+}
+pub(crate) fn simple_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
+}
+pub(crate) fn simple_map_time_in_cycle(l: &MSTrafficLightLogic, t: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().map_time_in_cycle(t)
+}
+
+pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: simple_try_switch,
+    get_phase_number: simple_get_phase_number,
+    get_phases: simple_get_phases,
+    get_phase: simple_get_phase,
+    get_current_phase_index: simple_get_current_phase_index,
+    get_current_phase_def: simple_get_current_phase_def,
+    reset_last_switch: simple_reset_last_switch,
+    get_phase_index_at_time: simple_get_phase_index_at_time,
+    get_offset_from_index: simple_get_offset_from_index,
+    get_index_from_offset: simple_get_index_from_offset,
+    change_step_and_duration: simple_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: MSTrafficLightLogic::init_base,
+    adapt_link_information_from: MSTrafficLightLogic::adapt_link_information_from_base,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: MSTrafficLightLogic::get_detector_states_base,
+    get_conditions: MSTrafficLightLogic::get_conditions_base,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: simple_save_state,
+    load_state: simple_load_state,
+    map_time_in_cycle: simple_map_time_in_cycle,
+};
+
 impl MSSimpleTrafficLightLogic {
     /// C++: `void MSSimpleTrafficLightLogic::MSSimpleTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const TrafficLightType, const Phases &, int, SUMOTime, const Parameterised::Map &)`
     /// Constructor
@@ -59,6 +127,11 @@ impl MSSimpleTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, offset, logicType, delay, parameters);
+        // only the static logic has this table; derived logics (delay_based, actuated, ...) install their own,
+        // and the others keep the panicking default instead of silently running the static overrides
+        if matches!(logicType, TrafficLightType::STATIC) {
+            base.vt = &MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
+        }
         let myPhases: MSTrafficLightLogic_Phases = phases.clone();
         base.myDefaultCycleTime = base.compute_cycle_time(&myPhases);
         let mut this = MSSimpleTrafficLightLogic {

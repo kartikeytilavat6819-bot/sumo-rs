@@ -22,6 +22,7 @@ const DEFAULT_CONDITION: &str = "DEFAULT";
 // C++ MSActuatedTrafficLightLogic::OPERATOR_PRECEDENCE
 const OPERATOR_PRECEDENCE: &[&str] = &["**", "^", "*", "/", "+", "-", "%", "=", "==", "!=", "<", ">", "<=", ">=", "and", "&&", "or", "||"];
 use super::ms_phase_definition::OVERRIDE_DURATION;
+use super::ms_simple_traffic_light_logic::{simple_get_current_phase_def, simple_get_current_phase_index, simple_get_index_from_offset, simple_get_offset_from_index, simple_get_phase, simple_get_phase_index_at_time, simple_get_phase_number, simple_get_phases, simple_load_state, simple_map_time_in_cycle, simple_reset_last_switch, simple_save_state};
 // C++ RGBColor::ORANGE / RGBColor::GREEN (the loop keeps a pointer to them, so they need statics)
 static RGB_ORANGE: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::ORANGE;
 static RGB_GREEN: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::GREEN;
@@ -180,6 +181,49 @@ impl std::ops::DerefMut for MSActuatedTrafficLightLogic {
 // C++ static members of MSActuatedTrafficLightLogic (port as module-level statics, see AGENTS.md):
 //   static const std::vector<std::string> MSActuatedTrafficLightLogic::OPERATOR_PRECEDENCE;
 
+fn actuated_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().try_switch()
+}
+fn actuated_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().init(nb)
+}
+fn actuated_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+fn actuated_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_detector_states()
+}
+fn actuated_get_conditions(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_conditions()
+}
+fn actuated_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
+}
+
+static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: actuated_try_switch,
+    get_phase_number: simple_get_phase_number,
+    get_phases: simple_get_phases,
+    get_phase: simple_get_phase,
+    get_current_phase_index: simple_get_current_phase_index,
+    get_current_phase_def: simple_get_current_phase_def,
+    reset_last_switch: simple_reset_last_switch,
+    get_phase_index_at_time: simple_get_phase_index_at_time,
+    get_offset_from_index: simple_get_offset_from_index,
+    get_index_from_offset: simple_get_index_from_offset,
+    change_step_and_duration: actuated_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: actuated_init,
+    adapt_link_information_from: MSTrafficLightLogic::adapt_link_information_from_base,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: actuated_get_detector_states,
+    get_conditions: actuated_get_conditions,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: simple_save_state,
+    load_state: actuated_load_state,
+    map_time_in_cycle: simple_map_time_in_cycle,
+};
+
 impl MSActuatedTrafficLightLogic {
     /// C++: `void MSActuatedTrafficLightLogic::MSActuatedTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const MSSimpleTrafficLightLogic::Phases &, int, SUMOTime, const Parameterised::Map &, const std::string &, const ConditionMap &, const AssignmentMap &, const FunctionMap &)`
     /// Constructor
@@ -219,6 +263,7 @@ impl MSActuatedTrafficLightLogic {
             myDetectorPrefix: format!("{}_{}_", id, programID),
             myTargets: BTreeMap::new(),
         };
+        this.base.base.vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT;
         let to_d = |s: String| utils::common::string_utils::to_double(&s).unwrap_or_else(|e| panic!("{}", e));
         this.myMaxGap = to_d(this.get_parameter("max-gap", DEFAULT_MAX_GAP.to_string()));
         this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_string("tls.actuated.jam-threshold")));
