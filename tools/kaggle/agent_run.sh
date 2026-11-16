@@ -1,28 +1,47 @@
 #!/bin/bash
-# Temporary agent diagnostics (removed before merge).
+# Temporary agent sweep: netconvert options on OSM nets, ours vs pristine (removed before merge).
 set -u
-OSM=tools/oracle/cases/city_munich/input.osm
 RS=/tmp/target/debug/netconvert
 CP=$SUMO_PRISTINE_BIN/netconvert
-mkdir -p /tmp/nc
-$CP --simple-projection true --osm-files $OSM -o /tmp/nc/cpp.net.xml > /tmp/nc/cpp.log 2>&1; echo "cpp exit=$?"
-$RS --simple-projection true --osm-files $OSM -o /tmp/nc/rs.net.xml > /tmp/nc/rs.log 2>&1; echo "rs exit=$?"
-python3 - <<'EOF'
-import xml.etree.ElementTree as ET
-J = "1413262637"
-for tag, path in (("cpp", "/tmp/nc/cpp.net.xml"), ("rs", "/tmp/nc/rs.net.xml")):
-    root = ET.parse(path).getroot()
-    for j in root.iter("junction"):
-        if j.get("id") == J:
-            print(tag, "junction", {k: v for k, v in j.attrib.items() if k in ("type", "incLanes", "intLanes")})
-    edges = {}
-    for e in root.iter("edge"):
-        if e.get("function") == "internal":
-            continue
-        edges[e.get("id")] = e
-    for e in edges.values():
-        if e.get("to") == J or e.get("from") == J:
-            lanes = e.findall("lane")
-            allow = lanes[0].get("allow") if lanes else None
-            print(tag, "  ", "in " if e.get("to") == J else "out", e.get("id"), "type=" + str(e.get("type")), "from=" + str(e.get("from")), "lanes=" + str(len(lanes)), "allow=" + str(allow))
-EOF
+C=tools/oracle/cases
+W=/tmp/nc
+mkdir -p $W
+OPTS=(
+  "base|"
+  "geomRemove|--geometry.remove true"
+  "ramps|--ramps.guess true"
+  "roundabouts|--roundabouts.guess true"
+  "junctionsJoin|--junctions.join true"
+  "tlsGuess|--tls.guess-signals true"
+  "tlsJoin|--tls.join true"
+  "tlsDiscard|--tls.discard-simple true"
+  "edgesJoin|--edges.join true"
+  "removeIsolated|--remove-edges.isolated true"
+  "keepVclass|--keep-edges.by-vclass passenger"
+  "removeFootway|--remove-edges.by-type highway.footway,highway.cycleway"
+  "sidewalks|--sidewalks.guess true"
+  "crossings|--crossings.guess true"
+  "turnLanes|--osm.turn-lanes true"
+  "laneAccess|--osm.lane-access true"
+  "elevation|--osm.elevation true"
+  "noInternal|--no-internal-links true"
+  "lanewidth|--default.lanewidth 3.2"
+  "streetNames|--output.street-names true"
+  "originalNames|--output.original-names true"
+  "bundle|--geometry.remove true --ramps.guess true --junctions.join true --tls.guess-signals true --tls.discard-simple true --tls.join true --tls.default-type actuated"
+)
+for net in city_munich real city_plano; do
+  for spec in "${OPTS[@]}"; do
+    name=${spec%%|*}; args=${spec#*|}
+    d=$W/$net/$name; mkdir -p $d
+    SUMO_HOME=$SUMO_HOME $CP --simple-projection true $args --osm-files $C/$net/input.osm -o $d/cpp.net.xml > $d/cpp.log 2>&1; crc=$?
+    $RS --simple-projection true $args --osm-files $C/$net/input.osm -o $d/rs.net.xml > $d/rs.log 2>&1; rrc=$?
+    if grep -q panicked $d/rs.log; then v=PANIC
+    elif [ $rrc -ne $crc ]; then v="FAIL exit rs=$rrc cpp=$crc"
+    elif [ -s $d/rs.net.xml ] && [ -s $d/cpp.net.xml ]; then
+      if python3 tools/oracle/compare_net.py $d/cpp.net.xml $d/rs.net.xml > $d/net.log 2>&1; then v=PASS
+      else v="FAIL $(head -1 $d/net.log)"; fi
+    else v="FAIL-missing-net"; fi
+    echo "$net $name $v"
+  done
+done
