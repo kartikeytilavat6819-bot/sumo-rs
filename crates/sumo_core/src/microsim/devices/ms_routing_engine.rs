@@ -7,6 +7,8 @@ use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_
 use utils::common::util_exceptions::ProcessError;
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::a_star_router::AStarRouter;
+use crate::utils::router::ch_router::CHRouter;
+use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
 use crate::utils::router::railway_router::RailwayRouter;
 use crate::utils::router::router_provider::RouterProvider;
 use crate::microsim::ms_router_defs::{MSMapMatcher, MSRouterProvider};
@@ -499,9 +501,19 @@ impl MSRoutingEngine {
             }
             let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(edges, true, Some(effort), None, true, false).with_compute();
             Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
-        } else if routingAlgorithm == "CH" || routingAlgorithm == "CHWrapper" || routingAlgorithm == "CCH" {
-            // shortcut: CH, CHWrapper and CCH routers are not ported, upgrade with the CH/CCH port
-            panic!("shortcut: routing algorithm '{}' is not ported", routingAlgorithm)
+        } else if routingAlgorithm == "CH" && !hasPermissions {
+            let weightPeriod = if state().myAdaptationInterval > 0 { state().myAdaptationInterval } else { utils::common::time::SUMOTIME_MAX };
+            let svc = if vehicle.is_null() { SVC_PASSENGER } else { v_vclass(vehicle) };
+            let router = CHRouter::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), svc, weightPeriod, true, false).with_compute();
+            Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
+        } else if routingAlgorithm == "CHWrapper" || routingAlgorithm == "CH" {
+            // use CHWrapper instead of CH if the net has permissions
+            let weightPeriod = if state().myAdaptationInterval > 0 { state().myAdaptationInterval } else { utils::common::time::SUMOTIME_MAX };
+            let router = CHRouterWrapper::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), string2time(&get_string("begin")).unwrap_or_else(|e| std::panic::panic_any(e)), string2time(&get_string("end")).unwrap_or_else(|e| std::panic::panic_any(e)), weightPeriod, hasPermissions, get_int("device.rerouting.threads")).with_compute();
+            Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
+        } else if routingAlgorithm == "CCH" {
+            // shortcut: CCH routers need RoutingKit (CCHGraph, CCHMetricFamily), not ported
+            panic!("shortcut: routing algorithm 'CCH' is not ported")
         } else {
             std::panic::panic_any(ProcessError::new(&format!("Unknown routing algorithm '{}'!", routingAlgorithm)))
         };

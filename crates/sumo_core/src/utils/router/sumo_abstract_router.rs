@@ -13,6 +13,7 @@ pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f6
 
 /// The concrete router's `compute` (C++ virtual), installed by the subclass that implements it.
 pub type SUMOAbstractRouter_ComputeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<E>, Ptr<E>, Ptr<V>, SUMOTime, &mut Vec<Ptr<E>>, bool) -> bool;
+pub type SUMOAbstractRouter_ProhibitFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, &SUMOAbstractRouter_Prohibitions);
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -103,6 +104,8 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myTTOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
     /// the concrete `compute` the pure-virtual base dispatches to (None: the base has no implementation)
     pub myCompute: Option<SUMOAbstractRouter_ComputeFn<E, V>>,
+    /// the subclass prohibit override (C++ virtual `prohibit`), None for the base behaviour
+    pub myProhibit: Option<SUMOAbstractRouter_ProhibitFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -157,6 +160,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myOperation: operation,
             myTTOperation: ttOperation,
             myCompute: None,
+            myProhibit: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -197,6 +201,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myOperation: other.myOperation,
             myTTOperation: other.myTTOperation,
             myCompute: other.myCompute,
+            myProhibit: other.myProhibit,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -769,6 +774,9 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where E: RouterEdgeInfo {
+        if let Some(prohibit) = self.myProhibit {
+            return prohibit(self, toProhibit);
+        }
         for item in self.myProhibited.keys() {
             let info = &mut self.myEdgeInfos[e_numerical_id(item.cast::<E>())];
             info.prohibitedPermissions = SVC_ALL;
