@@ -39,7 +39,9 @@ for dir in tools/oracle/cases/*/; do
   if [ ! -f "$dir/input.osm" ]; then
     line "$c" net SKIP "no input.osm"; SKIP=$((SKIP+1))
   elif [ -f "$dir/ref_simple.net.xml" ]; then
-    "$BIN/netconvert.exe" --osm-files "$dir/input.osm" --simple-projection \
+    NETEXTRA=""
+    [ -f "$dir/net.args" ] && NETEXTRA=$(cat "$dir/net.args")
+    "$BIN/netconvert.exe" --osm-files "$dir/input.osm" --simple-projection $NETEXTRA \
         -o "$OUT/$c.net.xml" >/dev/null 2>&1
     if python tools/oracle/compare_net.py "$dir/ref_simple.net.xml" "$OUT/$c.net.xml" >"$OUT/$c.net.log" 2>&1; then
       line "$c" net PASS; PASS=$((PASS+1))

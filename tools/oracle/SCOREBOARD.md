@@ -11,7 +11,9 @@ python tools/oracle/acceptance.py <case> <cand.ti.xml> <cand.stat.xml>          
 ```
 
 `run_all.sh` runs the checkout it lives in. The sim stage runs whenever `ref_simple.net.xml`, `routes.rou` and
-`ref.tripinfo.xml` exist; it appends `cases/<case>/sim.args` to the sumo call. The net stage runs only with `input.osm`.
+`ref.tripinfo.xml` exist; it appends `cases/<case>/sim.args` to the sumo call. The net stage runs only with
+`input.osm`, and appends `cases/<case>/net.args` to the netconvert call (that is how `lefthand` gets
+`--lefthand`; without it the mirrored net can never match).
 
 ## Exact comparator (`run_all.sh`)
 
@@ -35,9 +37,21 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=12 FAIL=3 SKIP=6**. The three fails are `real_dense/ref` (`v15`
-arrival speed), `vtypes/ref` (EIDM timeLoss 0.03) and `reroute/ref_device` (rerouting device never
-created). Before the Euler fix: PASS=11 FAIL=3. Before the variant/coverage work: **PASS=8 FAIL=2 SKIP=0**
+Exact totals: **`run_all.sh` PASS=19 FAIL=4 SKIP=6** after the four new cases (lanechange, lefthand, sublanes,
+reroute_alt) were added. The four failures are the honest ones:
+
+| Row | Symptom | Owner |
+|---|---|---|
+| `sublanes/ref` | **PANIC** `ms_leader_info.rs:503` index out of bounds — any `--lateral-resolution` run crashes | sl01 |
+| `reroute_alt/ref` | `v0` stays on the closed edge `11` at t=8; C++ detours to `12` — rerouting never runs | rr01 |
+| `real_dense/ref` | `v15.arrivalSpeed` 5.29 vs 7.60 | op02 |
+| `vtypes/ref` | `EIDM_1` timeLoss 4.05 vs 4.02 | unowned |
+
+`lanechange` and `lefthand` PASS — so the `gComputeLC`/`change_lanes` fix and left-hand-traffic net
+generation (`--lefthand` via `net.args`) are now proven rather than asserted. `sublanes` net also PASSES;
+only the simulation crashes.
+
+Before this change: **PASS=8 FAIL=2 SKIP=0**
 (measured with the original script on the same binaries; stress, reroute, vtypes, ref_closing and depart were invisible).
 Gate: all 8 previous PASS rows still PASS.
 
