@@ -929,7 +929,7 @@ impl NLJunctionControlBuilder {
                 .cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::STATIC => {
-                let mut logic = leak_box(MSSimpleTrafficLightLogic::new(
+                let simple = leak_box(MSSimpleTrafficLightLogic::new(
                     self.get_tl_logic_control_to_use(),
                     &self.myActiveKey,
                     &self.myActiveProgram,
@@ -940,8 +940,9 @@ impl NLJunctionControlBuilder {
                     firstEventOffset,
                     &self.myAdditionalParameter,
                 ));
-                logic.m().schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
-                tlLogic = logic.cast::<MSTrafficLightLogic>();
+                // the C++ constructor schedules the first SwitchCommand itself; without it the signal never leaves phase 0
+                simple.m().schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = simple.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::RAIL_SIGNAL => {
                 tlLogic = leak_box(MSRailSignal::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
