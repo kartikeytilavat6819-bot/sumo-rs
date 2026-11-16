@@ -28,14 +28,25 @@ pub enum MSMoveReminder_Notification {
     NOTIFICATION_NONE = 19,
 }
 
+/// Virtual dispatch table for the polymorphic methods of MSMoveReminder.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct MSMoveReminderVt {
+    pub notify_enter: fn(&mut MSMoveReminder, &mut SUMOTrafficObject, MSMoveReminder_Notification, Ptr<MSLane>) -> bool,
+    pub notify_move: fn(&mut MSMoveReminder, &mut SUMOTrafficObject, f64, f64, f64) -> bool,
+    pub notify_leave: fn(&mut MSMoveReminder, &mut SUMOTrafficObject, f64, MSMoveReminder_Notification, Ptr<MSLane>) -> bool,
+}
+
 /// Something on a lane to be noticed about vehicle movement
 /// C++ class `MSMoveReminder` (microsim/MSMoveReminder.h)
+#[repr(C)]
 pub struct MSMoveReminder {
     /// Lane on which the reminder works
     pub myLane: Ptr<MSLane>,
     /// a description of this moveReminder
     pub myDescription: String,
     pub myLastVehicleUpdateValues: BTreeMap<i64, (SUMOTime, f64)>, // C++: std::map<long long, std::pair<SUMOTime, double>>
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSMoveReminderVt,
 }
 
 // C++ static members of MSMoveReminder (port as module-level statics, see AGENTS.md):
@@ -65,6 +76,7 @@ impl MSMoveReminder {
             myLane: lane,
             myDescription: description.to_string(),
             myLastVehicleUpdateValues: BTreeMap::new(),
+            vt: &DEFAULT_MSMOVE_REMINDER_VT,
         }
     }
 
@@ -96,8 +108,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        // UNUSED_PARAMETER(reason, veh, enteredLane)
-        true
+        (self.vt.notify_enter)(self, veh, reason, enteredLane)
     }
 
     /// C++: `bool MSMoveReminder::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -114,8 +125,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        // UNUSED_PARAMETER(oldPos, newPos, newSpeed, veh)
-        true
+        (self.vt.notify_move)(self, veh, oldPos, newPos, newSpeed)
     }
 
     /// C++: `bool MSMoveReminder::notifyIdle(SUMOTrafficObject &)` [virtual]
@@ -157,8 +167,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        // UNUSED_PARAMETER(veh, lastPos, reason, enteredLane)
-        true
+        (self.vt.notify_leave)(self, veh, lastPos, reason, enteredLane)
     }
 
     /// C++: `bool MSMoveReminder::notifyLeaveBack(SUMOTrafficObject &, Notification, const MSLane *)` [virtual]
@@ -371,4 +380,20 @@ impl MSMoveReminder {
     }
 
 }
+
+pub(crate) fn default_notify_enter(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject, _: MSMoveReminder_Notification, _: Ptr<MSLane>) -> bool {
+    true
+}
+pub(crate) fn default_notify_move(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject, _: f64, _: f64, _: f64) -> bool {
+    true
+}
+pub(crate) fn default_notify_leave(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject, _: f64, _: MSMoveReminder_Notification, _: Ptr<MSLane>) -> bool {
+    true
+}
+
+static DEFAULT_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: default_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
 

@@ -1852,7 +1852,7 @@ impl MSDevice_Tripinfo {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        MSDevice_Tripinfo {
+        let mut this = MSDevice_Tripinfo {
             base: MSVehicleDevice::new(holder, id),
             myDepartLane: String::new(),
             myDepartSpeed: -1.0,
@@ -1870,7 +1870,9 @@ impl MSDevice_Tripinfo {
             myArrivalReason: MSMoveReminder_Notification::NOTIFICATION_ARRIVED,
             myMesoTimeLoss: 0,
             myRouteLength: 0.0,
-        }
+        };
+        this.base.base.vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT;
+        this
     }
 
     /// C++: `void MSDevice_Tripinfo::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -2059,4 +2061,23 @@ impl MSDevice_Tripinfo {
     }
 
 }
+
+fn ms_device_tripinfo_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_enter(veh, reason, enteredLane)
+}
+fn ms_device_tripinfo_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_device_tripinfo_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_device_tripinfo_notify_enter,
+    notify_move: ms_device_tripinfo_notify_move,
+    notify_leave: ms_device_tripinfo_notify_leave,
+};
 
