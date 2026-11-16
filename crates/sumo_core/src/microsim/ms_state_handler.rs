@@ -670,9 +670,12 @@ impl MSStateHandler {
                     MSRoutingEngine::init_weight_update(lastAdaptation);
                 }
                 MSRoutingEngine::init_edge_weights(SVC_PASSENGER, lastAdaptation, index);
-                if utils::options::options_cont::get_bool("device.rerouting.bike-speeds") || use_meso_sim() {
-                    // shortcut: bicycle edge weights and meso segment speed reset are not ported
-                    panic!("shortcut: bike-speed routing init and meso cached speeds are not ported");
+                if utils::options::options_cont::get_bool("device.rerouting.bike-speeds") {
+                    MSRoutingEngine::init_edge_weights(SVC_BICYCLE, -1, -1);
+                }
+                if use_meso_sim() {
+                    // shortcut: meso segment cached-speed reset (MESegment::resetCachedSpeeds) is not ported, meso is ported separately
+                    panic!("shortcut: meso cached speeds are not ported");
                 }
             }
             SUMO_TAG_EDGE => {
@@ -833,8 +836,9 @@ impl MSStateHandler {
                 }
             }
             SUMO_TAG_DISPATCHER => {
-                // shortcut: MSDevice_Taxi::initDispatch is not ported under a verified name
-                panic!("shortcut: taxi dispatcher state is not ported");
+                let next = attrs.get::<i64>(SUMO_ATTR_NEXT, "dispatcher", &mut ok, true);
+                MSDevice_Taxi::init_dispatch(next);
+                MSDevice_Taxi::get_dispatch_algorithm().m().load_state(attrs);
             }
             _ => {}
         }
@@ -911,9 +915,9 @@ impl MSStateHandler {
                 let net = MSNet::get_instance();
                 let tc = if element == SUMO_TAG_PERSON { net.m().get_person_control() } else { net.m().get_container_control() };
                 let transportable = tc.get(&self.myAttrs.get_string(SUMO_ATTR_ID));
-                // shortcut: MSTransportable::loadState and fixLoadCount are not wired here, loaded transportable state is refused
-                let _ = transportable;
-                panic!("shortcut: transportable (person/container) state loading is not ported");
+                transportable.m().load_state(&self.myAttrs.get_string(SUMO_ATTR_STATE));
+                tc.fix_load_count(transportable);
+                self.myAttrs = Ptr::null();
             }
             SUMO_TAG_FLOWSTATE => {
                 MSNet::get_instance().m().get_insertion_control().add_flow(self.myVehicleParameter, self.myFlowIndex);
@@ -1088,7 +1092,7 @@ impl MSStateHandler {
                 panic!("{}", ProcessError::new(format!("Could not load vehicle '{}' from state", vehID)));
             }
             if deviceNames.iter().any(|d| d == "person" || d == "container") {
-                // shortcut: initTransportableDevice for loaded persons and containers is not ported
+                // shortcut: MSBaseVehicle::initTransportableDevice is a stub (buildVehicleDevices not wired in ms_base_vehicle.rs), upgrade when it creates myPersonDevice/myContainerDevice
                 panic!("shortcut: transportable devices in loaded state are not ported");
             }
             let base: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
@@ -1109,11 +1113,16 @@ impl MSStateHandler {
                 let attrID = attrs.get_string(SUMO_ATTR_ID);
                 for dev in base.m().get_devices().clone() {
                     if dev.m().base2.get_id() == attrID {
-                        if attrID.starts_with("tripinfo_") {
-                            dev.cast::<MSDevice_Tripinfo>().m().load_state(&attrs);
-                        } else {
-                            // shortcut: only tripinfo device states are restored, other device types need a device vtable
-                            panic!("shortcut: device '{}' state restore is not ported", attrID);
+                        // C++ dev->loadState() is virtual; dispatch by deviceName() as in get_parameter_of. MSDevice::loadState is empty.
+                        match dev.base2.device_name().as_str() {
+                            "battery" => dev.cast::<MSDevice_Battery>().m().load_state(&attrs),
+                            "rerouting" => dev.cast::<MSDevice_Routing>().m().load_state(&attrs),
+                            "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().load_state(&attrs),
+                            "taxi" => dev.cast::<MSDevice_Taxi>().m().load_state(&attrs),
+                            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().load_state(&attrs),
+                            "person" | "container" => dev.cast::<MSDevice_Transportable>().m().load_state(&attrs),
+                            "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().load_state(&attrs),
+                            _ => {}
                         }
                     }
                 }
