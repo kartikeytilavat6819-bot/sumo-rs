@@ -703,8 +703,8 @@ pub struct NBEdge {
     pub myRoutingType: String,
     /// the index of the edge in the list of all edges. Set by NBEdgeCont and requires re-set whenever the list of edges changes
     pub myIndex: i32,
-    pub mySuccessors: EdgeVector,
-    pub myViaSuccessors: ConstRouterEdgePairVector,
+    pub mySuccessors: std::cell::RefCell<EdgeVector>,
+    pub myViaSuccessors: std::cell::RefCell<ConstRouterEdgePairVector>,
 }
 
 impl std::ops::Deref for NBEdge {
@@ -826,8 +826,8 @@ impl NBEdge {
             myIsBidi: false,
             myRoutingType: String::new(),
             myIndex: -1,
-            mySuccessors: Vec::new(),
-            myViaSuccessors: Vec::new(),
+            mySuccessors: std::cell::RefCell::new(Vec::new()),
+            myViaSuccessors: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -8111,20 +8111,20 @@ impl NBEdge {
     //     return mySuccessors;
     // }
     #[allow(unused_variables)]
-    pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &EdgeVector {
-        // mySuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
-        let this = Ptr::new(self);
-        this.m().mySuccessors.clear();
+    pub fn get_successors(&self, vClass: SUMOVehicleClass) -> EdgeVector {
+        // mySuccessors is a C++ mutable cache: rebuilt on every call, returned by copy
+        let mut successors = self.mySuccessors.borrow_mut();
+        successors.clear();
         for con in &self.myConnections {
             if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
                 && (vClass == utils::common::sumo_vehicle_class::SVC_IGNORING
                     || (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) != 0)
-                && !self.mySuccessors.contains(&con.toEdge)
+                && !successors.contains(&con.toEdge)
             {
-                this.m().mySuccessors.push(con.toEdge);
+                successors.push(con.toEdge);
             }
         }
-        &self.mySuccessors
+        successors.clone()
     }
 
     /// C++: `const ConstRouterEdgePairVector & NBEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -8151,17 +8151,17 @@ impl NBEdge {
     //     return myViaSuccessors;
     // }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        // myViaSuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
-        let this = Ptr::new(self);
-        this.m().myViaSuccessors.clear();
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> ConstRouterEdgePairVector {
+        // myViaSuccessors is a C++ mutable cache: rebuilt on every call, returned by copy
+        let mut viaSuccessors = self.myViaSuccessors.borrow_mut();
+        viaSuccessors.clear();
         for con in &self.myConnections {
             // NBEdge* -> NBRouterEdge* is the base3 subobject; Connection* -> NBRouterEdge* is base2
             let to_router: Ptr<NBRouterEdge> = if con.toEdge.is_null() { Ptr::null() } else { Ptr::new(&con.toEdge.base3) };
             let mut pair: (Ptr<NBRouterEdge>, Ptr<NBRouterEdge>) = (to_router, Ptr::null());
             // special case for Persons in Netedit
             if vClass == utils::common::sumo_vehicle_class::SVC_PEDESTRIAN {
-                this.m().myViaSuccessors.push(pair); // Pedestrians have complete freedom of movement in all successors
+                viaSuccessors.push(pair); // Pedestrians have complete freedom of movement in all successors
             } else if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
                 && (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) == vClass
             {
@@ -8169,10 +8169,10 @@ impl NBEdge {
                 if con.get_length() > 0.0 {
                     pair.1 = Ptr::new(&con.base2);
                 }
-                this.m().myViaSuccessors.push(pair);
+                viaSuccessors.push(pair);
             }
         }
-        &self.myViaSuccessors
+        viaSuccessors.clone()
     }
 
     /// C++: `const std::string & NBEdge::getID() const` [const, virtual]

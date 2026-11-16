@@ -519,7 +519,7 @@ impl NBLoadedSUMOTLDef {
             self.base.init_extra_conflicts();
             assert!(self.base.myExtraConflictsReady.get());
         }
-        self.base.myExtraConflicts.contains(&(index, foeIndex))
+        self.base.myExtraConflicts.borrow().contains(&(index, foeIndex))
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::cleanupStates()`
@@ -1272,8 +1272,8 @@ impl NBLoadedSUMOTLDef {
     pub fn init_needs_cont_relation(&self) {
         let me = Ptr::new(self);
         if !self.am_invalid() && !self.base.myNeedsContRelationReady.get() {
-            me.m().base.myNeedsContRelation.clear();
-            me.m().base.myExtraConflicts.clear();
+            self.base.myNeedsContRelation.borrow_mut().clear();
+            self.base.myExtraConflicts.borrow_mut().clear();
             if self.base.myType == TrafficLightType::NEMA {
                 me.m().base.init_needs_cont_relation();
                 me.m().base.init_extra_conflicts();
@@ -1313,7 +1313,7 @@ impl NBLoadedSUMOTLDef {
                                     && !c2.get_from().is_turning_direction_at(c2.get_to());
                                 let hasContRel = (forbidden && at(i1) != b's') || rightTurnConflict;
                                 if hasContRel {
-                                    me.m().base.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                                    self.base.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(
                                         c1.get_from(),
                                         c1.get_to(),
                                         c2.get_from(),
@@ -1323,7 +1323,7 @@ impl NBLoadedSUMOTLDef {
                                 // shortcut: NBEdge::get_connection returns CHBuilder_Connection, which has no indirectLeft field in this port, so indirectLeft is taken as false, upgrade: port NBEdge::getConnection returning NBEdge_Connection
                                 let indirectLeft = false;
                                 if isFoes && (at(i1) == b's' || (!hasContRel && at(i2) == b'G' && !indirectLeft)) {
-                                    me.m().base.myExtraConflicts.insert((i1, i2));
+                                    self.base.myExtraConflicts.borrow_mut().insert((i1, i2));
                                 }
                             }
                         }

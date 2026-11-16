@@ -1329,9 +1329,9 @@ impl NBOwnTLDef {
     pub fn compute_logic_and_conts(&mut self, brakingTimeSeconds: i32, onlyConts: bool) -> Ptr<NBTrafficLightLogic> {
         if self.myControlledNodes.len() == 1 {
             // otherwise, use values from previous call to initNeedsContRelation
-            self.myNeedsContRelation.clear();
+            self.myNeedsContRelation.borrow_mut().clear();
         }
-        self.myExtraConflicts.clear();
+        self.myExtraConflicts.borrow_mut().clear();
         let isNEMA = self.myType == TrafficLightType::NEMA;
         let brakingTime: SUMOTime = time2steps(brakingTimeSeconds as f64);
         let leftTurnTime: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.left-green.time") as f64);
@@ -1917,15 +1917,15 @@ impl NBOwnTLDef {
         if !self.myNeedsContRelationReady.get() {
             if self.myControlledNodes.len() > 0 {
                 // we use a dummy node just to maintain const-correctness
-                Ptr::new(self).m().myNeedsContRelation.clear();
+                self.myNeedsContRelation.borrow_mut().clear();
                 for n in self.myControlledNodes.clone() {
                     // shortcut: C++ registers the dummy with node n via its constructor; the port's constructor does not, upgrade: construct the definition boxed/in place
                     let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
                     dummy.set_participants_information();
                     let tllDummy = dummy.compute_logic_and_conts(0, true);
                     let _ = tllDummy; // C++: delete tllDummy
-                    let rel = dummy.myNeedsContRelation.clone();
-                    Ptr::new(self).m().myNeedsContRelation.extend(rel);
+                    let rel = dummy.myNeedsContRelation.borrow().clone();
+                    self.myNeedsContRelation.borrow_mut().extend(rel);
                     n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
                 }
             }
@@ -3204,7 +3204,7 @@ impl NBOwnTLDef {
                         if self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, controlledWithin) || rightTurnConflicts[i1] {
                             st[i1] = b'g';
                             if self.myControlledNodes.len() == 1 {
-                                self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2]));
+                                self.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2]));
                             }
                             if !isTurnaround[i1] && !hadGreenMajor[i1] && !rightTurnConflicts[i1] {
                                 *haveForbiddenLeftMover = true;
@@ -3248,7 +3248,7 @@ impl NBOwnTLDef {
                                 && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
                                     || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
                             {
-                                self.myExtraConflicts.insert((i1 as i32, i2 as i32));
+                                self.myExtraConflicts.borrow_mut().insert((i1 as i32, i2 as i32));
                             }
                         }
                     }

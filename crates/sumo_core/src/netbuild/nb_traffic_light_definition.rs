@@ -89,9 +89,9 @@ pub struct NBTrafficLightDefinition {
     pub myOffset: SUMOTime,
     /// The algorithm type for the traffic light
     pub myType: TrafficLightType,
-    pub myNeedsContRelation: NBTrafficLightDefinition_NeedsContRelation,
+    pub myNeedsContRelation: std::cell::RefCell<NBTrafficLightDefinition_NeedsContRelation>,
     pub myNeedsContRelationReady: std::cell::Cell<bool>,
-    pub myExtraConflicts: NBTrafficLightDefinition_ExtraConflicts,
+    pub myExtraConflicts: std::cell::RefCell<NBTrafficLightDefinition_ExtraConflicts>,
     pub myExtraConflictsReady: std::cell::Cell<bool>,
 }
 
@@ -179,9 +179,9 @@ impl NBTrafficLightDefinition {
             mySubID: programID.to_string(),
             myOffset: offset,
             myType: type_,
-            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelation: std::cell::RefCell::new(BTreeSet::new()),
             myNeedsContRelationReady: std::cell::Cell::new(false),
-            myExtraConflicts: BTreeSet::new(),
+            myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
@@ -213,9 +213,9 @@ impl NBTrafficLightDefinition {
             mySubID: programID.to_string(),
             myOffset: offset,
             myType: type_,
-            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelation: std::cell::RefCell::new(BTreeSet::new()),
             myNeedsContRelationReady: std::cell::Cell::new(false),
-            myExtraConflicts: BTreeSet::new(),
+            myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
@@ -245,9 +245,9 @@ impl NBTrafficLightDefinition {
             mySubID: programID.to_string(),
             myOffset: offset,
             myType: type_,
-            myNeedsContRelation: BTreeSet::new(),
+            myNeedsContRelation: std::cell::RefCell::new(BTreeSet::new()),
             myNeedsContRelationReady: std::cell::Cell::new(false),
-            myExtraConflicts: BTreeSet::new(),
+            myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
         }
     }
@@ -858,7 +858,7 @@ impl NBTrafficLightDefinition {
             self.init_needs_cont_relation();
             // assert(myNeedsContRelationReady)
         }
-        self.myNeedsContRelation.contains(&NBTrafficLightDefinition_StreamPair::new(fromE, toE, otherFromE, otherToE))
+        self.myNeedsContRelation.borrow().contains(&NBTrafficLightDefinition_StreamPair::new(fromE, toE, otherFromE, otherToE))
     }
 
     /// C++: `bool NBTrafficLightDefinition::extraConflict(int, int) const` [const, virtual]
@@ -871,7 +871,7 @@ impl NBTrafficLightDefinition {
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
         self.init_extra_conflicts();
-        self.myExtraConflicts.contains(&(index, foeIndex))
+        self.myExtraConflicts.borrow().contains(&(index, foeIndex))
     }
 
     /// C++: `void NBTrafficLightDefinition::initNeedsContRelation() const` [const, virtual]
@@ -893,7 +893,7 @@ impl NBTrafficLightDefinition {
             let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
             dummy.init_needs_cont_relation();
             // the C++ code assigns through a const method, so the cache is written via Ptr::m
-            Ptr::new(self).m().myNeedsContRelation = dummy.myNeedsContRelation.clone();
+            *self.myNeedsContRelation.borrow_mut() = dummy.myNeedsContRelation.borrow().clone();
             for node in self.myControlledNodes.clone() {
                 node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
             }
@@ -929,7 +929,7 @@ impl NBTrafficLightDefinition {
             // shortcut: C++ deletes tllDummy here; Ptr-owned logics have no ownership convention yet, so it is leaked, upgrade: free it once Ptr ownership is defined
             let _ = tllDummy;
             // the C++ code assigns through a const method, so the cache is written via Ptr::m
-            Ptr::new(self).m().myExtraConflicts = dummy.myExtraConflicts.clone();
+            *self.myExtraConflicts.borrow_mut() = dummy.myExtraConflicts.borrow().clone();
             for node in self.myControlledNodes.clone() {
                 node.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
             }

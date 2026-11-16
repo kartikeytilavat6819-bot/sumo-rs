@@ -21,7 +21,7 @@ pub struct CCHGraph<E, V> {
     /// (tail node, head node) -> arc index
     pub myArcOf: HashMap<(u32, u32), u32>,
     /// per-arc CONNECTION-level permission bitmask, accumulated per primed class (see primeClassMask); mutable lazy cache
-    pub myArcPerm: Vec<SVCPermissions>,
+    pub myArcPerm: std::cell::RefCell<Vec<SVCPermissions>>,
     /// the classes already primed into myArcPerm
     pub myPrimedClasses: std::cell::Cell<SVCPermissions>,
     /// edge numerical id -> arcs whose weight reads that edge (head + folded via edges); the reverse image of computeArcWeightRaw's inputs
@@ -320,7 +320,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     #[allow(unused_variables)]
     pub fn compute_arc_weight(&self, a: u32, effort: CCHGraph_EffortOperation, maskClass: SUMOVehicleClass, veh: Ptr<V>, time: f64) -> u32 {
         if maskClass != utils::common::sumo_vehicle_class::SVC_IGNORING
-                && (((self.myArcPerm[a as usize] & maskClass) == 0)
+                && (((self.myArcPerm.borrow()[a as usize] & maskClass) == 0)
                     || ({
                         // shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
                         let perm: SVCPermissions = panic!("shortcut: CCHGraph::computeArcWeight needs E::getPermissions, not in RouterEdge");
@@ -360,7 +360,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_class_masks(&self) {
-        Ptr::new(self).m().myArcPerm.fill(0);
+        self.myArcPerm.borrow_mut().fill(0);
         self.myPrimedClasses.set(0);
     }
 
@@ -400,7 +400,6 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
         if vClass == utils::common::sumo_vehicle_class::SVC_IGNORING || (self.myPrimedClasses.get() & vClass) == vClass {
             return;
         }
-        let this = Ptr::new(self);
         for n in 0..self.myNodeToEdge.len() as u32 {
             for follower in self.myNodeToEdge[n as usize].via_successors(vClass, false) {
                 let toNode = self.node_of(follower.0);
@@ -408,7 +407,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
                     continue;
                 }
                 if let Some(&a) = self.myArcOf.get(&(n, toNode)) {
-                    this.m().myArcPerm[a as usize] |= vClass;
+                    self.myArcPerm.borrow_mut()[a as usize] |= vClass;
                 }
             }
         }
@@ -447,7 +446,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
             myArcHead: arg0.myArcHead.clone(),
             myArcVia: arg0.myArcVia.clone(),
             myArcOf: arg0.myArcOf.clone(),
-            myArcPerm: arg0.myArcPerm.clone(),
+            myArcPerm: std::cell::RefCell::new(arg0.myArcPerm.borrow().clone()),
             myPrimedClasses: std::cell::Cell::new(arg0.myPrimedClasses.get()),
             myEdgeToArcs: arg0.myEdgeToArcs.clone(),
             myTazSrcNodes: arg0.myTazSrcNodes.clone(),
