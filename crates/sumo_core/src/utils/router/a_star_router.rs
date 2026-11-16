@@ -62,7 +62,18 @@ impl<E, V, M> std::ops::DerefMut for AStarRouter<E, V, M> {
     }
 }
 
+/// The `AStarRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn astar_compute<E: RouterEdge<V>, V: RouterVehicle, M>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<AStarRouter<E, V, M>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarRouter<E, V, M> {
+    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(astar_compute::<E, V, M>);
+        self
+    }
+
     /// C++: `void AStarRouter::AStarRouter<E, V, M>(const std::vector<E *> &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
     /// Constructor
     // AStarRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation operation, const std::shared_ptr<const LookupTable> lookup = nullptr,

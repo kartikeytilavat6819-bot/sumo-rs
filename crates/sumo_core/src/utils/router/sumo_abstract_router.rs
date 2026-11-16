@@ -11,6 +11,9 @@ use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterVehicl
 /// microsim/logging bindings, whose C++ operation is a pointer-to-member, not a router function.
 pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f64;
 
+/// The concrete router's `compute` (C++ virtual), installed by the subclass that implements it.
+pub type SUMOAbstractRouter_ComputeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<E>, Ptr<E>, Ptr<V>, SUMOTime, &mut Vec<Ptr<E>>, bool) -> bool;
+
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
 
@@ -98,6 +101,8 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
     /// The object's operation to perform for travel times (null in C++ means the effort is used as is)
     pub myTTOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
+    /// the concrete `compute` the pure-virtual base dispatches to (None: the base has no implementation)
+    pub myCompute: Option<SUMOAbstractRouter_ComputeFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -151,6 +156,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myErrorMsgHandler: msg_instance(unbuildIsWarning),
             myOperation: operation,
             myTTOperation: ttOperation,
+            myCompute: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -190,6 +196,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myErrorMsgHandler: other.myErrorMsgHandler,
             myOperation: other.myOperation,
             myTTOperation: other.myTTOperation,
+            myCompute: other.myCompute,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -323,8 +330,11 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        // shortcut: pure virtual, subclasses (e.g. DijkstraRouter) implement compute() and the Rust base has no dynamic dispatch yet, upgrade when routers are trait objects
-        panic!("shortcut: SUMOAbstractRouter::compute is pure virtual, no dynamic dispatch yet")
+        // shortcut: pure virtual with no vtable; the subclass installs its compute in myCompute, a router without one still panics, upgrade when routers are trait objects
+        match self.myCompute {
+            Some(compute) => compute(self, from, to, vehicle, msTime, into, silent),
+            None => panic!("shortcut: SUMOAbstractRouter::compute is pure virtual and this router has no compute installed"),
+        }
     }
 
     /// C++: `bool SUMOAbstractRouter::compute(const E *, double, const E *, double, const V *const, SUMOTime, std::vector<const E *> &, bool)`
