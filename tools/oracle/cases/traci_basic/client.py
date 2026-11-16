@@ -65,7 +65,7 @@ def sumo_command(side, port, net, rou, ours, extra=()):
                 "--no-step-log", "true", "--no-warnings", "true", *extra]
     flags = "".join(f" {x}" for x in extra)
     # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
-    inner = (f"SUMO_HOME=$($HOME/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)') "
+    inner = (f"SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo "
              f"$HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
              f"--remote-port {port} --no-step-log true --no-warnings true{flags}")
     return ["wsl", "-e", "bash", "-lc", inner]
