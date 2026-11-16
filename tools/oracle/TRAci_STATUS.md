@@ -14,18 +14,18 @@ measuring the wrong one produced a false **40/62** reading on the night that che
 
 ## Score
 
-**56 of 62 probes match C++ 1.28.0** (junction 28/31, signal 28/31). Up from 9/32 at the start of the
-session, after `VariableWrapper`, `Vehicle::handleVariable`, the wrapper sink and the panic-to-error-status
-conversion landed.
+**58 of 62 probes match C++ 1.28.0** (junction 29/31, signal 29/31). Up from 9/32 at the start of the
+session, after `VariableWrapper`, `Vehicle::handleVariable`, the wrapper sink, the panic-to-error-status
+conversion and a null-RNG fix in `MSVehicleType::computeChosenSpeedDeviation` (C++ allows a null `SumoRNG*`
+and means "default generator"; we dereferenced it and panicked, which made `vehicle.add` unusable).
 
 Probes run in separate sessions, so one crash costs only its own row.
 
-## Remaining mismatches (3 per case, same three)
+## Remaining mismatches (2 per case, the same two)
 
 | Probe | C++ | Ours | Cause |
 |---|---|---|---|
-| `vehicle.setRoute(v0, current)` + step + getRoute | `TraCIException: Route replacement failed for vehicle 'v0' (No connection between edge …)` | junction: returns the unchanged route instead of failing; signal: `Vehicle 'v0' is not known` | C++ rejects the route when `gCheckRoutes` is set; our `replace_route_edges` (`ms_base_vehicle.rs:1685`) only **warns** and continues |
-| `vehicle.add(vnew, route0)` + step + getIDList | the new vehicle appears in `getIDList` | `TraCIException: null Ptr dereference` | `ms_vehicle_type.rs:303` always passes a null-able RNG into the vehicle constructor; it must pass `None` when null |
+| `vehicle.setRoute(v0, current)` + step + getRoute | `TraCIException: Route replacement failed for vehicle 'v0' (No connection between edge …)` | junction: returns the unchanged route instead of failing; signal: `Vehicle 'v0' is not known` | C++ rejects the route when `gCheckRoutes` is set; our `replace_route_edges` (`ms_base_vehicle.rs:1685`) only **warns** and continues. Deliberately not changed: flipping it alters route validation for every simulation, not just TraCI |
 | `vehicle.getJunctionFoes(v0)` | `()` | `TraCIException: Vehicle::getJunctionFoes not yet ported` | `LinkBits` is `()` in `ms_logic_junction.rs` (the same `Unmapped` class `VariableWrapper` was) |
 
 ## Fixed this session, in order of user impact

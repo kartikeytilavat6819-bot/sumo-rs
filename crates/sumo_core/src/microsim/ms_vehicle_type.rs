@@ -300,7 +300,15 @@ impl MSVehicleType {
     #[allow(unused_variables)]
     pub fn compute_chosen_speed_deviation(&self, speedFactorOverride: f64, rng: Ptr<SumoRNG>, minDev: f64) -> f64 {
         if speedFactorOverride < 0. {
-            round_decimal(max2(minDev, self.myParameter.speedFactor.sample(Some(rng.m())).unwrap_or_else(|e| panic!("{}", e))), g_precision_random())
+            // C++ passes a possibly-null SumoRNG* here (vehicle.add from TraCI did); sample() treats null as
+            // "use the default generator". Dereferencing the null Ptr instead panicked with
+            // "null Ptr dereference" and made vehicle.add unusable.
+            let sampled = if rng.is_null() {
+                self.myParameter.speedFactor.sample(None)
+            } else {
+                self.myParameter.speedFactor.sample(Some(rng.m()))
+            };
+            round_decimal(max2(minDev, sampled.unwrap_or_else(|e| panic!("{}", e))), g_precision_random())
         } else {
             speedFactorOverride
         }
