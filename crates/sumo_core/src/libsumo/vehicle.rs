@@ -2763,6 +2763,15 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     //         throw TraCIException(e.what());
     //     }
     // }
+    /// C++ `MSBaseVehicle::getRouterTT() const`; the ms_base_vehicle.rs method is still a stub, so the mode branch is here
+    fn router_tt_of(veh: &Ptr<MSBaseVehicle>) -> &'static mut MSVehicleRouter {
+        if veh.get_routing_mode() == ROUTING_MODE_AGGREGATED {
+            MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), &Default::default())
+        } else {
+            MSNet::get_instance().get_mut().unwrap().get_router_tt(veh.get_rng_index(), &Default::default())
+        }
+    }
+
     #[allow(unused_variables)]
     pub fn change_target(vehID: &str, edgeID: &str) {
         let veh = Helper::get_vehicle(vehID);
@@ -2773,7 +2782,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         }
         // change the final edge of the route and reroute
         let success = veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:changeTarget",
-                                      veh.get_router_tt(), onInit, false, false, destEdge);
+                                      Self::router_tt_of(&veh), onInit, false, false, destEdge);
         if !success {
             panic!("{}", format!("ChangeTarget failed for vehicle '{}', destination edge '{}' unreachable.", veh.get_id(), edgeID));
         }
@@ -3403,7 +3412,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             veh.m().set_routing_mode(ROUTING_MODE_AGGREGATED_CUSTOM);
         }
         veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteTraveltime",
-                        veh.get_router_tt(), Self::is_on_init(vehID), false, false, Ptr::default());
+                        Self::router_tt_of(&veh), Self::is_on_init(vehID), false, false, Ptr::default());
         if currentTravelTimes && routingMode == ROUTING_MODE_DEFAULT {
             veh.m().set_routing_mode(routingMode);
         }
@@ -3553,7 +3562,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         if !veh.is_on_road() && veh.get_parameter().was_set(VEHPARS_FORCE_REROUTE) && veh.get_route().get_edges().len() == 2 {
             // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
             veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:moveTo-tripInsertion",
-                            veh.get_router_tt(), true, false, false, Ptr::default());
+                            Self::router_tt_of(&veh.cast::<MSBaseVehicle>()), true, false, false, Ptr::default());
         }
         // find edge in the remaining route
         let edges = veh.get_route().get_edges();
