@@ -102,7 +102,11 @@ where
 }
 
 // shortcut: C++ dynamic_cast<_AccessEdge*> stand-in: both AccessEdge ctors tag the line "!access" and no other intermodal edge does, upgrade to a type flag when the edge kinds get one
-fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>> {
+fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    V: RouterVehicle,
+{
     if edge.get_line() == "!access" { edge.cast() } else { Ptr::null() }
 }
 
@@ -1297,7 +1301,7 @@ where
                     } else {
                         // check for restricted access
                         for out in carSplit.get_successors(SVC_IGNORING).clone() {
-                            let aOut = as_access_edge(out);
+                            let aOut = as_access_edge::<E, L, N, V>(out);
                             if !aOut.is_null() && out.m().remove_successor(prevArr) {
                                 out.m().add_successor(arrConn, Ptr::null());
                                 let carSplitBefore = self.myAccessSplits[&self.myCarLookup[&stopEdge]][splitIndex as usize];

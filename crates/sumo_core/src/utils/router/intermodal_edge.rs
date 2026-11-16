@@ -54,7 +54,7 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
 
 impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V>
 where
-    E: RouterEdge<V>,
+    E: RouterEdge<V, Node = N, Lane = L>,
     V: RouterVehicle,
 {
     fn edge_numerical_id(&self) -> i32 {

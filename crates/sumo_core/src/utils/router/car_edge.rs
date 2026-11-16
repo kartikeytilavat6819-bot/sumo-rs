@@ -109,7 +109,8 @@ where
                 list.push(e);
             }
         }
-        let me = Ptr::new(self).m();
+        // C++ fills the mutable per-vClass cache from a const method
+        let me = unsafe { &mut *(self as *const Self as *mut Self) };
         me.myClassesSuccessorMap.entry(vClass).or_default().extend(list);
         me.myClassesSuccessorMap.get(&vClass).unwrap()
     }
@@ -163,7 +164,8 @@ where
                 list.push(e);
             }
         }
-        let me = Ptr::new(self).m();
+        // C++ fills the mutable per-vClass cache from a const method
+        let me = unsafe { &mut *(self as *const Self as *mut Self) };
         let viaMap = if ignoreTransientPermissions { &mut me.myOrigClassesViaSuccessorMap } else { &mut me.myClassesViaSuccessorMap };
         viaMap.entry(vClass).or_default().extend(list);
         viaMap.get(&vClass).unwrap()

@@ -1,7 +1,7 @@
 //! Port of utils/router/PedestrianRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 use crate::utils::router::intermodal_edge::get_sidewalk;
 use crate::utils::router::intermodal_network::IntermodalNetwork;
 
@@ -41,7 +41,12 @@ impl<E, L, N, V> std::ops::DerefMut for PedestrianRouter<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
+impl<E, L, N, V> PedestrianRouter<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    N: RouterNode<Edge = E>,
+    V: RouterVehicle,
+{
     /// C++: `void PedestrianRouter::PedestrianRouter<E, L, N, V>()`
     /// Constructor
     // PedestrianRouter():
