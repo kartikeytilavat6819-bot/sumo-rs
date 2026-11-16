@@ -1227,12 +1227,23 @@ impl Helper {
         let cmax = [b.xmax() as f32, b.ymax() as f32];
         match domain {
             CMD_GET_BUSSTOP_VARIABLE | CMD_GET_CHARGINGSTATION_VARIABLE | CMD_GET_PARKINGAREA_VARIABLE => {
-                // shortcut: MSNet::get_stopping_places returns Unmapped (NamedObjectCont), iteration needs ms_net.rs mapped
-                panic!("shortcut: MSNet::get_stopping_places is not mapped yet, cannot collect stopping places in range");
+                let category = match domain {
+                    CMD_GET_BUSSTOP_VARIABLE => SUMO_TAG_BUS_STOP,
+                    CMD_GET_CHARGINGSTATION_VARIABLE => SUMO_TAG_CHARGING_STATION,
+                    _ => SUMO_TAG_PARKING_AREA,
+                };
+                for (_, stop) in MSNet::get_instance().get_stopping_places(category).iter() {
+                    if shape.distance2d(&stop.get_center_pos(), false) <= range {
+                        into.insert(stop.cast::<Named>());
+                    }
+                }
             }
             CMD_GET_CALIBRATOR_VARIABLE => {
-                // shortcut: MSCalibrator::getInstances is not mapped yet
-                panic!("shortcut: MSCalibrator::getInstances is not mapped yet, cannot collect calibrators in range");
+                for (_, calib) in MSCalibrator::get_instances().iter() {
+                    if shape.distance2d(&calib.get_lane().get_shape()[0], false) <= range {
+                        into.insert(Ptr::from_mut(&mut calib.m().base3.base));
+                    }
+                }
             }
             CMD_GET_INDUCTIONLOOP_VARIABLE | CMD_GET_JUNCTION_VARIABLE | CMD_GET_LANEAREA_VARIABLE | CMD_GET_POI_VARIABLE | CMD_GET_POLYGON_VARIABLE => {
                 // shortcut: NamedRTree is Unmapped in the detector and shape ports, Search cannot be called yet
