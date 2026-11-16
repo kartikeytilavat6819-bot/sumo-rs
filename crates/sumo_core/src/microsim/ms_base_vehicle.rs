@@ -2995,7 +2995,7 @@ impl MSBaseVehicle {
     pub fn save_state(&mut self, out: &mut OutputDevice) {
         // the parameters may hold the name of a vTypeDistribution but we are interested in the actual type
         let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
-        self.myParameter.write(out, panic!("shortcut: the global OptionsCont (getOptions) is not ported yet, so the vehicle parameter write cannot run"), SUMO_TAG_VEHICLE, &typeID);
+        utils::options::options_cont::with_options(|oc| self.myParameter.write(out, oc, SUMO_TAG_VEHICLE, &typeID));
         out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
         let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
         out.write_attr(SUMO_ATTR_DISTANCE, &os);
@@ -3630,8 +3630,8 @@ impl MSBaseVehicle {
             stop.lane = MSLane::dictionary_2(&stopPar.lane);
             if stop.lane.is_null() {
                 // must be an opposite stop
-                // shortcut: SUMOVehicleParameter::Stop is not Clone (durationDist is Unmapped), so the copy for interpretOppositeStop cannot be made yet
-                stop.lane = panic!("shortcut: opposite-stop interpretation needs a copy of SUMOVehicleParameter::Stop");
+                let mut tmp = stopPar.clone();
+                stop.lane = Self::interpret_opposite_stop(&mut tmp);
             }
             if !stop.lane.allows_vehicle_class_2(self.myType.get_vehicle_class(), self.get_routing_mode()) {
                 *errorMsg = format!("Vehicle '{}' is not allowed to stop on lane '{}'.", self.myParameter.id, stopPar.lane);
