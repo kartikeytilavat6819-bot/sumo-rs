@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <vehicle id="Krauss_0" type="Krauss" route="r0" depart="0"/>
+  <vehicle id="Krauss_1" type="Krauss" route="r0" depart="10"/>
+  <vehicle id="IDM_0" type="IDM" route="r0" depart="20"/>
+  <vehicle id="IDM_1" type="IDM" route="r0" depart="30"/>
+  <vehicle id="EIDM_0" type="EIDM" route="r0" depart="40"/>
+  <vehicle id="EIDM_1" type="EIDM" route="r0" depart="50"/>
+  <vehicle id="Wiedemann_0" type="Wiedemann" route="r0" depart="60"/>
+  <vehicle id="Wiedemann_1" type="Wiedemann" route="r0" depart="70"/>
+  <vehicle id="W99_0" type="W99" route="r0" depart="80"/>
+  <vehicle id="W99_1" type="W99" route="r0" depart="90"/>
+  <vehicle id="ACC_0" type="ACC" route="r0" depart="100"/>
+  <vehicle id="ACC_1" type="ACC" route="r0" depart="105"/>
+  <vehicle id="CACC_0" type="CACC" route="r0" depart="110"/>
+  <vehicle id="CACC_1" type="CACC" route="r0" depart="115"/>
+</routes>
