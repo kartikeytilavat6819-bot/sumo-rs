@@ -498,7 +498,7 @@ impl MSDevice_Taxi {
             MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
         });
         // delete myIdleAlgorithm
-        drop(unsafe { Box::from_raw(self.myIdleAlgorithm.as_raw()) });
+        delete_idle_algorithm(self.myIdleAlgorithm);
         // base class destructor runs after the derived one in C++
         self.base.drop_();
     }
@@ -1849,9 +1849,9 @@ impl MSDevice_Taxi {
         let algo = holder.get_string_param("device.taxi.idle-algorithm", false, "");
         let idle: Ptr<MSIdling>;
         if algo == "stop" {
-            idle = { panic!("shortcut: MSIdling_Stop constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_Stop::new()))).cast::<MSIdling>();
         } else if algo == "randomCircling" {
-            idle = { panic!("shortcut: MSIdling_RandomCircling constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_RandomCircling::new()))).cast::<MSIdling>();
             // make sure simulation terminates
             let depart = if holder.get_parameter().departProcedure == DepartDefinition::GIVEN {
                 holder.get_parameter().depart
