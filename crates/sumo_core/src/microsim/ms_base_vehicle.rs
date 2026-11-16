@@ -1341,7 +1341,7 @@ impl MSBaseVehicle {
                 source = self.myRoute.get_first_edge();
             }
         } else {
-            source = self.myRoute.index_op(self.get_reroute_origin() as i32);
+            source = self.myRoute.index_op(self.base.get_reroute_origin() as i32);
         }
         let mut sink = sink;
         if sink.is_null() {
@@ -1654,7 +1654,7 @@ impl MSBaseVehicle {
         }
         let mut oldSize = edges.len() as i32;
         if !onInit {
-            let origin = self.myRoute.index_op(self.get_reroute_origin() as i32);
+            let origin = self.myRoute.index_op(self.base.get_reroute_origin() as i32);
             if origin != self.get_edge() && edges[0] == origin {
                 edges.insert(0, self.get_edge());
                 oldSize = edges.len() as i32;
