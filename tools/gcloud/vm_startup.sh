@@ -13,7 +13,7 @@ cat > /usr/local/bin/idle_stop.sh <<'EOF'
 idle=0
 while true; do
   sleep 60
-  if pgrep -f 'vm_gate_run|cargo|sumo ' >/dev/null; then idle=0; else idle=$((idle+1)); fi
+  if pgrep -f 'vm_gate_run|/home/gate/run_|cargo|sumo ' >/dev/null; then idle=0; else idle=$((idle+1)); fi
   [ $idle -ge 30 ] && shutdown -h now
 done
 EOF
