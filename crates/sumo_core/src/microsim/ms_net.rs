@@ -11,6 +11,7 @@ use utils::common::msg_handler::write_message;
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::a_star_router::AStarRouter;
 use crate::microsim::ms_router_defs::MSMapMatcher;
+use crate::mesosim::me_loop::MELoop;
 
 thread_local! {
     static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
@@ -402,8 +403,7 @@ impl MSNet {
         let max_depart_delay = opt_time("max-depart-delay");
         let random_depart_offset = opt_time("random-depart-offset");
         if MSGlobals::use_meso_sim() {
-            // shortcut: MSGlobals::gMesoNet (MELoop) is not wired into MSNet yet, mesoscopic runs are refused
-            panic!("mesoscopic simulation is not wired into MSNet yet");
+            crate::microsim::ms_globals::set_meso_net(leak_ptr(MELoop::new(opt_time("meso-recheck"))));
         }
         let mut net = Box::new(MSNet {
             base: Parameterised::new(),
@@ -569,6 +569,10 @@ impl MSNet {
         delete_ptr(self.myInsertionEvents);
         self.myInsertionEvents = Ptr::null();
         delete_ptr(self.myEdgeWeights);
+        if MSGlobals::use_meso_sim() {
+            delete_ptr(crate::microsim::ms_globals::meso_net());
+            crate::microsim::ms_globals::set_meso_net(Ptr::null());
+        }
         for (_, router) in std::mem::take(&mut self.myRouterTT) {
             delete_ptr(router);
         }
@@ -1106,7 +1110,7 @@ impl MSNet {
         self.myLogics.m().check2_switch(self.myStep);
 
         if MSGlobals::use_meso_sim() {
-            panic!("mesoscopic simulation is not wired into MSNet yet");
+            crate::microsim::ms_globals::meso_net().m().simulate(self.myStep);
         } else {
             // assure all lanes with vehicles are 'active'
             self.myEdges.m().patch_active_lanes();
@@ -1941,7 +1945,19 @@ impl MSNet {
     pub fn clear_state(&mut self, step: SUMOTime, quickReload: bool) {
         MSGlobals::set_clear_state(true);
         if MSGlobals::use_meso_sim() {
-            panic!("mesoscopic simulation is not wired into MSNet yet");
+            crate::microsim::ms_globals::meso_net().m().clear_state();
+            for edge in MSEdge::get_all_edges().iter() {
+                let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge, 0.);
+                while !segment.is_null() {
+                    segment.m().clear_state();
+                    segment = segment.m().get_next_segment();
+                }
+                for lane in edge.get_lanes().iter() {
+                    for link in lane.get_link_cont().iter() {
+                        link.m().clear_state();
+                    }
+                }
+            }
         } else {
             for edge in MSEdge::get_all_edges().iter() {
                 for lane in edge.get_lanes().iter() {
