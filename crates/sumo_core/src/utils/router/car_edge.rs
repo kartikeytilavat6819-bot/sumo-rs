@@ -39,8 +39,10 @@ impl<E, L, N, V> std::ops::DerefMut for CarEdge<E, L, N, V> {
 
 impl<E, L, N, V> CarEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void CarEdge::CarEdge<E, L, N, V>(int, const E *, const double)`
     // CarEdge(int numericalID, const E* edge, const double pos = -1.) :
