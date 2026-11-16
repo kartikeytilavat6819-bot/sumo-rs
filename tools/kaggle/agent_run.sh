@@ -23,9 +23,10 @@ cat > routes.xml <<'EOF'
 </routes>
 EOF
 run_side() {  # $1=label $2=sumo binary
-    "$2" -n net.xml -r routes.xml --no-step-log --end 200 --save-state.times 60 --save-state.prefix "$1_st" --save-state.suffix .xml --save-state.transportables true --tripinfo-output "$1_straight_ti.xml" --personinfo-output "$1_straight_pi.xml" >"$1_straight.log" 2>&1
+    RUST_BACKTRACE=1 "$2" -n net.xml -r routes.xml --no-step-log --end 200 --save-state.times 60 --save-state.prefix "$1_st" --save-state.suffix .xml --save-state.transportables true --tripinfo-output "$1_straight_ti.xml" --personinfo-output "$1_straight_pi.xml" >"$1_straight.log" 2>&1
     echo "$1 straight exit $?"
     tail -n 4 "$1_straight.log"
+    grep -E "sumo_core::|at crates" "$1_straight.log" | head -n 14
     STATE=$(ls "$1"_st_*.xml 2>/dev/null | head -1)
     echo "$1 state file: ${STATE:-none}"
     [ -n "$STATE" ] || return
