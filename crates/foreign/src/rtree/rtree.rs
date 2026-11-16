@@ -71,6 +71,27 @@ const UNIT_SPHERE_VOLUMES: [f32; 21] = [
 
 const MAX_STACK: usize = 32;
 
+/// Chooses the RectSphericalVolume of a tree. C++ specialises it for NamedRTree and
+/// LANE_RTREE_QUAL (float, 2 dims); every other RTree uses the RTree.h template.
+pub trait VolumeModel {
+    /// true for the float 2D specialisation (`.78539816f * (extent0 * extent0 + extent1 * extent1)`)
+    const FLOAT_2D_SPECIALISED: bool;
+}
+
+/// The RTree.h template RectSphericalVolume (default)
+pub struct TemplateVolume;
+
+impl VolumeModel for TemplateVolume {
+    const FLOAT_2D_SPECIALISED: bool = false;
+}
+
+/// NamedRTree.h / MSLane.h RectSphericalVolume specialisation (float, 2 dims)
+pub struct Float2DVolume;
+
+impl VolumeModel for Float2DVolume {
+    const FLOAT_2D_SPECIALISED: bool = true;
+}
+
 /// C++ rtree_min: `(a<b?a:b)`
 fn rtree_min<T: PartialOrd + Copy>(a: T, b: T) -> T {
     if a < b { a } else { b }
@@ -146,13 +167,13 @@ struct PartitionVars<D, E, const N: usize, R> {
 }
 
 /// C++ RTree<...>. Use `RTree::<D, E, NUMDIMS, R, MAXNODES, MINNODES>` with the template arguments in C++ order.
-pub struct RTree<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize> {
+pub struct RTree<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize, V: VolumeModel = TemplateVolume> {
     root: Box<Node<D, E, NUMDIMS>>,
-    _real: PhantomData<R>,
+    _real: PhantomData<(R, V)>,
 }
 
-impl<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize> Default
-    for RTree<D, E, NUMDIMS, R, MAXNODES, MINNODES>
+impl<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize, V: VolumeModel> Default
+    for RTree<D, E, NUMDIMS, R, MAXNODES, MINNODES, V>
 where
     D: Clone + PartialEq,
     E: Coord,
@@ -230,8 +251,8 @@ impl<'a, D, E, const N: usize> RTreeIter<'a, D, E, N> {
     }
 }
 
-impl<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize>
-    RTree<D, E, NUMDIMS, R, MAXNODES, MINNODES>
+impl<D, E, const NUMDIMS: usize, R, const MAXNODES: usize, const MINNODES: usize, V: VolumeModel>
+    RTree<D, E, NUMDIMS, R, MAXNODES, MINNODES, V>
 where
     D: Clone + PartialEq,
     E: Coord,
@@ -344,6 +365,12 @@ where
 
     /// C++ RectSphericalVolume.
     fn rect_spherical_volume(rect: &Rect<E, NUMDIMS>) -> R {
+        if V::FLOAT_2D_SPECIALISED && NUMDIMS == 2 {
+            // C++ NAMED_RTREE_QUAL / LANE_RTREE_QUAL::RectSphericalVolume (float literal, float arithmetic)
+            let extent0 = (rect.max[0] - rect.min[0]).to_real::<R>();
+            let extent1 = (rect.max[1] - rect.min[1]).to_real::<R>();
+            return R::from_f64(f64::from(0.785_398_16_f32)) * (extent0 * extent0 + extent1 * extent1);
+        }
         let mut sum_of_squares = R::from_f64(0.0);
         for index in 0..NUMDIMS {
             let half_extent = (rect.max[index].to_real::<R>() - rect.min[index].to_real::<R>()) * R::from_f64(0.5);
@@ -926,11 +953,21 @@ mod tests {
         assert!((v - 2.0 * std::f32::consts::PI).abs() < 1e-4, "{v}");
 
         // 3D cube side 2: radius sqrt(3), volume = r^3 * 4.188790 (table value)
-        let cube = RTree::<u32, f32, 3, f32, 8, 4>::calc_rect_volume(&Rect {
+        let cube = RTree::<u32, f32, 3, f32, 8, 4, TemplateVolume>::calc_rect_volume(&Rect {
             min: [0.0f32, 0.0, 0.0],
             max: [2.0, 2.0, 2.0],
         });
         let expected = 3.0f32.sqrt().powi(3) * 4.188790;
         assert!((cube - expected).abs() < 1e-3, "{cube} vs {expected}");
+    }
+
+    #[test]
+    fn float_2d_volume_matches_named_rtree_override() {
+        // C++ NamedRTree: .78539816f * (extent0 * extent0 + extent1 * extent1), exact float ops
+        type NamedTree = RTree<u32, f32, 2, f32, 8, 4, Float2DVolume>;
+        let square = Rect { min: [0.0f32, 0.0], max: [2.0, 2.0] };
+        assert_eq!(NamedTree::calc_rect_volume(&square), 0.785_398_16_f32 * (2.0f32 * 2.0 + 2.0 * 2.0));
+        let wide = Rect { min: [1.0f32, -1.0], max: [4.0, 0.0] };
+        assert_eq!(NamedTree::calc_rect_volume(&wide), 0.785_398_16_f32 * (3.0f32 * 3.0 + 1.0 * 1.0));
     }
 }
