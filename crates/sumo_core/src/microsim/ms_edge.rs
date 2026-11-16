@@ -51,7 +51,7 @@ pub struct MSEdge {
     /// The time of last insertion failure
     pub myLastFailedInsertionTime: std::cell::Cell<SUMOTime>,
     /// A cache for the rejected insertion attempts. Used to assure that no further insertion attempts are made on a lane where an attempt has already failed in the current time step if MSInsertionControl::myEagerInsertionCheck is off.
-    pub myFailedInsertionMemory: BTreeSet<i32>,
+    pub myFailedInsertionMemory: std::cell::RefCell<BTreeSet<i32>>,
     /// The crossed edges id for a crossing edge. On not crossing edges it is empty
     pub myCrossingEdges: Vec<String>,
     /// The succeeding edges
@@ -118,7 +118,7 @@ pub struct MSEdge {
     /// The bounding rectangle of end nodes incoming or outgoing edges for taz connectors or of my own start and end node for normal edges
     pub myBoundary: Boundary,
     /// List of waiting vehicles
-    pub myWaiting: Vec<Ptr<SUMOVehicle>>,
+    pub myWaiting: std::cell::RefCell<Vec<Ptr<SUMOVehicle>>>,
     /// Mesoscopic vehicle positions
     pub myCachedMesoPos: BTreeMap<Ptr<MEVehicle>, (f64, i32)>, // C++: std::map<const MEVehicle *, std::pair<double, int>>
     /// time stamp of mesoscopic vehicle positions
@@ -306,7 +306,7 @@ impl MSEdge {
             myFunction: function,
             myVaporizationRequests: 0,
             myLastFailedInsertionTime: std::cell::Cell::new(-1),
-            myFailedInsertionMemory: BTreeSet::new(),
+            myFailedInsertionMemory: std::cell::RefCell::new(BTreeSet::new()),
             myCrossingEdges: Vec::new(),
             mySuccessors: Vec::new(),
             myViaSuccessors: Vec::new(),
@@ -342,7 +342,7 @@ impl MSEdge {
             myClassesViaSuccessorMap: BTreeMap::new(),
             myOrigClassesViaSuccessorMap: BTreeMap::new(),
             myBoundary: Boundary::default(),
-            myWaiting: Vec::new(),
+            myWaiting: std::cell::RefCell::new(Vec::new()),
             myCachedMesoPos: BTreeMap::new(),
             myLastCacheUpdate: -1,
             myBidiEdge: Ptr::null(),
@@ -2103,23 +2103,22 @@ impl MSEdge {
             return false;
         }
         // determinism: the failed-insertion memory is a set of lane indices, so iteration order does not matter
-        let me: Ptr<MSEdge> = Ptr::new(self);
         if !forceCheck {
             if self.myLastFailedInsertionTime.get() == time {
-                if self.myFailedInsertionMemory.contains(&insertionLane.get_index()) {
+                if self.myFailedInsertionMemory.borrow().contains(&insertionLane.get_index()) {
                     // A vehicle was already rejected for the proposed insertionLane in this timestep
                     return false;
                 }
             } else {
                 // last rejection occurred in a previous timestep, clear cache
-                me.m().myFailedInsertionMemory.clear();
+                self.myFailedInsertionMemory.borrow_mut().clear();
             }
         }
         let success = insertionLane.m().insert_vehicle(vp.cast::<MSVehicle>().m());
         if !success {
             // constraints may enforce explicit re-ordering so we need to try other vehicles after failure
             if !insertionLane.base2.has_parameter(&format!("insertionOrder{}", vp.m().get_id())) {
-                me.m().myFailedInsertionMemory.insert(insertionLane.get_index());
+                self.myFailedInsertionMemory.borrow_mut().insert(insertionLane.get_index());
             }
         }
         success
@@ -3601,7 +3600,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        Ptr::new(self).m().myWaiting.push(vehicle);
+        self.myWaiting.borrow_mut().push(vehicle);
     }
 
     /// C++: `void MSEdge::removeWaiting(const SUMOVehicle *) const` [const]
@@ -3618,9 +3617,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        let meP = Ptr::new(self); let me = meP.m();
-        if let Some(i) = me.myWaiting.iter().position(|v| *v == vehicle) {
-            me.myWaiting.remove(i);
+        let mut waiting = self.myWaiting.borrow_mut();
+        if let Some(i) = waiting.iter().position(|v| *v == vehicle) {
+            waiting.remove(i);
         }
     }
 
@@ -3649,7 +3648,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_vehicle(&self, transportable: Ptr<MSTransportable>, position: f64) -> Ptr<SUMOVehicle> {
-        for vehicle in self.myWaiting.iter() {
+        // snapshot: the lookup calls back into the transportable, which may add or remove waiting vehicles
+        let waiting = self.myWaiting.borrow().clone();
+        for vehicle in waiting.iter() {
             let vehicle = *vehicle;
             if transportable.is_waiting_for(vehicle) {
                 if vehicle.is_stopped_in_range(position, G_STOP_TOLERANCE, true)
@@ -3688,7 +3689,7 @@ impl MSEdge {
     pub fn clear_state(&mut self) {
         self.myPersons.clear();
         self.myContainers.clear();
-        self.myWaiting.clear();
+        self.myWaiting.get_mut().clear();
     }
 
     /// C++: `void MSEdge::postLoadInitLaneChanger()`
