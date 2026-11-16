@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="324752522 324752521 324752524"/>
+  <route id="r1" edges="177308057 324752524"/>
+  <route id="r2" edges="-324752524 -324752521 -324752522"/>
+  <route id="r3" edges="324752524 -324752524"/>
+  <vehicle id="v0" route="r0" depart="75"/>
+  <vehicle id="v1" route="r1" depart="79"/>
+  <vehicle id="v2" route="r2" depart="83"/>
+  <vehicle id="v3" route="r3" depart="87"/>
+  <vehicle id="v4" route="r0" depart="91"/>
+  <vehicle id="v5" route="r1" depart="95"/>
+  <vehicle id="v6" route="r2" depart="99"/>
+  <vehicle id="v7" route="r3" depart="103"/>
+  <vehicle id="v8" route="r0" depart="107"/>
+  <vehicle id="v9" route="r1" depart="111"/>
+  <vehicle id="v10" route="r2" depart="115"/>
+  <vehicle id="v11" route="r3" depart="119"/>
+  <vehicle id="v12" route="r0" depart="123"/>
+  <vehicle id="v13" route="r1" depart="127"/>
+  <vehicle id="v14" route="r2" depart="131"/>
+  <vehicle id="v15" route="r3" depart="135"/>
+  <vehicle id="v16" route="r0" depart="139"/>
+  <vehicle id="v17" route="r1" depart="143"/>
+  <vehicle id="v18" route="r2" depart="147"/>
+  <vehicle id="v19" route="r3" depart="151"/>
+</routes>
