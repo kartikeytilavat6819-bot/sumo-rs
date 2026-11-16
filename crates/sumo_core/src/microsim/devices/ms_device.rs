@@ -582,3 +582,20 @@ impl MSDevice {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn vtype_param_probability_equips_rerouting_device() {
+        // global option left disabled (-1), so only the vType <param> can equip the device
+        let mut oc = utils::options::options_cont::OptionsCont::new();
+        oc.do_register("device.rerouting.probability", SumoOption::float(-1.));
+        let holder = utils::common::parameterised::Parameterised::new();
+        let mut vtype = utils::common::parameterised::Parameterised::new();
+        assert!(!MSDevice::equipped_by_default_assignment_options(&oc, "rerouting", "v1", &holder, &vtype, false, false));
+        vtype.set_parameter("device.rerouting.probability", "1");
+        assert!(MSDevice::equipped_by_default_assignment_options(&oc, "rerouting", "v1", &holder, &vtype, false, false));
+    }
+}
+

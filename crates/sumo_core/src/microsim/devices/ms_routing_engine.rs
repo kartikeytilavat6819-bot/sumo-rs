@@ -146,12 +146,8 @@ impl MSRoutingEngine {
                 st.myAdaptationWeight = weight;
             }
             if weight < 1. && interval > 0 {
-                let mut nextAdaptation: SUMOTime = -1;
-                if lastAdaption >= 0 {
-                    nextAdaptation = lastAdaption + interval;
-                }
-                let cmd = Box::into_raw(Box::new(MSRoutingEngine_StaticCommand { f: MSRoutingEngine::adapt_edge_efforts })) as *mut dyn crate::microsim::ms_event_control::Command;
-                MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd), nextAdaptation);
+                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so edge weights are never adapted; no reroute runs yet either (periodic reroute command unported), upgrade together with the reroute command port
+
             } else if period > 0 {
                 utils::common::msg_handler::write_warning("Rerouting is useless if the edge weights do not get updated!");
             }
