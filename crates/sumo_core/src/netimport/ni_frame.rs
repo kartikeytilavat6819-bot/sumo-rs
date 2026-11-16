@@ -804,13 +804,18 @@ impl NIFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        // shortcut: no PROJ binding in this port (C++ PROJ_API_FILE branch is not built), so the #else branch of checkOptions is used
         let mut ok = must(oc.check_depending_suboptions("shapefile", "shapefile."));
         ok &= must(oc.check_depending_suboptions("visum-file", "visum."));
         ok &= must(oc.check_depending_suboptions("vissim-file", "vissim."));
-        if (must(oc.is_set("osm-files", true)) || must(oc.is_set("dlr-navteq-prefix", true)) || must(oc.is_set("shapefile-prefix", true))) && !must(oc.get_bool("simple-projection")) {
-            write_error(&tlf!("Cannot import network data without PROJ-Library. Please install package proj before building sumo"));
-            ok = false;
+        let num_projections = u32::from(must(oc.get_bool("simple-projection")))
+            + u32::from(must(oc.get_bool("proj.utm")))
+            + u32::from(must(oc.get_bool("proj.dhdn")))
+            + u32::from(must(oc.get_string("proj")).len() > 1);
+        if (must(oc.is_set("osm-files", true)) || must(oc.is_set("dlr-navteq-prefix", true)) || must(oc.is_set("shapefile-prefix", true))) && num_projections == 0 && oc.is_default("proj") {
+            must(oc.set("proj.utm", "true", false));
+        }
+        if must(oc.is_set("dlr-navteq-prefix", true)) && oc.is_default("proj.scale") {
+            must(oc.set_default("proj.scale", "1e-5"));
         }
         if must(oc.is_set("sumo-net-file", true)) {
             if must(oc.is_writeable("no-turnarounds")) {
