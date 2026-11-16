@@ -153,42 +153,41 @@ static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_person: ms_person_is_person,
     is_container: ms_person_is_container,
     get_parameter: ms_person_get_parameter,
-    // shortcut: MSPerson getEdge/getNumericalID are not ported yet, base pure-virtual panic kept, upgrade when persons are simulated
-    get_edge: crate::utils::vehicle::sumo_traffic_object::default_get_edge,
-    get_lane: crate::utils::vehicle::sumo_traffic_object::default_get_lane,
-    get_speed: crate::utils::vehicle::sumo_traffic_object::default_get_speed,
-    get_position: crate::utils::vehicle::sumo_traffic_object::default_get_position,
-    get_numerical_id: crate::utils::vehicle::sumo_traffic_object::default_get_numerical_id,
-    get_random_seed: crate::utils::vehicle::sumo_traffic_object::default_get_random_seed,
-    get_vehicle_type: crate::utils::vehicle::sumo_traffic_object::default_get_vehicle_type,
-    get_v_type_parameter: crate::utils::vehicle::sumo_traffic_object::default_get_v_type_parameter,
+    get_edge: ms_person_get_edge,
+    get_lane: ms_person_get_lane,
+    get_speed: ms_person_get_speed,
+    get_position: ms_person_get_position,
+    get_numerical_id: ms_person_get_numerical_id,
+    get_random_seed: ms_person_get_random_seed,
+    get_vehicle_type: ms_person_get_vehicle_type,
+    get_v_type_parameter: ms_person_get_v_type_parameter,
     replace_vehicle_type: crate::utils::vehicle::sumo_traffic_object::default_replace_vehicle_type,
-    get_rng: crate::utils::vehicle::sumo_traffic_object::default_get_rng,
-    get_rng_index: crate::utils::vehicle::sumo_traffic_object::default_get_rng_index,
-    is_stopped: crate::utils::vehicle::sumo_traffic_object::default_is_stopped,
-    get_current_edge: crate::utils::vehicle::sumo_traffic_object::default_get_current_edge,
-    get_next_edge_ptr: crate::utils::vehicle::sumo_traffic_object::default_get_next_edge_ptr,
-    get_upcoming_edge_i_ds: crate::utils::vehicle::sumo_traffic_object::default_get_upcoming_edge_i_ds,
-    get_back_lane: crate::utils::vehicle::sumo_traffic_object::default_get_back_lane,
-    get_route_position: crate::utils::vehicle::sumo_traffic_object::default_get_route_position,
-    get_reroute_destination: crate::utils::vehicle::sumo_traffic_object::default_get_reroute_destination,
+    get_rng: ms_person_get_rng,
+    get_rng_index: ms_person_get_rng_index,
+    is_stopped: ms_person_is_stopped,
+    get_current_edge: ms_person_get_current_edge,
+    get_next_edge_ptr: ms_person_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: ms_person_get_upcoming_edge_i_ds,
+    get_back_lane: ms_person_get_back_lane,
+    get_route_position: ms_person_get_route_position,
+    get_reroute_destination: ms_person_get_reroute_destination,
     replace_route: crate::utils::vehicle::sumo_traffic_object::default_replace_route,
-    get_slope: crate::utils::vehicle::sumo_traffic_object::default_get_slope,
-    get_chosen_speed_factor: crate::utils::vehicle::sumo_traffic_object::default_get_chosen_speed_factor,
-    get_v_class: crate::utils::vehicle::sumo_traffic_object::default_get_v_class,
-    get_routing_mode: crate::utils::vehicle::sumo_traffic_object::default_get_routing_mode,
+    get_slope: ms_person_get_slope,
+    get_chosen_speed_factor: ms_person_get_chosen_speed_factor,
+    get_v_class: ms_person_get_v_class,
+    get_routing_mode: ms_person_get_routing_mode,
     set_routing_mode: crate::utils::vehicle::sumo_traffic_object::default_set_routing_mode,
-    get_max_speed: crate::utils::vehicle::sumo_traffic_object::default_get_max_speed,
-    get_waiting_time: crate::utils::vehicle::sumo_traffic_object::default_get_waiting_time,
-    get_previous_speed: crate::utils::vehicle::sumo_traffic_object::default_get_previous_speed,
-    get_acceleration: crate::utils::vehicle::sumo_traffic_object::default_get_acceleration,
-    get_position_on_lane: crate::utils::vehicle::sumo_traffic_object::default_get_position_on_lane,
-    get_back_position_on_lane: crate::utils::vehicle::sumo_traffic_object::default_get_back_position_on_lane,
-    get_angle: crate::utils::vehicle::sumo_traffic_object::default_get_angle,
-    has_arrived: crate::utils::vehicle::sumo_traffic_object::default_has_arrived,
-    has_influencer: crate::utils::vehicle::sumo_traffic_object::default_has_influencer,
-    is_selected: crate::utils::vehicle::sumo_traffic_object::default_is_selected,
-    get_device: crate::utils::vehicle::sumo_traffic_object::default_get_device,
+    get_max_speed: ms_person_get_max_speed,
+    get_waiting_time: ms_person_get_waiting_time,
+    get_previous_speed: ms_person_get_previous_speed,
+    get_acceleration: ms_person_get_acceleration,
+    get_position_on_lane: ms_person_get_position_on_lane,
+    get_back_position_on_lane: ms_person_get_back_position_on_lane,
+    get_angle: ms_person_get_angle,
+    has_arrived: ms_person_has_arrived,
+    has_influencer: ms_person_has_influencer,
+    is_selected: ms_person_is_selected,
+    get_device: ms_person_get_device,
 };
 
 /// The class holds a simulated person together with her movement stages
@@ -918,3 +917,48 @@ fn ms_person_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
     let p: &MSPerson = Ptr::new(o).cast::<MSPerson>().get().unwrap();
     p.get_parameter()
 }
+
+fn ms_person_of(o: &SUMOTrafficObject) -> &MSPerson {
+    Ptr::new(o).cast::<MSPerson>().get().unwrap()
+}
+
+// C++ MSTransportable overrides of SUMOTrafficObject, forwarded to the MSTransportable methods
+macro_rules! person_fwd {
+    ($name:ident, ($($a:ident : $t:ty),*), $ret:ty, $m:ident) => {
+        fn $name(o: &SUMOTrafficObject $(, $a: $t)*) -> $ret {
+            ms_person_of(o).$m($($a),*)
+        }
+    };
+}
+person_fwd!(ms_person_get_edge, (), Ptr<MSEdge>, get_edge);
+person_fwd!(ms_person_get_lane, (), Ptr<MSLane>, get_lane);
+person_fwd!(ms_person_get_speed, (), f64, get_speed);
+person_fwd!(ms_person_get_position, (arg: f64), Position, get_position);
+person_fwd!(ms_person_get_numerical_id, (), SUMOTrafficObject_NumericalID, get_numerical_id);
+person_fwd!(ms_person_get_random_seed, (), i64, get_random_seed);
+person_fwd!(ms_person_get_vehicle_type, (), &MSVehicleType, get_vehicle_type);
+person_fwd!(ms_person_get_v_type_parameter, (), &SUMOVTypeParameter, get_v_type_parameter);
+person_fwd!(ms_person_get_rng, (), Ptr<SumoRNG>, get_rng);
+person_fwd!(ms_person_get_rng_index, (), i32, get_rng_index);
+person_fwd!(ms_person_is_stopped, (), bool, is_stopped);
+person_fwd!(ms_person_get_current_edge, (), Ptr<MSEdge>, get_current_edge);
+person_fwd!(ms_person_get_next_edge_ptr, (), Ptr<MSEdge>, get_next_edge_ptr);
+person_fwd!(ms_person_get_upcoming_edge_i_ds, (), BTreeSet<SUMOTrafficObject_NumericalID>, get_upcoming_edge_i_ds);
+person_fwd!(ms_person_get_back_lane, (), Ptr<MSLane>, get_back_lane);
+person_fwd!(ms_person_get_route_position, (), i32, get_route_position);
+person_fwd!(ms_person_get_reroute_destination, (), Ptr<MSEdge>, get_reroute_destination);
+person_fwd!(ms_person_get_slope, (), f64, get_slope);
+person_fwd!(ms_person_get_chosen_speed_factor, (), f64, get_chosen_speed_factor);
+person_fwd!(ms_person_get_v_class, (), SUMOVehicleClass, get_v_class);
+person_fwd!(ms_person_get_routing_mode, (), i32, get_routing_mode);
+person_fwd!(ms_person_get_max_speed, (), f64, get_max_speed);
+person_fwd!(ms_person_get_waiting_time, (accumulated: bool), SUMOTime, get_waiting_time);
+person_fwd!(ms_person_get_previous_speed, (), f64, get_previous_speed);
+person_fwd!(ms_person_get_acceleration, (), f64, get_acceleration);
+person_fwd!(ms_person_get_position_on_lane, (), f64, get_position_on_lane);
+person_fwd!(ms_person_get_back_position_on_lane, (lane: Ptr<MSLane>), f64, get_back_position_on_lane);
+person_fwd!(ms_person_get_angle, (), f64, get_angle);
+person_fwd!(ms_person_has_arrived, (), bool, has_arrived);
+person_fwd!(ms_person_has_influencer, (), bool, has_influencer);
+person_fwd!(ms_person_is_selected, (), bool, is_selected);
+person_fwd!(ms_person_get_device, (type_: &Unmapped), Ptr<MSDevice>, get_device);
