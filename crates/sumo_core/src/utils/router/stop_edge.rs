@@ -30,8 +30,10 @@ impl<E, L, N, V> std::ops::DerefMut for StopEdge<E, L, N, V> {
 
 impl<E, L, N, V> StopEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void StopEdge::StopEdge<E, L, N, V>(const std::string, int, const E *, const double, const double)`
     // StopEdge(const std::string id, int numericalID, const E* edge, const double startPos, const double endPos) :

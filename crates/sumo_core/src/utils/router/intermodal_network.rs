@@ -191,9 +191,10 @@ pub struct IntermodalNetwork<E, L, N, V> {
 
 impl<E, L, N, V> IntermodalNetwork<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    N: RouterNode<Edge = E>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: RouterNode<Edge = E> + 'static,
+    V: RouterVehicle + 'static,
 {
     /// Returns the next numerical ID (C++ `myNumericalID++`)
     fn next_id(&mut self) -> i32 {
@@ -386,7 +387,7 @@ where
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let mut net = Self {
             myEdges: Vec::new(),
             myBidiLookup: BTreeMap::new(),
@@ -689,7 +690,7 @@ where
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let splitList = match self.myDepartLookup.get(&e) {
             Some(list) => list,
             None => panic!("{}", ProcessError::new(format!("Depart edge '{}' not found in intermodal network.", e.id()))),
@@ -766,7 +767,7 @@ where
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let splitList = match self.myArrivalLookup.get(&e) {
             Some(list) => list,
             None => panic!("{}", ProcessError::new(format!("Arrival edge '{}' not found in intermodal network.", e.id()))),
@@ -813,7 +814,7 @@ where
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         match self.myWalkingConnectorLookup.get(&e_to_junction(e)) {
             Some(conn) => *conn,
             None => {
@@ -913,7 +914,7 @@ where
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         for &edge in edges {
             if e_has_normal_function(edge) || e_has_internal_function(edge) {
                 let id = self.next_id();
@@ -1196,7 +1197,7 @@ where
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         assert!(!stopEdge.is_null());
         let transferCarWalk = (category == SUMO_TAG_PARKING_AREA && (self.myCarWalkTransfer & ModeChangeOptions::PARKING_AREAS as i32) != 0)
             || (category == SUMO_TAG_BUS_STOP && (self.myCarWalkTransfer & ModeChangeOptions::PT_STOPS as i32) != 0);
