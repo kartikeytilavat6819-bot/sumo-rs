@@ -962,7 +962,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        true
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().is_on_road();
+        }
+        self.as_ms_vehicle().is_on_road()
     }
 
     /// C++: `bool MSBaseVehicle::isRemoteControlled() const` [const, virtual]

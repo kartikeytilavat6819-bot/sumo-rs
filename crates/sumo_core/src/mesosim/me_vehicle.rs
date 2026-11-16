@@ -64,6 +64,7 @@ impl std::ops::DerefMut for MEVehicle {
 }
 
 use crate::utils::vehicle::sumo_traffic_object::{DEFAULT_SUMO_TRAFFIC_OBJECT_VT, SUMOTrafficObject, SUMOTrafficObjectVt};
+use crate::utils::vehicle::sumo_vehicle::{DEFAULT_SUMO_VEHICLE_VT, SUMOVehicle, SUMOVehicleVt};
 
 // SUMOTrafficObject vtable for MEVehicle (mirrors MS_VEHICLE_VT); getters not listed keep the default
 static ME_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
@@ -88,6 +89,35 @@ static ME_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     has_influencer: me_vehicle_has_influencer,
     ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT
 };
+
+// SUMOVehicle vtable for MEVehicle: the C++ virtuals MEVehicle overrides at SUMOVehicle level
+static ME_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
+    is_on_road: me_sv_is_on_road,
+    is_idling: me_sv_is_idling,
+    get_angle: me_sv_get_angle,
+    get_time_loss: me_sv_get_time_loss,
+    get_current_edge: me_sv_get_current_edge,
+    ..DEFAULT_SUMO_VEHICLE_VT
+};
+
+fn me_sv_ref(v: &SUMOVehicle) -> &MEVehicle {
+    Ptr::new(v).cast::<MEVehicle>().get().unwrap()
+}
+fn me_sv_is_on_road(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_on_road()
+}
+fn me_sv_is_idling(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_idling()
+}
+fn me_sv_get_angle(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_angle()
+}
+fn me_sv_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_time_loss()
+}
+fn me_sv_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
+    me_sv_ref(v).get_current_edge()
+}
 
 fn me_vehicle_ref(o: &SUMOTrafficObject) -> &MEVehicle {
     Ptr::new(o).cast::<MEVehicle>().get().unwrap()
@@ -181,6 +211,7 @@ impl MEVehicle {
             myInfluencer: Ptr::null(),
         };
         v.base.base.base.vt = &ME_VEHICLE_VT;
+        v.base.base.vt = &ME_SUMO_VEHICLE_VT;
         v
     }
 
