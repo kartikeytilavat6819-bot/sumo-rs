@@ -32,9 +32,39 @@ def check_tripinfo(straight_path, load_path, t):
     return 0 if running and not bad else 1
 
 
+def check_loads(straight_path, cpp_load_path, our_load_path, t):
+    # C++ itself does not reproduce the straight run after loading (timeLoss/arrival drift), so the bar is C++ behaviour
+    running = [i for i, a in tripinfo_by_id(straight_path).items() if float(a["depart"]) < t < float(a["arrival"])]
+    cpp = tripinfo_by_id(cpp_load_path)
+    ours = tripinfo_by_id(our_load_path)
+    bad = []
+    for i in sorted(running):
+        if i not in ours:
+            bad.append(f"{i}: missing in our loaded run")
+        elif ours[i] != cpp.get(i):
+            keys = sorted(set(cpp.get(i, {})) | set(ours[i]))
+            bad.append(f"{i}: differs from C++ in {[k for k in keys if cpp.get(i, {}).get(k) != ours[i].get(k)]}")
+    print(f"running at t={t}: {len(running)}  mismatches vs C++ load: {len(bad)}")
+    for line in bad[:20]:
+        print("  " + line)
+    print("RESULT " + ("IDENTICAL" if running and not bad else "DIFFERENT" if bad else "NO VEHICLES RUNNING AT t"))
+    return 0 if running and not bad else 1
+
+
 def state_body(path):
-    lines = open(path, encoding="utf-8").read().splitlines()
-    return [l for l in lines if not (l.startswith("<?xml") or l.lstrip().startswith("<snapshot"))]
+    # drop the XML header, the <snapshot> tag and the <configuration> block (paths, output names and timestamps)
+    body, in_config = [], False
+    for l in open(path, encoding="utf-8").read().splitlines():
+        s = l.strip()
+        if s.startswith(("<configuration", "<sumoConfiguration")):
+            in_config = True
+        if in_config:
+            in_config = not s.startswith(("</configuration", "</sumoConfiguration"))
+            continue
+        if s.startswith("<?xml") or s.startswith("<!--") or s.startswith("<snapshot"):
+            continue
+        body.append(l)
+    return body
 
 
 def check_state(ours_path, ref_path):
@@ -50,4 +80,6 @@ def check_state(ours_path, ref_path):
 if __name__ == "__main__":
     if sys.argv[1] == "tripinfo":
         sys.exit(check_tripinfo(sys.argv[2], sys.argv[3], float(sys.argv[4])))
+    if sys.argv[1] == "loads":
+        sys.exit(check_loads(sys.argv[2], sys.argv[3], sys.argv[4], float(sys.argv[5])))
     sys.exit(check_state(sys.argv[2], sys.argv[3]))

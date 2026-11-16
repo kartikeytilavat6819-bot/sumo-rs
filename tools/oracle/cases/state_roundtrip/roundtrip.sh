@@ -18,7 +18,9 @@ for c in junction signal; do
   "$BIN/sumo" -n "$net" -r "$rou" --no-step-log true --load-state "$o/s.xml" --tripinfo-output "$o/load.ti.xml" \
       >"$o/load.log" 2>&1
   echo "$c load exit=$?"
-  python "$ROOT/tools/oracle/cases/state_roundtrip/compare.py" tripinfo "$o/straight.ti.xml" "$o/load.ti.xml" $SAVE_T \
-      >"$o/tripinfo.txt" 2>&1
-  cat "$o/tripinfo.txt"
+  C="$ROOT/tools/oracle/cases/state_roundtrip/compare.py"; REF="$ROOT/tools/oracle/cases/state_roundtrip/cpp/$c"
+  python3 "$C" tripinfo "$o/straight.ti.xml" "$o/load.ti.xml" $SAVE_T >"$o/tripinfo.txt" 2>&1
+  python3 "$C" loads "$o/straight.ti.xml" "$REF/load.ti.xml" "$o/load.ti.xml" $SAVE_T >"$o/vs_cpp_load.txt" 2>&1
+  python3 "$C" state "$o/s.xml" "$REF/s.xml" >"$o/state_vs_cpp.txt" 2>&1
+  cat "$o/tripinfo.txt" "$o/vs_cpp_load.txt" "$o/state_vs_cpp.txt"
 done
