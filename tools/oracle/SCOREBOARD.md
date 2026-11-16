@@ -149,6 +149,22 @@ roundabout, signal, real, real_dense, stress, reroute; tripinfo MATCH for vtypes
 8. Reroute: a rerouting case needs `<param key="device.rerouting.probability" value="1"/>` form; the current
    case proves the rerouter *loads* but never proves rerouting happens (`rerouteNo=0` on both sides).
 
+## Known unsupported features — loud, not silent
+
+Measured on 2026-11-16, so nobody has to rediscover them:
+
+| Feature | Our behaviour | C++ | Status |
+|---|---|---|---|
+| `--mesosim true` | **hard error**: `mesoscopic simulation is not wired into MSNet yet` (`ms_net.rs:401`) | runs (5 tripinfo entries on the junction case) | meso is not ported. It fails loudly, which is the correct behaviour for a missing subsystem — a silent fallback to microsim would be worse. The eight `g_use_meso_sim() -> false` stubs are consistent with this: meso can never be reached. |
+| `--lateral-resolution` | crashed (index out of bounds) | runs | being fixed by sl01 — this one is a *bug*, not a missing feature |
+| emissions output | `shortcut:` panic on the typed getters | implements `utils/emissions` (~16 k lines) | unported module, documented |
+| `saveState`/`loadState` | panic | works | `MSStateHandler` being ported by sh01 |
+| CCH routing | `shortcut:` (needs RoutingKit types) | works | unported dependency |
+
+Reproduce the meso result: run our `sumo.exe` on any case with `--mesosim true`; it exits 1 with that message.
+C++ on the same case exits 0. Meso is a separate simulation mode, so it does not affect the microsim path that
+every other row on this page measures.
+
 ## Traps that have cost real time here
 
 - **Stale binary.** Shared target dir gets overwritten by other agents. Build before trusting a run.
