@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<osm version="0.6">
+  <node id="1" lat="48.0000" lon="11.0000"/>
+  <node id="2" lat="48.0000" lon="11.0010"/>
+  <node id="3" lat="48.0010" lon="11.0010"/>
+  <node id="4" lat="48.0010" lon="11.0000"/>
+  <way id="10">
+    <nd ref="1"/>
+    <nd ref="2"/>
+    <nd ref="3"/>
+    <nd ref="4"/>
+    <tag k="building" v="yes"/>
+    <tag k="highway" v="service"/>
+  </way>
+</osm>
