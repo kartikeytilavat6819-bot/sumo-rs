@@ -1,7 +1,7 @@
 //! Port of utils/router/IntermodalRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 
 /// C++ typedef `void (*)(IntermodalRouter<E, L, N, V> &) IntermodalRouter::CreateNetCallback`
 pub type IntermodalRouter_CreateNetCallback<E, L, N, V> = fn(&mut IntermodalRouter<E, L, N, V>);
