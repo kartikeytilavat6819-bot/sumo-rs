@@ -89,7 +89,8 @@ impl MSBatteryExport {
         of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, utils::common::time::time2string(timestep).as_str());
         of.set_precision(precision);
 
-        let vc = MSNet::get_instance().m().get_vehicle_control();
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
         for (_, veh) in vc.myVehicleDict.iter() {
             let mveh: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
             if !(mveh.is_on_road() || mveh.is_parking() || mveh.is_remote_controlled()) {
