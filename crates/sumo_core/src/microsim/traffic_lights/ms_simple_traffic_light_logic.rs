@@ -823,7 +823,6 @@ mod initial_switch_tests {
             oc.do_register("duration-log.statistics", SumoOption::bool(false));
             oc.do_register("meso-edgelength", SumoOption::float(98.0));
             oc.do_register("meso-jam-threshold", SumoOption::float(-1.0));
-            oc.do_register("meso-lookahead", SumoOption::float(0.0));
             oc.do_register("meso-junction-control", SumoOption::bool(false));
             oc.do_register("meso-tls-penalty", SumoOption::float(0.0));
             oc.do_register("meso-tls-flow-penalty", SumoOption::float(0.0));

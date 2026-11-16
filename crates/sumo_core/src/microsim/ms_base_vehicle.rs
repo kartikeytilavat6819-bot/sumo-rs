@@ -199,6 +199,14 @@ fn rand_helper_get_seed() -> i32 {
 }
 
 impl MSBaseVehicle {
+    // Downcast of this base to the concrete vehicle: micro sim is always MSVehicle, meso always MEVehicle.
+    fn as_ms_vehicle(&self) -> &crate::microsim::ms_vehicle::MSVehicle {
+        Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap()
+    }
+    fn as_me_vehicle(&self) -> &crate::mesosim::me_vehicle::MEVehicle {
+        Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap()
+    }
+
     /// C++: `double MSBaseVehicle::getPreviousSpeed() const` [const, virtual]
     /// Returns the vehicle's previous speed
     // double
@@ -207,7 +215,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        if MSGlobals::use_meso_sim() {
+            panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        }
+        self.as_ms_vehicle().get_previous_speed()
     }
 
     /// C++: `void MSBaseVehicle::MSBaseVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
@@ -850,7 +861,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        self.get_edge()
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().get_current_edge();
+        }
+        self.as_ms_vehicle().get_current_edge()
     }
 
     /// C++: `const std::set<SUMOTrafficObject::NumericalID> MSBaseVehicle::getUpcomingEdgeIDs() const` [const, virtual]
@@ -930,7 +944,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        Ptr::default()
+        if MSGlobals::use_meso_sim() {
+            return Ptr::default();
+        }
+        self.as_ms_vehicle().get_next_edge_ptr()
     }
 
     /// C++: `bool MSBaseVehicle::isOnRoad() const` [const, virtual]
@@ -940,7 +957,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        true
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().is_on_road();
+        }
+        self.as_ms_vehicle().is_on_road()
     }
 
     /// C++: `bool MSBaseVehicle::isRemoteControlled() const` [const, virtual]
@@ -981,7 +1001,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lateral_position_on_lane(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_lateral_position_on_lane()
     }
 
     /// C++: `double MSBaseVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
@@ -1002,7 +1025,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
-        self.myCurrEdge
+        if MSGlobals::use_meso_sim() {
+            return self.myCurrEdge;
+        }
+        self.as_ms_vehicle().get_reroute_origin()
     }
 
     /// C++: `const MSEdge * MSBaseVehicle::getRerouteDestination() const` [const, virtual]
@@ -1023,8 +1049,11 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss_seconds(&self) -> f64 {
-        // better timeLoss for meso?
-        0.0
+        if MSGlobals::use_meso_sim() {
+            // better timeLoss for meso?
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_time_loss_seconds()
     }
 
     /// C++: `double MSBaseVehicle::getWaitingSeconds() const` [const]
@@ -1081,18 +1110,12 @@ impl MSBaseVehicle {
     //     std::set<int> jumps;
     //
     //
-    //     double sourcePos = getPositionOnLane();
+    //     double sourcePos = onInit ? 0 : getPositionOnLane();
     // #ifdef DEBUG_REROUTE
     //     if (DEBUG_COND) {
     //         std::cout << " curEdge=" << (*myCurrEdge)->getID() << " source=" << source->getID() << " sourcePos=" << sourcePos << " lane=" << Named::getIDSecure(getLane()) << " departPos=" << myParameter->departPos << " oldEdgesRemaining=" << toString(oldEdgesRemaining) << "\n";
     //     }
     // #endif
-    //     if (onInit && myParameter->departPosProcedure == DepartPosDefinition::GIVEN) {
-    //         sourcePos = myParameter->departPos;
-    //     } else if (getLane() != nullptr && source != &getLane()->getEdge()) {
-    //         // routing starts on the next edge
-    //         sourcePos = 0;
-    //     }
     //     if (myParameter->via.size() == 0) {
     //         double firstPos = INVALID_DOUBLE;
     //         double lastPos = INVALID_DOUBLE;
@@ -1287,10 +1310,9 @@ impl MSBaseVehicle {
     //     }
     //     const double routeCost = router.recomputeCosts(edges, this, t);
     //     // trips have no loaded route to compare against when routed on insertion
-    //     const bool isTripInit = onInit && myParameter->wasSet(VEHPARS_FORCE_REROUTE);
-    //     const double previousCost = isTripInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
+    //     const double previousCost = onInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
     //     const double savings = previousCost - routeCost;
-    //     bool savingsOk = isTripInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
+    //     bool savingsOk = onInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
     //     if (!savingsOk) {
     //         MSDevice_Routing* routingDevice = static_cast<MSDevice_Routing*>(getDevice(typeid(MSDevice_Routing)));
     //         assert(routingDevice != 0);
@@ -1360,13 +1382,7 @@ impl MSBaseVehicle {
         let mut stops: Vec<MSBaseVehicle_StopEdgeInfo> = Vec::new();
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
-        let mut sourcePos = self.get_position_on_lane();
-        if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
-            sourcePos = self.myParameter.departPos;
-        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            // routing starts on the next edge
-            sourcePos = 0.0;
-        }
+        let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
@@ -1490,7 +1506,7 @@ impl MSBaseVehicle {
                     continue;
                 } else if stops[idx].isSink {
                     edges.clear();
-                    if source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
+                    if onInit && source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
                         edges.push(stopEdge);
                         utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%' with departPos %.",
                             self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id(), sourcePos));
@@ -1538,11 +1554,10 @@ impl MSBaseVehicle {
         }
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
-        let isTripInit = onInit && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) != 0;
-        let previousCost = if isTripInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
+        let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
         let savings = previousCost - routeCost;
         // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
-        let mut savingsOk = isTripInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
+        let mut savingsOk = onInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
         if !savingsOk {
             // shortcut: MSDevice_Routing::sufficientSaving and hasValidRoute over an edge range need the
             // routing device and MSRouteIterator, neither reachable yet; the old route is treated as prohibited
@@ -1966,7 +1981,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_acceleration()
     }
 
     /// C++: `void MSBaseVehicle::onDepart()` [virtual]

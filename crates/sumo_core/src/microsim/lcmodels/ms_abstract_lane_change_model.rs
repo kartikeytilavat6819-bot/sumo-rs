@@ -2087,6 +2087,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_shadow_lane(&mut self) {
+        // C++: if (!MSGlobals::gSublane) return; — without sublanes every vehicle sits at lane center
+        if !crate::microsim::ms_globals::sublane() {
+            return;
+        }
         if !self.myShadowLane.is_null() {
             self.myShadowLane.m().reset_partial_occupation(self.myVehicle);
         }

@@ -49,7 +49,10 @@ if not inp:
     raise SystemExit(1)
 base = os.path.dirname(inp[0])
 sh(setup, "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", 3)
-env = f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score; cd {SRC};"
+# emission models (PHEMlight5) read data files relative to SUMO_HOME; the oracle wheel ships them
+sh(setup, "python -m pip install -q --target /tmp/sumo_pkg eclipse-sumo==1.28.0 2>&1 | tail -2; ls /tmp/sumo_pkg/sumo/data/emissions/PHEMlight5 | wc -l", 4)
+env = (f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score"
+       f" SUMO_HOME=/tmp/sumo_pkg/sumo SUMO_PRISTINE_BIN=/tmp/sumo_pkg/sumo/bin; cd {SRC};")
 
 for line in open(inp[0]).read().split("\n"):
     if not line.strip():
@@ -71,5 +74,9 @@ for line in open(inp[0]).read().split("\n"):
         sh(log, env + " bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1", 3)
         sh(log, env + " cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10", 12)
         log.write("GATE DONE\n")
+        # agents' own trace/measurement commands (branch-only file; must not reach main)
+        if os.path.exists(f"{SRC}/tools/kaggle/agent_run.sh"):
+            sh(log, env + " timeout 600 bash tools/kaggle/agent_run.sh 2>&1", 400)
+            log.write("AGENT RUN DONE\n")
     log.close()
     os.replace(f"{RES}/{gid}.result.tmp", f"{RES}/{gid}.result")

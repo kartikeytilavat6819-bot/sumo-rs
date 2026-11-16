@@ -61,18 +61,23 @@ def wsl_path(p):
     return "/mnt/" + p[0].lower() + p[2:]
 
 
-def sumo_command(side, port, net, rou, ours):
+def sumo_command(side, port, net, rou, ours, extra=()):
     if side == "ours":
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
-                "--no-step-log", "true", "--no-warnings", "true"]
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
     if PRISTINE_BIN:
         return [f"{PRISTINE_BIN}/sumo", "-n", str(net), "-r", str(rou), "--remote-port", str(port),
-                "--no-step-log", "true", "--no-warnings", "true"]
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
+    flags = "".join(f" {x}" for x in extra)
     # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
-    inner = (f"SUMO_HOME=$($HOME/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)') "
+    inner = (f"SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo "
              f"$HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
-             f"--remote-port {port} --no-step-log true --no-warnings true")
+             f"--remote-port {port} --no-step-log true --no-warnings true{flags}")
     return ["wsl", "-e", "bash", "-lc", inner]
+
+
+# the tripinfo device exists only when tripinfo-output or duration-log.statistics is set (C++ buildVehicleDevices)
+TRIPINFO_PROBE = "vehicle.getParameter(v0, device.tripinfo.waitingTime)"
 
 
 def probes(lane, tl_id):
@@ -524,6 +529,7 @@ def probes(lane, tl_id):
         "vehicle.getIDList": lambda t: t.vehicle.getIDList(),
         "vehicle.getPosition(v0)": lambda t: t.vehicle.getPosition("v0"),
         "vehicle.getSpeed(v0)": lambda t: t.vehicle.getSpeed("v0"),
+        TRIPINFO_PROBE: lambda t: t.vehicle.getParameter("v0", "device.tripinfo.waitingTime"),
         "lane.getLastStepVehicleNumber": lambda t: t.lane.getLastStepVehicleNumber(lane),
         "lane.getLength": lambda t: t.lane.getLength(lane),
         "trafficlight.getIDList": lambda t: t.trafficlight.getIDList(),
@@ -625,11 +631,11 @@ def probes(lane, tl_id):
     }
 
 
-def run_probe(side, port, net, rou, ours, fn):
+def run_probe(side, port, net, rou, ours, fn, extra=()):
     """One fresh server for one probe. Returns {"type", "value"}."""
     log = Path(os.environ.get("TEMP", ".")) / f"traci_{side}_{net.parent.name}.log"
     with open(log, "a") as fh:
-        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours, extra), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
         try:
             traci.init(port=port, numRetries=20, host="localhost")
             try:
@@ -653,24 +659,27 @@ def run_probe(side, port, net, rou, ours, fn):
                 proc.kill()
 
 
-def kill_cpp():
-    cmd = "pkill -f 'bin/sumo' || true"
+def kill_cpp(port):
+    # per-port only: other agents run harnesses concurrently and must not lose their sumo
+    cmd = f"pkill -f -- '--remote-port {port} ' || true"
     if PRISTINE_BIN:
         subprocess.run(["bash", "-c", cmd], capture_output=True)
     else:
         subprocess.run(["wsl", "-e", "bash", "-lc", cmd], capture_output=True)
 
 
-def run_side(side, port, ours, case, flt=()):
+def run_side(side, port, ours, case, flt=(), skip=()):
     net, rou = CASES_DIR / case / "ref_simple.net.xml", CASES_DIR / case / "routes.rou"
     lane, tl_id = CASE_PARAMS[case]
     out = {}
-    picked = [(l, f) for l, f in probes(lane, tl_id).items() if not flt or any(s in l for s in flt)]
+    picked = [(l, f) for l, f in probes(lane, tl_id).items()
+              if (not flt or any(s in l for s in flt)) and not any(s in l for s in skip)]
     for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
-        out[label] = run_probe(side, port + i, net, rou, ours, fn)
+        extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
+        out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
-            kill_cpp()
+            kill_cpp(port + i)
         time.sleep(0.5)
     return out
 
@@ -682,18 +691,20 @@ def main():
     ap.add_argument("--ours", default=str(DEFAULT_OURS))
     ap.add_argument("--port", type=int, default=8813)
     ap.add_argument("--filter", default="", help="comma-separated substrings; only probes whose label contains one run")
+    ap.add_argument("--skip", default="", help="comma-separated substrings; probes whose label contains one are not run")
     a = ap.parse_args()
     warn_if_stale(Path(a.ours))
     flt = tuple(s for s in a.filter.split(",") if s)
+    skip = tuple(s for s in a.skip.split(",") if s)
 
     if a.only:
-        print(json.dumps(run_side(a.only, a.port, a.ours, a.case, flt), indent=2))
+        print(json.dumps(run_side(a.only, a.port, a.ours, a.case, flt, skip), indent=2))
         return 0
 
     total = bad_total = 0
     for case in ([a.case] if a.case != "all" else sorted(CASE_PARAMS)):
-        cpp = run_side("cpp", a.port, a.ours, case, flt)
-        ours = run_side("ours", a.port, a.ours, case, flt)
+        cpp = run_side("cpp", a.port, a.ours, case, flt, skip)
+        ours = run_side("ours", a.port, a.ours, case, flt, skip)
         print(f"[{case}] {'command':<42} {'C++':<38} {'ours':<38} verdict")
         bad = 0
         for label in cpp:

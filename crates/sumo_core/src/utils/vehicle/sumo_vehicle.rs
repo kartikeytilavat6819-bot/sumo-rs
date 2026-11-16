@@ -440,7 +440,7 @@ fn default_load_state(_: &mut SUMOVehicle, _: &SUMOSAXAttributes, _: SUMOTime) {
     panic!("SUMOVehicle::loadState is pure virtual")
 }
 
-static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
+pub(crate) static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_route: default_get_route,
     get_departure: default_get_departure,
     get_depart_pos: default_get_depart_pos,

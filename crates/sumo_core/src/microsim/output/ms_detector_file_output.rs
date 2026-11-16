@@ -328,22 +328,6 @@ impl MSDetectorFileOutput {
         // C++ body is empty
     }
 
-    /// C++: `void MSDetectorFileOutput::saveState(OutputDevice &) const` [const, virtual]
-    /// Saves the state which is needed to continue after loading state
-    // virtual void saveState(OutputDevice& /*out*/) const {}
-    #[allow(unused_variables)]
-    pub fn save_state(&self, arg0: &mut OutputDevice) {
-        // C++ body is empty
-    }
-
-    /// C++: `void MSDetectorFileOutput::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
-    /// Loads the state, shifting all times by the given offset
-    // virtual void loadState(const SUMOSAXAttributes& /*attrs*/, const SUMOTime /*offset*/) {}
-    #[allow(unused_variables)]
-    pub fn load_state(&mut self, arg0: &SUMOSAXAttributes, arg1: SUMOTime) {
-        // C++ body is empty
-    }
-
     /// C++: `void MSDetectorFileOutput::MSDetectorFileOutput(const MSDetectorFileOutput &)` [private]
     /// Invalidated copy constructor.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
