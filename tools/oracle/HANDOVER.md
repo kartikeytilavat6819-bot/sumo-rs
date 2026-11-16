@@ -6,17 +6,23 @@ This file is the situational picture and the handover.
 ## Verified state
 
 ```
-run_all.sh        PASS=26 FAIL=0 SKIP=8      over 17 cases (+ real/ref_reroute variant)
+run_all.sh        PASS=28 FAIL=1 SKIP=9      over 19 cases
 depart            15/15 variants
-netconvert        5 networks + 10 edge cases + 3 option variants + --lefthand + --tls.* variants: MATCH
+netconvert        5 networks + 10 edge cases + 3 option variants + --lefthand + --tls.* + one plain-XML net: MATCH
 unit tests        175 passing (2 ignored)
 release == debug  identical on junction, roundabout, real, signal
-TraCI             48/62 probes
+TraCI             58/62 probes
 ```
 
-Every row the suite asks about matches SUMO 1.28.0 on tripinfo, FCD and statistics. See the coverage-gap
-table in `SCOREBOARD.md` before treating that as "done": rerouting has no detour-through-a-real-junction
-case, meso and rail have no cases at all, and TraCI is measured at 48/62.
+The single failing row is a **recorded C++ quirk**, not a broken test: with `device.rerouting.period=1`, C++
+reverts a detour and sends the vehicle back onto the closed edge (`rerouteNo=2`), because its periodic device
+reroute replans without the rerouter's prohibitions. Ours keeps the bypass. The periodic reroute is
+implemented on branch `worktree-agent-pr01`; merging it fixes that row but breaks `reroute_alt` on a
+Dijkstra tie-break, which is why it is not merged.
+
+See the coverage-gap table in `SCOREBOARD.md` before treating the board as "done": rerouting has no
+multi-vehicle contention case, meso and rail have no cases, TraCI is 58/62, and `gCheckRoutes` is still a
+`shortcut:` treated as false.
 
 ## The bug classes that mattered (read this before debugging anything)
 
