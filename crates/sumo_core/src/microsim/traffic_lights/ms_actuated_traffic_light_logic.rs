@@ -222,6 +222,9 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLigh
     save_state: simple_save_state,
     load_state: actuated_load_state,
     map_time_in_cycle: simple_map_time_in_cycle,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
 };
 
 impl MSActuatedTrafficLightLogic {

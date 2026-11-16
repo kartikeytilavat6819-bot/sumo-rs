@@ -23,7 +23,27 @@ pub struct MSSOTLPolicy {
     pub myName: String,
     /// A pointer to the policy desirability object.'s an optional component related to the computeDesirability() method and it's necessary only when the policy is used in combination with an high level policy.
     pub myDesirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>,
+    /// Virtual dispatch table for canRelease() and decideNextPhase(); each low-level policy installs its own
+    pub vt: &'static MSSOTLPolicyVt,
 }
+
+/// Virtual dispatch table for the low-level policy base class
+pub struct MSSOTLPolicyVt {
+    pub can_release: fn(&mut MSSOTLPolicy, SUMOTime, bool, bool, Ptr<MSPhaseDefinition>, i32) -> bool,
+    pub decide_next_phase: fn(&mut MSSOTLPolicy, SUMOTime, Ptr<MSPhaseDefinition>, i32, i32, bool, bool, i32) -> i32,
+}
+
+fn policy_base_can_release(_: &mut MSSOTLPolicy, _: SUMOTime, _: bool, _: bool, _: Ptr<MSPhaseDefinition>, _: i32) -> bool {
+    panic!("MSSOTLPolicy::canRelease is pure virtual; call it on a subclass")
+}
+fn policy_base_decide_next_phase(p: &mut MSSOTLPolicy, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
+    p.decide_next_phase_base(elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
+}
+
+pub(crate) static MSSOTL_POLICY_BASE_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: policy_base_can_release,
+    decide_next_phase: policy_base_decide_next_phase,
+};
 
 impl std::ops::Deref for MSSOTLPolicy {
     type Target = Parameterised;
@@ -59,6 +79,7 @@ impl MSSOTLPolicy {
             theta_sensitivity: 0.0,
             myName: name,
             myDesirabilityAlgorithm: Ptr::null(),
+            vt: &MSSOTL_POLICY_BASE_VT,
         }
     }
 
@@ -77,6 +98,7 @@ impl MSSOTLPolicy {
             theta_sensitivity: 0.0,
             myName: name,
             myDesirabilityAlgorithm: desirabilityAlgorithm,
+            vt: &MSSOTL_POLICY_BASE_VT,
         }
     }
 
@@ -96,6 +118,7 @@ impl MSSOTLPolicy {
             theta_sensitivity: 0.0,
             myName: name,
             myDesirabilityAlgorithm: desirabilityAlgorithm,
+            vt: &MSSOTL_POLICY_BASE_VT,
         };
         s.theta_sensitivity = or_panic(to_double(&s.get_parameter("THETA_INIT", "0.5")));
         s
@@ -113,7 +136,8 @@ impl MSSOTLPolicy {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        panic!("MSSOTLPolicy::canRelease is pure virtual; call it on a subclass")
+        let vt = self.vt;
+        (vt.can_release)(self, elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
     }
 
     /// C++: `int MSSOTLPolicy::decideNextPhase(SUMOTime, const MSPhaseDefinition *, int, int, bool, bool, int)` [virtual]
@@ -149,6 +173,13 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
+        let vt = self.vt;
+        (vt.decide_next_phase)(self, elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
+    }
+
+    /// C++ `MSSOTLPolicy::decideNextPhase` body (the base implementation of the virtual)
+    #[allow(unused_variables)]
+    pub fn decide_next_phase_base(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
         //If the junction was in a commit step
         if stage.is_commit() {
             // decide which chain to activate. Gotta work on this

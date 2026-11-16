@@ -1,6 +1,28 @@
 //! Port of microsim/traffic_lights/MSSwarmTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn swarm_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().init(nb)
+}
+fn swarm_decide_next_phase(l: &mut MSTrafficLightLogic) -> i32 {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().decide_next_phase()
+}
+fn swarm_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().can_release()
+}
+fn swarm_compute_return_time(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().compute_return_time()
+}
+
+static MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    init: swarm_init,
+    decide_next_phase: swarm_decide_next_phase,
+    can_release: swarm_can_release,
+    compute_return_time: swarm_compute_return_time,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// Leaks a heap object for the whole simulation, like the C++ `new` the constructor uses.
 fn leak<T>(value: T) -> &'static mut T {
@@ -333,8 +355,10 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
+        let mut hi = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters);
+        hi.base.base.base.vt = &MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT;
         let mut this = Self {
-            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters),
+            base: hi,
             pheromoneInputLanes: BTreeMap::new(),
             pheromoneOutputLanes: BTreeMap::new(),
             lastThetaSensitivityUpdate: 0,

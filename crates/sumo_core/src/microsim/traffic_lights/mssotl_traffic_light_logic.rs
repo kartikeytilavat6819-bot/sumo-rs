@@ -3,9 +3,36 @@
 use crate::prelude::*;
 use utils::common::msg_handler::{with_instance, write_error, write_message};
 use utils::common::rand_helper;
+use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
 /// C++ typedef `std::map<const std::string, std::vector<MSPushButton *>> MSSOTLTrafficLightLogic::PhasePushButtons`
 pub type MSSOTLTrafficLightLogic_PhasePushButtons = BTreeMap<String, Vec<Ptr<MSPushButton>>>;
+
+fn sotl_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().try_switch()
+}
+fn sotl_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().init(nb)
+}
+fn sotl_decide_next_phase(l: &mut MSTrafficLightLogic) -> i32 {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().decide_next_phase()
+}
+fn sotl_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().can_release()
+}
+fn sotl_compute_return_time(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().compute_return_time()
+}
+
+/// Virtual dispatch for the SOTL family; subclasses override through their own tables built with `..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT`.
+pub(crate) static MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: sotl_try_switch,
+    init: sotl_init,
+    decide_next_phase: sotl_decide_next_phase,
+    can_release: sotl_can_release,
+    compute_return_time: sotl_compute_return_time,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// A self-organizing traffic light logic
 /// C++ class `MSSOTLTrafficLightLogic` (microsim/traffic_lights/MSSOTLTrafficLightLogic.h)
@@ -58,7 +85,8 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     /// Shared C++ member initialisation for both constructors (member order follows the header).
-    fn with_base(base: MSSimpleTrafficLightLogic, mySensors: Ptr<MSSOTLSensors>, sensorsSelfBuilt: bool) -> Self {
+    fn with_base(mut base: MSSimpleTrafficLightLogic, mySensors: Ptr<MSSOTLSensors>, sensorsSelfBuilt: bool) -> Self {
+        base.base.vt = &MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
         Self {
             base,
             m_pushButtons: BTreeMap::new(),
@@ -76,6 +104,20 @@ impl MSSOTLTrafficLightLogic {
     /// C++ `(MSSOTLE2Sensors*)mySensors`: mySensors is always built as an E2 sensor here (SENSORS_TYPE is E2).
     fn e2_sensors(&self) -> Ptr<MSSOTLE2Sensors> {
         Ptr::from_raw(self.mySensors.as_raw() as *mut MSSOTLE2Sensors)
+    }
+
+    /// C++ `trySwitch()` and `decideNextPhase()` call the virtual `decideNextPhase()` / `canRelease()` / `computeReturnTime()` through `this`
+    fn dispatch_decide_next_phase(&mut self) -> i32 {
+        let vt = self.base.base.vt;
+        (vt.decide_next_phase)(&mut self.base.base)
+    }
+    fn dispatch_can_release(&mut self) -> bool {
+        let vt = self.base.base.vt;
+        (vt.can_release)(&mut self.base.base)
+    }
+    fn dispatch_compute_return_time(&mut self) -> SUMOTime {
+        let vt = self.base.base.vt;
+        (vt.compute_return_time)(&mut self.base.base)
     }
 
     #[allow(unused_variables)]
@@ -234,7 +276,7 @@ impl MSSOTLTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
         // MSTrafficLightLogic::init(nb);
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
 
         if self.is_decay_threshold_activated() {
             self.decayThreshold = 1.0;
@@ -354,7 +396,7 @@ impl MSSOTLTrafficLightLogic {
             self.update_cts();
 
             // Invoking the function member, specialized for each SOTL logic
-            let next = self.decide_next_phase();
+            let next = self.dispatch_decide_next_phase();
             self.set_step(next);
             // C++ copies the current phase here and sets its myLastSwitch on that copy, which has no effect on the real phase, so no write is made.
 
@@ -391,7 +433,7 @@ impl MSSOTLTrafficLightLogic {
                 }
             }
         }
-        self.compute_return_time()
+        self.dispatch_compute_return_time()
     }
 
     /// C++: `void MSSOTLTrafficLightLogic::logStatus()` [protected]
@@ -445,7 +487,7 @@ impl MSSOTLTrafficLightLogic {
             return self.get_current_phase_index() + 1;
         }
         if decisional {
-            if self.can_release() {
+            if self.dispatch_can_release() {
                 return self.get_current_phase_index() + 1;
             }
         }
