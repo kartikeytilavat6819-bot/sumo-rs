@@ -2747,7 +2747,7 @@ impl Helper {
                 let angle2 = if useCurrentAngle { currentAngle } else { angle };
                 let angleDiff = if angle2 == INVALID_DOUBLE_VALUE || l.is_walking_area() { 0. } else { geom_helper::get_min_angle_diff(angle2, langle) };
 
-                let mut origIDMatch: bool = panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised");
+                let mut origIDMatch: bool = l.base2.get_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &l.get_id()) == origID;
                 if origIDMatch && setLateralPos && perpendicularDist > l.get_width() / 2. {
                     origIDMatch = false;
                 }
@@ -2992,7 +2992,7 @@ impl Helper {
         if !(*lane).get_edge().is_internal() {
             let lanes = (*lane).get_edge().get_lanes().clone();
             for li in lanes.iter() {
-                if { panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised") } {
+                if li.base2.get_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &li.get_id()) == origID {
                     if setLateralPos {
                         // vehicle might end up on top of another lane with a big
                         // lateral offset to the lane with origID.

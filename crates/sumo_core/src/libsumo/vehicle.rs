@@ -23,6 +23,7 @@ use utils::common::to_string::to_string;
 use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
 use utils::common::msg_handler::write_warning;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::geom::geom_helper;
 use utils::traci::traci_constants::{REMOVE_ARRIVED, REMOVE_PARKING, REMOVE_TELEPORT, REMOVE_TELEPORT_ARRIVED, REMOVE_VAPORIZED};
 
 // SUMOVehicleParameter.h / SUMOVehicleParameter::Stop parametersSet bits (not exported by the ported module yet)
@@ -3736,9 +3737,83 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn move_to_xy(vehID: &str, edgeID: &str, laneIndex: i32, x: f64, y: f64, angle: f64, keepRoute: i32, matchThreshold: f64) {
-        // shortcut: moveToXY (Helper::moveToXYMap, lane shape/lateral offsets, setRemoteControlled) not ported in this pass
-        panic!("Vehicle::moveToXY not yet ported")
+    pub fn move_to_xy(vehID: &str, edgeID: &str, laneIndex: i32, x: f64, y: f64, mut angle: f64, keepRoute: i32, mut matchThreshold: f64) {
+        let mut veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_null() {
+            utils::common::msg_handler::write_warning("moveToXY not yet implemented for meso");
+            return;
+        }
+        let doKeepRoute = (keepRoute & 1) != 0 && veh.get_id() != "VTD_EGO";
+        let mayLeaveNetwork = (keepRoute & 2) != 0;
+        let ignorePermissions = (keepRoute & 4) != 0;
+        let setLateralPos = MSGlobals::lateral_resolution() > 0. || mayLeaveNetwork;
+        let vClass = if ignorePermissions { SVC_IGNORING } else { veh.get_v_class() };
+        let origID = format!("{}_{}", edgeID, laneIndex);
+        let mut pos = Position::new(x, y);
+        if angle != INVALID_DOUBLE_VALUE {
+            while angle >= 360. {
+                angle -= 360.;
+            }
+            while angle < 0. {
+                angle += 360.;
+            }
+        }
+
+        let mut edges: ConstMSEdgeVector = Vec::new();
+        let mut lane: Ptr<MSLane> = Ptr::null();
+        let mut lanePos: f64 = 0.;
+        let mut lanePosLat: f64 = 0.;
+        let mut bestDistance: f64 = f64::MAX;
+        let mut routeOffset: i32 = 0;
+        let found: bool;
+        let maxRouteDistance = matchThreshold;
+        if doKeepRoute {
+            found = Helper::move_to_xy_map_matching_route_position(&pos, &origID, veh.get_route().get_edges(), veh.get_route_position(), vClass, setLateralPos, &mut bestDistance, Ptr::from_mut(&mut lane), &mut lanePos, &mut routeOffset);
+        } else {
+            let speed = pos.distance_to2d(&veh.get_position(0.));
+            found = Helper::move_to_xy_map(&pos, maxRouteDistance, mayLeaveNetwork, &origID, angle, speed, veh.get_route().get_edges(), veh.get_route_position(), veh.get_lane(), veh.get_position_on_lane(), veh.is_on_road(), vClass, geom_helper::navi_degree(veh.get_angle()), setLateralPos, &mut bestDistance, Ptr::from_mut(&mut lane), &mut lanePos, &mut routeOffset, &mut edges);
+        }
+        if (found && bestDistance <= maxRouteDistance) || mayLeaveNetwork {
+            pos.setz(veh.get_position(0.).z());
+            if found && setLateralPos {
+                let perpDist = lane.get_shape(false).distance2d(&pos, false);
+                if perpDist != geom_helper::INVALID_OFFSET {
+                    lanePosLat = perpDist;
+                    if !mayLeaveNetwork {
+                        lanePosLat = f64::min(lanePosLat, 0.5 * (lane.get_width() + veh.get_vehicle_type().get_width() - MSGlobals::lateral_resolution()));
+                    }
+                    let mut tmp = lane.get_shape(false).clone();
+                    // shortcut: move2side has no Result in this port, so the ProcessError warning at Vehicle.cpp:1856 cannot fire; upgrade when move2side reports failure
+                    tmp.move2side(-lanePosLat, 100.);
+                    if tmp.distance2d(&pos, false) > perpDist {
+                        lanePosLat = -lanePosLat;
+                    }
+                }
+                pos.setz(lane.geometry_position_at_offset(lanePos, 0.).z());
+            }
+            if found && !mayLeaveNetwork && MSGlobals::lateral_resolution() < 0. {
+                pos = lane.geometry_position_at_offset(lanePos, -lanePosLat);
+            }
+            assert!((found && !lane.is_null()) || (!found && lane.is_null()));
+            assert!(!lanePos.is_nan());
+            if angle == INVALID_DOUBLE_VALUE {
+                if !lane.is_null() {
+                    angle = geom_helper::navi_degree(lane.get_shape(false).rotation_at_offset(lanePos));
+                } else {
+                    angle = geom_helper::navi_degree(veh.get_position(0.).angle_to2d(&pos));
+                }
+            }
+            Helper::set_remote_controlled(veh, pos, lane, lanePos, lanePosLat, angle, routeOffset, edges, MSNet::get_instance().get_current_time_step());
+            if !veh.is_on_road() {
+                MSNet::get_instance().m().get_insertion_control().already_departed(veh.cast::<SUMOVehicle>());
+            }
+        } else {
+            if lane.is_null() {
+                panic!("Could not map vehicle '{}', no road found within {}m.", vehID, utils::common::to_string::to_string(&maxRouteDistance));
+            } else {
+                panic!("Could not map vehicle '{}', distance to road is {}.", vehID, utils::common::to_string::to_string(&bestDistance));
+            }
+        }
     }
 
     /// C++: `void Vehicle::remove(const std::string &, char)` [static]
