@@ -4,11 +4,15 @@ use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_ALL, SVC_IGNORING};
 use utils::common::time::steps2time;
 use utils::common::msg_handler::{with_instance, MsgType};
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 /// Typed for the generic router. The bare `SUMOAbstractRouter_Operation` stays a placeholder for the
 /// microsim/logging bindings, whose C++ operation is a pointer-to-member, not a router function.
 pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f64;
+
+/// The concrete router's `compute` (C++ virtual), installed by the subclass that implements it.
+pub type SUMOAbstractRouter_ComputeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<E>, Ptr<E>, Ptr<V>, SUMOTime, &mut Vec<Ptr<E>>, bool) -> bool;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -97,6 +101,8 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
     /// The object's operation to perform for travel times (null in C++ means the effort is used as is)
     pub myTTOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>,
+    /// the concrete `compute` the pure-virtual base dispatches to (None: the base has no implementation)
+    pub myCompute: Option<SUMOAbstractRouter_ComputeFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -126,7 +132,7 @@ pub struct SUMOAbstractRouter<E, V> {
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
-impl<E, V> SUMOAbstractRouter<E, V> {
+impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
     /// C++: `void SUMOAbstractRouter::SUMOAbstractRouter<E, V>(const std::string &, bool, Operation, Operation, const bool, const bool)`
     /// Constructor
     // SUMOAbstractRouter(const std::string& type, bool unbuildIsWarning, Operation operation, Operation ttOperation,
@@ -150,6 +156,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myErrorMsgHandler: msg_instance(unbuildIsWarning),
             myOperation: operation,
             myTTOperation: ttOperation,
+            myCompute: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -189,6 +196,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myErrorMsgHandler: other.myErrorMsgHandler,
             myOperation: other.myOperation,
             myTTOperation: other.myTTOperation,
+            myCompute: other.myCompute,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -322,8 +330,11 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        // shortcut: pure virtual, subclasses (e.g. DijkstraRouter) implement compute() and the Rust base has no dynamic dispatch yet, upgrade when routers are trait objects
-        panic!("shortcut: SUMOAbstractRouter::compute is pure virtual, no dynamic dispatch yet")
+        // shortcut: pure virtual with no vtable; the subclass installs its compute in myCompute, a router without one still panics, upgrade when routers are trait objects
+        match self.myCompute {
+            Some(compute) => compute(self, from, to, vehicle, msTime, into, silent),
+            None => panic!("shortcut: SUMOAbstractRouter::compute is pure virtual and this router has no compute installed"),
+        }
     }
 
     /// C++: `bool SUMOAbstractRouter::compute(const E *, double, const E *, double, const V *const, SUMOTime, std::vector<const E *> &, bool)`
@@ -385,8 +396,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
         }
         let mut minEffort = f64::MAX;
         let mut best: Vec<Ptr<E>> = Vec::new();
-        let vClass: SUMOVehicleClass = if vehicle.is_null() { SVC_IGNORING } else { v_vclass(vehicle) };
-        for follower in e_via_successors(from, vClass) {
+        let vClass: SUMOVehicleClass = if vehicle.is_null() { SVC_IGNORING } else { v_vclass::<V>(vehicle) };
+        for follower in e_via_successors::<E, V>(from, vClass) {
             let mut tmp: Vec<Ptr<E>> = Vec::new();
             self.compute(follower.0, to, vehicle, msTime, &mut tmp, true);
             if tmp.len() > 0 {
@@ -402,7 +413,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             into.extend(best);
             return true;
         } else if !silent && !self.myErrorMsgHandler.is_null() {
-            let (fromId, toId) = (e_id(from), e_id(to));
+            let (fromId, toId) = (e_id::<E, V>(from), e_id::<E, V>(to));
             let args: [&dyn utils::common::to_string::ToStringPrec; 2] = [&fromId, &toId];
             self.myErrorMsgHandler.m().informf("No connection between edge '%' and edge '%' found.", &args);
         }
@@ -420,12 +431,12 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     #[allow(unused_variables)]
     pub fn is_prohibited(&self, edge: Ptr<E>, vehicle: Ptr<V>, t: f64) -> bool {
         if !self.myProhibited.is_empty() {
-            let info = &self.myEdgeInfos[e_numerical_id(edge)];
-            if (info.prohibitedPermissions & v_vclass(vehicle)) != v_vclass(vehicle) && info.prohibitionBegin <= t && info.prohibitionEnd == f64::MAX {
+            let info = &self.myEdgeInfos[e_numerical_id::<E, V>(edge)];
+            if (info.prohibitedPermissions & v_vclass::<V>(vehicle)) != v_vclass::<V>(vehicle) && info.prohibitionBegin <= t && info.prohibitionEnd == f64::MAX {
                 return true;
             }
         }
-        (self.myHavePermissions && e_prohibits(edge, vehicle)) || (self.myHaveRestrictions && e_restricts(edge, vehicle))
+        (self.myHavePermissions && e_prohibits::<E, V>(edge, vehicle)) || (self.myHaveRestrictions && e_restricts::<E, V>(edge, vehicle))
     }
 
     /// C++: `double SUMOAbstractRouter::getTravelTime(const E *const, const V *const, const double, const double) const` [const]
@@ -453,12 +464,12 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     #[allow(unused_variables)]
     pub fn update_via_edge_cost(&self, viaEdge: Ptr<E>, v: Ptr<V>, time: &mut f64, effort: &mut f64, length: &mut f64) {
         let mut viaEdge = viaEdge;
-        while !viaEdge.is_null() && e_is_internal(viaEdge) {
+        while !viaEdge.is_null() && e_is_internal::<E, V>(viaEdge) {
             let viaEffortDelta = self.get_effort(viaEdge, v, *time);
             *time += self.get_travel_time(viaEdge, v, *time, viaEffortDelta);
             *effort += viaEffortDelta;
-            *length += e_length(viaEdge);
-            viaEdge = e_via_successors(viaEdge, SVC_IGNORING)[0].1;
+            *length += e_length::<E, V>(viaEdge);
+            viaEdge = e_via_successors::<E, V>(viaEdge, SVC_IGNORING)[0].1;
         }
     }
 
@@ -480,7 +491,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     #[allow(unused_variables)]
     pub fn update_via_cost(&self, prev: Ptr<E>, e: Ptr<E>, v: Ptr<V>, time: &mut f64, effort: &mut f64, length: &mut f64) {
         if !prev.is_null() {
-            for follower in e_via_successors(prev, SVC_IGNORING) {
+            for follower in e_via_successors::<E, V>(prev, SVC_IGNORING) {
                 if follower.0 == e {
                     self.update_via_edge_cost(follower.1, v, time, effort, length);
                     break;
@@ -490,7 +501,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
         let effortDelta = self.get_effort(e, v, *time);
         *effort += effortDelta;
         *time += self.get_travel_time(e, v, *time, effortDelta);
-        *length += e_length(e);
+        *length += e_length::<E, V>(e);
     }
 
     /// C++: `bool SUMOAbstractRouter::isValid(const std::vector<const E *> &, const V *const, double) const` [const]
@@ -585,29 +596,29 @@ impl<E, V> SUMOAbstractRouter<E, V> {
         let mut effort = self.recompute_costs(edges, v, msTime, lengthp);
         if !edges.is_empty() {
             let mut first = edges[0];
-            if e_length(first) == 0. {
-                if edges.len() > 1 && e_length(edges[1]) > 0. {
+            if e_length::<E, V>(first) == 0. {
+                if edges.len() > 1 && e_length::<E, V>(edges[1]) > 0. {
                     first = edges[1];
                 } else {
                     return effort;
                 }
             }
             let mut last = edges[edges.len() - 1];
-            if e_length(last) == 0. {
-                if edges.len() > 1 && e_length(edges[edges.len() - 2]) > 0. {
+            if e_length::<E, V>(last) == 0. {
+                if edges.len() > 1 && e_length::<E, V>(edges[edges.len() - 2]) > 0. {
                     last = edges[edges.len() - 2];
                 } else {
                     return effort;
                 }
             }
-            assert!(e_length(first) > 0.);
-            assert!(e_length(last) > 0.);
+            assert!(e_length::<E, V>(first) > 0.);
+            assert!(e_length::<E, V>(last) > 0.);
             let firstEffort = self.get_effort(first, v, steps2time(msTime));
             let lastEffort = self.get_effort(last, v, steps2time(msTime));
-            effort -= firstEffort * fromPos / e_length(first);
-            effort -= lastEffort * (e_length(last) - toPos) / e_length(last);
+            effort -= firstEffort * fromPos / e_length::<E, V>(first);
+            effort -= lastEffort * (e_length::<E, V>(last) - toPos) / e_length::<E, V>(last);
             if !lengthp.is_null() {
-                *lengthp.m() -= fromPos + e_length(last) - toPos;
+                *lengthp.m() -= fromPos + e_length::<E, V>(last) - toPos;
             }
         }
         effort
@@ -648,15 +659,15 @@ impl<E, V> SUMOAbstractRouter<E, V> {
         let mut time = steps2time(msTime);
         let mut effort = 0.;
         let mut length = 0.;
-        let mut prev: Ptr<SUMOAbstractRouter_EdgeInfo> = Ptr::from_mut(&mut self.myEdgeInfos[e_numerical_id(route[routeBegin])]);
-        self.init(e_numerical_id(route[routeBegin]) as i32, msTime);
+        let mut prev: Ptr<SUMOAbstractRouter_EdgeInfo> = Ptr::from_mut(&mut self.myEdgeInfos[e_numerical_id::<E, V>(route[routeBegin])]);
+        self.init(e_numerical_id::<E, V>(route[routeBegin]) as i32, msTime);
         for e_idx in routeBegin + 1..routeEnd {
             let e = route[e_idx];
             // C++ calls isProhibited(*e, v) with two arguments, which does not compile if instantiated; the query time is passed here
             if self.is_prohibited(e, v, time) {
                 return -1.;
             }
-            let edge_info = Ptr::from_mut(&mut self.myEdgeInfos[e_numerical_id(e)]);
+            let edge_info = Ptr::from_mut(&mut self.myEdgeInfos[e_numerical_id::<E, V>(e)]);
             edge_info.m().heuristicEffort = effort;
             edge_info.m().prev = prev;
             self.update_via_cost(prev.m().edge.cast::<E>(), e, v, &mut time, &mut effort, &mut length);
@@ -683,8 +694,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     #[allow(unused_variables)]
     pub fn get_effort(&self, e: Ptr<E>, v: Ptr<V>, t: f64) -> f64 {
         if !self.myProhibited.is_empty() && !self.myEdgeInfos.is_empty() {
-            let info = &self.myEdgeInfos[e_numerical_id(e)];
-            if info.prohibitionEnd > t && info.prohibitionBegin <= t && (info.prohibitedPermissions & v_vclass(v)) != v_vclass(v) {
+            let info = &self.myEdgeInfos[e_numerical_id::<E, V>(e)];
+            if info.prohibitionEnd > t && info.prohibitionBegin <= t && (info.prohibitedPermissions & v_vclass::<V>(v)) != v_vclass::<V>(v) {
                 // pass edge after prohibition ends
                 let end = info.prohibitionEnd;
                 return (end - t) + call_op(self.myOperation, e, v, end);
@@ -751,13 +762,13 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
         for item in self.myProhibited.keys() {
-            let info = &mut self.myEdgeInfos[e_numerical_id(*item)];
+            let info = &mut self.myEdgeInfos[e_numerical_id::<E, V>((*item).cast::<E>())];
             info.prohibitedPermissions = SVC_ALL;
             info.prohibitionBegin = -1.;
             info.prohibitionEnd = -1.;
         }
         for (item, rp) in toProhibit.iter() {
-            let info = &mut self.myEdgeInfos[e_numerical_id(*item)];
+            let info = &mut self.myEdgeInfos[e_numerical_id::<E, V>((*item).cast::<E>())];
             info.prohibitionBegin = rp.begin;
             info.prohibitionEnd = rp.end;
             info.prohibitedPermissions = rp.permissions;
@@ -825,39 +836,32 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
     utils::common::msg_handler::with_instance(if warning { MsgType::Warning } else { MsgType::Error }, |h| Ptr::from_mut(h))
 }
 
-// shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on the generic E
-fn e_numerical_id<E>(_e: Ptr<E>) -> usize {
-    panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+fn e_numerical_id<E: RouterEdge<V>, V>(e: Ptr<E>) -> usize {
+    e.numerical_id() as usize
 }
 
-// shortcut: needs router trait bounds (lead), E::getLength is not callable on the generic E
-fn e_length<E>(_e: Ptr<E>) -> f64 {
-    panic!("shortcut: needs router trait bounds (lead), E::getLength")
+fn e_length<E: RouterEdge<V>, V>(e: Ptr<E>) -> f64 {
+    e.length()
 }
 
-// shortcut: needs router trait bounds (lead), E::isInternal is not callable on the generic E
-fn e_is_internal<E>(_e: Ptr<E>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+fn e_is_internal<E: RouterEdge<V>, V>(e: Ptr<E>) -> bool {
+    e.is_internal()
 }
 
-// shortcut: needs router trait bounds (lead), E::getID is not callable on the generic E
-fn e_id<E>(_e: Ptr<E>) -> String {
-    panic!("shortcut: needs router trait bounds (lead), E::getID")
+fn e_id<E: RouterEdge<V>, V>(e: Ptr<E>) -> String {
+    e.id().to_string()
 }
 
-// shortcut: needs router trait bounds (lead), E::prohibits(V) is not callable on the generic E
-fn e_prohibits<E, V>(_e: Ptr<E>, _v: Ptr<V>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::prohibits")
+fn e_prohibits<E: RouterEdge<V>, V>(e: Ptr<E>, v: Ptr<V>) -> bool {
+    e.prohibits(v, true)
 }
 
-// shortcut: needs router trait bounds (lead), E::restricts(V) is not callable on the generic E
-fn e_restricts<E, V>(_e: Ptr<E>, _v: Ptr<V>) -> bool {
-    panic!("shortcut: needs router trait bounds (lead), E::restricts")
+fn e_restricts<E: RouterEdge<V>, V>(e: Ptr<E>, v: Ptr<V>) -> bool {
+    e.restricts(v)
 }
 
-// shortcut: needs router trait bounds (lead), E::getViaSuccessors is not callable on the generic E
-fn e_via_successors<E>(_e: Ptr<E>, _v_class: SUMOVehicleClass) -> Vec<(Ptr<E>, Ptr<E>)> {
-    panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+fn e_via_successors<E: RouterEdge<V>, V>(e: Ptr<E>, v_class: SUMOVehicleClass) -> Vec<(Ptr<E>, Ptr<E>)> {
+    e.via_successors(v_class, false).to_vec()
 }
 
 /// C++ `(*myOperation)(e, v, t)`. A null operation is dereferenced by C++ too, so it is a crash here as well.
@@ -868,9 +872,8 @@ fn call_op<E, V>(op: Option<SUMOAbstractRouter_TypedOperation<E, V>>, e: Ptr<E>,
     }
 }
 
-// shortcut: needs router trait bounds (lead), V::getVClass is not callable on the generic V
-fn v_vclass<V>(_v: Ptr<V>) -> SUMOVehicleClass {
-    panic!("shortcut: needs router trait bounds (lead), V::getVClass")
+fn v_vclass<V: RouterVehicle>(v: Ptr<V>) -> SUMOVehicleClass {
+    v.v_class()
 }
 
 

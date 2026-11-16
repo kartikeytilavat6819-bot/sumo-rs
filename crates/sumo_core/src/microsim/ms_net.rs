@@ -8,6 +8,9 @@ use utils::geom::POSITION_EPS;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
 use utils::common::msg_handler::write_message;
+use crate::utils::router::dijkstra_router::DijkstraRouter;
+use crate::utils::router::a_star_router::AStarRouter;
+use crate::microsim::ms_router_defs::MSMapMatcher;
 
 thread_local! {
     static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
@@ -3130,16 +3133,29 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter/AStarRouter/CCHRouter::new need SUMOAbstractRouter_Operation (Unmapped fn-pointer type in sumo_abstract_router.rs) and the CCH lookup types, upgrade when that operation type is typed; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        match me.myRouterTT.get(&rngIndex).copied() {
-            Some(router) => {
-                router.m().prohibit(prohibited);
-                router.get_mut().unwrap()
-            }
-            None => panic!("shortcut: routing algorithm routers for TraCI/triggers are not creatable yet"),
+        let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
+        if !me.myRouterTT.contains_key(&rngIndex) {
+            let routingAlgorithm = get_string("routing-algorithm");
+            let router: Ptr<MSVehicleRouter> = if routingAlgorithm == "dijkstra" {
+                let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
+                Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
+            } else if routingAlgorithm == "CCH" {
+                // shortcut: CCHRouter over MSCCHGraph is not ported, upgrade with the CCH port
+                panic!("shortcut: routing algorithm 'CCH' for TraCI and triggers is not ported")
+            } else {
+                if routingAlgorithm != "astar" {
+                    utils::common::msg_handler::write_warning(&format!("TraCI and Triggers cannot use routing algorithm '{}'. using 'astar' instead.", routingAlgorithm));
+                }
+                let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, true, false).with_compute();
+                Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
+            };
+            me.myRouterTT.insert(rngIndex, router);
         }
+        let router = me.myRouterTT[&rngIndex];
+        router.m().prohibit(prohibited);
+        router.get_mut().unwrap()
     }
 
     /// C++: `MSVehicleRouter & MSNet::getRouterEffort(int, const Prohibitions &) const` [const]

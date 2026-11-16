@@ -18,6 +18,11 @@ fn edge_numerical_id<E: RouterEdge<V>, V>(edge: Ptr<()>) -> i32 {
     edge.cast::<E>().numerical_id()
 }
 
+/// The `DijkstraRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn dijkstra_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<DijkstraRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
 /// Computes the shortest path through a network using the Dijkstra algorithm.
 /// C++ class `DijkstraRouter` (utils/router/DijkstraRouter.h)
 #[repr(C)]
@@ -94,12 +99,19 @@ impl<E, V> DijkstraRouter<E, V> {
         let warning = self.base.myErrorMsgHandler == msg_instance(true);
         let mut clone: DijkstraRouter<E, V> = DijkstraRouter::new_2(&self.base.myEdgeInfos, warning, self.base.myOperation, self.base.myTTOperation, self.mySilent, self.myExternalEffort, self.base.myHavePermissions, self.base.myHaveRestrictions);
         clone.set_auto_bulk_mode(self.base.myAutoBulkMode);
+        clone.base.myCompute = self.base.myCompute;
         Ptr::from_raw(Box::into_raw(Box::new(clone))).cast::<SUMOAbstractRouter<E, V>>()
     }
 
 }
 
 impl<E: RouterEdge<V>, V: RouterVehicle> DijkstraRouter<E, V> {
+    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(dijkstra_compute::<E, V>);
+        self
+    }
+
     /// C++: `bool DijkstraRouter::compute(const E *, const E *, const V *const, SUMOTime, std::vector<const E *> &, bool)`
     /// Builds the route between the given edges using the minimum effort at the given time The definition of the effort depends on the wished routing scheme
     // bool compute(const E* from, const E* to, const V* const vehicle,
@@ -404,3 +416,95 @@ impl DijkstraRouter_EdgeInfoByEffortComparator {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::router::router_edge::RouterEdgeInfo;
+    use utils::common::sumo_vehicle_class::{SVC_ALL, SVC_PASSENGER};
+    use utils::common::sumo_vehicle_class::SVCPermissions;
+
+    /// Test edge: a diamond in the edge graph, in -> {top, bot} -> out
+    struct TEdge {
+        num: i32,
+        name: String,
+        length: f64,
+        succ: Vec<Ptr<TEdge>>,
+    }
+
+    struct TVeh;
+
+    impl RouterVehicle for TVeh {
+        fn v_class(&self) -> SUMOVehicleClass { SVC_PASSENGER }
+        fn get_id(&self) -> String { "v".to_string() }
+        fn get_max_speed(&self) -> f64 { 10. }
+        fn get_chosen_speed_factor(&self) -> f64 { 1. }
+        fn ignore_transient_permissions(&self) -> bool { false }
+        fn length(&self) -> f64 { 5. }
+    }
+
+    impl RouterEdgeInfo for TEdge {
+        fn edge_numerical_id(&self) -> i32 { self.num }
+        fn edge_id(&self) -> String { self.name.clone() }
+        fn edge_permissions(&self) -> SVCPermissions { SVC_ALL }
+    }
+
+    impl RouterEdge<TVeh> for TEdge {
+        type Node = ();
+        type Lane = ();
+        fn id(&self) -> &str { &self.name }
+        fn numerical_id(&self) -> i32 { self.num }
+        fn length(&self) -> f64 { self.length }
+        fn length_geometry_factor(&self) -> f64 { 1. }
+        fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 { 0. }
+        fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] { &self.succ }
+        fn via_successors(&self, _vclass: SUMOVehicleClass, _ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] { &[] }
+        fn speed_limit(&self) -> f64 { 10. }
+        fn minimum_travel_time(&self, _veh: Ptr<TVeh>) -> f64 { self.length / 10. }
+        fn bidi_edge(&self) -> Ptr<Self> { Ptr::null() }
+        fn travel_time_static(edge: Ptr<Self>, _veh: Ptr<TVeh>, _time: f64) -> f64 { edge.length }
+        fn travel_time_aggregated(edge: Ptr<Self>, _veh: Ptr<TVeh>, _time: f64) -> f64 { edge.length }
+        fn is_internal(&self) -> bool { false }
+        fn prohibits(&self, _veh: Ptr<TVeh>, _check_restrictions: bool) -> bool { false }
+        fn restricts(&self, _veh: Ptr<TVeh>) -> bool { false }
+    }
+
+    /// effort = edge length, so the shortest route is the one with the least total length
+    fn test_effort(e: Ptr<TEdge>, _v: Ptr<TVeh>, _t: f64) -> f64 { e.length }
+
+    fn new_edge(num: i32, name: &str, length: f64) -> Ptr<TEdge> {
+        Ptr::from_raw(Box::into_raw(Box::new(TEdge { num, name: name.to_string(), length, succ: Vec::new() })))
+    }
+
+    fn names(route: &[Ptr<TEdge>]) -> Vec<String> {
+        route.iter().map(|e| e.name.clone()).collect()
+    }
+
+    #[test]
+    fn detours_around_a_prohibited_edge_through_the_base_router() {
+        let inE = new_edge(0, "in", 1.);
+        let top = new_edge(1, "top", 10.);
+        let bot = new_edge(2, "bot", 20.);
+        let outE = new_edge(3, "out", 1.);
+        inE.m().succ = vec![top, bot];
+        top.m().succ = vec![outE];
+        bot.m().succ = vec![outE];
+        let edges = vec![inE, top, bot, outE];
+        let mut veh = TVeh;
+        let vehPtr = Ptr::from_mut(&mut veh);
+
+        let mut router: DijkstraRouter<TEdge, TVeh> = DijkstraRouter::new(&edges, true, Some(test_effort), None, false, Ptr::null(), false, false).with_compute();
+
+        let mut plain: Vec<Ptr<TEdge>> = Vec::new();
+        assert!(router.base.compute(inE, outE, vehPtr, 0, &mut plain, true));
+        assert_eq!(names(&plain), vec!["in", "top", "out"]);
+
+        let mut prohibitions: SUMOAbstractRouter_Prohibitions = Default::default();
+        prohibitions.insert(top.cast::<()>(), RouterProhibition { begin: 0., end: f64::MAX, permissions: 0 });
+        router.base.prohibit(&prohibitions);
+
+        let mut detour: Vec<Ptr<TEdge>> = Vec::new();
+        assert!(router.base.compute(inE, outE, vehPtr, 0, &mut detour, true));
+        assert_eq!(names(&detour), vec!["in", "bot", "out"]);
+    }
+}

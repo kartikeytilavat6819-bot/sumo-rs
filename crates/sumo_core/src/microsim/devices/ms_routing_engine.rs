@@ -5,6 +5,11 @@ use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER
 use utils::common::time::{steps2time, string2time};
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_default, is_set, OptionsCont};
 use utils::common::util_exceptions::ProcessError;
+use crate::utils::router::dijkstra_router::DijkstraRouter;
+use crate::utils::router::a_star_router::AStarRouter;
+use crate::utils::router::railway_router::RailwayRouter;
+use crate::utils::router::router_provider::RouterProvider;
+use crate::microsim::ms_router_defs::{MSMapMatcher, MSRouterProvider};
 
 /// C++ `StaticCommand<MSRoutingEngine>` (utils/common/StaticCommand.h): runs a static function at a time step
 pub struct MSRoutingEngine_StaticCommand {
@@ -473,9 +478,42 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_router(vehicle: Ptr<SUMOVehicle>) {
-        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderinitRouter constructs the Dijkstra/AStar/CH/CCH and railway routers
-        let _ = vehicle;
-        panic!("shortcut: initRouter must construct the Dijkstra/AStar/CH/railway routers and the RouterProvider; no construction path exists in the port")
+        let routingAlgorithm = get_string("routing-algorithm");
+        let hasPermissions = MSNet::get_instance().m().has_permissions();
+        let bikeSpeeds = get_bool("device.rerouting.bike-speeds");
+        let effortIsExtra = {
+            let mut st = state();
+            st.myBikeSpeeds = bikeSpeeds;
+            st.myEffortFuncIsExtra = st.myHaveExtras || bikeSpeeds;
+            st.myEffortFuncIsExtra
+        };
+        let effort: SUMOAbstractRouter_TypedOperation<MSEdge, SUMOVehicle> = if effortIsExtra { MSRoutingEngine::get_effort_extra } else { MSRoutingEngine::get_effort };
+        let edges = MSEdge::get_all_edges();
+        let router: Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>> = if routingAlgorithm == "dijkstra" {
+            let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), None, false, Ptr::null(), true, false).with_compute();
+            Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
+        } else if routingAlgorithm == "astar" {
+            // shortcut: the astar.all-distances and astar.landmark-distances lookup tables are not ported, a run that sets them panics instead of routing without them
+            if is_set("astar.all-distances") || is_set("astar.landmark-distances") {
+                panic!("shortcut: astar lookup tables (astar.all-distances, astar.landmark-distances) are not ported")
+            }
+            let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(edges, true, Some(effort), None, true, false).with_compute();
+            Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
+        } else if routingAlgorithm == "CH" || routingAlgorithm == "CHWrapper" || routingAlgorithm == "CCH" {
+            // shortcut: CH, CHWrapper and CCH routers are not ported, upgrade with the CH/CCH port
+            panic!("shortcut: routing algorithm '{}' is not ported", routingAlgorithm)
+        } else {
+            std::panic::panic_any(ProcessError::new(&format!("Unknown routing algorithm '{}'!", routingAlgorithm)))
+        };
+        let railRouter: Ptr<RailwayRouter<MSEdge, SUMOVehicle>> = if MSNet::get_instance().m().has_bidi_edges() {
+            let router = RailwayRouter::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), None, false, true, false, get_float("railway.max-train-length"), get_float("weights.reversal-penalty")).with_compute();
+            Ptr::from_raw(Box::into_raw(Box::new(router)))
+        } else {
+            Ptr::null()
+        };
+        // shortcut: MSTransportableRouter (pedestrian and intermodal routing) is not ported, the provider holds no pedestrian or intermodal router, upgrade with the transportable port
+        let provider: MSRouterProvider = RouterProvider::new(router, Ptr::null(), Ptr::null(), railRouter);
+        ROUTER_PROVIDER.with(|p| p.set(Some(Ptr::from_raw(Box::into_raw(Box::new(provider))))));
     }
 
     /// C++: `void MSRoutingEngine::reroute(SUMOVehicle &, const SUMOTime, const std::string &, const bool, const bool, const Prohibitions &)` [static]
@@ -618,7 +656,8 @@ impl MSRoutingEngine {
         }
         // myCachedRoutes.clear(): the route cache is never populated in this port
         Self::cleanup_cch();
-        // myRouterProvider = nullptr / delete: the router provider is never created in this port
+        // shortcut: the provider and its routers are leaked, not deleted (C++ delete), upgrade when the routers have a common owner
+        ROUTER_PROVIDER.with(|p| p.set(None));
     }
 
     /// C++: `void MSRoutingEngine::cleanupCCH()` [static]
@@ -681,9 +720,15 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
-        // shortcut: myRouterProvider is never constructed (initRouter is a stub), so there is no MSVehicleRouter to return; upgrade when initRouter builds the RouterProvider
-        let _ = (rngIndex, svc, prohibited);
-        panic!("shortcut: getRouterTT needs myRouterProvider, which initRouter never builds")
+        if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
+            Self::init_weight_update(-1);
+            Self::init_edge_weights(svc, -1, -1);
+            Self::init_router(Ptr::null());
+        }
+        let provider = ROUTER_PROVIDER.with(|p| p.get()).unwrap();
+        let router = provider.get_mut().unwrap().get_vehicle_router(svc);
+        router.prohibit(prohibited);
+        router
     }
 
     /// C++: `MSTransportableRouter & MSRoutingEngine::getIntermodalRouterTT(const int, const Prohibitions &)` [static]
@@ -1500,6 +1545,11 @@ static ROUTING_ENGINE_STATE: std::sync::Mutex<RoutingEngineState> = std::sync::M
     myEffortFuncIsExtra: false,
     myEdgeWeightSettingCommand: false,
 });
+
+thread_local! {
+    /// C++ static `MSRoutingEngine::myRouterProvider`; thread-local because the worker-thread pool is not ported
+    static ROUTER_PROVIDER: std::cell::Cell<Option<Ptr<MSRouterProvider>>> = const { std::cell::Cell::new(None) };
+}
 
 fn state() -> std::sync::MutexGuard<'static, RoutingEngineState> {
     ROUTING_ENGINE_STATE.lock().unwrap_or_else(|e| e.into_inner())
