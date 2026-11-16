@@ -1382,7 +1382,7 @@ impl MSBaseVehicle {
         let mut stops: Vec<MSBaseVehicle_StopEdgeInfo> = Vec::new();
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
-        let sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
+        let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
