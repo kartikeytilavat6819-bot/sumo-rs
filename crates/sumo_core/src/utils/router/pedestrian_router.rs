@@ -58,7 +58,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn new() -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
-        let net: Ptr<IntermodalNetwork<E, L, N, V>> = Ptr::from_raw(Box::into_raw(Box::new(IntermodalNetwork::new(&E::all_edges(), true, 0))));
+        let net: Ptr<IntermodalNetwork<E, L, N, V>> = Ptr::from_raw(Box::into_raw(Box::new(IntermodalNetwork::<E, L, N, V>::new(&E::all_edges(), true, 0))));
         let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().clone();
         let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false);
         Self {

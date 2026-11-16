@@ -1,4 +1,4 @@
-//! Port of microsim/transportables/MSPerson.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+﻿//! Port of microsim/transportables/MSPerson.{h,cpp} â€” GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
@@ -149,117 +149,17 @@ fn ms_person_is_container(_: &SUMOTrafficObject) -> bool {
     false
 }
 // C++ overrides of SUMOTrafficObject in MSTransportable (inherited by MSPerson): dispatch to the MSTransportable methods
-fn ms_person_of(o: &SUMOTrafficObject) -> &MSPerson {
-    Ptr::new(o).cast::<MSPerson>().get().unwrap()
-}
-fn ms_person_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    ms_person_of(o).base.get_edge()
-}
-fn ms_person_get_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
-    ms_person_of(o).base.get_lane()
-}
-fn ms_person_get_speed(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_speed()
-}
-fn ms_person_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
-    ms_person_of(o).base.get_position(offset)
-}
-fn ms_person_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
-    ms_person_of(o).base.get_numerical_id()
-}
-fn ms_person_get_random_seed(o: &SUMOTrafficObject) -> i64 {
-    ms_person_of(o).base.get_random_seed()
-}
-fn ms_person_get_vehicle_type(o: &SUMOTrafficObject) -> &MSVehicleType {
-    ms_person_of(o).base.get_vehicle_type()
-}
-fn ms_person_get_rng(o: &SUMOTrafficObject) -> Ptr<SumoRNG> {
-    ms_person_of(o).base.get_rng()
-}
-fn ms_person_get_rng_index(o: &SUMOTrafficObject) -> i32 {
-    ms_person_of(o).base.get_rng_index()
-}
-fn ms_person_get_current_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    ms_person_of(o).base.get_current_edge()
-}
-fn ms_person_get_back_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
-    ms_person_of(o).base.get_back_lane()
-}
-fn ms_person_get_route_position(o: &SUMOTrafficObject) -> i32 {
-    ms_person_of(o).base.get_route_position()
-}
-fn ms_person_get_reroute_destination(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    ms_person_of(o).base.get_reroute_destination()
-}
-fn ms_person_get_slope(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_slope()
-}
-fn ms_person_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
-    ms_person_of(o).base.get_v_class()
-}
-fn ms_person_get_max_speed(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_max_speed()
-}
-fn ms_person_get_waiting_time(o: &SUMOTrafficObject, accumulated: bool) -> SUMOTime {
-    ms_person_of(o).base.get_waiting_time(accumulated)
-}
-fn ms_person_get_acceleration(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_acceleration()
-}
-fn ms_person_get_position_on_lane(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_position_on_lane()
-}
-fn ms_person_get_back_position_on_lane(o: &SUMOTrafficObject, lane: Ptr<MSLane>) -> f64 {
-    ms_person_of(o).base.get_back_position_on_lane(lane)
-}
-fn ms_person_get_angle(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_angle()
-}
-fn ms_person_has_arrived(o: &SUMOTrafficObject) -> bool {
-    ms_person_of(o).base.has_arrived()
-}
-fn ms_person_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
-    ms_person_of(o).base.get_device(type_)
-}
-
 fn ms_person_of_mut(o: &mut SUMOTrafficObject) -> &mut MSPerson {
     Ptr::from_mut(o).cast::<MSPerson>().get_mut().unwrap()
-}
-fn ms_person_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
-    ms_person_of(o).base.get_v_type_parameter()
 }
 fn ms_person_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
     ms_person_of_mut(o).base.replace_vehicle_type(type_)
 }
-fn ms_person_is_stopped(o: &SUMOTrafficObject) -> bool {
-    ms_person_of(o).base.is_stopped()
-}
-fn ms_person_get_next_edge_ptr(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
-    ms_person_of(o).get_next_edge_ptr()
-}
-fn ms_person_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
-    ms_person_of(o).base.get_upcoming_edge_i_ds()
-}
 fn ms_person_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
     ms_person_of_mut(o).base.replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
 }
-fn ms_person_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).get_chosen_speed_factor()
-}
-fn ms_person_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
-    ms_person_of(o).base.get_routing_mode()
-}
 fn ms_person_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
     ms_person_of_mut(o).base.set_routing_mode(value)
-}
-fn ms_person_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
-    ms_person_of(o).base.get_previous_speed()
-}
-fn ms_person_has_influencer(o: &SUMOTrafficObject) -> bool {
-    ms_person_of(o).has_influencer()
-}
-fn ms_person_is_selected(o: &SUMOTrafficObject) -> bool {
-    ms_person_of(o).is_selected()
 }
 
 static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
