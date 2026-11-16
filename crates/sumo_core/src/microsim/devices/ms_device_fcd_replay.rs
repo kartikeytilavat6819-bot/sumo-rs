@@ -1021,6 +1021,13 @@ impl MSDevice_FCDReplay {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
+        let mut this = Self::new_device(holder, id);
+        // C++ deviceName() is "fcd-replay", which the id prefix "fcdReplay_" does not give
+        this.base.base2.name = "fcd-replay".to_string();
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str) -> Self {
         MSDevice_FCDReplay {
             base: MSVehicleDevice::new(holder, id),
             myTrajectory: Ptr::null(),

@@ -777,6 +777,23 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, maxRoutes);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Self {
         let currentRoute = holder.get_route_ptr();
         let mut this = MSDevice_Vehroutes {
             base: MSVehicleDevice::new(holder, id),
