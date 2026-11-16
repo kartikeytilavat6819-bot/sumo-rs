@@ -4770,7 +4770,9 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     pub fn get_emissions(&mut self, et: PollutantsInterface_EmissionType) -> f64 {
         if self.is_on_road() || self.is_idling() {
-            PollutantsInterface::compute(self.get_vehicle_type().get_emission_class(), et, self.get_speed(), self.get_acceleration(), self.get_slope(), self.get_emission_parameters())
+            // virtual calls in C++: read through SUMOTrafficObject so MSVehicle's acceleration is used, not the base 0
+            let obj: &SUMOTrafficObject = self;
+            PollutantsInterface::compute(obj.get_vehicle_type().get_emission_class(), et, obj.get_speed(), obj.get_acceleration(), obj.get_slope(), self.get_emission_parameters())
         } else {
             0.
         }

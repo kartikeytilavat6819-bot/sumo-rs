@@ -152,7 +152,9 @@ impl MSEmissionExport {
         of.write_func_attr(SUMO_ATTR_ECLASS, || PollutantsInterface::get_name(veh.get_vehicle_type().get_emission_class()), mask, false);
         if mask.test(SUMO_ATTR_CO2) || mask.test(SUMO_ATTR_CO) || mask.test(SUMO_ATTR_HC) || mask.test(SUMO_ATTR_NOX) || mask.test(SUMO_ATTR_PMX)
             || mask.test(SUMO_ATTR_FUEL) || mask.test(SUMO_ATTR_ELECTRICITY) {
-            let mut emiss = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.m().get_emission_parameters());
+            // virtual calls in C++: read through SUMOTrafficObject so MSVehicle's acceleration is used, not the base 0
+            let obj: &SUMOTrafficObject = &*veh;
+            let mut emiss = PollutantsInterface::compute_all(obj.get_vehicle_type().get_emission_class(), obj.get_speed(), obj.get_acceleration(), obj.get_slope(), veh.m().get_emission_parameters());
             if options_cont::get_bool("emission-output.step-scaled") {
                 // C++ addScaled(emiss, TS - 1.) aliases its own operand; the copy reads the pre-scaling values
                 let copy = PollutantsInterface_Emissions { CO2: emiss.CO2, CO: emiss.CO, HC: emiss.HC, fuel: emiss.fuel, NOx: emiss.NOx, PMx: emiss.PMx, electricity: emiss.electricity };
@@ -168,7 +170,8 @@ impl MSEmissionExport {
             of.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY, &emiss.electricity, mask, false);
             of.set_precision(g_precision());
         }
-        of.write_func_attr(SUMO_ATTR_NOISE, || HelpersHarmonoise::compute_noise(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration()), mask, false);
+        let obj: &SUMOTrafficObject = &*veh;
+        of.write_func_attr(SUMO_ATTR_NOISE, || HelpersHarmonoise::compute_noise(obj.get_vehicle_type().get_emission_class(), obj.get_speed(), obj.get_acceleration()), mask, false);
         of.write_optional_attr_mask(SUMO_ATTR_ROUTE, veh.get_route().base.get_id(), mask, false);
         if includeType {
             let fclass = veh.get_vehicle_type().get_id().split('@').next().unwrap().to_string();
