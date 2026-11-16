@@ -267,7 +267,7 @@ impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //         myFallback->prohibit(toProhibit);
     //     }
     #[allow(unused_variables)]
-    pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+    pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) where V: crate::utils::router::router_edge::RouterVehicle {
         self.myProhibited = toProhibit.clone();
         self.myProhibitionActive = !toProhibit.is_empty();
         self.myFallback.m().prohibit(toProhibit);

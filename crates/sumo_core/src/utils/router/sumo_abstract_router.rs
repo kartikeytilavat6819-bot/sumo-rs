@@ -132,7 +132,7 @@ pub struct SUMOAbstractRouter<E, V> {
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
-impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
+impl<E, V> SUMOAbstractRouter<E, V> {
     /// C++: `void SUMOAbstractRouter::SUMOAbstractRouter<E, V>(const std::string &, bool, Operation, Operation, const bool, const bool)`
     /// Constructor
     // SUMOAbstractRouter(const std::string& type, bool unbuildIsWarning, Operation operation, Operation ttOperation,
@@ -337,6 +337,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         }
     }
 
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
     /// C++: `bool SUMOAbstractRouter::compute(const E *, double, const E *, double, const V *const, SUMOTime, std::vector<const E *> &, bool)`
     /// Builds the route between the given edges using the minimum effort at the given time, also taking into account position along the edges to ensure currect handling of looped routes The definition of the effort depends on the wished routing scheme
     // inline bool compute(
@@ -439,6 +442,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         (self.myHavePermissions && e_prohibits::<E, V>(edge, vehicle)) || (self.myHaveRestrictions && e_restricts::<E, V>(edge, vehicle))
     }
 
+}
+
+impl<E, V> SUMOAbstractRouter<E, V> {
     /// C++: `double SUMOAbstractRouter::getTravelTime(const E *const, const V *const, const double, const double) const` [const]
     // inline double getTravelTime(const E* const e, const V* const v, const double t, const double effort) const {
     //         return myTTOperation == nullptr ? effort : (*myTTOperation)(e, v, t);
@@ -451,6 +457,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         }
     }
 
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
     /// C++: `void SUMOAbstractRouter::updateViaEdgeCost(const E *, const V *const, double &, double &, double &) const` [const]
     // inline void updateViaEdgeCost(const E* viaEdge, const V* const v, double& time, double& effort, double& length) const {
     //         while (viaEdge != nullptr && viaEdge->isInternal()) {
@@ -704,6 +713,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         call_op(self.myOperation, e, v, t)
     }
 
+}
+
+impl<E, V> SUMOAbstractRouter<E, V> {
     /// C++: `void SUMOAbstractRouter::startQuery()`
     // inline void startQuery() {
     //         myNumQueries++;
@@ -744,6 +756,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         self.myAutoBulkMode = mode;
     }
 
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
     /// C++: `void SUMOAbstractRouter::prohibit(const Prohibitions &)` [virtual]
     // virtual void prohibit(const Prohibitions& toProhibit) {
     //         for (auto item : this->myProhibited) {
@@ -776,6 +791,9 @@ impl<E: RouterEdge<V>, V: RouterVehicle> SUMOAbstractRouter<E, V> {
         self.myProhibited = toProhibit.clone();
     }
 
+}
+
+impl<E, V> SUMOAbstractRouter<E, V> {
     /// C++: `bool SUMOAbstractRouter::hasProhibitions() const` [const]
     // bool hasProhibitions() const {
     //         return this->myProhibited.size() > 0;

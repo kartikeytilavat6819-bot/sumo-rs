@@ -141,7 +141,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         return success ? time : -1.;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&self, from: Ptr<E>, to: Ptr<E>, departPos: f64, arrivalPos: f64, speed: f64, msTime: SUMOTime, onlyNode: Ptr<N>, pars: &SUMOVTypeParameter, into: &mut Vec<Ptr<E>>, allEdges: bool) -> f64 {
+    pub fn compute(&self, from: Ptr<E>, to: Ptr<E>, departPos: f64, arrivalPos: f64, speed: f64, msTime: SUMOTime, onlyNode: Ptr<N>, pars: &SUMOVTypeParameter, into: &mut Vec<Ptr<E>>, allEdges: bool) -> f64 where E: crate::utils::router::router_edge::RouterEdge<V> {
         if get_sidewalk::<E, L>(from, SVC_PEDESTRIAN).is_null() {
             // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E for the warning text
             panic!("shortcut: needs router trait bounds (lead), E::getID");
@@ -190,7 +190,7 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         myInternalRouter->prohibit(toProhibitPE);
     //     }
     #[allow(unused_variables)]
-    pub fn prohibit(&mut self, toProhibit: &BTreeMap<Ptr<E>, RouterProhibition>) {
+    pub fn prohibit(&mut self, toProhibit: &BTreeMap<Ptr<E>, RouterProhibition>) where E: crate::utils::router::router_edge::RouterEdge<V> {
         let mut toProhibitPE: SUMOAbstractRouter_Prohibitions = Default::default();
         for (edge, prohibition) in toProhibit {
             let dirs = self.myPedNet.get_both_directions(*edge);

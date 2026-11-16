@@ -247,7 +247,7 @@ impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn build_contraction_hierarchy(&mut self, time: SUMOTime, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) -> Ptr<CHBuilder_Hierarchy<E>> {
+    pub fn build_contraction_hierarchy(&mut self, time: SUMOTime, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) -> Ptr<CHBuilder_Hierarchy<E>> where V: crate::utils::router::router_edge::RouterVehicle {
         let result = Ptr::from_raw(Box::into_raw(Box::new(CHBuilder_Hierarchy {
             shortcuts: std::collections::BTreeMap::new(),
             forwardUplinks: Vec::new(),
@@ -385,7 +385,7 @@ impl<E: RouterEdge<V>, V> CHBuilder<E, V> {
     //         // @todo: check whether we even need to save approaching in ROEdge;
     //     }
     #[allow(unused_variables)]
-    pub fn synchronize(&mut self, info: &mut CHBuilder_CHInfo<E>, time: f64, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) {
+    pub fn synchronize(&mut self, info: &mut CHBuilder_CHInfo<E>, time: f64, vehicle: Ptr<V>, effortProvider: Ptr<SUMOAbstractRouter<E, V>>) where V: crate::utils::router::router_edge::RouterVehicle {
         let prune = !self.mySPTree.m().validate_permissions();
         let edge = info.edge;
         if prune && ((e_permissions(edge) & self.mySVC) != self.mySVC) {

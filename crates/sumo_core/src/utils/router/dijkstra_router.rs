@@ -430,6 +430,8 @@ mod tests {
         name: String,
         length: f64,
         succ: Vec<Ptr<TEdge>>,
+        /// C++ getViaSuccessors(): (successor, no internal via edge)
+        via: Vec<(Ptr<TEdge>, Ptr<TEdge>)>,
     }
 
     struct TVeh;
@@ -458,7 +460,7 @@ mod tests {
         fn length_geometry_factor(&self) -> f64 { 1. }
         fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 { 0. }
         fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] { &self.succ }
-        fn via_successors(&self, _vclass: SUMOVehicleClass, _ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] { &[] }
+        fn via_successors(&self, _vclass: SUMOVehicleClass, _ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] { &self.via }
         fn speed_limit(&self) -> f64 { 10. }
         fn minimum_travel_time(&self, _veh: Ptr<TVeh>) -> f64 { self.length / 10. }
         fn bidi_edge(&self) -> Ptr<Self> { Ptr::null() }
@@ -473,7 +475,7 @@ mod tests {
     fn test_effort(e: Ptr<TEdge>, _v: Ptr<TVeh>, _t: f64) -> f64 { e.length }
 
     fn new_edge(num: i32, name: &str, length: f64) -> Ptr<TEdge> {
-        Ptr::from_raw(Box::into_raw(Box::new(TEdge { num, name: name.to_string(), length, succ: Vec::new() })))
+        Ptr::from_raw(Box::into_raw(Box::new(TEdge { num, name: name.to_string(), length, succ: Vec::new(), via: Vec::new() })))
     }
 
     fn names(route: &[Ptr<TEdge>]) -> Vec<String> {
@@ -489,6 +491,9 @@ mod tests {
         inE.m().succ = vec![top, bot];
         top.m().succ = vec![outE];
         bot.m().succ = vec![outE];
+        for e in [inE, top, bot] {
+            e.m().via = e.succ.iter().map(|s| (*s, Ptr::null())).collect();
+        }
         let edges = vec![inE, top, bot, outE];
         let mut veh = TVeh;
         let vehPtr = Ptr::from_mut(&mut veh);
@@ -506,5 +511,11 @@ mod tests {
         let mut detour: Vec<Ptr<TEdge>> = Vec::new();
         assert!(router.base.compute(inE, outE, vehPtr, 0, &mut detour, true));
         assert_eq!(names(&detour), vec!["in", "bot", "out"]);
+
+        // C++ getRouterTT without prohibitions resets the previous ones
+        router.base.prohibit(&Default::default());
+        let mut again: Vec<Ptr<TEdge>> = Vec::new();
+        assert!(router.base.compute(inE, outE, vehPtr, 0, &mut again, true));
+        assert_eq!(names(&again), vec!["in", "top", "out"]);
     }
 }

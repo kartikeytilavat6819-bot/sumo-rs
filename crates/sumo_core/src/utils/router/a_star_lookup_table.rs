@@ -395,7 +395,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V> {
+    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V>, V: crate::utils::router::router_edge::RouterVehicle {
         let mut s = Self {
             base: AbstractLookupTable { _p: std::marker::PhantomData },
             myLandmarks: BTreeMap::new(),
