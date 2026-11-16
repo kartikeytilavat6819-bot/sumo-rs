@@ -852,7 +852,16 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        // shortcut: meso branch (MSGlobals::gMesoNet segment walk) not ported, unreachable while MSGlobals::use_meso_sim() is false
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+            while !segment.is_null() {
+                if segment.m().get_car_number() > 0 {
+                    return false;
+                }
+                segment = segment.m().get_next_segment();
+            }
+            return true;
+        }
         for lane in self.get_lanes() {
             if lane.get_vehicle_number() > 0 {
                 return false;
@@ -883,8 +892,17 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles(&self) -> Vec<Ptr<SUMOVehicle>> {
-        // shortcut: meso branch (MEVehicle segment lists) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut result = Vec::new();
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+            while !segment.is_null() {
+                for veh in segment.m().get_vehicles().iter() {
+                    result.push(Ptr::from_mut(&mut veh.m().base.base));
+                }
+                segment = segment.m().get_next_segment();
+            }
+            return result;
+        }
         for lane in self.get_lanes() {
             for veh in lane.get_vehicles_secure().iter() {
                 result.push(Ptr::from_mut(&mut veh.m().base.base));
@@ -911,8 +929,13 @@ impl MSEdge {
         if self.myLanes.len() == 0 {
             return 0.;
         }
-        // shortcut: only the meso segment walk is in C++ (gMesoNet is null in non-meso runs); meso segments not ported, upgrade with MESegment
-        0.
+        let mut occ = 0.;
+        let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+        while !segment.is_null() {
+            occ += segment.m().get_brutto_occupancy();
+            segment = segment.m().get_next_segment();
+        }
+        occ / self.myLanes[0].get_length() / (self.myLanes.len() as f64)
     }
 
     /// C++: `double MSEdge::getFlow() const` [const]
@@ -933,8 +956,13 @@ impl MSEdge {
         if self.myLanes.len() == 0 {
             return 0.;
         }
-        // shortcut: only the meso segment walk is in C++ (gMesoNet is null in non-meso runs); meso segments not ported, upgrade with MESegment
-        0.
+        let mut flow = 0.;
+        let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+        while !segment.is_null() {
+            flow += segment.m().get_car_number() as f64 * segment.m().get_mean_speed(true);
+            segment = segment.m().get_next_segment();
+        }
+        3600. * flow / self.myLanes[0].get_length()
     }
 
     /// C++: `double MSEdge::getWaitingSeconds() const` [const]
@@ -955,8 +983,15 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_seconds(&self) -> f64 {
-        // shortcut: meso branch (MESegment::getWaitingSeconds) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut wtime = 0.;
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+            while !segment.is_null() {
+                wtime += segment.m().get_waiting_seconds();
+                segment = segment.m().get_next_segment();
+            }
+            return wtime;
+        }
         for lane in self.get_lanes() {
             wtime += lane.get_waiting_seconds();
         }
@@ -990,7 +1025,14 @@ impl MSEdge {
         if self.myLanes.len() == 0 {
             return 0.;
         }
-        // shortcut: meso branch (vehicle-type length sum) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
+        if crate::microsim::ms_globals::use_meso_sim() {
+            // MESegment only tracks brutto occupancy, so the occupancy is computed from the vehicle lengths
+            let mut sum = 0.;
+            for veh in self.get_vehicles() {
+                sum += veh.cast::<MEVehicle>().m().get_vehicle_type().get_length();
+            }
+            return sum / (self.myLength * (self.myLanes.len() as f64));
+        }
         let mut sum = 0.;
         for lane in self.get_lanes() {
             sum += lane.get_netto_occupancy();
@@ -2910,7 +2952,13 @@ impl MSEdge {
                 }
                 p.rebuild_allowed_targets(updateVehicles);
             }
-            // shortcut: meso segment updatePermissions (MSGlobals::gMesoNet) not ported, unreachable while MSGlobals::use_meso_sim() is false
+            if crate::microsim::ms_globals::use_meso_sim() {
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+                while !s.is_null() {
+                    s.m().update_permissions();
+                    s = s.m().get_next_segment();
+                }
+            }
             for lane in laneList.iter() {
                 for link in lane.get_link_cont() {
                     link.m().update_permissions();
@@ -3407,9 +3455,23 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self) -> f64 {
-        // shortcut: meso branch (MESegment::getMeanSpeed) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut v = 0.;
         let mut totalNumVehs = 0.;
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+            while !segment.is_null() {
+                let numVehs = segment.m().get_car_number();
+                if numVehs > 0 {
+                    v += numVehs as f64 * segment.m().get_mean_speed(true);
+                    totalNumVehs += numVehs as f64;
+                }
+                segment = segment.m().get_next_segment();
+            }
+            if totalNumVehs == 0. {
+                return self.get_length() / self.myEmptyTraveltime;
+            }
+            return v / totalNumVehs;
+        }
         for lane in self.myLanes.iter() {
             let mut numVehs = lane.get_vehicle_number();
             if numVehs == 0 {
@@ -4005,7 +4067,54 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_meso_positions(&self) -> &BTreeMap<Ptr<MEVehicle>, (f64, i32)> {
-        // shortcut: meso segment vehicle positions (MESegment walk) not ported; returns the cache as it stands, which is what C++ returns when no meso segments exist
+        let me = Ptr::new(self);
+        let simStep = MSNet::get_instance().get_current_time_step();
+        if self.myLastCacheUpdate < simStep {
+            me.m().myLastCacheUpdate = simStep;
+            let old = std::mem::take(&mut me.m().myCachedMesoPos);
+            let now = steps2time(simStep);
+            for laneIndex in 0..self.myLanes.len() as i32 {
+                // go through the vehicles
+                let mut segmentOffset = 0.;
+                let mut segment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self, 0.);
+                while !segment.is_null() {
+                    let segLength = segment.m().get_length();
+                    let lanesCovered = if segment.m().num_queues() == 1 { (segment.m().get_capacity() / segLength).round() } else { 1. };
+                    if laneIndex < segment.m().num_queues() {
+                        // make a copy so we don't have to worry about synchronization
+                        let queue = segment.m().get_queue(laneIndex).clone();
+                        let queueSize = queue.len() as i32;
+                        let mut earliestExitTime = segment.m().get_queue_block_time(laneIndex);
+                        let mut overlap: i32 = 0;
+                        let mut prevPos = f64::MAX;
+                        for i in 0..queueSize {
+                            let veh = queue[(queueSize - i - 1) as usize];
+                            earliestExitTime = std::cmp::max(earliestExitTime, veh.m().get_event_time());
+                            let vehLength = veh.m().get_vehicle_type().get_length_with_gap();
+                            let mut maxPos = segmentOffset + segLength;
+                            let oldPos = old.get(&veh).map_or(0., |p| p.0);
+                            if i > 0 {
+                                earliestExitTime += segment.m().get_min_tau_with_veh_length(vehLength, veh.m().get_vehicle_type().get_car_follow_model().get_headway_time());
+                                maxPos = f64::min(maxPos, prevPos - vehLength / lanesCovered);
+                            }
+                            let entry = veh.m().get_last_entry_time_seconds();
+                            debug_assert!(steps2time(earliestExitTime) > entry);
+                            let pos = f64::max(f64::min(segmentOffset + segLength * (now - entry) / (steps2time(earliestExitTime) - entry), maxPos), oldPos);
+                            // check if we overlap with the previous vehicle such that the gui has the chance to add some lateral offset
+                            if overlap == 0 && prevPos - pos < vehLength {
+                                overlap = if lanesCovered > 1. { -3 } else { -1 };
+                            } else {
+                                overlap = 0;
+                            }
+                            me.m().myCachedMesoPos.insert(veh, (pos, overlap));
+                            prevPos = pos;
+                        }
+                    }
+                    segmentOffset += segLength;
+                    segment = segment.m().get_next_segment();
+                }
+            }
+        }
         &self.myCachedMesoPos
     }
 
