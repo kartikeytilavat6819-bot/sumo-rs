@@ -5,9 +5,26 @@ The simulation oracle (`run_all.sh`) does not exercise TraCI at all, so a passin
 
 ## Score
 
-13 of 32 probes match C++ 1.28.0 (junction 7/16, signal 6/16). Run: `python tools/oracle/cases/traci_basic/client.py`.
-The `simulation.getTime` segfault and the `getVersion` text are fixed (1e33a68). Probes run in separate sessions,
-so one crash only costs its own row.
+**48 of 62 probes match C++ 1.28.0** (junction 24/31, signal 24/31), measured on branch `worktree-agent-ls04` after
+rebasing onto main `88c57f8` with no callsite changes needed. Run: `python tools/oracle/cases/traci_basic/client.py`.
+Probes run in separate sessions, so one crash only costs its own row.
+
+First mismatch per failing probe (the same 7 on both cases, except where noted):
+
+| Probe | C++ | Ours |
+|---|---|---|
+| `vehicle.subscribe(nope)` + step | `TraCIException: Could not add subscription. Vehicle 'nope' is not known.` | `FatalTraCIError: Connection closed by SUMO.` (server dies) |
+| `vehicle.changeTarget(v0, last)` + getRoute | junction: `('-103224#0', '-103224#1', '-103224#2', '-103224#3')`; signal: `Vehicle 'v0' is not known.` | `getRouterTT() needs MSRoutingEngine / MSNet router access, which is not ported yet` |
+| `vehicle.setRoute(v0, current)` + getRoute | `Route replacement failed for vehicle 'v0' (No connection between edge '-103224#0' and edge '-103224#0'.).` (signal: `'324752521'` → `'324752522'`) | `index out of bounds: the len is 4 but the index is 4` (signal: len 3) |
+| `vehicle.add(vnew, route0)` + step + getIDList | junction: `('v0', …, 'v4', 'vnew')`; signal: `('v1', …, 'v4', 'vnew')` | `Vehicle::add not yet ported` |
+| `vehicle.add(v0, dup)` | `The vehicle 'v0' to add already exists.` | `Vehicle::add not yet ported` |
+| `vehicle.add(vx, nope route)` | `Invalid route 'nope' for vehicle 'vx'.` | `Vehicle::add not yet ported` |
+| `vehicle.getJunctionFoes(v0)` | `()` | `Vehicle::getJunctionFoes not yet ported` |
+
+Gate on this branch: `run_all.sh` PASS=25 FAIL=1 SKIP=8 (the FAIL is `reroute/ref_device`); `cargo test -p sumo_core -p utils`
+175 passed, 2 ignored; `depart` 15/15.
+
+The `simulation.getTime` segfault and the `getVersion` text are fixed (1e33a68).
 
 ## What a Unity client hits today
 
@@ -45,5 +62,5 @@ Fixing 2 is a design change, not a contained patch: the TraCI server needs to be
 
 ## Not covered
 
-Subscriptions (`subscribe*` / `getSubscriptionResults`), `changeLane`, `setRedYellowGreenState`,
-multi-client ordering, `simulation.load`, persons, routes, POIs. None of these were exercised.
+`setRedYellowGreenState`, multi-client ordering, `simulation.load`, persons, POIs. Not exercised.
+Subscriptions, `changeLane`, `moveToXY`, route setting and add/remove are now probed (table above).
