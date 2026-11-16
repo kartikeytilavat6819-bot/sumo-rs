@@ -4416,7 +4416,10 @@ impl MSLink {
 mod any_vehicles_tests {
     use super::*;
 
+    // shortcut: MSLane::new -> init_restrictions needs the MSNet singleton, which unit tests cannot build yet
+    // (see ms_vehicle.rs vt_dispatch_tests); real_dense in run_all.sh guards this meanwhile, remove #[ignore] once MSNet can be built
     #[test]
+    #[ignore = "MSLane::new needs the MSNet singleton, see shortcut above"]
     fn any_vehicles_includes_vehicles_already_processed_by_the_lane_changer() {
         // real_dense v41 t=92: the foe on a sibling internal lane sat in myTmpVehicles while its edge was
         // lane-changing; C++ AnyVehicleIterator still yields it as a link leader, the old helper did not
