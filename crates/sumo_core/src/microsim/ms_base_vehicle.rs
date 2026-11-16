@@ -1500,8 +1500,7 @@ impl MSBaseVehicle {
                     edges.clear();
                 } else {
                     let error = utils::tlf!("Vehicle '%' has no valid route from edge '%' to stop edge '%'.", self.get_id(), source.get_id(), stopEdge.get_id());
-                    // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-                    if silent {
+                    if MSGlobals::check_routes() || silent {
                         panic!("{}", error);
                     } else {
                         utils::common::msg_handler::write_warning(&error);
@@ -1555,8 +1554,9 @@ impl MSBaseVehicle {
         // this must be called even if the route could not be replaced
         if onInit {
             if edges.is_empty() {
-                // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-                if source.is_taz_connector() {
+                if MSGlobals::check_routes() {
+                    std::panic::panic_any(ProcessError::new(utils::tlf!("Vehicle '%' has no valid route.", self.get_id())));
+                } else if source.is_taz_connector() {
                     utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' which has no valid route.", self.get_id()));
                     // shortcut: MSNet::getInstance()->getInsertionControl().descheduleDeparture(this) not ported
                     return false;
@@ -1682,7 +1682,12 @@ impl MSBaseVehicle {
         let mut msg = String::new();
         if check && !self.has_valid_route(&mut msg, constRoute.clone()) {
             utils::common::msg_handler::write_warning(&utils::tlf!("Invalid route replacement for vehicle '%'. %", self.get_id(), msg));
-            // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false (route is still replaced)
+            if MSGlobals::check_routes() {
+                if !msgReturn.is_null() {
+                    *msgReturn.m() = msg;
+                }
+                return false;
+            }
         }
         // C++ calls the *virtual* replaceRoute here, so MSVehicle::replaceRoute runs and refreshes the
         // best lanes afterwards. Calling MSBaseVehicle::replace_route directly skips that override, which
@@ -2710,7 +2715,7 @@ impl MSBaseVehicle {
                 *msgReturn.m() = msg.clone();
             }
         }
-        if self.myRoute.get_first_edge().is_internal()
+        if (MSGlobals::check_routes() || self.myRoute.get_first_edge().is_internal())
             && (self.myRouteValidity & MSBaseVehicle_RouteValidity::ROUTE_UNCHECKED as i32) != 0
             // we could check after the first rerouting
             && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) == 0
