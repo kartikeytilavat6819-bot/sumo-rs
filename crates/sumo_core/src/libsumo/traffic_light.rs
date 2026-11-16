@@ -584,12 +584,59 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_program_logic(tlsID: &str, logic: &TraCILogic) {
+        let vars = Helper::get_tls(tlsID);
         // make sure index and phaseNo are consistent
         if logic.currentPhaseIndex >= logic.phases.len() as i32 {
             panic!("{}", "set program: parameter index must be less than parameter phase number.");
         }
-        // shortcut: creating the MSActuatedTrafficLightLogic / NEMALogic / MSDelayBasedTrafficLightLogic / MSSimpleTrafficLightLogic instances needs the Parameterised::Map argument (Unmapped in ms_traffic_light_logic.rs) and the else branch needs a static_cast to MSSimpleTrafficLightLogic, upgrade when both are typed
-        panic!("shortcut: TrafficLight::setProgramLogic needs typed Parameterised::Map logic constructors and MSSimpleTrafficLightLogic cast")
+        let mut phases: MSTrafficLightLogic_Phases = Vec::new();
+        for phase in logic.phases.iter() {
+            let sumoPhase = Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(phase.duration), &phase.state, &phase.name))));
+            sumoPhase.m().minDuration = time2steps(phase.minDur);
+            sumoPhase.m().maxDuration = time2steps(phase.maxDur);
+            sumoPhase.m().nextPhases = phase.next.clone();
+            phases.push(sumoPhase);
+        }
+        if vars.get_logic(&logic.programID).is_null() {
+            let net = MSNet::get_instance();
+            let tlc = net.m().get_tls_control();
+            let step = logic.currentPhaseIndex;
+            let basePath = "";
+            let nextSwitch = net.get_current_time_step() + phases[0].m().duration;
+            // TraCILogic.type is a raw int: 0 STATIC, 3 ACTUATED, 4 NEMA, 5 DELAYBASED (TrafficLightType values)
+            let tlLogic: Ptr<MSTrafficLightLogic> = match logic.type_ {
+                3 => {
+                    let actuated = Ptr::from_raw(Box::into_raw(Box::new(MSActuatedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath, &Default::default(), &Default::default(), &Default::default()))));
+                    actuated.cast::<MSTrafficLightLogic>()
+                }
+                4 => {
+                    let nema = Ptr::from_raw(Box::into_raw(Box::new(NEMALogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
+                    nema.cast::<MSTrafficLightLogic>()
+                }
+                5 => {
+                    let delayBased = Ptr::from_raw(Box::into_raw(Box::new(MSDelayBasedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
+                    delayBased.cast::<MSTrafficLightLogic>()
+                }
+                0 => {
+                    let simple = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, TrafficLightType::STATIC, &phases, step, nextSwitch, &logic.subParameter))));
+                    simple.cast::<MSTrafficLightLogic>()
+                }
+                _ => panic!("Unsupported traffic light type '{}'", logic.type_),
+            };
+            // a ProcessError from addLogic already carries the message the C++ catch rethrows as TraCIException
+            if !vars.add_logic(&logic.programID, tlLogic, true, true) {
+                panic!("Could not add traffic light logic '{}'", logic.programID);
+            }
+            // XXX pass GUIDetectorBuilder when running with gui
+            let mut db = NLDetectorBuilder::new(net.m());
+            tlLogic.m().init(&mut db);
+            net.m().create_tl_wrapper(tlLogic);
+        } else {
+            let tlLogic = vars.get_logic(&logic.programID).cast::<MSSimpleTrafficLightLogic>();
+            tlLogic.m().set_phases(&phases, logic.currentPhaseIndex);
+            tlLogic.m().base.set_traffic_light_signals(MSNet::get_instance().get_current_time_step());
+            vars.execute_on_switch_actions();
+        }
     }
 
     /// C++: `void TrafficLight::addConstraint(const std::string &, const std::string &, const std::string &, const std::string &, const int, const int)` [static]
