@@ -84,7 +84,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_factor(typeID: &str) -> f64 {
-        panic!("shortcut: VehicleType::getSpeedFactor needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
+        Self::get_v_type(typeID.to_string()).get_speed_factor().get_parameter(0)
     }
 
     /// C++: `double VehicleType::getAccel(const std::string &)` [static]
@@ -280,7 +280,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(typeID: &str) -> f64 {
-        panic!("shortcut: VehicleType::getSpeedDeviation needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
+        Self::get_v_type(typeID.to_string()).get_speed_factor().get_parameter(1)
     }
 
     /// C++: `double VehicleType::getBoardingDuration(const std::string &)` [static]
@@ -351,7 +351,18 @@ impl VehicleType {
     #[allow(unused_variables)]
     pub fn get_parameter(typeID: &str, key: &str) -> String {
         if starts_with(key, "junctionModel.") {
-            panic!("shortcut: VehicleType::getParameter junctionModel branch needs SUMOVTypeParameter::AllowedJMAttrs, which is not ported")
+            let attrName = &key[14..];
+            if !Attrs.has_string(attrName) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, typeID);
+            }
+            let attr = Attrs.get(attrName).unwrap() as SumoXMLAttr;
+            if !allowed_jm_attrs().contains(&attr) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, typeID);
+            }
+            match Self::get_v_type(typeID.to_string()).get_parameter().jmParameter.get(&attr) {
+                Some(v) => v.clone(),
+                None => String::new(),
+            }
         } else {
             Self::get_v_type(typeID.to_string()).get_parameter().get_parameter(key, "")
         }
@@ -389,9 +400,21 @@ impl VehicleType {
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
         if starts_with(key, "junctionModel.") {
-            panic!("shortcut: VehicleType::setParameter junctionModel branch needs SUMOXMLDefinitions::Attrs lookup and SUMOVTypeParameter::AllowedJMAttrs, which are not ported")
+            let attrName = &key[14..];
+            if !Attrs.has_string(attrName) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, objectID);
+            }
+            let attr = Attrs.get(attrName).unwrap() as SumoXMLAttr;
+            if !allowed_jm_attrs().contains(&attr) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, objectID);
+            }
+            if utils::common::string_utils::to_double(value).is_err() {
+                panic!("Invalid junctionModel parameter value '{}' for type '{} (should be numeric)'", value, objectID);
+            }
+            Self::get_v_type(objectID.to_string()).m().myParameter.jmParameter.insert(attr, value.to_string());
+        } else {
+            Self::get_v_type(objectID.to_string()).m().myParameter.set_parameter(key, value);
         }
-        Self::get_v_type(objectID.to_string()).m().myParameter.set_parameter(key, value);
     }
 
     /// C++: `void VehicleType::setLength(const std::string &, double)` [static]
