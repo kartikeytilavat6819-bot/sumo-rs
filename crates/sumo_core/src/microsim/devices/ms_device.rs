@@ -314,6 +314,25 @@ impl MSDevice {
         }
     }
 
+    /// C++: `void MSDevice::generateOutput(OutputDevice *) const` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_parameter_of, upgrade when devices carry a type tag
+    pub fn generate_output_of(dev: Ptr<MSVehicleDevice>, tripinfoOut: Ptr<OutputDevice>) {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().generate_output(tripinfoOut),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().generate_output(tripinfoOut),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().generate_output(tripinfoOut),
+            "emissions" => dev.cast::<MSDevice_Emissions>().generate_output(tripinfoOut),
+            "example" => dev.cast::<MSDevice_Example>().generate_output(tripinfoOut),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().generate_output(tripinfoOut),
+            "ssm" => dev.cast::<MSDevice_SSM>().generate_output(tripinfoOut),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().generate_output(tripinfoOut),
+            "taxi" => dev.cast::<MSDevice_Taxi>().generate_output(tripinfoOut),
+            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().generate_output(tripinfoOut),
+            "vehroute" => dev.cast::<MSDevice_Vehroutes>().generate_output(tripinfoOut),
+            _ => dev.base2.generate_output(tripinfoOut),
+        }
+    }
+
     /// C++: `void MSDevice::cleanupAll()` [static]
     /// perform cleanup for all devices
     // void
