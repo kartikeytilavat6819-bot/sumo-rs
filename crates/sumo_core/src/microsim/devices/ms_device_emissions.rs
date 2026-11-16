@@ -8,7 +8,8 @@ use utils::options::options_cont::{get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 thread_local! {
-    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
+    // C++ `myWrittenAttributes(getDefaultMask())`: all attributes written until emission-output.attributes is set
+    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask((1u128 << SumoXMLAttrMask::SIZE) - 1)) };
     static MY_AM_INITIALIZED: Cell<bool> = const { Cell::new(false) };
 }
 
