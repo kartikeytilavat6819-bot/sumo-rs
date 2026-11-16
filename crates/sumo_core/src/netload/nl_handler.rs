@@ -829,7 +829,6 @@ impl NLHandler {
                 self.myLastParameterised.push(p);
             }
             SUMO_TAG_DEADLOCK => self.add_deadlock(attrs),
-            SUMO_TAG_ROUTEPART => self.add_deadlock_route(attrs),
             _ => {}
         });
         if let Err(what) = result {
@@ -2016,7 +2015,7 @@ impl NLHandler {
     //             throw InvalidArgument("Rail signal '" + toString(id) + "' in " + toString(SUMO_TAG_DEADLOCK) + " is not known");
     //         }
     //     }
-    //     MSRailSignalControl::getInstance().loadDeadlockCheck(signals);
+    //     MSRailSignalControl::getInstance().addDeadlockCheck(signals);
     // }
     #[allow(unused_variables)]
     pub fn add_deadlock(&mut self, attrs: &SUMOSAXAttributes) {
@@ -2032,23 +2031,7 @@ impl NLHandler {
                 throw_invalid_argument(format!("Rail signal '{}' in {} is not known", id, tag_to_string(SUMO_TAG_DEADLOCK)));
             }
         }
-        MSRailSignalControl::get_instance().load_deadlock_check(signals);
-    }
-
-    /// C++: `void NLHandler::addDeadlockRoute(const SUMOSAXAttributes &)` [virtual, protected]
-    // void
-    // NLHandler::addDeadlockRoute(const SUMOSAXAttributes& attrs) {
-    //     bool ok = true;
-    //     ConstMSEdgeVector edges;
-    //     MSEdge::parseEdgesList(attrs.get<std::string>(SUMO_ATTR_EDGES, "deadlock", ok), edges, "deadlock");
-    //     MSRailSignalControl::getInstance().loadDeadlockRoute(edges);
-    // }
-    #[allow(unused_variables)]
-    pub fn add_deadlock_route(&mut self, attrs: &SUMOSAXAttributes) {
-        let mut ok = true;
-        let mut edges: ConstMSEdgeVector = Vec::new();
-        MSEdge::parse_edges_list(&attrs.get::<String>(SUMO_ATTR_EDGES, "deadlock", &mut ok, true), &mut edges, "deadlock");
-        MSRailSignalControl::get_instance().load_deadlock_route(&edges);
+        MSRailSignalControl::get_instance().add_deadlock_check(signals);
     }
 
     /// C++: `void NLHandler::closeEdge()` [virtual, protected]

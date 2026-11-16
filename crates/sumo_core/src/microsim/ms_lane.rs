@@ -1733,8 +1733,6 @@ impl MSLane {
             let mut dwBlocked = false;
             if dw.foe_drive_way_occupied(false, aVehicle.cast::<SUMOVehicle>(), &mut occupied) {
                 dwBlocked = true;
-            } else if dw.siding_deadlock(aVehicle.cast::<SUMOVehicle>()) {
-                dwBlocked = true;
             }
             if dwBlocked {
                 self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.base2.get_id());

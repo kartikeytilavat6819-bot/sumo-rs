@@ -1080,41 +1080,11 @@ impl MSDriveWay {
     //         if (allOccupied) {
     // #ifdef DEBUG_SIGNALSTATE
     //             if (gDebugFlag4 || DEBUG_COND_DW2 || DEBUG_HELPER(ego)) {
-    //                 std::cout << SIMTIME << " " << getID() << " ego=" << Named::getIDSecure(ego) << " deadlockCheck " << joinNamedToString(dlFoes, " ") << " myFoes=" << toString(myFoes) << "\n";
+    //                 std::cout << SIMTIME << " " << getID() << " ego=" << Named::getIDSecure(ego) << " deadlockCheck " << joinNamedToString(dlFoes, " ") << "\n";
     //             }
     // #endif
     //             for (const MSDriveWay* dlFoe : dlFoes) {
     //                 MSRailSignal::blockingDriveWays().push_back(dlFoe);
-    //             }
-    //             // for addWaitRelation we need to find the foe that results in the
-    //             // longest chain (otherwise the deadlock relation is smaller than the original)
-    //             int start = myForwardEdgeCount;
-    //             bool foundFoe = false;
-    //             while (start < (int)myRoute.size() && !foundFoe) {
-    //                 const MSEdge* e = myRoute[start];
-    //                 if (e->getFromJunction()->getType() == SumoXMLNodeType::RAIL_SIGNAL) {
-    //                     const MSEdge* p = myRoute[start - 1];
-    //                     const MSLink* link = p->getLanes().front()->getLinkTo(e->getLanes().front());
-    //                     if (link != nullptr && link->isTLSControlled()) {
-    //                         MSRailSignal* rs = const_cast<MSRailSignal*>(dynamic_cast<const MSRailSignal*>(link->getTLLogic()));
-    //                         const MSDriveWay& cand = rs->getExistingDriveWay(link, myRoute.begin() + start, myRoute.end());
-    //                         for (const MSDriveWay* dlFoe : dlFoes) {
-    //                             if (std::find(cand.myFoes.begin(), cand.myFoes.end(), dlFoe) != cand.myFoes.end()) {
-    //                                 foundFoe = true;
-    //                                 const MSRailSignal* rs2 = myOrigin != nullptr ? dynamic_cast<const MSRailSignal*>(myOrigin->getTLLogic()) : nullptr;
-    //                                 MSRailSignalControl::getInstance().addWaitRelation(ego, rs2, *dlFoe->myTrains.begin(), nullptr);
-    //                             }
-    //                         }
-    //                     }
-    //                 }
-    //                 start += 1;
-    //             }
-    //             if (!foundFoe) {
-    //                 for (const MSDriveWay* dlFoe : dlFoes) {
-    //                     const MSRailSignal* rs2 = myOrigin != nullptr ? dynamic_cast<const MSRailSignal*>(myOrigin->getTLLogic()) : nullptr;
-    //                     MSRailSignalControl::getInstance().addWaitRelation(ego, rs2, *dlFoe->myTrains.begin(), nullptr);
-    //                     break;
-    //                 }
     //             }
     //             return true;
     //         }
@@ -1207,133 +1177,13 @@ impl MSDriveWay {
                 for &dl_foe in dl_foes.iter() {
                     MSRailSignal::blocking_drive_ways().push(dl_foe);
                 }
-                // for addWaitRelation we need to find the foe that results in the
-                // longest chain (otherwise the deadlock relation is smaller than the original)
-                let mut start = self.myForwardEdgeCount;
-                let mut found_foe = false;
-                while start < self.myRoute.len() as i32 && !found_foe {
-                    let e = self.myRoute[start as usize];
-                    if e.get_from_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
-                        let p = self.myRoute[start as usize - 1];
-                        let link = p.get_lanes().first().unwrap().get_link_to(*e.get_lanes().first().unwrap());
-                        if !link.is_null() && link.is_tls_controlled() {
-                            let rs = as_rail_signal(link.get_tl_logic());
-                            if !rs.is_null() {
-                                let cand: Ptr<MSDriveWay> =
-                                    Ptr::new(rs.m().get_existing_drive_way(link, start as usize, self.myRoute.len()));
-                                for &dl_foe in dl_foes.iter() {
-                                    if cand.myFoes.contains(&dl_foe) {
-                                        found_foe = true;
-                                        let rs2 = origin_rail_signal(self.myOrigin);
-                                        let reason = *dl_foe.myTrains.iter().next().unwrap();
-                                        MSRailSignalControl::get_instance()
-                                            .add_wait_relation(ego, rs2, reason, Ptr::null());
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    start += 1;
-                }
-                if !found_foe {
-                    for &dl_foe in dl_foes.iter() {
-                        let rs2 = origin_rail_signal(self.myOrigin);
-                        let reason = *dl_foe.myTrains.iter().next().unwrap();
-                        MSRailSignalControl::get_instance().add_wait_relation(ego, rs2, reason, Ptr::null());
-                        break;
-                    }
-                }
                 return true;
             }
         }
         false
     }
 
-    /// C++: `bool MSDriveWay::sidingDeadlock(const SUMOVehicle *) const` [const]
-    /// whether insertion on this driveway would cause deadlock in an approached siding
-    // bool
-    // MSDriveWay::sidingDeadlock(const SUMOVehicle* veh) const {
-    //     const MSEdge* end = &myForward.back()->getEdge();
-    //     const auto it = mySidingDriveways.find(end);
-    //     if (it != mySidingDriveways.end()) {
-    //         for (const auto& item : it->second) {
-    //             if (!item.first->myTrains.empty() && !item.second->myTrains.empty()
-    //                     && bidiBlockedBy(*item.second)) {
-    //                 // we found two driveways that are in conflict and
-    //                 // could make use of this siding. Inserting a vehicle here could create deadlock.
-    // #ifdef DEBUG_SIGNALSTATE
-    //                 if (gDebugFlag4 || DEBUG_COND_DW2) {
-    //                     std::cout << SIMTIME << " sidingDeadlock insertionDw=" << getID() << " approachingDW=" << item.first->getID() << " foeDW=" << item.second->getID() << "\n";
-    //                 }
-    // #endif
-    //                 myCurrentSidingCheck.push_back(end);
-    //                 if (veh->getLength() > end->getLength() && !MSGlobals::gUseMesoSim) {
-    //                     double backDist =  veh->getLength() - getForwardDistance((int)myForward.size() - 1);
-    //                     const MSLane* lane = myForward.front();
-    //                     const MSLane* prev = lane->getLogicalPredecessorLane();
-    //                     while (backDist > 0 && prev != nullptr) {
-    //                         backDist -= lane->getLength();
-    //                         const MSLink* link = prev->getLinkTo(lane);
-    //                         if (prev->isNormal() && link->getTLLogic() != nullptr
-    //                                 && link->getTLLogic()->getLogicType() == TrafficLightType::RAIL_SIGNAL) {
-    //                             // inserted train back reaches onto this edge
-    //                             myCurrentSidingCheck.push_back(&prev->getEdge());
-    //                         }
-    //                         lane = prev;
-    //                         prev = lane->getLogicalPredecessorLane();
-    //                     }
-    //                 }
-    //                 const bool requiredSiding = !item.first->canUseSiding(*item.first->myTrains.begin(), item.second).first;
-    //                 myCurrentSidingCheck.clear();
-    //                 if (requiredSiding) {
-    //                     return true;
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     return false;
-    // }
-    #[allow(unused_variables)]
-    pub fn siding_deadlock(&self, veh: Ptr<SUMOVehicle>) -> bool {
-        let end = Ptr::new(self.myForward.last().unwrap().get_edge());
-        let items = MY_SIDING_DRIVEWAYS.with(|m| m.borrow().get(&end).cloned());
-        if let Some(items) = items {
-            for (dw, foe) in items.iter() {
-                if !dw.myTrains.is_empty() && !foe.myTrains.is_empty() && self.bidi_blocked_by(&*foe) {
-                    // we found two driveways that are in conflict and
-                    // could make use of this siding. Inserting a vehicle here could create deadlock.
-                    let mveh = veh.cast::<MSVehicle>();
-                    MY_CURRENT_SIDING_CHECK.with(|c| c.borrow_mut().push(end));
-                    if mveh.get_length() > end.get_length() && !MSGlobals::use_meso_sim() {
-                        let mut back_dist = mveh.get_length() - self.get_forward_distance(self.myForward.len() as i32 - 1);
-                        let mut lane = *self.myForward.first().unwrap();
-                        let mut prev = lane.get_logical_predecessor_lane();
-                        while back_dist > 0. && !prev.is_null() {
-                            back_dist -= lane.get_length();
-                            let link = prev.get_link_to(lane);
-                            if prev.is_normal()
-                                && !link.get_tl_logic().is_null()
-                                && link.get_tl_logic().get_logic_type() == TrafficLightType::RAIL_SIGNAL
-                            {
-                                // inserted train back reaches onto this edge
-                                MY_CURRENT_SIDING_CHECK.with(|c| c.borrow_mut().push(Ptr::new(prev.get_edge())));
-                            }
-                            lane = prev;
-                            prev = lane.get_logical_predecessor_lane();
-                        }
-                    }
-                    let required_siding = !dw
-                        .can_use_siding(*dw.myTrains.iter().next().unwrap(), *foe, Ptr::null())
-                        .0;
-                    MY_CURRENT_SIDING_CHECK.with(|c| c.borrow_mut().clear());
-                    if required_siding {
-                        return true;
-                    }
-                }
-            }
-        }
-        false
-    }
+
 
     /// C++: `bool MSDriveWay::foeDriveWayApproached() const` [const]
     /// whether any of my Foes is being approached
