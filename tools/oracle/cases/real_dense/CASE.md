@@ -13,10 +13,10 @@ because passenger vehicles cannot use them (a disallowed edge is reported as "No
 wsl -e bash -lc 'D=/mnt/c/Users/karti/sumo-rs/<worktree>/tools/oracle/cases/real_dense; \
   SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n $D/ref_simple.net.xml -r $D/routes.rou \
   --tripinfo-output $D/ref.tripinfo.xml --fcd-output $D/ref.fcd.xml \
-  --statistic-output $D/ref.stat.xml --no-step-log true --end 120'
+  --statistic-output $D/ref.stat.xml --no-step-log true --end 125'
 ```
 
-Reference: exit 0, 38 of 48 vehicles arrived by t=120 s.
+Reference: exit 0, 40 of 48 vehicles arrived by t=125 s. Horizon moved from 120 to 125 s, see `REPORT.md`.
 
 ## Ours
 
@@ -24,7 +24,7 @@ Reference: exit 0, 38 of 48 vehicles arrived by t=120 s.
 cargo build -p sumo   # CARGO_TARGET_DIR=C:\Users\karti\sumo-rs-target-ts02
 C:\Users\karti\sumo-rs-target-ts02\debug\sumo.exe -n ref_simple.net.xml -r routes.rou \
   --tripinfo-output ours.tripinfo.xml --fcd-output ours.fcd.xml \
-  --statistic-output ours.stat.xml --no-step-log true --end 120
+  --statistic-output ours.stat.xml --no-step-log true --end 125
 ```
 
 ## Compare
