@@ -156,6 +156,18 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn lane_outgoing_via_lanes(lane: Ptr<MSLane>) -> Vec<(Ptr<MSLane>, Ptr<MSEdge>)> {
         lane.m().get_outgoing_via_lanes()
     }
+    fn time_penalty(&self) -> f64 {
+        self.get_time_penalty()
+    }
+    fn lane_incoming_link_state(lane: Ptr<MSLane>) -> LinkState {
+        lane.m().get_incoming_link_state()
+    }
+    fn lane_permissions(lane: Ptr<MSLane>) -> SVCPermissions {
+        lane.get_permissions()
+    }
+    fn lane_allows_vehicle_class(lane: Ptr<MSLane>, svc: SUMOVehicleClass) -> bool {
+        lane.allows_vehicle_class(svc)
+    }
     fn railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
         self.get_railway_routing_edge()
     }
