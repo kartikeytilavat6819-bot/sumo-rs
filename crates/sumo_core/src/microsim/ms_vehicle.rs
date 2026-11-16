@@ -11871,7 +11871,7 @@ impl MSVehicle {
                 let front = self.myStops.front().unwrap();
                 let brakeGap = self.get_car_follow_model().brake_gap_2(self.myLane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()), self.get_car_follow_model().get_max_decel(), 3.0);
                 let nearStop = front.reached || (self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) && self.myStopDist < brakeGap);
-                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, false).allows_vehicle_class(self.get_v_class());
+                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, true).allows_vehicle_class(self.get_v_class());
                 (nearStop, notStoppingRight, !front.reached && front.pars.parking == ParkingType::OFFROAD)
             };
             if reached {
