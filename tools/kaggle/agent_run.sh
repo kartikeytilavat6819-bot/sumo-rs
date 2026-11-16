@@ -1,12 +1,12 @@
 #!/bin/bash
 # Measurement only (mc02): meso cases through our sumo, compared with pristine refs. Removed before merge.
 cd "$(dirname "$0")/../.." || exit 1
-BIN=/tmp/target/debug
+BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug
 for c in meso_junction meso_real meso_city_plano; do
   d=tools/oracle/cases/$c
   out=/tmp/mo/$c; mkdir -p $out
   flags=$(cat $d/sim.args)
-  $BIN/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --tripinfo-output $out/ti.xml \
+  timeout 60 $BIN/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --tripinfo-output $out/ti.xml \
       --fcd-output $out/fcd.xml --statistic-output $out/stat.xml --no-step-log true $flags > $out/log 2>&1
   rc=$?
   echo "== $c rc=$rc $(grep -m1 -E 'panicked|rror' $out/log | cut -c1-160)"
@@ -17,7 +17,7 @@ done
 d=tools/oracle/cases/meso_junction
 echo "--- junction trace (first 30 TRACE lines)"
 mkdir -p /tmp/mo/trace
-MESO_TRACE=1 $BIN/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --no-step-log true $(cat $d/sim.args) \
+MESO_TRACE=1 timeout 60 $BIN/sumo -n $d/ref_simple.net.xml -r $d/routes.rou --no-step-log true $(cat $d/sim.args) \
     --end 4 > /tmp/mo/trace/log 2>&1
 grep TRACE /tmp/mo/trace/log | head -30 | cut -c1-220
 echo "--- junction trace panics/errors"
