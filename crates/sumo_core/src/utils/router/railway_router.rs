@@ -82,7 +82,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self
     where
         E: RouterEdge<V>,
     {
@@ -288,7 +288,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         if self.myInternalRouter.is_null() {
             let warning = self.base.myErrorMsgHandler == msg_instance(true);
             let edges = self.get_rail_edges().clone();
-            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, (), (), self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
+            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, Some(Self::get_travel_time_static), None, self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
             self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
         }
     }

@@ -39,8 +39,7 @@ pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
     OutputDevice::create_device_by_option("all-pairs-output", "", "", -1).unwrap_or_else(|e| panic!("{e}"));
     let outFile = OutputDevice::get_device_by_option("all-pairs-output").unwrap_or_else(|e| panic!("{e}"));
     // build the router
-    // shortcut: SUMOAbstractRouter::Operation is still () (Unmapped), so &getTravelTime is passed as () and the effort operation cannot be called, upgrade when the operation alias is typed
-    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), (), (), false, Ptr::null(), false, false);
+    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), Some(get_travel_time), None, false, Ptr::null(), false, false);
     let mut into: Vec<Ptr<ROEdge>> = Vec::new();
     let numInternalEdges: i32 = net.get_internal_edge_number();
     let numTotalEdges: i32 = net.get_edge_number();
@@ -282,8 +281,8 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
     if measure == "traveltime" && priorityFactor == 0.0 {
         match routingAlgorithm.as_str() {
             "dijkstra" => {
-                // shortcut: SUMOAbstractRouter::Operation is still (), so ttOp is passed as () and the travel-time operation cannot be called
-                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, (), (), false, Ptr::null(), net.has_permissions(), false);
+                // shortcut: C++ selects the effort operation from the paths option (penalised TT or ROEdge::getTravelTimeStatic) and that selection is not ported, so no effort operation is set yet; upgrade with the option port
+                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false);
             }
             "astar" | "CH" | "CHWrapper" | "CCH" => {
                 // shortcut: astar, CH, CHWrapper and CCH routers need the SUMOAbstractRouter trait object, not ported
@@ -297,8 +296,8 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
         if measure != "traveltime" && !net.has_loaded_effort() {
             utils::common::msg_handler::write_warning(&format!("No weight data was loaded for attribute '{}'.", measure));
         }
-        // shortcut: SUMOAbstractRouter::Operation is still (), so the effort operation is not selected and the weighted router cannot route yet
-        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, (), (), false, Ptr::null(), net.has_permissions(), false);
+        // shortcut: C++ selects the effort operation from the measure and the priority-factor option, which is not ported, so the weighted router has no effort operation and cannot route yet
+        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false);
     }
     let router: &mut crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle> = &mut dijkstra.base;
     // shortcut: RORouterProvider and the HAVE_FOX worker threads are not ported, routing runs on this thread only

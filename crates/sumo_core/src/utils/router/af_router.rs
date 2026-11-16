@@ -186,9 +186,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut router = Self {
-            base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myFlagInfos: Ptr::null(),
             myPartition: partition,
             myComparator: AFRouter_EdgeInfoComparator {},
@@ -251,9 +251,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, edges: &Vec<Ptr<E>>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flippedOperation: SUMOAbstractRouter_Operation, weightPeriod: SUMOTime, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut router = Self {
-            base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            base: SUMOAbstractRouter::new("arcFlagRouter", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myFlagInfos: Ptr::null(),
             myPartition: partition,
             myComparator: AFRouter_EdgeInfoComparator {},
@@ -312,9 +312,9 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_3(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, flagInfos: Ptr<Vec<Ptr<AFInfo_FlagInfo>>>, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_3(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, partition: Ptr<KDTreePartition<E, N, V>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, flagInfos: Ptr<Vec<Ptr<AFInfo_FlagInfo>>>, lookup: Option<Rc<AFRouter_LookupTable<E, V>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut router = Self {
-            base: SUMOAbstractRouter::new("arcFlagRouterClone", unbuildIsWarning, operation, (), havePermissions, haveRestrictions),
+            base: SUMOAbstractRouter::new("arcFlagRouterClone", unbuildIsWarning, operation, None, havePermissions, haveRestrictions),
             myFlagInfos: flagInfos,
             myPartition: partition,
             myComparator: AFRouter_EdgeInfoComparator {},

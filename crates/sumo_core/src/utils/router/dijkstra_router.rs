@@ -58,7 +58,7 @@ impl<E, V> DijkstraRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut base = SUMOAbstractRouter::new("DijkstraRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions);
         for e in edges.iter() {
             base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(e.cast::<()>()));
@@ -363,7 +363,7 @@ impl<E, V> DijkstraRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, effortOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, silent: bool, calc: Ptr<EffortCalculator>, havePermissions: bool, haveRestrictions: bool) -> Self {
         let mut base = SUMOAbstractRouter::new("DijkstraRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions);
         for edgeInfo in edgeInfos.iter() {
             base.myEdgeInfos.push(SUMOAbstractRouter_EdgeInfo::new(edgeInfo.edge));

@@ -51,8 +51,7 @@ impl ROJTRRouter {
     #[allow(unused_variables)]
     pub fn new(unbuildIsWarningOnly: bool, acceptAllDestinations: bool, maxEdges: i32, ignoreClasses: bool, allowLoops: bool, discountSources: bool) -> Self {
         Self {
-            // shortcut: the &ROEdge::getTravelTimeStatic and nullptr operations are Unmapped (SUMOAbstractRouter_Operation = ()), upgrade when the operation alias is typed
-            base: SUMOAbstractRouter::new("JTRRouter", unbuildIsWarningOnly, (), (), false, false),
+            base: SUMOAbstractRouter::new("JTRRouter", unbuildIsWarningOnly, Some(<crate::router::ro_edge::ROEdge as crate::utils::router::router_edge::RouterEdge<crate::router::ro_vehicle::ROVehicle>>::travel_time_static), None, false, false),
             myUnbuildIsWarningOnly: unbuildIsWarningOnly,
             myAcceptAllDestination: acceptAllDestinations,
             myMaxEdges: maxEdges,

@@ -64,11 +64,11 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(net: Ptr<IntermodalNetwork<E, L, N, V>>) -> Self {
-        // shortcut: SUMOAbstractRouter::Operation is Unmapped (fn pointer), so the travel-time function and nullptr are passed as ()
+        // shortcut: gWeightsRandomFactor > 1 selects getTravelTimeStaticRandomized in C++; only the plain getTravelTimeStatic is wired here, upgrade when the random factor option is read here
         let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().iter().map(|e| (*e).cast()).collect();
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, (), (), false, Ptr::null(), true, false);
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false);
         Self {
-            base: SUMOAbstractRouter::new("PedestrianRouterClone", true, (), (), false, false),
+            base: SUMOAbstractRouter::new("PedestrianRouterClone", true, None, None, false, false),
             myAmClone: true,
             myInternalRouter: Ptr::from_raw(Box::into_raw(Box::new(internal))),
             myPedNet: net,
