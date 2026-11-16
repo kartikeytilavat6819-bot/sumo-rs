@@ -2312,13 +2312,93 @@ impl MSLaneChanger {
                 state |= blockedByLeader;
             }
         }
+        if (state & LCA_BLOCKED) == 0 && (state & LCA_WANTS_LANECHANGE) != 0 && crate::microsim::ms_globals::lane_change_duration() > delta_t() {
+            // Ensure that a continuous lane change manoeuvre can be completed before the next turning movement.
+            // Assume lateral position == 0. (If this should change in the future add + laneOffset*vehicle->getLateralPositionOnLane() to distToNeighLane)
+            let distToNeighLane = 0.5 * (vehicle.get_lane().get_width() + targetLane.get_width());
+            // Extrapolate the LC duration if operating with speed dependent lateral speed.
+            let lcm = vehicle.get_lane_change_model_2();
+            let assumedDecel = lcm.get_assumed_decel_for_lane_change_duration();
+            let estimatedLCDuration = lcm.estimate_lc_duration(vehicle.get_speed(), distToNeighLane, assumedDecel, (state & LCA_URGENT) != 0);
+            if estimatedLCDuration == -1. {
+                // Can't guarantee that LC will succeed if vehicle is braking -> assert(lcm.myMaxSpeedLatStanding==0)
+                state |= LCA_INSUFFICIENT_SPEED;
+            } else {
+                // Compute covered distance, when braking for the whole lc duration
+                let decel = vehicle.get_car_follow_model().get_max_decel() * estimatedLCDuration;
+                let avgSpeed = 0.5 * (
+                    max2(0., vehicle.get_speed() - utils::common::time::accel2speed(vehicle.get_car_follow_model().get_max_decel())) +
+                    max2(0., vehicle.get_speed() - decel));
+                // Distance required for lane change.
+                let space2change = avgSpeed * estimatedLCDuration;
+                // Available distance for LC maneuver (distance till next turn)
+                let mut seen = self.myChanger[c].lane.get_length() - vehicle.get_position_on_lane();
+
+                // for finding turns it doesn't matter whether we look along the current lane or the target lane
+                let bestLaneConts = vehicle.get_best_lanes_continuation();
+                let mut view: i32 = 1;
+                let mut nextLane: Ptr<MSLane> = vehicle.get_lane();
+                let mut link: usize = MSLane::succ_link_sec(&*vehicle, view, &*nextLane, bestLaneConts);
+                while !nextLane.is_link_end(&mut link) && seen <= space2change {
+                    let l = nextLane.myLinks[link];
+                    if l.get_direction() == LinkDirection::LEFT || l.get_direction() == LinkDirection::RIGHT
+                        // the lanes after an internal junction are on different
+                        // edges and do not allow lane-changing
+                        || (nextLane.get_edge().is_internal() && l.get_via_lane_or_lane().get_edge().is_internal())
+                    {
+                        state |= LCA_INSUFFICIENT_SPACE;
+                        break;
+                    }
+                    if l.get_via_lane().is_null() {
+                        view += 1;
+                    }
+                    nextLane = l.get_via_lane_or_lane();
+                    seen += nextLane.get_length();
+                    // get the next link used
+                    link = MSLane::succ_link_sec(&*vehicle, view, &*nextLane, bestLaneConts);
+                }
+                if nextLane.is_link_end(&mut link) && seen < space2change {
+                    state |= LCA_INSUFFICIENT_SPACE;
+                }
+
+                if (state & LCA_BLOCKED) == 0 {
+                    // check for dangerous leaders in case the target lane changes laterally between
+                    // now and the lane-changing midpoint
+                    let speed = vehicle.get_speed();
+                    seen = self.myChanger[c].lane.get_length() - vehicle.get_position_on_lane();
+                    nextLane = vehicle.get_lane();
+                    view = 1;
+                    let dist = vehicle.get_car_follow_model().brake_gap(speed) + vehicle.get_vehicle_type().get_min_gap();
+                    let mut nextLink: usize = MSLane::succ_link_sec(&*vehicle, view, &*nextLane, bestLaneConts);
+                    while !nextLane.is_link_end(&mut nextLink) && seen <= space2change && seen <= dist {
+                        let l = nextLane.myLinks[nextLink];
+                        nextLane = l.get_via_lane_or_lane();
+                        let parallelLane = nextLane.get_parallel_lane(laneOffset, true);
+                        if parallelLane.is_null() {
+                            state |= LCA_INSUFFICIENT_SPACE;
+                            break;
+                        } else {
+                            let neighLead2 = parallelLane.get_leader(vehicle, -seen, &Vec::new(), -1., false);
+                            if !neighLead2.0.is_null() && neighLead2.0 != neighLead.0
+                                && (neighLead2.1 < vehicle.get_car_follow_model().get_secure_gap(vehicle, neighLead2.0, vehicle.get_speed(), neighLead2.0.get_speed(), neighLead2.0.get_car_follow_model().get_max_decel())) {
+                                state |= blockedByLeader;
+                                break;
+                            }
+                        }
+                        if l.get_via_lane().is_null() {
+                            view += 1;
+                        }
+                        seen += nextLane.get_length();
+                        // get the next link used
+                        nextLink = MSLane::succ_link_sec(&*vehicle, view, &*nextLane, bestLaneConts);
+                    }
+                }
+            }
+        }
         if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
             blocked = vehicle.get_lane_change_model_2().check_change_before_committing(vehicle, state);
             state |= blocked;
         }
-        // shortcut: MSGlobals::gLaneChangeDuration is not ported and defaults to 0, so the
-        // C++ block "gLaneChangeDuration > DELTA_T" (estimateLCDuration and the succLinkSec
-        // lookahead) never runs here; port it when MSGlobals and MSLane::succLinkSec are typed
         // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) is not ported; upgrade with MSLink approach API
         state
     }
