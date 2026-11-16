@@ -43,33 +43,7 @@ pub struct MSCFModel_W99 {
     pub myCC9: f64,
 }
 
-fn w99_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
-    cf_cast::<MSCFModel_W99>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
-}
-fn w99_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
-    cf_cast::<MSCFModel_W99>(m).interaction_gap(veh, vL)
-}
-fn w99_get_model_id(m: &MSCFModel) -> i32 {
-    cf_cast::<MSCFModel_W99>(m).get_model_id()
-}
-fn w99_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-    cf_cast::<MSCFModel_W99>(m).duplicate(vtype)
-}
-
-fn w99_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
-    cf_cast::<MSCFModel_W99>(m).stop_speed(veh, speed, gap, decel, usage)
-}
-
 /// Virtual table of MSCFModel_W99: its overrides on top of the MSCFModel table
-pub const W99_VT: MSCFModelVt = MSCFModelVt {
-    stop_speed_2: w99_stop_speed_2,
-    follow_speed: w99_follow_speed,
-    interaction_gap: w99_interaction_gap,
-    get_model_id: w99_get_model_id,
-    duplicate: w99_duplicate,
-    ..DEFAULT_MSCF_MODEL_VT
-};
-
 impl std::ops::Deref for MSCFModel_W99 {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
