@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 import traci
+from traci import constants as tc
 from traci.exceptions import TraCIException
 
 CASE = Path(__file__).resolve().parent
@@ -50,6 +51,51 @@ def probes(lane, tl_id):
         t.simulationStep(11)
         return t.vehicle.getSpeed("v0")
 
+    def sub_vehicle(t):
+        t.vehicle.subscribe("v0", [tc.VAR_SPEED, tc.VAR_LANE_ID, tc.VAR_POSITION])
+        t.simulationStep(11)
+        return t.vehicle.getSubscriptionResults("v0")
+
+    def sub_simulation(t):
+        t.simulation.subscribe([tc.VAR_DEPARTED_VEHICLES_NUMBER])
+        t.simulationStep(11)
+        return t.simulation.getSubscriptionResults()
+
+    def sub_param(t):
+        t.vehicle.subscribeParameterWithKey("v0", "nokey")
+        t.simulationStep(11)
+        return t.vehicle.getSubscriptionResults("v0")
+
+    def change_lane(t):
+        t.vehicle.changeLane("v0", t.vehicle.getLaneIndex("v0") ^ 1, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getLaneIndex("v0")
+
+    def change_target_last(t):
+        t.vehicle.changeTarget("v0", t.vehicle.getRoute("v0")[-1])
+        t.simulationStep(11)
+        return t.vehicle.getRoute("v0")
+
+    def set_route_current(t):
+        t.vehicle.setRoute("v0", t.vehicle.getRoute("v0"))
+        t.simulationStep(11)
+        return t.vehicle.getRoute("v0")
+
+    def move_to_xy(t):
+        x, y = t.vehicle.getPosition("v0")
+        t.vehicle.moveToXY("v0", t.vehicle.getRoadID("v0"), t.vehicle.getLaneIndex("v0"), x + 1.0, y)
+        return t.vehicle.getPosition("v0")
+
+    def add_vehicle(t):
+        t.vehicle.add("vnew", t.route.getIDList()[0])
+        t.simulationStep(11)
+        return t.vehicle.getIDList()
+
+    def remove_vehicle(t):
+        t.vehicle.remove("v0")
+        t.simulationStep(11)
+        return t.vehicle.getIDList()
+
     return {
         "getVersion": lambda t: t.getVersion(),
         "simulationStep(11) returns": lambda t: t.simulationStep(11),
@@ -67,6 +113,21 @@ def probes(lane, tl_id):
         "vehicle.getSpeed(nope)": lambda t: t.vehicle.getSpeed("nope"),
         "lane.getLength(nope)": lambda t: t.lane.getLength("nope"),
         "trafficlight.getRedYellowGreenState(nope)": lambda t: t.trafficlight.getRedYellowGreenState("nope"),
+        "vehicle.subscribe(v0) + step + results": sub_vehicle,
+        "simulation.subscribe(departed) + step": sub_simulation,
+        "vehicle.subscribeParameterWithKey(v0) + step": sub_param,
+        "vehicle.subscribe(nope) + step + results": lambda t: (t.vehicle.subscribe("nope", [tc.VAR_SPEED]), t.simulationStep(11), t.vehicle.getSubscriptionResults("nope"))[2],
+        "vehicle.changeLane(v0) + step + getLaneIndex": change_lane,
+        "vehicle.changeTarget(v0, last) + step + getRoute": change_target_last,
+        "vehicle.setRoute(v0, current) + step + getRoute": set_route_current,
+        "vehicle.moveToXY(v0, edge, lane, x+1, y)": move_to_xy,
+        "vehicle.moveToXY(v0, nope edge)": lambda t: t.vehicle.moveToXY("v0", "nope", 0, 0.0, 0.0),
+        "vehicle.add(vnew, route0) + step + getIDList": add_vehicle,
+        "vehicle.add(v0, dup)": lambda t: t.vehicle.add("v0", "r0"),
+        "vehicle.add(vx, nope route)": lambda t: t.vehicle.add("vx", "nope"),
+        "vehicle.remove(v0) + step + getIDList": remove_vehicle,
+        "vehicle.remove(nope)": lambda t: t.vehicle.remove("nope"),
+        "vehicle.getJunctionFoes(v0)": lambda t: t.vehicle.getJunctionFoes("v0"),
     }
 
 
