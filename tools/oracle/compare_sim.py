@@ -18,6 +18,10 @@ REL_TOL = 1e-9
 TRIPINFO_FIELDS = (
     "depart", "departLane", "departSpeed", "arrival", "arrivalLane",
     "arrivalSpeed", "duration", "routeLength", "waitingTime", "timeLoss",
+    # `devices` catches a whole defect class the numeric fields cannot see: a device that was
+    # configured but never created leaves every number identical (silent no-op). The rerouting
+    # device goes missing this way in reroute/ref_device.
+    "devices",
 )
 FCD_FIELDS = ("x", "y", "angle", "speed", "lane", "pos")
 
