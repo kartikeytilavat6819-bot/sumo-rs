@@ -1,0 +1,26 @@
+<routes>
+    <vehicle id="p0" depart="0.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E0_0" endPos="250.00" duration="10.00"/>
+    </vehicle>
+    <vehicle id="p1" depart="2.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E1_0" endPos="200.00" until="45.00"/>
+    </vehicle>
+    <vehicle id="p2" depart="4.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop parkingArea="pa0" duration="15.00"/>
+    </vehicle>
+    <vehicle id="p3" depart="6.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E2_0" endPos="150.00" duration="5.00"/>
+    </vehicle>
+    <vehicle id="p4" depart="8.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+    </vehicle>
+    <vehicle id="p5" depart="10.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E0_0" endPos="100.00" until="30.00"/>
+        <stop parkingArea="pa0" duration="5.00"/>
+    </vehicle>
+</routes>

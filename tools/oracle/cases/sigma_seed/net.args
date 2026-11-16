@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/sigma_seed/sigma_seed.nod.xml --edge-files tools/oracle/cases/sigma_seed/sigma_seed.edg.xml
