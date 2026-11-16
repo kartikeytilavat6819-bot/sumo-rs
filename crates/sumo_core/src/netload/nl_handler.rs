@@ -976,7 +976,7 @@ impl NLHandler {
             }
             _ => {}
         }
-        // shortcut: MSRouteHandler::myEndElement is not ported (no end-element hook on MSRouteHandler), so the base step is skipped; upgrade when microsim/ms_route_handler.rs ports it
+        self.base.my_end_element(element);
     }
 
     /// C++: `void NLHandler::addParam(const SUMOSAXAttributes &)` [protected]
