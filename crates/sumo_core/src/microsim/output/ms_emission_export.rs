@@ -75,7 +75,7 @@ impl MSEmissionExport {
         let vc = net.m().get_vehicle_control();
         for veh in vc.myVehicleDict.values() {
             let veh: Ptr<SUMOVehicle> = *veh;
-            // shortcut: getDevice(typeid(MSDevice_Emissions)) is matched by deviceName, the type_info lookup is not ported
+            // no typeid in Rust: "emissions" is the device name only MSDevice_Emissions reports, so this equals getDevice(typeid(MSDevice_Emissions))
             let hasEmissionsDevice = veh.get_devices().iter().any(|d| d.base2.device_name() == "emissions");
             if hasEmissionsDevice && (veh.is_on_road() || veh.is_idling()) {
                 of.open_tag("vehicle");
