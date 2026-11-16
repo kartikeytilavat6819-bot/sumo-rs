@@ -37,16 +37,20 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=26 FAIL=0 SKIP=8** over 17 cases (plus one variant row, `real/ref_reroute`).
+Exact totals: **`run_all.sh` PASS=28 FAIL=1 SKIP=9** over 19 cases. The single failure is a **recorded
+behavioural divergence**, not a broken test:
 
-**Every row in the suite now matches C++ 1.28.0 on tripinfo, FCD and statistics.** The last one to fall was
-`reroute/ref_device`: a one-step arrival offset that turned out **not** to be scheduling but a seventh
-missing virtual dispatch — `getRerouteOrigin()` is virtual and `MSVehicle` overrides it to return the *next*
-edge when the vehicle sits at the end of a 0.20 m lane, so C++'s reroute **fails** and the route is kept,
-while ours succeeded and terminated early.
+| Row | Symptom | Cause |
+|---|---|---|
+| `reroute_bypass_p1/ref` | with `device.rerouting.period=1`, C++ **reverts** the detour and sends the vehicle back onto the closed edge (`rerouteNo=2`, arrival 53.00); we keep the bypass (61.00) | C++'s periodic device reroute replans **without** the rerouter's prohibitions, while a rerouter-triggered reroute honours them. Ours propagates the prohibition to both paths |
 
-Getting rerouting to work required **four** missing-dispatch fixes, and the suite's remaining blind spots are
-listed under "Coverage gaps" below. A zero in the FAIL column does not mean zero untested surface.
+`reroute_bypass` (same net, `period=1000`) PASSES and proves a genuine mid-route detour:
+`LEAD IN AB OUT` → `LEAD IN AC CB OUT`, `rerouteNo=1`, matching C++ on tripinfo, FCD and statistics. Its net
+is built from plain XML (`net.args`) and is re-verified against C++ netconvert on every sweep: 0 differences
+in 42 elements.
+
+**Every other row matches C++ 1.28.0 on tripinfo, FCD and statistics.** A zero in the FAIL column would not
+mean zero untested surface — see the coverage-gap table below.
 
 - **`reroute_alt`** — `v0` rerouted at t=0 to `10 → 12 → 13`, arrival 30.00
 - **`closed_edge`** — a lane closed **after** departure; `v0` rerouted off it at t=8
