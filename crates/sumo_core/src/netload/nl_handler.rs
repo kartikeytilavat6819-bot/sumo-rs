@@ -73,6 +73,30 @@ fn parse_vehicle_classes_v(allowed: &str, disallowed: &str, network_version: (i3
     }
 }
 
+/// C++ `StopOffset::StopOffset(const SUMOSAXAttributes&, bool& ok)` (SUMOVehicleClass.cpp); lives here until the utils port takes it
+fn stop_offset_from_attrs(attrs: &SUMOSAXAttributes, ok: &mut bool) -> StopOffset {
+    let mut stopOffset = StopOffset::default();
+    if attrs.has_attribute(SUMO_ATTR_VCLASSES) && attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+        write_error("Simultaneous specification of vClasses and exceptions is not allowed");
+        *ok = false;
+    }
+    if !attrs.has_attribute(SUMO_ATTR_VALUE) {
+        write_error("StopOffset requires an offset value");
+        *ok = false;
+    }
+    let vClasses = attrs.get_opt::<String>(SUMO_ATTR_VCLASSES, "", ok, String::new(), true);
+    let exceptions = attrs.get_opt::<String>(SUMO_ATTR_EXCEPTIONS, "", ok, String::new(), true);
+    if attrs.has_attribute(SUMO_ATTR_VCLASSES) {
+        stopOffset.set_permissions(parse_vehicle_classes(&vClasses));
+    } else if attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+        stopOffset.set_permissions(!parse_vehicle_classes(&exceptions));
+    } else {
+        stopOffset.set_permissions(parse_vehicle_classes("all"));
+    }
+    stopOffset.set_offset(attrs.get_opt::<f64>(SUMO_ATTR_VALUE, "", ok, 0., true));
+    stopOffset
+}
+
 /// The XML-Handler for network loading
 /// C++ class `NLHandler` (netload/NLHandler.h)
 #[repr(C)]
@@ -629,10 +653,20 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        // C++ registerParent made the rerouter the active SAX handler; NLHandler sees nothing until </rerouter>
-        let child = self.myTriggerBuilder.m().myChildRerouter;
-        if !child.is_null() {
-            child.m().my_start_element(element, attrs);
+        // C++ registerParent made the trigger the active SAX handler; NLHandler sees nothing until its closing tag
+        let rerouter = self.myTriggerBuilder.m().myChildRerouter;
+        let laneSpeedTrigger = self.myTriggerBuilder.m().myChildLaneSpeedTrigger;
+        let calibrator = self.myTriggerBuilder.m().myChildCalibrator;
+        if !rerouter.is_null() {
+            rerouter.m().my_start_element(element, attrs);
+            return;
+        }
+        if !laneSpeedTrigger.is_null() {
+            laneSpeedTrigger.m().my_start_element(element, attrs);
+            return;
+        }
+        if !calibrator.is_null() {
+            calibrator.m().my_start_element(element, attrs);
             return;
         }
         let result = try_catch_args(|| match element {
@@ -755,8 +789,13 @@ impl NLHandler {
                 }
             }
             SUMO_TAG_STOPOFFSET => {
-                // shortcut: the StopOffset(attrs, ok) constructor is not ported (utils/common/sumo_vehicle_class.rs), so stop offsets from the net file are not applied yet; upgrade when it is
-                let _ = attrs;
+                let mut ok = true;
+                let stopOffset = stop_offset_from_attrs(attrs, &mut ok);
+                if !ok {
+                    write_error(&self.myEdgeControlBuilder.m().report_current_edge_or_lane());
+                } else {
+                    self.myEdgeControlBuilder.m().add_stop_offsets(&stopOffset);
+                }
             }
             SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
                 let mut ok = true;
@@ -900,12 +939,28 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
-        let child = self.myTriggerBuilder.m().myChildRerouter;
-        if !child.is_null() {
-            child.m().my_end_element(element);
+        let rerouter = self.myTriggerBuilder.m().myChildRerouter;
+        let laneSpeedTrigger = self.myTriggerBuilder.m().myChildLaneSpeedTrigger;
+        let calibrator = self.myTriggerBuilder.m().myChildCalibrator;
+        if !rerouter.is_null() {
+            rerouter.m().my_end_element(element);
             if element == SUMO_TAG_REROUTER {
                 // GenericSAXHandler::endElement: XMLSubSys::setHandler(*myParentHandler)
                 self.myTriggerBuilder.m().myChildRerouter = Ptr::null();
+            }
+            return;
+        }
+        if !laneSpeedTrigger.is_null() {
+            laneSpeedTrigger.m().my_end_element(element);
+            if element == SUMO_TAG_VSS {
+                self.myTriggerBuilder.m().myChildLaneSpeedTrigger = Ptr::null();
+            }
+            return;
+        }
+        if !calibrator.is_null() {
+            calibrator.m().my_end_element(element);
+            if element == SUMO_TAG_CALIBRATOR {
+                self.myTriggerBuilder.m().myChildCalibrator = Ptr::null();
             }
             return;
         }
