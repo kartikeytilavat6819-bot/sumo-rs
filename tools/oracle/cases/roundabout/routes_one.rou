@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="rA" edges="5197062#0 5197062#1"/>
+  <vehicle id="l0" route="rA" depart="0"/>
+</routes>
