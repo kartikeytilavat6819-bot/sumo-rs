@@ -5,7 +5,7 @@ use utils::geom::POSITION_EPS;
 use utils::common::to_string::f64_to_string_prec;
 use utils::common::std_defs::g_precision;
 use utils::options::options_cont::{get_bool, get_string};
-use crate::microsim::transportables::msp_model_striping::get_sidewalk;
+use crate::microsim::transportables::msp_model_striping::walking_sidewalk;
 
 // C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
 const MSPMODEL_FORWARD: i32 = 1;
@@ -542,7 +542,7 @@ impl MSStageWalking {
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, person: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
         self.get_edge().remove_transportable(person);
-        let lane = get_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
+        let lane = walking_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
         let arrived = self.myRouteStep == self.myRoute.len() - 1;
         if !lane.is_null() {
             let tl = person.get_vehicle_type().get_length();
@@ -619,7 +619,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_entry_reminders(&mut self, person: Ptr<MSTransportable>, isDepart: bool) {
-        let nextLane = get_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
+        let nextLane = walking_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
         if !nextLane.is_null() {
             let reason = if isDepart { MSMoveReminder_Notification::NOTIFICATION_DEPARTED } else { MSMoveReminder_Notification::NOTIFICATION_JUNCTION };
             for rem in nextLane.get_move_reminders().clone() {

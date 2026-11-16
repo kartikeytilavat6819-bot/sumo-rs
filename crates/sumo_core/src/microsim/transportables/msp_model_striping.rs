@@ -153,9 +153,14 @@ const SIDEWALK_OFFSET: f64 = 3.0;
 const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
 const RANDOM_POS_LAT: f64 = -f64::MAX;
 
+/// Sidewalk lookup for the walking stage; a uniquely named wrapper avoids clashing with the router's get_sidewalk in the prelude glob
+pub fn walking_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    get_sidewalk(edge, svc)
+}
+
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
 // shortcut: local copy because the generic getSidewalk in utils/router/intermodal_edge.rs is a stub (needs router trait bounds for E::getLanes and L::getPermissions); delete this copy and call that one once it is ported
-pub fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
     if edge.is_null() {
         return Ptr::null();
     }
