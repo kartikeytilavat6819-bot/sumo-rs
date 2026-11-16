@@ -1376,7 +1376,9 @@ impl MSBaseVehicle {
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
             stops = self.get_stop_edges(&mut firstPos, &mut lastPos, &mut jumps);
             if !stops.is_empty() {
-                // shortcut: MSGlobals::gUseMesoSim not ported, so the meso stop-position branch is skipped
+                if MSGlobals::use_meso_sim() && self.is_stopped() {
+                    sourcePos = self.get_next_stop().pars.endPos;
+                }
                 if !self.is_stopped() && self.myStops.front().unwrap().pars.speed == 0.0 {
                     sourcePos += self.get_brake_gap(false);
                 }
@@ -3667,7 +3669,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the parking-area access, too-short-stop warning, meso segment lookup, departPos-before-stop check and
+        // shortcut: the parking-area access, too-short-stop warning, departPos-before-stop check and
         // stopPar.tripId registration are not ported, upgrade with the parking area and departPos port
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
@@ -3686,6 +3688,13 @@ impl MSBaseVehicle {
             }
             if !stop.lane.allows_vehicle_class_2(self.myType.get_vehicle_class(), self.get_routing_mode()) {
                 *errorMsg = format!("Vehicle '{}' is not allowed to stop on lane '{}'.", self.myParameter.id, stopPar.lane);
+                return false;
+            }
+        }
+        if MSGlobals::use_meso_sim() {
+            stop.segment = meso_net().m().get_segment_for_edge(stop.lane.get_edge(), stop.get_end_pos(&self.base));
+            if stop.lane.is_internal() {
+                *errorMsg = format!("Mesoscopic simulation does not allow stopping on internal edge '{}' for vehicle '{}'.", stopPar.edge, self.myParameter.id);
                 return false;
             }
         }

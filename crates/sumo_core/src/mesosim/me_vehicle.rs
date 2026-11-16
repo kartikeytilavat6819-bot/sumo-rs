@@ -847,8 +847,7 @@ impl MEVehicle {
             }
             let pars = self.myStops.front().unwrap().pars.clone();
             self.myPastStops.push(pars);
-            // shortcut: MSStop.edge is an Unmapped route iterator; routeIndex uses the current route position, which equals stop.edge for stops handled in meso
-            self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+            self.myPastStops.last_mut().unwrap().routeIndex = self.myStops.front().unwrap().edge as i32;
             let (triggered, containerTriggered, joinTriggered) = {
                 let s = self.myStops.front().unwrap();
                 (s.triggered, s.containerTriggered, s.joinTriggered)
@@ -1640,7 +1639,8 @@ impl MEVehicle {
 
         // load stops
         self.myStops.clear();
-        // shortcut: addStops(!MSGlobals::gCheckRoutes, &myCurrEdge, false) needs an MSRouteIterator (Unmapped); stops are not re-added from the saved state until it is mapped
+        let searchStart = Ptr::from_mut(&mut self.myCurrEdge);
+        self.add_stops(!MSGlobals::check_routes(), searchStart, false);
 
         if self.has_departed() {
             self.myDeparture -= offset;
@@ -1654,8 +1654,7 @@ impl MEVehicle {
                 }
                 let pars = self.myStops.front().unwrap().pars.clone();
                 self.myPastStops.push(pars);
-                // shortcut: routeIndex is (int)(stop.edge - myRoute->begin()) on an Unmapped iterator; uses the current route position
-                self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+                self.myPastStops.last_mut().unwrap().routeIndex = self.myStops.front().unwrap().edge as i32;
                 self.myStops.pop_front();
                 pastStops -= 1;
             }
