@@ -1814,7 +1814,7 @@ impl NBNode {
                 && in_.is_connected_to(out, false)
             {
                 for i in inOffset..in_.get_num_lanes() {
-                    nbnode_set_connection_default(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED);
+                    nbnode_set_connection_same_dest(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED, true);
                 }
                 return;
             }
