@@ -270,8 +270,7 @@ impl MSDevice_ToC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
-    if panic!("shortcut: equipped_by_default_assignment_options not ported") {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "toc", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             if MSGlobals::use_meso_sim() {
                 utils::common::msg_handler::write_warning("ToC device is not supported by the mesoscopic simulation.");
                 return;

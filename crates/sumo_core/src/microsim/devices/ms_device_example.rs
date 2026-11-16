@@ -91,8 +91,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "example", v, false) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "example", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             // get custom vehicle parameter
             let mut customParameter2 = -1.0;
             if v.get_parameter().has_parameter("example") {
