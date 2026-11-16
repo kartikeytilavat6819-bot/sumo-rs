@@ -5,6 +5,7 @@ if [ ! -f /opt/gate_ready ]; then
   id gate || useradd -m -s /bin/bash gate
   sudo -u gate bash -lc 'curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal'
   sudo -u gate bash -lc 'python3 -m pip install -q --break-system-packages --target /home/gate/sumo_pkg eclipse-sumo==1.28.0'
+  python3 -m pip install -q --break-system-packages traci==1.28.0 sumolib==1.28.0
   touch /opt/gate_ready
 fi
 # stop the VM after 30 idle minutes (no gate running) so it never bills for nothing
