@@ -303,8 +303,97 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_bidi_stops(&mut self, ec: &NBEdgeCont) {
-        // shortcut: NBPTStop::myBidiStop is Unmapped (std::weak_ptr) and SUMOAbstractRouter::Operation is Unmapped, so bidi stop direction fixing cannot run yet; upgrade when both are mapped
-        panic!("NBPTLineCont::fixBidiStops: shortcut, needs NBPTStop bidi links and router operations");
+        let mut router: DijkstraRouter<NBRouterEdge, NBVehicle> = {
+            let op: SUMOAbstractRouter_TypedOperation<NBRouterEdge, NBVehicle> = NBRouterEdge::get_travel_time_static;
+            DijkstraRouter::new(&ec.get_all_router_edges(), true, Some(op), None, true, Ptr::null(), false, false).with_compute()
+        };
+        for item in self.myPTLines.values() {
+            let line = *item;
+            let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+            if stops.len() < 2 {
+                continue;
+            }
+            let svc: SUMOVehicleClass = match line.get_type() {
+                "bus" | "minibus" | "trolleybus" => SVC_BUS,
+                "tram" => SVC_TRAM,
+                "train" => SVC_RAIL,
+                "subway" | "light_rail" | "monorail" | "aerialway" => SVC_RAIL_URBAN,
+                "ferry" => SVC_SHIP,
+                _ => {
+                    write_warning(&format!("Could not determine vehicle class for public transport line of type '{}'.", line.get_type()));
+                    continue;
+                }
+            };
+            let mut veh = NBVehicle::new(line.get_ref(), svc);
+            let vehPtr: Ptr<NBVehicle> = Ptr::from_mut(&mut veh);
+            let mut newStops: Vec<Rc<NBPTStop>> = Vec::new();
+            let mut from: Option<Rc<NBPTStop>> = None;
+            let stopInfos: Vec<NBPTLine_PTStopInfo> = line.get_stop_edges(ec);
+            for (it, stop) in stops.iter().enumerate() {
+                let mut to: Rc<NBPTStop> = stop.clone();
+                let mut used: Rc<NBPTStop> = stop.clone();
+                // C++ asserts stopInfos.size() == stops.size(); get_stop_edges skips stops without an edge, so a short list counts as not revised
+                let isRevised = stopInfos.get(it).map_or(false, |info| info.revised);
+                if let Some(mut to2) = to.get_bidi_stop() {
+                    if !isRevised {
+                        let mut best = f64::MAX;
+                        match from.clone() {
+                            None => {
+                                if it + 1 != stops.len() {
+                                    let fromS: Rc<NBPTStop> = to.clone();
+                                    let from2: Rc<NBPTStop> = to2.clone();
+                                    to = stops[it + 1].clone();
+                                    let c1 = Self::get_cost(ec, &mut router, fromS.clone(), to.clone(), vehPtr);
+                                    let c2 = Self::get_cost(ec, &mut router, from2.clone(), to.clone(), vehPtr);
+                                    best = c1;
+                                    if let Some(to2b) = to.get_bidi_stop() {
+                                        to2 = to2b;
+                                        let c3 = Self::get_cost(ec, &mut router, fromS.clone(), to2.clone(), vehPtr);
+                                        let c4 = Self::get_cost(ec, &mut router, from2.clone(), to2.clone(), vehPtr);
+                                        if c2 < best {
+                                            used = from2.clone();
+                                            best = c2;
+                                        }
+                                        if c3 < best {
+                                            used = fromS.clone();
+                                            best = c3;
+                                        }
+                                        if c4 < best {
+                                            used = from2.clone();
+                                            best = c4;
+                                        }
+                                    } else if c2 < c1 {
+                                        used = from2.clone();
+                                        best = c2;
+                                    } else {
+                                        best = c1;
+                                    }
+                                }
+                            }
+                            Some(fromS) => {
+                                let c1 = Self::get_cost(ec, &mut router, fromS.clone(), to.clone(), vehPtr);
+                                let c2 = Self::get_cost(ec, &mut router, fromS.clone(), to2.clone(), vehPtr);
+                                if c2 < c1 {
+                                    used = to2.clone();
+                                    best = c2;
+                                } else {
+                                    best = c1;
+                                }
+                            }
+                        }
+                        if best < f64::MAX {
+                            from = Some(used.clone());
+                        } else {
+                            write_warning(&format!("Could not determine direction for line '{}' at stop '{}'.", line.get_line_id(), used.get_id()));
+                        }
+                    }
+                }
+                from = Some(used.clone());
+                newStops.push(used);
+            }
+            assert!(stops.len() == newStops.len());
+            line.m().replace_stops(newStops);
+        }
     }
 
     /// C++: `void NBPTLineCont::removeInvalidEdges(const NBEdgeCont &)`
@@ -1100,9 +1189,26 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Rc<NBPTStop>, to: Rc<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
-        // shortcut: SUMOAbstractRouter::Operation is Unmapped and NBRouterEdge is not linked to NBEdge yet, so routing costs cannot be computed; upgrade when the router is ported
-        let _ = (ec, router, from, to, veh);
-        panic!("NBPTLineCont::getCost: shortcut, router operations are not mapped yet");
+        let fromEdge: Ptr<NBEdge> = ec.get_by_id(from.get_edge_id());
+        let toEdge: Ptr<NBEdge> = ec.get_by_id(to.get_edge_id());
+        if fromEdge.is_null() || toEdge.is_null() {
+            return f64::MAX;
+        } else if fromEdge == toEdge {
+            if from.get_end_pos() <= to.get_end_pos() {
+                return to.get_end_pos() - from.get_end_pos();
+            } else {
+                return f64::MAX;
+            }
+        } else if fromEdge.get_bidi_edge() == toEdge {
+            return f64::MAX;
+        }
+        let mut route: Vec<Ptr<NBRouterEdge>> = Vec::new();
+        router.compute(Ptr::new(&fromEdge.base3), Ptr::new(&toEdge.base3), veh, 0, &mut route, false);
+        if route.is_empty() {
+            f64::MAX
+        } else {
+            router.recompute_costs(&route, veh, 0, Ptr::null())
+        }
     }
 
     /// C++: `std::string NBPTLineCont::getWayID(const std::string &)` [static, private]
