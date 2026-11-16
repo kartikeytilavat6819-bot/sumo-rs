@@ -2822,7 +2822,21 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, fileName: &str, catchExceptions: bool) -> SUMOTime {
-        panic!("shortcut: MSNet::loadState needs MSStateHandler, which is not ported yet ({})", fileName);
+        // load time only
+        let newTime = MSStateHandler_MSStateTimeHandler::get_time(fileName);
+        // clean up state
+        self.clear_state(newTime, false);
+        // load state
+        let mut h = MSStateHandler::new(fileName, 0);
+        let _ = utils::xml::xml_sub_sys::run_parser(&mut h, fileName, false, false, false, catchExceptions);
+        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |m| m.was_informed()) {
+            panic!("{}", ProcessError::new(utils::tlf!("Loading state from '%' failed.", fileName)));
+        }
+        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        // prevent loading errors on rewound route file
+        crate::microsim::ms_globals::set_state_loaded(true);
+        self.update_gui();
+        newTime
     }
 
     /// C++: `void MSNet::quickReload()`

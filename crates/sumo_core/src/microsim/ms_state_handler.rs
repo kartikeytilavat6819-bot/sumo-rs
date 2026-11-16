@@ -37,8 +37,8 @@ pub struct MSStateHandler {
     /// cached attrs for delayed loading of MSVehicleControl state
     pub myVCAttrs: Ptr<SUMOSAXAttributes>,
     /// cached device and reminder attrs (used when loading vehicles)
-    pub myDeviceAttrs: i32,
-    pub myReminderAttrs: i32,
+    pub myDeviceAttrs: Vec<Ptr<SUMOSAXAttributes>>,
+    pub myReminderAttrs: Vec<Ptr<SUMOSAXAttributes>>,
     pub myCFMAttrs: Ptr<SUMOSAXAttributes>,
     /// the last object that potentially carries parameters
     pub myLastParameterised: Ptr<Parameterised>,
@@ -52,8 +52,8 @@ pub struct MSStateHandler {
     pub myFlowIndex: i32,
     /// rail signal for which constraints are being loaded
     pub myConstrainedSignal: Ptr<MSRailSignal>,
-    /// vehicles that have arrived
-    pub myArrived: i32,
+    /// vehicles that have arrived (C++ std::set<SUMOVehicle*>, kept as a duplicate-free Vec)
+    pub myArrived: Vec<Ptr<SUMOVehicle>>,
 }
 
 impl std::ops::Deref for MSStateHandler {
@@ -113,8 +113,8 @@ impl MSStateHandler {
             myQueIndex: 0,
             myAttrs: Ptr::null(),
             myVCAttrs: Ptr::null(),
-            myDeviceAttrs: 0,
-            myReminderAttrs: 0,
+            myDeviceAttrs: Vec::new(),
+            myReminderAttrs: Vec::new(),
             myCFMAttrs: Ptr::null(),
             myLastParameterised: Ptr::null(),
             myVehiclesToRemove: utils::options::options_cont::get_string_vector("load-state.remove-vehicles")
@@ -124,7 +124,7 @@ impl MSStateHandler {
             myMesoEventCounter: -1,
             myFlowIndex: -1,
             myConstrainedSignal: Ptr::null(),
-            myArrived: 0,
+            myArrived: Vec::new(),
         };
         sh.myAmLoadingState = true;
         sh.myAllowInternalRoutes = true;
@@ -138,7 +138,7 @@ impl MSStateHandler {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // C++ body only frees the attribute holders (myDeviceAttrs, myReminderAttrs, myAttrs); not owned here yet
-        // shortcut: the attribute holders are i32 placeholders in the skeleton, so nothing is freed until they are typed
+        // shortcut: the attribute clones are leaked (leak_attrs), so nothing is freed here
     }
 
     /// C++: `void MSStateHandler::saveState(const std::string &, SUMOTime, bool)` [static]
@@ -652,8 +652,16 @@ impl MSStateHandler {
                 MSLane::load_rng_state(index, &state);
             }
             SUMO_TAG_EDGECONTROL => {
-                // shortcut: lane lookup by id (MSLane::dictionary) returns bool only, so the active-lane list cannot be built yet
-                panic!("shortcut: edgeControl state needs a lane lookup by id, not ported");
+                let laneIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_LANES, "", &mut ok, false);
+                let mut activeLanes: VecDeque<Ptr<MSLane>> = VecDeque::new();
+                for laneID in laneIDs.iter() {
+                    let lane = MSLane::dictionary_2(laneID);
+                    if lane.is_null() {
+                        panic!("{}", ProcessError::new(utils::tlf!("Unknown lane '%' in loaded state.", laneID)));
+                    }
+                    activeLanes.push_back(lane);
+                }
+                MSNet::get_instance().m().get_edge_control().set_active_lanes(activeLanes);
             }
             SUMO_TAG_ROUTINGENGINE => {
                 let lastAdaptation = attrs.get::<i64>(SUMO_ATTR_LAST, "", &mut ok, true);
@@ -688,9 +696,11 @@ impl MSStateHandler {
                 self.myLastParameterised = self.myVehicleParameter.cast::<Parameterised>();
                 self.myAttrs = leak_attrs(attrs);
             }
-            SUMO_TAG_DEVICE | SUMO_TAG_REMINDER => {
-                // shortcut: myDeviceAttrs and myReminderAttrs are i32 placeholders, so device and reminder states cannot be stored yet
-                panic!("shortcut: device and reminder states need typed attribute holders");
+            SUMO_TAG_DEVICE => {
+                self.myDeviceAttrs.push(leak_attrs(attrs));
+            }
+            SUMO_TAG_REMINDER => {
+                self.myReminderAttrs.push(leak_attrs(attrs));
             }
             SUMO_TAG_CFM_VARIABLES => {
                 self.myCFMAttrs = leak_attrs(attrs);
@@ -704,17 +714,93 @@ impl MSStateHandler {
                 // shortcut: meso segment lookup needs MSEdge::dictionary by id and MESegment chain walking, meso state is not ported
                 panic!("shortcut: meso segment state is not ported");
             }
-            SUMO_TAG_LANE | SUMO_TAG_VIEWSETTINGS_VEHICLES | SUMO_TAG_LINK | SUMO_TAG_APPROACHING => {
-                // shortcut: lane/link lookup by id and vehicle-by-id state loading for these tags need APIs that are not ported
-                panic!("shortcut: lane, link, view-settings and approaching state is not ported");
+            SUMO_TAG_LANE => {
+                let laneID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                self.myCurrentLane = MSLane::dictionary_2(&laneID);
+                if self.myCurrentLane.is_null() {
+                    panic!("{}", ProcessError::new(utils::tlf!("Unknown lane '%' in loaded state.", laneID)));
+                }
+            }
+            SUMO_TAG_VIEWSETTINGS_VEHICLES => {
+                let vehIDs: Vec<String> = attrs.get::<Vec<String>>(SUMO_ATTR_VALUE, "", &mut ok, false);
+                let net = MSNet::get_instance();
+                let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
+                let mut vehs: Vec<Ptr<SUMOVehicle>> = Vec::new();
+                for id in vehIDs.iter() {
+                    let v = vc.get_vehicle(id);
+                    // vehicle could be removed due to options
+                    if !v.is_null() {
+                        vehs.push(v);
+                        self.myArrived.retain(|a| *a != v);
+                    }
+                }
+                if use_meso_sim() {
+                    // shortcut: meso segment loadState and queue state need the MESegment chain, not ported
+                    panic!("shortcut: meso view-settings state is not ported");
+                } else {
+                    self.myCurrentLane.m().load_state(&vehs);
+                }
+            }
+            SUMO_TAG_LINK => {
+                let toLaneID = attrs.get::<String>(SUMO_ATTR_TO, "", &mut ok, true);
+                self.myCurrentLink = Ptr::null();
+                let lane = self.myCurrentLane;
+                for link in lane.m().get_link_cont().iter() {
+                    if link.m().get_via_lane_or_lane().m().get_id().to_string() == toLaneID {
+                        self.myCurrentLink = *link;
+                    }
+                }
+                if self.myCurrentLink.is_null() {
+                    panic!("{}", ProcessError::new(format!("Unknown link from lane '{}' to lane '{}' in loaded state", lane.m().get_id(), toLaneID)));
+                }
+            }
+            SUMO_TAG_APPROACHING => {
+                let vehID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                let arrivalTime = attrs.get::<i64>(SUMO_ATTR_ARRIVALTIME, "", &mut ok, true);
+                let arrivalSpeed = attrs.get::<f64>(SUMO_ATTR_ARRIVALSPEED, "", &mut ok, true);
+                let leaveSpeed = attrs.get::<f64>(SUMO_ATTR_DEPARTSPEED, "", &mut ok, true);
+                let setRequest = attrs.get::<bool>(SUMO_ATTR_REQUEST, "", &mut ok, true);
+                let arrivalSpeedBraking = attrs.get::<f64>(SUMO_ATTR_ARRIVALSPEEDBRAKING, "", &mut ok, true);
+                let waitingTime = attrs.get::<i64>(SUMO_ATTR_WAITINGTIME, "", &mut ok, true);
+                let dist = attrs.get::<f64>(SUMO_ATTR_DISTANCE, "", &mut ok, true);
+                let latOffset = attrs.get_opt::<f64>(SUMO_ATTR_POSITION_LAT, "", &mut ok, 0.0, true);
+                let net = MSNet::get_instance();
+                let vc: &mut MSVehicleControl = net.m().get_vehicle_control();
+                let veh = vc.get_vehicle(&vehID);
+                self.myCurrentLink.m().set_approaching(veh, arrivalTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, latOffset);
+                if !use_meso_sim() {
+                    // shortcut: dynamic_cast<MSVehicle*> is unchecked, approaching state is only loaded for micro vehicles
+                    veh.cast::<MSVehicle>().m().load_previous_approaching(self.myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
+                }
             }
             SUMO_TAG_RAILSIGNAL_CONSTRAINT_TRACKER | SUMO_TAG_RAILSIGNAL_CONSTRAINTS | SUMO_TAG_PREDECESSOR | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
                 // shortcut: rail signal constraint loading is not ported
                 panic!("shortcut: railSignal constraint state is not ported");
             }
             SUMO_TAG_TLLOGIC => {
-                // shortcut: TLS program lookup and loadState need MSTLLogicControl::get(id, programID), not ported under a verified name
-                panic!("shortcut: traffic light state is not ported");
+                let tlID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+                let programID = attrs.get::<String>(SUMO_ATTR_PROGRAMID, &tlID, &mut ok, true);
+                let phase = attrs.get::<i32>(SUMO_ATTR_PHASE, &tlID, &mut ok, true);
+                let spentDuration = attrs.get::<i64>(SUMO_ATTR_DURATION, &tlID, &mut ok, true);
+                let nextSwitch = attrs.get::<i64>(SUMO_ATTR_UNTIL, &tlID, &mut ok, true);
+                let timeInCycle = attrs.get::<i64>(SUMO_ATTR_CYCLETIME, &tlID, &mut ok, true);
+                let active = attrs.get::<bool>(SUMO_ATTR_ACTIVE, &tlID, &mut ok, true);
+                let net = MSNet::get_instance();
+                let tlc: &mut MSTLLogicControl = net.m().get_tls_control();
+                let tl = tlc.get_2(&tlID, &programID);
+                if tl.is_null() {
+                    if programID == "online" {
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Ignoring program '%' for traffic light '%' in loaded state", programID, tlID));
+                        return;
+                    } else {
+                        panic!("{}", ProcessError::new(format!("Unknown program '{}' for traffic light '{}'", programID, tlID)));
+                    }
+                }
+                if phase >= tl.m().get_phase_number() {
+                    panic!("{}", ProcessError::new(format!("Invalid phase '{}' for traffic light '{}'", phase, tlID)));
+                }
+                // might not be set if the phase happens to match and there are multiple programs
+                tl.m().load_state(tlc, self.myTime, phase, spentDuration, nextSwitch, timeInCycle, active);
             }
             SUMO_TAG_DRIVEWAY | SUMO_TAG_SUBDRIVEWAY => {
                 MSDriveWay::load_state(attrs, element);
@@ -852,10 +938,19 @@ impl MSStateHandler {
                     utils::common::msg_handler::write_message(&format!("Removed {} vehicles while loading state.", self.myRemoved));
                     vc.discount_state_removed(self.myRemoved);
                 }
-                // shortcut: myArrived is an i32 placeholder, so kept-after-arrival vehicles are not deleted here
+                for v in self.myArrived.iter() {
+                    // state was created with active option --keep-after-arrival
+                    vc.delete_kept_vehicle(*v);
+                }
                 if !use_meso_sim() {
-                    // shortcut: the updateBestLanes pass over loaded vehicles needs the loadedVehBegin/End iterator, not ported
-                    panic!("shortcut: updateBestLanes pass after loading state is not ported");
+                    // shortcut: loaded vehicles are read from myVehicleDict directly (C++ loadedVehBegin..End), dynamic_cast is unchecked
+                    for veh in vc.myVehicleDict.values() {
+                        let microVeh = veh.cast::<MSVehicle>();
+                        if microVeh.m().has_departed() && !microVeh.m().get_lane().is_null() {
+                            // occupancy update must happen after all lane states have been loaded
+                            microVeh.m().update_best_lanes(false, Ptr::null());
+                        }
+                    }
                 }
                 if use_meso_sim() && self.myMesoEventCounter >= 0 {
                     MELoop::set_event_counter(self.myMesoEventCounter);
@@ -984,14 +1079,20 @@ impl MSStateHandler {
         // make a copy because myVehicleParameter is reset in closeVehicle()
         let vehID = self.myVehicleParameter.m().id.clone();
         if !self.myVehiclesToRemove.contains(&vehID) {
-            // shortcut: the LOADSTATE_DEVICENAMES parameter, the per-device loadState and the reminder loadState loops need myDeviceAttrs/myReminderAttrs typed (they are i32 placeholders), so device and reminder state is not restored
-            // shortcut: the embedded route "!<id>" checkRemoval and the CFM variables loadState are not ported under verified names
+            // shortcut: the embedded route "!<id>" checkRemoval is not ported under a verified name
+            let deviceNames: Vec<String> = self.myDeviceAttrs.iter().map(|a| MSDevice::get_device_name(&a.get_string(SUMO_ATTR_ID))).collect();
+            self.myVehicleParameter.m().set_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES, &deviceNames.join(" "));
             self.base.close_vehicle();
             let v: Ptr<SUMOVehicle> = vc.get_vehicle(&vehID);
             if v.is_null() {
                 panic!("{}", ProcessError::new(format!("Could not load vehicle '{}' from state", vehID)));
             }
+            if deviceNames.iter().any(|d| d == "person" || d == "container") {
+                // shortcut: initTransportableDevice for loaded persons and containers is not ported
+                panic!("shortcut: transportable devices in loaded state are not ported");
+            }
             let base: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
+            base.m().myParameter.m().unset_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES);
             let attrs: &SUMOSAXAttributes = &*self.myAttrs;
             base.m().set_chosen_speed_factor(attrs.get_float(SUMO_ATTR_SPEEDFACTOR).unwrap_or_else(|e| panic!("{e}")));
             v.cast::<MSVehicle>().m().load_state(attrs, self.myOffset);
@@ -1000,14 +1101,47 @@ impl MSStateHandler {
                 MSNet::get_instance().m().get_insertion_control().already_departed(v);
                 // shortcut: the rail-signal vehicleStateChanged registration is skipped, its signature is not verified
                 vc.handle_triggered_depart(v, false);
-                if base.has_arrived() {
-                    // shortcut: myArrived is an i32 placeholder, arrived vehicles are not recorded
+                if base.has_arrived() && !self.myArrived.contains(&v) {
+                    self.myArrived.push(v);
                 }
+            }
+            while let Some(attrs) = self.myDeviceAttrs.pop() {
+                let attrID = attrs.get_string(SUMO_ATTR_ID);
+                for dev in base.m().get_devices().clone() {
+                    if dev.m().base2.get_id() == attrID {
+                        if attrID.starts_with("tripinfo_") {
+                            dev.cast::<MSDevice_Tripinfo>().m().load_state(&attrs);
+                        } else {
+                            // shortcut: only tripinfo device states are restored, other device types need a device vtable
+                            panic!("shortcut: device '{}' state restore is not ported", attrID);
+                        }
+                    }
+                }
+            }
+            let mut ok = true;
+            while let Some(attrs) = self.myReminderAttrs.pop() {
+                let attrID = attrs.get_string(SUMO_ATTR_ID);
+                let rattrs: &SUMOSAXAttributes = &*attrs;
+                let time = rattrs.get::<i64>(SUMO_ATTR_TIME, "", &mut ok, false);
+                let pos = rattrs.get::<f64>(SUMO_ATTR_POSITION, "", &mut ok, false);
+                let net = MSNet::get_instance();
+                let remDict = net.m().get_detector_control().get_all_reminders();
+                if let Some(rem) = remDict.get(&attrID) {
+                    rem.m().load_reminder_state(v.get_numerical_id() as i64, time, pos);
+                }
+            }
+            if !self.myCFMAttrs.is_null() {
+                let vars = v.cast::<MSVehicle>().m().get_car_follow_variables();
+                if !vars.is_null() {
+                    vars.m().load_state(&*self.myCFMAttrs);
+                }
+                self.myCFMAttrs = Ptr::null();
             }
         } else {
             self.myVehicleParameter = Ptr::null();
             self.myRemoved += 1;
-            // shortcut: device and reminder attribute holders are i32 placeholders, nothing to delete
+            self.myDeviceAttrs.clear();
+            self.myReminderAttrs.clear();
             self.myAttrs = Ptr::null();
         }
     }
@@ -1115,7 +1249,7 @@ impl MSStateHandler_MSStateTimeHandler {
     #[allow(unused_variables)]
     pub fn get_time(fileName: &str) -> SUMOTime {
         // build handler and parser
-        let mut handler = MSStateHandler_MSStateTimeHandler { base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, "", ""), myTime: 0 };
+        let mut handler = MSStateHandler_MSStateTimeHandler { base: utils::xml::sumo_sax_handler::new("", ""), myTime: 0 };
         handler.set_file_name(fileName);
         handler.myTime = -1;
         let mut parser = utils::xml::xml_sub_sys::get_sax_reader(false, false);
