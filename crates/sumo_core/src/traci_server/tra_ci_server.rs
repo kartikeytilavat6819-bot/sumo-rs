@@ -1821,7 +1821,7 @@ impl TraCIServer {
     pub fn new(begin: SUMOTime, port: i32, numClients: i32) -> Self {
         let mut s = TraCIServer {
             base: MSNet_VehicleStateListener::new(),
-            base2: VariableWrapper::new(()),
+            base2: VariableWrapper::new(None),
             base3: MSNet_TransportableStateListener::new(),
             mySockets: BTreeMap::new(),
             mySocketReorderRequests: BTreeMap::new(),

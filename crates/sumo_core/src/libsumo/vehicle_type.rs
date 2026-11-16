@@ -763,7 +763,9 @@ impl VehicleType {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        panic!("shortcut: VehicleType::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int VehicleType::domainID()` [static]
@@ -799,7 +801,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        panic!("shortcut: VehicleType::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool VehicleType::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

@@ -52,11 +52,22 @@ impl SimVariableWrapper for Helper_SubscriptionWrapper {
     }
 }
 
-/// C++ `std::shared_ptr<VariableWrapper>` built from the SubscriptionWrapper subclass (base first)
-// shortcut: relies on #[repr(C)] with `base` first on Helper_SubscriptionWrapper (helper.rs)
-fn as_variable_wrapper(v: Helper_SubscriptionWrapper) -> Rc<VariableWrapper> {
-    let p = Rc::into_raw(Rc::new(v)) as *const VariableWrapper;
-    unsafe { Rc::from_raw(p) }
+impl SimVariableWrapper for VariableWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        VariableWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        VariableWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        VariableWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        VariableWrapper::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        VariableWrapper::wrap_string_pair(self, objID, variable, value)
+    }
 }
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (base first)
@@ -1237,7 +1248,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        as_variable_wrapper(Helper_SubscriptionWrapper::new((), my_subscription_results(), my_context_subscription_results()))
+        Helper::make_subscription_wrapper(Some(Simulation::handle_variable::<VariableWrapper>), my_subscription_results(), my_context_subscription_results())
     }
 
     /// C++: `bool Simulation::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
