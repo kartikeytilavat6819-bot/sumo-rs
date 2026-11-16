@@ -2677,7 +2677,6 @@ impl MSLink {
                 let isOpposite = leader.get_lane_change_model_2().is_opposite();
                 let avi = foeExitLink.get_approaching(msveh_to_sumo_vehicle(leader));
                 let willPass = avi.willPass || (avi.arrivalTime == INVALID_TIME && sameTarget);
-                if !ego.is_null() && ego.get_id() == "146" && simStep >= 303000 && simStep <= 304000 { eprintln!("CAND t={} egoLink={} foe={} leaderLane={} leader={} cannot={} fdtc={:.17} lb={:.17} lbd={:.17} fcw={:.17} sag={:.17} pastCP={} enteredCP={} inTheWay={} willPass={} avi.willPass={} arrival={} sameTarget={} sameSource={} greenCont={} foeIndirect={}", simStep, self.get_lane().get_id(), foeLane.get_id(), leader.get_lane().get_id(), leader.get_id(), cannotIgnore, foeDistToCrossing, leaderBack, leaderBackDist, foeCrossingWidth, sagitta, pastTheCrossingPoint, enteredTheCrossingPoint, inTheWay, willPass, avi.willPass, avi.arrivalTime, sameTarget, sameSource, ignoreGreenCont, foeIndirect); }
                 if leader == ego {
                     continue;
                 }

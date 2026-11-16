@@ -1,7 +1,9 @@
 #!/bin/bash
-# TRACE ONLY (removed before final commit): London vehicle 146, t=303..304, our side.
+# TEMPORARY (removed before final commit): London full run vs regenerated reference.
 cd tools/oracle/cases/city_london_lh || exit 1
-/tmp/target/debug/sumo -n ref_simple.net.xml -r routes.rou --end 305 --no-step-log true --fcd-output /tmp/l146.fcd.xml > /tmp/l146.out 2>&1
+/tmp/target/debug/sumo -n ref_simple.net.xml -r routes.rou --end 600 --no-step-log true --tripinfo-output /tmp/l.tripinfo.xml --fcd-output /tmp/l.fcd.xml --statistic-output /tmp/l.stat.xml > /tmp/l.out 2>&1
 echo "sumo_exit=$?"
-grep -E '^ISL ' /tmp/l146.out | cut -c1-330 | head -40
-grep -E '^(GA0|GC 23) ' /tmp/l146.out | grep -E 't=304000' | head -5
+cd ../..
+python3 compare_sim.py --fcd cases/city_london_lh/ref.fcd.xml /tmp/l.fcd.xml 2>&1 | head -3
+python3 compare_sim.py --tripinfo cases/city_london_lh/ref.tripinfo.xml /tmp/l.tripinfo.xml 2>&1 | head -3
+grep -E '<vehicles ' /tmp/l.stat.xml

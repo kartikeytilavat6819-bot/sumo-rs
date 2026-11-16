@@ -9988,9 +9988,9 @@ impl MSVehicle {
                         response2 = self.get_speed() >= veh.get_speed();
                     } else {
                         // fallback if pedestrian crossings are involved
-                        // shortcut: needs logic->getResponseFor(i).test(j) on MSLogicJunction_LinkBits, which is not ported (Unmapped), so no response is assumed, upgrade when ms_logic_junction is ported
-                        response = false;
-                        response2 = false;
+                        let logic = link.get_junction().get_logic();
+                        response = logic.get_response_for(link.get_index()).test(foeLink.get_index());
+                        response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index());
                     }
                     if !response {
                         // if we have right of way over the foe, entryTime does not matter
@@ -11528,9 +11528,9 @@ impl MSVehicle {
     //         //if (isSelected()) std::cout << "   check1 passed\n";
     //
     //         // ensure that the vehicle is fully on bidi edges that allow reversal
-    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks()
-    //                                                 ? ceil((double)myFurtherLanes.size() / 2.0)
-    //                                                 : myFurtherLanes.size());
+    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes
+    //                                                 ? myFurtherLanes.size()
+    //                                                 : ceil((double)myFurtherLanes.size() / 2.0));
     //         const int remainingRoute = int(myRoute->end() - myCurrEdge) - 1;
     //         if (remainingRoute < neededFutureRoute) {
     // #ifdef DEBUG_REVERSE_BIDI
@@ -11660,10 +11660,10 @@ impl MSVehicle {
             && stopOk
         {
             // ensure that the vehicle is fully on bidi edges that allow reversal
-            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
-                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
-            } else {
+            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() {
                 self.myFurtherLanes.len() as f64
+            } else {
+                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
             }) as i32;
             let remainingRoute = (self.myRoute.size() as i32 - self.myCurrEdge as i32) - 1;
             if remainingRoute < neededFutureRoute {
@@ -13142,7 +13142,7 @@ impl MSVehicle {
     //             // check for train direction reversal
     //             if (lane->getBidiLane() != nullptr
     //                     && (*link)->getLane()->getBidiLane() == lane) {
-    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - NUMERICAL_EPS);
+    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - POSITION_EPS);
     //                 if (seen < 1) {
     //                     mustSeeBeforeReversal = 2 * seen + getLength();
     //                 }
@@ -13154,17 +13154,14 @@ impl MSVehicle {
     //                                 && seen > SPEED2DIST(v));
     //         }
     //
-    //         if (!planningToStop) {
-    //             // no need to slow down for reversal if we are alrady slowing down for a stop
-    //             bool canReverseEventually = false;
-    //             const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
-    //             v = MIN2(v, vReverse);
+    //         bool canReverseEventually = false;
+    //         const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
+    //         v = MIN2(v, vReverse);
     // #ifdef DEBUG_PLAN_MOVE
-    //             if (DEBUG_COND) {
-    //                 std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
-    //             }
-    // #endif
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
     //         }
+    // #endif
     //
     //         // check whether we need to slow down in order to finish a continuous lane change
     //         if (myLaneChangeModel->isChangingLanes()) {
@@ -13444,20 +13441,16 @@ impl MSVehicle {
         }
         // v is the initial maximum velocity of this vehicle in this step
         let mut v = cfModel.maximum_lane_speed_cf(me, maxV, laneMaxV);
-        if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GA0 t={} speed={:.17} lane={} pos={:.17} maxV={:.17} laneMaxV={:.17} v1={:.17}", MSNet::get_instance().get_current_time_step(), self.myState.mySpeed, self.myLane.get_id(), self.myState.myPos, maxV, laneMaxV, v); }
         // if we are modelling parking then we dawdle until the manoeuvre is complete - by setting a very low max speed
         //   in practice this only applies to exit manoeuvre because entry manoeuvre just delays setting stop.reached - when the vehicle is virtually stopped
         if crate::microsim::ms_globals::model_parking_manoeuver() && !self.manoeuvre_is_complete() {
             v = NUMERICAL_EPS_SPEED;
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 1 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
         }
 
         if !self.myInfluencer.is_null() {
             let vMin = max2(0.0, cfModel.min_next_speed(self.myState.mySpeed, me));
             v = self.myInfluencer.m().influence_speed(t, v, v, vMin, maxV);
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 2 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
             v = self.myInfluencer.m().gap_control_speed(t, me.cast::<SUMOVehicle>(), v, v, vMin, maxV);
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 3 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
         }
         // all links within dist are taken into account (potentially)
         let dist = speed2dist(maxV) + cfModel.brake_gap(maxV);
@@ -13492,7 +13485,6 @@ impl MSVehicle {
         {
             let vSlowDown = self.slow_down_for_schedule(vMinComfortable);
             v = min2(v, vSlowDown);
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 4 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
         }
         let mut stopIt: usize = 0;
         loop {
@@ -13530,7 +13522,6 @@ impl MSVehicle {
                     }
                 }
                 self.adapt_to_leader_distance(&oppositeLeaders, 0.0, seen, lastLink, &mut v, &mut vLinkPass);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 5 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
             } else {
                 if crate::microsim::ms_globals::lateral_resolution() > 0.0 && self.myLaneChangeModel.get_shadow_lane().is_null() {
                     let rightOL = self.get_right_side_on_lane_2(lane) + lateralShift;
@@ -13558,12 +13549,10 @@ impl MSVehicle {
                         lane.release_vehicles();
                         if outsideLeaders.has_vehicles() {
                             self.adapt_to_leaders(&outsideLeaders, lateralShift, seen, lastLink, leaderLane, &mut v, &mut vLinkPass);
-                            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 6 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
                         }
                     }
                 }
                 self.adapt_to_leaders(&ahead, lateralShift, seen, lastLink, leaderLane, &mut v, &mut vLinkPass);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 7 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
             }
             if !lastLink.is_null() {
                 lastLink.m().myVLinkWait = min2(lastLink.m().myVLinkWait, v);
@@ -13592,7 +13581,6 @@ impl MSVehicle {
                         }
                         let turningDifference = max2(0.0, leaderLane.get_length() - shadowLane.get_length());
                         self.adapt_to_leaders(&shadowLeaders, latOffset, seen - turningDifference, lastLink, shadowLane, &mut v, &mut vLinkPass);
-                        if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 8 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
                     } else if shadowLane == self.myLaneChangeModel.get_shadow_lane() && leaderLane == self.myLane {
                         // check for leader vehicles driving in the opposite direction on the opposite-direction shadow lane
                         // (and thus in the same direction as ego)
@@ -13600,7 +13588,6 @@ impl MSVehicle {
                         let latOffset = 0.0;
                         shadowLeaders.fix_opposite_gaps(true);
                         self.adapt_to_leader_distance(&shadowLeaders, latOffset, seen, lastLink, &mut v, &mut vLinkPass);
-                        if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 9 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
                     }
                 }
             }
@@ -13612,7 +13599,6 @@ impl MSVehicle {
                 if !leader.0.is_null() {
                     let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
                     v = min2(v, stopSpeed);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 10 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 }
             }
             if !lane.get_bidi_lane().is_null() {
@@ -13626,7 +13612,6 @@ impl MSVehicle {
                     if !leader.0.is_null() {
                         let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
                         v = min2(v, stopSpeed);
-                        if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 11 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                     }
                 }
             }
@@ -13634,7 +13619,6 @@ impl MSVehicle {
             if !opposite && lane.get_edge().has_lane_changer() {
                 let vHelp = self.myLaneChangeModel.get_cooperative_help_speed(lane, seen);
                 v = min2(v, vHelp);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 12 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
             }
 
             // process all stops and waypoints on the current edge
@@ -13727,7 +13711,6 @@ impl MSVehicle {
                         *newStopSpeed = f64::MAX;
                     }
                     v = min2(v, stopSpeed);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 13 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                     if lane.is_internal() {
                         let mut exitLink: usize = MSLane::succ_link_sec(self, (view + 1) as i32, &lane, bestLaneConts);
                         debug_assert!(!lane.is_link_end(&mut exitLink));
@@ -13735,7 +13718,6 @@ impl MSVehicle {
                         let mut dummyVLinkWait = 0.0;
                         let exitLinkP = lane.get_link_cont()[exitLink];
                         self.check_link_leader_current_and_parallel(exitLinkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut dummyVLinkWait, &mut dummySetRequest);
-                        if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 14 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
                     }
 
                     if isFirstStop {
@@ -13800,7 +13782,6 @@ impl MSVehicle {
                 let distToArrival = seen + self.myArrivalPos - lane.get_length() - speed2dist(arrivalSpeed);
                 let va = max2(utils::geom::NUMERICAL_EPS, cfModel.free_speed(me, self.get_speed(), distToArrival, arrivalSpeed, false, MSCFModel_CalcReason::CURRENT));
                 v = min2(v, va);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 15 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 if !lastLink.is_null() {
                     lastLink.m().adapt_leave_speed(va);
                 }
@@ -13818,10 +13799,8 @@ impl MSVehicle {
                 }
                 if self.myLaneChangeModel.get_committed_speed() > 0.0 {
                     v = min2(self.myLaneChangeModel.get_committed_speed(), v);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 16 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 } else {
                     v = min2(va, v);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 17 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 }
                 if lane.is_link_end(&mut link) {
                     lfLinks.push(MSVehicle_DriveProcessItem::new_2(v, seen, 0.0));
@@ -13895,12 +13874,11 @@ impl MSVehicle {
             if self.is_rail() && !lane.is_internal() {
                 // check for train direction reversal
                 if !lane.get_bidi_lane().is_null() && linkP.get_lane().get_bidi_lane() == lane {
-                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - utils::geom::NUMERICAL_EPS, MSCFModel_CalcReason::CURRENT);
+                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT);
                     if seen < 1.0 {
                         mustSeeBeforeReversal = 2.0 * seen + self.get_length();
                     }
                     v = min2(v, vMustReverse);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 18 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 }
                 // signal that is passed in the current step does not count
                 foundRailSignal |= !linkP.get_tl_logic().is_null()
@@ -13908,13 +13886,9 @@ impl MSVehicle {
                     && seen > speed2dist(v);
             }
 
-            if !planningToStop {
-                // no need to slow down for reversal if we are alrady slowing down for a stop
-                let mut canReverseEventually = false;
-                let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
-                v = min2(v, vReverse);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 19 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
-            }
+            let mut canReverseEventually = false;
+            let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+            v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
             if self.myLaneChangeModel.is_changing_lanes() {
@@ -13932,7 +13906,6 @@ impl MSVehicle {
                     // XXX: Euler-logic (#860), but I couldn't identify problems from this yet (Leo). Refs. #2575
                     let va = max2(cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT), (seen - POSITION_EPS) / timeRemaining);
                     v = min2(va, v);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 20 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
                 }
             }
 
@@ -13949,7 +13922,6 @@ impl MSVehicle {
             if yellowOrRed && canBrakeBeforeStopLine && !self.ignore_red(linkP, canBrakeBeforeStopLine) && seen >= mustSeeBeforeReversal {
                 if lane.is_internal() {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
-                    if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 21 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
                 }
                 // arrivalSpeed / arrivalTime when braking for red light is only relevent for rail signal switching
                 let arrivalTime = self.get_arrival_time(t, seen, v, vLinkPass);
@@ -13964,11 +13936,9 @@ impl MSVehicle {
                 let redSpeed = min2(v, self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_RED_SPEED, v));
                 let va = max2(redSpeed, cfModel.free_speed(me, self.get_speed(), seen, redSpeed, false, MSCFModel_CalcReason::CURRENT));
                 v = min2(va, v);
-                if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 22 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
             }
 
             self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GC 23 t={} v={:.17} vLinkPass={:.17}", MSNet::get_instance().get_current_time_step(), v, vLinkPass); }
 
             if !lastLink.is_null() {
                 lastLink.m().adapt_leave_speed(laneMaxV);
@@ -14077,7 +14047,6 @@ impl MSVehicle {
             //  speed limits are not emergencies (e.g. when the limit changes suddenly due to TraCI or a variableSpeedSignal)
             let va = max2(cfModel.free_speed(me, self.get_speed(), seen, laneMaxV, false, MSCFModel_CalcReason::CURRENT), vMinComfortable - utils::geom::NUMERICAL_EPS);
             v = min2(va, v);
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 299000 && MSNet::get_instance().get_current_time_step() <= 304000 { eprintln!("GV 24 t={} v={:.17}", MSNet::get_instance().get_current_time_step(), v); }
             if lane.get_edge().is_internal() {
                 seenInternal += lane.get_length();
             } else {
@@ -15346,7 +15315,6 @@ impl MSVehicle {
         for it in linkLeaders.iter() {
             // the vehicle to enter the junction first has priority
             let leader: Ptr<MSVehicle> = it.vehAndGap.0;
-            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 303000 && MSNet::get_instance().get_current_time_step() <= 304000 { let isl = if leader.is_null() { false } else { self.is_leader(link, leader, it.vehAndGap.1) }; eprintln!("ISL t={} leader={} gap={:.17} inTheWay={} isLeader={} ET={} ETN={} CET={} lET={} lETN={} lCET={} lane={} link={}", MSNet::get_instance().get_current_time_step(), if leader.is_null() { "PED".to_string() } else { leader.get_id().to_string() }, it.vehAndGap.1, it.in_the_way(), isl, self.myJunctionEntryTime, self.myJunctionEntryTimeNeverYield, self.myJunctionConflictEntryTime, if leader.is_null() { -1 } else { leader.myJunctionEntryTime }, if leader.is_null() { -1 } else { leader.myJunctionEntryTimeNeverYield }, if leader.is_null() { -1 } else { leader.myJunctionConflictEntryTime }, self.myLane.get_id(), link.get_via_lane_or_lane().get_id()); }
             if leader.is_null() {
                 // leader is a pedestrian. Passing 'this' as a dummy.
                 let ignoreProb = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB, 0.0);
