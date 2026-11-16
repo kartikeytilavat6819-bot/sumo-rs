@@ -471,7 +471,7 @@ impl MSRoutingEngine {
     pub fn init_router(vehicle: Ptr<SUMOVehicle>) {
         // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderinitRouter constructs the Dijkstra/AStar/CH/CCH and railway routers
         let _ = vehicle;
-        panic!("shortcut: initRouter needs the router types and MSRouterProvider")
+        panic!("shortcut: initRouter must construct the Dijkstra/AStar/CH/railway routers and the RouterProvider; no construction path exists in the port")
     }
 
     /// C++: `void MSRoutingEngine::reroute(SUMOVehicle &, const SUMOTime, const std::string &, const bool, const bool, const Prohibitions &)` [static]
@@ -677,9 +677,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(rngIndex: i32, svc: SUMOVehicleClass, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSVehicleRouter {
-        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProvidergetRouterTT returns the MSVehicleRouter of myRouterProvider
+        // shortcut: myRouterProvider is never constructed (initRouter is a stub), so there is no MSVehicleRouter to return; upgrade when initRouter builds the RouterProvider
         let _ = (rngIndex, svc, prohibited);
-        panic!("shortcut: getRouterTT needs MSRouterProvider and MSVehicleRouter")
+        panic!("shortcut: getRouterTT needs myRouterProvider, which initRouter never builds")
     }
 
     /// C++: `MSTransportableRouter & MSRoutingEngine::getIntermodalRouterTT(const int, const Prohibitions &)` [static]
@@ -708,9 +708,9 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router_tt(rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSTransportableRouter {
-        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProvidergetIntermodalRouterTT returns the MSTransportableRouter of myRouterProvider
+        // shortcut: myRouterProvider is never constructed (initRouter is a stub), so there is no MSTransportableRouter to return; upgrade when initRouter builds the RouterProvider
         let _ = (rngIndex, prohibited);
-        panic!("shortcut: getIntermodalRouterTT needs MSRouterProvider and MSTransportableRouter")
+        panic!("shortcut: getIntermodalRouterTT needs myRouterProvider, which initRouter never builds")
     }
 
     /// C++: `bool MSRoutingEngine::hasBikeSpeeds()` [static]
