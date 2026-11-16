@@ -94,6 +94,7 @@ for dir in tools/oracle/cases/*/; do
         line "$c/$tag" sim PASS; PASS=$((PASS+1))
       else
         d=$( (head -1 "$OUT/$c.$tag.ti.log"; head -1 "$OUT/$c.$tag.fcd.log"; tail -1 "$OUT/$c.$tag.stat.log") 2>/dev/null | grep -vE '^$' | head -1 | cut -c1-90)
+        [ -f "$OUT/$c.$tag.edge.log" ] && d="$d | edge: $(grep -v '^$' "$OUT/$c.$tag.edge.log" | head -2 | tr '\n' ' ' | cut -c1-160)"
         line "$c/$tag" sim FAIL "$d"; FAIL=$((FAIL+1))
       fi
     done
