@@ -4,7 +4,6 @@ use crate::prelude::*;
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
-// shortcut: the mesoscopic branches (gMesoNet, MESegment) are not ported; ms_net refuses mesosim runs, so the micro path is taken
 fn g_use_meso_sim() -> bool {
     crate::microsim::ms_globals::use_meso_sim()
 }
@@ -320,7 +319,6 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         self.myInitTime = MSNet::get_instance().get_current_time_step();
         if self.myEdges.is_empty() {
             // use all edges by default
@@ -338,6 +336,39 @@ impl MSMeanData {
             self.myEdgeIndex.insert(edge, index);
             index += 1;
             let lanes: Vec<Ptr<MSLane>> = edge.get_lanes().clone();
+            if crate::microsim::ms_globals::use_meso_sim() {
+                if !self.myAmEdgeBased {
+                    for lane in lanes.iter().copied() {
+                        let data = self.create_values(lane, lanes[0].get_length(), false);
+                        self.myMeasures.last_mut().unwrap().push(data);
+                        let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                        while !s.is_null() {
+                            s.m().add_detector(reminder_of(data), lane.get_index());
+                            s.m().prepare_detector_for_writing(reminder_of(data).m(), lane.get_index());
+                            s = s.m().get_next_segment();
+                        }
+                        data.m().reset(false);
+                        data.m().reset(true);
+                    }
+                } else {
+                    let data = if self.myTrackVehicles {
+                        upcast_tracker(heap(MSMeanData_MeanDataValueTracker::new(Ptr::null(), lanes[0].get_length(), Ptr::from_mut(&mut *self))))
+                    } else {
+                        self.create_values(Ptr::null(), lanes[0].get_length(), false)
+                    };
+                    reminder_of(data).m().set_description(&format!("meandata_{}|{}", self.get_id(), edge.get_id()));
+                    self.myMeasures.last_mut().unwrap().push(data);
+                    let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                    while !s.is_null() {
+                        s.m().add_detector(reminder_of(data), -1);
+                        s.m().prepare_detector_for_writing(reminder_of(data).m(), -1);
+                        s = s.m().get_next_segment();
+                    }
+                    data.m().reset(false);
+                    data.m().reset(true);
+                }
+                continue;
+            }
             if self.myAmEdgeBased && self.myTrackVehicles {
                 let t = heap(MSMeanData_MeanDataValueTracker::new(Ptr::null(), lanes[0].get_length(), Ptr::from_mut(&mut *self)));
                 self.myMeasures.last_mut().unwrap().push(upcast_tracker(t));
@@ -971,7 +1002,6 @@ impl MSMeanData {
             // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
             panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
         let mut edgeLengthSum = 0.0;
@@ -990,6 +1020,21 @@ impl MSMeanData {
                 meanData.add_to(sumData.m());
                 if !skip_final_reset {
                     meanData.m().reset(false);
+                }
+            }
+        }
+        if crate::microsim::ms_globals::use_meso_sim() {
+            for (edge, edgeValues) in self.myEdges.iter().zip(self.myMeasures.iter()) {
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                while !s.is_null() {
+                    for meanData in edgeValues.iter() {
+                        s.m().prepare_detector_for_writing(reminder_of(*meanData).m(), -1);
+                        meanData.add_to(sumData.m());
+                        if !skip_final_reset {
+                            meanData.m().reset(false);
+                        }
+                    }
+                    s = s.m().get_next_segment();
                 }
             }
         }
@@ -1081,7 +1126,6 @@ impl MSMeanData {
             // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
             panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
         for taz in self.myTAZ.clone() {
@@ -1108,8 +1152,19 @@ impl MSMeanData {
                 let edge = self.myEdges[i];
                 if connected.contains(&edge) {
                     let edgeValues = &self.myMeasures[i];
-                    for meanData in edgeValues.iter() {
-                        meanData.add_to(sumData.m());
+                    if crate::microsim::ms_globals::use_meso_sim() {
+                        let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                        while !s.is_null() {
+                            for meanData in edgeValues.iter() {
+                                s.m().prepare_detector_for_writing(reminder_of(*meanData).m(), -1);
+                                meanData.add_to(sumData.m());
+                            }
+                            s = s.m().get_next_segment();
+                        }
+                    } else {
+                        for meanData in edgeValues.iter() {
+                            meanData.add_to(sumData.m());
+                        }
                     }
                 }
             }
