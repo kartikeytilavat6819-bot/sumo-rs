@@ -443,7 +443,12 @@ impl NBTrafficLightLogicCont {
             delete_ptr(logic);
         }
         self.myComputed.clear();
-        // shortcut: the tls.rebuild, tls.group-signals and tls.ungroup-signals branches use dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which needs runtime type info that NBTrafficLightDefinition does not carry in the Rust port; these branches are skipped, upgrade when a type tag is added to NBTrafficLightDefinition
+        // shortcut: tls.rebuild, tls.group-signals and tls.ungroup-signals need dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which NBTrafficLightDefinition cannot answer (no type tag). Refuse them instead of silently skipping, upgrade when a type tag is added
+        for opt in ["tls.rebuild", "tls.group-signals", "tls.ungroup-signals"] {
+            if oc.get_bool(opt).unwrap() {
+                panic!("shortcut: option --{opt} is not supported by this port yet (its C++ branch needs runtime type information for traffic light definitions)");
+            }
+        }
         let mut numPrograms = 0;
         for def in self.get_definitions() {
             if self.compute_single_logic(oc, def) {

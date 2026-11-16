@@ -30,3 +30,27 @@ run_variant() {
 run_variant base
 run_variant noturn --no-turnarounds true
 run_variant corner3 --junctions.corner-detail 3
+run_variant join --junctions.join true
+run_variant joinDist --junctions.join true --junctions.join-dist 30
+run_variant joinSame --junctions.join-same 10
+run_variant geomRemove --geometry.remove true
+run_variant geomRemoveLen --geometry.remove true --geometry.remove.min-length 5
+run_variant noInternal --no-internal-links true
+run_variant tlsJoin --tls.join true --tls.join-dist 50
+run_variant tlsCycle60 --tls.cycle.time 60
+run_variant tlsGreen --tls.green.time 20 --tls.yellow.time 4
+run_variant tlsDefType --tls.default-type actuated
+run_variant projScale --proj.scale 2
+run_variant projRotate --proj.rotate 30
+# registered-but-unported TLS options must refuse, not silently produce the default net
+for opt in tls.group-signals tls.ungroup-signals tls.rebuild; do
+  d=$B/refuse_$opt; mkdir -p $d; rm -f $d/rust.net.xml
+  wd=$(wslpath -w "$d"); wr=$(wslpath -w "$REAL")
+  timeout 900 "$RUST" --simple-projection true --$opt true --osm-files "$wr\\input.osm" -o "$wd\\rust.net.xml" > "$d/rust.log" 2>&1
+  rc=$?
+  if [ $rc -ne 0 ] && [ ! -s $d/rust.net.xml ] && grep -q "shortcut: option --$opt" $d/rust.log; then
+    echo "refuse_$opt refused=OK"
+  else
+    echo "refuse_$opt refused=FAIL rust_exit=$rc"
+  fi
+done
