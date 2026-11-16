@@ -1092,8 +1092,7 @@ impl MSStateHandler {
                 panic!("shortcut: transportable devices in loaded state are not ported");
             }
             let base: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
-            // shortcut: C++ unsets the parameter on the vehicle's own copy; the getter is const here, so the cast drops const
-            unsafe { &mut *(base.m().get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter) }.unset_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES);
+            base.m().myParameter.m().unset_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES);
             let attrs: &SUMOSAXAttributes = &*self.myAttrs;
             base.m().set_chosen_speed_factor(attrs.get_float(SUMO_ATTR_SPEEDFACTOR).unwrap_or_else(|e| panic!("{e}")));
             v.cast::<MSVehicle>().m().load_state(attrs, self.myOffset);
