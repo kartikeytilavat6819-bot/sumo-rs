@@ -68,6 +68,18 @@ the input paths, so re-deriving from a different directory always differs there.
 
 ## Newly visible cases: first differences
 
+- **netconv_edge: every generated network now matches.** The harness compares the two nets with
+  `compare_net.py` (element level — a raw diff always differs because the header carries the generation
+  stamp and the recorded input/output paths). Result: `net=MATCH` on all 7 cases that produce a network,
+  `net=skip` on the 3 that error on both sides, and `net=MATCH` on the three `real` option variants
+  (`real_base`, `real_noturn`, `real_corner3`) — 1165 elements, Times Square OSM.
+  Both runners were pointing at another agent's worktree (`agent-rb06`) and were repointed to derive paths
+  from their own location.
+- **netconvert message text still differs** (owner mp01): C++ aggregates repeated messages —
+  `Warning: 6 total messages of type: Could not build program '%' for traffic light '%'` — while we print
+  each occurrence; and one warning is written without a trailing newline, so ours reads
+  `...it will not be build.Success.` with the run-completion text glued on. Both are output-text fidelity,
+  not network correctness.
 - **signal: now exact.** The divergence at t=34 was `semi_implicit_euler_update()` in `ms_vehicle.rs`
   hardcoded to `false` instead of reading `MSGlobals` (C++ default: true). Explicit Euler integrates
   position from the old speed, so every vehicle drifted slightly and the car-following model amplified it

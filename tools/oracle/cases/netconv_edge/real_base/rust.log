@@ -14,5 +14,5 @@ Warning: Could not build program '0' for traffic light '42435671'
 Warning: The traffic light '42435675' does not control any links; it will not be build.
 Warning: Could not build program '0' for traffic light '42435675'
 Warning: Could not build program '0' for traffic light '42439994'
-Warning: 6 total messages of type: The traffic light '%' does not control any links; it will not be build.
 Success.
+Warning: 6 total messages of type: The traffic light '%' does not control any links; it will not be build.

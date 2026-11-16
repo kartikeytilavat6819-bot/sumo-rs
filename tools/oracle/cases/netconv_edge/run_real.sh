@@ -1,12 +1,14 @@
 #!/bin/bash
-# Case 7: real/input.osm under option variants. Logs and nets go to netconv_edge/real_<variant>/.
-REAL=/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb06/tools/oracle/cases/real
-E=/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb06/tools/oracle/cases/netconv_edge
-RUST=/mnt/c/Users/karti/sumo-rs-target-main/debug/netconvert.exe
+# Case 7: real/input.osm under option variants. Logs and nets go to netconvert_edge/real_<variant>/.
+# Paths derive from this script's location so the runner works from any worktree (it used to point at
+# another agent's worktree, which would have measured the wrong tree).
+B=$(cd "$(dirname "$0")" && pwd)
+REAL=$B/../real
+RUST=${RUST_NETCONVERT:-/mnt/c/Users/karti/sumo-rs-target-main/debug/netconvert.exe}
 CPP=$HOME/sumo-src/bin/netconvert
 run_variant() {
   v=$1; shift
-  d=$E/real_$v
+  d=$B/real_$v
   mkdir -p $d
   wd=$(wslpath -w "$d")
   wr=$(wslpath -w "$REAL")
@@ -15,6 +17,15 @@ run_variant() {
   echo "real_$v rust_exit=$?"
   SUMO_HOME=$HOME/sumo-src timeout 900 "$CPP" --simple-projection true "$@" --osm-files "$REAL/input.osm" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
   echo "real_$v cpp_exit=$?"
+  if [ -s $d/rust.net.xml ] && [ -s $d/cpp.net.xml ]; then
+    if python3 $B/../../compare_net.py $d/cpp.net.xml $d/rust.net.xml > $d/net.log 2>&1; then
+      echo "real_$v net=MATCH"
+    else
+      echo "real_$v net=DIFF $(grep -m1 SUMMARY $d/net.log)"
+    fi
+  else
+    echo "real_$v net=skip"
+  fi
 }
 run_variant base
 run_variant noturn --no-turnarounds true
