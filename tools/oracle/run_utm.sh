@@ -13,9 +13,11 @@ mkdir -p "$OUT"
 PASS=0; FAIL=0
 
 if [ "${1:-}" = "--refs" ]; then
+  # C++ reference from the untouched SUMO install in WSL (never ~/sumo-src)
+  wroot=$(echo "$PWD" | sed 's#^/c/#/mnt/c/#; s#^C:/#/mnt/c/#')
   for c in $CASES; do
-    wdir=$(wslpath -u "$PWD/tools/oracle/cases/$c")
-    wsl -e bash -lc "export SUMO_HOME=\$(~/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)'); cd '$wdir' && ~/sumo-pristine/bin/netconvert --osm-files input.osm -o ref_utm.net.xml" >/dev/null 2>&1
+    wsl -e bash -c "export SUMO_HOME=\$(~/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)'); cd '$wroot/tools/oracle/cases/$c' && ~/sumo-pristine/bin/netconvert --osm-files input.osm -o ref_utm.net.xml" >/dev/null 2>&1
+    echo "ref $c: $(ls "tools/oracle/cases/$c/ref_utm.net.xml" 2>/dev/null || echo MISSING)"
   done
 fi
 
