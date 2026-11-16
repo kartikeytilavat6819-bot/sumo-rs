@@ -38,6 +38,11 @@ os.makedirs(f"{W}/rail_out", exist_ok=True)
 for f in glob.glob("/tmp/score/run-*/rail.*"):
     shutil.copy(f, f"{W}/rail_out/")
 sh("ls -la /kaggle/working/rail_out | head -30", 30)
+# rail diagnostics: ours vs pristine C++ (pip eclipse-sumo 1.28.0), summaries copied to rail_out
+sh("python -m pip install -q --target /tmp/sumo_pkg eclipse-sumo==1.28.0 2>&1 | tail -2", 4)
+sh(env + " SUMO_PRISTINE_BIN=/tmp/sumo_pkg/sumo/bin SUMO_HOME=/tmp/sumo_pkg/sumo OURS=/tmp/target/debug/sumo OUT=/tmp/agent_run bash tools/oracle/cases/rail/agent_run.sh", 60)
+sh("cp /tmp/agent_run/*.log /tmp/agent_run/*.ti.xml /kaggle/working/rail_out/ 2>/dev/null; cat /tmp/agent_run/*.log | head -5; echo copied", 5)
+shutil.copy(f"/tmp/agent_run/summary.txt", f"{W}/rail_out/") if os.path.exists("/tmp/agent_run/summary.txt") else None
 sh(env + " bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1", 3)
 sh(env + " cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10", 12)
 LOG.write("GATE DONE\n")
