@@ -8,6 +8,10 @@
 #   reroute      --end 200 --additional-files tools/oracle/cases/reroute/reroute.add.xml
 #   vtypes       --end 120 --additional-files tools/oracle/cases/vtypes/vtypes.add.xml
 #                (tripinfo only, like its committed reference: no fcd/stat files are written)
+#   sublanes     --end 120 --lateral-resolution 0.8
+#   lanechange   --end 120
+#   lefthand     --end 120   (reference net built with netconvert --lefthand; see its CASE.md)
+#   reroute_alt  --end 200 --additional-files tools/oracle/cases/reroute_alt/closing.add.xml
 #   depart       15 variants via cases/depart/run_ref.sh (--seed 42 --end 120), into cases/depart/ref/
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
@@ -17,7 +21,7 @@ cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 W=/mnt/c${ROOT#/c}
 LOG=/c/Users/karti/AppData/Local/Temp/opencode
-CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart}
+CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart sublanes lanechange lefthand reroute_alt}
 wp() { echo "/mnt/c${1#/c}"; }
 
 for c in $CASES; do

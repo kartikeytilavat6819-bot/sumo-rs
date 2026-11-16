@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T01:19:30.908551-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lanechange/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lanechange/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="lane0a" depart="3.00" departLane="100_0" departPos="5.00" departSpeed="13.03" departDelay="0.00" arrival="27.00" arrivalLane="100_0" arrivalPos="300.56" arrivalSpeed="12.69" duration="24.00" routeLength="295.56" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.14" rerouteNo="0" devices="tripinfo_lane0a fcd_lane0a" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="chaser0" depart="5.00" departLane="100_1" departPos="5.00" departSpeed="2.11" departDelay="0.00" arrival="30.00" arrivalLane="100_1" arrivalPos="300.56" arrivalSpeed="12.92" duration="25.00" routeLength="295.56" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.97" rerouteNo="0" devices="tripinfo_chaser0 fcd_chaser0" vType="car" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="chaser1" depart="9.00" departLane="100_1" departPos="5.00" departSpeed="10.56" departDelay="0.00" arrival="32.00" arrivalLane="100_1" arrivalPos="300.56" arrivalSpeed="12.81" duration="23.00" routeLength="295.56" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.09" rerouteNo="0" devices="tripinfo_chaser1 fcd_chaser1" vType="car" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="chaser2" depart="14.00" departLane="100_1" departPos="5.00" departSpeed="13.49" departDelay="0.00" arrival="37.00" arrivalLane="100_1" arrivalPos="300.56" arrivalSpeed="13.05" duration="23.00" routeLength="295.56" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.19" rerouteNo="0" devices="tripinfo_chaser2 fcd_chaser2" vType="car" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="blocker" depart="0.00" departLane="100_1" departPos="30.00" departSpeed="3.00" departDelay="0.00" arrival="115.00" arrivalLane="100_0" arrivalPos="300.56" arrivalSpeed="2.23" duration="115.00" routeLength="270.56" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="24.18" rerouteNo="0" devices="tripinfo_blocker fcd_blocker" vType="slow" speedFactor="1.06" vaporized=""/>
+</tripinfos>
