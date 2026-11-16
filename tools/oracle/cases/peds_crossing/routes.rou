@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" length="5" maxSpeed="13.89"/>
+  <route id="r_we" edges="WC CE"/>
+  <route id="r_ns" edges="NC CS"/>
+  <vehicle id="v0" type="car" route="r_we" depart="0"/>
+  <person id="p0" depart="0">
+    <walk from="WC" to="CS"/>
+  </person>
+  <person id="p1" depart="1">
+    <walk from="WC" to="CE"/>
+  </person>
+  <person id="p2" depart="2">
+    <walk from="NC" to="CS"/>
+  </person>
+  <person id="p3" depart="3">
+    <walk from="EC" to="CW"/>
+  </person>
+  <person id="p4" depart="4">
+    <walk from="SC" to="CN"/>
+  </person>
+  <vehicle id="v1" type="car" route="r_ns" depart="5"/>
+  <person id="p5" depart="6">
+    <walk from="CE" to="NC"/>
+  </person>
+</routes>
