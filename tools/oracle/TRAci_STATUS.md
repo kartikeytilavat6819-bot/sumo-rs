@@ -5,7 +5,8 @@ The simulation oracle (`run_all.sh`) does not exercise TraCI at all, so a passin
 
 ## Score
 
-9 of 32 probes match C++ 1.28.0 (junction 5/16, signal 4/16). Probes run in separate sessions,
+13 of 32 probes match C++ 1.28.0 (junction 7/16, signal 6/16). Run: `python tools/oracle/cases/traci_basic/client.py`.
+The `simulation.getTime` segfault and the `getVersion` text are fixed (1e33a68). Probes run in separate sessions,
 so one crash only costs its own row.
 
 ## What a Unity client hits today
