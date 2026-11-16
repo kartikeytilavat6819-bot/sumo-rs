@@ -28,6 +28,15 @@ impl std::ops::DerefMut for MSLaneChangerSublane {
     }
 }
 
+fn sublane_check_change_opposite(lc: &mut MSLaneChanger, vehicle: Ptr<MSVehicle>, laneOffset: i32, targetLane: Ptr<MSLane>, leader: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), preb: &Vec<MSVehicle_LaneQ>) -> bool {
+    Ptr::from_mut(lc).cast::<MSLaneChangerSublane>().m().check_change_opposite(vehicle, laneOffset, targetLane, leader, neighLead, neighFollow, preb)
+}
+
+/// Virtual dispatch table of MSLaneChangerSublane; overrides checkChangeOpposite only
+pub static MS_LANE_CHANGER_SUBLANE_VT: MSLaneChangerVt = MSLaneChangerVt {
+    check_change_opposite: sublane_check_change_opposite,
+};
+
 impl MSLaneChangerSublane {
     /// C++: `void MSLaneChangerSublane::MSLaneChangerSublane(const std::vector<MSLane *> *, bool)`
     /// Constructor
@@ -47,8 +56,10 @@ impl MSLaneChangerSublane {
     // }
     #[allow(unused_variables)]
     pub fn new(lanes: Ptr<Vec<Ptr<MSLane>>>, allowChanging: bool) -> Self {
+        let mut base = MSLaneChanger::new(lanes, allowChanging);
+        base.vt = &MS_LANE_CHANGER_SUBLANE_VT;
         let mut me = MSLaneChangerSublane {
-            base: MSLaneChanger::new(lanes, allowChanging),
+            base,
             myCheckedChangeOpposite: false,
         };
         // initialize siblings
@@ -1617,8 +1628,10 @@ impl MSLaneChangerSublane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2() -> Self {
+        let mut base = MSLaneChanger::new_2();
+        base.vt = &MS_LANE_CHANGER_SUBLANE_VT;
         MSLaneChangerSublane {
-            base: MSLaneChanger::new_2(),
+            base,
             myCheckedChangeOpposite: false,
         }
     }
@@ -1628,8 +1641,10 @@ impl MSLaneChangerSublane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(arg0: &MSLaneChangerSublane) -> Self {
+        let mut base = MSLaneChanger::new_3(&arg0.base);
+        base.vt = &MS_LANE_CHANGER_SUBLANE_VT;
         MSLaneChangerSublane {
-            base: MSLaneChanger::new_3(&arg0.base),
+            base,
             myCheckedChangeOpposite: arg0.myCheckedChangeOpposite,
         }
     }

@@ -86,6 +86,55 @@ impl std::ops::DerefMut for MSLCM_DK2008 {
     }
 }
 
+fn dk2008_inform(lcm: &mut MSAbstractLaneChangeModel, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().inform(info, sender)
+}
+
+fn dk2008_patch_speed(lcm: &mut MSAbstractLaneChangeModel, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().patch_speed(min, wanted, max, cfModel)
+}
+
+fn dk2008_changed(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().changed()
+}
+
+fn dk2008_wants_change(lcm: &mut MSAbstractLaneChangeModel, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().wants_change(laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, lastBlocked, firstBlocked)
+}
+
+fn dk2008_prepare_step(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().prepare_step()
+}
+
+/// Virtual dispatch table of MSLCM_DK2008; overrides only the entries listed in MSLCM_DK2008.h
+pub static MSLCM_DK2008_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: dk2008_inform,
+    patch_speed: dk2008_patch_speed,
+    changed: dk2008_changed,
+    wants_change: dk2008_wants_change,
+    wants_change_sublane: MSAbstractLaneChangeModel::wants_change_sublane_base,
+    update_expected_sublane_speeds: MSAbstractLaneChangeModel::update_expected_sublane_speeds_base,
+    decide_direction: MSAbstractLaneChangeModel::decide_direction_base,
+    set_own_state: MSAbstractLaneChangeModel::set_own_state_base,
+    prepare_step: dk2008_prepare_step,
+    reset_speed_lat: MSAbstractLaneChangeModel::reset_speed_lat_base,
+    update_safe_lat_dist: MSAbstractLaneChangeModel::update_safe_lat_dist_base,
+    get_safety_factor: MSAbstractLaneChangeModel::get_safety_factor_base,
+    compute_speed_lat: MSAbstractLaneChangeModel::compute_speed_lat_base,
+    save_blocker_length: MSAbstractLaneChangeModel::save_blocker_length_base,
+    get_extra_reservation: MSAbstractLaneChangeModel::get_extra_reservation_base,
+    set_parameter: MSAbstractLaneChangeModel::set_parameter_base,
+    avoid_overtake_right: MSAbstractLaneChangeModel::avoid_overtake_right_base,
+    save_state: MSAbstractLaneChangeModel::save_state_base,
+    load_state: MSAbstractLaneChangeModel::load_state_base,
+    reset_state: MSAbstractLaneChangeModel::reset_state_base,
+    get_opposite_safety_factor: MSAbstractLaneChangeModel::get_opposite_safety_factor_base,
+    debug_vehicle: MSAbstractLaneChangeModel::debug_vehicle_base,
+    get_parameter: MSAbstractLaneChangeModel::get_parameter_base,
+    get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
+};
+
 impl MSLCM_DK2008 {
     /// C++: `void MSLCM_DK2008::MSLCM_DK2008(MSVehicle &)`
     // MSLCM_DK2008::MSLCM_DK2008(MSVehicle& v)
@@ -95,7 +144,8 @@ impl MSLCM_DK2008 {
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
         // C++ base-class initializer runs first
-        let base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::DK2008);
+        let mut base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::DK2008);
+        base.vt = &MSLCM_DK2008_VT;
         MSLCM_DK2008 {
             base,
             myChangeProbability: 0.,

@@ -2746,8 +2746,8 @@ impl MSVehicle {
     pub fn init_devices(&mut self) {
         self.base.init_devices();
         self.myLaneChangeModel = MSAbstractLaneChangeModel::build(self.myType.get_lane_change_model(), self);
-        self.myDriverState = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped, the first device is taken
-        self.myFrictionDevice = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped
+        self.myDriverState = MSDevice::get_device_by_name(&self.myDevices, "driverstate").cast::<MSDevice_DriverState>();
+        self.myFrictionDevice = MSDevice::get_device_by_name(&self.myDevices, "friction").cast::<MSDevice_Friction>();
     }
 
     /// C++: `bool MSVehicle::hasValidRouteStart(std::string &)` [virtual]
@@ -7133,7 +7133,7 @@ impl MSVehicle {
         }
         // go backward through the lanes
         // track back best lane and compute the best prior lane(s)
-        let hasElecHybrid = !self.get_device(&()).is_null();
+        let hasElecHybrid = !MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").is_null();
         // Rng and contRight are read up front (side-effect free) so betterContinuation can run while myBestLanes is borrowed
         let rng = self.get_rng();
         let contRight = self.get_vehicle_type().get_parameter().get_lc_param(SUMO_ATTR_LCA_CONTRIGHT, 1.0);

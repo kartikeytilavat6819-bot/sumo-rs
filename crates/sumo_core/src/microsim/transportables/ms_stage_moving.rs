@@ -508,7 +508,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
-        if !self.base.equals(s) {
+        if !self.base.equals_base(s) {
             return false;
         }
         // this is safe because MSStage already checked that the type fits
