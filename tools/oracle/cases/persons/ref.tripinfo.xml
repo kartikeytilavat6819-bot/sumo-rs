@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T10:42:36.219126-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/persons/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/persons/routes.rou"/>
+        <additional-files value="tools/oracle/cases/persons/persons.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="tools/oracle/cases/persons/ref.tripinfo.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pb0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="0.94" duration="25.00" waitingTime="12.00" timeLoss="2.92" traveltime="13.00">
+        <ride waitingTime="12.00" vehicle="bus0" depart="12.00" arrival="25.00" arrivalPos="52.58" duration="13.00" routeLength="83.55" timeLoss="2.92"/>
+    </personinfo>
+    <tripinfo id="bus0" depart="1.00" departLane="--103226#1_1" departPos="12.10" departSpeed="12.97" departDelay="0.00" arrival="25.00" arrivalLane="--103226#0_1" arrivalPos="52.58" arrivalSpeed="13.18" duration="24.00" routeLength="111.44" waitingTime="0.00" waitingCount="0" stopTime="5.00" timeLoss="3.25" rerouteNo="0" devices="tripinfo_bus0 person_bus0" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="v0" depart="3.00" departLane="--103226#1_1" departPos="5.10" departSpeed="8.84" departDelay="1.00" arrival="33.00" arrivalLane="--103226#0_1" arrivalPos="52.58" arrivalSpeed="13.63" duration="30.00" routeLength="118.44" waitingTime="4.00" waitingCount="1" stopTime="3.00" timeLoss="14.75" rerouteNo="0" devices="tripinfo_v0" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized=""/>
+    <personinfo id="ps0" depart="4.00" type="DEFAULT_PEDTYPE" speedFactor="1.03" duration="35.00" waitingTime="0.00" timeLoss="2.52" traveltime="25.00">
+        <walk depart="4.00" departPos="0.00" arrival="29.00" arrivalPos="32.17" duration="25.00" routeLength="32.17" timeLoss="2.52" maxSpeed="1.43" waitingTime="0.00"/>
+        <stop duration="10.00" arrival="39.00" arrivalPos="32.17" actType="waiting"/>
+    </personinfo>
+    <personinfo id="pt0" depart="3.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="61.00" waitingTime="0.00" timeLoss="5.91" traveltime="61.00">
+        <walk depart="3.00" departPos="0.00" arrival="64.00" arrivalPos="30.26" duration="61.00" routeLength="82.84" timeLoss="5.91" maxSpeed="1.50" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pw0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.06" duration="66.00" waitingTime="0.00" timeLoss="7.04" traveltime="66.00">
+        <walk depart="0.00" departPos="0.00" arrival="66.00" arrivalPos="26.29" duration="66.00" routeLength="86.81" timeLoss="7.04" maxSpeed="1.47" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

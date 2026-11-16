@@ -256,10 +256,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     //         } else if (reason == MSMoveReminder::NOTIFICATION_LANE_CHANGE) {
     //             ++nVehLaneChangeFrom;
     //         } else if (myParent == nullptr || reason != MSMoveReminder::NOTIFICATION_SEGMENT) {
-    //             if (reason != MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION && reason != MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED) {
-    //                 // if the entered this edge via teleport, we do not want to count it
-    //                 ++nVehLeft;
-    //             }
+    //             ++nVehLeft;
     //             if (reason == MSMoveReminder::NOTIFICATION_TELEPORT || reason == MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED) {
     //                 ++nVehTeleported;
     //             } else if (reason >= MSMoveReminder::NOTIFICATION_VAPORIZED_CALIBRATOR) {
@@ -286,10 +283,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
             } else if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
                 self.nVehLaneChangeFrom += 1;
             } else if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
-                if reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION && reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED {
-                    // if the entered this edge via teleport, we do not want to count it
-                    self.nVehLeft += 1;
-                }
+                self.nVehLeft += 1;
                 if reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED {
                     self.nVehTeleported += 1;
                 } else if reason >= MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR {

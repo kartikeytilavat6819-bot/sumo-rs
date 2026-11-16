@@ -1,10 +1,10 @@
 //! Port of utils/router/IntermodalRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 
 /// C++ typedef `void (*)(IntermodalRouter<E, L, N, V> &) IntermodalRouter::CreateNetCallback`
-pub type IntermodalRouter_CreateNetCallback = Unmapped /* void (*)(IntermodalRouter<E, L, N, V> &) */;
+pub type IntermodalRouter_CreateNetCallback<E, L, N, V> = fn(&mut IntermodalRouter<E, L, N, V>);
 
 /// C++ typedef `IntermodalNetwork<E, L, N, V> IntermodalRouter::Network`
 pub type IntermodalRouter_Network<E, L, N, V> = IntermodalNetwork<E, L, N, V>;
@@ -39,7 +39,7 @@ pub struct IntermodalRouter<E, L, N, V> {
     pub myAmClone: bool,
     pub myInternalRouter: Ptr<IntermodalRouter__InternalRouter<E, L, N, V>>,
     pub myIntermodalNet: Ptr<IntermodalRouter_Network<E, L, N, V>>,
-    pub myCallback: IntermodalRouter_CreateNetCallback,
+    pub myCallback: IntermodalRouter_CreateNetCallback<E, L, N, V>,
     pub myCarWalkTransfer: i32,
     pub myTaxiWait: f64,
     pub myRoutingAlgorithm: String,
@@ -60,7 +60,12 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalRouter<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
+impl<E, L, N, V> IntermodalRouter<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    N: RouterNode<Edge = E>,
+    V: RouterVehicle,
+{
     /// C++: `void IntermodalRouter::IntermodalRouter<E, L, N, V>(CreateNetCallback, const int, double, const std::string &, const int, EffortCalculator *)`
     /// Constructor
     // IntermodalRouter(CreateNetCallback callback, const int carWalkTransfer, double taxiWait, const std::string& routingAlgorithm,
@@ -72,7 +77,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     //         myRoutingMode(routingMode), myExternalEffort(calc) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(callback: IntermodalRouter_CreateNetCallback, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
+    pub fn new(callback: IntermodalRouter_CreateNetCallback<E, L, N, V>, carWalkTransfer: i32, taxiWait: f64, routingAlgorithm: &str, routingMode: i32, calc: Ptr<EffortCalculator>) -> Self {
         Self {
             base: SUMOAbstractRouter::new("IntermodalRouter", true, None, None, false, false),
             myAmClone: false,
@@ -286,8 +291,8 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
                             lastLineEdge = iEdge;
                             lastLineTime = time;
                             if lastLine == "!car" {
-                                // shortcut: vehicle.getID() and getParameter().vtypeid need RouterVehicle, which SUMOVehicle does not implement yet
-                                panic!("shortcut: IntermodalRouter::compute cannot name a !car trip item without RouterVehicle");
+                                into.push(IntermodalRouter_TripItem::new(&vehicle.get_id()));
+                                into.last_mut().unwrap().vType = vehicle.vtype_id();
                             } else if lastLine == "!ped" {
                                 into.push(IntermodalRouter_TripItem::new(""));
                             } else {
@@ -326,8 +331,12 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
                 }
             }
         } else {
-            // shortcut: the no-connection message needs E::getID and V::getVClass, which need RouterEdge/RouterVehicle bounds that MSEdge and SUMOVehicle do not implement yet
-            panic!("shortcut: IntermodalRouter::compute cannot report a missing connection without RouterEdge/RouterVehicle");
+            let oType = if originStopID != "" { "stop" } else { "edge" };
+            let oID = if originStopID != "" { originStopID.to_string() } else { from.id().to_string() };
+            let dType = if stopID != "" { "stop" } else { "edge" };
+            let dID = if stopID != "" { stopID.to_string() } else { to.id().to_string() };
+            let vClass = if vehicle.is_null() { String::new() } else { format!(" with vClass {}", utils::common::sumo_vehicle_class::get_vehicle_class_names(vehicle.v_class(), false)) };
+            utils::common::msg_handler::write_error(&format!("No connection between {} '{}' and {} '{}' found{}.", oType, oID, dType, dID, vClass));
         }
         if !into.is_empty() {
             into.last_mut().unwrap().arrivalPos = arrivalPos;
@@ -476,7 +485,7 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
             myAmClone: true,
             myInternalRouter: Ptr::null(),
             myIntermodalNet: net,
-            myCallback: Default::default(),
+            myCallback: |_| {},
             myCarWalkTransfer: carWalkTransfer,
             myTaxiWait: taxiWait,
             myRoutingAlgorithm: routingAlgorithm.to_string(),
@@ -537,8 +546,11 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn create_net(&mut self) {
         if self.myIntermodalNet.is_null() {
-            // shortcut: E::getAllEdges() needs a RouterEdge bound that MSEdge does not implement yet, and myCallback is Unmapped
-            panic!("shortcut: IntermodalRouter::createNet cannot build the network without E::getAllEdges()");
+            let edges = E::all_edges();
+            let mut net = IntermodalNetwork::<E, L, N, V>::new(&edges, false, self.myCarWalkTransfer);
+            net.add_car_edges(&edges, self.myTaxiWait);
+            self.myIntermodalNet = Ptr::from_raw(Box::into_raw(Box::new(net)));
+            (self.myCallback)(self);
         }
         if self.myInternalRouter.is_null() {
             let edges = self.myIntermodalNet.m().get_all_edges().clone();
@@ -548,17 +560,24 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
                         // shortcut: _InternalAStar needs the AStarRouter lookup table and MapMatcher, which are not ported
                         panic!("shortcut: IntermodalRouter astar routing needs AStarRouter lookup table and MapMatcher");
                     } else {
-                        self.set_internal_dijkstra(&edges, Ptr::null());
+                        // C++ gWeightsRandomFactor > 1 selects the randomized travel time
+                        let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::options::options_cont::get_float("weights.random-factor") > 1. {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized
+                        } else {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static
+                        };
+                        self.set_internal_dijkstra(&edges, Some(effort), None, Ptr::null());
                     }
                 }
-                1 => self.set_internal_dijkstra(&edges, Ptr::null()),
-                2 => self.set_internal_dijkstra(&edges, Ptr::null()),
+                1 => self.set_internal_dijkstra(&edges, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_aggregated_2), None, Ptr::null()),
+                2 => self.set_internal_dijkstra(&edges, Some(IntermodalEdge::<E, L, N, V>::get_effort_static), Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), Ptr::null()),
                 3 => {
                     if !self.myExternalEffort.is_null() {
                         let edgeLines: Vec<String> = edges.iter().map(|e| e.get_line().to_string()).collect();
                         self.myExternalEffort.m().init(&edgeLines);
                     }
-                    self.set_internal_dijkstra(&edges, self.myExternalEffort);
+                    // shortcut: C++ uses &getCombined (AccessEdge-typed travel time plus external effort), not ported yet, so combined routing (mode 3) is unsupported
+                    panic!("shortcut: IntermodalRouter combined effort (getCombined) is not wired yet");
                 }
                 _ => {}
             }
@@ -566,14 +585,8 @@ impl<E, L, N, V> IntermodalRouter<E, L, N, V> {
     }
 
     /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
-    fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, calc: Ptr<EffortCalculator>) {
-        // shortcut: with an external effort C++ passes &getCombined (over myExternalEffort), but getCombined takes AccessEdge__IntermodalEdge, not IntermodalEdge; upgrade with a typed combined effort
-        let effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>> = if calc.is_null() {
-            Some(IntermodalEdge::<E, L, N, V>::get_effort_static)
-        } else {
-            panic!("shortcut: IntermodalRouter combined effort (getCombined) is not wired yet")
-        };
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), false, calc, true, false);
+    fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, calc: Ptr<EffortCalculator>) {
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, ttOperation, false, calc, true, false);
         self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 

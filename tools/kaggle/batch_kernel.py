@@ -76,7 +76,7 @@ for line in open(inp[0]).read().split("\n"):
         log.write("GATE DONE\n")
         # agents' own trace/measurement commands (branch-only file; must not reach main)
         if os.path.exists(f"{SRC}/tools/kaggle/agent_run.sh"):
-            sh(log, env + " timeout 1500 bash tools/kaggle/agent_run.sh 2>&1", 400)
+            sh(log, env + " timeout 600 bash tools/kaggle/agent_run.sh 2>&1", 400)
             log.write("AGENT RUN DONE\n")
     log.close()
     os.replace(f"{RES}/{gid}.result.tmp", f"{RES}/{gid}.result")

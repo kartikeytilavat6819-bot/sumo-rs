@@ -176,7 +176,6 @@ fn notification_string(reason: MSMoveReminder_Notification) -> &'static str {
         MSMoveReminder_Notification::NOTIFICATION_PARKING_REROUTE => "parkingReroute",
         MSMoveReminder_Notification::NOTIFICATION_ARRIVED => "arrived",
         MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED => "teleportArrived",
-        MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED => "teleportContinuationArrived",
         MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR => "vaporizedCalibrator",
         MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION => "vaporizedCollision",
         MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_TRACI => "vaporizedTraCI",
