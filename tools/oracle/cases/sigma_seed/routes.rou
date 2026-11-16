@@ -1,0 +1,33 @@
+<routes>
+    <vType id="passenger" vClass="passenger" sigma="0.5" accel="2.6" decel="4.5" length="5.00" minGap="2.50" maxSpeed="20.00"/>
+    <vehicle id="s0" type="passenger" depart="0.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s1" type="passenger" depart="2.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s2" type="passenger" depart="4.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s3" type="passenger" depart="6.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s4" type="passenger" depart="8.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s5" type="passenger" depart="10.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s6" type="passenger" depart="12.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s7" type="passenger" depart="14.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s8" type="passenger" depart="16.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="s9" type="passenger" depart="18.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+</routes>
