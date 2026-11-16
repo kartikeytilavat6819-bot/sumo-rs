@@ -250,7 +250,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        panic!("MSStageWalking::getRoutePosition needs MSStageMoving::myRouteStep, which is Unmapped (std::vector iterator); not ported yet");
+        self.myRouteStep as i32
     }
 
     /// C++: `std::string MSStageWalking::getStageDescription(const bool) const` [const, virtual]
@@ -712,7 +712,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        panic!("MSStageWalking::getNextRouteEdge needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
+        if self.myRouteStep + 1 >= self.myRoute.len() { Ptr::null() } else { self.myRoute[self.myRouteStep + 1] }
     }
 
     /// C++: `bool MSStageWalking::isWalk() const` [const, virtual]
@@ -860,12 +860,9 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn walk_distance(&self, partial: bool) -> f64 {
-        // shortcut: the partial (current position) distance needs MSStageMoving::myRouteStep (Unmapped iterator), upgrade when it is ported
-        if partial && self.myArrived < 0 {
-            panic!("MSStageWalking::walkDistance(partial) needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
-        }
+        let endIt = if partial && self.myArrived < 0 { self.myRouteStep + 1 } else { self.myRoute.len() };
         let mut length: f64 = 0.;
-        for e in self.myRoute.iter() {
+        for e in self.myRoute[..endIt].iter() {
             length += e.get_length();
         }
         // shortcut: MSPModel::usingInternalLanes() is assumed false (movement model not ported), so walkingarea distances are not added
@@ -875,7 +872,7 @@ impl MSStageWalking {
         let departBwdArrivalDir = MSPModel::can_traverse(MSPMODEL_BACKWARD, &self.myRoute, &mut dummy);
         let mayStartForward = departFwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
         let mayStartBackward = departBwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
-        let arrivalPos = self.myArrivalPos;
+        let arrivalPos = if partial && self.myArrived < 0 { self.get_edge_pos(MSNet::get_instance().get_current_time_step()) } else { self.myArrivalPos };
         let lastLength = self.myRoute[self.myRoute.len() - 1].get_length();
         let firstLength = self.myRoute[0].get_length();
         let lengthFwd = length - self.myDepartPos - (if departFwdArrivalDir == MSPMODEL_BACKWARD { arrivalPos } else { lastLength - arrivalPos });
