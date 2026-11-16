@@ -193,7 +193,7 @@ impl MSInstantInductLoop {
 
         let oldSpeed = veh.get_previous_speed();
         // NOTE: For the euler update, the vehicle is assumed to travel at constant speed for the whole time step
-        let mut enterSpeed = if crate::microsim::cfmodels::mscf_model::g_semi_implicit_euler_update() { newSpeed } else { oldSpeed };
+        let mut enterSpeed = if MSGlobals::semi_implicit_euler_update() { newSpeed } else { oldSpeed };
 
         if newPos >= self.myPosition && oldPos < self.myPosition {
             let timeBeforeEnter = MSCFModel::passing_time(oldPos, self.myPosition, newPos, oldSpeed, newSpeed);

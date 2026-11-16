@@ -216,3 +216,28 @@ ms_global!(G_INSERTION_CHECKS, insertion_checks, set_insertion_checks, AtomicI32
 // C++ MSGlobals::gMaxRailSignalBlockLength
 ms_global_f64!(G_MAX_RAIL_SIGNAL_BLOCK_LENGTH, max_rail_signal_block_length, set_max_rail_signal_block_length, 2e4);
 
+
+#[cfg(test)]
+mod tests {
+    // Stale-globals guard (tools/oracle/STALE_GLOBALS.md): files must read these statics, not local stubs.
+    #[test]
+    fn no_local_stub_shadows_using_internal_lanes_or_compute_lc() {
+        // was `fn g_using_internal_lanes() -> bool { false }`, disabling internal-lane output with internal links on
+        assert!(!include_str!("output/ms_full_export.rs").contains("fn g_using_internal_lanes"));
+        // C++ MSEdgeControl::changeLanes brackets lane changing with gComputeLC = true / false
+        let ec = include_str!("ms_edge_control.rs");
+        assert!(ec.contains("MSGlobals::set_compute_lc(true);") && ec.contains("MSGlobals::set_compute_lc(false);"));
+        // was `-1.` in ms_leader_info.rs, re-exported by the prelude to ms_link.rs: sublane checks never ran
+        assert!(include_str!("ms_leader_info.rs").contains("MSGlobals::lateral_resolution()"));
+    }
+
+    #[test]
+    fn globals_round_trip() {
+        super::set_using_internal_lanes(true);
+        assert!(super::using_internal_lanes());
+        super::set_compute_lc(true);
+        assert!(super::compute_lc());
+        super::set_compute_lc(false);
+        assert!(!super::compute_lc());
+    }
+}

@@ -4,10 +4,6 @@ use crate::prelude::*;
 use utils::common::to_string::f64_to_string_prec;
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 
 /// C++ enum `MSDevice_ToC::ToCState`
@@ -276,7 +272,7 @@ impl MSDevice_ToC {
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
         // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
     if panic!("shortcut: equipped_by_default_assignment_options not ported") {
-            if g_use_meso_sim() {
+            if MSGlobals::use_meso_sim() {
                 utils::common::msg_handler::write_warning("ToC device is not supported by the mesoscopic simulation.");
                 return;
             }

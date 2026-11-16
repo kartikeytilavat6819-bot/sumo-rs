@@ -466,9 +466,9 @@ impl MSEdgeControl {
     #[allow(unused_variables)]
     pub fn change_lanes(&mut self, t: SUMOTime) {
         let mut toAdd: Vec<Ptr<MSLane>> = Vec::new();
-        // shortcut: MSGlobals::gComputeLC is not ported (ms_globals.rs has no statics), the flag is never set, upgrade when MSGlobals statics land
         // shortcut: multi-threaded lane changing (gNumSimThreads > 1) is not ported, edges change lanes serially, upgrade when ThreadPool lands
-        let lateralResolution = options_cont::get_float("lateral-resolution"); // MSGlobals::gLateralResolution
+        let lateralResolution = MSGlobals::lateral_resolution();
+        MSGlobals::set_compute_lc(true);
         let active: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
         for l in active {
             if self.myLanes[l.get_numerical_id() as usize].haveNeighbors {
@@ -492,6 +492,7 @@ impl MSEdgeControl {
                 break;
             }
         }
+        MSGlobals::set_compute_lc(false);
         for lane in toAdd {
             self.myActiveLanes.push_front(lane);
         }

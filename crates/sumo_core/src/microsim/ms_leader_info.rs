@@ -6,9 +6,9 @@ use utils::common::to_string::f64_to_string_prec;
 use utils::common::util_exceptions::ProcessError;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
-// shortcut: MSGlobals::gLateralResolution is a static that is not ported yet (ms_globals.rs has no statics), this stub returns the C++ default -1 (unit-test default, sublane model off), upgrade when MSGlobals statics are ported
+/// C++ `MSGlobals::gLateralResolution`; re-exported through the prelude, so ms_link.rs and others read it via this name
 pub fn g_lateral_resolution() -> f64 {
-    -1.
+    MSGlobals::lateral_resolution()
 }
 
 fn min2(a: f64, b: f64) -> f64 {
