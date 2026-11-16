@@ -544,10 +544,10 @@ impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
         Named::get_id(self).to_string()
     }
     fn get_max_speed(&self) -> f64 {
-        self.get_max_speed()
+        self.base.get_max_speed()
     }
     fn get_chosen_speed_factor(&self) -> f64 {
-        self.get_chosen_speed_factor()
+        self.base.get_chosen_speed_factor()
     }
     fn ignore_transient_permissions(&self) -> bool {
         false
