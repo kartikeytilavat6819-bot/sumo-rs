@@ -15346,6 +15346,7 @@ impl MSVehicle {
         for it in linkLeaders.iter() {
             // the vehicle to enter the junction first has priority
             let leader: Ptr<MSVehicle> = it.vehAndGap.0;
+            if self.get_id() == "146" && MSNet::get_instance().get_current_time_step() >= 303000 && MSNet::get_instance().get_current_time_step() <= 304000 { let isl = if leader.is_null() { false } else { self.is_leader(link, leader, it.vehAndGap.1) }; eprintln!("ISL t={} leader={} gap={:.17} inTheWay={} isLeader={} ET={} ETN={} CET={} lET={} lETN={} lCET={} lane={} link={}", MSNet::get_instance().get_current_time_step(), if leader.is_null() { "PED".to_string() } else { leader.get_id().to_string() }, it.vehAndGap.1, it.in_the_way(), isl, self.myJunctionEntryTime, self.myJunctionEntryTimeNeverYield, self.myJunctionConflictEntryTime, if leader.is_null() { -1 } else { leader.myJunctionEntryTime }, if leader.is_null() { -1 } else { leader.myJunctionEntryTimeNeverYield }, if leader.is_null() { -1 } else { leader.myJunctionConflictEntryTime }, self.myLane.get_id(), link.get_via_lane_or_lane().get_id()); }
             if leader.is_null() {
                 // leader is a pedestrian. Passing 'this' as a dummy.
                 let ignoreProb = self.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB, 0.0);
