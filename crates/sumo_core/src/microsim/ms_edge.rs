@@ -8,9 +8,8 @@ use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 const BEST_LANE_LOOKAHEAD: f64 = 3000.0;
 
 // shortcut: MSGlobals is still an empty skeleton (ms_globals.rs), so the g* values used here are the
-// default-run values (lateral-resolution=-1, no-internal-links=false, no meso, zero penalties);
+// default-run values (no-internal-links=false, no meso, zero penalties);
 // upgrade these to MSGlobals::g* reads once that module is ported.
-const G_LATERAL_RESOLUTION: f64 = -1.;
 const G_USING_INTERNAL_LANES: bool = true;
 const G_USE_MESO_SIM: bool = false;
 const G_TLS_PENALTY: f64 = 0.;
@@ -403,7 +402,7 @@ impl MSEdge {
             lane.m().set_right_side_on_edge(self.myWidth, self.mySublaneSides.len() as i32);
             let ahead = MSLeaderInfo::new(lane.get_width(), Ptr::null(), 0.);
             for j in 0..ahead.num_sublanes() {
-                self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+                self.mySublaneSides.push(self.myWidth + j as f64 * MSGlobals::lateral_resolution());
             }
             self.myWidth += lane.get_width();
         }
@@ -630,7 +629,7 @@ impl MSEdge {
             if !opposite.is_null() {
                 let ahead = MSLeaderInfo::new(opposite.get_width(), Ptr::null(), 0.);
                 for j in 0..ahead.num_sublanes() {
-                    self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+                    self.mySublaneSides.push(self.myWidth + j as f64 * MSGlobals::lateral_resolution());
                 }
             }
         }
@@ -661,7 +660,7 @@ impl MSEdge {
         if !self.myLanes.is_empty() {
             let allowChanging = self.allows_lane_changing();
             let lanes = Ptr::new(self.myLanes.as_ref());
-            if G_LATERAL_RESOLUTION > 0. {
+            if MSGlobals::lateral_resolution() > 0. {
                 // may always initiate sublane-change
                 if !self.is_internal() || G_USING_INTERNAL_LANES {
                     // shortcut: sublane changer is stored through its MSLaneChanger base pointer, only reachable when lateral-resolution > 0
