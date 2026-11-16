@@ -567,7 +567,7 @@ impl MSBaseVehicle {
     fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, String> {
         for dev in self.myDevices.iter() {
             if dev.base2.device_name() == deviceName {
-                return Ok(dev.base2.get_parameter(key));
+                return Ok(MSDevice::get_parameter_of(*dev, key));
             }
         }
         Err(utils::tlf!("no device of type '%' exists", deviceName))
@@ -669,7 +669,7 @@ impl MSBaseVehicle {
     pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) {
         for dev in self.myDevices.iter_mut() {
             if dev.base2.device_name() == deviceName {
-                dev.base2.set_parameter(key, value);
+                MSDevice::set_parameter_of(*dev, key, value);
                 return;
             }
         }

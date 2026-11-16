@@ -841,8 +841,17 @@ impl MSDevice_Battery {
             notify_move: mr_notify_move,
             notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
         };
+        fn mr_notify_parking(mr: &mut MSMoveReminder) {
+            Ptr::from_mut(mr).cast::<MSDevice_Battery>().m().notify_parking()
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+            notify_parking: mr_notify_parking,
+            notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
+        };
         let mut this = Self::new_device(holder, id, actualBatteryCapacity, maximumBatteryCapacity, stoppingThreshold, maximumChargeRate, chargeLevelTable, chargeCurveTable);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
         this
     }
 

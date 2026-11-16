@@ -273,6 +273,47 @@ impl MSDevice {
         Ptr::default()
     }
 
+    /// C++: `std::string MSDevice::getParameter(const std::string &) const` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    pub fn get_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str) -> String {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().get_parameter(key),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().get_parameter(key),
+            "driverstate" => dev.cast::<MSDevice_DriverState>().get_parameter(key),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().get_parameter(key),
+            "example" => dev.cast::<MSDevice_Example>().get_parameter(key),
+            "friction" => dev.cast::<MSDevice_Friction>().get_parameter(key),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().get_parameter(key),
+            "rerouting" => dev.cast::<MSDevice_Routing>().get_parameter(key),
+            "ssm" => dev.cast::<MSDevice_SSM>().get_parameter(key),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().get_parameter(key),
+            "taxi" => dev.cast::<MSDevice_Taxi>().get_parameter(key),
+            "toc" => dev.cast::<MSDevice_ToC>().get_parameter(key),
+            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().get_parameter(key),
+            _ => dev.base2.get_parameter(key),
+        }
+    }
+
+    /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    pub fn set_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str, value: &str) {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().m().set_parameter(key, value),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().m().set_parameter(key, value),
+            "driverstate" => dev.cast::<MSDevice_DriverState>().m().set_parameter(key, value),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().m().set_parameter(key, value),
+            "example" => dev.cast::<MSDevice_Example>().m().set_parameter(key, value),
+            "friction" => dev.cast::<MSDevice_Friction>().m().set_parameter(key, value),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().m().set_parameter(key, value),
+            "rerouting" => dev.cast::<MSDevice_Routing>().m().set_parameter(key, value),
+            "ssm" => dev.cast::<MSDevice_SSM>().m().set_parameter(key, value),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().set_parameter(key, value),
+            "taxi" => dev.cast::<MSDevice_Taxi>().m().set_parameter(key, value),
+            "toc" => dev.cast::<MSDevice_ToC>().m().set_parameter(key, value),
+            _ => dev.m().base2.set_parameter(key, value),
+        }
+    }
+
     /// C++: `void MSDevice::cleanupAll()` [static]
     /// perform cleanup for all devices
     // void

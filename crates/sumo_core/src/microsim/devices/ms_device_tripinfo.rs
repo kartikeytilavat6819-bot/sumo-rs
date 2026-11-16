@@ -1872,6 +1872,7 @@ impl MSDevice_Tripinfo {
             myRouteLength: 0.0,
         };
         this.base.base.vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_IDLE_VT;
         this
     }
 
@@ -2079,5 +2080,15 @@ static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderV
     notify_enter: ms_device_tripinfo_notify_enter,
     notify_move: ms_device_tripinfo_notify_move,
     notify_leave: ms_device_tripinfo_notify_leave,
+};
+fn ms_device_tripinfo_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_idle(veh)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+    notify_idle: ms_device_tripinfo_notify_idle,
+    notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+    notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
 };
 

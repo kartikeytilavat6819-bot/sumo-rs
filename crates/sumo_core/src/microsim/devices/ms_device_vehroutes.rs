@@ -788,8 +788,17 @@ impl MSDevice_Vehroutes {
             notify_move: crate::microsim::ms_move_reminder::default_notify_move,
             notify_leave: mr_notify_leave,
         };
+        fn mr_notify_stop_ended(mr: &mut MSMoveReminder) {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_stop_ended()
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: mr_notify_stop_ended,
+        };
         let mut this = Self::new_device(holder, id, maxRoutes);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
         this
     }
 
