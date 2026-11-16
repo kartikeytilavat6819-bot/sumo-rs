@@ -2884,6 +2884,8 @@ impl MSNet {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
                 TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
+                crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }

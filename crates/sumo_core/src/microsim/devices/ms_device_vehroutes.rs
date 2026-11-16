@@ -102,6 +102,16 @@ thread_local! {
     static MY_ROUTE_INFOS: std::cell::Cell<Ptr<MSDevice_Vehroutes_SortedRouteInfo>> = std::cell::Cell::new(Ptr::default());
 }
 
+/// MSNet dispatches vehicle-state notifications by address (the base has no vtable): true for this listener
+pub fn is_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+    MY_STATE_LISTENER.with(|c| !c.get().is_null() && c.get().as_raw() as *mut MSNet_VehicleStateListener == listener)
+}
+
+/// the StateListener's vehicleStateChanged, reached from MSNet::informVehicleStateListener
+pub fn state_listener_vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+    my_state_listener().m().vehicle_state_changed(vehicle, to, info);
+}
+
 /// C++ static `myStateListener`
 fn my_state_listener() -> Ptr<MSDevice_Vehroutes_StateListener> {
     MY_STATE_LISTENER.with(|c| {

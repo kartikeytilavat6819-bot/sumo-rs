@@ -63,8 +63,10 @@ ev = "tools/oracle/cases/ev"
 run("ev", ["-n", f"{ev}/ref_simple.net.xml", "-r", f"{ev}/routes.rou", *sim("ev"),
            "--battery-output", f"{OUT}/ev/battery.xml",
            "--chargingstations-output", f"{OUT}/ev/chargingstations.xml",
-           "--tripinfo-output", f"{OUT}/ev/tripinfo.xml"],
-    ["battery.xml", "chargingstations.xml", "tripinfo.xml"])
+           "--tripinfo-output", f"{OUT}/ev/tripinfo.xml",
+           "--fcd-output", f"{OUT}/ev/fcd.xml",
+           "--statistic-output", f"{OUT}/ev/stat.xml"],
+    ["battery.xml", "chargingstations.xml", "tripinfo.xml", "fcd.xml", "stat.xml"])
 
 for c in ["real", "signal", "stress"]:
     base = ["-n", f"tools/oracle/cases/{c}/ref_simple.net.xml", "-r", f"tools/oracle/cases/{c}/routes.rou", *sim(c)]
