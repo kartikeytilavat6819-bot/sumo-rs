@@ -118,10 +118,15 @@ roundabout, signal, real, real_dense, stress, reroute; tripinfo MATCH for vtypes
 1. `real_dense` `v15` arrival speed 5.29 vs 7.6 — the only exact-comparator FAIL (agent op02). Diverges at
    t=98 on internal lane `:42428297_1_3`, +0.22 m/s inherited from `v09`; we accelerate 0.2–0.5 m/s faster
    on junction-internal lanes.
-2. Stale MSGlobals accessors: 38 local `fn g_*()` across 18 files. Four proven wrong and fixed:
-   `g_ignore_junction_blocker` (0), `g_using_internal_lanes` (false in `ms_full_export.rs`, true elsewhere),
-   `g_compute_lc` (false), `semi_implicit_euler_update` (false — this one alone made `signal` exact).
-   This is the highest-yield bug class in the port; finish the sweep (agent op01).
+2. Stale MSGlobals accessors: 38 local `fn g_*()` across 18 files; 18 were stale/wrong, 12 fixed.
+   Proven wrong and fixed: `g_ignore_junction_blocker` (0), `g_lateral_resolution` (-1, which through the
+   shared prelude also reached `ms_link.rs` so sublane foe checks never ran), `g_using_internal_lanes`
+   (false in `ms_full_export.rs`), `mslcm_sl2015`'s left-hand flag (always off), the taxi device's own copy
+   of the taxi-classes value (separate from the router's, started at 0).
+   **`gComputeLC` is NOT default-true** — C++ sets it true only while lane changes are being applied and back
+   to false afterwards. `MSEdgeControl::change_lanes` never set it, so it was permanently false and lane
+   changing never ran the C++ path. Corrected 2026-11-16; do not "fix" it to a constant `true`.
+   This is the highest-yield bug class in the port; 6 stale accessors remain in files owned by other agents.
 3. `vtypes` `EIDM_1` timeLoss 4.05 vs 4.02 — CLOSE, not exact (agent vt01).
 4. `libsumo` API surface: 102 `panic!("shortcut:")` bodies, mostly wiring (agent ls01).
 5. Router/rail/intermodal stubs: 164, mostly off the car path (agent rt02).

@@ -1240,7 +1240,7 @@ impl Helper {
             }
             CMD_GET_CALIBRATOR_VARIABLE => {
                 for (_, calib) in MSCalibrator::get_instances().iter() {
-                    if shape.distance2d(&calib.get_lane().get_shape()[0], false) <= range {
+                    if shape.distance2d(&calib.get_lane().get_shape(false)[0], false) <= range {
                         into.insert(Ptr::from_mut(&mut calib.m().base3.base));
                     }
                 }

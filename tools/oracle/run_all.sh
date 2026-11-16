@@ -10,6 +10,18 @@ export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-8}
 BIN="$CARGO_TARGET_DIR/debug"
 if [ "${1:-}" = "--build" ]; then
   cargo build -q -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
+else
+  # Refuse to print a scoreboard from binaries older than the sources: it looks authoritative and is
+  # not. This has produced false readings for the lead and for several agents.
+  if [ -x "$BIN/sumo.exe" ]; then
+    newer=$(find crates -name '*.rs' -newer "$BIN/sumo.exe" -print -quit 2>/dev/null)
+    if [ -n "$newer" ]; then
+      echo "STALE BINARY: $BIN/sumo.exe is older than $newer"
+      echo "             run 'bash tools/oracle/run_all.sh --build', or the numbers below measure other code."
+    fi
+  else
+    echo "MISSING BINARY: $BIN/sumo.exe — build first (--build)."
+  fi
 fi
 OUT=/c/Users/karti/Temp/score
 mkdir -p "$OUT"
