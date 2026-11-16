@@ -4393,7 +4393,8 @@ impl MSLane {
     //         into.Insert(cmin, cmax, l);
     //     }
     // }
-    // shortcut: RTREE template parameter replaced by an insert closure (cmin, cmax, lane), since no generic RTree is wired to MSLane yet
+    // determinism: lanes arrive in std::map id order (MY_DICT is a BTreeMap), which fixes the tree shape
+    // the RTREE argument is an insert closure (cmin, cmax, lane), i.e. `into.Insert(cmin, cmax, l)`
     #[allow(unused_variables)]
     pub fn fill<F: FnMut(&[f32; 2], &[f32; 2], Ptr<MSLane>)>(mut into: F) {
         let lanes: Vec<Ptr<MSLane>> = MY_DICT.with(|d| d.borrow().values().copied().collect());
@@ -9214,6 +9215,10 @@ impl MSLane {
     }
 
 }
+
+/// C++ `LANE_RTREE_QUAL` (microsim/MSLane.h): `RTree<MSLane*, MSLane, float, 2, MSLane::StoringVisitor>`
+/// with the float 2D RectSphericalVolume specialisation
+pub type LANE_RTREE_QUAL = RTree<Ptr<MSLane>, f32, 2, f32, 8, 4, foreign::rtree::rtree::Float2DVolume>;
 
 /// C++ class `MSLane::StoringVisitor` (microsim/MSLane.h)
 pub struct MSLane_StoringVisitor {
