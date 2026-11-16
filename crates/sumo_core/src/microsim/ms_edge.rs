@@ -2864,17 +2864,6 @@ impl MSEdge {
     //                 ili.viaLink->updatePermissions();
     //             }
     //         }
-    //         // permissions of links entering this edge also depend on its new permissions,
-    //         // so they must be refreshed as well (important for connections via internal lanes)
-    //         for (MSEdge* const pred : myPredecessors) {
-    //             for (MSLane* const lane : *pred->myLanes) {
-    //                 for (MSLink* link : lane->getLinkCont()) {
-    //                     if (&link->getLane()->getEdge() == this) {
-    //                         link->updatePermissions();
-    //                     }
-    //                 }
-    //             }
-    //         }
     //     }
     // }
     #[allow(unused_variables)]
@@ -2947,16 +2936,6 @@ impl MSEdge {
                 }
                 for ili in lane.get_incoming_lanes() {
                     ili.viaLink.m().update_permissions();
-                }
-            }
-            // permissions of links entering this edge also depend on its new permissions
-            for pred in preds.iter() {
-                for lane in pred.myLanes.iter() {
-                    for link in lane.get_link_cont() {
-                        if Ptr::new(link.get_lane().get_edge()) == me {
-                            link.m().update_permissions();
-                        }
-                    }
                 }
             }
         }

@@ -789,7 +789,8 @@ impl MSNet {
                 minorPenalty: opt_time("meso-minor-penalty"),
                 overtaking: get_bool("meso-overtaking"),
                 edgeLength: get_float("meso-edgelength"),
-                lookahead: get_float("meso-lookahead"),
+                // shortcut: official 1.28 has no meso-lookahead option; 0 until the MESegment lookahead queue logic is removed
+                lookahead: 0.0,
             };
             self.myMesoEdgeTypes.insert(typeID.to_string(), edgeType);
         }

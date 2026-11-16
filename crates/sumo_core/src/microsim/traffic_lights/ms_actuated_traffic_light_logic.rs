@@ -63,6 +63,10 @@ impl MSActuatedTrafficLightLogic_Function {
 }
 
 /// C++ class `MSActuatedTrafficLightLogic::InductLoopInfo` (microsim/traffic_lights/MSActuatedTrafficLightLogic.h)
+pub(crate) fn actuated_save_state(l: &MSTrafficLightLogic, out: &mut OutputDevice) {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().save_state(out)
+}
+
 pub struct MSActuatedTrafficLightLogic_InductLoopInfo {
     pub loop_: Ptr<MSInductLoop>,
     pub lane: Ptr<MSLane>,
@@ -219,7 +223,7 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLigh
     get_detector_states: actuated_get_detector_states,
     get_conditions: actuated_get_conditions,
     get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
-    save_state: simple_save_state,
+    save_state: actuated_save_state,
     load_state: actuated_load_state,
     map_time_in_cycle: simple_map_time_in_cycle,
     decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
@@ -391,7 +395,6 @@ impl MSActuatedTrafficLightLogic {
     //                 ilpos = length - inductLoopPosition;
     //                 MSLane* placementLane = lane;
     //                 while (ilpos < 0 && placementLane->getIncomingLanes().size() == 1
-    //                         && placementLane->getLogicalPredecessorLane() != nullptr
     //                         && placementLane->getIncomingLanes().front().viaLink->getCorrespondingEntryLink()->getTLLogic() == nullptr) {
     //                     placementLane = placementLane->getLogicalPredecessorLane();
     //                     ilpos += placementLane->getLength();
@@ -745,7 +748,6 @@ impl MSActuatedTrafficLightLogic {
                     ilpos = length - inductLoopPosition;
                     let mut placementLane: Ptr<MSLane> = lane;
                     while ilpos < 0.0 && placementLane.get_incoming_lanes().len() == 1
-                        && !placementLane.get_logical_predecessor_lane().is_null()
                         && placementLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null() {
                         placementLane = placementLane.get_logical_predecessor_lane();
                         ilpos += placementLane.get_length();
@@ -1596,6 +1598,58 @@ impl MSActuatedTrafficLightLogic {
             }
         }
         result
+    }
+
+    /// C++: `void MSActuatedTrafficLightLogic::loadExtraState(const std::string &)` [virtual]
+    /// restore the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::loadExtraState(const std::string& state) {
+    //     std::vector<std::string> timeGaps = StringTokenizer(state).getVector();
+    //     int i = 0;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         if (i < (int)timeGaps.size()) {
+    //             loop->loadTimeSinceLastDetection(StringUtils::toDouble(timeGaps[i]));
+    //         }
+    //         i++;
+    //     }
+    // }
+    // shortcut: no load_extra_state vtable hook exists in MSTrafficLightLogic yet, so nothing calls this; upgrade when the MSTLLogicControl loadState path dispatches extra state
+    #[allow(unused_variables)]
+    pub fn load_extra_state(&mut self, state: &str) {
+        let timeGaps: Vec<String> = StringTokenizer::new(state).get_vector();
+        for (i, loopInfo) in self.myInductLoops.iter().enumerate() {
+            if i < timeGaps.len() {
+                loopInfo.loop_.m().load_time_since_last_detection(utils::common::string_utils::to_double(&timeGaps[i]).unwrap());
+            }
+        }
+    }
+
+    /// C++: `void MSActuatedTrafficLightLogic::saveState(OutputDevice &) const` [const, virtual]
+    /// save the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::saveState(OutputDevice& out) const {
+    //     out.openTag(SUMO_TAG_TLLOGIC);
+    //     MSSimpleTrafficLightLogic::saveStateAttrs(out);
+    //
+    //     std::vector<double> state;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         state.push_back(loop->getTimeSinceLastDetection());
+    //     }
+    //     out.writeAttr(SUMO_ATTR_STATE, state);
+    //     out.closeTag();
+    // }
+    #[allow(unused_variables)]
+    pub fn save_state(&self, out: &mut OutputDevice) {
+        out.open_tag_id(SUMO_TAG_TLLOGIC);
+        self.base.save_state_attrs(out);
+        let mut state: Vec<f64> = Vec::new();
+        for loopInfo in self.myInductLoops.iter() {
+            state.push(loopInfo.loop_.get().unwrap().get_time_since_last_detection());
+        }
+        out.write_attr(SUMO_ATTR_STATE, &state.iter().map(|v| utils::common::to_string::f64_to_string_default(*v)).collect::<Vec<_>>().join(" "));
+        out.close_tag("");
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]

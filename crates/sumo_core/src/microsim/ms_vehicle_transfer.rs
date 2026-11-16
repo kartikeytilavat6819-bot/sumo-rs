@@ -212,7 +212,7 @@ impl MSVehicleTransfer {
     //                             desc.myProceedTime = time + TIME2STEPS(e->getCurrentTravelTime(TeleportMinSpeed));
     //                         } else {
     //                             WRITE_WARNINGF(TL("Vehicle '%' teleports beyond arrival edge '%', time=%."), desc.myVeh->getID(), e->getID(), time2string(time));
-    //                             desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED);
+    //                             desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED);
     //                             MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(desc.myVeh);
     //                             i = vehInfos.erase(i);
     //                         }
@@ -351,7 +351,7 @@ impl MSVehicleTransfer {
                                 desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
                             } else {
                                 write_warning(&format!("Vehicle '{}' teleports beyond arrival edge '{}', time={}.", desc.myVeh.get_id(), e.get_id(), time2string(time)));
-                                desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED, Ptr::null());
+                                desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED, Ptr::null());
                                 MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(Ptr::from_mut(&mut desc.myVeh.m().base.base), false);
                                 self.myVehicles.remove(i);
                             }
