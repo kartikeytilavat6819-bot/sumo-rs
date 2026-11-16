@@ -23,6 +23,30 @@ CASE = Path(__file__).resolve().parent
 CASES_DIR = CASE.parent
 DEFAULT_OURS = Path(os.environ.get("CARGO_TARGET_DIR", "C:/Users/karti/sumo-rs-target")) / "debug" / "sumo.exe"
 
+
+def warn_if_stale(ours: Path) -> None:
+    """Print the binary in use and shout if any .rs is newer than it.
+
+    Two different defaults exist across this harness (`sumo-rs-target` here, `sumo-rs-target-main` in
+    run_all.sh), so it is easy to measure a binary that is not the code under test — that mistake produced
+    a false 40/62 reading on the night this was added.
+    """
+    print(f"ours: {ours}")
+    try:
+        btime = ours.stat().st_mtime
+    except OSError:
+        print("  MISSING BINARY — build first")
+        return
+    repo = CASES_DIR.parent.parent.parent
+    newer = None
+    for p in (repo / "crates").rglob("*.rs"):
+        if p.stat().st_mtime > btime:
+            newer = p
+            break
+    if newer is not None:
+        print(f"  STALE BINARY: older than {newer.relative_to(repo)} — results measure other code")
+
+
 # case -> (lane for the lane getters, traffic light id in that net or "")
 CASE_PARAMS = {
     "junction": ("-103224#1_0", ""),
@@ -179,6 +203,7 @@ def main():
     ap.add_argument("--ours", default=str(DEFAULT_OURS))
     ap.add_argument("--port", type=int, default=8813)
     a = ap.parse_args()
+    warn_if_stale(Path(a.ours))
 
     if a.only:
         print(json.dumps(run_side(a.only, a.port, a.ours, a.case), indent=2))
