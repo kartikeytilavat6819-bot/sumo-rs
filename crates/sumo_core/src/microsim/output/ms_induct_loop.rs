@@ -701,6 +701,16 @@ impl MSInductLoop {
         sim_time() - self.myLastLeaveTime
     }
 
+    /// C++: `void MSInductLoop::loadTimeSinceLastDetection(double)`
+    // void
+    // MSInductLoop::loadTimeSinceLastDetection(double time) {
+    //     myLastLeaveTime = SIMTIME - time;
+    // }
+    #[allow(unused_variables)]
+    pub fn load_time_since_last_detection(&mut self, time: f64) {
+        self.myLastLeaveTime = sim_time() - time;
+    }
+
     /// C++: `double MSInductLoop::getOccupancyTime() const` [const]
     /// Returns the time of continous occupation by the same vehicle in seconds or 0 if there is no vehicle on the detector
     // double

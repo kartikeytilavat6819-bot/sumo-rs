@@ -1600,6 +1600,31 @@ impl MSActuatedTrafficLightLogic {
         result
     }
 
+    /// C++: `void MSActuatedTrafficLightLogic::loadExtraState(const std::string &)` [virtual]
+    /// restore the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::loadExtraState(const std::string& state) {
+    //     std::vector<std::string> timeGaps = StringTokenizer(state).getVector();
+    //     int i = 0;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         if (i < (int)timeGaps.size()) {
+    //             loop->loadTimeSinceLastDetection(StringUtils::toDouble(timeGaps[i]));
+    //         }
+    //         i++;
+    //     }
+    // }
+    // shortcut: no load_extra_state vtable hook exists in MSTrafficLightLogic yet, so nothing calls this; upgrade when the MSTLLogicControl loadState path dispatches extra state
+    #[allow(unused_variables)]
+    pub fn load_extra_state(&mut self, state: &str) {
+        let timeGaps: Vec<String> = StringTokenizer::new(state).get_vector();
+        for (i, loopInfo) in self.myInductLoops.iter().enumerate() {
+            if i < timeGaps.len() {
+                loopInfo.loop_.m().load_time_since_last_detection(utils::common::string_utils::to_double(&timeGaps[i]).unwrap());
+            }
+        }
+    }
+
     /// C++: `void MSActuatedTrafficLightLogic::saveState(OutputDevice &) const` [const, virtual]
     /// save the time since the last detection of every induction loop
     // void
