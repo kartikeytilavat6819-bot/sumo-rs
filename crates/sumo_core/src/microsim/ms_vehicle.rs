@@ -5318,6 +5318,10 @@ impl MSVehicle {
                 p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
             }
         }
+        if std::env::var("CB01_TRACE").is_ok() && format!("{}", self.get_id()) == "3" && (397000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
+            let further: Vec<String> = self.myFurtherLanes.iter().map(|l| l.m().get_id().to_string()).collect();
+            eprintln!("TRACE t={} veh=3 lane={} pos={} posLat={} p1=({},{}) p2=({},{}) further={:?} furPosLat={:?} laneLen={}", MSNet::get_instance().get_current_time_step(), self.myLane.m().get_id(), self.myState.myPos, self.myState.myPosLat, p1.x(), p1.y(), p2.x(), p2.y(), further, self.myFurtherLanesPosLat, self.myLane.m().get_length());
+        }
         let mut result = if p1 != p2 {
             p2.angle_to2d(&p1)
         } else {
