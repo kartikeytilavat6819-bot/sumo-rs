@@ -164,7 +164,7 @@ impl MSStageWaiting {
     // }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
-        if self.myType == MSStageType::WAITING_FOR_DEPART { 0 } else { self.base.get_duration() }
+        if self.myType == MSStageType::WAITING_FOR_DEPART { 0 } else { self.base.get_duration_base() }
     }
 
     /// C++: `SUMOTime MSStageWaiting::getStopEnd() const` [const]
