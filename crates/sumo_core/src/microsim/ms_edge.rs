@@ -148,6 +148,12 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn is_walking_area(&self) -> bool {
         self.is_walking_area()
     }
+    fn railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
+        self.get_railway_routing_edge()
+    }
+    fn all_edges() -> Vec<Ptr<MSEdge>> {
+        MSEdge::get_all_edges().clone()
+    }
     fn id(&self) -> &str {
         self.get_id()
     }

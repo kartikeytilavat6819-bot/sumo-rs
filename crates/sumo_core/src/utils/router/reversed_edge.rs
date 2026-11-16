@@ -1,6 +1,7 @@
 //! Port of utils/router/ReversedEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> ReversedEdge::ConstEdgePairVector`
 pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, Ptr<ReversedEdge<E, V>>)>;
@@ -28,7 +29,12 @@ impl<E, V> ReversedEdge<E, V> {
             _p: std::marker::PhantomData,
         }
     }
+}
 
+impl<E, V> ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
     /// C++: `void ReversedEdge::init()`
     // void init() {
     //         if (!myOriginal->isInternal()) {
@@ -68,8 +74,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        self.myOriginal.numerical_id()
     }
 
     /// C++: `const std::string & ReversedEdge::getID() const` [const]
@@ -79,8 +84,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getID")
+        self.myOriginal.id()
     }
 
     /// C++: `double ReversedEdge::getLength() const` [const]
@@ -90,8 +94,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getLength")
+        self.myOriginal.length()
     }
 
     /// C++: `const ReversedEdge<E, V> * ReversedEdge::getBidiEdge() const` [const]
@@ -110,8 +113,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        // shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+        self.myOriginal.is_internal()
     }
 
     /// C++: `bool ReversedEdge::prohibits(const V *const) const` [const]
@@ -120,8 +122,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<V>) -> bool {
-        // shortcut: needs router trait bounds (lead), E::prohibits is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::prohibits")
+        // C++ ROEdge::prohibits(vehicle) defaults checkRestrictions to false
+        self.myOriginal.prohibits(vehicle, false)
     }
 
     /// C++: `bool ReversedEdge::restricts(const V *const) const` [const]
@@ -130,8 +132,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, vehicle: Ptr<V>) -> bool {
-        // shortcut: needs router trait bounds (lead), E::restricts is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::restricts")
+        self.myOriginal.restricts(vehicle)
     }
 
     /// C++: `double ReversedEdge::getTravelTimeStatic(const ReversedEdge<E, V> *const, const V *const, double)` [static]
