@@ -1,0 +1,12 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="5"/>
+        <param key="device.rerouting.pre-period" value="0"/>
+    </vType>
+    <rerouter id="closeMid" edges="397795464#1">
+        <interval begin="2" end="11">
+            <closingReroute id="397795464#3"/>
+        </interval>
+    </rerouter>
+</additional>
