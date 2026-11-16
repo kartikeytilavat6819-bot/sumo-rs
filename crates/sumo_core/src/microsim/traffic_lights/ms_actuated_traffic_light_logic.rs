@@ -63,6 +63,10 @@ impl MSActuatedTrafficLightLogic_Function {
 }
 
 /// C++ class `MSActuatedTrafficLightLogic::InductLoopInfo` (microsim/traffic_lights/MSActuatedTrafficLightLogic.h)
+pub(crate) fn actuated_save_state(l: &MSTrafficLightLogic, out: &mut OutputDevice) {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().save_state(out)
+}
+
 pub struct MSActuatedTrafficLightLogic_InductLoopInfo {
     pub loop_: Ptr<MSInductLoop>,
     pub lane: Ptr<MSLane>,
@@ -219,7 +223,7 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLigh
     get_detector_states: actuated_get_detector_states,
     get_conditions: actuated_get_conditions,
     get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
-    save_state: simple_save_state,
+    save_state: actuated_save_state,
     load_state: actuated_load_state,
     map_time_in_cycle: simple_map_time_in_cycle,
     decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
@@ -1594,6 +1598,33 @@ impl MSActuatedTrafficLightLogic {
             }
         }
         result
+    }
+
+    /// C++: `void MSActuatedTrafficLightLogic::saveState(OutputDevice &) const` [const, virtual]
+    /// save the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::saveState(OutputDevice& out) const {
+    //     out.openTag(SUMO_TAG_TLLOGIC);
+    //     MSSimpleTrafficLightLogic::saveStateAttrs(out);
+    //
+    //     std::vector<double> state;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         state.push_back(loop->getTimeSinceLastDetection());
+    //     }
+    //     out.writeAttr(SUMO_ATTR_STATE, state);
+    //     out.closeTag();
+    // }
+    #[allow(unused_variables)]
+    pub fn save_state(&self, out: &mut OutputDevice) {
+        out.open_tag_id(SUMO_TAG_TLLOGIC);
+        self.base.save_state_attrs(out);
+        let mut state: Vec<f64> = Vec::new();
+        for loopInfo in self.myInductLoops.iter() {
+            state.push(loopInfo.loop_.get().unwrap().get_time_since_last_detection());
+        }
+        out.write_attr(SUMO_ATTR_STATE, &state.iter().map(|v| f64_to_string_default(*v)).collect::<Vec<_>>().join(" "));
+        out.close_tag("");
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
