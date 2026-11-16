@@ -8729,7 +8729,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_time_gap_on_lane(&self) -> f64 {
         // calling getLeader with 0 would induce a dist calculation but we only want to look for the leaders on the current lane
-        let leaderInfo = self.get_leader(-1.0, false);
+        let leaderInfo = self.get_leader(-1.0, true);
         if leaderInfo.0.is_null() || self.get_speed() == 0.0 {
             return -1.0;
         }
