@@ -159,6 +159,10 @@ impl std::ops::DerefMut for TraCIServer {
 //   static TraCIServer * TraCIServer::myInstance;
 //   static bool TraCIServer::myDoCloseConnection;
 
+fn panic_text(p: Box<dyn std::any::Any + Send>) -> String {
+    p.downcast_ref::<String>().cloned().or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
+}
+
 impl TraCIServer {
     /// C++ `myCurrentSocket->second`; only valid while the iterator is not end()
     fn cur_socket(&self) -> &Ptr<TraCIServer_SocketInfo> {
@@ -2295,16 +2299,23 @@ impl TraCIServer {
         let outp = Ptr::from_mut(&mut self.myOutputStorage);
         let mut success = false;
         // dispatch commands
+        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here
         if self.myExecutors.contains_key(&commandId) {
             let exec = self.myExecutors[&commandId];
-            success = exec(self, inp.m(), outp.m());
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| exec(self, inp.m(), outp.m()))) {
+                Ok(s) => success = s,
+                Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
+            }
         } else if (commandId >= CMD_GET_INDUCTIONLOOP_VARIABLE && commandId <= CMD_GET_BUSSTOP_VARIABLE)
             || (commandId >= CMD_GET_PARKINGAREA_VARIABLE && commandId <= CMD_GET_OVERHEADWIRE_VARIABLE)
         {
             if commandId == CMD_GET_GUI_VARIABLE {
                 self.write_status_cmd_2(commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo");
             } else {
-                success = self.process_get(commandId, inp.m(), outp.m());
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_get(commandId, inp.m(), outp.m()))) {
+                    Ok(s) => success = s,
+                    Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
+                }
             }
         } else {
             match commandId {
