@@ -355,8 +355,7 @@ impl MSBaseVehicle {
         crate::microsim::devices::ms_device_fcd::MSDevice_FCD::build_vehicle_devices(v, &mut devices);
         self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
         self.myDevices = devices;
-        // shortcut: MSGlobals::gHaveEmissions is not ported yet, so the emission parameters are never forced here
-        if false {
+        if MSGlobals::have_emissions() {
             // ensure we have the emission parameters even if we don't have the device
             self.get_emission_parameters();
         }
@@ -1500,8 +1499,7 @@ impl MSBaseVehicle {
                     edges.clear();
                 } else {
                     let error = utils::tlf!("Vehicle '%' has no valid route from edge '%' to stop edge '%'.", self.get_id(), source.get_id(), stopEdge.get_id());
-                    // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-                    if silent {
+                    if MSGlobals::check_routes() || silent {
                         panic!("{}", error);
                     } else {
                         utils::common::msg_handler::write_warning(&error);
@@ -1542,8 +1540,8 @@ impl MSBaseVehicle {
         let isTripInit = onInit && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) != 0;
         let previousCost = if isTripInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
         let savings = previousCost - routeCost;
-        // shortcut: gWeightsRandomFactor (MSEdgeWeightsStorage global) is not ported, assumed 1
-        let mut savingsOk = isTripInit || info != "device.rerouting";
+        // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
+        let mut savingsOk = isTripInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
         if !savingsOk {
             // shortcut: MSDevice_Routing::sufficientSaving and hasValidRoute over an edge range need the
             // routing device and MSRouteIterator, neither reachable yet; the old route is treated as prohibited
@@ -1555,7 +1553,9 @@ impl MSBaseVehicle {
         // this must be called even if the route could not be replaced
         if onInit {
             if edges.is_empty() {
-                // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
+                if MSGlobals::check_routes() {
+                    panic!("{}", utils::tlf!("Vehicle '%' has no valid route.", self.get_id()));
+                }
                 if source.is_taz_connector() {
                     utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' which has no valid route.", self.get_id()));
                     // shortcut: MSNet::getInstance()->getInsertionControl().descheduleDeparture(this) not ported
@@ -1682,17 +1682,21 @@ impl MSBaseVehicle {
         let mut msg = String::new();
         if check && !self.has_valid_route(&mut msg, constRoute.clone()) {
             utils::common::msg_handler::write_warning(&utils::tlf!("Invalid route replacement for vehicle '%'. %", self.get_id(), msg));
-            // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false (route is still replaced)
+            if MSGlobals::check_routes() {
+                if !msgReturn.is_null() {
+                    *msgReturn.m() = msg;
+                }
+                return false;
+            }
         }
         // C++ calls the *virtual* replaceRoute here, so MSVehicle::replaceRoute runs and refreshes the
         // best lanes afterwards. Calling MSBaseVehicle::replace_route directly skips that override, which
         // is why a rerouted vehicle kept its stale best lanes and stopped at the end of the old edge.
-        let this: Ptr<MSBaseVehicle> = Ptr::from_mut(self);
-        let veh = this.cast::<crate::microsim::ms_vehicle::MSVehicle>();
-        let replaced = if veh.get().is_some() {
-            veh.m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+        // shortcut: the vehicle class is told apart by the use_meso_sim flag, not by a type tag; upgrade when MSBaseVehicle carries one
+        let replaced = if MSGlobals::use_meso_sim() {
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
         } else {
-            self.replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
         };
         if !replaced {
             return false;
@@ -5576,7 +5580,12 @@ impl MSBaseVehicle {
                 self.myMoveReminders.remove(i);
             }
         }
-        self.reset_approach_on_reroute();
+        // resetApproachOnReroute() is virtual: MSVehicle overrides it (MEVehicle does not)
+        if MSGlobals::use_meso_sim() {
+            self.reset_approach_on_reroute();
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().reset_approach_on_reroute();
+        }
         // event only called once
         0
     }
