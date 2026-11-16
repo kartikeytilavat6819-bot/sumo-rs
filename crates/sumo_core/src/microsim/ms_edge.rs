@@ -13,8 +13,6 @@ const BEST_LANE_LOOKAHEAD: f64 = 3000.0;
 const G_USING_INTERNAL_LANES: bool = true;
 const G_USE_MESO_SIM: bool = false;
 const G_TLS_PENALTY: f64 = 0.;
-const G_MINOR_PENALTY: f64 = 0.;
-const G_TURNAROUND_PENALTY: f64 = 0.;
 const G_LANE_CHANGE_DURATION: SUMOTime = 0;
 const G_STOP_TOLERANCE: f64 = 10.; // default of option ride.stop-tolerance
 
@@ -523,7 +521,7 @@ impl MSEdge {
             for ili in self.myLanes[0].get_incoming_lanes() {
                 let mut penalty = steps2time(ili.viaLink.get_meso_tls_penalty());
                 if !ili.viaLink.have_off_priority() {
-                    penalty = if penalty > G_MINOR_PENALTY { penalty } else { G_MINOR_PENALTY };
+                    penalty = if penalty > crate::microsim::ms_globals::minor_penalty() { penalty } else { crate::microsim::ms_globals::minor_penalty() };
                 }
                 if penalty > 0. {
                     self.myEmptyTraveltime += penalty;
@@ -534,11 +532,11 @@ impl MSEdge {
             let link = self.myLanes[0].get_incoming_lanes()[0].viaLink;
             if !link.is_tls_controlled() && !link.have_priority() {
                 if link.is_turnaround() {
-                    self.myEmptyTraveltime += G_TURNAROUND_PENALTY;
-                    self.myTimePenalty = G_TURNAROUND_PENALTY;
+                    self.myEmptyTraveltime += crate::microsim::ms_globals::turnaround_penalty();
+                    self.myTimePenalty = crate::microsim::ms_globals::turnaround_penalty();
                 } else {
-                    self.myEmptyTraveltime += G_MINOR_PENALTY;
-                    self.myTimePenalty = G_MINOR_PENALTY;
+                    self.myEmptyTraveltime += crate::microsim::ms_globals::minor_penalty();
+                    self.myTimePenalty = crate::microsim::ms_globals::minor_penalty();
                 }
             }
         }
