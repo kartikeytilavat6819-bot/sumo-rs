@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/zipper/zipper.nod.xml --edge-files tools/oracle/cases/zipper/zipper.edg.xml
