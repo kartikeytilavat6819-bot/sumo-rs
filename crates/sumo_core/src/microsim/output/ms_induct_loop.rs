@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSInductLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 use std::cmp::Reverse;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::string_utils;
@@ -93,6 +94,47 @@ impl std::ops::DerefMut for MSInductLoop {
     }
 }
 
+fn ms_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_induct_loop_notify_enter,
+    notify_move: ms_induct_loop_notify_move,
+    notify_leave: ms_induct_loop_notify_leave,
+};
+
+// the MSDetectorFileOutput base is base2, not the first field: step back to the enclosing loop
+fn ms_induct_loop_of(d: *mut MSDetectorFileOutput) -> *mut MSInductLoop {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2)) as *mut MSInductLoop
+}
+fn ms_induct_loop_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*ms_induct_loop_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn ms_induct_loop_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*ms_induct_loop_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn ms_induct_loop_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*ms_induct_loop_of(d)).reset() }
+}
+
+fn ms_induct_loop_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*ms_induct_loop_of(d)).detector_update(step) }
+}
+
+static MS_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_induct_loop_write_xml_output,
+    write_xml_detector_prolog: ms_induct_loop_write_xml_detector_prolog,
+    reset: ms_induct_loop_reset,
+    detector_update: ms_induct_loop_detector_update,
+};
+
 impl MSInductLoop {
     /// C++: `void MSInductLoop::MSInductLoop(const std::string &, MSLane *const, double, double, std::string, const std::string &, const std::string &, int, const bool)`
     /// Constructor.
@@ -155,6 +197,8 @@ impl MSInductLoop {
             mySegment: Ptr::null(),
             mySegmentPos: 0.,
         });
+        s.base.vt = &MS_INDUCT_LOOP_MSMOVE_REMINDER_VT;
+        s.base2.vt = &MS_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT;
         // C++ MSMoveReminder base constructor (doAdd = true): myLane->addMoveReminder(this)
         lane.m().add_move_reminder(Ptr::from_mut(&mut s.base), true);
         s.reset();
