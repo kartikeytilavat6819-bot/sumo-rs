@@ -2046,7 +2046,7 @@ impl MSFrame {
                 or_panic(oc.set_default("junction-taz", "true"));
             }
             ok &= crate::microsim::devices::ms_device::MSDevice::check_options(oc);
-            // shortcut: C++ SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here
+            ok &= utils::common::system_frame::check_options(oc);
             ok
         })
     }

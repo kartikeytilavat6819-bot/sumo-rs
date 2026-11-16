@@ -1,11 +1,12 @@
 //! Port of utils/common/SUMOVehicleClass.{h,cpp}
-// shortcut: writePermissions / writePreferences (need OutputDevice) and the StopOffset constructor
-// from SUMOSAXAttributes are not ported; add them with utils/iodevices and utils/xml
+// shortcut: writePreferences and the StopOffset constructor from SUMOSAXAttributes are not ported; add them with utils/iodevices and utils/xml
 use super::msg_handler::write_warning;
 use super::std_defs::g_ignore_unknown_vclass;
 use super::string_bijection::StringBijection;
 use super::string_tokenizer::StringTokenizer;
 use super::util_exceptions::ProcessError;
+use crate::iodevices::output_device::OutputDevice;
+use crate::xml::sumo_xml_definitions::{SUMO_ATTR_ALLOW, SUMO_ATTR_DISALLOW};
 use crate::{write_errorf, write_warningf};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{LazyLock, Mutex, MutexGuard};
@@ -314,6 +315,36 @@ pub fn get_vehicle_class_names_list(permissions: SVCPermissions) -> Vec<String> 
                 .collect()
         })
         .clone()
+}
+
+/// C++: `void writePermissions(OutputDevice& into, SVCPermissions permissions)`
+pub fn write_permissions(into: &mut OutputDevice, permissions: SVCPermissions) {
+    if permissions == SVC_ALL || permissions == SVC_UNSPECIFIED {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
+        return;
+    }
+    if permissions == 0 {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_attr(SUMO_ATTR_DISALLOW, VEHICLE_CLASS_NAME_ALL);
+        return;
+    }
+    let mut num_allowed: i64 = 0;
+    let mut mask: SVCPermissions = 1;
+    while mask <= SUMO_VEHICLE_CLASS_MAX {
+        if (mask & permissions) == mask {
+            num_allowed += 1;
+        }
+        mask <<= 1;
+    }
+    let num_vc = num_vclasses() as i64;
+    if num_allowed <= (num_vc - num_allowed) && num_allowed > 0 {
+        into.write_attr(SUMO_ATTR_ALLOW, get_vehicle_class_names(permissions, false).as_str());
+        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
+    } else {
+        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
+        into.write_attr(SUMO_ATTR_DISALLOW, get_vehicle_class_names(!permissions, false).as_str());
+    }
 }
 
 pub fn get_vehicle_class_id(name: &str) -> Result<SUMOVehicleClass, ProcessError> {

@@ -1,6 +1,7 @@
 //! Port of netwrite/NWWriter_SUMO.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::sumo_vehicle_class::write_permissions;
 use utils::geom::POSITION_EPS;
 
 /// C++ enum `NWWriter_SUMO::ConnectionStyle`
@@ -2226,36 +2227,6 @@ fn normalise_sum(v: &mut Vec<f64>, msum: f64) {
     let d = rsum / msum;
     for x in v.iter_mut() {
         *x /= d;
-    }
-}
-
-/// writePermissions (SUMOVehicleClass.cpp); not yet ported to the Rust utils crate
-fn write_permissions(into: &mut OutputDevice, permissions: SVCPermissions) {
-    if permissions == SVC_ALL || permissions == SVC_UNSPECIFIED {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
-        return;
-    }
-    if permissions == 0 {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_attr(SUMO_ATTR_DISALLOW, "all");
-        return;
-    }
-    let mut num_allowed: i64 = 0;
-    let mut mask: SVCPermissions = 1;
-    while mask <= SUMO_VEHICLE_CLASS_MAX {
-        if (mask & permissions) == mask {
-            num_allowed += 1;
-        }
-        mask <<= 1;
-    }
-    let num_vclasses = SUMO_VEHICLE_CLASS_STRINGS.size() as i64 - 8; // NUM_VCLASSES in SUMOVehicleClass.cpp
-    if num_allowed <= (num_vclasses - num_allowed) && num_allowed > 0 {
-        into.write_attr(SUMO_ATTR_ALLOW, get_vehicle_class_names(permissions, false).as_str());
-        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
-    } else {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_attr(SUMO_ATTR_DISALLOW, get_vehicle_class_names(!permissions, false).as_str());
     }
 }
 

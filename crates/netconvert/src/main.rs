@@ -59,7 +59,7 @@ fn check_options() -> bool {
         let mut ok = NIFrame::check_options(oc);
         ok &= NBFrame::check_options(oc);
         ok &= NWFrame::check_options(oc);
-        // shortcut: SystemFrame::checkOptions(oc) is not ported, so its checks are skipped, upgrade when system_frame is ported
+        ok &= utils::common::system_frame::check_options(oc);
         ok
     })
 }
