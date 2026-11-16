@@ -6,6 +6,7 @@ OUT=/tmp/city
 mkdir -p "$OUT"
 export TRACI_STATE_FILE=/tmp/traci_probe_state.xml
 CMP="python3 tools/oracle/cases/state_roundtrip/compare.py"
+export PYTHONPATH=$SUMO_HOME/tools:${PYTHONPATH:-}
 for c in city_manhattan_midtown city_bengaluru_blr; do
   d=tools/oracle/cases/$c
   for side in ours cpp; do
@@ -22,8 +23,8 @@ for c in city_manhattan_midtown city_bengaluru_blr; do
     echo "$c $side load exit=$?"
   done
   O=$OUT/$c/ours; C=$OUT/$c/cpp
-  echo "== $c (1) state @300 ours vs pristine"; $CMP state $O/s.xml $C/s.xml | grep -E 'state lines|RESULT'
-  echo "== $c (1b) state @300 with rng ours vs pristine"; $CMP state $O/rng.xml $C/rng.xml | grep -E 'state lines|RESULT'
+  echo "== $c (1) state @300 ours vs pristine"; $CMP state $O/s.xml $C/s.xml | head -24
+  echo "== $c (1b) state @300 with rng ours vs pristine"; $CMP state $O/rng.xml $C/rng.xml | head -24
   echo "== $c (2a) ours load->end vs ours straight (vehicles running at 300)"; $CMP tripinfo $O/straight.ti.xml $O/load.ti.xml 300 | head -12
   echo "== $c (2b) pristine load->end vs pristine straight"; $CMP tripinfo $C/straight.ti.xml $C/load.ti.xml 300 | head -12
   echo "== $c (2c) ours load vs pristine load"; $CMP loads $O/straight.ti.xml $C/load.ti.xml $O/load.ti.xml 300 | head -12
