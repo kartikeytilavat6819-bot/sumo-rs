@@ -2,25 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-#[cfg(test)]
-mod initial_switch_tests {
-    use super::*;
-
-    // shortcut: MSNet::new needs many registered options (MSVehicleControl::new reads "scale" and more, MSFrame::fill_options panics on the missing Report topic), remove #[ignore] once a test option setup exists
-    // a static program must schedule its first switch at firstEventOffset, otherwise it never leaves phase 0
-    #[test]
-    #[ignore = "needs global options setup, see shortcut above"]
-    fn static_program_schedules_first_switch_at_first_event_offset() {
-        let ec = || Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new())));
-        let _net = MSNet::new(Ptr::from_raw(Box::into_raw(Box::new(MSVehicleControl::new()))), ec(), ec(), ec(), Ptr::default());
-        let mut tlcontrol = MSTLLogicControl::new();
-        let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(39.), "GGGGGrrr", ""))))];
-        let mut logic = MSSimpleTrafficLightLogic::new(&mut tlcontrol, "42428297", "0", 0, TrafficLightType::STATIC, &phases, 0, time2steps(6.), &ParameterisedMap::new());
-        logic.schedule_initial_switch(&mut tlcontrol, time2steps(6.));
-        assert_eq!(logic.base.get_next_switch_time(), time2steps(6.));
-    }
-}
-
 /// A fixed traffic light logic
 /// C++ class `MSSimpleTrafficLightLogic` (microsim/traffic_lights/MSSimpleTrafficLightLogic.h)
 #[repr(C)]

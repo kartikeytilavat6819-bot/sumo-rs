@@ -33,9 +33,11 @@ for dir in tools/oracle/cases/*/; do
   fi
   # --- sim stage
   if [ -f "$dir/routes.rou" ] && [ -f "$dir/ref_simple.net.xml" ] && [ -f "$dir/ref.tripinfo.xml" ]; then
+    EXTRA=""
+    [ -f "$dir/sim.args" ] && EXTRA=$(cat "$dir/sim.args")
     "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
         --tripinfo-output "$OUT/$c.ti.xml" --fcd-output "$OUT/$c.fcd.xml" \
-        --statistic-output "$OUT/$c.stat.xml" --no-step-log true \
+        --statistic-output "$OUT/$c.stat.xml" --no-step-log true $EXTRA \
         >"$OUT/$c.sumo.log" 2>&1
     rc=$?
     if [ $rc -ne 0 ]; then
