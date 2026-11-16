@@ -613,8 +613,7 @@ impl MSStateHandler {
                     utils::common::msg_handler::write_warning(&format!("State was written with sumo version {} (present: {})!", version, STATE_VERSION_STRING));
                 }
                 if attrs.get_opt::<bool>(SUMO_ATTR_CONSTRAINTS, "", &mut ok, false, false) {
-                    // shortcut: MSRailSignalConstraint::clearAll is not ported under a verified name, state with constraints cannot be loaded yet
-                    panic!("shortcut: railSignal constraints in saved state are not ported");
+                    MSRailSignalConstraint::clear_all();
                 }
                 if attrs.get_opt::<bool>(SUMO_ATTR_RAIL, "", &mut ok, false, false) {
                     // init before loading any vehicles to ensure that driveways are built early
@@ -773,9 +772,12 @@ impl MSStateHandler {
                     veh.cast::<MSVehicle>().m().load_previous_approaching(self.myCurrentLink, setRequest, arrivalTime, arrivalSpeed, arrivalSpeedBraking, dist, leaveSpeed);
                 }
             }
-            SUMO_TAG_RAILSIGNAL_CONSTRAINT_TRACKER | SUMO_TAG_RAILSIGNAL_CONSTRAINTS | SUMO_TAG_PREDECESSOR | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
-                // shortcut: rail signal constraint loading is not ported
-                panic!("shortcut: railSignal constraint state is not ported");
+            SUMO_TAG_RAILSIGNAL_CONSTRAINT_TRACKER => {
+                MSRailSignalConstraint_Predecessor::load_state(attrs);
+            }
+            SUMO_TAG_RAILSIGNAL_CONSTRAINTS | SUMO_TAG_PREDECESSOR | SUMO_TAG_INSERTION_PREDECESSOR | SUMO_TAG_FOE_INSERTION | SUMO_TAG_INSERTION_ORDER | SUMO_TAG_BIDI_PREDECESSOR => {
+                // shortcut: the constraint-definition tags need the myStartElement parameterised pass (MSStateHandler.cpp:441-459, NLHandler::addPredecessorConstraint), only tracker state is ported; upgrade when save-state with signal constraints is in scope
+                panic!("shortcut: railSignal constraint definitions in saved state are not ported");
             }
             SUMO_TAG_TLLOGIC => {
                 let tlID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);

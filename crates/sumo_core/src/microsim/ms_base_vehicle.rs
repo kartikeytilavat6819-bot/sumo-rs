@@ -2437,10 +2437,19 @@ impl MSBaseVehicle {
     //         myMoveReminders.insert(myMoveReminders.begin(), std::make_pair(myContainerDevice, 0.));
     //     }
     // }
-    #[allow(unused_variables)]
     pub fn init_transportable_device(&mut self, isPerson: bool) {
-        // shortcut: MSDevice_Transportable::buildVehicleDevices is not wired to myDevices yet, so the device stays null
-        let _ = isPerson;
+        let self_ptr = self as *mut MSBaseVehicle;
+        let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
+        // determinism: myDevices is taken out and restored so the builder can push into it while `v` is borrowed
+        let mut devices = std::mem::take(&mut self.myDevices);
+        let device = MSDevice_Transportable::build_vehicle_devices(v, &mut devices, !isPerson);
+        self.myDevices = devices;
+        if isPerson {
+            self.myPersonDevice = device;
+        } else {
+            self.myContainerDevice = device;
+        }
+        self.myMoveReminders.insert(0, (device.cast::<MSMoveReminder>(), 0.0));
     }
 
     /// C++: `void MSBaseVehicle::removeTransportable(MSTransportable *)` [virtual]
