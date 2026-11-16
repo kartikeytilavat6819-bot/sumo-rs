@@ -187,13 +187,8 @@ fn notification_string(reason: MSMoveReminder_Notification) -> &'static str {
 }
 
 /// `std::bitset<256>::test` for `MSLogicJunction::LinkBits`.
-// shortcut: MSLogicJunction::LinkBits is still Unmapped (= ()) in ms_logic_junction.rs, so the foe bitset
-// content is unavailable; the ported MSJunctionLogic::getFoesFor returns an empty dummy set, so testing
-// any bit yields false. Upgrade when the typedef is mapped to a real bitset.
 fn link_bits_test(bits: &MSLogicJunction_LinkBits, bit: i32) -> bool {
-    let _ = bit;
-    let _ = bits;
-    false
+    bits.test(bit)
 }
 
 /// `dynamic_cast<const MSRailSignal*>(logic)`: null unless the logic is a rail signal.
