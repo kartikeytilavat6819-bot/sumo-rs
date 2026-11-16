@@ -1118,7 +1118,14 @@ impl MSDriveWay {
     #[allow(unused_variables)]
     pub fn foe_drive_way_occupied(&self, store: bool, ego: Ptr<SUMOVehicle>, occupied: &mut MSEdgeVector) -> bool {
         let this_ptr = Ptr::new(self);
+        if std::env::var_os("RB01_INS").is_some() {
+            println!("INS t={} ego={} dw={} foes={}", MSNet::get_instance().get_current_time_step(), if ego.is_null() { "NULL".to_string() } else { ego.get_id().to_string() }, self.base2.get_id(), self.myFoes.len());
+        }
         for &foe_dw in self.myFoes.iter() {
+            if std::env::var_os("RB01_INS").is_some() {
+                let trains: Vec<String> = foe_dw.myTrains.iter().map(|t| format!("{}@{}", t.get_id(), t.cast::<MSVehicle>().get_edge().get_id())).collect();
+                println!("INS t={} ego={} dw={} foe={} trains={}", MSNet::get_instance().get_current_time_step(), if ego.is_null() { "NULL".to_string() } else { ego.get_id().to_string() }, self.base2.get_id(), foe_dw.base2.get_id(), trains.iter().map(|s| format!("{},", s)).collect::<String>());
+            }
             if !foe_dw.myTrains.is_empty() {
                 if foe_dw.myTrains.len() == 1 {
                     let foe = *foe_dw.myTrains.iter().next().unwrap();
