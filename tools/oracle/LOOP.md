@@ -1,3 +1,5 @@
+references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation only
+
 # Self-improving verification loop
 
 One command measures everything:

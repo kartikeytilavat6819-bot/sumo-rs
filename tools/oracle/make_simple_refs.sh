@@ -7,7 +7,7 @@ OUT=/c/Users/karti/Temp/oracle
 mkdir -p "$OUT"
 for c in junction roundabout signal; do
   WSLDIR=/mnt/c/Users/karti/sumo-rs/tools/oracle/cases/$c
-  wsl -e bash -lc "SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/netconvert --osm-files $WSLDIR/input.osm --simple-projection -o $WSLDIR/ref_simple.net.xml" >"$OUT/ref_$c.log" 2>&1
+  wsl -e bash -lc "SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/netconvert --osm-files $WSLDIR/input.osm --simple-projection -o $WSLDIR/ref_simple.net.xml" >"$OUT/ref_$c.log" 2>&1
   echo "== $c reference exit: $?"
 done
 ls -la tools/oracle/cases/*/ref_simple.net.xml 2>&1 | head -5

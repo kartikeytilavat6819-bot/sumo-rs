@@ -40,7 +40,7 @@ for c in $CASES; do
   [ -f "$src/ref.fcd.xml" ] && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
   [ -f "$src/ref.stat.xml" ] && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
   flags=$(cat "$src/sim.args" 2>/dev/null)
-  wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" >"$LOG/ref_$c.log" 2>&1
+  wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" >"$LOG/ref_$c.log" 2>&1
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
   # Variants: run_all pairs ref_<v>.tripinfo.xml with sim_<v>.args, so each variant reference must be
   # regenerable the same way. Without this loop a variant reference can only be reproduced by hand.
@@ -51,7 +51,7 @@ for c in $CASES; do
     vouts="--tripinfo-output $(wp "$o")/ref_$v.tripinfo.xml"
     [ -f "$src/ref_$v.fcd.xml" ] && vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"
     [ -f "$src/ref_$v.stat.xml" ] && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
-    wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" >"$LOG/ref_${c}_$v.log" 2>&1
+    wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" >"$LOG/ref_${c}_$v.log" 2>&1
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
   done
 done
