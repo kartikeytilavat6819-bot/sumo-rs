@@ -43,6 +43,8 @@ pub struct MSEdge {
     pub myLanes: Rc<Vec<Ptr<MSLane>>>,
     /// This member will do the lane-change
     pub myLaneChanger: Ptr<MSLaneChanger>,
+    /// true when myLaneChanger points into an MSLaneChangerSublane (its base field)
+    pub myLaneChangerIsSublane: bool,
     /// the purpose of the edge
     pub myFunction: SumoXMLEdgeFunc,
     /// Vaporizer counter
@@ -302,6 +304,7 @@ impl MSEdge {
             myNumericalID: numericalID,
             myLanes: Rc::new(Vec::new()), // C++ null shared_ptr until initialize()
             myLaneChanger: Ptr::null(),
+            myLaneChangerIsSublane: false,
             myFunction: function,
             myVaporizationRequests: 0,
             myLastFailedInsertionTime: std::cell::Cell::new(-1),
@@ -666,6 +669,7 @@ impl MSEdge {
                     // shortcut: sublane changer is stored through its MSLaneChanger base pointer, only reachable when lateral-resolution > 0
                     let sub = Box::into_raw(Box::new(MSLaneChangerSublane::new(lanes, allowChanging)));
                     self.myLaneChanger = Ptr::from_raw(unsafe { &mut (*sub).base } as *mut MSLaneChanger);
+                    self.myLaneChangerIsSublane = true;
                 }
             } else if G_LANE_CHANGE_DURATION > 0 || self.myLanes.len() > 1 || self.can_change_to_opposite() {
                 self.myLaneChanger = Ptr::from_raw(Box::into_raw(Box::new(MSLaneChanger::new(lanes, allowChanging))));
@@ -2566,7 +2570,11 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn change_lanes(&self, t: SUMOTime) {
         if !self.myLaneChanger.is_null() {
-            self.myLaneChanger.m().lane_change(t);
+            if self.myLaneChangerIsSublane {
+                self.myLaneChanger.cast::<MSLaneChangerSublane>().m().lane_change_sublane(t);
+            } else {
+                self.myLaneChanger.m().lane_change(t);
+            }
         }
     }
 

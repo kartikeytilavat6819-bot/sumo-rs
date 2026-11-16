@@ -224,6 +224,17 @@ impl MSLaneChangerSublane {
     //     }
     //     return false;
     // }
+    /// C++ `MSLaneChanger::laneChange(SUMOTime)` with the virtual `change()` resolved to the sublane override
+    /// (the base loop is not reachable from `MSEdge` once the changer is stored as an `MSLaneChanger` pointer)
+    pub fn lane_change_sublane(&mut self, t: SUMOTime) {
+        self.init_changer();
+        while self.veh_in_changer() {
+            let haveChanged = self.change();
+            self.update_changer(haveChanged);
+        }
+        self.update_lanes(t);
+    }
+
     #[allow(unused_variables)]
     pub fn change(&mut self) -> bool {
         self.myCandi = self.find_candidate();
