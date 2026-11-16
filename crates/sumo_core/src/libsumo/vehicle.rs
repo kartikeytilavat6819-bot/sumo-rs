@@ -4733,8 +4733,161 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        // shortcut: the variable dispatch (handleVariable, ~200 lines of C++ incl. subscription readers) is not ported in this pass; upgrade when the subscription readers are filled
-        panic!("Vehicle::handleVariable not yet ported")
+        let p = paramData.m();
+        match variable {
+            TRACI_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_id_list()),
+            ID_COUNT => wrapper.m().wrap_int(objID, variable, Self::get_id_count()),
+            VAR_POSITION => wrapper.m().wrap_position(objID, variable, &Self::get_position(objID, false)),
+            VAR_POSITION3D => wrapper.m().wrap_position(objID, variable, &Self::get_position(objID, true)),
+            VAR_ANGLE => wrapper.m().wrap_double(objID, variable, Self::get_angle(objID)),
+            VAR_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_speed(objID)),
+            VAR_SPEED_LAT => wrapper.m().wrap_double(objID, variable, Self::get_lateral_speed(objID)),
+            VAR_ROAD_ID => wrapper.m().wrap_string(objID, variable, &Self::get_road_id(objID)),
+            VAR_SPEED_WITHOUT_TRACI => wrapper.m().wrap_double(objID, variable, Self::get_speed_without_tra_ci(objID)),
+            VAR_SLOPE => wrapper.m().wrap_double(objID, variable, Self::get_slope(objID)),
+            VAR_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_lane_id(objID)),
+            VAR_SHADOW_LANE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_shadow_lane_id(objID)),
+            VAR_LANE_INDEX => wrapper.m().wrap_int(objID, variable, Self::get_lane_index(objID)),
+            VAR_SEGMENT_ID => wrapper.m().wrap_string(objID, variable, &Self::get_segment_id(objID)),
+            VAR_SEGMENT_INDEX => wrapper.m().wrap_int(objID, variable, Self::get_segment_index(objID)),
+            VAR_TYPE => wrapper.m().wrap_string(objID, variable, &Self::get_type_id(objID)),
+            VAR_ROUTE_ID => wrapper.m().wrap_string(objID, variable, &Self::get_route_id(objID)),
+            VAR_DEPARTURE => wrapper.m().wrap_double(objID, variable, Self::get_departure(objID)),
+            VAR_DEPART_DELAY => wrapper.m().wrap_double(objID, variable, Self::get_depart_delay(objID)),
+            VAR_ROUTE_INDEX => wrapper.m().wrap_int(objID, variable, Self::get_route_index(objID)),
+            VAR_COLOR => wrapper.m().wrap_color(objID, variable, &Self::get_color(objID)),
+            VAR_LANEPOSITION => wrapper.m().wrap_double(objID, variable, Self::get_lane_position(objID)),
+            VAR_ARRIVALPOS => wrapper.m().wrap_double(objID, variable, Self::get_arrival_pos(objID)),
+            VAR_LANEPOSITION_LAT => wrapper.m().wrap_double(objID, variable, Self::get_lateral_lane_position(objID)),
+            VAR_CO2EMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co2_emission(objID)),
+            VAR_COEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_co_emission(objID)),
+            VAR_HCEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_hc_emission(objID)),
+            VAR_PMXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_p_mx_emission(objID)),
+            VAR_NOXEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_n_ox_emission(objID)),
+            VAR_FUELCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_fuel_consumption(objID)),
+            VAR_NOISEEMISSION => wrapper.m().wrap_double(objID, variable, Self::get_noise_emission(objID)),
+            VAR_ELECTRICITYCONSUMPTION => wrapper.m().wrap_double(objID, variable, Self::get_electricity_consumption(objID)),
+            VAR_PERSON_NUMBER => wrapper.m().wrap_int(objID, variable, Self::get_person_number(objID)),
+            VAR_PERSON_CAPACITY => wrapper.m().wrap_int(objID, variable, Self::get_person_capacity(objID)),
+            VAR_BOARDING_DURATION => wrapper.m().wrap_double(objID, variable, Self::get_boarding_duration(objID)),
+            LAST_STEP_PERSON_ID_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_person_id_list(objID)),
+            VAR_WAITING_TIME => wrapper.m().wrap_double(objID, variable, Self::get_waiting_time(objID)),
+            VAR_ACCUMULATED_WAITING_TIME => wrapper.m().wrap_double(objID, variable, Self::get_accumulated_waiting_time(objID)),
+            VAR_EDGE_TRAVELTIME => {
+                StoHelp::read_compound(p, -1, "");
+                let time = StoHelp::read_typed_double(p, "");
+                let edge = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_double(objID, variable, Self::get_adapted_traveltime(objID, time, &edge))
+            }
+            VAR_EDGE_EFFORT => {
+                StoHelp::read_compound(p, -1, "");
+                let time = StoHelp::read_typed_double(p, "");
+                let edge = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_double(objID, variable, Self::get_effort(objID, time, &edge))
+            }
+            VAR_ROUTE_VALID => wrapper.m().wrap_int(objID, variable, Self::is_route_valid(objID) as i32),
+            VAR_EDGES => wrapper.m().wrap_string_list(objID, variable, &Self::get_route(objID)),
+            VAR_SIGNALS => wrapper.m().wrap_int(objID, variable, Self::get_signals(objID)),
+            VAR_BEST_LANES => wrapper.m().wrap_best_lanes_data_vector(objID, variable, &Self::get_best_lanes(objID)),
+            VAR_NEXT_LINKS => wrapper.m().wrap_connection_vector(objID, variable, &Self::get_next_links(objID)),
+            VAR_STOPSTATE => wrapper.m().wrap_int(objID, variable, Self::get_stop_state(objID)),
+            VAR_DISTANCE => wrapper.m().wrap_double(objID, variable, Self::get_distance(objID)),
+            VAR_REFERENCE_DISTANCE => wrapper.m().wrap_double(objID, variable, Self::get_reference_distance(objID)),
+            VAR_ALLOWED_SPEED => wrapper.m().wrap_double(objID, variable, Self::get_allowed_speed(objID)),
+            VAR_SPEED_FACTOR => wrapper.m().wrap_double(objID, variable, Self::get_speed_factor(objID)),
+            VAR_SPEEDSETMODE => wrapper.m().wrap_int(objID, variable, Self::get_speed_mode(objID)),
+            VAR_LANECHANGE_MODE => wrapper.m().wrap_int(objID, variable, Self::get_lane_change_mode(objID)),
+            VAR_ROUTING_MODE => wrapper.m().wrap_int(objID, variable, Self::get_routing_mode(objID)),
+            VAR_LINE => wrapper.m().wrap_string(objID, variable, &Self::get_line(objID)),
+            VAR_VIA => wrapper.m().wrap_string_list(objID, variable, &Self::get_via(objID)),
+            VAR_ACCELERATION => wrapper.m().wrap_double(objID, variable, Self::get_acceleration(objID)),
+            VAR_LASTACTIONTIME => wrapper.m().wrap_double(objID, variable, Self::get_last_action_time(objID)),
+            VAR_STOP_DELAY => wrapper.m().wrap_double(objID, variable, Self::get_stop_delay(objID)),
+            VAR_IMPATIENCE => wrapper.m().wrap_double(objID, variable, Self::get_impatience(objID)),
+            VAR_STOP_ARRIVALDELAY => wrapper.m().wrap_double(objID, variable, Self::get_stop_arrival_delay(objID)),
+            VAR_TIMELOSS => wrapper.m().wrap_double(objID, variable, Self::get_time_loss(objID)),
+            VAR_MINGAP_LAT => wrapper.m().wrap_double(objID, variable, Self::get_min_gap_lat(objID)),
+            VAR_LEADER => {
+                let dist = StoHelp::read_typed_double(p, "");
+                wrapper.m().wrap_string_double_pair(objID, variable, &Self::get_leader(objID, dist))
+            }
+            VAR_FOLLOWER => {
+                let dist = StoHelp::read_typed_double(p, "");
+                wrapper.m().wrap_string_double_pair(objID, variable, &Self::get_follower(objID, dist))
+            }
+            VAR_LOADED_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_loaded_id_list()),
+            VAR_TELEPORTING_LIST => wrapper.m().wrap_string_list(objID, variable, &Self::get_teleporting_id_list()),
+            VAR_FOLLOW_SPEED => {
+                StoHelp::read_compound(p, -1, "");
+                let speed = StoHelp::read_typed_double(p, "");
+                let gap = StoHelp::read_typed_double(p, "");
+                let leaderSpeed = StoHelp::read_typed_double(p, "");
+                let leaderMaxDecel = StoHelp::read_typed_double(p, "");
+                let leaderID = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_double(objID, variable, Self::get_follow_speed(objID, speed, gap, leaderSpeed, leaderMaxDecel, &leaderID))
+            }
+            VAR_SECURE_GAP => {
+                StoHelp::read_compound(p, -1, "");
+                let speed = StoHelp::read_typed_double(p, "");
+                let leaderSpeed = StoHelp::read_typed_double(p, "");
+                let leaderMaxDecel = StoHelp::read_typed_double(p, "");
+                let leaderID = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_double(objID, variable, Self::get_secure_gap(objID, speed, leaderSpeed, leaderMaxDecel, &leaderID))
+            }
+            VAR_STOP_SPEED => {
+                StoHelp::read_compound(p, -1, "");
+                let speed = StoHelp::read_typed_double(p, "");
+                let gap = StoHelp::read_typed_double(p, "");
+                wrapper.m().wrap_double(objID, variable, Self::get_stop_speed(objID, speed, gap))
+            }
+            VAR_FOES => {
+                let dist = StoHelp::read_typed_double(p, "");
+                wrapper.m().wrap_junction_foe_vector(objID, variable, &Self::get_junction_foes(objID, dist))
+            }
+            VAR_NEIGHBORS => {
+                let mode = StoHelp::read_typed_byte(p, "");
+                wrapper.m().wrap_string_double_pair_list(objID, variable, &Self::get_neighbors(objID, mode))
+            }
+            CMD_CHANGELANE => {
+                let direction = StoHelp::read_typed_int(p, "");
+                wrapper.m().wrap_int_pair(objID, variable, &Self::get_lane_change_state(objID, direction))
+            }
+            VAR_STOP_PARAMETER => {
+                let count = StoHelp::read_compound(p, -1, "");
+                let nextStopIndex = StoHelp::read_typed_int(p, "");
+                let param = StoHelp::read_typed_string(p, "");
+                let customParam = count == 3 && StoHelp::read_typed_byte(p, "") != 0;
+                wrapper.m().wrap_string(objID, variable, &Self::get_stop_parameter(objID, nextStopIndex, &param, customParam))
+            }
+            VAR_NEXT_TLS => wrapper.m().wrap_next_tls_data_vector(objID, variable, &Self::get_next_tls(objID)),
+            VAR_NEXT_STOPS => wrapper.m().wrap_next_stop_data_vector(objID, variable, &Self::get_next_stops(objID)),
+            VAR_NEXT_STOPS2 => {
+                let limit = StoHelp::read_typed_int(p, "");
+                wrapper.m().wrap_next_stop_data_vector(objID, variable, &Self::get_stops(objID, limit))
+            }
+            DISTANCE_REQUEST => {
+                let mut roadPos = TraCIRoadPosition { base: TraCIResult::new(), edgeID: String::new(), pos: 0., laneIndex: 0 };
+                let mut pos = Position::default();
+                if Helper::read_distance_request(p, &mut roadPos, &mut pos) == POSITION_ROADMAP {
+                    wrapper.m().wrap_double(objID, variable, Self::get_driving_distance(objID, &roadPos.edgeID, roadPos.pos, roadPos.laneIndex))
+                } else {
+                    wrapper.m().wrap_double(objID, variable, Self::get_driving_distance2_d(objID, pos.x(), pos.y()))
+                }
+            }
+            VAR_TAXI_FLEET => {
+                let taxiState = StoHelp::read_typed_int(p, "");
+                wrapper.m().wrap_string_list(objID, variable, &Self::get_taxi_fleet(taxiState))
+            }
+            VAR_PARAMETER => {
+                let key = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
+            }
+            VAR_PARAMETER_WITH_KEY => {
+                let key = StoHelp::read_typed_string(p, "");
+                wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
+            }
+            _ => VehicleType::handle_variable_with_id(objID, &Self::get_type_id(objID), variable, wrapper, paramData),
+        }
     }
 
     /// C++: `bool Vehicle::isVisible(const SUMOVehicle *)` [static, private]
