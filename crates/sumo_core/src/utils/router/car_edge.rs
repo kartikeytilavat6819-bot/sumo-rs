@@ -110,9 +110,9 @@ where
             }
         }
         // C++ fills the mutable per-vClass cache from a const method
-        let me = unsafe { &mut *(self as *const Self as *mut Self) };
-        me.myClassesSuccessorMap.entry(vClass).or_default().extend(list);
-        me.myClassesSuccessorMap.get(&vClass).unwrap()
+        let me = self as *const Self as *mut Self;
+        unsafe { (*me).myClassesSuccessorMap.entry(vClass).or_default().extend(list) };
+        unsafe { (*me).myClassesSuccessorMap.get(&vClass).unwrap() }
     }
 
     /// C++: `const std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>> & CarEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -165,10 +165,10 @@ where
             }
         }
         // C++ fills the mutable per-vClass cache from a const method
-        let me = unsafe { &mut *(self as *const Self as *mut Self) };
-        let viaMap = if ignoreTransientPermissions { &mut me.myOrigClassesViaSuccessorMap } else { &mut me.myClassesViaSuccessorMap };
+        let me = self as *const Self as *mut Self;
+        let viaMap = unsafe { if ignoreTransientPermissions { &mut (*me).myOrigClassesViaSuccessorMap } else { &mut (*me).myClassesViaSuccessorMap } };
         viaMap.entry(vClass).or_default().extend(list);
-        viaMap.get(&vClass).unwrap()
+        unsafe { if ignoreTransientPermissions { (*me).myOrigClassesViaSuccessorMap.get(&vClass).unwrap() } else { (*me).myClassesViaSuccessorMap.get(&vClass).unwrap() } }
     }
 
     /// C++: `bool CarEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
