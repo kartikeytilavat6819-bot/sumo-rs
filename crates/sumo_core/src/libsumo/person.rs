@@ -818,8 +818,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(personID: &str) -> f64 {
-        // shortcut: MSVehicleType::getSpeedFactor() returns an Unmapped Distribution_Parameterized, so getParameter(1) cannot be read; upgrade when that type is mapped
-        panic!("getSpeedDeviation not yet ported: VehicleType speed factor distribution is unmapped")
+        Self::get_person(personID).get_vehicle_type().get_speed_factor().get_parameter(1)
     }
 
     /// C++: `double Person::getBoardingDuration(const std::string &)` [static]
