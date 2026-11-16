@@ -46,8 +46,6 @@ pub struct MSStateHandler {
     pub myVehiclesToRemove: BTreeSet<String>,
     /// vehicles that were removed when loading state
     pub myRemoved: i32,
-    /// the loaded counter of meso leader events (-1 if not given)
-    pub myMesoEventCounter: i64,
     /// index of the currently parse flowState
     pub myFlowIndex: i32,
     /// rail signal for which constraints are being loaded
@@ -93,7 +91,6 @@ impl MSStateHandler {
     //     myCFMAttrs(nullptr),
     //     myLastParameterised(nullptr),
     //     myRemoved(0),
-    //     myMesoEventCounter(-1),
     //     myFlowIndex(-1),
     //     myConstrainedSignal(nullptr) {
     //     myAmLoadingState = true;
@@ -121,7 +118,6 @@ impl MSStateHandler {
                 .into_iter()
                 .collect(),
             myRemoved: 0,
-            myMesoEventCounter: -1,
             myFlowIndex: -1,
             myConstrainedSignal: Ptr::null(),
             myArrived: Vec::new(),
@@ -305,7 +301,6 @@ impl MSStateHandler {
     //                 // init before loading any vehicles to ensure that driveways are built early
     //                 MSRailSignalControl::getInstance();
     //             }
-    //             myMesoEventCounter = attrs.getOpt<long long int>(SUMO_ATTR_COUNT, nullptr, ok, -1);
     //             break;
     //         }
     //         case SUMO_TAG_RNGSTATE: {
@@ -620,7 +615,6 @@ impl MSStateHandler {
                     // init before loading any vehicles to ensure that driveways are built early
                     MSRailSignalControl::get_instance();
                 }
-                self.myMesoEventCounter = attrs.get_opt::<i64>(SUMO_ATTR_COUNT, "", &mut ok, -1, false);
             }
             SUMO_TAG_RNGSTATE => {
                 if attrs.has_attribute(SUMO_ATTR_DEFAULT) {
@@ -890,9 +884,6 @@ impl MSStateHandler {
     //                     }
     //                 }
     //             }
-    //             if (use_meso_sim() && myMesoEventCounter >= 0) {
-    //                 MELoop::setEventCounter(myMesoEventCounter);
-    //             }
     //             MSDevice_Taxi::finalizeLoadState();
     //             break;
     //         }
@@ -951,9 +942,6 @@ impl MSStateHandler {
                             microVeh.m().update_best_lanes(false, Ptr::null());
                         }
                     }
-                }
-                if use_meso_sim() && self.myMesoEventCounter >= 0 {
-                    MELoop::set_event_counter(self.myMesoEventCounter);
                 }
                 MSDevice_Taxi::finalize_load_state();
             }
