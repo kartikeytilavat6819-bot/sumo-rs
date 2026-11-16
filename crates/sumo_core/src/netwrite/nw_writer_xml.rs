@@ -4,7 +4,7 @@ use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
 use utils::common::std_defs::{g_precision, g_precision_geo, NETWORK_VERSION};
 use utils::common::string_utils::escape_xml;
-use utils::common::sumo_vehicle_class::{get_vehicle_class_names, num_vclasses, SVCPermissions, SUMO_VEHICLE_CLASS_MAX, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
+use utils::common::sumo_vehicle_class::{get_vehicle_class_names, write_permissions, SVCPermissions, SVC_ALL, SVC_IGNORING, SVC_PEDESTRIAN, SVC_UNSPECIFIED};
 use utils::common::to_string::{join_to_string, mm_version_to_string};
 use utils::iodevices::output_device::OutputDeviceRef;
 use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, TrafficLightTypes};
@@ -58,37 +58,6 @@ pub fn write_location(into: &mut OutputDevice) {
     into.write_attr(SUMO_ATTR_ORIG_PROJ, &escape_xml(gch.get_proj_string(), false));
     into.close_tag("");
     into.lf();
-}
-
-/// writePermissions(OutputDevice&, SVCPermissions) (utils/common/SUMOVehicleClass.cpp)
-// shortcut: local copy until utils/common/sumo_vehicle_class.rs ports writePermissions/writePreferences
-fn write_permissions(into: &mut OutputDevice, permissions: SVCPermissions) {
-    if permissions == SVC_ALL || permissions == SVC_UNSPECIFIED {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
-        return;
-    }
-    if permissions == 0 {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_attr(SUMO_ATTR_DISALLOW, "all");
-        return;
-    }
-    let mut num_allowed: i64 = 0;
-    let mut mask: SVCPermissions = 1;
-    while mask <= SUMO_VEHICLE_CLASS_MAX as SVCPermissions {
-        if (mask & permissions) == mask {
-            num_allowed += 1;
-        }
-        mask <<= 1;
-    }
-    let num_vc = num_vclasses() as i64;
-    if num_allowed <= (num_vc - num_allowed) && num_allowed > 0 {
-        into.write_attr(SUMO_ATTR_ALLOW, get_vehicle_class_names(permissions, false).as_str());
-        into.write_optional_attr(SUMO_ATTR_DISALLOW, "", true);
-    } else {
-        into.write_optional_attr(SUMO_ATTR_ALLOW, "", true);
-        into.write_attr(SUMO_ATTR_DISALLOW, get_vehicle_class_names(!permissions, false).as_str());
-    }
 }
 
 /// writePreferences(OutputDevice&, SVCPermissions) (utils/common/SUMOVehicleClass.cpp)

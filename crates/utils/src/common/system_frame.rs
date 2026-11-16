@@ -1,5 +1,6 @@
 //! Port of utils/common/SystemFrame.{h,cpp}
 use super::msg_handler::{MsgHandler, MsgType, with_instance};
+use super::std_defs::{set_g_human_readable_time, set_g_precision, set_g_precision_emissions, set_g_precision_geo};
 use crate::iodevices::output_device::OutputDevice;
 use crate::options::option::SumoOption;
 use crate::options::options_cont::{OptionsCont, with_options};
@@ -123,6 +124,18 @@ pub fn add_report_options(oc: &mut OptionsCont) {
 
     oc.do_register_abbr("human-readable-time", 'H', SumoOption::bool(false));
     oc.add_description("human-readable-time", "Output", "Write time values as hour:minute:second or day:hour:minute:second rather than seconds");
+}
+
+/// C++: `bool SystemFrame::checkOptions(OptionsCont& oc)`
+pub fn check_options(oc: &mut OptionsCont) -> bool {
+    set_g_precision(oc.get_int("precision").unwrap_or_else(|e| panic!("{e}")));
+    if oc.exists("emission-output.precision") {
+        set_g_precision_emissions(oc.get_int("emission-output.precision").unwrap_or_else(|e| panic!("{e}")));
+    }
+    set_g_precision_geo(oc.get_int("precision.geo").unwrap_or_else(|e| panic!("{e}")));
+    set_g_human_readable_time(oc.get_bool("human-readable-time").unwrap_or_else(|e| panic!("{e}")));
+    // shortcut: gWeightsRandomFactor and gWeightsWalkOppositeFactor are not ported globals (ro_edge reads the option directly), and gIgnoreUnknownVClass/gSimulation checks and the xml-validation.routes default are skipped here, upgrade when those globals are ported
+    true
 }
 
 /// C++: `void SystemFrame::close()`
