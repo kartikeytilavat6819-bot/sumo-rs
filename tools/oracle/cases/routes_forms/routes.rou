@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <!-- flow with an inline route child -->
+  <flow id="fi" begin="0" end="20" number="2">
+    <route edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  </flow>
+  <!-- trip from/to, no route -->
+  <trip id="tr" depart="9" from="-103224#2" to="-103224#3"/>
+  <!-- vehicle with an inline route -->
+  <vehicle id="vn" depart="10">
+    <route edges="-103227#0 -103227#1 -103227#2"/>
+  </vehicle>
+  <!-- route-level route without stops, used by a vehicle referencing it -->
+  <route id="rr" edges="-103228 -103227#1 -103227#2"/>
+  <vehicle id="vr" route="rr" depart="12"/>
+</routes>

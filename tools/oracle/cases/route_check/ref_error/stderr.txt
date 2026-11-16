@@ -1,0 +1,2 @@
+Error: Vehicle 'vbad' has no valid route. No connection between edge '-103224#0' and edge '-103227#1'.
+Quitting (on error).

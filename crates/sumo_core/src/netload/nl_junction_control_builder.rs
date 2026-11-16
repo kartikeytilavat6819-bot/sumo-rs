@@ -21,11 +21,11 @@ pub struct NLJunctionControlBuilder {
     /// The current logic type
     pub myLogicType: TrafficLightType,
     /// The right-of-way-logic of the currently chosen bitset-logic
-    pub myActiveLogic: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
+    pub myActiveLogic: Vec<LinkBits>,
     /// The description about which lanes disallow other passing the junction simultaneously
-    pub myActiveFoes: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
+    pub myActiveFoes: Vec<LinkBits>,
     /// The description about which lanes have an internal follower
-    pub myActiveConts: [bool; SUMO_MAX_CONNECTIONS],
+    pub myActiveConts: LinkBits,
     /// The current phase definitions for a simple traffic light
     pub myActivePhases: MSTrafficLightLogic_Phases,
     /// The current switching conditions for an actuated traffic light
@@ -92,12 +92,12 @@ fn leak_box<T>(v: T) -> Ptr<T> {
 }
 
 /// C++ `std::bitset<SUMO_MAX_CONNECTIONS>(str)`: the rightmost character is bit 0, missing bits are 0.
-fn bitset_from_str(s: &str) -> [bool; SUMO_MAX_CONNECTIONS] {
-    let mut bits = [false; SUMO_MAX_CONNECTIONS];
+fn bitset_from_str(s: &str) -> LinkBits {
+    let mut bits = LinkBits::new();
     for (i, c) in s.chars().rev().take(SUMO_MAX_CONNECTIONS).enumerate() {
         match c {
             '0' => {}
-            '1' => bits[i] = true,
+            '1' => bits.set(i as i32, true),
             // std::invalid_argument in C++
             _ => panic!("bitset_from_str: invalid character in a junction logic string"),
         }
@@ -106,7 +106,7 @@ fn bitset_from_str(s: &str) -> [bool; SUMO_MAX_CONNECTIONS] {
 }
 
 /// C++ `new MSBitsetLogic(nLinks, logic, foes, conts)` as an MSJunctionLogic pointer.
-fn new_bitset_logic(nLinks: i32, logic: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, foes: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, conts: [bool; SUMO_MAX_CONNECTIONS]) -> Ptr<MSJunctionLogic> {
+fn new_bitset_logic(nLinks: i32, logic: &Vec<LinkBits>, foes: &Vec<LinkBits>, conts: LinkBits) -> Ptr<MSJunctionLogic> {
     leak_box(MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(nLinks, logic, foes, conts)).cast::<MSJunctionLogic>()
 }
 
@@ -131,7 +131,7 @@ impl NLJunctionControlBuilder {
             myLogicType: TrafficLightType::INVALID,
             myActiveLogic: Vec::new(),
             myActiveFoes: Vec::new(),
-            myActiveConts: [false; SUMO_MAX_CONNECTIONS],
+            myActiveConts: LinkBits::new(),
             myActivePhases: Vec::new(),
             myActiveConditions: ParameterisedMap::new(),
             myActiveAssignments: Vec::new(),
@@ -386,7 +386,7 @@ impl NLJunctionControlBuilder {
         self.myActiveProgram = String::new();
         self.myActiveLogic.clear();
         self.myActiveFoes.clear();
-        self.myActiveConts = [false; SUMO_MAX_CONNECTIONS];
+        self.myActiveConts = LinkBits::new();
         self.myRequestSize = NO_REQUEST_SIZE; // seems not to be used
         self.myRequestItemNumber = 0;
         self.myCurrentHasError = false;
@@ -465,7 +465,7 @@ impl NLJunctionControlBuilder {
         // add the read junction-internal foes for the given request index
         self.myActiveFoes.push(bitset_from_str(foes));
         // add whether the vehicle may drive a little bit further
-        self.myActiveConts[request as usize] = cont;
+        self.myActiveConts.set(request, cont);
         // increse number of set information
         self.myRequestItemNumber += 1;
     }

@@ -81,6 +81,10 @@ fn or_panic<T>(r: Result<T, ProcessError>) -> T {
 pub fn get_string(name: &str) -> String {
     with_options(|oc| or_panic(oc.get_string(name)))
 }
+/// OptionsCont::getOptions().getValueString(name): the value of any option type as text
+pub fn get_value_string(name: &str) -> String {
+    with_options(|oc| or_panic(oc.get_value_string(name)))
+}
 pub fn get_float(name: &str) -> f64 {
     with_options(|oc| or_panic(oc.get_float(name)))
 }

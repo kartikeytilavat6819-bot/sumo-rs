@@ -18,7 +18,7 @@ thread_local! {
 
 use utils::geom::geom_helper::navi_degree;
 use utils::common::std_defs::INVALID_DOUBLE;
-use utils::common::time::{delta_t, SUMOTIME_MAX};
+use utils::common::time::{delta_t, speed2dist, SUMOTIME_MAX};
 use utils::common::to_string::to_string;
 use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
 use utils::common::msg_handler::write_warning;
@@ -577,11 +577,118 @@ impl Vehicle {
     }
 
     /// C++: `std::vector<libsumo::TraCIJunctionFoe> Vehicle::getJunctionFoes(const std::string &, double)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // std::vector<TraCIJunctionFoe>
+    // Vehicle::getJunctionFoes(const std::string& vehID, double dist) {
+    //     std::vector<TraCIJunctionFoe> result;
+    //     MSBaseVehicle* vehicle = Helper::getVehicle(vehID);
+    //     MSVehicle* veh = dynamic_cast<MSVehicle*>(vehicle);
+    //     if (veh == nullptr) {
+    //         WRITE_WARNING("getJunctionFoes not applicable for meso");
+    //     } else if (veh->isOnRoad()) {
+    //         if (dist == 0) {
+    //             dist = veh->getCarFollowModel().brakeGap(veh->getSpeed()) + veh->getVehicleType().getMinGap();
+    //         }
+    //         const std::vector<const MSLane*> internalLanes;
+    //         // distance to the end of the lane
+    //         double curDist = -veh->getPositionOnLane();
+    //         for (const MSLane* lane : veh->getUpcomingLanesUntil(dist)) {
+    //             curDist += lane->getLength();
+    //             if (lane->isInternal()) {
+    //                 const MSLink* exitLink = lane->getLinkCont().front();
+    //                 int foeIndex = 0;
+    //                 const std::vector<MSLink::ConflictInfo>& conflicts = exitLink->getConflicts();
+    //                 const MSJunctionLogic* logic = exitLink->getJunction()->getLogic();
+    //                 for (const MSLane* foeLane : exitLink->getFoeLanes()) {
+    //                     const MSLink::ConflictInfo& ci = conflicts[foeIndex];
+    //                     if (ci.flag == MSLink::CONFLICT_NO_INTERSECTION) {
+    //                         continue;
+    //                     }
+    //                     const double distBehindCrossing = ci.lengthBehindCrossing;
+    //                     const MSLink* foeExitLink = foeLane->getLinkCont().front();
+    //                     const double distToCrossing = curDist - distBehindCrossing;
+    //                     const double foeDistBehindCrossing = ci.getFoeLengthBehindCrossing(foeExitLink);
+    //                     for (auto item : foeExitLink->getApproaching()) {
+    //                         const SUMOVehicle* foe = item.first;
+    //                         TraCIJunctionFoe jf;
+    //                         jf.foeId = foe->getID();
+    //                         jf.egoDist = distToCrossing;
+    //                         // approach information is from the start of the previous step
+    //                         // but the foe vehicle then moved within that steop
+    //                         const double prevFoeDist = SPEED2DIST(MSGlobals::gSemiImplicitEulerUpdate
+    //                                                               ? foe->getSpeed()
+    //                                                               : (foe->getSpeed() + foe->getPreviousSpeed()) / 2);
+    //                         jf.foeDist = item.second.dist - foeDistBehindCrossing - prevFoeDist;
+    //                         jf.egoExitDist = jf.egoDist + ci.conflictSize;
+    //                         jf.foeExitDist = jf.foeDist + ci.getFoeConflictSize(foeExitLink);
+    //                         jf.egoLane = lane->getID();
+    //                         jf.foeLane = foeLane->getID();
+    //                         jf.egoResponse = logic->getResponseFor(exitLink->getIndex()).test(foeExitLink->getIndex());
+    //                         jf.foeResponse = logic->getResponseFor(foeExitLink->getIndex()).test(exitLink->getIndex());
+    //                         result.push_back(jf);
+    //                     }
+    //                     foeIndex++;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return result;
+    // }
     #[allow(unused_variables)]
-    pub fn get_junction_foes(vehID: &str, dist: f64) -> Vec<TraCIJunctionFoe> {
-        // shortcut: egoResponse/foeResponse need MSJunctionLogic::getResponseFor(...).test(), and MSLogicJunction::LinkBits is Unmapped (= ()) in microsim/ms_logic_junction.rs; upgrade when that typedef is a bitset
-        panic!("Vehicle::getJunctionFoes not yet ported")
+    pub fn get_junction_foes(vehID: &str, mut dist: f64) -> Vec<TraCIJunctionFoe> {
+        let mut result: Vec<TraCIJunctionFoe> = Vec::new();
+        // shortcut: meso warning unreachable, micro_veh cannot tell MEVehicle apart, upgrade with a vehicle type tag (see micro_veh)
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if veh.is_on_road() {
+            if dist == 0.0 {
+                dist = veh.get_car_follow_model().brake_gap(veh.get_speed()) + veh.get_vehicle_type().get_min_gap();
+            }
+            // distance to the end of the lane
+            let mut curDist = -veh.get_position_on_lane();
+            for lane in veh.get_upcoming_lanes_until(dist) {
+                curDist += lane.get_length();
+                if lane.is_internal() {
+                    let exitLink = lane.get_link_cont()[0];
+                    let mut foeIndex: usize = 0;
+                    let logic = exitLink.get_junction().get_logic();
+                    for foeLane in exitLink.get_foe_lanes().iter().copied() {
+                        let ci = &exitLink.get_conflicts()[foeIndex];
+                        // C++ `continue` skips the `foeIndex++` below, so a skipped conflict does not advance the index
+                        if ci.flag == MSLink_ConflictFlag::CONFLICT_NO_INTERSECTION {
+                            continue;
+                        }
+                        let distBehindCrossing = ci.lengthBehindCrossing;
+                        let foeExitLink = foeLane.get_link_cont()[0];
+                        let distToCrossing = curDist - distBehindCrossing;
+                        let foeDistBehindCrossing = ci.get_foe_length_behind_crossing(foeExitLink);
+                        // determinism: C++ std::map is keyed by SUMOVehicle*, BTreeMap<Ptr<SUMOVehicle>> iterates in the same address order
+                        for (foe, item) in foeExitLink.myApproachingVehicles.iter() {
+                            // approach information is from the start of the previous step
+                            // but the foe vehicle then moved within that steop
+                            let prevFoeDist = speed2dist(if MSGlobals::semi_implicit_euler_update() {
+                                foe.get_speed()
+                            } else {
+                                (foe.get_speed() + foe.get_previous_speed()) / 2.0
+                            });
+                            let egoDist = distToCrossing;
+                            let foeDist = item.dist - foeDistBehindCrossing - prevFoeDist;
+                            result.push(TraCIJunctionFoe {
+                                foeId: foe.get_id().to_string(),
+                                egoDist,
+                                foeDist,
+                                egoExitDist: egoDist + ci.conflictSize,
+                                foeExitDist: foeDist + ci.get_foe_conflict_size(foeExitLink),
+                                egoLane: lane.get_id().to_string(),
+                                foeLane: foeLane.get_id().to_string(),
+                                egoResponse: logic.get_response_for(exitLink.get_index()).test(foeExitLink.get_index()),
+                                foeResponse: logic.get_response_for(foeExitLink.get_index()).test(exitLink.get_index()),
+                            });
+                        }
+                        foeIndex += 1;
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `double Vehicle::getWaitingTime(const std::string &)` [static]

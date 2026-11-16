@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSE2Collector.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::MSDetectorFileOutputVt;
 use utils::common::msg_handler::write_warning;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
@@ -167,6 +168,47 @@ impl std::ops::DerefMut for MSE2Collector {
     }
 }
 
+fn mse2_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse2_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse2_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MSE2_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse2_notify_enter,
+    notify_move: mse2_notify_move,
+    notify_leave: mse2_notify_leave,
+};
+
+// the MSDetectorFileOutput base is base2, not the first field: step back to the enclosing collector
+fn mse2_of(d: *mut MSDetectorFileOutput) -> *mut MSE2Collector {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector
+}
+fn mse2_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*mse2_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn mse2_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*mse2_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn mse2_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*mse2_of(d)).reset() }
+}
+
+fn mse2_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*mse2_of(d)).detector_update(step) }
+}
+
+static MSE2_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: mse2_write_xml_output,
+    write_xml_detector_prolog: mse2_write_xml_detector_prolog,
+    reset: mse2_reset,
+    detector_update: mse2_detector_update,
+};
+
 impl MSE2Collector {
     /// Builds the fields shared by both constructors (C++ member initialiser lists) with all
     /// other members at their C++ in-class defaults. Errors come from MSDetectorFileOutput.
@@ -324,6 +366,8 @@ impl MSE2Collector {
         let mut endPos = endPos;
         let mut length = length;
         let mut this = Box::new(Self::new_base(id, lane, usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?);
+        this.base.vt = &MSE2_MSMOVE_REMINDER_VT;
+        this.base2.vt = &MSE2_DETECTOR_FILE_OUTPUT_VT;
         // check that exactly one of length, startPos, endPos is invalid
         let lengthInvalid = length == f64::MAX || length <= 0.0;
         let endPosInvalid = endPos == f64::MAX;
@@ -432,6 +476,8 @@ impl MSE2Collector {
         let mut lanes = lanes;
         let last = lanes.len() - 1;
         let mut this = Box::new(Self::new_base(id, lanes[last], usage, name, haltingTimeThreshold, haltingSpeedThreshold, jamDistThreshold, vTypes, nextEdges, detectPersons)?);
+        this.base.vt = &MSE2_MSMOVE_REMINDER_VT;
+        this.base2.vt = &MSE2_DETECTOR_FILE_OUTPUT_VT;
         this.myFirstLane = lanes[0];
         this.myLastLane = lanes[last];
         this.myStartPos = startPos;
