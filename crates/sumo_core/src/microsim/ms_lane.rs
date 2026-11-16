@@ -7570,7 +7570,6 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        if self.myLinks.len() > 0 { eprintln!("TRACE save-lane {} edge={} toJunctionNull={} links={}", self.get_id(), self.myEdge.get_id(), self.myEdge.get_to_junction().is_null(), self.myLinks.len()); }
         let toRailJunction = self.myLinks.len() > 0
             && (self.myEdge.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL
                 || self.myEdge.get_to_junction().get_type() == SumoXMLNodeType::RAIL_CROSSING);

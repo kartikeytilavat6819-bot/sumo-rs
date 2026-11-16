@@ -1040,7 +1040,6 @@ impl NLHandler {
                     let edge = MSEdge::dictionary_2(edgeID);
                     let from = self.myJunctionControlBuilder.m().retrieve(fromID.clone());
                     let to = self.myJunctionControlBuilder.m().retrieve(toID.clone());
-                    if edgeID.starts_with(':') { eprintln!("TRACE junc-graph {} edge_null={} from_null={} to_null={}", edgeID, edge.is_null(), from.is_null(), to.is_null()); }
                     if from.is_null() {
                         write_error(&format!("Unknown from-node '{}' for edge '{}'.", fromID, edgeID));
                         return;
