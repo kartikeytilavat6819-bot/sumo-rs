@@ -5,7 +5,7 @@ only loses its own row. Usage:
   python tools/oracle/cases/traci_basic/client.py                # both cases, both sides, one table each
   python tools/oracle/cases/traci_basic/client.py --case signal --only ours
 Options: --ours <sumo.exe> (default: $CARGO_TARGET_DIR/debug/sumo.exe)  --port <n> (default 8813)
-The C++ side runs in WSL: $HOME/sumo-src/bin/sumo with SUMO_HOME=$HOME/sumo-src.
+The C++ side runs in WSL: the untouched official SUMO 1.28.0 at $HOME/sumo-pristine.
 """
 import argparse
 import json
@@ -64,7 +64,9 @@ def sumo_command(side, port, net, rou, ours, extra=()):
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
                 "--no-step-log", "true", "--no-warnings", "true", *extra]
     flags = "".join(f" {x}" for x in extra)
-    inner = (f"SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
+    # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
+    inner = (f"SUMO_HOME=$($HOME/sumo-pristine/bin/python -c 'import sumo; print(sumo.SUMO_HOME)') "
+             f"$HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
              f"--remote-port {port} --no-step-log true --no-warnings true{flags}")
     return ["wsl", "-e", "bash", "-lc", inner]
 
