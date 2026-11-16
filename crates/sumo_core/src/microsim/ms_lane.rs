@@ -1090,7 +1090,7 @@ impl MSLane {
             // try to compensate sub-step depart delay by moving the vehicle forward
             speed = v.get_speed(); // may have been adapted in isInsertionSuccess
             let mut dist = speed * utils::common::time::steps2time(relevantDelay);
-            let (leader, leaderGap) = self.get_leader(Ptr::from_mut(v), pos, v.get_best_lanes_continuation(), 0., false);
+            let (leader, leaderGap) = self.get_leader(Ptr::from_mut(v), pos, v.get_best_lanes_continuation(), -1., false);
             if !leader.is_null() {
                 let vp = Ptr::from_mut(v);
                 let frontGapNeeded = v.get_car_follow_model().get_secure_gap(vp, leader, speed, leader.get_speed(), leader.get_car_follow_model().get_max_decel());
