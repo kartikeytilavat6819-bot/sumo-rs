@@ -6,16 +6,17 @@ This file is the situational picture and the handover.
 ## Verified state
 
 ```
-run_all.sh        PASS=24 FAIL=1 SKIP=8      over 17 cases
+run_all.sh        PASS=26 FAIL=0 SKIP=8      over 17 cases (+ real/ref_reroute variant)
 depart            15/15 variants
 netconvert        5 networks + 10 edge cases + 3 option variants + --lefthand + --tls.* variants: MATCH
-unit tests        174 passing (2 ignored)
+unit tests        175 passing (2 ignored)
 release == debug  identical on junction, roundabout, real, signal
-TraCI             44/62 probes (was 9/32 at the start; harness was extended)
+TraCI             48/62 probes
 ```
 
-The single failure: `reroute/ref_device` — `v1` arrival 3.00 vs 4.00, i.e. our rerouter terminates its route
-**one step early**. Quantified and isolated; not yet explained.
+Every row the suite asks about matches SUMO 1.28.0 on tripinfo, FCD and statistics. See the coverage-gap
+table in `SCOREBOARD.md` before treating that as "done": rerouting has no detour-through-a-real-junction
+case, meso and rail have no cases at all, and TraCI is measured at 48/62.
 
 ## The bug classes that mattered (read this before debugging anything)
 
@@ -28,10 +29,12 @@ The single failure: `reroute/ref_device` — `v1` arrival 3.00 vs 4.00, i.e. our
    100 s; the version string lacking `v…-0000000000`.
 3. **A ported component nothing called**: `schedule_initial_switch`, `registerParent` (rerouter children),
    the rerouter's move reminder, the pans.
-4. **No virtual dispatch** — C++ virtual calls through a base pointer are silent no-ops here. Six instances:
-   `VehicleStateListener` (TraCI `getLoadedNumber`), `MSLaneChanger::change` (sublane changes never ran),
-   `MSMoveReminder` on the rerouter, `replace_route` (best lanes never refreshed), `MSDevice::device_name`
-   (pure virtual, cannot be called at all), `getDevice(typeid)` (always null). **This is the dominant
+4. **No virtual dispatch** — C++ virtual calls through a base pointer are silent no-ops here. **Seven**
+   instances found: `schedule_initial_switch` (traffic lights never switched), `registerParent` (rerouter
+   children), the rerouter's `MSMoveReminder` vtable, `MSLaneChanger::change` (sublane changes never ran),
+   `VehicleStateListener` (TraCI `getLoadedNumber`), `replace_route` (best lanes never refreshed),
+   `getRerouteOrigin` (a reroute that should have failed succeeded). Plus `MSDevice::device_name`
+   (pure virtual, cannot be called at all) and `getDevice(typeid)` (always null). **This is the dominant
    structural weakness; `PORTING.md` has a vtable plan that is not implemented.**
 
 ## Harness lessons (each of these produced a false "PASS" tonight)
