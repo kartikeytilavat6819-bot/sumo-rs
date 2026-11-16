@@ -5,8 +5,8 @@ use crate::prelude::*;
 use utils::common::std_defs::{g_precision, set_g_precision};
 
 /// version written into saved states (C++ VERSION_STRING)
-// shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with the release version
-const STATE_VERSION_STRING: &str = "1.28.0";
+// shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with crates/sumo/src/main.rs VERSION_STRING
+const STATE_VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// keep a copy of the attributes for later use (C++ `attrs.clone()`); the C++ owner deletes it, here it is leaked
 // shortcut: cached attribute clones are leaked, upgrade when the owner holds a typed Box
