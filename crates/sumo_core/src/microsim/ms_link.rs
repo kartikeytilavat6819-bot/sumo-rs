@@ -12,19 +12,16 @@ fn max3(a: f64, b: f64, c: f64) -> f64 {
     max2(c, if a > b { a } else { b })
 }
 
-// shortcut: MSGlobals::gComputeLC is a static that is not ported yet, this stub returns the C++ default (false), upgrade when MSGlobals statics are ported
 fn g_compute_lc() -> bool {
-    false
+    crate::microsim::ms_globals::compute_lc()
 }
 
-// shortcut: MSGlobals::gSublane is a static that is not ported yet, this stub returns the C++ default (false), upgrade when MSGlobals statics are ported
 fn g_sublane() -> bool {
-    false
+    crate::microsim::ms_globals::sublane()
 }
 
-// shortcut: MSGlobals::gIgnoreJunctionBlocker is a zero-initialised static that is not ported yet, this stub returns 0, upgrade when MSGlobals statics are ported
 fn g_ignore_junction_blocker() -> SUMOTime {
-    0
+    crate::microsim::ms_globals::ignore_junction_blocker()
 }
 
 /// C++ implicit upcast MSVehicle* -> SUMOVehicle* (MSVehicle -> MSBaseVehicle -> SUMOVehicle), null-safe
@@ -77,19 +74,16 @@ use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_deg
 /// C++ `#define INVALID_TIME -1000` (MSLink.cpp)
 const INVALID_TIME: SUMOTime = -1000;
 
-// shortcut: MSGlobals::gLefthand is a static that is not ported yet, this stub returns the C++ default (right-hand traffic), upgrade when MSGlobals statics are ported
 fn g_lefthand() -> bool {
-    false
+    crate::microsim::ms_globals::lefthand()
 }
 
-// shortcut: MSGlobals::gUseMesoSim is a static that is not ported yet, this stub returns the C++ default (micro simulation), upgrade when MSGlobals statics are ported
 fn g_use_meso_sim() -> bool {
-    false
+    crate::microsim::ms_globals::use_meso_sim()
 }
 
-// shortcut: MSGlobals::gUsingInternalLanes is a static that is not ported yet, this stub returns the usual setting (internal lanes enabled, option no-internal-links off), upgrade when MSGlobals statics are ported
 fn g_using_internal_lanes() -> bool {
-    true
+    crate::microsim::ms_globals::using_internal_lanes()
 }
 
 /// C++ `#define DIVERGENCE_MIN_WIDTH 2.5` (MSLink.cpp)
