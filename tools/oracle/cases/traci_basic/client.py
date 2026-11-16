@@ -64,6 +64,10 @@ def sumo_command(side, port, net, rou, ours, extra=()):
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
                 "--no-step-log", "true", "--no-warnings", "true", *extra]
     flags = "".join(f" {x}" for x in extra)
+    if os.environ.get("SUMO_PRISTINE_BIN"):
+        # Kaggle (Linux): the untouched official binary is given directly, no WSL
+        return [os.environ["SUMO_PRISTINE_BIN"] + "/sumo", "-n", str(net), "-r", str(rou), "--remote-port", str(port),
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
     # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
     inner = (f"SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo "
              f"$HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
@@ -187,6 +191,15 @@ def probes(lane, tl_id):
         t.trafficlight.setRedYellowGreenState(tl, "G" * len(s))
         t.simulationStep(11)
         return t.trafficlight.getRedYellowGreenState(tl)
+
+    def person_move_to_xy(t):
+        t.person.add("p0", edge, 1.0, 10.0, "DEFAULT_PEDTYPE")
+        t.person.appendWalkingStage("p0", [edge], 50.0)
+        t.simulationStep(11)
+        x, y = t.person.getPosition("p0")
+        t.person.moveToXY("p0", edge, x + 1.0, y, 0.0, 0)
+        t.simulationStep(12)
+        return t.person.getPosition("p0")
 
     def poi_add(t):
         t.poi.add("p0", 1.0, 2.0, (255, 0, 0, 255))
@@ -331,6 +344,7 @@ def probes(lane, tl_id):
         "trafficlight.getNextSwitch(nope)": lambda t: t.trafficlight.getNextSwitch("nope"),
         "junction.getPosition(first)": lambda t: t.junction.getPosition(t.junction.getIDList()[0]),
         "junction.getPosition(nope)": lambda t: t.junction.getPosition("nope"),
+        "person.add + walk + moveToXY(p0) + step + getPosition": person_move_to_xy,
         "poi.add(p0) + getPosition": poi_add,
         "poi.getPosition(nope)": lambda t: t.poi.getPosition("nope"),
     }
@@ -373,7 +387,11 @@ def run_side(side, port, ours, case):
         extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
         out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
-            subprocess.run(["wsl", "-e", "bash", "-lc", f"pkill -f -- '--remote-port {port + i} ' || true"], capture_output=True)
+            kill = f"pkill -f -- '--remote-port {port + i} ' || true"
+            if os.environ.get("SUMO_PRISTINE_BIN"):
+                subprocess.run(["bash", "-lc", kill], capture_output=True)
+            else:
+                subprocess.run(["wsl", "-e", "bash", "-lc", kill], capture_output=True)
         time.sleep(0.5)
     return out
 
