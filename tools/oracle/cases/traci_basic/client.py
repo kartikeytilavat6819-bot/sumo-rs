@@ -194,7 +194,7 @@ def probes(lane, tl_id):
 
     def person_move_to_xy(t):
         t.person.add("p0", edge, 1.0, 10.0, "DEFAULT_PEDTYPE")
-        t.person.appendWalkingStage("p0", [edge], 50.0)
+        t.person.appendWalkingStage("p0", [edge], t.lane.getLength(lane) - 1.0)
         t.simulationStep(11)
         x, y = t.person.getPosition("p0")
         t.person.moveToXY("p0", edge, x + 1.0, y, 0.0, 0)
