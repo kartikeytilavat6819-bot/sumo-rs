@@ -226,6 +226,13 @@ impl MSDriveWay {
     // {}
     #[allow(unused_variables)]
     pub fn new(origin: Ptr<MSLink>, id: &str, temporary: bool) -> Self {
+        let mut dw = Self::new_unhooked(origin, id, temporary);
+        dw.base.vt = &DRIVEWAY_MR_VT;
+        dw.base.ext_vt = &DRIVEWAY_MR_EXT_VT;
+        dw
+    }
+
+    fn new_unhooked(origin: Ptr<MSLink>, id: &str, temporary: bool) -> Self {
         MSDriveWay {
             base: MSMoveReminder::new(
                 &format!("DriveWay_{}", if temporary { "tmp" } else { id }),
@@ -5369,3 +5376,33 @@ mod tests {
     }
 }
 
+
+/// C++ MSDriveWay overrides of MSMoveReminder (notifyEnter, notifyLeave, notifyLeaveBack, notifyReroute):
+/// the port dispatches through the reminder's vtables, so the driveway installs these in 
+ew.
+fn mr_dw_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_enter(veh, reason, enteredLane)
+}
+
+fn mr_dw_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+fn mr_dw_notify_leave_back(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, leftLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_leave_back(veh, reason, leftLane)
+}
+
+fn mr_dw_notify_reroute(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_reroute(veh)
+}
+
+static DRIVEWAY_MR_VT: crate::microsim::ms_move_reminder::MSMoveReminderVt = crate::microsim::ms_move_reminder::MSMoveReminderVt {
+    notify_enter: mr_dw_notify_enter,
+    notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+    notify_leave: mr_dw_notify_leave,
+};
+
+static DRIVEWAY_MR_EXT_VT: crate::microsim::ms_move_reminder::MSMoveReminderExtVt = crate::microsim::ms_move_reminder::MSMoveReminderExtVt {
+    notify_leave_back: mr_dw_notify_leave_back,
+    notify_reroute: mr_dw_notify_reroute,
+};
