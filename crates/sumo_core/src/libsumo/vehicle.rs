@@ -4853,8 +4853,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        // shortcut: C++ storeShape (Helper shape cache) not ported in this pass; upgrade when helper.rs find_object_shape is filled
-        panic!("Vehicle::storeShape not yet ported")
+        shape.0.push(Helper::get_vehicle(id).get_position(0.));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Vehicle::makeWrapper()` [static]
