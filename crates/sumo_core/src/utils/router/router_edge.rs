@@ -6,7 +6,7 @@ use crate::utils::router::rail_edge::RailEdge;
 
 /// Accessors the generic router code calls on its edge type `E` (`E::getID()`, `E::getSuccessors()`, ...).
 /// `Node` and `Lane` are the junction and lane types of the network (C++ `N` and `L` templates).
-pub trait RouterEdge<V> {
+pub trait RouterEdge<V>: RouterEdgeInfo {
     type Node;
     type Lane;
     fn id(&self) -> &str;
@@ -100,4 +100,24 @@ pub trait RouterNode {
     fn position(&self) -> &Position;
     fn incoming(&self) -> &[Ptr<Self::Edge>];
     fn outgoing(&self) -> &[Ptr<Self::Edge>];
+}
+
+/// Network-edge accessors that need no vehicle type (C++ `E::getNumericalID()`, `E::getID()`, `E::getPermissions()`),
+/// so the CH/SPTree code can read them on a node's edge without `V`.
+pub trait RouterEdgeInfo {
+    fn edge_numerical_id(&self) -> i32;
+    fn edge_id(&self) -> String;
+    fn edge_permissions(&self) -> SVCPermissions;
+}
+
+impl RouterEdgeInfo for MSEdge {
+    fn edge_numerical_id(&self) -> i32 {
+        <MSEdge as RouterEdge<SUMOVehicle>>::numerical_id(self)
+    }
+    fn edge_id(&self) -> String {
+        <MSEdge as RouterEdge<SUMOVehicle>>::id(self).to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.get_permissions()
+    }
 }

@@ -90,6 +90,20 @@ impl std::ops::DerefMut for ROEdge {
     }
 }
 
+use crate::utils::router::router_edge::RouterEdgeInfo;
+
+impl RouterEdgeInfo for ROEdge {
+    fn edge_numerical_id(&self) -> i32 {
+        <ROEdge as RouterEdge<ROVehicle>>::numerical_id(self)
+    }
+    fn edge_id(&self) -> String {
+        <ROEdge as RouterEdge<ROVehicle>>::id(self).to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.get_permissions()
+    }
+}
+
 impl RouterEdge<ROVehicle> for ROEdge {
     type Node = RONode;
     type Lane = ROLane;
