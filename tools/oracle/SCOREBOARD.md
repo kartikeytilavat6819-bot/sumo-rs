@@ -37,18 +37,24 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=24 FAIL=1 SKIP=8** over 17 cases. The single failure:
+Exact totals: **`run_all.sh` PASS=25 FAIL=1 SKIP=8** over 17 cases (plus one variant row, `real/ref_reroute`).
+The single failure:
 
 | Row | Symptom | Cause |
 |---|---|---|
 | `reroute/ref_device` | `v1` arrival 3.00 vs 4.00 — we terminate its route **one step early**; FCD shows `v1 missing in candidate` at t=3 | the rerouter fires one step before C++. `hasReroutingDevice` is now a parameter check (`has.rerouting.device`) because there is no type-keyed device lookup and `MSDevice::device_name` has no vtable; whether that branch or the trigger timing causes the single-step offset is not yet established |
 
-Everything else matches C++ exactly, including the two cases that were the hardest in this port:
+Everything else matches C++ exactly, including the three cases that were the hardest in this port:
 
 - **`reroute_alt`** — `v0` rerouted at t=0 to `10 → 12 → 13`, arrival 30.00
 - **`closed_edge`** — a lane closed **after** departure; `v0` rerouted off it at t=8
+- **`real/ref_reroute`** — mid-route closure on the Times Square network; C++ `rerouteNo=1` for `v0`, ours
+  matches on tripinfo, FCD and statistics. Note the limit: the closed edge is `v0`'s destination, so SUMO
+  terminates its route rather than detouring — the Times Square extracts have no bypass. The mechanism fires
+  at real-network scale; a genuine detour is still unproven.
 
-Getting those two required four separate missing-dispatch fixes, either of which silently disabled the feature:
+Getting rerouting to work required **four** missing-dispatch fixes, any one of which silently disabled the
+feature:
 1. the rerouter was never registered as a move reminder (`register_at`),
 2. its `MSMoveReminder` vtable was never installed, so `notify_enter` went to the base no-op,
 3. `setPermissions` had no scheduler (C++ uses an unported `WrappingCommand`),
