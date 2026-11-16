@@ -7120,11 +7120,10 @@ impl MSLane {
     //         return ret;
     //     }
     #[allow(unused_variables)]
-    pub fn get_emissions(&self) -> f64 {
-        // shortcut: ET template collapsed; MSBaseVehicle::get_emissions is itself a shortcut returning 0 until PollutantsInterface is wired
+    pub fn get_emissions(&self, et: PollutantsInterface_EmissionType) -> f64 {
         let mut ret = 0.;
         for v in self.get_vehicles_secure().iter() {
-            ret += v.get_emissions();
+            ret += v.m().get_emissions(et);
         }
         self.release_vehicles();
         ret

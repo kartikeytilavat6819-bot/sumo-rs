@@ -1,7 +1,7 @@
 //! Port of microsim/output/MSEmissionExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::{g_precision, g_precision_emissions};
+use utils::common::std_defs::{g_precision, g_precision_emissions, g_precision_geo};
 use utils::common::time::ts;
 use utils::options::options_cont;
 
@@ -70,8 +70,40 @@ impl MSEmissionExport {
         }
         let mask = MSDevice_Emissions::get_written_attributes();
         of.open_tag("timestep").write_attr("time", &time2string(timestep));
-        // shortcut: the vehicle rows need getDevice(typeid(MSDevice_Emissions)) (unmapped type_info), static_cast<const MSBaseVehicle*>(veh) (no repr(C) layout yet) and MSVehicle acceleration/slope; no rows are written until those exist
-        let _ = (useGeo, mask);
+        let net = MSNet::get_instance();
+        let hasElevation = net.has_elevation();
+        let vc = net.m().get_vehicle_control();
+        for veh in vc.myVehicleDict.values() {
+            let veh: Ptr<SUMOVehicle> = *veh;
+            // shortcut: getDevice(typeid(MSDevice_Emissions)) is matched by deviceName, the type_info lookup is not ported
+            let hasEmissionsDevice = veh.get_devices().iter().any(|d| d.base2.device_name() == "emissions");
+            if hasEmissionsDevice && (veh.is_on_road() || veh.is_idling()) {
+                of.open_tag("vehicle");
+                of.write_attr(SUMO_ATTR_ID, veh.get_id());
+                Self::write_emissions(of, veh.cast::<MSBaseVehicle>(), true, &mask);
+                if use_meso_sim() {
+                    of.write_optional_attr_mask(SUMO_ATTR_EDGE, &veh.get_current_edge().get_id().to_string(), mask, false);
+                } else {
+                    of.write_optional_attr_mask(SUMO_ATTR_LANE, &veh.cast::<MSVehicle>().get_lane().get_id().to_string(), mask, false);
+                }
+                of.write_optional_attr_mask(SUMO_ATTR_POSITION, &veh.get_position_on_lane(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_SPEED, &veh.get_speed(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_ANGLE, &utils::geom::geom_helper::navi_degree(veh.get_angle()), mask, false);
+
+                let mut pos = veh.get_position(0.0);
+                if useGeo {
+                    of.set_precision(g_precision_geo());
+                    GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
+                }
+                of.write_optional_attr_mask(SUMO_ATTR_X, &pos.x(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_Y, &pos.y(), mask, false);
+                of.set_precision(g_precision());
+                if hasElevation {
+                    of.write_optional_attr_mask(SUMO_ATTR_Z, &pos.z(), mask, false);
+                }
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 

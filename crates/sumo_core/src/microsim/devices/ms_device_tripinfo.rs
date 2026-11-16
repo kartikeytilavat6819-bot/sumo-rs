@@ -341,7 +341,7 @@ impl MSDevice_Tripinfo {
                             // tripinfo is special and vehroute has its own write-unfinished option
                             continue;
                         }
-                        dev.base2.generate_output(tripinfoOut);
+                        dev.generate_output(tripinfoOut);
                     }
                     tripinfoOut.m().close_tag("");
                 }
