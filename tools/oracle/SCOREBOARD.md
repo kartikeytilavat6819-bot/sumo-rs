@@ -45,7 +45,13 @@ Gate: all 8 previous PASS rows still PASS.
 
 15 variants (`lane_*`, `pos_*`, `speed_*`), each with its own C++ reference in `depart/ref/<variant>/`:
 **PASS=15 FAIL=0** (`lane_1` and `pos_max` pass by error parity: both sides exit with the same `Error:` line).
-Outputs go to `/c/Users/karti/Temp/score/depart`, not the tracked `ours/` directory. The C++ references were not re-derived in this run.
+Outputs go to `/c/Users/karti/Temp/score/depart`, not the tracked `ours/` directory.
+
+The 15 references were **re-derived from C++ sumo 1.28.0 on 2026-11-16** into a scratch directory and compared
+with the committed ones using the same comparators: tripinfo MATCH for all 15, statistics MATCH for all 15,
+and the `Error:` text matches for the two error-parity variants. So the 15/15 verdict measures genuine C++
+output, not a stale reference. (Do not validate them with a raw `diff` — the `<configuration>` block records
+the input paths, so re-deriving from a different directory always differs there.)
 
 ## Product gate (`acceptance.py`)
 
