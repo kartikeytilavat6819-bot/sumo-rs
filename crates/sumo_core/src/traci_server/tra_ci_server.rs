@@ -46,8 +46,26 @@ const TRANSPORTABLE_STATES: [MSNet_TransportableState; 4] = [
     MSNet_TransportableState::CONTAINER_ARRIVED,
 ];
 
-// shortcut: C++ VERSION_STRING comes from the generated version.h, which the port does not have yet; uses the fallback from config.h.cmake, upgrade when version info is ported
-const TRACI_SERVER_VERSION_STRING: &str = "1.28.0";
+// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs, upgrade when version info is ported
+const TRACI_SERVER_VERSION_STRING: &str = "v1.28.0-0000000000";
+
+impl crate::libsumo::simulation::SimVariableWrapper for TraCIServer {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        TraCIServer::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        TraCIServer::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        TraCIServer::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        TraCIServer::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        TraCIServer::wrap_string_pair(self, objID, variable, value)
+    }
+}
 
 /// C++ class `TraCIServer::SocketInfo` (traci-server/TraCIServer.h)
 pub struct TraCIServer_SocketInfo {

@@ -435,7 +435,7 @@ impl TraCIServerAPI_Simulation {
                 }
             }
             _ => {
-                if !Simulation::handle_variable(objID, variable, Ptr::from_mut(&mut server.base2), Ptr::from_mut(inputStorage)) {
+                if !Simulation::handle_variable(objID, variable, Ptr::from_mut(server), Ptr::from_mut(inputStorage)) {
                     throw_traci_exception(&format!("Get Simulation Variable: unsupported variable {} specified", to_hex(variable as u64, 2, 0)));
                 }
             }
