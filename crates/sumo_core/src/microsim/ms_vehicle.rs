@@ -13142,7 +13142,7 @@ impl MSVehicle {
     //             // check for train direction reversal
     //             if (lane->getBidiLane() != nullptr
     //                     && (*link)->getLane()->getBidiLane() == lane) {
-    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - NUMERICAL_EPS);
+    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - POSITION_EPS);
     //                 if (seen < 1) {
     //                     mustSeeBeforeReversal = 2 * seen + getLength();
     //                 }
@@ -13154,17 +13154,14 @@ impl MSVehicle {
     //                                 && seen > SPEED2DIST(v));
     //         }
     //
-    //         if (!planningToStop) {
-    //             // no need to slow down for reversal if we are alrady slowing down for a stop
-    //             bool canReverseEventually = false;
-    //             const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
-    //             v = MIN2(v, vReverse);
+    //         bool canReverseEventually = false;
+    //         const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
+    //         v = MIN2(v, vReverse);
     // #ifdef DEBUG_PLAN_MOVE
-    //             if (DEBUG_COND) {
-    //                 std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
-    //             }
-    // #endif
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
     //         }
+    // #endif
     //
     //         // check whether we need to slow down in order to finish a continuous lane change
     //         if (myLaneChangeModel->isChangingLanes()) {
@@ -13877,7 +13874,7 @@ impl MSVehicle {
             if self.is_rail() && !lane.is_internal() {
                 // check for train direction reversal
                 if !lane.get_bidi_lane().is_null() && linkP.get_lane().get_bidi_lane() == lane {
-                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - utils::geom::NUMERICAL_EPS, MSCFModel_CalcReason::CURRENT);
+                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT);
                     if seen < 1.0 {
                         mustSeeBeforeReversal = 2.0 * seen + self.get_length();
                     }
@@ -13889,12 +13886,9 @@ impl MSVehicle {
                     && seen > speed2dist(v);
             }
 
-            if !planningToStop {
-                // no need to slow down for reversal if we are alrady slowing down for a stop
-                let mut canReverseEventually = false;
-                let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
-                v = min2(v, vReverse);
-            }
+            let mut canReverseEventually = false;
+            let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+            v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
             if self.myLaneChangeModel.is_changing_lanes() {
