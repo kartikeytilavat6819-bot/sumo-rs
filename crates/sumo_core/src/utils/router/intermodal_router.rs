@@ -62,9 +62,10 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalRouter<E, L, N, V> {
 
 impl<E, L, N, V> IntermodalRouter<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    N: RouterNode<Edge = E>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: RouterNode<Edge = E> + 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void IntermodalRouter::IntermodalRouter<E, L, N, V>(CreateNetCallback, const int, double, const std::string &, const int, EffortCalculator *)`
     /// Constructor
