@@ -9,13 +9,15 @@ bash tools/oracle/run_all.sh --build
 It runs every case in `tools/oracle/cases/` through the Rust binaries and prints a scoreboard:
 
 ```
-junction     net  PASS
-junction     sim  FAIL
-real         net  PASS
-real         sim  PASS
+junction/ref  sim  PASS
+real/ref      sim  PASS
 ...
-PASS=6 FAIL=4 SKIP=0
+PASS=11 FAIL=3 SKIP=6
 ```
+
+The example above is the shape of the output, not the current scoreboard — that lives in `SCOREBOARD.md`
+and is the only file whose numbers you should trust. The sim stage now runs one row **per committed
+reference variant** (`ref` uses `sim.args`, `ref_<v>` uses `sim_<v>.args`).
 
 `net` = `compare_net.py` against the C++-generated `ref_simple.net.xml`.
 `sim` = `compare_sim --tripinfo`, `compare_sim --fcd`, `compare_stat` against the committed references.
@@ -42,7 +44,31 @@ A panic is reported as `sim-PANIC` with the first message line.
   reference. Use `make_sim_refs.sh` / `make_net_ref.sh`.
 - **Never trust a pass you cannot reproduce from a clean checkout.**
 
-## Known failing rows and their owners (2026-11-15)
+## Known failing rows and their owners
+
+Current state, 2026-11-16 — **three** rows fail. Everything else in that old table is fixed and must not
+be re-investigated:
+
+| Row | Symptom | Owner |
+|---|---|---|
+| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.6 | rd02 |
+| signal/ref sim | RNG stream one draw out of phase; FCD first diff t=34 (0.26 m) | rng01 |
+| vtypes/ref sim | `EIDM_1` arrival 77.00 vs 76.00 — one step early | vt01 |
+
+Fixed since the table below was written, do **not** reopen:
+
+- junction `v0` 18 s vs 20 s — stale local `g_ignore_junction_blocker()` stub returning 0
+- roundabout `v1` release 15 s early — same mechanism
+- `--additional-files` panic `XMLSubSys::runParser not wired` — loads and runs
+- release-build segfault — `Ptr::new(self).m()` UB writes converted to `Cell`
+- malformed OSM panic — errors and exits 1 like C++
+- traffic lights never switching — `schedule_initial_switch` never called; also was missing for
+  actuated / delay_based / NEMA / SOTL / swarm / deterministic / wave / off
+- `stress` "107 vs 93 arrivals", `depart` "15 variants failing", `reroute` both variants panicking —
+  all three were stale reports; each now measures exact or 15/15 PASS
+
+<details>
+<summary>Original table (2026-11-15, historical)</summary>
 
 | Row | Symptom | Owner |
 |---|---|---|
@@ -53,3 +79,5 @@ A panic is reported as `sim-PANIC` with the first message line.
 | (any `--additional-files`) | panic `XMLSubSys::runParser not wired` | afp01 |
 | (release build) | segfault on net load | rel01 |
 | malformed OSM | panic instead of error | fx03 |
+
+</details>
