@@ -25,9 +25,10 @@ EOF
 run_side() {  # $1=label $2=sumo binary
     "$2" -n net.xml -r routes.xml --no-step-log --end 200 --save-state.times 60 --save-state.prefix "$1_st" --save-state.suffix .xml --save-state.transportables true --tripinfo-output "$1_straight_ti.xml" --personinfo-output "$1_straight_pi.xml" >"$1_straight.log" 2>&1
     echo "$1 straight exit $?"
-    STATE=$(ls "$1"_st*.xml 2>/dev/null | head -1)
+    tail -n 4 "$1_straight.log"
+    STATE=$(ls "$1"_st_*.xml 2>/dev/null | head -1)
     echo "$1 state file: ${STATE:-none}"
-    [ -n "$STATE" ] || { tail -n 5 "$1_straight.log"; return; }
+    [ -n "$STATE" ] || return
     "$2" -n net.xml --load-state "$STATE" --no-step-log --end 200 --tripinfo-output "$1_load_ti.xml" --personinfo-output "$1_load_pi.xml" >"$1_load.log" 2>&1
     echo "$1 load exit $?"
     tail -n 3 "$1_load.log"
@@ -35,7 +36,8 @@ run_side() {  # $1=label $2=sumo binary
 run_side cpp "$C/sumo"
 run_side ours "$OURS"
 verdict() {
-    if cmp -s "$1" "$2"; then echo "SAME $1 $2"; else echo "DIFF $1 $2 difflines=$(diff "$1" "$2" | wc -l)"; diff "$1" "$2" | head -n 12; fi
+    if [ ! -f "$2" ]; then echo "MISSING $2"; return; fi
+    if diff <(grep -v -E '<!--|value="' "$1") <(grep -v -E '<!--|value="' "$2") >/dev/null; then echo "SAME $1 $2"; else echo "DIFF $1 $2"; diff <(grep -v -E '<!--|value="' "$1") <(grep -v -E '<!--|value="' "$2") | head -n 12; fi
 }
 for k in ti pi; do
     verdict cpp_straight_$k.xml cpp_load_$k.xml
