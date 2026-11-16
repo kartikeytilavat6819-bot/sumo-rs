@@ -6604,7 +6604,7 @@ impl MSLane {
     //         // get only those edges which connect to this lane
     //         for (MSEdgeVector::iterator i = pred.begin(); i != pred.end();) {
     //             std::vector<IncomingLaneInfo>::const_iterator j = find_if(myIncomingLanes.begin(), myIncomingLanes.end(), edge_finder(*i));
-    //             if (j == myIncomingLanes.end() || myEdge->getBidiEdge() == *i || ((*i)->isInternal() && myEdge->getBidiEdge() == (*i)->getNormalBefore())) {
+    //             if (j == myIncomingLanes.end()) {
     //                 i = pred.erase(i);
     //             } else {
     //                 ++i;
@@ -6625,10 +6625,7 @@ impl MSLane {
         if self.myLogicalPredecessorLane.get().is_null() {
             let mut pred: MSEdgeVector = self.myEdge.get_predecessors().clone();
             // get only those edges which connect to this lane
-            pred.retain(|i| {
-                let connects = self.myIncomingLanes.iter().any(|ili| MSLane_edge_finder::new(*i).call_op(ili));
-                !(!connects || self.myEdge.get_bidi_edge() == *i || (i.is_internal() && self.myEdge.get_bidi_edge() == i.get_normal_before()))
-            });
+            pred.retain(|i| self.myIncomingLanes.iter().any(|ili| MSLane_edge_finder::new(*i).call_op(ili)));
             // get the lane with the "straightest" connection
             if !pred.is_empty() {
                 let sorter = MSLane_by_connections_to_sorter::new(self.myEdge);
