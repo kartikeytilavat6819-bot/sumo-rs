@@ -38,7 +38,7 @@ run_side() {  # $1=label $2=sumo binary
     "$2" -n net.xml --load-state "$STATE" --no-step-log --end 200 --tripinfo-output "$1_load_ti.xml" --personinfo-output "$1_load_pi.xml" >"$1_load.log" 2>&1
     echo "$1 load exit $?"
     tail -n 3 "$1_load.log"
-    grep -q -E 'Error|Quitting' "$1_load.log" && { echo "$1 state lines 50-56:"; sed -n 50,56p "$STATE" | cut -c1-300; }
+    grep -q -E 'Error|Quitting' "$1_load.log" && { echo "$1 state line 54 (cols 60-140):"; sed -n 54p "$STATE" | cut -c60-140; echo "$1 state lines 50-56:"; sed -n 50,56p "$STATE" | cut -c1-300; }
 }
 run_side cpp "$C/sumo"
 run_side ours "$OURS"
@@ -47,7 +47,7 @@ verdict() {
     if diff <(grep -v -E '<!--|value="' "$1") <(grep -v -E '<!--|value="' "$2") >/dev/null; then echo "SAME $1 $2"; else echo "DIFF $1 $2"; diff <(grep -v -E '<!--|value="' "$1") <(grep -v -E '<!--|value="' "$2") | head -n 12; fi
 }
 for k in ti pi; do
-    verdict cpp_straight_$k.xml cpp_load_$k.xml
-    verdict ours_straight_$k.xml ours_load_$k.xml
     verdict cpp_straight_$k.xml ours_straight_$k.xml
+    verdict cpp_load_$k.xml ours_load_$k.xml
 done
+verdict cpp_st_60.00.xml ours_st_60.00.xml
