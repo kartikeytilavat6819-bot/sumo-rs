@@ -6,6 +6,17 @@ use utils::common::time::{steps2time, string2time};
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_default, is_set, OptionsCont};
 use utils::common::util_exceptions::ProcessError;
 
+/// C++ `StaticCommand<MSRoutingEngine>` (utils/common/StaticCommand.h): runs a static function at a time step
+pub struct MSRoutingEngine_StaticCommand {
+    pub f: fn(SUMOTime) -> SUMOTime,
+}
+
+impl crate::microsim::ms_event_control::Command for MSRoutingEngine_StaticCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        (self.f)(currentTime)
+    }
+}
+
 /// C++ typedef `int MSRoutingEngine::Prohibitions`
 pub type MSRoutingEngine_Prohibitions = i32;
 
@@ -135,8 +146,12 @@ impl MSRoutingEngine {
                 st.myAdaptationWeight = weight;
             }
             if weight < 1. && interval > 0 {
-                // shortcut: the end-of-timestep StaticCommand (adaptEdgeEfforts) is not ported, so the periodic weight update cannot be scheduled, upgrade with the event port
-                panic!("shortcut: the end-of-timestep event for adaptEdgeEfforts is not ported");
+                let mut nextAdaptation: SUMOTime = -1;
+                if lastAdaption >= 0 {
+                    nextAdaptation = lastAdaption + interval;
+                }
+                let cmd = Box::into_raw(Box::new(MSRoutingEngine_StaticCommand { f: MSRoutingEngine::adapt_edge_efforts })) as *mut dyn crate::microsim::ms_event_control::Command;
+                MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd), nextAdaptation);
             } else if period > 0 {
                 utils::common::msg_handler::write_warning("Rerouting is useless if the edge weights do not get updated!");
             }

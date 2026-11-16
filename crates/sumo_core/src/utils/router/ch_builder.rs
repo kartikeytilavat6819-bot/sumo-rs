@@ -1,7 +1,7 @@
 //! Port of utils/router/CHBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 
 /// C++ typedef `std::pair<const CHConnection *, const CHConnection *> CHBuilder::CHConnectionPair`
 pub type CHBuilder_CHConnectionPair<E> = (Ptr<CHBuilder_CHConnection<E>>, Ptr<CHBuilder_CHConnection<E>>);
@@ -496,6 +496,61 @@ impl<E> CHBuilder_CHConnection<E> {
 
 }
 
+impl<E> SPTreeConnection<CHBuilder_CHInfo<E>> for CHBuilder_CHConnection<E> {
+    fn target(&self) -> Ptr<CHBuilder_CHInfo<E>> {
+        self.target
+    }
+    fn cost(&self) -> f64 {
+        self.cost
+    }
+    fn permissions(&self) -> SVCPermissions {
+        self.permissions
+    }
+}
+
+impl<E: RouterEdgeInfo> SPTreeNode for CHBuilder_CHInfo<E> {
+    type Connection = CHBuilder_CHConnection<E>;
+    fn traveltime(&self) -> f64 {
+        self.traveltime
+    }
+    fn set_traveltime(&mut self, traveltime: f64) {
+        self.traveltime = traveltime;
+    }
+    fn depth(&self) -> i32 {
+        self.depth
+    }
+    fn set_depth(&mut self, depth: i32) {
+        self.depth = depth;
+    }
+    fn visited(&self) -> bool {
+        self.visited
+    }
+    fn set_visited(&mut self, visited: bool) {
+        self.visited = visited;
+    }
+    fn permissions(&self) -> SVCPermissions {
+        self.permissions
+    }
+    fn set_permissions(&mut self, permissions: SVCPermissions) {
+        self.permissions = permissions;
+    }
+    fn followers(&self) -> &[CHBuilder_CHConnection<E>] {
+        &self.followers
+    }
+    fn edge_numerical_id(&self) -> i32 {
+        self.edge.m().edge_numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.edge.m().edge_id()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.edge.m().edge_permissions()
+    }
+    fn reset(&mut self) {
+        CHBuilder_CHInfo::<E>::reset(self)
+    }
+}
+
 /// C++ class `CHBuilder::CHInfo` (utils/router/CHBuilder.h)
 pub struct CHBuilder_CHInfo<E> {
     /// The current edge
@@ -521,7 +576,7 @@ pub struct CHBuilder_CHInfo<E> {
     pub permissions: SVCPermissions,
 }
 
-impl<E> CHBuilder_CHInfo<E> {
+impl<E: RouterEdgeInfo> CHBuilder_CHInfo<E> {
     /// C++: `void CHInfo::CHInfo(const E *const)`
     /// Constructor
     // CHInfo(const E* const e) :
@@ -668,8 +723,13 @@ impl<E> CHBuilder_CHInfo<E> {
         }
         // insert shortcuts needed due to unmet permissions
         if validatePermissions {
-            // shortcut: SPTree::getNeededShortcuts still returns the placeholder i32 SPTree_CHConnectionPairs, so the needed shortcuts cannot be iterated; upgrade when SPTree is ported
-            panic!("shortcut: SPTree::getNeededShortcuts placeholder type, upgrade when SPTree is ported")
+            for &(aInfo, fInfo) in spTree.m().get_needed_shortcuts(this).iter() {
+                let viaCost = aInfo.m().cost + fInfo.m().cost;
+                let viaPermissions = aInfo.m().permissions & fInfo.m().permissions;
+                let underlying = aInfo.m().underlying + fInfo.m().underlying;
+                self.underlyingTotal += underlying;
+                self.shortcuts.push(CHBuilder_Shortcut::new((aInfo.m().target.m().edge, fInfo.m().target.m().edge), viaCost, underlying, viaPermissions));
+            }
         }
     }
 

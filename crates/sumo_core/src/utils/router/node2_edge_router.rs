@@ -2,7 +2,14 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::utils::router::a_star_lookup_table::AStarLookupTableKind;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::a_star_router::AStarRouter_EdgeInfoComparator;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
+
+/// C++ `Named::getIDSecure(vehicle)`
+fn vehicle_id_secure<V: RouterVehicle>(vehicle: Ptr<V>) -> String {
+    if vehicle.is_null() { "NULL".to_string() } else { vehicle.get_id() }
+}
 
 /// C++ typedef `AbstractLookupTable<E, V> Node2EdgeRouter::LookupTable`
 pub type Node2EdgeRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
@@ -36,8 +43,7 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info(&mut self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        Ptr::from_mut(&mut self.myEdgeInfos[edge.numerical_id() as usize])
     }
 
     /// C++: `const typename SUMOAbstractRouter<E, V>::EdgeInfo * Node2EdgeRouter::edgeInfo(const E *const) const` [const]
@@ -47,8 +53,7 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info_2(&self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        // shortcut: needs router trait bounds (lead), E::getNumericalID is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getNumericalID")
+        Ptr::new(&self.myEdgeInfos[edge.numerical_id() as usize])
     }
 
     /// C++: `void Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
@@ -248,9 +253,121 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn compute_node2_edges(&mut self, fromNode: Ptr<N>, toEdges: &i32, vehicle: Ptr<V>, msTime: SUMOTime, silent: bool) -> bool {
-        // shortcut: needs router trait bounds (lead), N::getOutgoing / E::isInternal / E::getNumericalID are not callable on generic E, N
-        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
+    pub fn compute_node2_edges(&mut self, fromNode: Ptr<N>, toEdges: &std::collections::HashSet<Ptr<E>>, vehicle: Ptr<V>, msTime: SUMOTime, silent: bool) -> bool
+    where
+        N: RouterNode<Edge = E>,
+    {
+        // check whether fromNode and to can be used
+        let mut found = false;
+        let mut allVisited = true; // we try to disprove this
+        for from in fromNode.m().outgoing().iter().copied() {
+            if from.is_internal() {
+                continue;
+            }
+            if self.is_prohibited(from, vehicle, steps2time(msTime)) {
+                if !silent {
+                    self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on source edge '{}'.", vehicle_id_secure(vehicle), from.id()), true);
+                }
+            } else {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return false;
+        }
+        let fromEdges: Vec<Ptr<E>> = fromNode.m().outgoing().to_vec();
+
+        if fromEdges.is_empty() || toEdges.is_empty() {
+            // nothing to do here
+            return false;
+        }
+
+        let mut length = 0.; // dummy for the via edge cost update
+        self.start_query();
+
+        let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
+        self.init(fromEdges, vehicle, msTime);
+        self.myAmClean = false;
+        // loop
+        let mut num_visited: i32 = 0;
+        let cmp = AStarRouter_EdgeInfoComparator {};
+        while !self.myFrontierList.is_empty() {
+            num_visited += 1;
+            // use the edge with the minimal length
+            let minimumInfo = self.myFrontierList[0];
+            let minEdge = minimumInfo.edge.cast::<E>();
+            // check whether the destination edge was already reached
+            // determinism: C++ iterates an unordered_set here, but only whether every target is visited matters
+            if toEdges.contains(&minEdge) {
+                for to in toEdges.iter() {
+                    if !self.myEdgeInfos[to.numerical_id() as usize].visited {
+                        allVisited = false;
+                        break;
+                    }
+                }
+                if allVisited {
+                    self.end_query(num_visited);
+                    return true;
+                }
+            }
+            std_pop_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+            self.myFrontierList.pop();
+            self.myFound.push(minimumInfo);
+            minimumInfo.m().visited = true;
+            let effortDelta = self.get_effort(minEdge, vehicle, minimumInfo.leaveTime);
+            let leaveTime = minimumInfo.leaveTime + self.get_travel_time(minEdge, vehicle, minimumInfo.leaveTime, effortDelta);
+
+            let heuristic_remaining = 0.;
+            if heuristic_remaining == UNREACHABLE {
+                continue;
+            }
+            let heuristicEffort = minimumInfo.effort + effortDelta + heuristic_remaining;
+            // check all ways from the edge with the minimal length
+            for follower in minEdge.via_successors(vClass, false) {
+                let followerInfo = Ptr::from_mut(&mut self.myEdgeInfos[follower.0.numerical_id() as usize]);
+                // check whether it can be used
+                if self.is_prohibited(follower.0, vehicle, leaveTime) {
+                    continue;
+                }
+                let mut effort = minimumInfo.effort + effortDelta;
+                let mut time = leaveTime;
+                self.update_via_edge_cost(follower.1, vehicle, &mut time, &mut effort, &mut length);
+                let oldEffort = followerInfo.effort;
+                if !followerInfo.visited && effort < oldEffort {
+                    followerInfo.m().effort = effort;
+                    // if we use the effort including the via effort below we would count the via twice as shown by the ticket676 test
+                    // but we should never get below the real effort, see #12463
+                    followerInfo.m().heuristicEffort = max2(min2(heuristicEffort, followerInfo.heuristicEffort), effort);
+                    followerInfo.m().leaveTime = time;
+                    followerInfo.m().prev = minimumInfo;
+                    if oldEffort == f64::MAX {
+                        self.myFrontierList.push(followerInfo);
+                        std_push_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+                    } else {
+                        let fi = self.myFrontierList.iter().position(|p| *p == followerInfo).expect("follower with a finite effort is on the frontier");
+                        std_push_heap(&mut self.myFrontierList[..=fi], &|a, b| cmp.call_op::<E, V>(a, b));
+                    }
+                }
+            }
+        }
+        self.end_query(num_visited);
+        for to in toEdges.iter() {
+            if self.myEdgeInfos[to.numerical_id() as usize].visited {
+                if !silent {
+                    let fromId = fromNode.m().id().to_string();
+                    let args: [&dyn ToStringPrec; 1] = [&fromId];
+                    self.myErrorMsgHandler.m().informf("Only some connections between node '%' and the given edges were found.", &args);
+                }
+                return true; // at least one connection could be found
+            }
+        }
+        if !silent {
+            let fromId = fromNode.m().id().to_string();
+            let args: [&dyn ToStringPrec; 1] = [&fromId];
+            self.myErrorMsgHandler.m().informf("No connections between node '%' and the given edges were found.", &args);
+        }
+        false
     }
 
     /// C++: `bool Node2EdgeRouter::computeNode2Edge(const N *, const E *, const V *const, SUMOTime, int &, bool)`
@@ -367,8 +484,8 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        // shortcut: needs router trait bounds (lead), N::getOutgoing / E::isInternal / E::getViaSuccessors are not callable on generic E, N
-        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
+        // shortcut: C++ calls the two-argument isProhibited(edge, vehicle) and EdgeInfo::prohibited, which no base class provides (the C++ template is not instantiated for this path), upgrade when computeNode2Edge is instantiated in C++
+        panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported")
     }
 
     /// C++: `void Node2EdgeRouter::updateViaCostUpToEdge(const E *const, const E *const, const V *const, double &, double &, double &) const` [const]
@@ -385,8 +502,12 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn update_via_cost_up_to_edge(&self, prev: Ptr<E>, e: Ptr<E>, v: Ptr<V>, time: &mut f64, effort: &mut f64, length: &mut f64) {
-        // shortcut: needs router trait bounds (lead), E::getViaSuccessors is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+        for follower in prev.via_successors(SVC_IGNORING, false) {
+            if follower.0 == e {
+                self.update_via_edge_cost(follower.1, v, time, effort, length);
+                break;
+            }
+        }
     }
 
     /// C++: `double Node2EdgeRouter::recomputeCostsNoLastEdge(const int &, const V *const, SUMOTime, double *) const` [const]
@@ -494,8 +615,19 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
         }
         self.myFound.clear();
         for from in fromEdges {
-            // shortcut: needs router trait bounds (lead), E::isInternal / E::getNumericalID are not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+            if from.is_internal() {
+                continue;
+            }
+            let edgeID = from.numerical_id();
+            let fromInfo = Ptr::from_mut(&mut self.myEdgeInfos[edgeID as usize]);
+            if self.is_prohibited(from, vehicle, steps2time(msTime)) {
+                continue;
+            }
+            fromInfo.m().effort = 0.;
+            fromInfo.m().heuristicEffort = 0.;
+            fromInfo.m().prev = Ptr::null();
+            fromInfo.m().leaveTime = steps2time(msTime);
+            self.myFrontierList.push(fromInfo);
         }
     }
 
