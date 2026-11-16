@@ -4,7 +4,7 @@
 # Slots (1-5) are separate dataset+kernel pairs so up to five gates run at once.
 param(
     [Parameter(Mandatory = $true)][string]$Branch,
-    [int]$Slot = 1,
+    [string]$Slot = "rr04",
     [string]$Repo = "C:\Users\karti\sumo-rs",
     [int]$TimeoutMin = 90,
     # gate_token = account kartikey6819, gate_token_acct3 = kartikey5656 (both have notebook internet)
