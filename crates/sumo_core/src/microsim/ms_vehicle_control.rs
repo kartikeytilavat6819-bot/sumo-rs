@@ -494,7 +494,7 @@ impl MSVehicleControl {
                     let tripDev: Ptr<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo> = dev.cast::<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo>();
                     tripDev.m().generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
                 } else {
-                    dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                    dev.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
                 }
             }
             if !tripinfoOut.is_null() && hasTripinfo {
