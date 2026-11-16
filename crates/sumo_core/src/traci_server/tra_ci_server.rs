@@ -46,8 +46,8 @@ const TRANSPORTABLE_STATES: [MSNet_TransportableState; 4] = [
     MSNet_TransportableState::CONTAINER_ARRIVED,
 ];
 
-// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs, upgrade when version info is ported
-const TRACI_SERVER_VERSION_STRING: &str = "v1.28.0-0000000000";
+// official 1.28.0 reply, measured against the pristine binary (getVersion -> 'SUMO 1.28.0')
+const TRACI_SERVER_VERSION_STRING: &str = "1.28.0";
 
 impl crate::libsumo::simulation::SimVariableWrapper for TraCIServer {
     fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
