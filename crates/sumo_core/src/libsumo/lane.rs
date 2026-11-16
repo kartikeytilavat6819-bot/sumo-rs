@@ -120,8 +120,28 @@ impl Lane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_links(laneID: &str) -> Vec<TraCIConnection> {
-        // shortcut: needs MSLink::opened with its default arguments (posLat, collectFoes, ignoreRed, ego, dist) and MSLink::opened is still unported, upgrade when MSLink::opened is ported
-        panic!("shortcut: Lane::getLinks needs MSLink::opened with default arguments")
+        let mut v: Vec<TraCIConnection> = Vec::new();
+        let lane = Self::get_lane(laneID);
+        let currTime = MSNet::get_instance().get_current_time_step();
+        for link in lane.get_link_cont().iter() {
+            let approachedLane = if !link.get_lane().is_null() { link.get_lane().get_id().to_string() } else { String::new() };
+            let hasPrio = link.have_priority();
+            let speed = {
+                let a = lane.get_speed_limit();
+                let b = link.get_lane().get_speed_limit();
+                if a < b { a } else { b }
+            };
+            let defaults = SUMOVTypeParameter::get_default();
+            // C++ defaults of MSLink::opened: posLat=0, collectFoes=nullptr, ignoreRed=false, ego=nullptr, dist=-1
+            let isOpen = link.opened(currTime, speed, speed, defaults.length, defaults.impatience, SUMOVTypeParameter::get_default_decel(SVC_IGNORING), 0, 0.0, Ptr::null(), false, Ptr::null(), -1.0);
+            let hasFoe = link.has_approaching_foe(currTime, currTime, 0.0, SUMOVTypeParameter::get_default_decel(SVC_IGNORING));
+            let approachedInternal = if !link.get_via_lane().is_null() { link.get_via_lane().get_id().to_string() } else { String::new() };
+            let state = LinkStates.get_string(link.get_state()).to_string();
+            let direction = LinkDirections.get_string(link.get_direction()).to_string();
+            let length = link.get_length();
+            v.push(TraCIConnection { approachedLane, hasPrio, isOpen, hasFoe, approachedInternal, state, direction, length });
+        }
+        v
     }
 
     /// C++: `libsumo::TraCIPositionVector Lane::getShape(const std::string &)` [static]
