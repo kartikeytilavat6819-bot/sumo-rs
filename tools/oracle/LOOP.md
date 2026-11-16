@@ -51,9 +51,9 @@ be re-investigated:
 
 | Row | Symptom | Owner |
 |---|---|---|
-| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.6 | rd02 |
-| signal/ref sim | RNG stream one draw out of phase; FCD first diff t=34 (0.26 m) | rng01 |
-| vtypes/ref sim | `EIDM_1` arrival 77.00 vs 76.00 — one step early | vt01 |
+| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.6 | op02 |
+| vtypes/ref sim | `EIDM_1` timeLoss 4.05 vs 4.02 (arrival now matches) | vt01 |
+| reroute/ref_device sim | `devices` ref has `routing_v1`, ours does not — device never created | rr01 |
 
 Fixed since the table below was written, do **not** reopen:
 
@@ -64,6 +64,8 @@ Fixed since the table below was written, do **not** reopen:
 - malformed OSM panic — errors and exits 1 like C++
 - traffic lights never switching — `schedule_initial_switch` never called; also was missing for
   actuated / delay_based / NEMA / SOTL / swarm / deterministic / wave / off
+- signal t=34 divergence — was `semi_implicit_euler_update()` hardcoded `false`; the RNG-stream
+  hypothesis was investigated and eliminated, do not repeat it
 - `stress` "107 vs 93 arrivals", `depart` "15 variants failing", `reroute` both variants panicking —
   all three were stale reports; each now measures exact or 15/15 PASS
 

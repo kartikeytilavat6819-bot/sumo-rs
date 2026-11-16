@@ -24,7 +24,9 @@ python tools/oracle/acceptance.py <case> <cand.ti.xml> <cand.stat.xml>          
 | signal | PASS | FAIL — 1 tripinfo diff, FCD first diff t=34 | — |
 | stress | SKIP (no input.osm) | **PASS** (new) | `--end 200` |
 | reroute `/ref` | SKIP (no input.osm) | **PASS** (new) | `--end 200 --additional-files tools/oracle/cases/reroute/reroute.add.xml` |
-| reroute `/ref_closing` | SKIP (no input.osm) | **PASS** (new) | `sim_closing.args`: closing rerouter only |
+| reroute `/ref` | SKIP (no input.osm) | **PASS** | `--end 200 --additional-files …reroute.add.xml` |
+| reroute `/ref_closing` | SKIP (no input.osm) | **PASS** | `sim_closing.args`: closing rerouter only |
+| reroute `/ref_device` | SKIP (no input.osm) | **FAIL** | `sim_device.args`: `<param>`-form rerouting device. Diff is exactly `devices`: ref has `routing_v1`, we do not. FCD matches, so the traffic is identical — the device is never created. Silent defect, caught only because `devices` is now compared. |
 | vtypes | SKIP (no input.osm) | **FAIL** (new) | `--end 120 --additional-files tools/oracle/cases/vtypes/vtypes.add.xml` |
 | depart | — | SKIP: 15 variants, see below | none (one reference per route file) |
 | netconv_edge | SKIP | SKIP (no sim refs; its own `run_all.sh` checks netconvert) | — |
@@ -33,7 +35,9 @@ The sim stage now runs **once per committed reference variant**: `ref.tripinfo.x
 `ref_<v>.tripinfo.xml` uses `sim_<v>.args`. That is what brought `reroute/ref_closing` (the
 closing-rerouter-only variant) onto the board; it was previously measured by nothing and now PASSes.
 
-Exact totals: **`run_all.sh` PASS=12 FAIL=2 SKIP=6** (after the Euler fix; PASS=11 FAIL=3 before it). Before this change: **PASS=8 FAIL=2 SKIP=0**
+Exact totals: **`run_all.sh` PASS=12 FAIL=3 SKIP=6**. The three fails are `real_dense/ref` (`v15`
+arrival speed), `vtypes/ref` (EIDM timeLoss 0.03) and `reroute/ref_device` (rerouting device never
+created). Before the Euler fix: PASS=11 FAIL=3. Before the variant/coverage work: **PASS=8 FAIL=2 SKIP=0**
 (measured with the original script on the same binaries; stress, reroute, vtypes, ref_closing and depart were invisible).
 Gate: all 8 previous PASS rows still PASS.
 
