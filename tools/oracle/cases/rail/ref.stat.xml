@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T10:51:10.359396-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<!-- generated on 2026-11-16T14:27:16.166429-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="tools/oracle/cases/rail/ref_simple.net.xml"/>
-        <route-files value="tools/oracle/cases/rail/routes.rou"/>
+        <net-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb01/tools/oracle/cases/rail/ref_simple.net.xml"/>
+        <route-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb01/tools/oracle/cases/rail/routes.rou"/>
     </input>
 
     <output>
-        <fcd-output value="tools/oracle/cases/rail/ref.fcd.xml"/>
-        <tripinfo-output value="tools/oracle/cases/rail/ref.tripinfo.xml"/>
-        <statistic-output value="tools/oracle/cases/rail/ref.stat.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb01/tools/oracle/cases/rail/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb01/tools/oracle/cases/rail/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb01/tools/oracle/cases/rail/ref.stat.xml"/>
     </output>
 
     <time>
@@ -30,7 +30,7 @@
 -->
 
 <statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
-    <performance clockBegin="1794844270.37" clockEnd="1794844270.38" clockDuration="0.01" traciDuration="0.00" realTimeFactor="23076.92" vehicleUpdatesPerSecond="6461.54" personUpdatesPerSecond="0.00" begin="0.00" end="300.00" duration="300.00"/>
+    <performance clockBegin="1794857236.19" clockEnd="1794857236.20" clockDuration="0.01" traciDuration="0.00" realTimeFactor="27272.73" vehicleUpdatesPerSecond="7636.36" personUpdatesPerSecond="0.00" begin="0.00" end="300.00" duration="300.00"/>
     <vehicles loaded="2" inserted="2" running="0" waiting="0"/>
     <teleports total="0" jam="0" yield="0" wrongLane="0"/>
     <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
