@@ -340,15 +340,16 @@ impl MSPerson {
     // { }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, speedFactor: f64) -> Self {
-        let base = MSTransportable::new(pars, vtype, plan, true);
+        let mut base = MSTransportable::new(pars, vtype, plan, true);
+        // C++ sets the derived vtable before the constructor body runs, so getFloatParam already dispatches to MSPerson
+        base.base.vt = &MS_PERSON_VT;
         let timegap = base.get_float_param("pedestrian.timegap-crossing", false, utils::common::std_defs::INVALID_DOUBLE, true);
-        let mut p = MSPerson {
+        let p = MSPerson {
             base,
             myInfluencer: Ptr::null(),
             myChosenSpeedFactor: if pars.speedFactor < 0. { speedFactor } else { pars.speedFactor },
             myTimegapCrossing: timegap,
         };
-        p.base.base.vt = &MS_PERSON_VT;
         p
     }
 
