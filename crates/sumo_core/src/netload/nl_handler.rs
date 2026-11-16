@@ -976,7 +976,7 @@ impl NLHandler {
             }
             _ => {}
         }
-        // shortcut: MSRouteHandler::myEndElement is not ported (no end-element hook on MSRouteHandler), so the base step is skipped; upgrade when microsim/ms_route_handler.rs ports it
+        let _ = utils::xml::generic_sax_handler::SaxHandler::my_end_element(&mut self.base, element);
     }
 
     /// C++: `void NLHandler::addParam(const SUMOSAXAttributes &)` [protected]

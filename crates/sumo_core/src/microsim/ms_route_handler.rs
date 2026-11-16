@@ -1848,8 +1848,7 @@ impl MSRouteHandler {
         let mut vehType: Ptr<MSVehicleType> = Ptr::null();
         let net = MSNet::get_instance();
         if self.myCurrentVTypeRef.is_empty() {
-            // shortcut: SUMOSAXHandler base is Unmapped so getFileName() is unreachable, upgrade when SUMORouteHandler.base is ported
-            let fileName: String = panic!("SUMOSAXHandler::getFileName not ported");
+            let fileName: String = self.base.base.get_file_name().to_string();
             vehType = MSVehicleType::build(self.myCurrentVType.m(), &fileName);
             vehType.m().check();
             if !net.m().get_vehicle_control().add_v_type(vehType) {
