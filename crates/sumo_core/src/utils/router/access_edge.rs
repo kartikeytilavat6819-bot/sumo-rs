@@ -1,6 +1,9 @@
 //! Port of utils/router/AccessEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::intermodal_edge::{IntermodalEdge, IntermodalEdgeKind};
+use crate::utils::router::intermodal_trip::IntermodalTrip;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> AccessEdge::_IntermodalEdge`
 pub type AccessEdge__IntermodalEdge<E, L, N, V> = IntermodalEdge<E, L, N, V>;
@@ -32,7 +35,11 @@ impl<E, L, N, V> std::ops::DerefMut for AccessEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> AccessEdge<E, L, N, V> {
+impl<E, L, N, V> AccessEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    V: RouterVehicle,
+{
     /// C++: `void AccessEdge::AccessEdge<E, L, N, V>(int, const _IntermodalEdge *, const _IntermodalEdge *, const double, SVCPermissions, SVCPermissions, double)`
     // AccessEdge(int numericalID, const _IntermodalEdge* inEdge, const _IntermodalEdge* outEdge, const double length,
     //                SVCPermissions modeRestriction = SVC_IGNORING,
@@ -48,7 +55,7 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     pub fn new(numericalID: i32, inEdge: Ptr<IntermodalEdge<E, L, N, V>>, outEdge: Ptr<IntermodalEdge<E, L, N, V>>, length: f64, modeRestriction: SVCPermissions, vehicleRestriction: SVCPermissions, traveltime: f64) -> Self {
         let id = format!("{}:{}{}", inEdge.get_id(), outEdge.get_id(), if modeRestriction == SVC_TAXI { ":taxi" } else { "" });
         Self {
-            base: IntermodalEdge::new(id, numericalID, outEdge.get_edge(), "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }),
+            base: IntermodalEdge::new(id, numericalID, outEdge.get_edge(), "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }).with_kind(IntermodalEdgeKind::Access),
             myTraveltime: traveltime,
             myModeRestrictions: modeRestriction,
             myVehicleRestriction: vehicleRestriction,
@@ -68,7 +75,7 @@ impl<E, L, N, V> AccessEdge<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn new_2(numericalID: i32, id: &str, edge: Ptr<E>, length: f64, modeRestriction: SVCPermissions, vehicleRestriction: SVCPermissions) -> Self {
         Self {
-            base: IntermodalEdge::new(id.to_string(), numericalID, edge, "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }),
+            base: IntermodalEdge::new(id.to_string(), numericalID, edge, "!access", if length > 0. { length } else { utils::geom::NUMERICAL_EPS }).with_kind(IntermodalEdgeKind::Access),
             myTraveltime: -1.,
             myModeRestrictions: modeRestriction,
             myVehicleRestriction: vehicleRestriction,
