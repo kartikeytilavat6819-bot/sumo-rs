@@ -2186,8 +2186,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_impatience(&self) -> f64 {
-        // shortcut: MSGlobals::gTimeToImpatience is not ported, so the waiting-time term is always 0
-        let time_to_impatience: SUMOTime = 0;
+        let time_to_impatience: SUMOTime = crate::microsim::ms_globals::time_to_impatience();
         let waiting_term = if time_to_impatience > 0 { self.get_waiting_time(false) as f64 / time_to_impatience as f64 } else { 0.0 };
         let influence = if self.has_influencer() { self.get_base_influencer_2().get_extra_impatience() } else { 0.0 };
         f64::max(0.0, f64::min(1.0, self.get_vehicle_type().get_impatience() + influence + waiting_term))
