@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_traffic_light_right_on_red/junction.nod.xml --edge-files tools/oracle/cases/jt_traffic_light_right_on_red/junction.edg.xml --connection-files tools/oracle/cases/jt_traffic_light_right_on_red/junction.con.xml
