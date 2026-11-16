@@ -4422,6 +4422,12 @@ impl MSLane {
     //     }
     // }
     #[allow(unused_variables)]
+    /// Test-only stand-in for init_rn_gs (which needs the global options): one RNG, so MSLane::new works in unit tests
+    #[cfg(test)]
+    pub(crate) fn init_one_rng_for_tests() {
+        MY_RNGS.with(|r| if r.borrow().is_empty() { r.borrow_mut().push(SumoRNG::new("lanes_0")) });
+    }
+
     pub fn init_rn_gs(oc: &OptionsCont) {
         // shortcut: options are read from the global options container (utils::options::options_cont free fns), the oc argument is not used
         MY_RNGS.with(|r| r.borrow_mut().clear());

@@ -29,6 +29,8 @@ pub const EIDM_VT: MSCFModelVt = MSCFModelVt {
     stop_speed_2: eidm_stop_speed_2,
     interaction_gap: eidm_interaction_gap,
     get_secure_gap: eidm_get_secure_gap,
+    brake_gap_2: eidm_brake_gap,
+    max_next_safe_min: eidm_max_next_safe_min,
     maximum_lane_speed_cf: eidm_maximum_lane_speed_cf,
     get_model_id: eidm_get_model_id,
     duplicate: eidm_duplicate,
@@ -74,6 +76,9 @@ pub struct MSCFModel_EIDM {
 
 fn eidm_max_next_safe_min(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
     cf_cast::<MSCFModel_EIDM>(m).max_next_safe_min(speed, veh)
+}
+fn eidm_brake_gap(m: &MSCFModel, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+    cf_cast::<MSCFModel_EIDM>(m).brake_gap(speed, decel, headwayTime)
 }
 /// Virtual table of MSCFModel_EIDM: its overrides on top of the MSCFModel table
 impl std::ops::Deref for MSCFModel_EIDM {
@@ -2504,3 +2509,16 @@ impl MSCFModel_EIDM_VehicleVariables {
 
 }
 
+
+#[cfg(test)]
+mod vt_tests {
+    use super::*;
+
+    #[test]
+    fn eidm_table_overrides_max_next_safe_min_and_brake_gap() {
+        // vtypes EIDM_1 t=62: C++ maxNextSafeMin is 0 for EIDM, so vSafeMin = 0; through the base table it was
+        // maxNextSpeed (5.84) and vSafeMin pinned the speed 0.10 m/s too high
+        assert_eq!(EIDM_VT.max_next_safe_min as usize, eidm_max_next_safe_min as usize);
+        assert_eq!(EIDM_VT.brake_gap_2 as usize, eidm_brake_gap as usize);
+    }
+}
