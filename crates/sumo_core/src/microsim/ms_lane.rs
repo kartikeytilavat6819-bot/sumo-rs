@@ -4765,11 +4765,9 @@ impl MSLane {
     /// Sets the permissions to the given value. If a transientID is given, the permissions are recored as temporary
     // void
     // MSLane::setPermissions(SVCPermissions permissions, long long transientID) {
-    //     const SVCPermissions oldPermissions = myPermissions;
     //     if (transientID == CHANGE_PERMISSIONS_PERMANENT) {
     //         myPermissions = permissions;
     //         myOriginalPermissions = permissions;
-    //         updateInternalLanePermissions(oldPermissions);
     //     } else {
     //         myPermissionChanges[transientID] = permissions;
     //         resetPermissions(CHANGE_PERMISSIONS_PERMANENT);
@@ -4777,11 +4775,9 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, permissions: SVCPermissions, transientID: i64) {
-        let oldPermissions = self.myPermissions;
         if transientID == MSLane_CHANGE_PERMISSIONS_PERMANENT {
             self.myPermissions = permissions;
             self.myOriginalPermissions = permissions;
-            self.update_internal_lane_permissions(oldPermissions);
         } else {
             self.myPermissionChanges.insert(transientID, permissions);
             self.reset_permissions(MSLane_CHANGE_PERMISSIONS_PERMANENT);
@@ -4791,7 +4787,6 @@ impl MSLane {
     /// C++: `void MSLane::resetPermissions(long long)`
     // void
     // MSLane::resetPermissions(long long transientID) {
-    //     const SVCPermissions oldPermissions = myPermissions;
     //     myPermissionChanges.erase(transientID);
     //     if (myPermissionChanges.empty()) {
     //         myPermissions = myOriginalPermissions;
@@ -4802,11 +4797,9 @@ impl MSLane {
     //             myPermissions &= item.second;
     //         }
     //     }
-    //     updateInternalLanePermissions(oldPermissions);
     // }
     #[allow(unused_variables)]
     pub fn reset_permissions(&mut self, transientID: i64) {
-        let oldPermissions = self.myPermissions;
         self.myPermissionChanges.remove(&transientID);
         if self.myPermissionChanges.is_empty() {
             self.myPermissions = self.myOriginalPermissions;
@@ -4817,7 +4810,6 @@ impl MSLane {
                 self.myPermissions &= *item;
             }
         }
-        self.update_internal_lane_permissions(oldPermissions);
     }
 
     /// C++: `bool MSLane::hadPermissionChanges() const` [const]
@@ -4828,39 +4820,6 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn had_permission_changes(&self) -> bool {
         !self.myPermissionChanges.is_empty()
-    }
-
-    /// C++: `void MSLane::updateInternalLanePermissions(SVCPermissions)`
-    /// Propagate a permission change of this lane to internal lanes that mirror it
-    // void
-    // MSLane::updateInternalLanePermissions(SVCPermissions oldPermissions) {
-    //     if (isInternal()) {
-    //         return;
-    //     }
-    //     for (MSLink* const link : getLinkCont()) {
-    //         MSLane* const internal = link->getViaLane();
-    //         // only update internal lanes that mirror the permissions of this lane;
-    //         // lanes with connection-specific permissions are left untouched
-    //         if (internal != nullptr && internal->getPermissions() == oldPermissions) {
-    //             internal->setPermissions(myPermissions, CHANGE_PERMISSIONS_PERMANENT);
-    //             internal->getEdge().rebuildAllowedLanes(false, false);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn update_internal_lane_permissions(&mut self, oldPermissions: SVCPermissions) {
-        if self.is_internal() {
-            return;
-        }
-        for link in self.myLinks.iter() {
-            let internal = link.get_via_lane();
-            // only update internal lanes that mirror the permissions of this lane;
-            // lanes with connection-specific permissions are left untouched
-            if !internal.is_null() && internal.get_permissions() == oldPermissions {
-                internal.m().set_permissions(self.myPermissions, MSLane_CHANGE_PERMISSIONS_PERMANENT);
-                internal.get_edge().rebuild_allowed_lanes(false, false);
-            }
-        }
     }
 
     /// C++: `void MSLane::setChangeLeft(SVCPermissions)`
