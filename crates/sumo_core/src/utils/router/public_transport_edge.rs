@@ -27,15 +27,16 @@ impl<E, L, N, V> std::ops::DerefMut for PublicTransportEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> PublicTransportEdge<E, L, N, V> {
+impl<E, L, N, V> PublicTransportEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    V: RouterVehicle,
+{
     /// C++: `void PublicTransportEdge::PublicTransportEdge<E, L, N, V>(const std::string, int, const IntermodalEdge<E, L, N, V> *, const E *, const std::string &, const double)`
     // PublicTransportEdge(const std::string id, int numericalID, const IntermodalEdge<E, L, N, V>* entryStop, const E* endEdge, const std::string& line, const double length) :
     //         IntermodalEdge<E, L, N, V>(line + ":" + (id != "" ? id : endEdge->getID()), numericalID, endEdge, line, length), myEntryStop(entryStop) { }
     #[allow(unused_variables)]
-    pub fn new(id: String, numericalID: i32, entryStop: Ptr<IntermodalEdge<E, L, N, V>>, endEdge: Ptr<E>, line: &str, length: f64) -> Self
-    where
-        E: RouterEdge<V>,
-    {
+    pub fn new(id: String, numericalID: i32, entryStop: Ptr<IntermodalEdge<E, L, N, V>>, endEdge: Ptr<E>, line: &str, length: f64) -> Self {
         let base_id = format!("{}:{}", line, if id != "" { id } else { endEdge.id().to_string() });
         Self {
             base: IntermodalEdge::new(base_id, numericalID, endEdge, line, length),

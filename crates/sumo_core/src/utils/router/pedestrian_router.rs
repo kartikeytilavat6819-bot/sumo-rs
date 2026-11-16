@@ -1,7 +1,7 @@
 //! Port of utils/router/PedestrianRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> PedestrianRouter::_IntermodalEdge`
 pub type PedestrianRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
@@ -39,7 +39,12 @@ impl<E, L, N, V> std::ops::DerefMut for PedestrianRouter<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
+impl<E, L, N, V> PedestrianRouter<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L>,
+    N: RouterNode<Edge = E>,
+    V: RouterVehicle,
+{
     /// C++: `void PedestrianRouter::PedestrianRouter<E, L, N, V>()`
     /// Constructor
     // PedestrianRouter():
@@ -147,11 +152,11 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
         E: RouterEdge<V>,
         V: RouterVehicle,
     {
-        if get_sidewalk::<E, L>(from, SVC_PEDESTRIAN).is_null() {
+        if get_sidewalk::<E, L, V>(from, SVC_PEDESTRIAN).is_null() {
             utils::common::msg_handler::write_warning(&format!("Departure edge '{}' does not allow pedestrians.", from.edge_id()));
             return 0.;
         }
-        if get_sidewalk::<E, L>(to, SVC_PEDESTRIAN).is_null() {
+        if get_sidewalk::<E, L, V>(to, SVC_PEDESTRIAN).is_null() {
             utils::common::msg_handler::write_warning(&format!("Destination edge '{}' does not allow pedestrians.", to.edge_id()));
             return 0.;
         }
