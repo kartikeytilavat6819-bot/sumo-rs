@@ -1,0 +1,474 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T01:19:30.910850-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lanechange/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lanechange/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cases/tools/oracle/cases/lanechange/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="30.00" y="1.60" angle="90.00" type="slow" speed="3.00" pos="30.00" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="33.00" y="1.60" angle="90.00" type="slow" speed="3.00" pos="33.00" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="35.59" y="1.60" angle="90.00" type="slow" speed="2.60" pos="35.59" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="37.67" y="1.60" angle="90.00" type="slow" speed="2.08" pos="37.67" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="5.00" y="-1.60" angle="90.00" type="car" speed="13.03" pos="5.00" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="39.82" y="1.60" angle="90.00" type="slow" speed="2.15" pos="39.82" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="16.87" y="-1.60" angle="90.00" type="car" speed="11.87" pos="16.87" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="41.93" y="1.60" angle="90.00" type="slow" speed="2.11" pos="41.93" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser0" x="5.00" y="1.60" angle="90.00" type="car" speed="2.11" pos="5.00" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="28.98" y="-1.60" angle="90.00" type="car" speed="12.11" pos="28.98" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="43.70" y="1.60" angle="90.00" type="slow" speed="1.77" pos="43.70" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser0" x="9.32" y="1.60" angle="90.00" type="car" speed="4.32" pos="9.32" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="41.96" y="-1.60" angle="90.00" type="car" speed="12.97" pos="41.96" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker" x="45.69" y="-1.60" angle="90.00" type="slow" speed="1.99" pos="45.69" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="16.15" y="1.60" angle="90.00" type="car" speed="6.82" pos="16.15" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="54.35" y="-1.60" angle="90.00" type="car" speed="12.39" pos="54.35" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker" x="48.63" y="-1.60" angle="90.00" type="slow" speed="2.94" pos="48.63" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="24.69" y="1.60" angle="90.00" type="car" speed="8.54" pos="24.69" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="66.62" y="-1.60" angle="90.00" type="car" speed="12.27" pos="66.62" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker" x="51.31" y="-1.60" angle="90.00" type="slow" speed="2.68" pos="51.31" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="35.25" y="1.60" angle="90.00" type="car" speed="10.56" pos="35.25" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="5.00" y="1.60" angle="90.00" type="car" speed="10.56" pos="5.00" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="78.68" y="-1.60" angle="90.00" type="car" speed="12.07" pos="78.68" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker" x="53.34" y="-1.60" angle="90.00" type="slow" speed="2.03" pos="53.34" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="47.40" y="1.60" angle="90.00" type="car" speed="12.15" pos="47.40" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="17.78" y="1.60" angle="90.00" type="car" speed="12.78" pos="17.78" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="91.01" y="-1.60" angle="90.00" type="car" speed="12.32" pos="91.01" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker" x="55.47" y="-1.60" angle="90.00" type="slow" speed="2.13" pos="55.47" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="60.22" y="1.60" angle="90.00" type="car" speed="12.82" pos="60.22" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="31.07" y="1.60" angle="90.00" type="car" speed="13.29" pos="31.07" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="104.03" y="-1.60" angle="90.00" type="car" speed="13.03" pos="104.03" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker" x="57.88" y="-1.60" angle="90.00" type="slow" speed="2.41" pos="57.88" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="73.22" y="1.60" angle="90.00" type="car" speed="13.00" pos="73.22" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="44.51" y="1.60" angle="90.00" type="car" speed="13.44" pos="44.51" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="116.46" y="-1.60" angle="90.00" type="car" speed="12.43" pos="116.46" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker" x="60.54" y="-1.60" angle="90.00" type="slow" speed="2.66" pos="60.54" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="86.43" y="1.60" angle="90.00" type="car" speed="13.20" pos="86.43" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="57.34" y="1.60" angle="90.00" type="car" speed="12.83" pos="57.34" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="128.76" y="-1.60" angle="90.00" type="car" speed="12.30" pos="128.76" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker" x="62.40" y="-1.60" angle="90.00" type="slow" speed="1.86" pos="62.40" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="99.64" y="1.60" angle="90.00" type="car" speed="13.21" pos="99.64" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="71.11" y="1.60" angle="90.00" type="car" speed="13.77" pos="71.11" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="5.00" y="1.60" angle="90.00" type="car" speed="13.49" pos="5.00" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="141.71" y="-1.60" angle="90.00" type="car" speed="12.95" pos="141.71" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker" x="64.51" y="-1.60" angle="90.00" type="slow" speed="2.11" pos="64.51" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="112.62" y="1.60" angle="90.00" type="car" speed="12.98" pos="112.62" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="84.71" y="1.60" angle="90.00" type="car" speed="13.60" pos="84.71" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="17.65" y="1.60" angle="90.00" type="car" speed="12.65" pos="17.65" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="154.32" y="-1.60" angle="90.00" type="car" speed="12.61" pos="154.32" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker" x="66.84" y="-1.60" angle="90.00" type="slow" speed="2.33" pos="66.84" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="126.27" y="1.60" angle="90.00" type="car" speed="13.65" pos="126.27" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="98.42" y="1.60" angle="90.00" type="car" speed="13.71" pos="98.42" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="31.25" y="1.60" angle="90.00" type="car" speed="13.60" pos="31.25" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="167.30" y="-1.60" angle="90.00" type="car" speed="12.97" pos="167.30" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker" x="69.02" y="-1.60" angle="90.00" type="slow" speed="2.18" pos="69.02" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="139.95" y="1.60" angle="90.00" type="car" speed="13.68" pos="139.95" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="111.85" y="1.60" angle="90.00" type="car" speed="13.44" pos="111.85" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="44.40" y="1.60" angle="90.00" type="car" speed="13.15" pos="44.40" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="179.93" y="-1.60" angle="90.00" type="car" speed="12.63" pos="179.93" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker" x="70.95" y="-1.60" angle="90.00" type="slow" speed="1.93" pos="70.95" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="153.68" y="1.60" angle="90.00" type="car" speed="13.73" pos="153.68" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="124.69" y="1.60" angle="90.00" type="car" speed="12.84" pos="124.69" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="57.80" y="1.60" angle="90.00" type="car" speed="13.39" pos="57.80" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="191.74" y="-1.60" angle="90.00" type="car" speed="11.81" pos="191.74" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker" x="73.43" y="-1.60" angle="90.00" type="slow" speed="2.48" pos="73.43" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="166.48" y="1.60" angle="90.00" type="car" speed="12.80" pos="166.48" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="137.33" y="1.60" angle="90.00" type="car" speed="12.64" pos="137.33" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="71.03" y="1.60" angle="90.00" type="car" speed="13.23" pos="71.03" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="203.62" y="-1.60" angle="90.00" type="car" speed="11.88" pos="203.62" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker" x="76.12" y="-1.60" angle="90.00" type="slow" speed="2.69" pos="76.12" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="180.27" y="1.60" angle="90.00" type="car" speed="13.79" pos="180.27" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="150.97" y="1.60" angle="90.00" type="car" speed="13.64" pos="150.97" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="83.96" y="1.60" angle="90.00" type="car" speed="12.93" pos="83.96" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="215.95" y="-1.60" angle="90.00" type="car" speed="12.33" pos="215.95" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker" x="78.73" y="-1.60" angle="90.00" type="slow" speed="2.61" pos="78.73" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="193.06" y="1.60" angle="90.00" type="car" speed="12.79" pos="193.06" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="164.01" y="1.60" angle="90.00" type="car" speed="13.04" pos="164.01" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="96.61" y="1.60" angle="90.00" type="car" speed="12.65" pos="96.61" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="228.94" y="-1.60" angle="90.00" type="car" speed="12.99" pos="228.94" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker" x="81.52" y="-1.60" angle="90.00" type="slow" speed="2.79" pos="81.52" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="206.03" y="1.60" angle="90.00" type="car" speed="12.97" pos="206.03" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="177.09" y="1.60" angle="90.00" type="car" speed="13.08" pos="177.09" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="110.31" y="1.60" angle="90.00" type="car" speed="13.69" pos="110.31" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="240.98" y="-1.60" angle="90.00" type="car" speed="12.04" pos="240.98" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker" x="84.49" y="-1.60" angle="90.00" type="slow" speed="2.96" pos="84.49" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="219.13" y="1.60" angle="90.00" type="car" speed="13.10" pos="219.13" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="190.33" y="1.60" angle="90.00" type="car" speed="13.24" pos="190.33" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="123.23" y="1.60" angle="90.00" type="car" speed="12.92" pos="123.23" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="252.77" y="-1.60" angle="90.00" type="car" speed="11.79" pos="252.77" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker" x="87.06" y="-1.60" angle="90.00" type="slow" speed="2.57" pos="87.06" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="232.83" y="1.60" angle="90.00" type="car" speed="13.69" pos="232.83" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="203.56" y="1.60" angle="90.00" type="car" speed="13.23" pos="203.56" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="136.31" y="1.60" angle="90.00" type="car" speed="13.08" pos="136.31" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="264.91" y="-1.60" angle="90.00" type="car" speed="12.14" pos="264.91" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker" x="89.89" y="-1.60" angle="90.00" type="slow" speed="2.84" pos="89.89" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="246.30" y="1.60" angle="90.00" type="car" speed="13.47" pos="246.30" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="216.74" y="1.60" angle="90.00" type="car" speed="13.18" pos="216.74" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="149.48" y="1.60" angle="90.00" type="car" speed="13.17" pos="149.48" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="277.77" y="-1.60" angle="90.00" type="car" speed="12.86" pos="277.77" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker" x="91.64" y="-1.60" angle="90.00" type="slow" speed="1.75" pos="91.64" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="259.04" y="1.60" angle="90.00" type="car" speed="12.75" pos="259.04" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="229.76" y="1.60" angle="90.00" type="car" speed="13.02" pos="229.76" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="162.76" y="1.60" angle="90.00" type="car" speed="13.28" pos="162.76" lane="100_1" slope="0.00"/>
+        <vehicle id="lane0a" x="290.27" y="-1.60" angle="90.00" type="car" speed="12.50" pos="290.27" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker" x="94.35" y="-1.60" angle="90.00" type="slow" speed="2.71" pos="94.35" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="271.78" y="1.60" angle="90.00" type="car" speed="12.74" pos="271.78" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="243.05" y="1.60" angle="90.00" type="car" speed="13.29" pos="243.05" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="176.55" y="1.60" angle="90.00" type="car" speed="13.80" pos="176.55" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker" x="97.13" y="-1.60" angle="90.00" type="slow" speed="2.78" pos="97.13" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="285.31" y="1.60" angle="90.00" type="car" speed="13.53" pos="285.31" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="256.30" y="1.60" angle="90.00" type="car" speed="13.25" pos="256.30" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="190.24" y="1.60" angle="90.00" type="car" speed="13.69" pos="190.24" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker" x="99.39" y="-1.60" angle="90.00" type="slow" speed="2.26" pos="99.39" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser0" x="298.14" y="1.60" angle="90.00" type="car" speed="12.83" pos="298.14" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser1" x="269.51" y="1.60" angle="90.00" type="car" speed="13.21" pos="269.51" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="203.88" y="1.60" angle="90.00" type="car" speed="13.64" pos="203.88" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker" x="102.07" y="-1.60" angle="90.00" type="slow" speed="2.69" pos="102.07" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser1" x="282.74" y="1.60" angle="90.00" type="car" speed="13.24" pos="282.74" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="216.70" y="1.60" angle="90.00" type="car" speed="12.82" pos="216.70" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker" x="104.02" y="-1.60" angle="90.00" type="slow" speed="1.94" pos="104.02" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser1" x="296.58" y="1.60" angle="90.00" type="car" speed="13.84" pos="296.58" lane="100_1" slope="0.00"/>
+        <vehicle id="chaser2" x="230.02" y="1.60" angle="90.00" type="car" speed="13.32" pos="230.02" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker" x="106.90" y="-1.60" angle="90.00" type="slow" speed="2.88" pos="106.90" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser2" x="242.74" y="1.60" angle="90.00" type="car" speed="12.72" pos="242.74" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker" x="109.03" y="-1.60" angle="90.00" type="slow" speed="2.13" pos="109.03" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser2" x="255.56" y="1.60" angle="90.00" type="car" speed="12.82" pos="255.56" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker" x="111.10" y="-1.60" angle="90.00" type="slow" speed="2.07" pos="111.10" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser2" x="268.38" y="1.60" angle="90.00" type="car" speed="12.82" pos="268.38" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocker" x="113.33" y="-1.60" angle="90.00" type="slow" speed="2.22" pos="113.33" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser2" x="281.38" y="1.60" angle="90.00" type="car" speed="13.00" pos="281.38" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocker" x="115.43" y="-1.60" angle="90.00" type="slow" speed="2.10" pos="115.43" lane="100_0" slope="0.00"/>
+        <vehicle id="chaser2" x="294.90" y="1.60" angle="90.00" type="car" speed="13.52" pos="294.90" lane="100_1" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocker" x="117.21" y="-1.60" angle="90.00" type="slow" speed="1.78" pos="117.21" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocker" x="118.97" y="-1.60" angle="90.00" type="slow" speed="1.75" pos="118.97" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocker" x="121.57" y="-1.60" angle="90.00" type="slow" speed="2.60" pos="121.57" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocker" x="123.93" y="-1.60" angle="90.00" type="slow" speed="2.36" pos="123.93" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocker" x="126.17" y="-1.60" angle="90.00" type="slow" speed="2.25" pos="126.17" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocker" x="128.95" y="-1.60" angle="90.00" type="slow" speed="2.78" pos="128.95" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocker" x="130.71" y="-1.60" angle="90.00" type="slow" speed="1.76" pos="130.71" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocker" x="133.47" y="-1.60" angle="90.00" type="slow" speed="2.76" pos="133.47" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocker" x="135.64" y="-1.60" angle="90.00" type="slow" speed="2.17" pos="135.64" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocker" x="138.44" y="-1.60" angle="90.00" type="slow" speed="2.80" pos="138.44" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="blocker" x="141.40" y="-1.60" angle="90.00" type="slow" speed="2.96" pos="141.40" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="blocker" x="144.04" y="-1.60" angle="90.00" type="slow" speed="2.64" pos="144.04" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="blocker" x="146.33" y="-1.60" angle="90.00" type="slow" speed="2.29" pos="146.33" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="blocker" x="148.12" y="-1.60" angle="90.00" type="slow" speed="1.79" pos="148.12" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="blocker" x="151.04" y="-1.60" angle="90.00" type="slow" speed="2.91" pos="151.04" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="blocker" x="153.81" y="-1.60" angle="90.00" type="slow" speed="2.77" pos="153.81" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="blocker" x="155.52" y="-1.60" angle="90.00" type="slow" speed="1.71" pos="155.52" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="blocker" x="158.11" y="-1.60" angle="90.00" type="slow" speed="2.59" pos="158.11" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="blocker" x="160.67" y="-1.60" angle="90.00" type="slow" speed="2.56" pos="160.67" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="blocker" x="163.55" y="-1.60" angle="90.00" type="slow" speed="2.89" pos="163.55" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="blocker" x="165.82" y="-1.60" angle="90.00" type="slow" speed="2.26" pos="165.82" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="blocker" x="168.55" y="-1.60" angle="90.00" type="slow" speed="2.73" pos="168.55" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="blocker" x="171.31" y="-1.60" angle="90.00" type="slow" speed="2.77" pos="171.31" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="blocker" x="174.25" y="-1.60" angle="90.00" type="slow" speed="2.94" pos="174.25" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="blocker" x="177.15" y="-1.60" angle="90.00" type="slow" speed="2.90" pos="177.15" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="blocker" x="179.21" y="-1.60" angle="90.00" type="slow" speed="2.06" pos="179.21" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="blocker" x="181.75" y="-1.60" angle="90.00" type="slow" speed="2.54" pos="181.75" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="blocker" x="184.38" y="-1.60" angle="90.00" type="slow" speed="2.62" pos="184.38" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="blocker" x="187.10" y="-1.60" angle="90.00" type="slow" speed="2.72" pos="187.10" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="blocker" x="189.22" y="-1.60" angle="90.00" type="slow" speed="2.12" pos="189.22" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="blocker" x="191.67" y="-1.60" angle="90.00" type="slow" speed="2.45" pos="191.67" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="blocker" x="193.87" y="-1.60" angle="90.00" type="slow" speed="2.20" pos="193.87" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="blocker" x="196.36" y="-1.60" angle="90.00" type="slow" speed="2.49" pos="196.36" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="blocker" x="198.69" y="-1.60" angle="90.00" type="slow" speed="2.33" pos="198.69" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="blocker" x="200.62" y="-1.60" angle="90.00" type="slow" speed="1.93" pos="200.62" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="blocker" x="202.86" y="-1.60" angle="90.00" type="slow" speed="2.24" pos="202.86" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="blocker" x="205.32" y="-1.60" angle="90.00" type="slow" speed="2.46" pos="205.32" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="blocker" x="207.84" y="-1.60" angle="90.00" type="slow" speed="2.53" pos="207.84" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="blocker" x="209.57" y="-1.60" angle="90.00" type="slow" speed="1.73" pos="209.57" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="blocker" x="212.54" y="-1.60" angle="90.00" type="slow" speed="2.97" pos="212.54" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="blocker" x="215.15" y="-1.60" angle="90.00" type="slow" speed="2.61" pos="215.15" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="blocker" x="218.01" y="-1.60" angle="90.00" type="slow" speed="2.86" pos="218.01" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="blocker" x="219.87" y="-1.60" angle="90.00" type="slow" speed="1.86" pos="219.87" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="blocker" x="222.06" y="-1.60" angle="90.00" type="slow" speed="2.19" pos="222.06" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="blocker" x="223.86" y="-1.60" angle="90.00" type="slow" speed="1.80" pos="223.86" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="blocker" x="226.22" y="-1.60" angle="90.00" type="slow" speed="2.36" pos="226.22" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="blocker" x="228.67" y="-1.60" angle="90.00" type="slow" speed="2.45" pos="228.67" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="blocker" x="230.74" y="-1.60" angle="90.00" type="slow" speed="2.08" pos="230.74" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="blocker" x="233.15" y="-1.60" angle="90.00" type="slow" speed="2.41" pos="233.15" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="blocker" x="235.01" y="-1.60" angle="90.00" type="slow" speed="1.86" pos="235.01" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="blocker" x="237.27" y="-1.60" angle="90.00" type="slow" speed="2.25" pos="237.27" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="blocker" x="239.00" y="-1.60" angle="90.00" type="slow" speed="1.74" pos="239.00" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="blocker" x="241.62" y="-1.60" angle="90.00" type="slow" speed="2.61" pos="241.62" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="blocker" x="244.09" y="-1.60" angle="90.00" type="slow" speed="2.47" pos="244.09" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="blocker" x="246.64" y="-1.60" angle="90.00" type="slow" speed="2.55" pos="246.64" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="blocker" x="248.73" y="-1.60" angle="90.00" type="slow" speed="2.09" pos="248.73" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="blocker" x="251.60" y="-1.60" angle="90.00" type="slow" speed="2.87" pos="251.60" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="blocker" x="253.99" y="-1.60" angle="90.00" type="slow" speed="2.39" pos="253.99" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="blocker" x="256.13" y="-1.60" angle="90.00" type="slow" speed="2.14" pos="256.13" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="blocker" x="258.12" y="-1.60" angle="90.00" type="slow" speed="1.98" pos="258.12" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="blocker" x="260.75" y="-1.60" angle="90.00" type="slow" speed="2.63" pos="260.75" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="blocker" x="262.82" y="-1.60" angle="90.00" type="slow" speed="2.07" pos="262.82" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="blocker" x="265.66" y="-1.60" angle="90.00" type="slow" speed="2.84" pos="265.66" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="blocker" x="267.74" y="-1.60" angle="90.00" type="slow" speed="2.07" pos="267.74" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="blocker" x="270.55" y="-1.60" angle="90.00" type="slow" speed="2.82" pos="270.55" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="blocker" x="272.41" y="-1.60" angle="90.00" type="slow" speed="1.85" pos="272.41" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="blocker" x="274.92" y="-1.60" angle="90.00" type="slow" speed="2.52" pos="274.92" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="blocker" x="277.30" y="-1.60" angle="90.00" type="slow" speed="2.38" pos="277.30" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="blocker" x="280.24" y="-1.60" angle="90.00" type="slow" speed="2.94" pos="280.24" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="blocker" x="282.74" y="-1.60" angle="90.00" type="slow" speed="2.49" pos="282.74" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="blocker" x="284.86" y="-1.60" angle="90.00" type="slow" speed="2.12" pos="284.86" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="blocker" x="286.59" y="-1.60" angle="90.00" type="slow" speed="1.73" pos="286.59" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="blocker" x="288.49" y="-1.60" angle="90.00" type="slow" speed="1.90" pos="288.49" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="blocker" x="291.29" y="-1.60" angle="90.00" type="slow" speed="2.80" pos="291.29" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="blocker" x="293.11" y="-1.60" angle="90.00" type="slow" speed="1.82" pos="293.11" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="blocker" x="295.66" y="-1.60" angle="90.00" type="slow" speed="2.55" pos="295.66" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="blocker" x="297.80" y="-1.60" angle="90.00" type="slow" speed="2.14" pos="297.80" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="blocker" x="300.24" y="-1.60" angle="90.00" type="slow" speed="2.44" pos="300.24" lane="100_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+</fcd-export>
