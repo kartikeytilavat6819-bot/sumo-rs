@@ -87,6 +87,8 @@ pub struct MSMeanData {
     pub mySubData: Ptr<MSMeanData>,
     /// The intervals for which output still has to be generated (only in the tracking case)
     pub myPendingIntervals: VecDeque<(SUMOTime, SUMOTime)>,
+    /// Virtual dispatch table for the overridable methods; each subclass constructor installs its own
+    pub meandata_vt: &'static MSMeanDataVt,
 }
 
 impl std::ops::Deref for MSMeanData {
@@ -167,6 +169,7 @@ impl MSMeanData {
             myAggregate: aggregate,
             mySubData: Ptr::null(),
             myPendingIntervals: VecDeque::new(),
+            meandata_vt: &MS_MEAN_DATA_BASE_VT,
         };
         match utils::common::string_utils::to_bool(excludeEmpty) {
             Ok(b) => this.myDumpEmpty = !b,
@@ -322,6 +325,7 @@ impl MSMeanData {
                         lane.m().add_move_reminder(rem, true);
                     } else {
                         let t = heap(MSMeanData_MeanDataValueTracker::new(lane, lane.get_length(), Ptr::from_mut(&mut *self)));
+                        register_values(upcast_tracker(t), lane, true);
                         self.myMeasures.last_mut().unwrap().push(upcast_tracker(t));
                     }
                 } else {
@@ -458,7 +462,7 @@ impl MSMeanData {
     //     dev.writeXMLHeader("meandata", "meandata_file.xsd");
     // }
     #[allow(unused_variables)]
-    pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
+    pub fn write_xml_detector_prolog_base(&self, dev: &mut OutputDevice) {
         dev.write_xml_header("meandata", "meandata_file.xsd", BTreeMap::new(), true);
     }
 
@@ -508,8 +512,8 @@ impl MSMeanData {
     /// return all attributes that are (potentially) written by this output
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn get_attribute_names(&self) -> Vec<String> {
-        // shortcut: pure virtual in C++ (subclasses override). Rust has no virtual dispatch here, so the base panics like a C++ pure-virtual call.
+    pub fn get_attribute_names_base(&self) -> Vec<String> {
+        // shortcut: pure virtual in C++; the subclass table supplies it, so this panics like a pure-virtual call.
         panic!("MSMeanData::getAttributeNames is pure virtual; the subclass must implement it")
     }
 
@@ -606,8 +610,8 @@ impl MSMeanData {
     /// Create an instance of MeanDataValues
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        // shortcut: pure virtual in C++ (each output type creates its own MeanDataValues subclass). Panics like a pure-virtual call until virtual dispatch exists.
+    pub fn create_values_base(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+        // shortcut: pure virtual in C++ (each output type creates its own MeanDataValues subclass); the subclass table supplies it, so this panics like a pure-virtual call.
         panic!("MSMeanData::createValues is pure virtual; the subclass must implement it")
     }
 
@@ -637,7 +641,7 @@ impl MSMeanData {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn reset_only(&mut self, stopTime: SUMOTime) {
+    pub fn reset_only_base(&mut self, stopTime: SUMOTime) {
         // C++ UNUSED_PARAMETER(stopTime); the mesoscopic branch is not ported (see g_use_meso_sim)
         for i in self.myMeasures.iter() {
             for j in i.iter() {
@@ -653,7 +657,7 @@ impl MSMeanData {
     //     return edge->getID();
     // }
     #[allow(unused_variables)]
-    pub fn get_edge_id(&mut self, edge: Ptr<MSEdge>) -> String {
+    pub fn get_edge_id_base(&mut self, edge: Ptr<MSEdge>) -> String {
         edge.get_id().to_string()
     }
 
@@ -1077,7 +1081,7 @@ impl MSMeanData {
     //     dev.writeAttr(SUMO_ATTR_ID, myID);
     // }
     #[allow(unused_variables)]
-    pub fn open_interval(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    pub fn open_interval_base(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
         dev.open_tag_id(SUMO_TAG_INTERVAL).write_attr(SUMO_ATTR_BEGIN, &time2string(startTime)).write_attr(SUMO_ATTR_END, &time2string(stopTime));
         dev.write_attr(SUMO_ATTR_ID, self.get_id());
     }
@@ -1091,7 +1095,7 @@ impl MSMeanData {
     //     dev.writeOptionalAttr(SUMO_ATTR_SAMPLEDSECONDS, values.getSamples(), myWrittenAttributes);
     // }
     #[allow(unused_variables)]
-    pub fn write_prefix(&self, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
+    pub fn write_prefix_base(&self, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
         dev.open_tag_id(tag);
         dev.write_attr(SUMO_ATTR_ID, id.as_str());
         dev.write_optional_attr_mask(SUMO_ATTR_SAMPLEDSECONDS, &values.get_samples(), self.myWrittenAttributes, false);
@@ -1153,6 +1157,65 @@ impl MSMeanData {
 
 }
 
+/// Virtual dispatch table for the overridable methods of MSMeanData (C++ virtuals).
+/// Each subclass constructor installs its own table in `meandata_vt`; the base table forwards to the `*_base` methods.
+pub struct MSMeanDataVt {
+    pub create_values: fn(&MSMeanData, Ptr<MSLane>, f64, bool) -> Ptr<MSMeanData_MeanDataValues>,
+    pub get_attribute_names: fn(&MSMeanData) -> Vec<String>,
+    pub write_xml_detector_prolog: fn(&MSMeanData, &mut OutputDevice),
+    pub get_edge_id: fn(&mut MSMeanData, Ptr<MSEdge>) -> String,
+    pub open_interval: fn(&mut MSMeanData, &mut OutputDevice, SUMOTime, SUMOTime),
+    pub write_prefix: fn(&MSMeanData, &mut OutputDevice, &MSMeanData_MeanDataValues, SumoXMLTag, String),
+    pub reset_only: fn(&mut MSMeanData, SUMOTime),
+}
+
+static MS_MEAN_DATA_BASE_VT: MSMeanDataVt = MSMeanDataVt {
+    create_values: MSMeanData::create_values_base,
+    get_attribute_names: MSMeanData::get_attribute_names_base,
+    write_xml_detector_prolog: MSMeanData::write_xml_detector_prolog_base,
+    get_edge_id: MSMeanData::get_edge_id_base,
+    open_interval: MSMeanData::open_interval_base,
+    write_prefix: MSMeanData::write_prefix_base,
+    reset_only: MSMeanData::reset_only_base,
+};
+
+impl MSMeanData {
+    /// C++ virtual `MSMeanData::createValues`: dispatches to the subclass table
+    pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+        (self.meandata_vt.create_values)(self, lane, length, doAdd)
+    }
+
+    /// C++ virtual `MSMeanData::getAttributeNames`: dispatches to the subclass table
+    pub fn get_attribute_names(&self) -> Vec<String> {
+        (self.meandata_vt.get_attribute_names)(self)
+    }
+
+    /// C++ virtual `MSMeanData::writeXMLDetectorProlog`: dispatches to the subclass table
+    pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
+        (self.meandata_vt.write_xml_detector_prolog)(self, dev)
+    }
+
+    /// C++ virtual `MSMeanData::getEdgeID`: dispatches to the subclass table
+    pub fn get_edge_id(&mut self, edge: Ptr<MSEdge>) -> String {
+        (self.meandata_vt.get_edge_id)(self, edge)
+    }
+
+    /// C++ virtual `MSMeanData::openInterval`: dispatches to the subclass table
+    pub fn open_interval(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+        (self.meandata_vt.open_interval)(self, dev, startTime, stopTime)
+    }
+
+    /// C++ virtual `MSMeanData::writePrefix`: dispatches to the subclass table
+    pub fn write_prefix(&self, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
+        (self.meandata_vt.write_prefix)(self, dev, values, tag, id)
+    }
+
+    /// C++ virtual `MSMeanData::resetOnly`: dispatches to the subclass table
+    pub fn reset_only(&mut self, stopTime: SUMOTime) {
+        (self.meandata_vt.reset_only)(self, stopTime)
+    }
+}
+
 /// Data structure for mean (aggregated) edge/lane values for tracked vehicles
 /// C++ class `MSMeanData::MeanDataValueTracker` (microsim/output/MSMeanData.h)
 #[repr(C)] // base must stay at offset 0 for the C++ downcast in as_tracker
@@ -1194,6 +1257,7 @@ impl MSMeanData_MeanDataValueTracker {
             myTrackedData: BTreeMap::new(),
             myCurrentData: VecDeque::new(),
         };
+        tracker.base.data_vt = &MEAN_DATA_VALUES_TRACKER_VT;
         tracker.myCurrentData.push_back(Rc::new(MeanDataValueTracker_TrackerEntry::new(parent.create_values_sub_data(lane, length, false))));
         tracker
     }
@@ -1411,6 +1475,8 @@ pub struct MSMeanData_MeanDataValues {
     pub resetTime: SUMOTime,
     /// additional data to collect and write
     pub mySubData: Ptr<MSMeanData_MeanDataValues>,
+    /// Virtual dispatch table for the overridable methods; each subclass constructor installs its own
+    pub data_vt: &'static MeanDataValuesVt,
 }
 
 impl std::ops::Deref for MSMeanData_MeanDataValues {
@@ -1440,14 +1506,17 @@ impl MSMeanData_MeanDataValues {
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData>) -> Self {
         let parentId = if parent.is_null() { String::new() } else { format!("{}|", parent.get_id()) };
         let laneId = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
+        let mut base = MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd);
+        base.vt = &MEAN_DATA_VALUES_MSMOVE_VT;
         Self {
-            base: MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd),
+            base,
             myParent: parent,
             myLaneLength: length,
             sampleSeconds: 0.0,
             travelledDistance: 0.0,
             resetTime: 0,
             mySubData: Ptr::null(),
+            data_vt: &MEAN_DATA_VALUES_VT,
         }
     }
 
@@ -1464,8 +1533,8 @@ impl MSMeanData_MeanDataValues {
     /// Resets values so they may be used for the next interval
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn reset(&mut self, afterWrite: bool) {
-        // shortcut: pure virtual in C++; Rust has no dispatch from the base to the subclass override, so this panics like a pure-virtual call
+    pub fn reset_base(&mut self, afterWrite: bool) {
+        // shortcut: pure virtual in C++; the subclass table supplies it, so this panics like a pure-virtual call
         panic!("MeanDataValues::reset is pure virtual; the subclass must implement it")
     }
 
@@ -1473,8 +1542,8 @@ impl MSMeanData_MeanDataValues {
     /// Add the values of this to the given one and store them there
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
-        // shortcut: pure virtual in C++; see reset
+    pub fn add_to_base(&self, val: &mut MSMeanData_MeanDataValues) {
+        // shortcut: pure virtual in C++; see reset_base
         panic!("MeanDataValues::addTo is pure virtual; the subclass must implement it")
     }
 
@@ -1491,7 +1560,7 @@ impl MSMeanData_MeanDataValues {
     //     return myParent == nullptr || myParent->vehicleApplies(veh);
     // }
     #[allow(unused_variables)]
-    pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    pub fn notify_enter_base(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         // UNUSED_PARAMETER(reason), enteredLane is only used in debug output in C++
         self.myParent.is_null() || self.myParent.base.vehicle_applies(veh)
     }
@@ -1824,7 +1893,7 @@ impl MSMeanData_MeanDataValues {
     //     return reason == MSMoveReminder::NOTIFICATION_JUNCTION;
     // }
     #[allow(unused_variables)]
-    pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    pub fn notify_leave_base(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
         if g_use_meso_sim() {
             return false; // reminder is re-added on every segment (@recheck for performance)
         }
@@ -1838,7 +1907,7 @@ impl MSMeanData_MeanDataValues {
     //     return sampleSeconds == 0;
     // }
     #[allow(unused_variables)]
-    pub fn is_empty(&self) -> bool {
+    pub fn is_empty_base(&self) -> bool {
         self.sampleSeconds == 0.
     }
 
@@ -1848,14 +1917,14 @@ impl MSMeanData_MeanDataValues {
     // MSMeanData::MeanDataValues::update() {
     // }
     #[allow(unused_variables)]
-    pub fn update(&mut self) {}
+    pub fn update_base(&mut self) {}
 
     /// C++: `void MeanDataValues::write(OutputDevice &, const SumoXMLAttrMask &, const SUMOTime, const int, const double, const double, const int) const` [const, virtual, pure virtual]
     /// Writes output values into the given stream
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
-        // shortcut: pure virtual in C++; see reset
+    pub fn write_base(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+        // shortcut: pure virtual in C++; see reset_base
         panic!("MeanDataValues::write is pure virtual; the subclass must implement it")
     }
 
@@ -1866,7 +1935,7 @@ impl MSMeanData_MeanDataValues {
     //     return sampleSeconds;
     // }
     #[allow(unused_variables)]
-    pub fn get_samples(&self) -> f64 {
+    pub fn get_samples_base(&self) -> f64 {
         self.sampleSeconds
     }
 
@@ -1908,7 +1977,7 @@ impl MSMeanData_MeanDataValues {
     //             return 0;
     //         }
     #[allow(unused_variables)]
-    pub fn get_attribute_value(&self, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
+    pub fn get_attribute_value_base(&self, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
         0.
     }
 
@@ -1930,6 +1999,166 @@ impl MSMeanData_MeanDataValues {
         self.mySubData = subData;
     }
 
+}
+
+/// Virtual dispatch table for the overridable methods of MeanDataValues (C++ virtuals).
+/// Each subclass constructor installs its own table in `data_vt`; the base table forwards to the `*_base` methods.
+/// notifyMove is not overridden by any subclass, so it is called directly.
+pub struct MeanDataValuesVt {
+    pub reset: fn(&mut MSMeanData_MeanDataValues, bool),
+    pub add_to: fn(&MSMeanData_MeanDataValues, &mut MSMeanData_MeanDataValues),
+    pub notify_enter: fn(&mut MSMeanData_MeanDataValues, &mut SUMOTrafficObject, MSMoveReminder_Notification, Ptr<MSLane>) -> bool,
+    pub notify_leave: fn(&mut MSMeanData_MeanDataValues, &mut SUMOTrafficObject, f64, MSMoveReminder_Notification, Ptr<MSLane>) -> bool,
+    pub notify_move_internal: fn(&mut MSMeanData_MeanDataValues, &SUMOTrafficObject, f64, f64, f64, f64, f64, f64, f64),
+    pub is_empty: fn(&MSMeanData_MeanDataValues) -> bool,
+    pub update: fn(&mut MSMeanData_MeanDataValues),
+    pub write: fn(&MSMeanData_MeanDataValues, &mut OutputDevice, &SumoXMLAttrMask, SUMOTime, i32, f64, f64, i32),
+    pub get_samples: fn(&MSMeanData_MeanDataValues) -> f64,
+    pub get_attribute_value: fn(&MSMeanData_MeanDataValues, SumoXMLAttr, SUMOTime, f64, f64) -> f64,
+}
+
+impl MSMeanData_MeanDataValues {
+    /// C++ virtual `MeanDataValues::reset`: dispatches to the subclass table
+    pub fn reset(&mut self, afterWrite: bool) {
+        (self.data_vt.reset)(self, afterWrite)
+    }
+
+    /// C++ virtual `MeanDataValues::addTo`: dispatches to the subclass table
+    pub fn add_to(&self, val: &mut MSMeanData_MeanDataValues) {
+        (self.data_vt.add_to)(self, val)
+    }
+
+    /// C++ virtual `MeanDataValues::notifyEnter`: dispatches to the subclass table
+    pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+        (self.data_vt.notify_enter)(self, veh, reason, enteredLane)
+    }
+
+    /// C++ virtual `MeanDataValues::notifyLeave`: dispatches to the subclass table
+    pub fn notify_leave(&mut self, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+        (self.data_vt.notify_leave)(self, veh, lastPos, reason, enteredLane)
+    }
+
+    /// C++ virtual `MSMoveReminder::notifyMoveInternal`: dispatches to the subclass table
+    pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+        (self.data_vt.notify_move_internal)(self, veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+    }
+
+    /// C++ virtual `MeanDataValues::isEmpty`: dispatches to the subclass table
+    pub fn is_empty(&self) -> bool {
+        (self.data_vt.is_empty)(self)
+    }
+
+    /// C++ virtual `MeanDataValues::update`: dispatches to the subclass table
+    pub fn update(&mut self) {
+        (self.data_vt.update)(self)
+    }
+
+    /// C++ virtual `MeanDataValues::write`: dispatches to the subclass table
+    pub fn write(&self, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+        (self.data_vt.write)(self, dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, numVehicles)
+    }
+
+    /// C++ virtual `MeanDataValues::getSamples`: dispatches to the subclass table
+    pub fn get_samples(&self) -> f64 {
+        (self.data_vt.get_samples)(self)
+    }
+
+    /// C++ virtual `MeanDataValues::getAttributeValue`: dispatches to the subclass table
+    pub fn get_attribute_value(&self, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
+        (self.data_vt.get_attribute_value)(self, a, period, numLanes, speedLimit)
+    }
+
+    /// C++ `MeanDataValues` has no notifyMoveInternal override: the MSMoveReminder body applies
+    pub fn notify_move_internal_base(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+        self.base.notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+    }
+}
+
+/// C++ `MSMoveReminder` ctor registration (`if (myLane != nullptr && doAdd) myLane->addMoveReminder(this)`).
+/// Rust constructors cannot register, so the creator calls this once the values object has its final address.
+pub fn register_values(values: Ptr<MSMeanData_MeanDataValues>, lane: Ptr<MSLane>, doAdd: bool) {
+    if doAdd && !lane.is_null() {
+        lane.m().add_move_reminder(reminder_of(values), false);
+    }
+}
+
+/// MSMoveReminder vtable shared by every MeanDataValues object: lanes call it through the base, it forwards to `data_vt`.
+static MEAN_DATA_VALUES_MSMOVE_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mean_data_values_reminder_enter,
+    notify_move: mean_data_values_reminder_move,
+    notify_leave: mean_data_values_reminder_leave,
+};
+
+fn mean_data_values_reminder_enter(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_enter(veh, reason, enteredLane)
+}
+
+fn mean_data_values_reminder_move(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+
+fn mean_data_values_reminder_leave(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+/// Base MeanDataValues table: the `*_base` implementations
+static MEAN_DATA_VALUES_VT: MeanDataValuesVt = MeanDataValuesVt {
+    reset: MSMeanData_MeanDataValues::reset_base,
+    add_to: MSMeanData_MeanDataValues::add_to_base,
+    notify_enter: MSMeanData_MeanDataValues::notify_enter_base,
+    notify_leave: MSMeanData_MeanDataValues::notify_leave_base,
+    notify_move_internal: MSMeanData_MeanDataValues::notify_move_internal_base,
+    is_empty: MSMeanData_MeanDataValues::is_empty_base,
+    update: MSMeanData_MeanDataValues::update_base,
+    write: MSMeanData_MeanDataValues::write_base,
+    get_samples: MSMeanData_MeanDataValues::get_samples_base,
+    get_attribute_value: MSMeanData_MeanDataValues::get_attribute_value_base,
+};
+
+/// MeanDataValueTracker table: the tracker overrides everything but update and getAttributeValue
+static MEAN_DATA_VALUES_TRACKER_VT: MeanDataValuesVt = MeanDataValuesVt {
+    reset: mean_data_values_tracker_reset,
+    add_to: mean_data_values_tracker_add_to,
+    notify_enter: mean_data_values_tracker_notify_enter,
+    notify_leave: mean_data_values_tracker_notify_leave,
+    notify_move_internal: mean_data_values_tracker_notify_move_internal,
+    is_empty: mean_data_values_tracker_is_empty,
+    update: MSMeanData_MeanDataValues::update_base,
+    write: mean_data_values_tracker_write,
+    get_samples: mean_data_values_tracker_get_samples,
+    get_attribute_value: MSMeanData_MeanDataValues::get_attribute_value_base,
+};
+
+fn mean_data_values_tracker_reset(v: &mut MSMeanData_MeanDataValues, afterWrite: bool) {
+    as_tracker(Ptr::from_mut(v)).m().reset(afterWrite)
+}
+
+fn mean_data_values_tracker_add_to(v: &MSMeanData_MeanDataValues, val: &mut MSMeanData_MeanDataValues) {
+    as_tracker(Ptr::new(v)).m().add_to(val)
+}
+
+fn mean_data_values_tracker_notify_enter(v: &mut MSMeanData_MeanDataValues, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    as_tracker(Ptr::from_mut(v)).m().notify_enter(veh, reason, enteredLane)
+}
+
+fn mean_data_values_tracker_notify_leave(v: &mut MSMeanData_MeanDataValues, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    as_tracker(Ptr::from_mut(v)).m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+fn mean_data_values_tracker_notify_move_internal(v: &mut MSMeanData_MeanDataValues, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    as_tracker(Ptr::from_mut(v)).m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+fn mean_data_values_tracker_is_empty(v: &MSMeanData_MeanDataValues) -> bool {
+    as_tracker(Ptr::new(v)).m().is_empty()
+}
+
+fn mean_data_values_tracker_write(v: &MSMeanData_MeanDataValues, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+    as_tracker(Ptr::new(v)).m().write(dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, numVehicles)
+}
+
+fn mean_data_values_tracker_get_samples(v: &MSMeanData_MeanDataValues) -> f64 {
+    as_tracker(Ptr::new(v)).m().get_samples()
 }
 
 /// C++ class `MeanDataValueTracker::TrackerEntry` (microsim/output/MSMeanData.h)
