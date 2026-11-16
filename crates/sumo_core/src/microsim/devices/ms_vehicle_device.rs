@@ -44,6 +44,17 @@ impl std::ops::DerefMut for MSVehicleDevice {
 }
 
 impl MSVehicleDevice {
+    /// C++ virtual `MSDevice::generateOutput(OutputDevice *) const`, reached through a vehicle device
+    // shortcut: no vtable for generateOutput; only the emissions device overrides it here (dispatch by deviceName), upgrade when the other devices' tripinfo outputs are ported
+    pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
+        if self.base2.device_name() == "emissions" {
+            let dev: &MSDevice_Emissions = unsafe { &*(self as *const MSVehicleDevice as *const MSDevice_Emissions) };
+            dev.generate_output(tripinfoOut);
+        } else {
+            self.base2.generate_output(tripinfoOut);
+        }
+    }
+
     /// C++: `void MSVehicleDevice::MSVehicleDevice(SUMOVehicle &, const std::string &)`
     /// Constructor
     // MSVehicleDevice(SUMOVehicle& holder, const std::string& id) :

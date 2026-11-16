@@ -75,12 +75,8 @@ fn micro_veh(veh: Ptr<MSBaseVehicle>) -> Ptr<MSVehicle> {
 }
 
 /// C++ `veh->getEmissions<ET>()` (MSBaseVehicle template; the skeleton's get_emissions() has no ET parameter).
-fn get_emissions_et(mut veh: Ptr<MSBaseVehicle>, et: PollutantsInterface_EmissionType) -> f64 {
-    if veh.is_on_road() || veh.is_idling() {
-        PollutantsInterface::compute(veh.get_vehicle_type().get_emission_class(), et, veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.get_emission_parameters())
-    } else {
-        0.
-    }
+fn get_emissions_et(veh: Ptr<MSBaseVehicle>, et: PollutantsInterface_EmissionType) -> f64 {
+    veh.m().get_emissions(et)
 }
 
 /// Mutable access to a vehicle type; C++ Helper::getVehicleType returns a non-const reference.

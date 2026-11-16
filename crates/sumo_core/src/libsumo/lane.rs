@@ -173,8 +173,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO2>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getCO2Emission needs MSLane::getEmissions<CO2>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::CO2)
     }
 
     /// C++: `double Lane::getCOEmission(const std::string &)` [static]
@@ -184,8 +183,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getCOEmission needs MSLane::getEmissions<CO>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::CO)
     }
 
     /// C++: `double Lane::getHCEmission(const std::string &)` [static]
@@ -195,8 +193,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::HC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getHCEmission needs MSLane::getEmissions<HC>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::HC)
     }
 
     /// C++: `double Lane::getPMxEmission(const std::string &)` [static]
@@ -206,8 +203,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::PM_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getPMxEmission needs MSLane::getEmissions<PM_X>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::PM_X)
     }
 
     /// C++: `double Lane::getNOxEmission(const std::string &)` [static]
@@ -217,8 +213,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::NO_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getNOxEmission needs MSLane::getEmissions<NO_X>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::NO_X)
     }
 
     /// C++: `double Lane::getFuelConsumption(const std::string &)` [static]
@@ -228,8 +223,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::FUEL>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getFuelConsumption needs MSLane::getEmissions<FUEL>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::FUEL)
     }
 
     /// C++: `double Lane::getNoiseEmission(const std::string &)` [static]
@@ -249,8 +243,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::ELEC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getElectricityConsumption needs MSLane::getEmissions<ELEC>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::ELEC)
     }
 
     /// C++: `double Lane::getLastStepMeanSpeed(const std::string &)` [static]

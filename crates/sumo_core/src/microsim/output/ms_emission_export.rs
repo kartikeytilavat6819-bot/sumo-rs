@@ -1,7 +1,7 @@
 //! Port of microsim/output/MSEmissionExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::{g_precision, g_precision_emissions};
+use utils::common::std_defs::{g_precision, g_precision_emissions, g_precision_geo};
 use utils::common::time::ts;
 use utils::options::options_cont;
 
@@ -70,8 +70,40 @@ impl MSEmissionExport {
         }
         let mask = MSDevice_Emissions::get_written_attributes();
         of.open_tag("timestep").write_attr("time", &time2string(timestep));
-        // shortcut: the vehicle rows need getDevice(typeid(MSDevice_Emissions)) (unmapped type_info), static_cast<const MSBaseVehicle*>(veh) (no repr(C) layout yet) and MSVehicle acceleration/slope; no rows are written until those exist
-        let _ = (useGeo, mask);
+        let net = MSNet::get_instance();
+        let hasElevation = net.has_elevation();
+        let vc = net.m().get_vehicle_control();
+        for veh in vc.myVehicleDict.values() {
+            let veh: Ptr<SUMOVehicle> = *veh;
+            // shortcut: getDevice(typeid(MSDevice_Emissions)) is matched by deviceName, the type_info lookup is not ported
+            let hasEmissionsDevice = veh.get_devices().iter().any(|d| d.base2.device_name() == "emissions");
+            if hasEmissionsDevice && (veh.is_on_road() || veh.is_idling()) {
+                of.open_tag("vehicle");
+                of.write_attr(SUMO_ATTR_ID, veh.get_id());
+                Self::write_emissions(of, veh.cast::<MSBaseVehicle>(), true, &mask);
+                if use_meso_sim() {
+                    of.write_optional_attr_mask(SUMO_ATTR_EDGE, &veh.get_current_edge().get_id().to_string(), mask, false);
+                } else {
+                    of.write_optional_attr_mask(SUMO_ATTR_LANE, &veh.cast::<MSVehicle>().get_lane().get_id().to_string(), mask, false);
+                }
+                of.write_optional_attr_mask(SUMO_ATTR_POSITION, &veh.get_position_on_lane(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_SPEED, &veh.get_speed(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_ANGLE, &utils::geom::geom_helper::navi_degree(veh.get_angle()), mask, false);
+
+                let mut pos = veh.get_position(0.0);
+                if useGeo {
+                    of.set_precision(g_precision_geo());
+                    GeoConvHelper::with_final(|g| g.cartesian2geo(&mut pos));
+                }
+                of.write_optional_attr_mask(SUMO_ATTR_X, &pos.x(), mask, false);
+                of.write_optional_attr_mask(SUMO_ATTR_Y, &pos.y(), mask, false);
+                of.set_precision(g_precision());
+                if hasElevation {
+                    of.write_optional_attr_mask(SUMO_ATTR_Z, &pos.z(), mask, false);
+                }
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 
@@ -120,7 +152,9 @@ impl MSEmissionExport {
         of.write_func_attr(SUMO_ATTR_ECLASS, || PollutantsInterface::get_name(veh.get_vehicle_type().get_emission_class()), mask, false);
         if mask.test(SUMO_ATTR_CO2) || mask.test(SUMO_ATTR_CO) || mask.test(SUMO_ATTR_HC) || mask.test(SUMO_ATTR_NOX) || mask.test(SUMO_ATTR_PMX)
             || mask.test(SUMO_ATTR_FUEL) || mask.test(SUMO_ATTR_ELECTRICITY) {
-            let mut emiss = PollutantsInterface::compute_all(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration(), veh.get_slope(), veh.m().get_emission_parameters());
+            // virtual calls in C++: read through SUMOTrafficObject so MSVehicle's acceleration is used, not the base 0
+            let obj: &SUMOTrafficObject = &*veh;
+            let mut emiss = PollutantsInterface::compute_all(obj.get_vehicle_type().get_emission_class(), obj.get_speed(), obj.get_acceleration(), obj.get_slope(), veh.m().get_emission_parameters());
             if options_cont::get_bool("emission-output.step-scaled") {
                 // C++ addScaled(emiss, TS - 1.) aliases its own operand; the copy reads the pre-scaling values
                 let copy = PollutantsInterface_Emissions { CO2: emiss.CO2, CO: emiss.CO, HC: emiss.HC, fuel: emiss.fuel, NOx: emiss.NOx, PMx: emiss.PMx, electricity: emiss.electricity };
@@ -136,7 +170,8 @@ impl MSEmissionExport {
             of.write_optional_attr_mask(SUMO_ATTR_ELECTRICITY, &emiss.electricity, mask, false);
             of.set_precision(g_precision());
         }
-        of.write_func_attr(SUMO_ATTR_NOISE, || HelpersHarmonoise::compute_noise(veh.get_vehicle_type().get_emission_class(), veh.get_speed(), veh.get_acceleration()), mask, false);
+        let obj: &SUMOTrafficObject = &*veh;
+        of.write_func_attr(SUMO_ATTR_NOISE, || HelpersHarmonoise::compute_noise(obj.get_vehicle_type().get_emission_class(), obj.get_speed(), obj.get_acceleration()), mask, false);
         of.write_optional_attr_mask(SUMO_ATTR_ROUTE, veh.get_route().base.get_id(), mask, false);
         if includeType {
             let fclass = veh.get_vehicle_type().get_id().split('@').next().unwrap().to_string();
