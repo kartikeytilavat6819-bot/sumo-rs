@@ -534,7 +534,10 @@ impl MEVehicle {
             }
             if net.get_current_time_step() > self.myStops[i].endBoarding {
                 if self.myStops[i].triggered || self.myStops[i].containerTriggered {
-                    // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so cancelCurrentCustomers() is skipped; upgrade when device lookup by type is ported
+                    let taxiDevice = MSDevice::get_device_by_name(&self.myDevices, "taxi").cast::<MSDevice_Taxi>();
+                    if !taxiDevice.is_null() {
+                        taxiDevice.m().cancel_current_customers();
+                    }
                     self.myStops[i].triggered = false;
                     self.myStops[i].containerTriggered = false;
                 }
@@ -637,10 +640,8 @@ impl MEVehicle {
         let mut hadStop = false;
         let me = Ptr::from_mut(self);
         while !self.myStops.is_empty() {
-            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
-            let curEdge = self.myRoute.index_op(self.myCurrEdge as i32);
             let endPos = self.myStops[0].pars.endPos;
-            if self.myStops[0].get_edge() != curEdge || self.myStops[0].segment != self.mySegment || endPos <= lastPos {
+            if self.myStops[0].edge != self.myCurrEdge || self.myStops[0].segment != self.mySegment || endPos <= lastPos {
                 break;
             }
             lastPos = endPos;
@@ -660,9 +661,13 @@ impl MEVehicle {
             self.resume_from_stopping();
             hadStop = true;
         }
-        if self.get_waiting_time(false) > 0 {
+        let waitingTime = self.get_waiting_time(false);
+        if waitingTime > 0 {
             // entry back onto the road was blocked for some time
-            // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so recordMesoParkingTimeLoss() is skipped; upgrade when device lookup by type is ported
+            let tripinfoDevice = MSDevice::get_device_by_name(&self.myDevices, "tripinfo").cast::<MSDevice_Tripinfo>();
+            if !tripinfoDevice.is_null() {
+                tripinfoDevice.m().record_meso_parking_time_loss(waitingTime);
+            }
         }
         self.mySegment.get_edge().remove_waiting(me.cast::<SUMOVehicle>());
     }
@@ -743,8 +748,7 @@ impl MEVehicle {
                 utils::common::msg_handler::write_warning(&utils::tlf!("Join stops are not available in meso yet (vehicle '%', segment '%').", self.get_id(), self.mySegment.get_id()));
                 continue;
             }
-            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
-            if self.myStops[i].get_edge() != self.myRoute.index_op(self.myCurrEdge as i32) || self.myStops[i].segment != self.mySegment {
+            if self.myStops[i].edge != self.myCurrEdge || self.myStops[i].segment != self.mySegment {
                 break;
             }
             let cur = time;
@@ -783,10 +787,15 @@ impl MEVehicle {
             hadStop = true;
         }
         if reachedStop {
-            // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so taxi->notifyMove(*this, 0, 0, 0) is skipped
+            let taxiDevice = MSDevice::get_device_by_name(&self.myDevices, "taxi").cast::<MSDevice_Taxi>();
+            if !taxiDevice.is_null() {
+                taxiDevice.m().notify_move(self, 0., 0., 0.);
+            }
         }
-        // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so tripinfo->updateStopTime(time - initialTime) is skipped
-        let _ = initialTime;
+        let tripinfoDevice = MSDevice::get_device_by_name(&self.myDevices, "tripinfo").cast::<MSDevice_Tripinfo>();
+        if !tripinfoDevice.is_null() {
+            tripinfoDevice.m().update_stop_time(time - initialTime);
+        }
         time
     }
 
