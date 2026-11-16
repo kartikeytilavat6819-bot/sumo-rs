@@ -34,7 +34,7 @@ fn vehicle_class_to_string(vc: SUMOVehicleClass) -> String {
 }
 
 /// C++ `toString(LatAlignmentDefinition)` (utils/common/ToString.h)
-fn lat_alignment_to_string(lad: LatAlignmentDefinition) -> &'static str {
+pub(crate) fn lat_alignment_to_string(lad: LatAlignmentDefinition) -> &'static str {
     match lad {
         LatAlignmentDefinition::RIGHT => "right",
         LatAlignmentDefinition::CENTER => "center",

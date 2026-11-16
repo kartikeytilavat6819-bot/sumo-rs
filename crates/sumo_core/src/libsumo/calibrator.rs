@@ -336,13 +336,13 @@ impl Calibrator {
         vehicleParams.vtypeid = typeID.to_string();
         vehicleParams.routeid = routeID.to_string();
         if MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false).is_null() {
-            panic!("shortcut: Vehicle type '{typeID}' is not known (C++ TraCIException)");
+            panic!("Vehicle type '{typeID}' is not known");
         }
         if !SUMOVehicleParameter::parse_depart_lane(departLane, "calibrator", calibratorID, &mut vehicleParams.departLane, &mut vehicleParams.departLaneProcedure, &mut error) {
-            panic!("shortcut: {error} (C++ TraCIException)");
+            panic!("{error}");
         }
         if !SUMOVehicleParameter::parse_depart_speed(departSpeed, "calibrator", calibratorID, &mut vehicleParams.departSpeed, &mut vehicleParams.departSpeedProcedure, &mut error) {
-            panic!("shortcut: {error} (C++ TraCIException)");
+            panic!("{error}");
         }
         Self::get_calibrator(calibratorID).set_flow(time2steps(begin), time2steps(end), vehsPerHour, speed, vehicleParams);
     }
@@ -451,7 +451,7 @@ impl Calibrator {
         // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
         match MSCalibrator::get_instances().get(id) {
             Some(c) => *c,
-            None => panic!("shortcut: Calibrator '{id}' is not known (C++ TraCIException)"),
+            None => panic!("Calibrator '{id}' is not known"),
         }
     }
 
