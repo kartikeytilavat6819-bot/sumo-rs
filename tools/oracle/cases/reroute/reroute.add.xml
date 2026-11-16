@@ -1,0 +1,13 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE" device.rerouting.probability="1" device.rerouting.period="30"/>
+    <rerouter id="closeRR" edges="1117867029#0">
+        <interval begin="0" end="200">
+            <closingReroute id="1117867029#1"/>
+        </interval>
+    </rerouter>
+    <rerouter id="destRR" edges="46522008#0">
+        <interval begin="0" end="200">
+            <destProbReroute id="397795464#3" probability="1"/>
+        </interval>
+    </rerouter>
+</additional>

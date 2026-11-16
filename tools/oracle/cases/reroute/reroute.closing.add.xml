@@ -1,0 +1,7 @@
+<additional>
+    <rerouter id="closeRR" edges="1117867029#0">
+        <interval begin="0" end="200">
+            <closingReroute id="1117867029#1"/>
+        </interval>
+    </rerouter>
+</additional>
