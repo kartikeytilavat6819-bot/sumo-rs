@@ -1973,7 +1973,7 @@ pub struct MSVehicle {
     pub myStopSpeed: f64,
     /// amount of time for which the vehicle is immune from collisions
     pub myCollisionImmunity: SUMOTime,
-    pub myCachedPosition: Position,
+    pub myCachedPosition: std::cell::Cell<Position>,
     /// time at which the current junction was entered
     pub myJunctionEntryTime: SUMOTime,
     pub myJunctionEntryTimeNeverYield: SUMOTime,
@@ -2693,7 +2693,7 @@ impl MSVehicle {
             myStopDist: f64::MAX,
             myStopSpeed: f64::MAX,
             myCollisionImmunity: -1,
-            myCachedPosition: Position::INVALID,
+            myCachedPosition: std::cell::Cell::new(Position::INVALID),
             myJunctionEntryTime: SUMOTIME_MAX,
             myJunctionEntryTimeNeverYield: SUMOTIME_MAX,
             myJunctionConflictEntryTime: SUMOTIME_MAX,
@@ -3767,7 +3767,7 @@ impl MSVehicle {
                 self.myState.myPos = self.myLane.m().get_opposite_pos(self.myState.myPos);
                 self.myLane = newOpposite;
                 oldLane = oldLaneMaybeOpposite;
-                self.myCachedPosition = Position::INVALID;
+                self.myCachedPosition.set(Position::INVALID);
                 self.myLaneChangeModel.m().update_shadow_lane();
             }
         }
@@ -3842,7 +3842,7 @@ impl MSVehicle {
     pub fn execute_fractional_move(&mut self, dist: f64) {
         self.myState.myPos += dist;
         self.myState.myLastCoveredDist = dist;
-        self.myCachedPosition = Position::INVALID;
+        self.myCachedPosition.set(Position::INVALID);
 
         let lanes = self.get_upcoming_lanes_until(dist);
         let t = MSNet::get_instance().m().get_current_time_step();
@@ -4006,7 +4006,7 @@ impl MSVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn invalidate_cached_position(&mut self) {
-        self.myCachedPosition = Position::INVALID;
+        self.myCachedPosition.set(Position::INVALID);
     }
 
     /// C++: `double MSVehicle::getRightSideOnLane() const` [const]
@@ -4639,19 +4639,18 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self, offset: f64) -> Position {
-        // myCachedPosition is a mutable member written from this const method (C++ `mutable`)
-        let cache = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle);
+        // myCachedPosition is a C++ `mutable` member, written from this const method, hence Cell
         if self.myLane.is_null() {
             // when called in the context of GUI-Drawing, the simulation step is already incremented
             if !self.myInfluencer.is_null() && self.myInfluencer.m().is_remote_affected(MSNet::get_instance().get_current_time_step()) {
-                return self.myCachedPosition;
+                return self.myCachedPosition.get();
             } else {
                 return Position::INVALID;
             }
         }
         if self.is_parking() {
             if !self.myInfluencer.is_null() && self.myInfluencer.m().get_last_access_time_step() > self.get_next_stop_parameter().m().started {
-                return self.myCachedPosition;
+                return self.myCachedPosition.get();
             }
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
             if !parkingArea.is_null() {
@@ -4667,14 +4666,14 @@ impl MSVehicle {
         let changingLanes = self.myLaneChangeModel.m().is_changing_lanes();
         let posLat = (if crate::microsim::ms_globals::lefthand() { 1.0 } else { -1.0 }) * self.get_lateral_position_on_lane();
         if offset == 0.0 && !changingLanes {
-            if self.myCachedPosition == Position::INVALID {
+            if self.myCachedPosition.get() == Position::INVALID {
                 let mut pos = self.validate_position(self.myLane.m().geometry_position_at_offset(self.myState.myPos, posLat), 0.0);
                 if MSNet::get_instance().has_elevation() && crate::microsim::ms_globals::sublane() {
                     self.interpolate_lateral_z(&mut pos, self.myState.myPos, posLat);
                 }
-                cache.m().myCachedPosition = pos;
+                self.myCachedPosition.set(pos);
             }
-            return self.myCachedPosition;
+            return self.myCachedPosition.get();
         }
         let mut result = self.validate_position(self.myLane.m().geometry_position_at_offset(self.get_position_on_lane() + offset, posLat), offset);
         self.interpolate_lateral_z(&mut result, self.get_position_on_lane() + offset, posLat);
@@ -5546,7 +5545,7 @@ impl MSVehicle {
             // normal move() isn't called so reset position here. must be done
             // before calling reminders
             self.myState.myPos = 0.0;
-            self.myCachedPosition = Position::INVALID;
+            self.myCachedPosition.set(Position::INVALID);
             self.activate_reminders(MSMoveReminder_Notification::NOTIFICATION_TELEPORT, enteredLane);
         }
         // update via
@@ -5640,7 +5639,7 @@ impl MSVehicle {
                 self.myJunctionConflictEntryTime = self.myJunctionEntryTime;
             }
         }
-        self.myCachedPosition = Position::INVALID;
+        self.myCachedPosition.set(Position::INVALID);
         debug_assert!(self.myState.myPos >= 0.0);
         debug_assert!(self.myState.mySpeed >= 0.0);
         self.myLane = enteredLane;
@@ -5812,7 +5811,7 @@ impl MSVehicle {
     pub fn enter_lane_at_lane_change(&mut self, enteredLane: Ptr<MSLane>) {
         self.myAmOnNet = true;
         self.myLane = enteredLane;
-        self.myCachedPosition = Position::INVALID;
+        self.myCachedPosition.set(Position::INVALID);
         // need to update myCurrentLaneInBestLanes
         self.update_best_lanes(false, Ptr::null());
         // switch to and activate the new lane's reminders
@@ -9157,7 +9156,7 @@ impl MSVehicle {
                 let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, false);
                 self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
                 self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
-                self.myCachedPosition = Position::INVALID;
+                self.myCachedPosition.set(Position::INVALID);
                 if self.myState.myPos < self.myType.get_length() {
                     let lane = self.myLane;
                     let pos = self.myState.myPos;
@@ -9714,7 +9713,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_remote_state(&mut self, xyPos: Position) {
-        self.myCachedPosition = xyPos;
+        self.myCachedPosition.set(xyPos);
     }
 
     /// C++: `int MSVehicle::nextLinkPriority(const std::vector<MSLane *> &)` [static]
@@ -15648,7 +15647,7 @@ impl MSVehicle {
         self.myNextTurn.0 -= deltaPos;
 
         if !parking {
-            self.myCachedPosition = Position::INVALID;
+            self.myCachedPosition.set(Position::INVALID);
         }
     }
 
