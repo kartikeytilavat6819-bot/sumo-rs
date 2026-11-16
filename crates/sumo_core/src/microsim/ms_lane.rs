@@ -1159,32 +1159,22 @@ impl MSLane {
     //             && isRailwayOrShared(myPermissions)) {
     //         const MSDriveWay* dw = MSDriveWay::getDepartureDriveway(aVehicle);
     //         MSEdgeVector occupied;
-    //         bool dwBlocked = false;
     // #ifdef DEBUG_INSERTION
     //         gDebugFlag4 = DEBUG_COND2(aVehicle) || DEBUG_COND;
     // #endif
     //         if (dw->foeDriveWayOccupied(false, aVehicle, occupied)) {
-    //             dwBlocked = true;
+    //             setParameter("insertionBlocked:" + aVehicle->getID(), dw->getID());
     // #ifdef DEBUG_INSERTION
     //             if (DEBUG_COND2(aVehicle) || DEBUG_COND) {
     //                 std::cout << "   foe of driveway " + dw->getID() + " has occupied edges " + toString(occupied) << "\n";
     //             }
+    //             gDebugFlag4 = false;
     // #endif
-    //         } else if (dw->sidingDeadlock(aVehicle)) {
-    //             dwBlocked = true;
-    // #ifdef DEBUG_INSERTION
-    //             if (DEBUG_COND2(aVehicle) || DEBUG_COND) {
-    //                 std::cout << "   insertion on driveway " + dw->getID() + " would cause deadlock\n";
-    //             }
-    // #endif
+    //             return false;
     //         }
     // #ifdef DEBUG_INSERTION
     //         gDebugFlag4 = false;
     // #endif
-    //         if (dwBlocked) {
-    //             setParameter("insertionBlocked:" + aVehicle->getID(), dw->getID());
-    //             return false;
-    //         }
     //     }
     //     if (getBidiLane() != nullptr && isRail) {
     //         // do not insert if the bidirectional edge is occupied
@@ -1730,13 +1720,7 @@ impl MSLane {
             && utils::common::sumo_vehicle_class::is_railway_or_shared(self.myPermissions) {
             let dw = MSDriveWay::get_departure_driveway(aVehicle.cast::<SUMOVehicle>(), false);
             let mut occupied: MSEdgeVector = Vec::new();
-            let mut dwBlocked = false;
             if dw.foe_drive_way_occupied(false, aVehicle.cast::<SUMOVehicle>(), &mut occupied) {
-                dwBlocked = true;
-            } else if dw.siding_deadlock(aVehicle.cast::<SUMOVehicle>()) {
-                dwBlocked = true;
-            }
-            if dwBlocked {
                 self.base2.set_parameter(&format!("insertionBlocked:{}", aVehicle.get_id()), dw.base2.get_id());
                 return false;
             }
