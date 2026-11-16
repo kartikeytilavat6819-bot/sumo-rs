@@ -266,7 +266,7 @@ impl MSActuatedTrafficLightLogic {
         this.base.base.vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT;
         let to_d = |s: String| utils::common::string_utils::to_double(&s).unwrap_or_else(|e| panic!("{}", e));
         this.myMaxGap = to_d(this.get_parameter("max-gap", DEFAULT_MAX_GAP.to_string()));
-        this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_string("tls.actuated.jam-threshold")));
+        this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_value_string("tls.actuated.jam-threshold")));
         this.myPassingTime = to_d(this.get_parameter("passing-time", DEFAULT_PASSING_TIME.to_string()));
         this.myDetectorGap = to_d(this.get_parameter("detector-gap", DEFAULT_DETECTOR_GAP.to_string()));
         this.myInactiveThreshold = string2time(&this.get_parameter("inactive-threshold", DEFAULT_INACTIVE_THRESHOLD.to_string())).unwrap_or_else(|e| panic!("{}", e));
@@ -703,7 +703,7 @@ impl MSActuatedTrafficLightLogic {
         let mut inductLoopInfoMap: BTreeMap<Ptr<MSInductLoop>, i32> = BTreeMap::new();
         let mut detEdgeIndex: i32 = -1;
         let mut detLaneIndex: i32 = 0;
-        let detDefaultLength: f64 = utils::common::string_utils::to_double(&self.get_parameter("detector-length", utils::options::options_cont::get_string("tls.actuated.detector-length"))).unwrap_or_else(|e| panic!("{}", e));
+        let detDefaultLength: f64 = utils::common::string_utils::to_double(&self.get_parameter("detector-length", utils::options::options_cont::get_value_string("tls.actuated.detector-length"))).unwrap_or_else(|e| panic!("{}", e));
         let mut prevDetEdge: Ptr<MSEdge> = Ptr::null();
         for lanes in self.myLanes.clone() {
             for lane in lanes {
