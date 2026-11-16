@@ -102,7 +102,8 @@ fn device_inform(name: &str, msg: &str, progress: bool) {
     }
     let mut devs = lock(&DEVICES);
     let dev = devs.get_mut(name).unwrap();
-    let _ = if progress { write!(dev, "{msg}") } else { writeln!(dev, "{msg}") };
+    let line = if progress { msg.to_string() } else { format!("{msg}\n") };
+    let _ = dev.write_all(line.as_bytes());
     let _ = dev.flush();
 }
 
@@ -480,6 +481,43 @@ pub(crate) mod tests {
         h.clear(true);
         assert!(!h.was_informed());
         assert_eq!(cap.text(), "Warning: plain\nraw\nWarning: x 1\nWarning: 3 total messages of type: x %\n");
+    }
+
+    #[test]
+    fn repeats_collapse_into_total_after_threshold() {
+        // C++ MsgHandler::aggregationThresholdReached: the first `threshold` repeats are printed,
+        // clear() then reports "N total messages of type: <format>" for every key with N > threshold
+        let cap = Capture::default();
+        register_device("test-msg-agg", Box::new(cap.clone()));
+        let mut h = MsgHandler::new(MsgType::Warning);
+        h.remove_retriever("stderr");
+        h.add_retriever("test-msg-agg");
+        h.set_aggregation_threshold(5);
+        for i in 0..6 {
+            h.informf("Could not build program '%' for traffic light '%'", &[&String::from("0"), &i]);
+        }
+        h.clear(true);
+        assert_eq!(
+            cap.text(),
+            "Warning: Could not build program '0' for traffic light '0'\n\
+             Warning: Could not build program '0' for traffic light '1'\n\
+             Warning: Could not build program '0' for traffic light '2'\n\
+             Warning: Could not build program '0' for traffic light '3'\n\
+             Warning: Could not build program '0' for traffic light '4'\n\
+             Warning: 6 total messages of type: Could not build program '%' for traffic light '%'\n"
+        );
+    }
+
+    #[test]
+    fn every_line_is_newline_terminated() {
+        let cap = Capture::default();
+        register_device("test-msg-nl", Box::new(cap.clone()));
+        let mut h = MsgHandler::new(MsgType::Warning);
+        h.remove_retriever("stderr");
+        h.add_retriever("test-msg-nl");
+        h.inform("first", true);
+        h.inform("second", true);
+        assert_eq!(cap.text(), "Warning: first\nWarning: second\n");
     }
 
     #[test]
