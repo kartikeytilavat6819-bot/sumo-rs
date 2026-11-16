@@ -782,8 +782,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(personID: &str) -> String {
-        let _ = Self::get_person(personID).get_vehicle_type().get_preferred_lateral_alignment();
-        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
+        crate::libsumo::vehicle_type::lat_alignment_to_string(*Self::get_person(personID).get_vehicle_type().get_preferred_lateral_alignment()).to_string()
     }
 
     /// C++: `int Person::getPersonCapacity(const std::string &)` [static]

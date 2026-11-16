@@ -8,8 +8,13 @@ pub struct Vehicle {
 
 // C++ static members of Vehicle (port as module-level statics, see AGENTS.md):
 //   static const int Vehicle::DOMAIN_ID;
-//   static SubscriptionResults Vehicle::mySubscriptionResults;
-//   static ContextSubscriptionResults Vehicle::myContextSubscriptionResults;
+
+thread_local! {
+    /// C++ static `Vehicle::mySubscriptionResults`
+    static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
+    /// C++ static `Vehicle::myContextSubscriptionResults`
+    static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+}
 
 use utils::geom::geom_helper::navi_degree;
 use utils::common::std_defs::INVALID_DOUBLE;
@@ -65,6 +70,23 @@ fn get_emissions_et(mut veh: Ptr<MSBaseVehicle>, et: PollutantsInterface_Emissio
 /// Mutable access to a vehicle type; C++ Helper::getVehicleType returns a non-const reference.
 fn vtype_mut(typeID: &str) -> Ptr<MSVehicleType> {
     Ptr::new(Helper::get_vehicle_type(typeID))
+}
+
+/// Body of the per-link loop in C++ `Vehicle::getNextLinks`: one TraCIConnection for `link`, leaving `lane`.
+fn next_link_connection(veh: Ptr<MSVehicle>, lane: Ptr<MSLane>, link: Ptr<MSLink>, currTime: SUMOTime) -> TraCIConnection {
+    let approachedLane = if !link.get_lane().is_null() { link.get_lane().get_id().to_string() } else { String::new() };
+    let hasPrio = link.have_priority();
+    let speed = {
+        let a = lane.get_speed_limit();
+        let b = link.get_lane().get_speed_limit();
+        if a < b { a } else { b }
+    };
+    let isOpen = link.opened(currTime, speed, speed, veh.get_length(), veh.get_impatience(), veh.get_vehicle_type().get_car_follow_model().get_max_decel(), veh.get_waiting_time(false), veh.get_lateral_position_on_lane(), Ptr::null(), false, veh.cast::<SUMOTrafficObject>(), -1.0);
+    let hasFoe = link.has_approaching_foe(currTime, currTime, 0.0, SUMOVTypeParameter::get_default_decel(SVC_IGNORING));
+    let approachedInternal = if !link.get_via_lane().is_null() { link.get_via_lane().get_id().to_string() } else { String::new() };
+    let state = LinkStates.get_string(link.get_state()).to_string();
+    let direction = LinkDirections.get_string(link.get_direction()).to_string();
+    TraCIConnection { approachedLane, hasPrio, isOpen, hasFoe, approachedInternal, state, direction, length: link.get_length() }
 }
 
 // shortcut: C++ checkTimeBounds(double) (utils, not ported) is not applied; out-of-range durations are not rejected here. upgrade when checkTimeBounds is ported
@@ -609,8 +631,9 @@ impl Vehicle {
     #[allow(unused_variables)]
     pub fn is_route_valid(vehID: &str) -> bool {
         let mut msg = String::new();
-        // shortcut: C++ hasValidRoute defaults to a null route, which ConstMSRoutePtr (Rc) cannot represent, upgrade when hasValidRoute takes Option
-        panic!("is_route_valid needs MSBaseVehicle::hasValidRoute with a null route, not representable yet (msg={})", msg)
+        let veh = Helper::get_vehicle(vehID);
+        // C++ hasValidRoute(msg) with the default route == nullptr, i.e. myRoute
+        veh.has_valid_route(&mut msg, veh.get_route_ptr())
     }
 
     /// C++: `std::vector<std::string> Vehicle::getRoute(const std::string &)` [static]
@@ -651,24 +674,87 @@ impl Vehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_best_lanes(vehID: &str) -> Vec<TraCIBestLanesData> {
-        // shortcut: getBestLanes C++ body not ported in this pass (see Vehicle.cpp:497)
-        panic!("Vehicle::getBestLanes not yet ported")
+        let mut result = Vec::new();
+        let veh = micro_veh(Helper::get_vehicle(vehID));
+        if !veh.is_null() && veh.is_on_road() {
+            for lq in veh.get_best_lanes().iter() {
+                let mut bld = TraCIBestLanesData { laneID: lq.lane.get_id().to_string(), length: lq.length, occupation: lq.nextOccupation, bestLaneOffset: lq.bestLaneOffset, allowsContinuation: lq.allowsContinuation, continuationLanes: Vec::new() };
+                for lane in lq.bestContinuations.iter() {
+                    if !lane.is_null() {
+                        bld.continuationLanes.push(lane.get_id().to_string());
+                    }
+                }
+                result.push(bld);
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCINextTLSData> Vehicle::getNextTLS(const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_next_tls(vehID: &str) -> Vec<TraCINextTLSData> {
-        // shortcut: getNextTLS C++ body not ported in this pass (see Vehicle.cpp:521)
-        panic!("Vehicle::getNextTLS not yet ported")
+        let mut result: Vec<TraCINextTLSData> = Vec::new();
+        let vehicle = Helper::get_vehicle(vehID);
+        let veh = micro_veh(vehicle);
+        if !veh.is_null() {
+            let mut view: i32 = 1;
+            let mut seen = veh.get_edge().get_length() - veh.get_position_on_lane();
+            if vehicle.is_on_road() {
+                let mut lane = veh.get_lane();
+                let bestLaneConts = veh.get_best_lanes_continuation_2(lane).clone();
+                seen = lane.get_length() - veh.get_position_on_lane();
+                let mut linkIt = MSLane::succ_link_sec(&*veh, view, &*lane, &bestLaneConts);
+                while !lane.is_link_end(&mut linkIt) {
+                    let link = lane.get_link_cont()[linkIt];
+                    if !lane.get_edge().is_internal() && link.is_tls_controlled() {
+                        result.push(TraCINextTLSData { id: link.get_tl_logic().get_id().to_string(), tlIndex: link.get_tl_index(), dist: seen, state: link.get_state() as i8 });
+                    }
+                    lane = link.get_via_lane_or_lane();
+                    if !lane.get_edge().is_internal() {
+                        view += 1;
+                    }
+                    seen += lane.get_length();
+                    linkIt = MSLane::succ_link_sec(&*veh, view, &*lane, &bestLaneConts);
+                }
+            }
+            // consider edges beyond bestLanes
+            let edges = veh.get_route().get_edges().clone();
+            let curIdx = *veh.get_current_route_edge() as i32;
+            let remainingEdges = edges.len() as i32 - curIdx - view;
+            for i in 0..remainingEdges {
+                let prev = edges[(curIdx + view + i - 1) as usize];
+                let next = edges[(curIdx + view + i) as usize];
+                let allowed = prev.allowed_lanes(&*next, veh.get_v_class(), false);
+                if !allowed.is_null() && allowed.len() != 0 {
+                    for link in allowed[0].get_link_cont().iter() {
+                        if std::ptr::eq(&*link.get_lane().get_edge(), &*next) {
+                            if link.is_tls_controlled() {
+                                result.push(TraCINextTLSData { id: link.get_tl_logic().get_id().to_string(), tlIndex: link.get_tl_index(), dist: seen, state: link.get_state() as i8 });
+                            }
+                            seen += next.get_length() + link.get_internal_lengths_after();
+                            break;
+                        }
+                    }
+                } else {
+                    // invalid route, cannot determine nextTLS
+                    break;
+                }
+            }
+        } else {
+            write_warning("getNextTLS not yet implemented for meso");
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCINextStopData> Vehicle::getNextStops(const std::string &)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // std::vector<libsumo::TraCINextStopData>
+    // Vehicle::getNextStops(const std::string& vehID) {
+    //     return getStops(vehID, 0);
+    // }
     #[allow(unused_variables)]
     pub fn get_next_stops(vehID: &str) -> Vec<TraCINextStopData> {
-        // shortcut: getNextStops C++ body not ported in this pass (see Vehicle.cpp:587)
-        panic!("Vehicle::getNextStops not yet ported")
+        Self::get_stops(vehID, 0)
     }
 
     /// C++: `std::vector<libsumo::TraCIConnection> Vehicle::getNextLinks(const std::string &)` [static]
@@ -747,16 +833,100 @@ impl Vehicle {
         if !vehicle.is_on_road() {
             return Vec::new();
         }
-        // shortcut: MSLane::succLinkSec returns an Unmapped iterator (lane.rs), so the lane-link walk cannot run yet; upgrade when lane.rs maps it
-        panic!("getNextLinks not yet ported: MSLane::succLinkSec iterator is unmapped")
+        let mut result: Vec<TraCIConnection> = Vec::new();
+        let veh = micro_veh(vehicle);
+        if !veh.is_null() {
+            let lane = veh.get_lane();
+            let bestLaneConts = veh.get_best_lanes_continuation_2(lane).clone();
+            let mut view: i32 = 1;
+            let currTime = MSNet::get_instance().get_current_time_step();
+            let mut linkIt = MSLane::succ_link_sec(&*veh, view, &*lane, &bestLaneConts);
+            let mut lane = lane;
+            while !lane.is_link_end(&mut linkIt) {
+                let link = lane.get_link_cont()[linkIt];
+                if !lane.get_edge().is_internal() {
+                    result.push(next_link_connection(veh, lane, link, currTime));
+                }
+                lane = link.get_via_lane_or_lane();
+                if !lane.get_edge().is_internal() {
+                    view += 1;
+                }
+                linkIt = MSLane::succ_link_sec(&*veh, view, &*lane, &bestLaneConts);
+            }
+            // consider edges beyond bestLanes
+            let edges = veh.get_route().get_edges().clone();
+            let curIdx = *veh.get_current_route_edge() as i32;
+            let remainingEdges = edges.len() as i32 - curIdx - view;
+            for i in 0..remainingEdges {
+                let prev = edges[(curIdx + view + i - 1) as usize];
+                let next = edges[(curIdx + view + i) as usize];
+                let allowed = prev.allowed_lanes(&*next, veh.get_v_class(), false);
+                if !allowed.is_null() && allowed.len() != 0 {
+                    for link in allowed[0].get_link_cont().iter() {
+                        if std::ptr::eq(&*link.get_lane().get_edge(), &*next) {
+                            result.push(next_link_connection(veh, lane, *link, currTime));
+                        }
+                    }
+                } else {
+                    // invalid route, cannot determine nextTLS
+                    break;
+                }
+            }
+        } else {
+            write_warning("getNextLinks not yet implemented for meso");
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCINextStopData> Vehicle::getStops(const std::string &, int)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // std::vector<libsumo::TraCINextStopData>
+    // Vehicle::getStops(const std::string& vehID, int limit) {
+    //     std::vector<TraCINextStopData> result;
+    //     MSBaseVehicle* vehicle = Helper::getVehicle(vehID);
+    //     if (limit < 0) {
+    //         // return past stops up to the given limit
+    //         const StopParVector& pastStops = vehicle->getPastStops();
+    //         const int n = (int)pastStops.size();
+    //         for (int i = MAX2(0, n + limit); i < n; i++) {
+    //             result.push_back(Helper::buildStopData(pastStops[i]));
+    //         }
+    //     } else {
+    //         for (const MSStop& stop : vehicle->getStops()) {
+    //             if (!stop.pars.collision) {
+    //                 TraCINextStopData nsd = Helper::buildStopData(stop.pars);
+    //                 nsd.duration = STEPS2TIME(stop.duration);
+    //                 result.push_back(nsd);
+    //                 if (limit > 0 && (int)result.size() >= limit) {
+    //                     break;
+    //                 }
+    //             }
+    //         }
+    //     }
+    //     return result;
+    // }
     #[allow(unused_variables)]
     pub fn get_stops(vehID: &str, limit: i32) -> Vec<TraCINextStopData> {
-        // shortcut: getStops C++ body not ported in this pass (see Vehicle.cpp:662)
-        panic!("Vehicle::getStops not yet ported")
+        let mut result = Vec::new();
+        let vehicle = Helper::get_vehicle(vehID);
+        if limit < 0 {
+            let pastStops = vehicle.get_past_stops();
+            let n = pastStops.len() as i32;
+            for i in std::cmp::max(0, n + limit)..n {
+                result.push(Helper::build_stop_data(&pastStops[i as usize]));
+            }
+        } else {
+            for stop in vehicle.get_stops().iter() {
+                if !stop.pars.collision {
+                    let mut nsd = Helper::build_stop_data(&stop.pars);
+                    nsd.duration = steps2time(stop.duration);
+                    result.push(nsd);
+                    if limit > 0 && result.len() as i32 >= limit {
+                        break;
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `int Vehicle::getStopState(const std::string &)` [static]
@@ -1850,9 +2020,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(typeID: &str) -> String {
-        // shortcut: toString(LatAlignmentDefinition) is not ported yet, upgrade with the SUMOVTypeParameter string helpers
-        let _ = Helper::get_vehicle_type(typeID).get_preferred_lateral_alignment();
-        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
+        crate::libsumo::vehicle_type::lat_alignment_to_string(*Helper::get_vehicle_type(typeID).get_preferred_lateral_alignment()).to_string()
     }
 
     /// C++: `int Vehicle::getPersonCapacity(const std::string &)` [static]
@@ -4069,8 +4237,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_all_subscription_results() -> SubscriptionResults {
-        // shortcut: returns the Vehicle::mySubscriptionResults static, which is not ported yet (see the static block at the top of this file)
-        panic!("Vehicle::getAllSubscriptionResults not yet ported: mySubscriptionResults static is missing")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::TraCIResults Vehicle::getSubscriptionResults(const std::string &)` [static]
@@ -4078,8 +4245,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_subscription_results(objectID: &str) -> TraCIResults {
-        // shortcut: reads the Vehicle::mySubscriptionResults static, which is not ported yet (see the static block at the top of this file)
-        panic!("Vehicle::getSubscriptionResults not yet ported: mySubscriptionResults static is missing")
+        MY_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `const libsumo::ContextSubscriptionResults Vehicle::getAllContextSubscriptionResults()` [static]
@@ -4087,8 +4253,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_all_context_subscription_results() -> ContextSubscriptionResults {
-        // shortcut: returns the Vehicle::myContextSubscriptionResults static, which is not ported yet (see the static block at the top of this file)
-        panic!("Vehicle::getAllContextSubscriptionResults not yet ported: myContextSubscriptionResults static is missing")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow().clone())
     }
 
     /// C++: `const libsumo::SubscriptionResults Vehicle::getContextSubscriptionResults(const std::string &)` [static]
@@ -4096,8 +4261,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Vehicle, VEHICLE)
     #[allow(unused_variables)]
     pub fn get_context_subscription_results(objectID: &str) -> SubscriptionResults {
-        // shortcut: reads the Vehicle::myContextSubscriptionResults static, which is not ported yet (see the static block at the top of this file)
-        panic!("Vehicle::getContextSubscriptionResults not yet ported: myContextSubscriptionResults static is missing")
+        MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.borrow_mut().entry(objectID.to_string()).or_default().clone())
     }
 
     /// C++: `void Vehicle::subscribeParameterWithKey(const std::string &, const std::string &, double, double)` [static]
