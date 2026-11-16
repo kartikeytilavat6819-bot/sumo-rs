@@ -7,10 +7,15 @@ OURS=/tmp/target/debug/sumo
 "$C/netgenerate" --grid --grid.number 3 --grid.length 200 -o net.xml >ng.log 2>&1
 cat > routes.xml <<'EOF'
 <routes>
+    <vType id="truck" vClass="truck" personCapacity="4" containerCapacity="4"/>
     <route id="r0" edges="A0B0 B0C0"/>
-    <vehicle id="v0" route="r0" depart="0">
+    <vehicle id="v0" type="truck" route="r0" depart="0">
         <stop edge="A0B0" pos="100" duration="30"/>
     </vehicle>
+    <container id="c0" depart="0">
+        <transport from="A0B0" to="B0C0" lines="v0"/>
+        <tranship edges="B0C0" speed="1"/>
+    </container>
     <person id="p0" depart="0">
         <walk edges="A0B0"/>
         <ride from="A0B0" to="B0C0" lines="v0"/>
