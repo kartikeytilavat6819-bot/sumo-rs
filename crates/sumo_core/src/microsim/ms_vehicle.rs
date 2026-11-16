@@ -17023,3 +17023,13 @@ mod vt_dispatch_tests {
     }
 }
 
+
+#[cfg(test)]
+mod globals_tests {
+    #[test]
+    fn semi_implicit_euler_follows_ms_globals() {
+        // was a local stub hardcoded to false (ballistic), C++ defaults to the Euler update
+        assert_eq!(super::semi_implicit_euler_update(), crate::microsim::ms_globals::semi_implicit_euler_update());
+        assert!(super::semi_implicit_euler_update());
+    }
+}
