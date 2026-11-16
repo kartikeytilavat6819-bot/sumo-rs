@@ -199,7 +199,6 @@ impl MSStateHandler {
     //         }
     //     }
     //     MSNet::getInstance()->getTLSControl().saveState(out);
-    //     MSNet::getInstance()->getDetectorControl().saveState(out);
     //     MSRoutingEngine::saveState(out);
     //     out.close();
     //     gPrecision = defaultPrecision;
@@ -264,7 +263,6 @@ impl MSStateHandler {
             }
         }
         MSNet::get_instance().m().get_tls_control().save_state(&mut out);
-        MSNet::get_instance().m().get_detector_control().save_state(&mut out);
         MSRoutingEngine::save_state(&mut out);
         out.close().unwrap_or_else(|e| panic!("{e}"));
         set_g_precision(defaultPrecision);
@@ -577,14 +575,6 @@ impl MSStateHandler {
     //             tl->loadState(tlc, myTime, phase, spentDuration, nextSwitch, timeInCycle, active);
     //             break;
     //         }
-    //         case SUMO_TAG_INDUCTION_LOOP: {
-    //             MSDetectorFileOutput* const det = MSNet::getInstance()->getDetectorControl().getTypedDetectors(SUMO_TAG_INDUCTION_LOOP).get(attrs.getString(SUMO_ATTR_ID));
-    //             // the detector may belong to an output which is not loaded
-    //             if (det != nullptr) {
-    //                 det->loadState(attrs, myOffset);
-    //             }
-    //             break;
-    //         }
     //         case SUMO_TAG_DISPATCHER: {
     //             bool ok = true;
     //             SUMOTime next = attrs.get<SUMOTime>(SUMO_ATTR_NEXT, "dispatcher", ok);
@@ -818,13 +808,6 @@ impl MSStateHandler {
             }
             SUMO_TAG_PERSON | SUMO_TAG_CONTAINER => {
                 self.myAttrs = leak_attrs(attrs);
-            }
-            SUMO_TAG_INDUCTION_LOOP => {
-                let id = attrs.get_string(SUMO_ATTR_ID);
-                // the detector may belong to an output which is not loaded
-                if let Some(det) = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&id) {
-                    det.m().load_state(attrs, self.myOffset);
-                }
             }
             SUMO_TAG_DISPATCHER => {
                 // shortcut: MSDevice_Taxi::initDispatch is not ported under a verified name
