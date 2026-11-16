@@ -1249,7 +1249,7 @@ impl MSStateHandler_MSStateTimeHandler {
     #[allow(unused_variables)]
     pub fn get_time(fileName: &str) -> SUMOTime {
         // build handler and parser
-        let mut handler = MSStateHandler_MSStateTimeHandler { base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, "", ""), myTime: 0 };
+        let mut handler = MSStateHandler_MSStateTimeHandler { base: utils::xml::sumo_sax_handler::new("", ""), myTime: 0 };
         handler.set_file_name(fileName);
         handler.myTime = -1;
         let mut parser = utils::xml::xml_sub_sys::get_sax_reader(false, false);
