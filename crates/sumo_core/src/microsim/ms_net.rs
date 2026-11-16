@@ -2181,12 +2181,17 @@ impl MSNet {
             MSEmissionExport::write(&mut device_by_option("emission-output").borrow_mut(), self.myStep);
         }
 
+        // battery dumps
+        if is_set("battery-output") {
+            MSBatteryExport::write(&mut device_by_option("battery-output").borrow_mut(), self.myStep, get_int("battery-output.precision"));
+        }
+
         // check full dumps
         if is_set("full-output") {
             MSGlobals::set_have_emissions(true);
         }
 
-        // shortcut: the netstate, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        // shortcut: the netstate, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
         self.write_summary_output(false);
 
         // write detector values
