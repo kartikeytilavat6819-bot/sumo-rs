@@ -27,9 +27,9 @@ impl MSLCM_LC2013_CC {
     // MSLCM_LC2013_CC::MSLCM_LC2013_CC(MSVehicle& v) : MSLCM_LC2013(v) {}
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
-        MSLCM_LC2013_CC {
-            base: MSLCM_LC2013::new(v),
-        }
+        let mut base = MSLCM_LC2013::new(v);
+        base.base.vt = &MSLCM_LC2013_CC_VT;
+        MSLCM_LC2013_CC { base }
     }
 
     /// C++: `void MSLCM_LC2013_CC::~MSLCM_LC2013_CC() noexcept` [virtual]

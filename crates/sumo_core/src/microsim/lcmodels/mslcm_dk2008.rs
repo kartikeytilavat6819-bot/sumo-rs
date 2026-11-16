@@ -132,6 +132,7 @@ pub static MSLCM_DK2008_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeMo
     debug_vehicle: MSAbstractLaneChangeModel::debug_vehicle_base,
     get_parameter: MSAbstractLaneChangeModel::get_parameter_base,
     get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
 };
 
 impl MSLCM_DK2008 {

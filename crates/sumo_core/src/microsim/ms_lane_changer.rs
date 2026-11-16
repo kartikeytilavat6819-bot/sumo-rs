@@ -22,6 +22,8 @@ const OPPOSITE_OVERTAKING_ONCOMING_LOOKAHEAD: f64 = 1000.0;
 const OPPOSITE_OVERTAKING_MAX_SPACE_TO_OVERTAKE: f64 = 1000.0;
 const OPPOSITE_OVERTAKING_HILLTOP_THRESHOHOLD: f64 = 5.0;
 const OPPOSITE_OVERTAKING_DEADLOCK_WAIT: f64 = 1.0;
+// C++ utils/common/StdDefs.h SUMO_const_laneWidth
+const SUMO_const_laneWidth: f64 = 3.2;
 
 /// C++ typedef `std::vector<ChangeElem> MSLaneChanger::Changer`
 pub type MSLaneChanger_Changer = Vec<MSLaneChanger_ChangeElem>;
@@ -2311,6 +2313,10 @@ impl MSLaneChanger {
                 state |= blockedByLeader;
             }
         }
+        if blocked == 0 && (state & LCA_WANTS_LANECHANGE) != 0 {
+            blocked = vehicle.get_lane_change_model_2().check_change_before_committing(vehicle, state);
+            state |= blocked;
+        }
         // shortcut: MSGlobals::gLaneChangeDuration is not ported and defaults to 0, so the
         // C++ block "gLaneChangeDuration > DELTA_T" (estimateLCDuration and the succLinkSec
         // lookahead) never runs here; port it when MSGlobals and MSLane::succLinkSec are typed
@@ -2991,13 +2997,12 @@ impl MSLaneChanger {
         let u = if leader.get_acceleration() > 0.0 { leader.get_lane().get_vehicle_max_speed(traffic_object(leader)) } else { leader.get_speed() };
         let a = vehicle.get_car_follow_model().get_max_accel();
         let d = vehicle.get_car_follow_model().get_max_decel();
-        // shortcut: MSGlobals::gSublane is not ported and defaults to false, so the sublane term is 0
         let g = max2(0.0, (
             gap + vehicle.get_vehicle_type().get_min_gap()
             + leader.get_vehicle_type().get_length_with_gap()
             + vehicle.get_vehicle_type().get_length()
             + leader.get_car_follow_model().get_secure_gap(leader, vehicle, u, vMax, d))
-            + 0.0);
+            + if MSGlobals::sublane() { vMax * vehicle.get_lane().get_width() / vehicle.get_vehicle_type().get_max_speed_lat() } else { 0.0 });
         let sign: f64 = -1.0; // XXX recheck
         let mut t = (u - v - (4.0 * (u - v) * (u - v) + 8.0 * a * g).sqrt() * sign * 0.5) / a;
         debug_assert!(t >= 0.0);
@@ -3474,8 +3479,13 @@ impl MSLaneChanger {
         let bestOffset = preb[laneIndex as usize].bestLaneOffset;
         let spaceToStop = vehicle.next_stop_dist();
         let timeToStopForward = spaceToStop / max2(vehicle.get_speed(), vehicle.get_car_follow_model().get_max_accel());
-        // shortcut: MSGlobals::gLaneChangeDuration and gLateralResolution are not ported; both default to 0, so the lateral term is 0
-        let timeToStopLateral = 0.0_f64;
+        let timeToStopLateral = if MSGlobals::lane_change_duration() > 0 {
+            steps2time(MSGlobals::lane_change_duration()) * bestOffset as f64
+        } else if MSGlobals::lateral_resolution() > 0.0 {
+            bestOffset as f64 * SUMO_const_laneWidth / vehicle.get_vehicle_type().get_max_speed_lat()
+        } else {
+            0.0
+        };
         let timeToStop = max2(timeToStopForward, timeToStopLateral);
         if !isOpposite {
             let searchDist = timeToStop * oncomingLane.get_speed_limit() * 2.0 + spaceToStop;
