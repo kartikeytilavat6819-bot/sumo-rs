@@ -26,6 +26,8 @@ const STAGE_INSERTIONS: &str = "insertion";
 const STAGE_REMOTECONTROL: &str = "remoteControl";
 // C++ libsumo ROUTING_MODE_AGGREGATED_CUSTOM (TraCIConstants.h), not in utils::traci yet
 const ROUTING_MODE_AGGREGATED_CUSTOM: i32 = 0x04;
+// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// C++ `new` for a Ptr target that the net owns (freed with delete_ptr)
 fn leak_ptr<T>(v: T) -> Ptr<T> {
@@ -611,7 +613,7 @@ impl MSNet {
         self.myHasBidiEdges = self.check_bidi_edges();
         self.myVersion = *version;
         if (!MSGlobals::using_internal_lanes() || !self.myHasInternalLinks) && MSGlobals::weights_separate_turns() > 0.0 {
-            panic!("Option weights.separate-turns is only supported when simulating with internal lanes");
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Option weights.separate-turns is only supported when simulating with internal lanes"));
         }
     }
 
@@ -865,8 +867,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn simulate(&mut self, start: SUMOTime, stop: SUMOTime) -> MSNet_SimulationState {
-        // shortcut: VERSION_STRING is not ported yet, the version is reported as 'unknown'
-        write_messagef!("Simulation version % started with time: %.", "unknown", time2string(start));
+        write_messagef!("Simulation version % started with time: %.", VERSION_STRING, time2string(start));
         // the simulation loop
         let mut state = MSNet_SimulationState::SIMSTATE_RUNNING;
         // state loading may have changed the start time so we need to reinit it
@@ -1066,8 +1067,7 @@ impl MSNet {
             if self.myLogExecutionTime {
                 self.myTraCIStepDuration = current_millis() - self.myTraCIStepDuration;
             }
-            // shortcut: TraCI load arguments (TraCIServer::getLoadArgs) are not ported, so a load request does not end the step early
-            if TraCIServer::was_closed() {
+            if TraCIServer::was_closed() || !t.m().get_load_args().is_empty() {
                 return;
             }
         }
@@ -1789,7 +1789,9 @@ impl MSNet {
         if TraCIServer::was_closed() {
             return MSNet_SimulationState::SIMSTATE_CONNECTION_CLOSED;
         }
-        // shortcut: TraCI load arguments are not ported, so SIMSTATE_LOADING is never reported
+        if !TraCIServer::get_instance().is_null() && !TraCIServer::get_instance().m().get_load_args().is_empty() {
+            return MSNet_SimulationState::SIMSTATE_LOADING;
+        }
         if (stopTime < 0 || self.myStep > stopTime) && TraCIServer::get_instance().is_null() && (stopTime > 0 || self.myStep > self.myEdgeDataEndTime) {
             if self.myVehicleControl.get_active_vehicle_count() == 0
                 && self.myInserter.get_pending_flow_count() == 0
@@ -1818,7 +1820,10 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn adapt_to_state(&self, state: MSNet_SimulationState, isLibsumo: bool) -> MSNet_SimulationState {
         if state == MSNet_SimulationState::SIMSTATE_LOADING {
-            // shortcut: OptionsIO::setArgs with the TraCI load arguments is not ported yet
+            let t = TraCIServer::get_instance();
+            let args = t.m().get_load_args().clone();
+            utils::options::options_io::set_args(&args);
+            t.m().get_load_args().clear();
         } else if state != MSNet_SimulationState::SIMSTATE_RUNNING && ((!TraCIServer::get_instance().is_null() && !TraCIServer::was_closed()) || isLibsumo) {
             // overrides SIMSTATE_END_STEP_REACHED, e.g. (TraCI / Libsumo ignore SUMO's --end option)
             return MSNet_SimulationState::SIMSTATE_RUNNING;
@@ -3080,7 +3085,7 @@ impl MSNet {
     pub fn get_travel_time(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
@@ -3122,7 +3127,7 @@ impl MSNet {
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
