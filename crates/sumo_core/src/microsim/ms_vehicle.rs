@@ -2663,8 +2663,12 @@ impl MSVehicle {
             base: MSBaseVehicle::new(pars, route, type_, speedFactor),
             myManoeuvre: MSVehicle_Manoeuvre::new(),
             myWaitingTime: 0,
-            // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used
-            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(300 * 1000),
+            // C++: MSGlobals::gWaitingTimeMemory = string2time(oc.getString("waiting-time-memory"))
+            // (MSFrame.cpp:1213, option default "100" seconds). Was hardcoded to 300 s, which made the
+            // saved waitingTime three times C++'s.
+            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(
+                string2time(&utils::options::options_cont::get_string("waiting-time-memory")).unwrap_or(100 * 1000),
+            ),
             myTimeLoss: 0.0,
             myState: MSVehicle_State::new(0.0, 0.0, 0.0, 0.0, 0.0),
             myDriverState: Ptr::null(),
