@@ -14,7 +14,6 @@ fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
 
-// shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
 const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
 const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
@@ -28,9 +27,8 @@ fn as_traffic_object(v: &mut MSVehicle) -> &mut SUMOTrafficObject {
     unsafe { &mut *(v as *mut MSVehicle as *mut SUMOTrafficObject) }
 }
 
-#[allow(dead_code)]
 fn semi_implicit_euler_update() -> bool {
-    false
+    crate::microsim::ms_globals::MSGlobals::semi_implicit_euler_update()
 }
 
 /// C++ enum `MSVehicle::ChangeRequest`
