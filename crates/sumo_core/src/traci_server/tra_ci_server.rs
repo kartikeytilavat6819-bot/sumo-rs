@@ -498,6 +498,11 @@ impl TraCIServer {
     /// The switch of C++ processGet. Ok(false) is the C++ `return false` of the default case,
     /// Err carries the message of a TraCIException that the C++ code throws inside the switch.
     fn process_get_variable(&mut self, commandID: i32, variable: i32, id: &str, inputStorage: &mut Storage) -> Result<bool, String> {
+        // The VariableWrapper dispatch needs a sink that reaches the server's own `wrap*` bodies.
+        // `self` is the server; the borrow of `base2` below must not alias it, so the raw pointer is
+        // taken first (fetched from ls02's verified one-line change).
+        let me: *mut dyn crate::libsumo::variable_wrapper::VariableWrapperSink = self;
+        self.base2.set_sink(me);
         let wrapper = Ptr::from_mut(&mut self.base2);
         let params = Ptr::from_mut(inputStorage);
         let hex = to_hex(variable as u64, 2, 0);
