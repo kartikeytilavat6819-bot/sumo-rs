@@ -1,0 +1,1 @@
+Pending the router trait bounds (lead): MSStageWalking/MSPModel_Striping state ctor calls MSNet::get_pedestrian_router (utils/router/pedestrian_router.rs needs E::getAllEdges/getLength/getToJunction). Re-enable by deleting this file.
