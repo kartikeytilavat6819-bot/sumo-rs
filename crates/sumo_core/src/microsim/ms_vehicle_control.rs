@@ -11,10 +11,6 @@ use utils::options::options_cont::{get_float, get_string, is_set};
 // VTYPEPARS_VEHICLECLASS_SET bit from utils/vehicle/SUMOVTypeParameter.h (not exported by the ported module yet)
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 /// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
 // shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
@@ -566,7 +562,7 @@ impl MSVehicleControl {
         if pars.departProcedure == DepartDefinition::TRIGGERED || pars.departProcedure == DepartDefinition::CONTAINER_TRIGGERED || pars.departProcedure == DepartDefinition::SPLIT {
             let firstEdge: Ptr<MSEdge> = v.get_route().get_edges()[pars.departEdge as usize];
             if add {
-                if !g_use_meso_sim() {
+                if !MSGlobals::use_meso_sim() {
                     // position will be checked against person position later
                     as_ms_vehicle(v).m().set_tentative_lane_and_position(Ptr::null(), pars.departPos, 0.);
                 }

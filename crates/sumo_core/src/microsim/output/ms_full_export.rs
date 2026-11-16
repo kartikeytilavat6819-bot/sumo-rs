@@ -3,10 +3,6 @@
 use crate::prelude::*;
 use utils::geom::NUMERICAL_EPS;
 
-// shortcut: MSGlobals::gUsingInternalLanes is not ported (ms_globals.rs is empty); C++ default is false, upgrade when MSGlobals is filled
-fn g_using_internal_lanes() -> bool {
-    false
-}
 
 /// C++ `MSLane::getEmissions<ET>()` template body (MSLane.h): sums the per-vehicle emissions of the lane.
 /// The ms_lane.rs stub has no template parameter, so the sum is computed here from the same pieces.
@@ -193,7 +189,7 @@ impl MSFullExport {
         let ec = net.m().get_edge_control();
         let edges = ec.get_edges();
         for edge in edges.iter() {
-            if !g_using_internal_lanes() && !edge.is_normal() {
+            if !MSGlobals::using_internal_lanes() && !edge.is_normal() {
                 continue;
             }
             of.open_tag("edge").write_attr("id", edge.get_id()).write_attr("traveltime", &edge.get_current_travel_time(NUMERICAL_EPS));

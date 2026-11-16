@@ -57,21 +57,6 @@ fn device_by_option(name: &str) -> OutputDeviceRef {
     OutputDevice::get_device_by_option(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-// shortcut: MSGlobals is not ported yet; these read the options that MSFrame::setMSGlobals copies into it
-fn g_use_meso_sim() -> bool {
-    get_bool("mesosim")
-}
-fn g_check_4_accidents() -> bool {
-    !get_bool("ignore-accidents")
-}
-fn g_using_internal_lanes() -> bool {
-    !get_bool("no-internal-links")
-}
-fn g_weights_separate_turns() -> f64 {
-    get_float("weights.separate-turns")
-}
-// shortcut: MSGlobals::gClearState is not ported yet, the flag is not kept
-fn set_g_clear_state(_v: bool) {}
 
 
 /// C++ enum `MSNet::SimulationState`
@@ -337,7 +322,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_static() {
-        if !g_use_meso_sim() {
+        if !MSGlobals::use_meso_sim() {
             MSVehicle_Influencer::cleanup();
         }
     }
@@ -411,7 +396,7 @@ impl MSNet {
         let step = opt_time("begin");
         let max_depart_delay = opt_time("max-depart-delay");
         let random_depart_offset = opt_time("random-depart-offset");
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             // shortcut: MSGlobals::gMesoNet (MELoop) is not wired into MSNet yet, mesoscopic runs are refused
             panic!("mesoscopic simulation is not wired into MSNet yet");
         }
@@ -622,7 +607,7 @@ impl MSNet {
         self.myHasPedestrianNetwork = self.check_walkingarea();
         self.myHasBidiEdges = self.check_bidi_edges();
         self.myVersion = *version;
-        if (!g_using_internal_lanes() || !self.myHasInternalLinks) && g_weights_separate_turns() > 0.0 {
+        if (!MSGlobals::using_internal_lanes() || !self.myHasInternalLinks) && MSGlobals::weights_separate_turns() > 0.0 {
             panic!("Option weights.separate-turns is only supported when simulating with internal lanes");
         }
     }
@@ -1107,13 +1092,13 @@ impl MSNet {
             MSRailSignalControl::get_instance().update_signals(self.myStep);
         }
         // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) is not ported yet
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_EVENTS);
         }
         // check whether the tls programs need to be switched
         self.myLogics.m().check2_switch(self.myStep);
 
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             panic!("mesoscopic simulation is not wired into MSNet yet");
         } else {
             // assure all lanes with vehicles are 'active'
@@ -1125,12 +1110,12 @@ impl MSNet {
             self.myEdges.m().set_junction_approaches();
             // decide right-of-way and execute movements
             self.myEdges.m().execute_movements(self.myStep);
-            if g_check_4_accidents() {
+            if MSGlobals::check4_accidents() {
                 self.myEdges.m().detect_collisions(self.myStep, STAGE_MOVEMENTS);
             }
             // vehicles may change lanes
             self.myEdges.m().change_lanes(self.myStep);
-            if g_check_4_accidents() {
+            if MSGlobals::check4_accidents() {
                 self.myEdges.m().detect_collisions(self.myStep, STAGE_LANECHANGE);
             }
         }
@@ -1156,7 +1141,7 @@ impl MSNet {
         self.myInserter.m().determine_candidates(self.myStep);
         self.myInsertionEvents.m().execute(self.myStep);
         self.myInserter.m().emit_vehicles(self.myStep);
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_INSERTIONS);
         }
         MSVehicleTransfer::get_instance().m().check_insertions(self.myStep);
@@ -1942,8 +1927,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime, quickReload: bool) {
-        set_g_clear_state(true);
-        if g_use_meso_sim() {
+        MSGlobals::set_clear_state(true);
+        if MSGlobals::use_meso_sim() {
             panic!("mesoscopic simulation is not wired into MSNet yet");
         } else {
             for edge in MSEdge::get_all_edges().iter() {
@@ -1985,7 +1970,7 @@ impl MSNet {
         MSRailSignalControl::clear_state();
         MSDriveWay::clear_state();
         self.myStep = step;
-        set_g_clear_state(false);
+        MSGlobals::set_clear_state(false);
     }
 
     /// C++: `SUMOTime MSNet::getLoaderTime() const` [const]
@@ -3590,14 +3575,14 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn post_move_step(&mut self) {
         let numControlled = crate::libsumo::helper::Helper::post_process_remote_control();
-        if numControlled > 0 && g_check_4_accidents() {
+        if numControlled > 0 && MSGlobals::check4_accidents() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_REMOTECONTROL);
         }
         if self.myLogExecutionTime {
             self.myTraCIStepDuration += current_millis();
             self.myTraCIMillis += self.myTraCIStepDuration;
         }
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             // collisions from the previous step were kept to avoid duplicate
             // warnings. we must remove them now to ensure correct output.
             self.remove_outdated_collisions();

@@ -27,14 +27,6 @@ fn edge_filter_names(content: &str) -> Vec<&str> {
     names
 }
 
-fn g_use_meso_sim() -> bool {
-    get_bool("mesosim")
-}
-/// shortcut: MSGlobals is unported (no accessors); gSublane is set in MSFrame::init from lanechange.duration and lateral-resolution, re-derived here
-fn g_sublane() -> bool {
-    string2time(&get_string("lanechange.duration")).unwrap_or_else(|e| panic!("{e}")) > 0
-        || get_float("lateral-resolution") > 0.0
-}
 
 thread_local! {
     static MY_BEGIN: Cell<SUMOTime> = const { Cell::new(0) };
@@ -457,7 +449,7 @@ impl MSDevice_FCD {
         if get_bool("fcd-output.acceleration") {
             written.set(SUMO_ATTR_ACCELERATION);
         }
-        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && g_sublane();
+        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && MSGlobals::sublane();
         if accel_lat {
             written.set(SUMO_ATTR_ACCELERATION_LAT);
         } else {
@@ -591,7 +583,7 @@ impl MSDevice_FCD {
         mask.set(SUMO_ATTR_LANE); // for micro vehicles only
         mask.set(SUMO_ATTR_EDGE); // for persons and meso vehicles
         mask.set(SUMO_ATTR_SLOPE);
-        if !g_use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
+        if !MSGlobals::use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
             mask.set(SUMO_ATTR_LEADER_ID);
             mask.set(SUMO_ATTR_LEADER_SPEED);
             mask.set(SUMO_ATTR_LEADER_GAP);

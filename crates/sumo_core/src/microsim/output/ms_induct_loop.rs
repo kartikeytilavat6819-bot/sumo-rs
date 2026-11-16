@@ -13,13 +13,6 @@ const HAS_NOT_LEFT_DETECTOR: f64 = -1.;
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
 
-// shortcut: MSGlobals flags are not ported (ms_globals.rs is empty); these return the C++ defaults, upgrade when MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
-fn g_num_sim_threads() -> i32 {
-    1
-}
 
 /// C++ `SIMSTEP` macro
 fn sim_step() -> SUMOTime {
@@ -138,7 +131,7 @@ impl MSInductLoop {
     pub fn new(id: &str, lane: Ptr<MSLane>, positionInMeters: f64, length: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, needLocking: bool) -> Box<Self> {
         debug_assert!(length >= 0.);
         debug_assert!(positionInMeters >= 0. && positionInMeters + length <= lane.get_length());
-        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while g_use_meso_sim() is false
+        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while MSGlobals::use_meso_sim() is false
         let mut s = Box::new(MSInductLoop {
             base: MSMoveReminder::new(id, lane, true),
             // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
@@ -146,7 +139,7 @@ impl MSInductLoop {
             myName: name,
             myPosition: positionInMeters,
             myEndPosition: positionInMeters + length,
-            myNeedLock: needLocking || g_num_sim_threads() > 1,
+            myNeedLock: needLocking || MSGlobals::num_sim_threads() > 1,
             // initialize in a way which doesn't impact actualted traffic lights at simulation start (yet doesn't look ugly in the outputs)
             myLastLeaveTime: -3600.,
             myNextMesoLeaveTimes: MSInductLoop_TimeQueue::default(),
@@ -270,8 +263,8 @@ impl MSInductLoop {
         if !self.base2.vehicle_applies(veh) && (veh.is_person() || self.base2.myDetectPersons <= PersonMode::WALK as i32) {
             return false;
         }
-        if g_use_meso_sim() {
-            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, extrapolated segment leave times) not ported; unreachable while g_use_meso_sim() is false
+        if MSGlobals::use_meso_sim() {
+            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, extrapolated segment leave times) not ported; unreachable while MSGlobals::use_meso_sim() is false
             return true;
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
@@ -455,8 +448,8 @@ impl MSInductLoop {
             let p = MSNet::get_instance().m().get_person_control().get(veh.get_id());
             self.notify_move_person(p, lastDir, lastPos);
         }
-        if g_use_meso_sim() && reason <= MSMoveReminder_Notification::NOTIFICATION_SEGMENT && self.base2.vehicle_applies(veh) {
-            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, interpolated leave times) not ported; unreachable while g_use_meso_sim() is false
+        if MSGlobals::use_meso_sim() && reason <= MSMoveReminder_Notification::NOTIFICATION_SEGMENT && self.base2.vehicle_applies(veh) {
+            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, interpolated leave times) not ported; unreachable while MSGlobals::use_meso_sim() is false
             return false;
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION || (veh.is_person() && self.base2.myDetectPersons != PersonMode::NONE as i32) {
@@ -658,7 +651,7 @@ impl MSInductLoop {
             // detector is occupied
             return 0.;
         }
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             return sim_time() - steps2time(self.get_last_detection_time());
         }
         sim_time() - self.myLastLeaveTime
@@ -762,7 +755,7 @@ impl MSInductLoop {
             return MSNet::get_instance().get_current_time_step();
         }
         let now = sim_step();
-        if g_use_meso_sim() && !self.myNextMesoLeaveTimes.is_empty() && tq_top(&self.myNextMesoLeaveTimes) < now {
+        if MSGlobals::use_meso_sim() && !self.myNextMesoLeaveTimes.is_empty() && tq_top(&self.myNextMesoLeaveTimes) < now {
             // shortcut: C++ discards old times in its `mutable` queues; this method takes &self, so the cleanup runs on copies (meso is off)
             let mut next = self.myNextMesoLeaveTimes.clone();
             MSInductLoop::discard_old_times(&mut next, now);
@@ -945,7 +938,7 @@ impl MSInductLoop {
                 contrib += 1;
             }
         }
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             contrib = self.myEnteredVehicleNumber;
         }
         let flow = contrib as f64 / t * 3600.;

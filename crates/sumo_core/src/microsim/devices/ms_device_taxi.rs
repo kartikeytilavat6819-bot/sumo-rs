@@ -4,20 +4,13 @@ use crate::prelude::*;
 use utils::common::to_string::{f64_to_string_prec, join_to_string_sorting};
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
-thread_local! {
-    /// C++ `static SVCPermissions gTaxiClasses` in MSDevice_Taxi.cpp
-    static G_TAXI_CLASSES: std::cell::Cell<i64> = std::cell::Cell::new(0);
-}
+/// C++ `gTaxiClasses` (StdDefs, int); MSFrame seeds it from taxi.vclasses and the intermodal router reads it
 fn g_taxi_classes() -> i64 {
-    G_TAXI_CLASSES.with(|c| c.get())
+    utils::common::std_defs::g_taxi_classes() as i64
 }
 fn set_g_taxi_classes(v: i64) {
-    G_TAXI_CLASSES.with(|c| c.set(v))
+    utils::common::std_defs::set_g_taxi_classes(v as i32)
 }
 
 /// C++ enum `MSDevice_Taxi::TaxiState`
@@ -1141,7 +1134,7 @@ impl MSDevice_Taxi {
         self.myLastDispatch.retain(|x| current_reservations.contains(x));
         // if there are reservations left, go on with the dispatch
         // in meso, wait for the next dispatch cycle to avoid updating stops in this stage
-        if !g_use_meso_sim() {
+        if !MSGlobals::use_meso_sim() {
             let last = self.myLastDispatch.clone();
             self.dispatch_shared(last);
         }
@@ -1309,7 +1302,7 @@ impl MSDevice_Taxi {
             self.myCurrentReservations.clear();
             self.check_task_swap();
             if self.is_empty() {
-                if g_use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
+                if MSGlobals::use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
                     { let idle = self.myIdleAlgorithm; idle.m().idle(Ptr::from_mut(self)); }
                 }
             }
@@ -1952,7 +1945,7 @@ impl MSDevice_Taxi {
         } else if !self.myRoutingDevice.is_null() {
             self.myRoutingDevice.m().set_active(true);
         }
-        if holder.is_stopped() && (self.is_empty() || g_use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
+        if holder.is_stopped() && (self.is_empty() || MSGlobals::use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
             // limit duration of stop (but only for idling-related stops)
             holder.get_next_stop_mutable().endBoarding = self.myServiceEnd;
         }

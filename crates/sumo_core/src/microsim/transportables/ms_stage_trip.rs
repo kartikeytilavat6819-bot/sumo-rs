@@ -10,10 +10,6 @@ const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
 const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
 const VEHPARS_ARRIVALSPEED_SET: i64 = 2 << 13;
 
-// C++ MSGlobals::gUseMesoSim is set from the "mesosim" option
-fn g_use_meso_sim() -> bool {
-    options_cont::get_bool("mesosim")
-}
 
 /// A "placeholder" stage storing routing info which will result in real stages when routed
 /// C++ class `MSStageTrip` (microsim/transportables/MSStageTrip.h)
@@ -577,7 +573,7 @@ impl MSStageTrip {
             let mut result: Vec<IntermodalRouter_TripItem> = Vec::new();
             let mut departPos = previous.get_arrival_pos();
             let prevStop = previous.get_destination_stop();
-            if g_use_meso_sim() && !prevStop.is_null() {
+            if MSGlobals::use_meso_sim() && !prevStop.is_null() {
                 departPos = (prevStop.get_begin_lane_position() + prevStop.get_end_lane_position()) / 2.;
             }
             let prevStopID = if prevStop.is_null() { String::new() } else { prevStop.get_id().to_string() };

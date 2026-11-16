@@ -1281,10 +1281,10 @@ impl MSLaneChangerSublane {
         let mut result = MSLeaderDistanceInfo::new(tlane.get_width(), Ptr::null(), 0.0);
         let mut sublaneShift: i32 = 0;
         if tlane == ego.get_lane() {
-            if ego.get_left_side_on_lane() < -g_lateral_resolution() {
-                sublaneShift = (-ego.get_left_side_on_lane() / g_lateral_resolution()) as i32;
-            } else if ego.get_right_side_on_lane() > tlane.get_width() + g_lateral_resolution() {
-                sublaneShift = -(((ego.get_right_side_on_lane() - tlane.get_width()) / g_lateral_resolution()) as i32);
+            if ego.get_left_side_on_lane() < -MSGlobals::lateral_resolution() {
+                sublaneShift = (-ego.get_left_side_on_lane() / MSGlobals::lateral_resolution()) as i32;
+            } else if ego.get_right_side_on_lane() > tlane.get_width() + MSGlobals::lateral_resolution() {
+                sublaneShift = -(((ego.get_right_side_on_lane() - tlane.get_width()) / MSGlobals::lateral_resolution()) as i32);
             }
             result.set_sublane_offset(sublaneShift);
         }
@@ -1582,9 +1582,9 @@ impl MSLaneChangerSublane {
             if leftOL < 0.0 || outsideLeft {
                 let mut sublaneOffset: i32 = 0;
                 if outsideLeft {
-                    sublaneOffset = std::cmp::min(0, -(((leftOL - lane.get_width()) / g_lateral_resolution()).ceil() as i32) + 1);
+                    sublaneOffset = std::cmp::min(0, -(((leftOL - lane.get_width()) / MSGlobals::lateral_resolution()).ceil() as i32) + 1);
                 } else {
-                    sublaneOffset = std::cmp::max(0, (((-rightOL) / g_lateral_resolution()).ceil() as i32) - 1);
+                    sublaneOffset = std::cmp::max(0, (((-rightOL) / MSGlobals::lateral_resolution()).ceil() as i32) - 1);
                 }
                 if sublaneOffset != 0 {
                     leaders.set_sublane_offset(sublaneOffset);
@@ -1637,10 +1637,6 @@ impl MSLaneChangerSublane {
 
 
 /// Field-wise copy of MSAbstractLaneChangeModel::StateAndDist (C++ passes it by value; the Rust struct is not Clone)
-/// C++ `MSGlobals::gLateralResolution` (option "lateral-resolution"), as in mslcm_sl2015.rs
-fn g_lateral_resolution() -> f64 {
-    utils::options::options_cont::get_float("lateral-resolution")
-}
 
 fn sd_copy(s: &MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
     MSAbstractLaneChangeModel_StateAndDist::new(s.state, s.latDist, s.maneuverDist, s.dir)
