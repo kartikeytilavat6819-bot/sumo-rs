@@ -79,6 +79,11 @@ fn my_mb_classes() -> SVCPermissions {
     MY_MB_CLASSES.with(|c| c.get())
 }
 
+/// whether `listener` is the rail signal control singleton (the port has no vtable: the caller dispatches to it by identity)
+pub fn is_listener(listener: *const MSNet_VehicleStateListener) -> bool {
+    my_instance_opt().map_or(false, |i| i.as_raw() as *const MSNet_VehicleStateListener == listener)
+}
+
 /// the current singleton, creating it (and registering the listener) on first use
 fn my_instance_ptr() -> Ptr<MSRailSignalControl> {
     MY_INSTANCE.with(|c| {
