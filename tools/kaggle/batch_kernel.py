@@ -49,7 +49,9 @@ if not inp:
     raise SystemExit(1)
 base = os.path.dirname(inp[0])
 sh(setup, "curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", 3)
-env = f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score; cd {SRC};"
+# emission models (PHEMlight5) read data files relative to SUMO_HOME; the oracle wheel ships them
+sh("python -m pip install -q --target /tmp/sumo_pkg eclipse-sumo==1.28.0 2>&1 | tail -2; ls /tmp/sumo_pkg/sumo/data/emissions/PHEMlight5 | wc -l", 4)
+env = f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score SUMO_HOME=/tmp/sumo_pkg/sumo; cd {SRC};"
 
 for line in open(inp[0]).read().split("\n"):
     if not line.strip():
