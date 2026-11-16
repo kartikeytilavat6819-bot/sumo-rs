@@ -793,3 +793,64 @@ impl MSSimpleTrafficLightLogic {
 
 }
 
+#[cfg(test)]
+mod initial_switch_tests {
+    use super::*;
+
+    // a static logic must queue its first switch, otherwise its phases never advance (dense case: all 14 signals stuck in phase 0)
+    #[test]
+    fn static_logic_queues_first_switch_on_begin_of_timestep_events() {
+        // MSNet::new reads these; defaults as in MSFrame::fill_options (the full fill panics on the 'Report' sub-topic)
+        utils::options::options_cont::with_options(|oc| {
+            use utils::options::option::SumoOption;
+            oc.do_register("scale", SumoOption::float(1.0));
+            oc.do_register("keep-after-arrival", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("max-num-vehicles", SumoOption::integer(-1));
+            oc.do_register("max-num-teleports", SumoOption::integer(-1));
+            oc.do_register("max-depart-delay", SumoOption::string_typed("-1", "TIME"));
+            oc.do_register("eager-insert", SumoOption::bool(false));
+            oc.do_register("random-depart-offset", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("mesosim", SumoOption::bool(false));
+            oc.do_register("ignore-accidents", SumoOption::bool(false));
+            oc.do_register("no-internal-links", SumoOption::bool(false));
+            oc.do_register("weights.separate-turns", SumoOption::float(0.0));
+            oc.do_register("no-duration-log", SumoOption::bool(false));
+            oc.do_register("no-step-log", SumoOption::bool(false));
+            oc.do_register("step-log.period", SumoOption::integer(100));
+            oc.do_register("duration-log.statistics", SumoOption::bool(false));
+            oc.do_register("meso-edgelength", SumoOption::float(98.0));
+            oc.do_register("meso-jam-threshold", SumoOption::float(-1.0));
+            oc.do_register("meso-lookahead", SumoOption::float(0.0));
+            oc.do_register("meso-junction-control", SumoOption::bool(false));
+            oc.do_register("meso-tls-penalty", SumoOption::float(0.0));
+            oc.do_register("meso-tls-flow-penalty", SumoOption::float(0.0));
+            oc.do_register("meso-overtaking", SumoOption::bool(false));
+            oc.do_register("thread-rngs", SumoOption::integer(64));
+            oc.do_register("save-state.period.keep", SumoOption::integer(0));
+            oc.do_register("begin", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("end", SumoOption::string_typed("-1", "TIME"));
+            oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
+            oc.do_register("random", SumoOption::bool(false));
+            oc.do_register("seed", SumoOption::integer(23423));
+            oc.do_register("railsignal-moving-block", SumoOption::bool(false));
+            oc.do_register("railsignal.moving-block.default-classes", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
+            oc.do_register("railsignal.moving-block.max-dist", SumoOption::float(200.0));
+            oc.do_register("railsignal.max-block-length", SumoOption::float(2e4));
+            oc.do_register("railsignal.default-classes", SumoOption::string_vector_with(vec!["rail".to_string(), "rail_fast".to_string(), "rail_electric".to_string(), "rail_urban".to_string(), "subway".to_string()]));
+            for name in ["tripinfo-output", "statistic-output", "summary-output", "person-summary-output", "queue-output", "fcd-output", "person-fcd-output", "link-output", "collision-output", "chargingstations-output", "overheadwiresegments-output", "substations-output", "railsignal-block-output", "railsignal-vehicle-output"] {
+                oc.do_register(name, SumoOption::file_name());
+            }
+        });
+        let ec = || Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new())));
+        let _net = MSNet::new(Ptr::from_raw(Box::into_raw(Box::new(MSVehicleControl::new()))), ec(), ec(), ec(), Ptr::default());
+        let mut tlcontrol = MSTLLogicControl::new();
+        let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(10.), "GGr", ""))))];
+        let delay = time2steps(5.);
+        let logic = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(&mut tlcontrol, "tl", "0", 0, TrafficLightType::STATIC, &phases, 0, delay, &ParameterisedMap::new()))));
+        logic.m().schedule_initial_switch(&mut tlcontrol, delay);
+        let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+        assert_eq!(events.m().myEvents.len(), 1);
+        assert_eq!(events.m().myEvents[0].1, delay);
+    }
+}
+
