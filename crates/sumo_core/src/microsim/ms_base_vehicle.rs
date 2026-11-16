@@ -2179,7 +2179,13 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_odometer(&self) -> f64 {
-        -self.myDepartPos + self.myOdometer + (if self.has_arrived() { self.myArrivalPos } else { self.get_position_on_lane() })
+        // hasArrived() is virtual: MSVehicle / MEVehicle override it
+        let arrived = if MSGlobals::use_meso_sim() {
+            Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap().has_arrived()
+        } else {
+            Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap().has_arrived()
+        };
+        -self.myDepartPos + self.myOdometer + (if arrived { self.myArrivalPos } else { self.get_position_on_lane() })
     }
 
     /// C++: `void MSBaseVehicle::addToOdometer(double)`
@@ -2214,7 +2220,14 @@ impl MSBaseVehicle {
     pub fn get_impatience(&self) -> f64 {
         let time_to_impatience: SUMOTime = crate::microsim::ms_globals::time_to_impatience();
         let waiting_term = if time_to_impatience > 0 { self.get_waiting_time(false) as f64 / time_to_impatience as f64 } else { 0.0 };
-        let influence = if self.has_influencer() { self.get_base_influencer_2().get_extra_impatience() } else { 0.0 };
+        // hasInfluencer() / getBaseInfluencer() are virtual: MSVehicle / MEVehicle override them
+        let influence = if MSGlobals::use_meso_sim() {
+            let veh = Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap();
+            if veh.has_influencer() { veh.get_base_influencer_2().get_extra_impatience() } else { 0.0 }
+        } else {
+            let veh = Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap();
+            if veh.has_influencer() { veh.get_base_influencer_2().get_extra_impatience() } else { 0.0 }
+        };
         f64::max(0.0, f64::min(1.0, self.get_vehicle_type().get_impatience() + influence + waiting_term))
     }
 
@@ -2850,7 +2863,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_rail(&self) -> bool {
-        utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || utils::common::sumo_vehicle_class::is_railway(self.get_current_edge().get_permissions())
+        // getCurrentEdge() is virtual (MSVehicle returns the lane's edge): go through the SUMOVehicle vtable
+        utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || utils::common::sumo_vehicle_class::is_railway(self.base.get_current_edge().get_permissions())
     }
 
     /// C++: `double MSBaseVehicle::getWidth() const` [const]
@@ -2980,7 +2994,12 @@ impl MSBaseVehicle {
         }
         let id = format!("{}@{}", self.myType.get_id(), self.get_id());
         let type_ = self.myType.build_singular_type(&id);
-        self.replace_vehicle_type(type_);
+        // replaceVehicleType() is virtual: MSVehicle rebuilds myCFVariables for the new type
+        if MSGlobals::use_meso_sim() {
+            self.replace_vehicle_type(type_);
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().replace_vehicle_type(type_);
+        }
         type_.get_mut().unwrap()
     }
 
@@ -3674,6 +3693,20 @@ impl MSBaseVehicle {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
         }
+        // shortcut: stop.edge is never resolved here (route search not ported), so an internal stop lane uses edge 0 for endPosOffset; upgrade with the route search
+        if stop.pars.collision {
+            let endPosOffset = if stop.lane.get_edge().is_internal() { self.myRoute.get_edges().get(stop.edge).map_or(0.0, |e| e.get_length()) } else { 0.0 };
+            let distToStop = stop.pars.endPos + endPosOffset - self.get_position_on_lane();
+            // handleCollisionStop() is virtual: MSVehicle overrides it
+            let handled = if MSGlobals::use_meso_sim() {
+                self.handle_collision_stop(&mut stop, distToStop)
+            } else {
+                Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().handle_collision_stop(&mut stop, distToStop)
+            };
+            if !handled {
+                return false;
+            }
+        }
         self.myStops.push_back(stop);
         true
     }
@@ -4047,7 +4080,12 @@ impl MSBaseVehicle {
     pub fn abort_next_stop(&mut self, nextStopIndex: i32) -> bool {
         if self.has_stops() && (nextStopIndex as usize) < self.myStops.len() {
             if nextStopIndex == 0 && self.is_stopped() {
-                self.resume_from_stopping();
+                // C++ resumeFromStopping() is virtual: dispatch to the MSVehicle / MEVehicle override
+                if MSGlobals::use_meso_sim() {
+                    Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().resume_from_stopping();
+                } else {
+                    Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().resume_from_stopping();
+                }
             } else {
                 let parkingarea = self.myStops[nextStopIndex as usize].parkingarea;
                 if !parkingarea.is_null() && parkingarea.is_reservable() {
