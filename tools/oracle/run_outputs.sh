@@ -11,6 +11,9 @@ cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 W=/mnt/c${ROOT#/c}
 REFS=${REFS:-committed}
+# reference = official SUMO 1.28.0 (pip install in ~/sumo-pristine), not the edited ~/sumo-src build
+REF_BIN=${REF_BIN:-\$HOME/sumo-pristine/bin/sumo}
+REF_HOME=${REF_HOME:-\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo}
 OUT=${OUT:-/c/Users/karti/Temp/score/outputs}
 BIN=${BIN:-/c/Users/karti/sumo-rs-target-x07/debug/sumo.exe}
 RESULTS=$OUT/results.tsv
@@ -42,7 +45,7 @@ row() {
     # C++ sometimes exits 15 (SIGTERM) or gets "Interrupt signal received" with a truncated file (seen
     # 2026-11-16, not reproducible on demand): retry up to 3 times, keep the last attempt.
     for try in 1 2 3; do
-      wsl -e bash -lc "cd $W && SUMO_HOME=\$HOME/sumo-src \$HOME/sumo-src/bin/sumo $base $rargs --no-step-log true" \
+      wsl -e bash -lc "cd $W && SUMO_HOME=$REF_HOME $REF_BIN $base $rargs --no-step-log true" \
           </dev/null >"$sub/ref.log" 2>&1
       rrc=$?
       [ $rrc -eq 0 ] && ! grep -q 'Interrupt signal' "$sub/ref.log" && break

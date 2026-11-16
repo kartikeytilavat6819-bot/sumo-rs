@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T10:55:58.406768-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<!-- generated on 2026-11-16T11:09:31.365086-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -32,7 +32,7 @@
     <step time="9.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
     <step time="10.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
     <step time="11.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
-    <step time="12.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="1"/>
+    <step time="12.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
     <step time="13.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
     <step time="14.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
     <step time="15.00" loaded="0" inserted="0" walking="0" waitingForRide="0" riding="0" stopping="0" jammed="0" ended="0" arrived="0" teleports="0" discarded="0" duration="0"/>
