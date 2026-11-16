@@ -5775,7 +5775,7 @@ impl MSLCM_SL2015 {
         let mut leftmost: i32 = 0;
         let curHasStopped = !stoppedLeader.is_null();
         let dir = if latLaneDist < 0. { -1 } else { 1 };
-        let neighBeyond = neighLane.get_parallel_lane(dir, false);
+        let neighBeyond = neighLane.get_parallel_lane(dir, true);
         let hasLaneBeyond = checkCurrent && !neighBeyond.is_null() && neighBeyond.allows_vehicle_class(self.myVehicle.get_v_class());
         let _ = hasLaneBeyond; // UNUSED_PARAMETER in C++
         if curHasStopped || self.has_bidi_leader(leaders, conts) {
