@@ -36,6 +36,11 @@ The single failure: `reroute/ref_device` — `v1` arrival 3.00 vs 4.00, i.e. our
 
 ## Harness lessons (each of these produced a false "PASS" tonight)
 
+- **Disk**: per-agent `CARGO_TARGET_DIR` is *required* (see below) but each is a full dependency tree —
+  93 of them reached **256 GB** and left 1.2 GB free, at which point builds start failing for reasons that
+  look like code errors. Sweep `C:\Users\karti\sumo-rs-target*` (keep `sumo-rs-target`,
+  `sumo-rs-target-main`, and the one you are verifying with); the 410 worktrees are only 9.4 GB by comparison.
+  `merge_wave2_main.sh` now warns below 5 GB free.
 - `[ -f input.osm ] || continue` hid four cases from the scoreboard.
 - The script measured `main` from any worktree, and a shared target dir mixed binaries across trees — six
   false readings. **Each agent gets its own `CARGO_TARGET_DIR`**; `run_all.sh` prints `STALE BINARY:` if the
