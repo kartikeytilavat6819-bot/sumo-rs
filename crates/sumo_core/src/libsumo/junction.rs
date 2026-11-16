@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::traci::traci_constants::*;
+use utils::common::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::Junction` (libsumo/Junction.h)
 pub struct Junction {
@@ -17,8 +18,9 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `Junction::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `Junction::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
-//   static NamedRTree * Junction::myTree;
 
 impl Junction {
     /// C++: `libsumo::TraCIPosition Junction::getPosition(const std::string &, bool)` [static]
@@ -221,10 +223,19 @@ impl Junction {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        // shortcut: NamedRTree is not ported yet, upgrade when the R-tree type is mapped
-        panic!("shortcut: Junction::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_junction_control().iter() {
+                let b = i.get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &i.cast::<Named>());
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void Junction::cleanup()` [static]
@@ -235,7 +246,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete yet
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Junction::makeWrapper()` [static]
