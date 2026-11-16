@@ -3,6 +3,8 @@
 use crate::prelude::*;
 use std::cell::Cell;
 use utils::geom::geom_helper;
+use utils::common::named::NamedStoringVisitor;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 // shortcut: C++ `throw TraCIException(msg)` is `panic!("{}", msg)` in this file (the TraCI server catches panics per command).
 
@@ -36,8 +38,9 @@ thread_local! {
     static MY_REMOTE_CONTROLLED_VEHICLES: Ptr<BTreeMap<String, Ptr<MSVehicle>>> = leak(BTreeMap::new());
     // static std::map<std::string, MSPerson *> Helper::myRemoteControlledPersons
     static MY_REMOTE_CONTROLLED_PERSONS: Ptr<BTreeMap<String, Ptr<MSPerson>>> = leak(BTreeMap::new());
+    // static LANE_RTREE_QUAL* Helper::myLaneTree
+    static MY_LANE_TREE: Cell<Ptr<LANE_RTREE_QUAL>> = Cell::new(Ptr::null());
 }
-// shortcut: static myLaneTree (RTree<MSLane*>) is not ported yet, lane searches panic in collectObjectsInRange
 
 fn my_subscriptions() -> &'static mut Vec<Subscription> {
     unsafe { &mut *MY_SUBSCRIPTIONS.with(|p| p.as_raw()) }
@@ -1245,14 +1248,30 @@ impl Helper {
                     }
                 }
             }
-            CMD_GET_INDUCTIONLOOP_VARIABLE | CMD_GET_JUNCTION_VARIABLE | CMD_GET_LANEAREA_VARIABLE | CMD_GET_POI_VARIABLE | CMD_GET_POLYGON_VARIABLE => {
-                // shortcut: NamedRTree is Unmapped in the detector and shape ports, Search cannot be called yet
-                let _ = (cmin, cmax);
-                panic!("shortcut: NamedRTree is Unmapped, Search not available yet");
+            CMD_GET_INDUCTIONLOOP_VARIABLE => {
+                InductionLoop::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_JUNCTION_VARIABLE => {
+                Junction::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_LANEAREA_VARIABLE => {
+                LaneArea::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_POI_VARIABLE => {
+                POI::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_POLYGON_VARIABLE => {
+                Polygon::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
             }
             CMD_GET_EDGE_VARIABLE | CMD_GET_LANE_VARIABLE | CMD_GET_PERSON_VARIABLE | CMD_GET_VEHICLE_VARIABLE => {
-                // shortcut: the MSLane R-tree (myLaneTree) is not ported yet
-                panic!("shortcut: MSLane R-tree is not ported yet, cannot search lanes in range");
+                // determinism: `into` is a std::set ordered by address, so the R-tree hit order does not reach the output
+                if MY_LANE_TREE.with(|t| t.get()).is_null() {
+                    let tree = Ptr::from_raw(Box::into_raw(Box::new(LANE_RTREE_QUAL::new())));
+                    MY_LANE_TREE.with(|t| t.set(tree));
+                    MSLane::fill(|cmin, cmax, l| tree.m().insert(cmin, cmax, &l));
+                }
+                let lsv = MSLane_StoringVisitor::new(into, shape, range, domain);
+                MY_LANE_TREE.with(|t| t.get()).search(&cmin, &cmax, &lsv, |l, c| l.visit(c));
             }
             _ => panic!("Infeasible context domain ({})", domain),
         }
@@ -2225,7 +2244,10 @@ impl Helper {
         Polygon::cleanup();
         Helper::clear_state_changes();
         Helper::clear_subscriptions();
-        // shortcut: myLaneTree is not ported yet, nothing to delete
+        let lane_tree = MY_LANE_TREE.with(|t| t.replace(Ptr::null()));
+        if !lane_tree.is_null() {
+            drop(unsafe { Box::from_raw(lane_tree.as_raw()) });
+        }
         my_remote_controlled_vehicles().clear();
         my_remote_controlled_persons().clear();
     }

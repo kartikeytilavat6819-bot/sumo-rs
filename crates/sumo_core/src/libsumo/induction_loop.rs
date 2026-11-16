@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
 use utils::common::time::delta_t;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::InductionLoop` (libsumo/InductionLoop.h)
 pub struct InductionLoop {
@@ -20,6 +21,8 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `InductionLoop::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `InductionLoop::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
 /// C++ `MSGlobals::gUseMesoSim`
@@ -451,9 +454,20 @@ impl InductionLoop {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        panic!("shortcut: InductionLoop::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).iter() {
+                let il = i.cast::<MSInductLoop>();
+                let p = il.get_lane().get_shape_2().position_at_offset(il.get_position(), 0.0);
+                let cmin = [p.x() as f32, p.y() as f32];
+                let cmax = [p.x() as f32, p.y() as f32];
+                tree.m().insert(&cmin, &cmax, &Ptr::from_mut(&mut il.m().base2.base));
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void InductionLoop::cleanup()` [static]
@@ -464,7 +478,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void InductionLoop::storeShape(const std::string &, PositionVector &)` [static]

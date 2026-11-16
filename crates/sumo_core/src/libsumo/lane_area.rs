@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::LaneArea` (libsumo/LaneArea.h)
 pub struct LaneArea {
@@ -19,6 +20,8 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `LaneArea::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `LaneArea::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
 impl LaneArea {
@@ -379,9 +382,21 @@ impl LaneArea {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        panic!("shortcut: LaneArea::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            for id in Self::get_id_list() {
+                let mut shape = PositionVector(Vec::new());
+                Self::store_shape(&id, &mut shape);
+                let b = shape.get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                let det = Self::get_detector(&id);
+                tree.m().insert(&cmin, &cmax, &Ptr::from_mut(&mut det.m().base2.base));
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void LaneArea::cleanup()` [static]
@@ -392,7 +407,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void LaneArea::storeShape(const std::string &, PositionVector &)` [static]
