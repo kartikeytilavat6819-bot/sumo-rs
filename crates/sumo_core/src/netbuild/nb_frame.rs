@@ -995,7 +995,7 @@ impl NBFrame {
         oc.do_register("railway.signal.guess.by-stops.split", SumoOption::bool(false));
         oc.add_description("railway.signal.guess.by-stops.split", "Railway", "Split edges to improve positioning of guessed signals and prevent switches as rail_signals");
 
-        oc.do_register("railway.signal.permit-unsignalized", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
+        oc.do_register("railway.signal.permit-unsignalized", SumoOption::string_vector());
         oc.add_description("railway.signal.permit-unsignalized", "Railway", "List rail classes that may run without rail signals");
 
         oc.do_register("railway.access-distance", SumoOption::float(150.0));

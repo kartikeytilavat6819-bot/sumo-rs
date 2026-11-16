@@ -1,47 +1,37 @@
 #!/bin/bash
-# Temporary agent sweep: netconvert options on OSM nets, ours vs pristine (removed before merge).
+# Temporary agent audit: option templates, ours vs pristine (removed before merge).
 set -u
-RS=/tmp/target/debug/netconvert
-CP=$SUMO_PRISTINE_BIN/netconvert
-C=tools/oracle/cases
-W=/tmp/nc
-mkdir -p $W
-OPTS=(
-  "base|"
-  "geomRemove|--geometry.remove true"
-  "ramps|--ramps.guess true"
-  "roundabouts|--roundabouts.guess true"
-  "junctionsJoin|--junctions.join true"
-  "tlsGuess|--tls.guess-signals true"
-  "tlsJoin|--tls.join true"
-  "tlsDiscard|--tls.discard-simple true"
-  "edgesJoin|--edges.join true"
-  "removeIsolated|--remove-edges.isolated true"
-  "keepVclass|--keep-edges.by-vclass passenger"
-  "removeFootway|--remove-edges.by-type highway.footway,highway.cycleway"
-  "sidewalks|--sidewalks.guess true"
-  "crossings|--crossings.guess true"
-  "turnLanes|--osm.turn-lanes true"
-  "laneAccess|--osm.lane-access true"
-  "elevation|--osm.elevation true"
-  "noInternal|--no-internal-links true"
-  "lanewidth|--default.lanewidth 3.2"
-  "streetNames|--output.street-names true"
-  "originalNames|--output.original-names true"
-  "bundle|--geometry.remove true --ramps.guess true --junctions.join true --tls.guess-signals true --tls.discard-simple true --tls.join true --tls.default-type actuated"
-)
-for net in city_munich real city_plano; do
-  for spec in "${OPTS[@]}"; do
-    name=${spec%%|*}; args=${spec#*|}
-    d=$W/$net/$name; mkdir -p $d
-    SUMO_HOME=$SUMO_HOME $CP --simple-projection true $args --osm-files $C/$net/input.osm -o $d/cpp.net.xml > $d/cpp.log 2>&1; crc=$?
-    $RS --simple-projection true $args --osm-files $C/$net/input.osm -o $d/rs.net.xml > $d/rs.log 2>&1; rrc=$?
-    if grep -q panicked $d/rs.log; then v=PANIC
-    elif [ $rrc -ne $crc ]; then v="FAIL exit rs=$rrc cpp=$crc"
-    elif [ -s $d/rs.net.xml ] && [ -s $d/cpp.net.xml ]; then
-      if python3 tools/oracle/compare_net.py $d/cpp.net.xml $d/rs.net.xml > $d/net.log 2>&1; then v=PASS
-      else v="FAIL $(head -1 $d/net.log)"; fi
-    else v="FAIL-missing-net"; fi
-    echo "$net $name $v"
-  done
-done
+T=/tmp/tpl
+mkdir -p $T
+RS_DIR=/tmp/target/debug
+CP_DIR=$SUMO_PRISTINE_BIN
+$CP_DIR/netconvert --save-template $T/cpp_nc.xml > $T/cpp_nc.log 2>&1; echo "cpp netconvert template exit=$?"
+$RS_DIR/netconvert --save-template $T/rs_nc.xml > $T/rs_nc.log 2>&1; echo "rs netconvert template exit=$?"
+$CP_DIR/sumo --save-template $T/cpp_sumo.xml > $T/cpp_sumo.log 2>&1; echo "cpp sumo template exit=$?"
+$RS_DIR/sumo --save-template $T/rs_sumo.xml > $T/rs_sumo.log 2>&1; echo "rs sumo template exit=$?"
+python3 - <<'EOF'
+import xml.etree.ElementTree as ET
+def leaves(path):
+    root = ET.parse(path).getroot()
+    out = {}
+    def walk(e, p):
+        kids = list(e)
+        if not kids:
+            out["/".join(p)] = dict(e.attrib)
+        for k in kids:
+            walk(k, p + [k.tag])
+    for k in root:
+        walk(k, [k.tag])
+    return out
+for prog in ("nc", "sumo"):
+    a = leaves(f"/tmp/tpl/cpp_{prog}.xml")
+    b = leaves(f"/tmp/tpl/rs_{prog}.xml")
+    print(f"== {prog}: cpp leaves={len(a)} rs leaves={len(b)}")
+    for k in sorted(set(a) - set(b)):
+        print(f"ONLY_CPP {k} {a[k]}")
+    for k in sorted(set(b) - set(a)):
+        print(f"ONLY_RS {k} {b[k]}")
+    for k in sorted(set(a) & set(b)):
+        if a[k] != b[k]:
+            print(f"DIFF {k} cpp={a[k]} rs={b[k]}")
+EOF
