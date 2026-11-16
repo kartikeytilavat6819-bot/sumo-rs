@@ -35,8 +35,10 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
     //       myEmissions() {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Emissions>) -> Self {
+        let mut base = MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base));
+        base.data_vt = &MS_MEAN_DATA_VALUES_EMISSIONS_VT;
         MSMeanData_Emissions_MSLaneMeanDataValues {
-            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base)),
+            base,
             myEmissions: PollutantsInterface_Emissions::new(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0),
         }
     }
@@ -279,6 +281,55 @@ impl MSMeanData_Emissions_MSLaneMeanDataValues {
 }
 
 /// Emission data collector for edges/lanes
+/// Virtual dispatch table of MSMeanData_Emissions::MSLaneMeanDataValues (overrides reset, addTo, write, notifyMoveInternal; notifyIdle is not reachable yet)
+static MS_MEAN_DATA_VALUES_EMISSIONS_VT: MeanDataValuesVt = MeanDataValuesVt {
+    reset: emissions_values_reset,
+    add_to: emissions_values_add_to,
+    notify_enter: MSMeanData_MeanDataValues::notify_enter_base,
+    notify_leave: MSMeanData_MeanDataValues::notify_leave_base,
+    notify_move_internal: emissions_values_notify_move_internal,
+    is_empty: MSMeanData_MeanDataValues::is_empty_base,
+    update: MSMeanData_MeanDataValues::update_base,
+    write: emissions_values_write,
+    get_samples: MSMeanData_MeanDataValues::get_samples_base,
+    get_attribute_value: MSMeanData_MeanDataValues::get_attribute_value_base,
+};
+
+fn emissions_values_reset(v: &mut MSMeanData_MeanDataValues, afterWrite: bool) {
+    Ptr::from_mut(v).cast::<MSMeanData_Emissions_MSLaneMeanDataValues>().m().reset(afterWrite)
+}
+
+fn emissions_values_add_to(v: &MSMeanData_MeanDataValues, val: &mut MSMeanData_MeanDataValues) {
+    Ptr::new(v).cast::<MSMeanData_Emissions_MSLaneMeanDataValues>().m().add_to(val)
+}
+
+fn emissions_values_notify_move_internal(v: &mut MSMeanData_MeanDataValues, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    Ptr::from_mut(v).cast::<MSMeanData_Emissions_MSLaneMeanDataValues>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+fn emissions_values_write(v: &MSMeanData_MeanDataValues, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+    Ptr::new(v).cast::<MSMeanData_Emissions_MSLaneMeanDataValues>().m().write(dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, numVehicles)
+}
+
+/// Virtual dispatch table of MSMeanData_Emissions (overrides getAttributeNames and createValues)
+static MS_MEAN_DATA_EMISSIONS_VT: MSMeanDataVt = MSMeanDataVt {
+    create_values: emissions_mean_data_create_values,
+    get_attribute_names: emissions_mean_data_get_attribute_names,
+    write_xml_detector_prolog: MSMeanData::write_xml_detector_prolog_base,
+    get_edge_id: MSMeanData::get_edge_id_base,
+    open_interval: MSMeanData::open_interval_base,
+    write_prefix: MSMeanData::write_prefix_base,
+    reset_only: MSMeanData::reset_only_base,
+};
+
+fn emissions_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+    Ptr::new(m).cast::<MSMeanData_Emissions>().m().create_values(lane, length, doAdd)
+}
+
+fn emissions_mean_data_get_attribute_names(m: &MSMeanData) -> Vec<String> {
+    Ptr::new(m).cast::<MSMeanData_Emissions>().m().get_attribute_names()
+}
+
 /// C++ class `MSMeanData_Emissions` (microsim/output/MSMeanData_Emissions.h)
 #[repr(C)]
 pub struct MSMeanData_Emissions {
@@ -318,7 +369,8 @@ impl MSMeanData_Emissions {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, minSamples: f64, maxTravelTime: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        let base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, 0, minSamples, maxTravelTime, vTypes, writeAttributes, edges, aggregate);
+        let mut base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, 0, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
+        base.meandata_vt = &MS_MEAN_DATA_EMISSIONS_VT;
         Self { base }
     }
 
@@ -418,7 +470,9 @@ impl MSMeanData_Emissions {
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
         // shortcut: the values are leaked (C++ deletes them in ~MSMeanData), upgrade when myMeasures owns its values
         let values = Box::leak(Box::new(MSMeanData_Emissions_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))));
-        Ptr::from_mut(&mut values.base)
+        let values = Ptr::from_mut(&mut values.base);
+        register_values(values, lane, doAdd);
+        values
     }
 
     /// C++: `void MSMeanData_Emissions::MSMeanData_Emissions(const MSMeanData_Emissions &)` [private]
