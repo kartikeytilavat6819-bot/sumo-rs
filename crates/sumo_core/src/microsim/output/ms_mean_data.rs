@@ -665,7 +665,20 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn reset_only(&mut self, stopTime: SUMOTime) {
-        // C++ UNUSED_PARAMETER(stopTime); the mesoscopic branch is not ported (see g_use_meso_sim)
+        if crate::microsim::ms_globals::use_meso_sim() {
+            for (edge, i) in self.myEdges.iter().zip(self.myMeasures.iter()) {
+                // C++ walks the segments once per edge, so only the first value sees them
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                for data in i.iter() {
+                    while !s.is_null() {
+                        s.m().prepare_detector_for_writing(reminder_of(*data).m(), -1);
+                        s = s.m().get_next_segment();
+                    }
+                    data.m().reset(false);
+                }
+            }
+            return;
+        }
         for i in self.myMeasures.iter() {
             for j in i.iter() {
                 j.m().reset(false);
@@ -788,8 +801,36 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_edge(&mut self, dev: &mut OutputDevice, edgeValues: &Vec<Ptr<MSMeanData_MeanDataValues>>, edge: Ptr<MSEdge>, startTime: SUMOTime, stopTime: SUMOTime) {
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut idx: i32 = 0;
+            for data in edgeValues.iter() {
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                while !s.is_null() {
+                    s.m().prepare_detector_for_writing(reminder_of(*data).m(), if self.myAmEdgeBased { -1 } else { idx });
+                    s = s.m().get_next_segment();
+                }
+                idx += 1;
+            }
+            if self.myAmEdgeBased {
+                let data = edgeValues[0];
+                if self.myDumpEmpty || (self.myPrintModified && edge.get_lanes()[0].is_speed_modified()) || !data.is_empty() {
+                    let id = edge.get_id().to_string();
+                    self.write_prefix(dev, &data, SUMO_TAG_EDGE, id);
+                    let mut d = data;
+                    while !d.is_null() {
+                        let defaultTravelTime = if self.myPrintDefaults { edge.get_length() / edge.get_speed_limit() } else { -1. };
+                        d.write(dev, &self.myWrittenAttributes, stopTime - startTime, edge.get_num_driving_lanes(), edge.get_speed_limit(), defaultTravelTime, -1);
+                        d = d.m().get_sub_data();
+                    }
+                    dev.close_tag("");
+                }
+                if !skip_final_reset {
+                    data.m().reset(true);
+                }
+                return;
+            }
+        }
         if !self.myAmEdgeBased {
             let mut writeCheck = self.myDumpEmpty;
             if !writeCheck {

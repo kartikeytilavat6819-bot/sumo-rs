@@ -68,9 +68,13 @@ impl MSRouteProbe {
             myCurrentRouteDistribution: Ptr::null(),
             myEdge: edge,
         });
-        // C++ registers `this` on each lane of the edge (meso segment branch not ported: meso is off by default)
+        // C++ registers `this` on each meso segment of the edge, or on each lane otherwise
         if crate::microsim::ms_globals::use_meso_sim() {
-            // shortcut: meso branch needs MELoop::getSegmentForEdge(edge) without a position, not ported; meso is off by default
+            let mut seg = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+            while !seg.is_null() {
+                seg.m().add_detector(Ptr::from_mut(&mut b.base2), -1);
+                seg = seg.m().get_next_segment();
+            }
         } else {
             for lane in edge.get_lanes().iter() {
                 lane.m().add_move_reminder(Ptr::from_mut(&mut b.base2), true);
