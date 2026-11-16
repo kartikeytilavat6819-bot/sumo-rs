@@ -2,7 +2,7 @@
 # Reference run of the C++ SUMO oracle (WSL) on every depart variant.
 cd "$(dirname "$0")"
 export SUMO_HOME=$HOME/sumo-src
-NET=/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-rb05/tools/oracle/cases/junction/ref_simple.net.xml
+NET=../junction/ref_simple.net.xml
 for r in *.rou; do
   n=${r%.rou}
   mkdir -p ref/$n
