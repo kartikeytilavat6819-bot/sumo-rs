@@ -29,6 +29,21 @@ use utils::traci::traci_constants::{REMOVE_ARRIVED, REMOVE_PARKING, REMOVE_TELEP
 // SUMOVehicleParameter.h / SUMOVehicleParameter::Stop parametersSet bits (not exported by the ported module yet)
 const VEHPARS_COLOR_SET: i64 = 1;
 const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
+const VEHPARS_VTYPE_SET: i64 = 2;
+const VEHPARS_DEPARTLANE_SET: i64 = 2 << 1;
+const VEHPARS_DEPARTPOS_SET: i64 = 2 << 2;
+const VEHPARS_DEPARTSPEED_SET: i64 = 2 << 3;
+const VEHPARS_ARRIVALLANE_SET: i64 = 2 << 11;
+const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
+const VEHPARS_ARRIVALSPEED_SET: i64 = 2 << 13;
+const VEHPARS_LINE_SET: i64 = 2 << 14;
+const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
+const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
+const VEHPARS_PERSON_NUMBER_SET: i64 = 2 << 19;
+const VEHPARS_DEPARTPOSLAT_SET: i64 = 2 << 21;
+const VEHPARS_ARRIVALPOSLAT_SET: i64 = 2 << 22;
+const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
+const VEHPARS_INSERTION_CHECKS_SET: i64 = 2 << 31;
 const STOP_START_SET: i32 = 1;
 const STOP_END_SET: i32 = 2;
 const STOP_DURATION_SET: i32 = 2 << 1;
@@ -2739,8 +2754,141 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add(vehID: &str, routeID: &str, typeID: &str, depart: &str, departLane: &str, departPos: &str, departSpeed: &str, arrivalLane: &str, arrivalPos: &str, arrivalSpeed: &str, fromTaz: &str, toTaz: &str, line: &str, personCapacity: i32, personNumber: i32, departPosLat: &str, arrivalPosLat: &str, speedFactor: f64, insertionChecks: &str) {
-        // shortcut: Vehicle::add (~150 lines of C++ building SUMOVehicleParameter, VehicleControl::buildVehicle, InsertionControl) not ported in this pass
-        panic!("Vehicle::add not yet ported")
+        if !MSNet::get_instance().m().get_vehicle_control().get_vehicle(vehID).is_null() {
+            panic!("{}", format!("The vehicle '{}' to add already exists.", vehID));
+        }
+        let mut vehicleParams = SUMOVehicleParameter::new();
+        vehicleParams.id = vehID.to_string();
+        let vehicleType = MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false);
+        if vehicleType.is_null() {
+            panic!("{}", format!("Invalid type '{}' for vehicle '{}'.", typeID, vehID));
+        }
+        if typeID != "DEFAULT_VEHTYPE" {
+            vehicleParams.vtypeid = typeID.to_string();
+            vehicleParams.parametersSet |= VEHPARS_VTYPE_SET;
+        }
+        if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
+            write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is internal.", routeID));
+        }
+        let route = MSRoute::dictionary_3(routeID, Ptr::null());
+        if !MSRoute::has_route(routeID) {
+            if routeID.is_empty() {
+                // shortcut: an empty routeID builds a DUMMY_ROUTE_<vclass> route from SumoVehicleClassStrings, which is not ported; upgrade with the vclass string table
+                panic!("shortcut: vehicle.add with an empty route needs SumoVehicleClassStrings, not ported");
+            }
+            panic!("{}", format!("Invalid route '{}' for vehicle '{}'.", routeID, vehID));
+        }
+        // check if the route implies a trip
+        if route.size() == 2 {
+            let edges = route.get_edges();
+            if !edges[0].get_successors(SVC_IGNORING).contains(&edges[1]) {
+                vehicleParams.parametersSet |= VEHPARS_FORCE_REROUTE;
+            }
+        }
+        if !fromTaz.is_empty() || !toTaz.is_empty() {
+            vehicleParams.parametersSet |= VEHPARS_FORCE_REROUTE;
+        }
+        let mut error = String::new();
+        if !SUMOVehicleParameter::parse_depart(depart, "vehicle", vehID, &mut vehicleParams.depart, &mut vehicleParams.departProcedure, &mut error, "depart") {
+            panic!("{}", error);
+        }
+        if vehicleParams.departProcedure == DepartDefinition::GIVEN && vehicleParams.depart < MSNet::get_instance().get_current_time_step() {
+            vehicleParams.depart = MSNet::get_instance().get_current_time_step();
+            write_warning(&format!("Departure time for vehicle '{}' is in the past; using current time instead.", vehID));
+        } else if vehicleParams.departProcedure == DepartDefinition::NOW {
+            vehicleParams.depart = MSNet::get_instance().get_current_time_step();
+        }
+        if !SUMOVehicleParameter::parse_depart_lane(departLane, "vehicle", vehID, &mut vehicleParams.departLane, &mut vehicleParams.departLaneProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !SUMOVehicleParameter::parse_depart_pos(departPos, "vehicle", vehID, &mut vehicleParams.departPos, &mut vehicleParams.departPosProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !SUMOVehicleParameter::parse_depart_speed(departSpeed, "vehicle", vehID, &mut vehicleParams.departSpeed, &mut vehicleParams.departSpeedProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !SUMOVehicleParameter::parse_arrival_lane(arrivalLane, "vehicle", vehID, &mut vehicleParams.arrivalLane, &mut vehicleParams.arrivalLaneProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !SUMOVehicleParameter::parse_arrival_pos(arrivalPos, "vehicle", vehID, &mut vehicleParams.arrivalPos, &mut vehicleParams.arrivalPosProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !SUMOVehicleParameter::parse_arrival_speed(arrivalSpeed, "vehicle", vehID, &mut vehicleParams.arrivalSpeed, &mut vehicleParams.arrivalSpeedProcedure, &mut error) {
+            panic!("{}", error);
+        }
+        if !departPosLat.is_empty() {
+            if !SUMOVehicleParameter::parse_depart_pos_lat(departPosLat, "vehicle", vehID, &mut vehicleParams.departPosLat, &mut vehicleParams.departPosLatProcedure, &mut error) {
+                panic!("{}", error);
+            }
+            vehicleParams.parametersSet |= VEHPARS_DEPARTPOSLAT_SET;
+        }
+        if !arrivalPosLat.is_empty() {
+            if !SUMOVehicleParameter::parse_arrival_pos_lat(arrivalPosLat, "vehicle", vehID, &mut vehicleParams.arrivalPosLat, &mut vehicleParams.arrivalPosLatProcedure, &mut error) {
+                panic!("{}", error);
+            }
+            vehicleParams.parametersSet |= VEHPARS_ARRIVALPOSLAT_SET;
+        }
+        if speedFactor > 0. {
+            vehicleParams.speedFactor = speedFactor;
+            vehicleParams.parametersSet |= VEHPARS_SPEEDFACTOR_SET;
+        }
+        if !insertionChecks.is_empty() {
+            vehicleParams.insertionChecks = SUMOVehicleParameter::parse_insertion_checks(insertionChecks);
+            vehicleParams.parametersSet |= VEHPARS_INSERTION_CHECKS_SET;
+        }
+        // mark non-default attributes
+        if departLane != "first" {
+            vehicleParams.parametersSet |= VEHPARS_DEPARTLANE_SET;
+        }
+        if departPos != "base" {
+            vehicleParams.parametersSet |= VEHPARS_DEPARTPOS_SET;
+        }
+        if departSpeed != "0" {
+            vehicleParams.parametersSet |= VEHPARS_DEPARTSPEED_SET;
+        }
+        if arrivalLane != "current" {
+            vehicleParams.parametersSet |= VEHPARS_ARRIVALLANE_SET;
+        }
+        if arrivalPos != "max" {
+            vehicleParams.parametersSet |= VEHPARS_ARRIVALPOS_SET;
+        }
+        if arrivalSpeed != "current" {
+            vehicleParams.parametersSet |= VEHPARS_ARRIVALSPEED_SET;
+        }
+        if !fromTaz.is_empty() {
+            vehicleParams.parametersSet |= VEHPARS_FROM_TAZ_SET;
+        }
+        if !toTaz.is_empty() {
+            vehicleParams.parametersSet |= VEHPARS_TO_TAZ_SET;
+        }
+        if !line.is_empty() {
+            vehicleParams.parametersSet |= VEHPARS_LINE_SET;
+        }
+        if personNumber != 0 {
+            vehicleParams.parametersSet |= VEHPARS_PERSON_NUMBER_SET;
+        }
+        // build vehicle
+        vehicleParams.fromTaz = fromTaz.to_string();
+        vehicleParams.toTaz = toTaz.to_string();
+        vehicleParams.line = line.to_string();
+        vehicleParams.personNumber = personNumber;
+        let departProcedure = vehicleParams.departProcedure;
+        // shortcut: the parameters are leaked; C++ hands ownership to the vehicle, which would free them with itself
+        let params = Ptr::from_raw(Box::leak(Box::new(vehicleParams)));
+        let vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(params, route.clone(), vehicleType, true, MSVehicleControl_VehicleDefinitionSource::LIBSUMO, true);
+        if fromTaz.is_empty() && !route.get_edges()[0].validate_depart_speed(vehicle.m()) {
+            MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
+            panic!("{}", format!("Departure speed for vehicle '{}' is too high for the departure edge '{}'.", vehID, route.get_edges()[0].get_id()));
+        }
+        let mut msg = String::new();
+        if vehicle.m().get_route_validity(true, true, Ptr::from_mut(&mut msg)) != crate::microsim::ms_base_vehicle::MSBaseVehicle_RouteValidity::ROUTE_VALID as i32 {
+            MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle, true, false);
+            panic!("{}", format!("Vehicle '{}' has no valid route ({}). ", vehID, msg));
+        }
+        MSNet::get_instance().m().get_vehicle_control().add_vehicle(vehID, vehicle);
+        if departProcedure != DepartDefinition::TRIGGERED && departProcedure != DepartDefinition::CONTAINER_TRIGGERED {
+            MSNet::get_instance().m().get_insertion_control().add(vehicle);
+        }
     }
 
     /// C++: `void Vehicle::changeTarget(const std::string &, const std::string &)` [static]
@@ -2763,6 +2911,15 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     //         throw TraCIException(e.what());
     //     }
     // }
+    /// C++ `MSBaseVehicle::getRouterTT() const`; the ms_base_vehicle.rs method is still a stub, so the mode branch is here
+    fn router_tt_of(veh: &Ptr<MSBaseVehicle>) -> &'static mut MSVehicleRouter {
+        if veh.get_routing_mode() == ROUTING_MODE_AGGREGATED {
+            MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), &Default::default())
+        } else {
+            MSNet::get_instance().get_mut().unwrap().get_router_tt(veh.get_rng_index(), &Default::default())
+        }
+    }
+
     #[allow(unused_variables)]
     pub fn change_target(vehID: &str, edgeID: &str) {
         let veh = Helper::get_vehicle(vehID);
@@ -2773,7 +2930,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         }
         // change the final edge of the route and reroute
         let success = veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:changeTarget",
-                                      veh.get_router_tt(), onInit, false, false, destEdge);
+                                      Self::router_tt_of(&veh), onInit, false, false, destEdge);
         if !success {
             panic!("{}", format!("ChangeTarget failed for vehicle '{}', destination edge '{}' unreachable.", veh.get_id(), edgeID));
         }
@@ -3403,7 +3560,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             veh.m().set_routing_mode(ROUTING_MODE_AGGREGATED_CUSTOM);
         }
         veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:rerouteTraveltime",
-                        veh.get_router_tt(), Self::is_on_init(vehID), false, false, Ptr::default());
+                        Self::router_tt_of(&veh), Self::is_on_init(vehID), false, false, Ptr::default());
         if currentTravelTimes && routingMode == ROUTING_MODE_DEFAULT {
             veh.m().set_routing_mode(routingMode);
         }
@@ -3553,7 +3710,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         if !veh.is_on_road() && veh.get_parameter().was_set(VEHPARS_FORCE_REROUTE) && veh.get_route().get_edges().len() == 2 {
             // it's a trip that wasn't routeted yet (likely because the vehicle was added in this step. Find a route now
             veh.m().reroute(MSNet::get_instance().get_current_time_step(), "traci:moveTo-tripInsertion",
-                            veh.get_router_tt(), true, false, false, Ptr::default());
+                            Self::router_tt_of(&veh.cast::<MSBaseVehicle>()), true, false, false, Ptr::default());
         }
         // find edge in the remaining route
         let edges = veh.get_route().get_edges();

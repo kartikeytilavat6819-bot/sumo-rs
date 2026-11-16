@@ -3256,14 +3256,22 @@ impl TraCIServer {
                     }
                     let mut tmpOutput = Storage::new();
                     // shortcut: C++ catches std::invalid_argument from the executor and answers "Unsupported command specified"; the executors here do not throw it, so that catch is not reproduced
-                    if self.myExecutors.contains_key(&getCommandId) {
-                        let exec = self.myExecutors[&getCommandId];
-                        ok &= exec(self, &mut message, &mut tmpOutput);
-                    } else if !self.process_get(getCommandId, &mut message, &mut tmpOutput) {
-                        if getCommandId == CMD_GET_GUI_VARIABLE {
-                            self.write_status_cmd(s.commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo", &mut tmpOutput);
+                    // C++ `catch (libsumo::TraCIException&)` in handleVariable -> error status in tmpOutput, which the copy below reports
+                    let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        if self.myExecutors.contains_key(&getCommandId) {
+                            let exec = self.myExecutors[&getCommandId];
+                            exec(self, &mut message, &mut tmpOutput)
+                        } else {
+                            let r = self.process_get(getCommandId, &mut message, &mut tmpOutput);
+                            if !r && getCommandId == CMD_GET_GUI_VARIABLE {
+                                self.write_status_cmd(s.commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo", &mut tmpOutput);
+                            }
+                            r
                         }
-                        ok = false;
+                    }));
+                    match got {
+                        Ok(r) => ok &= r,
+                        Err(p) => ok &= self.write_error_status_cmd(getCommandId, &panic_text(p), &mut tmpOutput),
                     }
                     if ok {
                         let mut length = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");
