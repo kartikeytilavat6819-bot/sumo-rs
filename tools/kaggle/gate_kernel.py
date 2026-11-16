@@ -23,6 +23,8 @@ if not tgz:
     raise SystemExit(1)
 os.makedirs(SRC, exist_ok=True)
 sh(f"tar -xzf {tgz[0]} -C {SRC} && cat {SRC}/GATE_BRANCH.txt", 5)
+# scripts and *.args are committed from Windows with CRLF; Linux bash chokes on the \r
+sh(f"cd {SRC}/tools && find . -type f \\( -name '*.sh' -o -name '*.args' \\) -exec sed -i 's/\\r$//' {{}} +", 3)
 sh("curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal", 3)
 env = f"export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=/tmp/target CARGO_BUILD_JOBS=4 SCORE_OUT=/tmp/score; cd {SRC};"
 if sh(env + " cargo build -p sumo -p netconvert --message-format short 2>&1 | grep -E '^(error|warning: unused)|: error' | head -40; test -x /tmp/target/debug/sumo", 45) != 0:
