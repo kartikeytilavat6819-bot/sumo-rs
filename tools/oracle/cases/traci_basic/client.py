@@ -364,7 +364,7 @@ def run_side(side, port, ours, case):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
         out[label] = run_probe(side, port + i, net, rou, ours, fn)
         if side == "cpp":
-            subprocess.run(["wsl", "-e", "bash", "-lc", "pkill -f 'bin/sumo' || true"], capture_output=True)
+            subprocess.run(["wsl", "-e", "bash", "-lc", f"pkill -f -- '--remote-port {port + i} ' || true"], capture_output=True)
         time.sleep(0.5)
     return out
 
