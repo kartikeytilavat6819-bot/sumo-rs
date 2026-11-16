@@ -51,6 +51,8 @@ pub struct NLTriggerBuilder {
     pub myCurrentStop: Ptr<MSStoppingPlace>,
     pub myHaveWarnedAboutEigen: bool,
     pub myParkingAreaCapacitySet: bool,
+    /// C++ `registerParent(SUMO_TAG_REROUTER, myHandler)`: the rerouter that receives the elements until its closing tag
+    pub myChildRerouter: Ptr<MSTriggeredRerouter>,
 }
 
 impl NLTriggerBuilder {
@@ -66,6 +68,7 @@ impl NLTriggerBuilder {
             myCurrentStop: Ptr::null(),
             myHaveWarnedAboutEigen: false,
             myParkingAreaCapacitySet: false,
+            myChildRerouter: Ptr::null(),
         }
     }
 
@@ -352,8 +355,9 @@ impl NLTriggerBuilder {
         if !ok {
             throw_invalid_argument(format!("Could not parse rerouter '{}'.", id));
         }
-        let _trigger = self.build_rerouter(net, &id, &mut edges, prob, off, optional, timeThreshold, &vTypes, &p, radius);
-        // shortcut: trigger->registerParent(SUMO_TAG_REROUTER, myHandler) is not ported (no registerParent in sumo_core), upgrade when MSTrigger::registerParent lands
+        let trigger = self.build_rerouter(net, &id, &mut edges, prob, off, optional, timeThreshold, &vTypes, &p, radius);
+        // read in the trigger description: NLHandler forwards every element to the rerouter until </rerouter> (XMLSubSys::setHandler emulation)
+        self.myChildRerouter = trigger;
     }
 
     /// C++: `void NLTriggerBuilder::parseAndBuildStoppingPlace(MSNet &, const SUMOSAXAttributes &, const SumoXMLTag)`

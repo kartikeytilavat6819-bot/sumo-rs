@@ -1670,7 +1670,17 @@ impl MSBaseVehicle {
             utils::common::msg_handler::write_warning(&utils::tlf!("Invalid route replacement for vehicle '%'. %", self.get_id(), msg));
             // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false (route is still replaced)
         }
-        if !self.replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn) {
+        // C++ calls the *virtual* replaceRoute here, so MSVehicle::replaceRoute runs and refreshes the
+        // best lanes afterwards. Calling MSBaseVehicle::replace_route directly skips that override, which
+        // is why a rerouted vehicle kept its stale best lanes and stopped at the end of the old edge.
+        let this: Ptr<MSBaseVehicle> = Ptr::from_mut(self);
+        let veh = this.cast::<crate::microsim::ms_vehicle::MSVehicle>();
+        let replaced = if veh.get().is_some() {
+            veh.m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+        } else {
+            self.replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+        };
+        if !replaced {
             return false;
         }
         true
