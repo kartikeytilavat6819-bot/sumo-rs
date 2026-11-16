@@ -1870,9 +1870,26 @@ impl Helper {
                 }
                 // Check vehicles approaching the entry link corresponding to this lane
                 let foeLink = foeLane.get_entry_link();
-                // shortcut: MSLink exposes no iterator over its approaching vehicles map yet (getApproaching(veh) only)
-                let _ = foeLink;
-                panic!("shortcut: MSLink approaching-vehicles iteration is not mapped yet, turn filter unavailable");
+                for (veh, vi) in foeLink.myApproachingVehicles.iter() {
+                    if vi.dist <= s.filterFoeDistToJunction {
+                        // shortcut: C++ dynamic_cast<const MSVehicle*> is not checked, approaching links only hold MSVehicles
+                        vehs.insert(veh.cast::<SUMOTrafficObject>());
+                    }
+                }
+                // add vehicles currently on the junction
+                for foe in foeLane.get_vehicles_secure().iter() {
+                    vehs.insert(foe.cast::<SUMOTrafficObject>());
+                }
+                foeLane.release_vehicles();
+                for laneInfo in foeLane.get_incoming_lanes().iter() {
+                    let foeLanePred = laneInfo.lane;
+                    if foeLanePred.is_internal() {
+                        for foe in foeLanePred.get_vehicles_secure().iter() {
+                            vehs.insert(foe.cast::<SUMOTrafficObject>());
+                        }
+                        foeLanePred.release_vehicles();
+                    }
+                }
             }
         }
     }

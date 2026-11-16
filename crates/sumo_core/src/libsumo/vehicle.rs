@@ -4538,8 +4538,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn subscribe_leader(vehID: &str, dist: f64, begin: f64, end: f64) {
-        // shortcut: needs the TraCIResults writer for the leader-distance parameter, not ported in this pass
-        panic!("Vehicle::subscribeLeader not yet ported")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_LEADER, crate::libsumo::helper::as_traci_result(TraCIDouble { base: TraCIResult { result_type: TYPE_DOUBLE }, value: dist }));
+        Self::subscribe(vehID, &vec![VAR_LEADER], begin, end, &params);
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLanes(const std::vector<int> &, bool, double, double)` [static]
@@ -4561,8 +4562,19 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lanes(lanes: &Vec<i32>, noOpposite: bool, downstreamDist: f64, upstreamDist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterLanes not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_LANES);
+        if !s.is_null() {
+            s.m().filterLanes = lanes.clone();
+        }
+        if noOpposite {
+            Self::add_subscription_filter_no_opposite();
+        }
+        if downstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_downstream_distance(downstreamDist);
+        }
+        if upstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_upstream_distance(upstreamDist);
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterNoOpposite()` [static]
@@ -4572,8 +4584,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_no_opposite() {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterNoOpposite not yet ported")
+Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_NOOPPOSITE);
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterDownstreamDistance(double)` [static]
@@ -4586,8 +4597,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_downstream_distance(dist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterDownstreamDistance not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_DOWNSTREAM_DIST);
+        if !s.is_null() {
+            s.m().filterDownstreamDist = dist;
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterUpstreamDistance(double)` [static]
@@ -4600,8 +4613,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_upstream_distance(dist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterUpstreamDistance not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_UPSTREAM_DIST);
+        if !s.is_null() {
+            s.m().filterUpstreamDist = dist;
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterCFManeuver(double, double)` [static]
@@ -4618,8 +4633,13 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_cf_maneuver(downstreamDist: f64, upstreamDist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterCFManeuver not yet ported")
+Self::add_subscription_filter_lead_follow(&vec![0]);
+        if downstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_downstream_distance(downstreamDist);
+        }
+        if upstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_upstream_distance(upstreamDist);
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLCManeuver(int, bool, double, double)` [static]
@@ -4647,8 +4667,24 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lc_maneuver(direction: i32, noOpposite: bool, downstreamDist: f64, upstreamDist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterLCManeuver not yet ported")
+let mut lanes: Vec<i32> = Vec::new();
+        if direction == INVALID_INT_VALUE {
+            lanes = vec![-1, 0, 1];
+        } else if direction != -1 && direction != 1 {
+            utils::write_warningf!("Ignoring lane change subscription filter with non-neighboring lane offset direction=%.", direction);
+        } else {
+            lanes = vec![0, direction];
+        }
+        Self::add_subscription_filter_lead_follow(&lanes);
+        if noOpposite {
+            Self::add_subscription_filter_no_opposite();
+        }
+        if downstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_downstream_distance(downstreamDist);
+        }
+        if upstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_upstream_distance(upstreamDist);
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLeadFollow(const std::vector<int> &)` [static]
@@ -4659,8 +4695,8 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lead_follow(lanes: &Vec<i32>) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterLeadFollow not yet ported")
+Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_LEAD_FOLLOW);
+        Self::add_subscription_filter_lanes(lanes, false, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE);
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterTurn(double, double)` [static]
@@ -4676,8 +4712,13 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_turn(downstreamDist: f64, foeDistToJunction: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterTurn not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_TURN);
+        if downstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_downstream_distance(downstreamDist);
+        }
+        if foeDistToJunction != INVALID_DOUBLE_VALUE {
+            s.m().filterFoeDistToJunction = foeDistToJunction;
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterVClass(const std::vector<std::string> &)` [static]
@@ -4690,8 +4731,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_v_class(vClasses: &Vec<String>) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterVClass not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_VCLASS);
+        if !s.is_null() {
+            s.m().filterVClasses = utils::common::sumo_vehicle_class::parse_vehicle_classes_vec(vClasses).unwrap_or_else(|e| panic!("{}", e));
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterVType(const std::vector<std::string> &)` [static]
@@ -4704,8 +4747,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_v_type(vTypes: &Vec<String>) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterVType not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_VTYPE);
+        if !s.is_null() {
+            s.m().filterVTypes.extend(vTypes.iter().cloned());
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterFieldOfVision(double)` [static]
@@ -4718,8 +4763,10 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_field_of_vision(openingAngle: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterFieldOfVision not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_FIELD_OF_VISION);
+        if !s.is_null() {
+            s.m().filterFieldOfVisionOpeningAngle = openingAngle;
+        }
     }
 
     /// C++: `void Vehicle::addSubscriptionFilterLateralDistance(double, double, double)` [static]
@@ -4738,8 +4785,16 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn add_subscription_filter_lateral_distance(lateralDist: f64, downstreamDist: f64, upstreamDist: f64) {
-        // shortcut: needs the SubscriptionFilterType constructors (Helper::add_subscription_filter), not ported in this pass
-        panic!("Vehicle::addSubscriptionFilterLateralDistance not yet ported")
+let s = Helper::add_subscription_filter(SubscriptionFilterType::SUBS_FILTER_LATERAL_DIST);
+        if !s.is_null() {
+            s.m().filterLateralDist = lateralDist;
+        }
+        if downstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_downstream_distance(downstreamDist);
+        }
+        if upstreamDist != INVALID_DOUBLE_VALUE {
+            Self::add_subscription_filter_upstream_distance(upstreamDist);
+        }
     }
 
     /// C++: `void Vehicle::storeShape(const std::string &, PositionVector &)` [static]
@@ -4750,8 +4805,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn store_shape(id: &str, shape: &mut PositionVector) {
-        // shortcut: C++ storeShape (Helper shape cache) not ported in this pass; upgrade when helper.rs find_object_shape is filled
-        panic!("Vehicle::storeShape not yet ported")
+        shape.push(Helper::get_vehicle(id).cast::<MSVehicle>().get_position(0.0));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Vehicle::makeWrapper()` [static]
