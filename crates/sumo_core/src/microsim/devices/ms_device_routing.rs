@@ -6,6 +6,7 @@ use utils::options::option::SumoOption;
 use utils::common::msg_handler::{write_error, write_warning, write_message};
 use utils::common::time::{string2time, time2string, time2steps, steps2time, SUMOTIME_MIN};
 use utils::common::to_string::to_string;
+use crate::microsim::ms_event_control::Command;
 
 const INVALID_DOUBLE: f64 = f64::MAX;
 
@@ -24,7 +25,7 @@ pub struct MSDevice_Routing {
     /// The time for which routing may be skipped because we cannot be inserted
     pub mySkipRouting: SUMOTime,
     /// The (optional) command responsible for rerouting
-    pub myRerouteCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_Routing> */>,
+    pub myRerouteCommand: Ptr<MSDevice_Routing_WrappingCommand>,
     /// Whether the equipped vehicle may receive dispatch information at a rail signal
     pub myRerouteRailSignal: bool,
     /// the previous time that a vehicle entered a lane
@@ -50,6 +51,54 @@ impl std::ops::Deref for MSDevice_Routing {
 impl std::ops::DerefMut for MSDevice_Routing {
     fn deref_mut(&mut self) -> &mut MSVehicleDevice {
         &mut self.base
+    }
+}
+
+/// C++ `WrappingCommand<MSDevice_Routing>` bound to `wrappedRerouteCommandExecute` (utils/common/WrappingCommand.h)
+pub struct MSDevice_Routing_WrappingCommand {
+    pub myDevice: Ptr<MSDevice_Routing>,
+    pub myAmDescheduledByParent: bool,
+    pub myPriority: i32,
+}
+
+impl MSDevice_Routing_WrappingCommand {
+    /// C++: `void WrappingCommand::deschedule()`
+    pub fn deschedule(&mut self) {
+        self.myAmDescheduledByParent = true;
+    }
+}
+
+impl Command for MSDevice_Routing_WrappingCommand {
+    /// C++: `SUMOTime WrappingCommand::execute(SUMOTime)`
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        if self.myAmDescheduledByParent {
+            return 0;
+        }
+        self.myDevice.m().wrapped_reroute_command_execute(currentTime)
+    }
+
+    fn priority(&self) -> i32 {
+        self.myPriority
+    }
+}
+
+fn ms_device_routing_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Routing>().get_mut().unwrap();
+    dev.notify_enter(veh, reason, enteredLane)
+}
+
+static MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_device_routing_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
+
+impl Drop for MSDevice_Routing {
+    /// C++: `MSDevice_Routing::~MSDevice_Routing()`: make the rerouting command invalid if there is one
+    fn drop(&mut self) {
+        if !self.myRerouteCommand.is_null() {
+            self.myRerouteCommand.m().deschedule();
+        }
     }
 }
 
@@ -682,7 +731,7 @@ impl MSDevice_Routing {
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, period: SUMOTime, preInsertionPeriod: SUMOTime) -> Self {
         let base = MSVehicleDevice::new(holder, id);
-        let dev = MSDevice_Routing {
+        let mut dev = MSDevice_Routing {
             base,
             myPeriod: period,
             myPreInsertionPeriod: preInsertionPeriod,
@@ -700,6 +749,7 @@ impl MSDevice_Routing {
         };
         // we do always a pre insertion reroute for trips to fill the best lanes of the vehicle with somehow meaningful values (especially for deaprtLane="best")
         // shortcut: the pre-insertion WrappingCommand and its insertion-event schedule are not ported, so myRerouteCommand stays null; upgrade when Command and MSEventControl take commands
+        dev.base.base.vt = &MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT;
         dev
     }
 
@@ -817,15 +867,22 @@ impl MSDevice_Routing {
     pub fn rebuild_reroute_command(&mut self, start: SUMOTime) {
         let mut start = start;
         if !self.myRerouteCommand.is_null() {
-            // shortcut: Command deschedule not ported (no Command type)
+            self.myRerouteCommand.m().deschedule();
             self.myRerouteCommand = Ptr::default();
         }
         if self.myPeriod > 0 {
-            // shortcut: WrappingCommand (periodic reroute event) and its begin-of-timestep schedule are not ported, so no reroute event is created; upgrade when Command exists
+            let raw = Box::into_raw(Box::new(MSDevice_Routing_WrappingCommand {
+                myDevice: Ptr::from_mut(self),
+                myAmDescheduledByParent: false,
+                myPriority: 0,
+            }));
+            self.myRerouteCommand = Ptr::from_raw(raw);
             if with_options(|oc| oc.get_bool("device.rerouting.synchronize").unwrap()) {
                 start -= start % self.myPeriod;
             }
-            // determinism: the event priority (numerical holder id) is applied when the event is scheduled
+            // determinism: the event priority (numerical holder id) orders events at equal time
+            self.myRerouteCommand.m().myPriority = self.myHolder.m().get_numerical_id() as i32;
+            MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(raw as *mut dyn Command), start);
         }
     }
 
