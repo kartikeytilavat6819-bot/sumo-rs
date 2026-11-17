@@ -207,6 +207,20 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
         }
     }
 
+    /// the constructor without the options lookup (unit tests)
+    #[cfg(test)]
+    pub(crate) fn with_params(maxRouteNumber: i32, keepRoutes: bool, skipNewRoutes: bool, keepRouteProb: f64) -> Self {
+        RouteCostCalculator {
+            myMaxRouteNumber: maxRouteNumber,
+            myKeepRoutes: keepRoutes,
+            mySkipNewRoutes: skipNewRoutes,
+            myKeepRouteProb: keepRouteProb,
+            vt_set_costs: None,
+            vt_calculate_probabilities: None,
+            _p: std::marker::PhantomData,
+        }
+    }
+
     /// C++: `void RouteCostCalculator::~RouteCostCalculator<R, E, V>()` [virtual, protected]
     /// Destructor
     // virtual ~RouteCostCalculator() {}

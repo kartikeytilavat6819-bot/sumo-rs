@@ -169,3 +169,70 @@ fn min2(a: f64, b: f64) -> f64 {
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::Cell;
+
+    struct TestRoute {
+        costs: Cell<f64>,
+        prob: Cell<f64>,
+        edges: Vec<Ptr<()>>,
+    }
+
+    impl RouteCostRoute<()> for TestRoute {
+        fn get_costs(&self) -> f64 {
+            self.costs.get()
+        }
+        fn set_costs(&self, costs: f64) {
+            self.costs.set(costs)
+        }
+        fn get_probability(&self) -> f64 {
+            self.prob.get()
+        }
+        fn set_probability(&self, prob: f64) {
+            self.prob.set(prob)
+        }
+        fn get_edge_vector(&self) -> &Vec<Ptr<()>> {
+            &self.edges
+        }
+    }
+
+    fn route(costs: f64, prob: f64) -> Rc<TestRoute> {
+        Rc::new(TestRoute { costs: Cell::new(costs), prob: Cell::new(prob), edges: Vec::new() })
+    }
+
+    fn calc() -> GawronCalculator<TestRoute, (), ()> {
+        GawronCalculator { base: RouteCostCalculator::with_params(5, false, false, 0.), myBeta: 0.9, myA: 0.5, _p: std::marker::PhantomData }
+    }
+
+    #[test]
+    fn set_costs_blends_inactive_routes() {
+        // C++: isActive ? costs : beta * costs + (1 - beta) * old
+        let c = calc();
+        let r = route(100., 0.5);
+        c.set_costs(r.clone(), 130., false);
+        assert_eq!(r.get_costs(), 0.9 * 130. + (1.0 - 0.9) * 100.);
+        c.set_costs(r.clone(), 130., true);
+        assert_eq!(r.get_costs(), 130.);
+    }
+
+    #[test]
+    fn calculate_probabilities_two_routes() {
+        // [Gawron, 1998] (4.2, 4.3a/b) with a = 0.5: delta = 20 / 220
+        let mut c = calc();
+        let alts = vec![route(100., 0.5), route(120., 0.5)];
+        c.calculate_probabilities(&alts, Ptr::null(), 0);
+        assert!((alts[0].get_probability() - 0.5114563278831848).abs() < 1e-12);
+        assert!((alts[1].get_probability() - 0.48854367211681515).abs() < 1e-12);
+    }
+
+    #[test]
+    fn calculate_probabilities_single_route_unchanged() {
+        let mut c = calc();
+        let alts = vec![route(100., 1.)];
+        c.calculate_probabilities(&alts, Ptr::null(), 0);
+        assert_eq!(alts[0].get_probability(), 1.);
+    }
+}
