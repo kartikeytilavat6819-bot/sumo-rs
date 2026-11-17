@@ -1,6 +1,13 @@
 //! Port of utils/router/PedestrianEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::intermodal_edge::{get_sidewalk, IntermodalEdge, IntermodalEdgeKind};
+use crate::utils::router::intermodal_trip::IntermodalTrip;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use utils::common::to_string::to_string;
+
+/// C++ `#define TL_RED_PENALTY 20`
+const TL_RED_PENALTY: i32 = 20;
 
 /// the pedestrian edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `PedestrianEdge` (utils/router/PedestrianEdge.h)
@@ -31,7 +38,13 @@ impl<E, L, N, V> std::ops::DerefMut for PedestrianEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
+impl<E, L, N, V> PedestrianEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     /// C++: `void PedestrianEdge::PedestrianEdge<E, L, N, V>(int, const E *, const L *, bool, const double)`
     // PedestrianEdge(int numericalID, const E* edge, const L* lane, bool forward, const double pos = -1.) :
     //         IntermodalEdge<E, L, N, V>(edge->getID() + (edge->isWalkingArea() ? "" : (forward ? "_fwd" : "_bwd")) + toString(pos), numericalID, edge, "!ped"),
@@ -51,8 +64,23 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(numericalID: i32, edge: Ptr<E>, lane: Ptr<L>, forward: bool, pos: f64) -> Self {
-        // shortcut: needs router trait bounds (lead), E::getID, E::isWalkingArea, E::getFunction, E::getLength are not callable on generic E (the id is always built from edge->getID())
-        panic!("shortcut: needs router trait bounds (lead), E::getID")
+        let name = format!("{}{}{}", edge.id(), if edge.is_walking_area() { "" } else if forward { "_fwd" } else { "_bwd" }, to_string(&pos));
+        let mut r = Self {
+            base: IntermodalEdge::new(name, numericalID, edge, "!ped", -1.).with_kind(IntermodalEdgeKind::Pedestrian),
+            myLane: lane,
+            myForward: forward,
+            myStartPos: if pos >= 0. { pos } else if forward { 0. } else { edge.length() },
+            myIsOpposite: false,
+            _p: std::marker::PhantomData,
+        };
+        if !forward && (edge.function() == SumoXMLEdgeFunc::NORMAL || edge.function() == SumoXMLEdgeFunc::INTERNAL) {
+            let sidewalk = get_sidewalk::<E, L, V>(edge, SVC_PEDESTRIAN);
+            if !sidewalk.is_null() && E::lane_permissions(sidewalk) != SVC_PEDESTRIAN {
+                // some non-pedestrian traffic is allowed
+                r.myIsOpposite = true;
+            }
+        }
+        r
     }
 
     /// C++: `bool PedestrianEdge::includeInRoute(bool) const` [const]
@@ -64,8 +92,8 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
         if allEdges {
             true
         } else {
-            // shortcut: needs router trait bounds (lead), E::isCrossing, E::isWalkingArea, E::isInternal are not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::isCrossing")
+            let e = self.get_edge();
+            !e.is_crossing() && !e.is_walking_area() && !e.is_internal()
         }
     }
 
@@ -85,8 +113,8 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
         if trip.node.is_null() {
             false
         } else {
-            // shortcut: needs router trait bounds (lead), E::getFromJunction and E::getToJunction are not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getFromJunction")
+            let e = self.get_edge();
+            e.from_junction() != trip.node && e.to_junction() != trip.node
         }
     }
 
@@ -152,8 +180,26 @@ impl<E, L, N, V> PedestrianEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::isCrossing, E::getTimePenalty and L::getIncomingLinkState are not callable on generic E, L
-        panic!("shortcut: needs router trait bounds (lead), E::isCrossing")
+        let length = self.get_partial_length(trip);
+        let mut tlsDelay = 0.;
+        // @note pedestrian traffic lights should never have LINKSTATE_TL_REDYELLOW
+        let e = self.get_edge();
+        if e.is_crossing() {
+            let timeToCrossing = time - utils::common::time::steps2time(trip.departTime);
+            let state = E::lane_incoming_link_state(self.myLane);
+            if state == LINKSTATE_TL_RED {
+                // red traffic lights occurring later in the route may be green by the time we arrive
+                let penalty = TL_RED_PENALTY as f64 - timeToCrossing;
+                tlsDelay += if 0. < penalty { penalty } else { 0. };
+            } else if state == LINKSTATE_TL_GREEN_MAJOR && timeToCrossing > (TL_RED_PENALTY / 2) as f64 {
+                // green traffic lights occurring later in the route may be red by the time we arrive
+                tlsDelay += TL_RED_PENALTY as f64;
+            }
+            tlsDelay += e.time_penalty();
+        }
+        // shortcut: gWeightsWalkOppositeFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
+        let oppositeFactor = if self.myIsOpposite { utils::options::options_cont::get_float("persontrip.walk-opposite-factor") } else { 1. };
+        length / (trip.speed * oppositeFactor) + tlsDelay
     }
 
     /// C++: `double PedestrianEdge::getStartPos() const` [const]
