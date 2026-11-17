@@ -94,8 +94,16 @@ for c in $CASES; do
     row "$c" lanechange lanechange.xml --lanechange-output @DIR@/lanechange.xml
     continue
   fi
+  if [ "$c" = stops_transport ]; then
+    row "$c" stopout stopout.xml --stop-output @DIR@/stopout.xml
+    row "$c" stopout_unfinished stopout.xml --stop-output @DIR@/stopout.xml --stop-output.write-unfinished true
+    continue
+  fi
   row "$c" summary summary.xml --summary-output @DIR@/summary.xml
   row "$c" queue queue.xml --queue-output @DIR@/queue.xml
+  if [ "$c" = stress ]; then
+    row "$c" queue_agg queue.xml --queue-output @DIR@/queue.xml --queue-output.aggregation 50
+  fi
   row "$c" netstate netstate.xml --netstate-dump @DIR@/netstate.xml
   row "$c" vehroute vehroute.xml --vehroute-output @DIR@/vehroute.xml
   row "$c" vehroute_exit vehroute.xml --vehroute-output @DIR@/vehroute.xml --vehroute-output.exit-times true
@@ -106,11 +114,6 @@ for c in $CASES; do
   row "$c" person person.xml --person-summary-output @DIR@/person.xml
   if [ "$c" = stress ]; then
     row "$c" collision collision.xml --collision-output @DIR@/collision.xml --collision.action warn --collision.mingap-factor 10
-  fi
-  if [ "$c" = stops_transport ]; then
-    row "$c" stopout stopout.xml --stop-output @DIR@/stopout.xml
-    row "$c" stopout_unfinished stopout.xml --stop-output @DIR@/stopout.xml --stop-output.write-unfinished true
-    continue
   fi
 done
 echo "results: $RESULTS"
