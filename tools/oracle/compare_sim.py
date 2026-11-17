@@ -27,6 +27,9 @@ TRIPINFO_FIELDS = (
 TRIPINFO_EMISSION_FIELDS = tuple("emissions." + a for a in (
     "CO_abs", "CO2_abs", "HC_abs", "PMx_abs", "NOx_abs", "fuel_abs", "electricity_abs",
 ))
+PERSON_FIELDS = ("depart", "duration", "waitingTime", "timeLoss", "traveltime", "speedFactor")
+PERSON_STAGE_FIELDS = ("depart", "arrival", "arrivalPos", "duration", "routeLength", "timeLoss",
+                       "waitingTime", "maxSpeed", "vehicle")
 FCD_FIELDS = ("x", "y", "angle", "speed", "lane", "pos")
 
 
@@ -81,6 +84,40 @@ def compare_tripinfo(ref_path, cand_path):
     for vid in cand:
         if vid not in ref:
             return f"vehicle {vid} extra in candidate"
+    return compare_persons(ref_path, cand_path)
+
+
+def _persons(path):
+    """id -> list of <personinfo> elements (the stages are their children)."""
+    out = {}
+    for e in ET.parse(path).getroot().iter("personinfo"):
+        out.setdefault(e.get("id"), []).append(e)
+    return out
+
+
+def compare_persons(ref_path, cand_path):
+    ref = _persons(ref_path)
+    cand = _persons(cand_path)
+    for pid, ref_list in ref.items():
+        cand_list = cand.get(pid)
+        if cand_list is None:
+            return f"person {pid} missing in candidate"
+        if len(ref_list) != len(cand_list):
+            return f"person {pid} occurs {len(ref_list)}x in ref but {len(cand_list)}x in candidate"
+        for ref_el, cand_el in zip(ref_list, cand_list):
+            for f, a, b in _field_diffs(ref_el.attrib, cand_el.attrib, PERSON_FIELDS):
+                return f"person {pid} field {f}: ref={a!r} cand={b!r}"
+            ref_stages = list(ref_el)
+            cand_stages = list(cand_el)
+            if [s.tag for s in ref_stages] != [s.tag for s in cand_stages]:
+                return (f"person {pid} stages: ref={[s.tag for s in ref_stages]} "
+                        f"cand={[s.tag for s in cand_stages]}")
+            for i, (rs, cs) in enumerate(zip(ref_stages, cand_stages)):
+                for f, a, b in _field_diffs(rs.attrib, cs.attrib, PERSON_STAGE_FIELDS):
+                    return f"person {pid} stage {i} ({rs.tag}) field {f}: ref={a!r} cand={b!r}"
+    for pid in cand:
+        if pid not in ref:
+            return f"person {pid} extra in candidate"
     return None
 
 

@@ -991,7 +991,7 @@ impl MSTLLogicControl_TLSLogicVariants {
             logic.m().adapt_link_information_from(&*self.myCurrentProgram);
             if logic.get_links().len() > logic.get_phase(0).get_state().len() {
                 let id = logic.get_id().to_string();
-                panic!("{}", utils::tlf!("Mismatching phase size in tls '%', program '%'.", id, programID));
+                std::panic::panic_any(utils::common::util_exceptions::ProcessError::new(utils::tlf!("Mismatching phase size in tls '%', program '%'.", id, programID)));
             }
         }
         // add to the list of active

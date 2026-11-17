@@ -2234,8 +2234,7 @@ impl Helper {
         let persons = my_remote_controlled_persons();
         for (id, controlled) in persons.iter() {
             if !MSNet::get_instance().m().get_person_control().get(id).is_null() {
-                // shortcut: person remote-control post-processing (MSPerson influencer) is not ported, upgrade when it is
-                panic!("shortcut: person remote control post-processing not ported");
+                controlled.m().get_influencer().post_process_remote_control(*controlled);
                 numControlled += 1;
             } else {
                 utils::write_warningf!("Person '%' was removed though being controlled by TraCI", id);
