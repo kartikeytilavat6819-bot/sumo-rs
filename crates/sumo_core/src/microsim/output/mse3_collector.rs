@@ -370,7 +370,10 @@ impl MSE3Collector {
             v.haltings += 1;
             v.intervalHaltings += 1;
         }
-        // shortcut: C++ sets timeLoss from MSVehicle::getTimeLoss() for vehicles (dynamic_cast), MSVehicle is not #[repr(C)] so time loss stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
+        if !MSGlobals::use_meso_sim() && veh.is_vehicle() {
+            v.timeLoss = Ptr::new(veh).cast::<MSVehicle>().get_time_loss();
+            v.intervalTimeLoss = v.timeLoss;
+        }
         self.myEnteredContainer.insert(key, v);
     }
 
@@ -492,8 +495,7 @@ impl MSE3Collector {
                     values.frontLeaveTime = leaveTimestep;
                 }
             } else {
-                // shortcut: C++ sets timeLoss = MSVehicle::getTimeLoss() - entry timeLoss, MSVehicle is not #[repr(C)] so it stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
-                values.timeLoss = 0;
+                values.timeLoss = Ptr::new(veh).cast::<MSVehicle>().get_time_loss() - values.timeLoss;
             }
             self.myEnteredContainer.remove(&key);
             self.myLeftContainer.push(values);
@@ -735,9 +737,8 @@ impl MSE3Collector {
         let mut mean_interval_speed_within = 0.;
         let mut mean_interval_halts_within = 0.;
         let mut mean_interval_duration_within = 0.;
-        // shortcut: time loss within the area (C++ MSVehicle::getTimeLoss differences) is not tracked, stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
-        let mean_time_loss_within = 0.;
-        for values in self.myEnteredContainer.values_mut() {
+        let mut mean_time_loss_within = 0.;
+        for (key, values) in self.myEnteredContainer.iter_mut() {
             mean_halts_within += values.haltings as f64;
             mean_interval_halts_within += values.intervalHaltings as f64;
             let end = if values.backLeaveTime == 0. { steps2time(stopTime) } else { values.backLeaveTime };
@@ -754,6 +755,11 @@ impl MSE3Collector {
             // reset interval values
             values.intervalHaltings = 0;
             values.intervalSpeedSum = 0.;
+            if !MSGlobals::use_meso_sim() && key.is_vehicle() {
+                let current_time_loss = key.cast::<MSVehicle>().get_time_loss();
+                mean_time_loss_within += steps2time(current_time_loss - values.intervalTimeLoss);
+                values.intervalTimeLoss = current_time_loss;
+            }
         }
         self.myLastResetTime = stopTime;
         let norm = |x: f64| if vehicle_sum_within != 0 { x / vehicle_sum_within as f64 } else { -1. };
