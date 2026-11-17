@@ -1851,6 +1851,7 @@ impl MSDevice_Tripinfo {
         };
         this.base.base.vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_INTERNAL_VT;
         this
     }
 
@@ -2058,6 +2059,14 @@ static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderV
     notify_enter: ms_device_tripinfo_notify_enter,
     notify_move: ms_device_tripinfo_notify_move,
     notify_leave: ms_device_tripinfo_notify_leave,
+};
+fn ms_device_tripinfo_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+    notify_move_internal: ms_device_tripinfo_notify_move_internal,
 };
 fn ms_device_tripinfo_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
     let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();

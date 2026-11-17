@@ -1196,8 +1196,7 @@ impl MSDevice_StationFinder {
         let holderPtr = self.myHolder;
         let stoppingPlaceMemory = time2steps(self.base2.get_weight(holderPtr.m(), "memory".to_string(), 600., true));
         let now = MSNet::get_instance().m().get_current_time_step();
-                // shortcut: MSNet::get_stopping_places returns an unmapped container, so no candidates are collected until it is ported
-        let stopping_places: Vec<Ptr<MSStoppingPlace>> = Vec::new();
+        let stopping_places: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().m().get_stopping_places(SUMO_TAG_CHARGING_STATION).values().copied().collect();
         for cs in stopping_places.iter() {
             let cs = as_charging_station(*cs);
             if cs.get_efficency() < utils::geom::NUMERICAL_EPS || cs.get_charging_power(false) < utils::geom::NUMERICAL_EPS {
@@ -1608,7 +1607,18 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn already_planned_charging(&mut self) -> bool {
         if self.myChargingStation.is_null() {
-            // shortcut: iterating the vehicle's stops (MSStop.chargingStation / edge) is not wired, so no planned charging stop is adopted
+            let holderPtr = self.myHolder;
+            let holder = holderPtr.m();
+            for stop in holder.get_stops().iter() {
+                if !stop.chargingStation.is_null() {
+                    // compare whether we'll make it there without intermediate charging
+                    let expectedConsumption = self.estimate_consumption(holder.get_route().index_op(stop.edge as i32), true, 0.);
+                    if self.myBattery.m().get_actual_battery_capacity() < expectedConsumption {
+                        self.myChargingStation = stop.chargingStation;
+                        return true;
+                    }
+                }
+            }
         }
         false
     }
