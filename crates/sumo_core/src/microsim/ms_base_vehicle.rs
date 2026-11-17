@@ -4,6 +4,17 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
+/// C++ `WrappingCommand<MSBaseVehicle>` wrapping `MSBaseVehicle::activateRemindersOnReroute`
+pub struct MSBaseVehicle_ActivateRemindersCommand {
+    pub vehicle: Ptr<MSBaseVehicle>,
+}
+
+impl Command for MSBaseVehicle_ActivateRemindersCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        self.vehicle.m().activate_reminders_on_reroute(currentTime)
+    }
+}
+
 /// C++ enum `MSBaseVehicle::RouteValidity`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i64)]
@@ -1539,7 +1550,8 @@ impl MSBaseVehicle {
             }
         }
         if hasSkipped {
-            // shortcut: MSStopOptimizer::optimizeSkipped is not ported, skipped stops keep the edges computed above
+            let opti = MSStopOptimizer::new(Ptr::from_mut(self), router, t, maxDelay);
+            edges = opti.optimize_skipped(origSource, origSourcePos, &mut stops, edges);
             for stop in stops.iter() {
                 if stop.skipped || !stop.origEdge.is_null() {
                     let origEdge = if stop.origEdge.is_null() { stop.edge } else { stop.origEdge };
@@ -1585,7 +1597,7 @@ impl MSBaseVehicle {
                     std::panic::panic_any(ProcessError::new(utils::tlf!("Vehicle '%' has no valid route.", self.get_id())));
                 } else if source.is_taz_connector() {
                     utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' which has no valid route.", self.get_id()));
-                    // shortcut: MSNet::getInstance()->getInsertionControl().descheduleDeparture(this) not ported
+                    MSNet::get_instance().m().get_insertion_control().deschedule_departure(Ptr::from_mut(&mut self.base));
                     return false;
                 }
             }
@@ -1695,8 +1707,9 @@ impl MSBaseVehicle {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
         }
-        // shortcut: the route color is not copied (null means the default color)
-        let mut newRoute = MSRoute::new(&id, edges, false, Ptr::default(), &StopParVector::new(), -1, -1);
+        // C++ copies the color unless it is the default one (then nullptr)
+        let routeColor: Ptr<RGBColor> = if self.myRoute.myColor.is_null() { Ptr::null() } else { Ptr::from_raw(Box::into_raw(Box::new(*self.myRoute.get_color()))) };
+        let mut newRoute = MSRoute::new(&id, edges, false, routeColor, &StopParVector::new(), -1, -1);
         newRoute.set_costs(cost);
         newRoute.set_savings(savings);
         let constRoute: ConstMSRoutePtr = Rc::new(newRoute);
@@ -1954,8 +1967,11 @@ impl MSBaseVehicle {
         // save information that the vehicle was rerouted
         self.myNumberReroutes += 1;
         self.myStopUntilOffset += self.myRoute.get_period();
-        // shortcut: MSNet::informVehicleStateListener(NEWROUTE) is not ported
-        // shortcut: MSRailSignalControl driveway update event (activateRemindersOnReroute) is not ported
+        MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut self.base), MSNet_VehicleState::NEWROUTE, info);
+        if !onInit && self.is_rail() && MSRailSignalControl::has_instance() {
+            let cmd: &mut MSBaseVehicle_ActivateRemindersCommand = Box::leak(Box::new(MSBaseVehicle_ActivateRemindersCommand { vehicle: Ptr::from_mut(self) }));
+            MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd as &mut dyn Command), MSNet::get_instance().get_current_time_step());
+        }
         // remove past stops which are not on the route anymore
         let route = &self.myRoute;
         self.myPastStops.retain(|it| {
@@ -2997,14 +3013,26 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        // shortcut: the speedFactor distribution (getSpeedFactor()) is Unmapped, so the speed factor
-        // remapping onto the new type's distribution is not applied; the chosen factor is kept
+        let oldMu = self.myType.get_speed_factor().get_parameter(0);
+        let oldDev = self.myType.get_speed_factor().get_parameter(1);
         if self.myType.is_vehicle_specific() && type_ != self.myType {
-            // shortcut: MSNet::getVehicleControl().removeVType(myType) is not ported
+            MSNet::get_instance().m().get_vehicle_control().remove_v_type(self.myType);
+        }
+        if oldDev == 0. {
+            self.myChosenSpeedFactor = type_.compute_chosen_speed_deviation(self.get_parameter().speedFactor, self.get_rng(), -1.);
+        } else {
+            let distPoint = (self.myChosenSpeedFactor - oldMu) / oldDev;
+            let newMu = type_.get_speed_factor().get_parameter(0);
+            let newDev = type_.get_speed_factor().get_parameter(1);
+            self.myChosenSpeedFactor = newMu + distPoint * newDev;
+            let max = type_.get_speed_factor().get_max();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor < max { self.myChosenSpeedFactor } else { max };
+            let min = type_.get_speed_factor().get_min();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor > min { self.myChosenSpeedFactor } else { min };
         }
         self.myType = type_;
         if !self.myEnergyParams.is_null() {
-            // shortcut: EnergyParams::setSecondary(type->getEmissionParameters()) is not ported
+            self.myEnergyParams.m().set_secondary(type_.get_emission_parameters());
         }
     }
 
@@ -3082,7 +3110,7 @@ impl MSBaseVehicle {
         let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
         utils::options::options_cont::with_options(|oc| self.myParameter.write(out, oc, SUMO_TAG_VEHICLE, &typeID));
         out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
-        let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
+        let os = format!("{} {}", utils::common::to_string::f64_to_string_default(self.myOdometer), self.myNumberReroutes);
         out.write_attr(SUMO_ATTR_DISTANCE, &os);
         if self.myParameter.arrivalPosProcedure == ArrivalPosDefinition::RANDOM {
             out.write_attr(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &self.myArrivalPos);
@@ -5629,8 +5657,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_route_removal(&mut self) {
-        // shortcut: MSNet::hasInstance / hasFlow(getFlowID()) is not checked; MSRoute::checkRemoval is called directly
-        self.myRoute.check_removal(false);
+        // the check for an instance is needed for the unit tests which do not construct a network
+        if MSNet::has_instance() && !MSNet::get_instance().m().has_flow(&self.get_flow_id()) {
+            self.myRoute.check_removal(false);
+        }
     }
 
     /// C++: `bool MSBaseVehicle::insertJump(int, MSRouteIterator, std::string &)` [private]

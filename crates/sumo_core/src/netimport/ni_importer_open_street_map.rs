@@ -3934,7 +3934,7 @@ impl NIImporter_OpenStreetMap {
             }
         }
         if applyPlacement && placementOffset.abs() > utils::geom::POSITION_EPS {
-            // shortcut: C++ catches InvalidArgument from move2side and skips placement; the Rust move2side has no Result, so a failure here is not caught, upgrade when move2side returns Result
+            // C++ catch (InvalidArgument&) is unreachable: PositionVector::move2side(double) throws nothing
             shape.move2side(placementOffset, 100.0);
         }
 
@@ -4037,8 +4037,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '{id}'.")));
             }
         }
         if addBackward {
@@ -4103,8 +4102,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '-{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '-{id}'.")));
             }
         }
         if (e.myParkingType & PARKING_BOTH) != 0 && utils::options::options_cont::is_set("parking-output") {

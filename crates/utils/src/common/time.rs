@@ -149,6 +149,28 @@ pub fn time2string_hr(mut t: SUMOTime, human_readable: bool) -> String {
     result
 }
 
+/// C++ checkStepLengthMultiple(t, error, deltaT, begin) (SUMOTime.cpp); only emits warnings
+pub fn check_step_length_multiple(t: SUMOTime, error: &str, delta_t: SUMOTime, begin: SUMOTime) {
+    if begin % delta_t == 0 {
+        if t % delta_t != 0 {
+            super::msg_handler::write_warning(&format!(
+                "The given time value {} is not a multiple of the step length {}{}.",
+                time2string(t),
+                time2string(delta_t),
+                error
+            ));
+        }
+    } else if (t - begin) % delta_t != 0 {
+        super::msg_handler::write_warning(&format!(
+            "The given time value {} is not reached with step length {} and begin time {}{}.",
+            time2string(t),
+            time2string(delta_t),
+            time2string(begin),
+            error
+        ));
+    }
+}
+
 pub fn time2string(t: SUMOTime) -> String {
     time2string_hr(t, g_human_readable_time())
 }

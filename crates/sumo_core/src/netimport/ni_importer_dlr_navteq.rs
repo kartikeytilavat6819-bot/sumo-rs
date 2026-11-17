@@ -18,14 +18,10 @@ pub const GEO_SCALE: &str = "1e-5";
 static KEEP_LENGTH: AtomicBool = AtomicBool::new(false);
 const UNDEFINED: &str = "-1";
 
-// shortcut: NBEdge's static constants are not ported as statics yet, their C++ values are copied here
-const UNSPECIFIED_WIDTH: f64 = -1.0;
-const UNSPECIFIED_OFFSET: f64 = 0.0;
-const UNSPECIFIED_FRICTION: f64 = 1.0;
-const UNSPECIFIED_SPEED: f64 = -1.0;
-const UNSPECIFIED_CONTPOS: f64 = -1.0;
-const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.0;
-const UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
+use crate::netbuild::nb_edge::{
+    UNSPECIFIED_CONTPOS, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, UNSPECIFIED_OFFSET, UNSPECIFIED_SPEED,
+    UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_WIDTH,
+};
 
 /// C++ `throw ProcessError(...)`: the handler and loader signatures return no Result, so the error unwinds as a panic carrying the ProcessError
 fn throw_error(e: ProcessError) -> ! {
@@ -395,7 +391,7 @@ impl NIImporter_DlrNavteq_ConnectedLanesHandler {
         }
         // ensure that connections for other lanes are guessed if not specified
         from.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::INIT);
-        // shortcut: NBEdge::get_lane_struct is still todo and nb_edge.rs resolves Lane to libsumo::lane::Lane (no connectionsDone), set Lane.connectionsDone = true here once it is wired
+        from.m().get_lane_struct(fromLane).connectionsDone = true;
         true
     }
 
@@ -1451,8 +1447,7 @@ impl NIImporter_DlrNavteq_NodesHandler {
         }
 
         if intermediate == 0 {
-            // shortcut: the C++ NBNode(id, position) overload (district = nullptr) maps to the UNKNOWN node type here
-            let n = Ptr::from_mut(Box::leak(Box::new(NBNode::new(&id, &geoms[0], SumoXMLNodeType::UNKNOWN))));
+            let n = Ptr::from_mut(Box::leak(Box::new(NBNode::new_2(&id, &geoms[0], Ptr::null()))));
             if !self.myNodeCont.m().insert_2(n) {
                 // delete n
                 drop(unsafe { Box::from_raw(n.as_raw()) });
