@@ -256,7 +256,7 @@ static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransporta
     get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
     get_path_length: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_path_length(),
     save_state: |a, out| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().save_state(out),
-    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().get_id(),
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myPerson.get_id(),
 };
 /// PStateVehicle overrides getID (C++ `PStateVehicle::getID` returns the vehicle's ID)
 static MSPMODEL_STRIPING_PSTATE_VEHICLE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
