@@ -14,6 +14,7 @@ use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::a_star_router::AStarRouter;
 use crate::microsim::ms_router_defs::MSMapMatcher;
 use crate::mesosim::me_loop::MELoop;
+use crate::netload::nl_builder::NLBuilder;
 
 thread_local! {
     static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
@@ -2899,7 +2900,9 @@ impl MSNet {
         if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |m| m.was_informed()) {
             panic!("{}", ProcessError::new(utils::tlf!("Loading state from '%' failed.", fileName)));
         }
-        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        // reset route loaders
+        delete_ptr(self.myRouteLoaders);
+        self.myRouteLoaders = utils::options::options_cont::with_options(|oc| NLBuilder::build_route_loader_control(oc));
         // prevent loading errors on rewound route file
         crate::microsim::ms_globals::set_state_loaded(true);
         self.update_gui();
@@ -2933,8 +2936,10 @@ impl MSNet {
     pub fn quick_reload(&mut self) {
         let oc_begin = opt_time("begin");
         self.clear_state(oc_begin, true);
-        // shortcut: NLBuilder::initRandomness and the additional-files reload are not ported yet
-        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        NLBuilder::init_randomness();
+        // shortcut: the additional-files reload (MSRouteHandler + XMLSubSys::runParser) is not wired yet, upgrade when quickReload loads them
+        delete_ptr(self.myRouteLoaders);
+        self.myRouteLoaders = utils::options::options_cont::with_options(|oc| NLBuilder::build_route_loader_control(oc));
         self.update_gui();
     }
 
@@ -3297,16 +3302,16 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter::new needs SUMOAbstractRouter_Operation (Unmapped fn-pointer type in sumo_abstract_router.rs) for the effort and tt operations, upgrade when that type is typed; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        match me.myRouterEffort.get(&rngIndex).copied() {
-            Some(router) => {
-                router.m().prohibit(prohibited);
-                router.get_mut().unwrap()
-            }
-            None => panic!("shortcut: effort router is not creatable yet"),
+        let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
+        if !me.myRouterEffort.contains_key(&rngIndex) {
+            let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_effort), Some(MSNet::get_travel_time), false, Ptr::null(), true, false).with_compute();
+            me.myRouterEffort.insert(rngIndex, Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>());
         }
+        let router = me.myRouterEffort[&rngIndex];
+        router.m().prohibit(prohibited);
+        router.get_mut().unwrap()
     }
 
     /// C++: `MSPedestrianRouter & MSNet::getPedestrianRouter(int, const Prohibitions &) const` [const]
