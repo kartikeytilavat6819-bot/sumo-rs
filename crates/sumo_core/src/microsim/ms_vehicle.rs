@@ -14844,6 +14844,7 @@ impl MSVehicle {
                     vsafeLeader = max2(vsafeLeader, min2(v2, vStop));
                 }
             }
+            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 jl t={} leaderIsMe={} leaderDist={:x} distCP={:x} vsafeLeader={:x} vLinkPass={:x} v={:x}", MSNet::get_instance().get_current_time_step(), (leaderInfo.0 == me) as i32, leaderInfo.1.to_bits(), distToCrossing.to_bits(), vsafeLeader.to_bits(), (*vLinkPass).to_bits(), (*v).to_bits()); }
             if !lastLink.is_null() {
                 lastLink.m().adapt_leave_speed(vsafeLeader);
             }

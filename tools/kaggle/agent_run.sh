@@ -38,6 +38,11 @@ assert s.count(a) == 1, a
 t = r'''            if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = dpi.myDistance; unsigned long long dist = cvt.u; cvt.d = dpi.myVLinkWait; unsigned long long vW = cvt.u; cvt.d = dpi.myVLinkPass; unsigned long long vP = cvt.u; cvt.d = myState.mySpeed; unsigned long long sp = cvt.u; fprintf(stderr, "RX01 lnk t=%lld link=%s ls=%d yel=%d cb=%d ign=%d beyond=%d dist=%llx vW=%llx vP=%llx req=%d spd=%llx\n", (long long)SIMSTEP, link->getLaneBefore()->getID().c_str(), (int)ls, (int)yellow, (int)canBrake, (int)ignoreRedLink, (int)beyondStopLine, dist, vW, vP, (int)dpi.mySetRequest, sp); }
 '''
 s = s.replace(a, a + t)
+b = '        if (lastLink != nullptr) {\n            lastLink->adaptLeaveSpeed(vsafeLeader);\n        }\n        v = MIN2(v, vsafeLeader);\n'
+assert s.count(b) == 1, 'jl anchor'
+u = r'''        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = leaderInfo.second; unsigned long long ld = cvt.u; cvt.d = distToCrossing; unsigned long long dc = cvt.u; cvt.d = vsafeLeader; unsigned long long vs = cvt.u; cvt.d = vLinkPass; unsigned long long vl = cvt.u; cvt.d = v; unsigned long long vv = cvt.u; fprintf(stderr, "RX01 jl t=%lld leaderIsMe=%d leaderDist=%llx distCP=%llx vsafeLeader=%llx vLinkPass=%llx v=%llx\n", (long long)SIMSTEP, (int)(leaderInfo.first == this), ld, dc, vs, vl, vv); }
+'''
+s = s.replace(b, u + b)
 open(p, 'wb').write(s.encode())
 print('patched MSVehicle')
 EOF
