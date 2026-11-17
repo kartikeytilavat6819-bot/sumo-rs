@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<meandata>
+  <interval begin="0" end="100">
+    <edge id="-103224#0" traveltime="20.00"/>
+    <edge id="-103224#1" traveltime="35.50"/>
+    <edge id="-103224#3" traveltime="12.25"/>
+    <edge id="-103227#0" traveltime="40.00"/>
+  </interval>
+  <interval begin="100" end="3600">
+    <edge id="-103224#0" traveltime="5.00"/>
+    <edge id="-103227#0" traveltime="60.00"/>
+  </interval>
+</meandata>

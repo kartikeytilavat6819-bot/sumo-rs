@@ -303,7 +303,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        // shortcut: pure virtual in C++ (no base body); the field holds the model this object was built with, which is what every subclass returns
+        // pure virtual in C++; the stored model is what every subclass returns
         self.myModel
     }
 
@@ -406,14 +406,22 @@ impl MSAbstractLaneChangeModel {
         }
         if attrs.has_attribute(SUMO_ATTR_LCSTATE) {
             let s = attrs.get_string(SUMO_ATTR_LCSTATE);
+            // istringstream >> semantics: a token that fails to parse sets its value to 0 and ends the stream
             let mut toks = s.split_whitespace();
+            let mut ok = true;
             if let Some(t) = toks.next() {
                 self.mySpeedLat = t.parse::<f64>().unwrap_or(0.0);
+                ok = t.parse::<f64>().is_ok();
+            }
+            if ok {
                 if let Some(t) = toks.next() {
                     self.myLaneChangeCompletion = t.parse::<f64>().unwrap_or(0.0);
-                    if let Some(t) = toks.next() {
-                        self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
-                    }
+                    ok = t.parse::<f64>().is_ok();
+                }
+            }
+            if ok {
+                if let Some(t) = toks.next() {
+                    self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
                 }
             }
         }
@@ -2899,7 +2907,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn check_tra_ci_commands(&mut self) {
-        // shortcut: gDebugFlag2 debug printing is not ported (no debug flags in Rust yet), add it when the flags are ported
+        // gDebugFlag2 std::cout diagnostics are not ported; they do not affect simulation results
         let mut newstate = self.myVehicle.m().influence_change_decision(self.myOwnState);
         if self.myOwnState != newstate {
             if MSGlobals::lateral_resolution() > 0. {

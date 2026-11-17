@@ -2,8 +2,29 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `ComparatorNumericalIdLess` key of ActiveLanes: lanes are ordered by numerical ID, not by address
+// determinism: C++ ActiveLanes iterates in numerical-ID order; Ptr's own Ord is by address
+#[derive(Clone, Copy)]
+pub struct MSPModel_Interacting_LaneKey(pub Ptr<MSLane>);
+impl PartialEq for MSPModel_Interacting_LaneKey {
+    fn eq(&self, o: &Self) -> bool {
+        self.0.get_numerical_id() == o.0.get_numerical_id()
+    }
+}
+impl Eq for MSPModel_Interacting_LaneKey {}
+impl PartialOrd for MSPModel_Interacting_LaneKey {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for MSPModel_Interacting_LaneKey {
+    fn cmp(&self, o: &Self) -> std::cmp::Ordering {
+        self.0.get_numerical_id().cmp(&o.0.get_numerical_id())
+    }
+}
+
 /// C++ typedef `std::map<const MSLane *, Pedestrians, ComparatorNumericalIdLess> MSPModel_Interacting::ActiveLanes`
-pub type MSPModel_Interacting_ActiveLanes = BTreeMap<Ptr<MSLane>, MSPModel_Interacting_Pedestrians>;
+pub type MSPModel_Interacting_ActiveLanes = BTreeMap<MSPModel_Interacting_LaneKey, MSPModel_Interacting_Pedestrians>;
 
 /// C++ typedef `std::vector<MSPModel_InteractingState *> MSPModel_Interacting::Pedestrians`
 pub type MSPModel_Interacting_Pedestrians = Vec<Ptr<MSPModel_InteractingState>>;
@@ -90,7 +111,7 @@ impl MSPModel_Interacting {
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
         let p: Ptr<MSPModel_InteractingState> = state.cast::<MSPModel_InteractingState>();
-        let pedestrians = self.myActiveLanes.entry(state.get_lane()).or_default();
+        let pedestrians = self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(state.get_lane())).or_default();
         if let Some(idx) = pedestrians.iter().position(|x| *x == p) {
             if !p.get_next_crossing().is_null() {
                 MSPModel_Interacting::unregister_crossing_approach(&*p, p.get_next_crossing());
@@ -296,7 +317,7 @@ impl MSPModel_Interacting {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_pedestrians(&mut self, lane: Ptr<MSLane>) -> &mut MSPModel_Interacting_Pedestrians {
-        if let Some(v) = self.myActiveLanes.get_mut(&lane) {
+        if let Some(v) = self.myActiveLanes.get_mut(&MSPModel_Interacting_LaneKey(lane)) {
             return v;
         }
         NO_PEDESTRIANS.with(|p| *p).get_mut().unwrap()
@@ -352,6 +373,31 @@ impl std::ops::DerefMut for MSPModel_InteractingState {
     }
 }
 
+/// virtual overrides of MSPModel_InteractingState (the others keep the MSTransportableStateAdapter base implementation)
+pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lat_offset_base(),
+    get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
+    get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
+    get_position: adapter_default_get_position,
+    get_angle: adapter_default_get_angle,
+    get_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_waiting_time(),
+    get_total_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_total_waiting_time(),
+    get_speed: |a, _| Ptr::new(a).cast::<MSPModel_InteractingState>().get_speed(),
+    get_next_edge: adapter_default_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().is_jammed(),
+    is_finished: adapter_default_is_finished,
+    get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
+    get_path_length: adapter_default_get_path_length,
+    save_state: adapter_default_save_state,
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myPerson.get_id(),
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
+};
+
 impl MSPModel_InteractingState {
     /// C++: `void MSPModel_InteractingState::MSPModel_InteractingState(MSPerson *, MSStageMoving *, const MSLane *)`
     /// constructor
@@ -366,7 +412,7 @@ impl MSPModel_InteractingState {
     #[allow(unused_variables)]
     pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, lane: Ptr<MSLane>) -> Self {
         Self {
-            base: MSTransportableStateAdapter {},
+            base: MSTransportableStateAdapter { vt: &MSPMODEL_INTERACTING_STATE_VT },
             myPerson: person,
             myStage: stage,
             myLane: lane,
@@ -486,6 +532,11 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
+        (self.base.vt.get_lat_offset)(&self.base)
+    }
+
+    /// base implementation of the virtual getLatOffset (dispatched through the state vtable)
+    pub fn get_lat_offset_base(&self) -> f64 {
         self.myPosLat
     }
 
@@ -536,7 +587,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        self.myPerson.get_id()
+        (self.base.vt.get_id)(&self.base)
     }
 
     /// C++: `double MSPModel_InteractingState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]

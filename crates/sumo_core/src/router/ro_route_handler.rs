@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_BUS, SVC_TAXI};
 use utils::common::msg_handler::write_warning;
+use crate::utils::named_rtree::NamedRTree;
 // shortcut: LINE_ANY belongs to SUMOVehicleParameter.h, not ported yet, move it there
 const LINE_ANY: &str = "ANY";
 /// C++ `SUMOXMLDefinitions::getEdgeIDFromLane`: the lane id without its "_<index>" suffix
@@ -39,9 +40,8 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
 }
 
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
-// shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
 fn tag_to_string(tag: SumoXMLTag) -> String {
-    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
+    utils::xml::sumo_xml_definitions::Tags.get_string(tag).to_string()
 }
 
 /// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
@@ -111,7 +111,25 @@ impl std::ops::DerefMut for RORouteHandler {
     }
 }
 
+impl utils::xml::generic_sax_handler::SaxHandler for RORouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+        &mut self.base.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        RORouteHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        SUMORouteHandler::my_end_element(&mut self.base, element);
+        Ok(())
+    }
+}
+
 // C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+/// C++ virtual `RORouteHandler::myStartElement`, reached from SUMORouteLoader through the base handler
+fn ro_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().my_start_element(element, attrs)
+}
 fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
     Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)
 }
@@ -253,7 +271,7 @@ impl RORouteHandler {
         let mut myActiveRoute: ConstROEdgeVector = Vec::new();
         myActiveRoute.reserve(100);
         RORouteHandler {
-            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
+            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, start_element_override: Some(ro_my_start_element), ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
             base2: (),
             myNet: Ptr::from_mut(net),
             myActiveRoute,
@@ -2848,10 +2866,15 @@ impl RORouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        // shortcut: NamedRTree is not ported, lanes cannot be inserted into the tree yet, upgrade when the R-tree type is mapped
-        let _ = tree;
-        panic!("RORouteHandler::initLaneTree needs the unported NamedRTree");
+    pub fn init_lane_tree(&mut self, tree: Ptr<NamedRTree>) {
+        for (_, edge) in self.myNet.get_edge_map().iter() {
+            for lane in edge.m().get_lanes().iter() {
+                let b = lane.m().get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &Ptr::new(&lane.base));
+            }
+        }
     }
 
     /// C++: `ROEdge * RORouteHandler::retrieveEdge(const std::string &)` [virtual, protected]

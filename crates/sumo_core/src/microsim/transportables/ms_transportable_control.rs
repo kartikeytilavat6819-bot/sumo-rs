@@ -133,13 +133,11 @@ impl MSTransportableControl {
         let mut movementModel = nonInteracting;
         if isPerson {
             let model = get_string("pedestrian.model");
-            // shortcut: C++ compiles the jupedsim branches only with HAVE_JUPEDSIM_GRPC / HAVE_JUPEDSIM_LEGACY; the port has no such build flags, so they are always on, upgrade when build flags are ported
+            // the jupedsim branch is always on: the pristine 1.28.0 build has HAVE_JUPEDSIM (build features list JuPedSim)
             if model == "striping" {
                 movementModel = leak_ptr(with_options(|oc| MSPModel_Striping::new(oc, net))).cast::<MSPModel>();
             } else if model == "jupedsim" {
                 movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim::new(oc, net))).cast::<MSPModel>();
-            } else if model == "jupedsim_legacy" {
-                movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim_legacy::new(oc, net))).cast::<MSPModel>();
             } else if model != "nonInteracting" {
                 // C++ deletes myNonInteractingModel here before throwing; the port does not own models yet
                 panic!("{}", ProcessError::new(utils::tlf!("Unknown pedestrian model '%'", model)));
@@ -694,8 +692,7 @@ impl MSTransportableControl {
             for p in list {
                 edge.remove_transportable(p);
                 let stage = p.get_current_stage();
-                // shortcut: C++ dynamic_cast<MSStageDriving*> is an unchecked cast here; only MSStageDriving leaves transportables waiting for a vehicle
-                let waitDescription = if stage.is_null() { "waiting".to_string() } else { stage.cast::<MSStageDriving>().get_waiting_description() };
+                let waitDescription = if stage.is_null() || stage.get_stage_type() != crate::microsim::transportables::ms_stage::MSStageType::DRIVING { "waiting".to_string() } else { stage.cast::<MSStageDriving>().get_waiting_description() };
                 write_warning(&format!("{} '{}' aborted {}.", p.m().get_object_type(), p.get_id(), waitDescription));
                 if self.myAbortWaitingTimeout >= 0 {
                     p.m().set_abort_waiting(-1);
@@ -783,7 +780,13 @@ impl MSTransportableControl {
     #[allow(unused_variables)]
     pub fn build_person(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, rng: Ptr<SumoRNG>) -> Ptr<MSTransportable> {
         let speedFactor = vtype.compute_chosen_speed_deviation(pars.speedFactor, rng, -1.0);
-        leak_ptr(MSPerson::new(pars, vtype, plan, speedFactor)).cast::<MSTransportable>()
+        // C++ builds the devices in the MSTransportable constructor; here after leaking, so the devices' holder pointers stay valid
+        let person = leak_ptr(MSPerson::new(pars, vtype, plan, speedFactor)).cast::<MSTransportable>();
+        let p = person.m();
+        let mut devices = std::mem::take(&mut p.myDevices);
+        MSDevice::build_transportable_devices(p, &mut devices);
+        p.myDevices = devices;
+        person
     }
 
     /// C++: `MSTransportable * MSTransportableControl::buildContainer(const SUMOVehicleParameter *, MSVehicleType *, MSTransportable::MSTransportablePlan *) const` [const, virtual]
@@ -794,7 +797,12 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn build_container(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>) -> Ptr<MSTransportable> {
-        leak_ptr(MSTransportable::new(pars, vtype, plan, false))
+        let container = leak_ptr(MSTransportable::new(pars, vtype, plan, false));
+        let c = container.m();
+        let mut devices = std::mem::take(&mut c.myDevices);
+        MSDevice::build_transportable_devices(c, &mut devices);
+        c.myDevices = devices;
+        container
     }
 
     /// C++: `constVehIt MSTransportableControl::loadedBegin() const` [const]
@@ -814,7 +822,10 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn loaded_end(&self) -> MSTransportableControl_constVehIt<'_> {
-        panic!("shortcut: MSTransportableControl::loadedEnd needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
+        // shortcut: Rust iterators have no end value, so end() is an exhausted iterator; no caller compares against it yet, upgrade with a sentinel-based iterator when one is needed
+        let mut it = self.myTransportables.iter();
+        it.by_ref().for_each(drop);
+        it
     }
 
     /// C++: `int MSTransportableControl::size() const` [const]

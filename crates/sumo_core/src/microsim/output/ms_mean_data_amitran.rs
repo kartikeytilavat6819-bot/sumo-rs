@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSMeanData_Amitran.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Amitran::MSLaneMeanDataValues` (microsim/output/MSMeanData_Amitran.h)
@@ -272,6 +273,7 @@ static MS_MEAN_DATA_AMITRAN_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: amitran_mean_data_open_interval,
     write_prefix: amitran_mean_data_write_prefix,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
 };
 
 fn amitran_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
@@ -297,6 +299,26 @@ fn amitran_mean_data_open_interval(m: &mut MSMeanData, dev: &mut OutputDevice, s
 fn amitran_mean_data_write_prefix(m: &MSMeanData, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
     Ptr::new(m).cast::<MSMeanData_Amitran>().m().write_prefix(dev, values, tag, id)
 }
+
+fn amitran_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
+}
+
+fn amitran_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
+}
+
+fn amitran_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+}
+
+/// Detector-level dispatch (MSDetectorFileOutput virtuals reached through the base pointer), as in MSMeanData_Emissions
+static MS_MEAN_DATA_AMITRAN_DETECTOR_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: amitran_detector_write_xml_output,
+    write_xml_detector_prolog: amitran_detector_write_xml_detector_prolog,
+    detector_update: amitran_detector_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 /// C++ class `MSMeanData_Amitran` (microsim/output/MSMeanData_Amitran.h)
 #[repr(C)]
@@ -344,6 +366,7 @@ impl MSMeanData_Amitran {
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, haltSpeed: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
         let mut base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
         base.meandata_vt = &MS_MEAN_DATA_AMITRAN_VT;
+        base.base.vt = &MS_MEAN_DATA_AMITRAN_DETECTOR_VT;
         Self {
             base,
             myHaltSpeed: haltSpeed,

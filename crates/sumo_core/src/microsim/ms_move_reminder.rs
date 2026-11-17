@@ -54,6 +54,11 @@ pub struct MSMoveReminderInternalVt {
     pub notify_move_internal: fn(&mut MSMoveReminder, &SUMOTrafficObject, f64, f64, f64, f64, f64, f64, f64),
 }
 
+/// Virtual dispatch table for isParkingRerouter; kept apart like the other tables.
+pub struct MSMoveReminderParkingVt {
+    pub is_parking_rerouter: fn(&MSMoveReminder) -> bool,
+}
+
 /// Something on a lane to be noticed about vehicle movement
 /// C++ class `MSMoveReminder` (microsim/MSMoveReminder.h)
 #[repr(C)]
@@ -62,6 +67,8 @@ pub struct MSMoveReminder {
     pub myLane: Ptr<MSLane>,
     /// a description of this moveReminder
     pub myDescription: String,
+    /// C++ dynamic_cast target key: the most derived class name, set by each subclass constructor
+    pub kind: &'static str,
     pub myLastVehicleUpdateValues: BTreeMap<i64, (SUMOTime, f64)>, // C++: std::map<long long, std::pair<SUMOTime, double>>
     /// Virtual dispatch table; installed by the most derived constructor
     pub vt: &'static MSMoveReminderVt,
@@ -71,6 +78,8 @@ pub struct MSMoveReminder {
     pub ext_vt: &'static MSMoveReminderExtVt,
     /// Virtual dispatch table for notifyMoveInternal; installed by the most derived constructor
     pub internal_vt: &'static MSMoveReminderInternalVt,
+    /// Virtual dispatch table for isParkingRerouter; installed by the most derived constructor
+    pub parking_vt: &'static MSMoveReminderParkingVt,
 }
 
 // C++ static members of MSMoveReminder (port as module-level statics, see AGENTS.md):
@@ -99,11 +108,13 @@ impl MSMoveReminder {
         Self {
             myLane: lane,
             myDescription: description.to_string(),
+            kind: "MSMoveReminder",
             myLastVehicleUpdateValues: BTreeMap::new(),
             vt: &DEFAULT_MSMOVE_REMINDER_VT,
             idle_vt: &DEFAULT_MSMOVE_REMINDER_IDLE_VT,
             ext_vt: &DEFAULT_MSMOVE_REMINDER_EXT_VT,
             internal_vt: &DEFAULT_MSMOVE_REMINDER_INTERNAL_VT,
+            parking_vt: &DEFAULT_MSMOVE_REMINDER_PARKING_VT,
         }
     }
 
@@ -348,7 +359,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn is_parking_rerouter(&self) -> bool {
-        false
+        (self.parking_vt.is_parking_rerouter)(self)
     }
 
     /// C++: `void MSMoveReminder::saveReminderState(OutputDevice &, const SUMOTrafficObject &)`
@@ -432,6 +443,14 @@ fn default_notify_move_internal(_: &mut MSMoveReminder, _: &SUMOTrafficObject, _
 
 static DEFAULT_MSMOVE_REMINDER_INTERNAL_VT: MSMoveReminderInternalVt = MSMoveReminderInternalVt {
     notify_move_internal: default_notify_move_internal,
+};
+
+fn default_is_parking_rerouter(_: &MSMoveReminder) -> bool {
+    false
+}
+
+static DEFAULT_MSMOVE_REMINDER_PARKING_VT: MSMoveReminderParkingVt = MSMoveReminderParkingVt {
+    is_parking_rerouter: default_is_parking_rerouter,
 };
 
 pub(crate) fn default_notify_leave_back(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject, _: MSMoveReminder_Notification, _: Ptr<MSLane>) -> bool {

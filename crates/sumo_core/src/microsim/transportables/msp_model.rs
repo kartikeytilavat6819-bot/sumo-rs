@@ -7,7 +7,7 @@ pub type PersonDist = (Ptr<MSPerson>, f64);
 
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
-const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+pub const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)
@@ -23,6 +23,24 @@ pub struct MSPModelVt {
     pub remove: fn(&mut MSPModel, Ptr<MSTransportableStateAdapter>),
     pub using_internal_lanes: fn(&mut MSPModel) -> bool,
     pub get_active_number: fn(&mut MSPModel) -> i32,
+    pub load_state: fn(&mut MSPModel, Ptr<MSTransportable>, Ptr<MSStageMoving>, &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter>,
+    pub has_pedestrians: fn(&mut MSPModel, Ptr<MSLane>) -> bool,
+    pub next_blocking: fn(&mut MSPModel, Ptr<MSLane>, f64, f64, f64, f64, bool) -> PersonDist,
+}
+
+/// C++ MSPModel::loadState base implementation (returns nullptr)
+pub fn msp_model_default_load_state(_m: &mut MSPModel, _transportable: Ptr<MSTransportable>, _stage: Ptr<MSStageMoving>, _state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::null()
+}
+
+/// C++ MSPModel::hasPedestrians base implementation (returns false)
+pub fn msp_model_default_has_pedestrians(_m: &mut MSPModel, _lane: Ptr<MSLane>) -> bool {
+    false
+}
+
+/// C++ MSPModel::nextBlocking base implementation (returns PersonDist(nullptr, -1))
+pub fn msp_model_default_next_blocking(_m: &mut MSPModel, _lane: Ptr<MSLane>, _minPos: f64, _minRight: f64, _maxLeft: f64, _stopTime: f64, _bidi: bool) -> PersonDist {
+    (Ptr::null(), -1.0)
 }
 
 // C++ static members of MSPModel (port as module-level statics, see AGENTS.md):
@@ -58,8 +76,8 @@ impl MSPModel {
     //         return nullptr;
     //     }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, state: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
-        Ptr::null()
+    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
+        (self.vt.load_state)(self, transportable, stage, state)
     }
 
     /// C++: `void MSPModel::clearState()` [virtual, pure virtual]
@@ -103,7 +121,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn has_pedestrians(&mut self, lane: Ptr<MSLane>) -> bool {
-        false
+        (self.vt.has_pedestrians)(self, lane)
     }
 
     /// C++: `PersonDist MSPModel::nextBlocking(const MSLane *, double, double, double, double, bool)` [virtual]
@@ -119,7 +137,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn next_blocking(&mut self, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
-        (Ptr::null(), -1.0)
+        (self.vt.next_blocking)(self, lane, minPos, minRight, maxLeft, stopTime, bidi)
     }
 
     /// C++: `bool MSPModel::usingInternalLanes()` [virtual, pure virtual]
@@ -205,7 +223,125 @@ impl MSPModel {
 /// abstract base class for managing callbacks to retrieve various state information from the model
 /// C++ class `MSTransportableStateAdapter` (microsim/transportables/MSPModel.h)
 pub struct MSTransportableStateAdapter {
+    /// Virtual dispatch table of the concrete state (C++ virtual methods); set by each state's constructor
+    pub vt: &'static MSTransportableStateAdapterVt,
 }
+
+/// Virtual dispatch table for the virtual methods of MSTransportableStateAdapter (same pattern as MSPModelVt)
+pub struct MSTransportableStateAdapterVt {
+    pub get_edge_pos: fn(&MSTransportableStateAdapter, SUMOTime) -> f64,
+    pub get_direction: fn(&MSTransportableStateAdapter) -> i32,
+    pub get_position: fn(&MSTransportableStateAdapter, &MSStageMoving, SUMOTime) -> Position,
+    pub get_angle: fn(&MSTransportableStateAdapter, &MSStageMoving, SUMOTime) -> f64,
+    pub get_waiting_time: fn(&MSTransportableStateAdapter) -> SUMOTime,
+    pub get_total_waiting_time: fn(&MSTransportableStateAdapter) -> SUMOTime,
+    pub get_speed: fn(&MSTransportableStateAdapter, &MSStageMoving) -> f64,
+    pub get_next_edge: fn(&MSTransportableStateAdapter, &MSStageMoving) -> Ptr<MSEdge>,
+    pub move_to: fn(&mut MSTransportableStateAdapter, Ptr<MSPerson>, Ptr<MSLane>, f64, f64, SUMOTime),
+    pub move_to_xy: fn(&mut MSTransportableStateAdapter, Ptr<MSPerson>, Position, Ptr<MSLane>, f64, f64, f64, i32, &ConstMSEdgeVector, SUMOTime),
+    pub is_jammed: fn(&MSTransportableStateAdapter) -> bool,
+    pub is_finished: fn(&MSTransportableStateAdapter) -> bool,
+    pub get_lane: fn(&MSTransportableStateAdapter) -> Ptr<MSLane>,
+    pub get_path_length: fn(&MSTransportableStateAdapter) -> f64,
+    pub save_state: fn(&mut MSTransportableStateAdapter, &mut String),
+    pub get_lat_offset: fn(&MSTransportableStateAdapter) -> f64,
+    pub get_id: fn(&MSTransportableStateAdapter) -> &str,
+    pub get_min_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_max_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_width: fn(&MSTransportableStateAdapter) -> f64,
+    pub get_o_type: fn(&MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType,
+}
+
+/// C++ MSPModel_InteractingState::getLatOffset is only reachable on interacting states (the base adapter has none)
+pub fn adapter_default_get_lat_offset(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("MSPModel_InteractingState::getLatOffset is only available on interacting states")
+}
+
+/// C++ MSTransportableStateAdapter base implementations (pure virtuals panic, as the concrete state must provide them)
+pub fn adapter_default_get_edge_pos(_: &MSTransportableStateAdapter, _: SUMOTime) -> f64 {
+    panic!("MSTransportableStateAdapter::getEdgePos is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_direction(_: &MSTransportableStateAdapter) -> i32 {
+    panic!("MSTransportableStateAdapter::getDirection is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_position(_: &MSTransportableStateAdapter, _: &MSStageMoving, _: SUMOTime) -> Position {
+    panic!("MSTransportableStateAdapter::getPosition is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_angle(_: &MSTransportableStateAdapter, _: &MSStageMoving, _: SUMOTime) -> f64 {
+    panic!("MSTransportableStateAdapter::getAngle is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_waiting_time(_: &MSTransportableStateAdapter) -> SUMOTime {
+    panic!("MSTransportableStateAdapter::getWaitingTime is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_total_waiting_time(_: &MSTransportableStateAdapter) -> SUMOTime {
+    0
+}
+pub fn adapter_default_get_speed(_: &MSTransportableStateAdapter, _: &MSStageMoving) -> f64 {
+    panic!("MSTransportableStateAdapter::getSpeed is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_get_next_edge(_: &MSTransportableStateAdapter, _: &MSStageMoving) -> Ptr<MSEdge> {
+    panic!("MSTransportableStateAdapter::getNextEdge is pure virtual; call it on a concrete state adapter")
+}
+pub fn adapter_default_move_to(_: &mut MSTransportableStateAdapter, _: Ptr<MSPerson>, _: Ptr<MSLane>, _: f64, _: f64, _: SUMOTime) {
+    utils::common::msg_handler::write_warning("moveTo is ignored by the current movement model");
+}
+pub fn adapter_default_move_to_xy(_: &mut MSTransportableStateAdapter, _: Ptr<MSPerson>, _: Position, _: Ptr<MSLane>, _: f64, _: f64, _: f64, _: i32, _: &ConstMSEdgeVector, _: SUMOTime) {
+    utils::common::msg_handler::write_warning("moveToXY is ignored by the current movement model");
+}
+pub fn adapter_default_is_jammed(_: &MSTransportableStateAdapter) -> bool {
+    false
+}
+pub fn adapter_default_is_finished(_: &MSTransportableStateAdapter) -> bool {
+    true
+}
+pub fn adapter_default_get_lane(_: &MSTransportableStateAdapter) -> Ptr<MSLane> {
+    Ptr::null()
+}
+pub fn adapter_default_get_path_length(_: &MSTransportableStateAdapter) -> f64 {
+    0.0
+}
+pub fn adapter_default_save_state(_: &mut MSTransportableStateAdapter, _: &mut String) {
+}
+pub fn adapter_default_get_id(_: &MSTransportableStateAdapter) -> &str {
+    panic!("getID is virtual on MSPModel_InteractingState only; call it on an interacting state")
+}
+pub fn adapter_default_get_min_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMinX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_max_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMaxX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_width(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("getWidth is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_o_type(_: &MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType {
+    panic!("getOType is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+
+/// base vtable of MSTransportableStateAdapter, used by states that do not override the virtual methods
+pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_edge_pos: adapter_default_get_edge_pos,
+    get_direction: adapter_default_get_direction,
+    get_position: adapter_default_get_position,
+    get_angle: adapter_default_get_angle,
+    get_waiting_time: adapter_default_get_waiting_time,
+    get_total_waiting_time: adapter_default_get_total_waiting_time,
+    get_speed: adapter_default_get_speed,
+    get_next_edge: adapter_default_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: adapter_default_is_jammed,
+    is_finished: adapter_default_is_finished,
+    get_lane: adapter_default_get_lane,
+    get_path_length: adapter_default_get_path_length,
+    save_state: adapter_default_save_state,
+    get_lat_offset: adapter_default_get_lat_offset,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
+};
 
 impl MSTransportableStateAdapter {
     /// C++: `void MSTransportableStateAdapter::~MSTransportableStateAdapter() noexcept` [virtual]
@@ -219,8 +355,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getEdgePos is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_edge_pos)(self, now)
     }
 
     /// C++: `int MSTransportableStateAdapter::getDirection() const` [const, virtual, pure virtual]
@@ -228,8 +363,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getDirection is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_direction)(self)
     }
 
     /// C++: `Position MSTransportableStateAdapter::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual, pure virtual]
@@ -237,8 +371,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_position(&self, stage: &MSStageMoving, now: SUMOTime) -> Position {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getPosition is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_position)(self, stage, now)
     }
 
     /// C++: `double MSTransportableStateAdapter::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual, pure virtual]
@@ -246,8 +379,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_angle(&self, stage: &MSStageMoving, now: SUMOTime) -> f64 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getAngle is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_angle)(self, stage, now)
     }
 
     /// C++: `SUMOTime MSTransportableStateAdapter::getWaitingTime() const` [const, virtual, pure virtual]
@@ -255,8 +387,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getWaitingTime is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_waiting_time)(self)
     }
 
     /// C++: `SUMOTime MSTransportableStateAdapter::getTotalWaitingTime() const` [const, virtual]
@@ -265,7 +396,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_waiting_time(&self) -> SUMOTime {
-        0
+        (self.vt.get_total_waiting_time)(self)
     }
 
     /// C++: `double MSTransportableStateAdapter::getSpeed(const MSStageMoving &) const` [const, virtual, pure virtual]
@@ -273,8 +404,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_speed(&self, stage: &MSStageMoving) -> f64 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getSpeed is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_speed)(self, stage)
     }
 
     /// C++: `const MSEdge * MSTransportableStateAdapter::getNextEdge(const MSStageMoving &) const` [const, virtual, pure virtual]
@@ -282,8 +412,7 @@ impl MSTransportableStateAdapter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSTransportableStateAdapter::getNextEdge is pure virtual; call it on a concrete state adapter")
+        (self.vt.get_next_edge)(self, stage)
     }
 
     /// C++: `void MSTransportableStateAdapter::moveTo(MSPerson *, MSLane *, double, double, SUMOTime)` [virtual]
@@ -298,7 +427,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn move_to(&mut self, p: Ptr<MSPerson>, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, t: SUMOTime) {
-        utils::common::msg_handler::write_warning("moveTo is ignored by the current movement model");
+        (self.vt.move_to)(self, p, lane, lanePos, lanePosLat, t)
     }
 
     /// C++: `void MSTransportableStateAdapter::moveToXY(MSPerson *, Position, MSLane *, double, double, double, int, const ConstMSEdgeVector &, SUMOTime)` [virtual]
@@ -319,7 +448,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn move_to_xy(&mut self, p: Ptr<MSPerson>, pos: Position, lane: Ptr<MSLane>, lanePos: f64, lanePosLat: f64, angle: f64, routeOffset: i32, edges: &ConstMSEdgeVector, t: SUMOTime) {
-        utils::common::msg_handler::write_warning("moveToXY is ignored by the current movement model");
+        (self.vt.move_to_xy)(self, p, pos, lane, lanePos, lanePosLat, angle, routeOffset, edges, t)
     }
 
     /// C++: `bool MSTransportableStateAdapter::isJammed() const` [const, virtual]
@@ -329,7 +458,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn is_jammed(&self) -> bool {
-        false
+        (self.vt.is_jammed)(self)
     }
 
     /// C++: `bool MSTransportableStateAdapter::isFinished() const` [const, virtual]
@@ -339,7 +468,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn is_finished(&self) -> bool {
-        true
+        (self.vt.is_finished)(self)
     }
 
     /// C++: `const MSLane * MSTransportableStateAdapter::getLane() const` [const, virtual]
@@ -349,7 +478,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        Ptr::null()
+        (self.vt.get_lane)(self)
     }
 
     /// C++: `double MSTransportableStateAdapter::getPathLength() const` [const, virtual]
@@ -359,7 +488,7 @@ impl MSTransportableStateAdapter {
     //     }
     #[allow(unused_variables)]
     pub fn get_path_length(&self) -> f64 {
-        0.0
+        (self.vt.get_path_length)(self)
     }
 
     /// C++: `void MSTransportableStateAdapter::saveState(std::ostringstream &)` [virtual]
@@ -368,7 +497,8 @@ impl MSTransportableStateAdapter {
     //         UNUSED_PARAMETER(out);
     //     }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
+    pub fn save_state(&mut self, out: &mut String /* std::ostringstream */) {
+        (self.vt.save_state)(self, out)
     }
 
 }

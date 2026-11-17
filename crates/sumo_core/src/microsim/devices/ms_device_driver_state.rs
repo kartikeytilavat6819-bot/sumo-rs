@@ -227,7 +227,7 @@ impl MSDevice_DriverState {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         let ds: &MSSimpleDriverState = &self.myDriverState;
         let value: f64 = match key {
             "awareness" => ds.get_awareness(),
@@ -245,10 +245,9 @@ impl MSDevice_DriverState {
             "maximalReactionTime" => ds.get_maximal_reaction_time(),
             "originalReactionTime" => ds.get_original_reaction_time(),
             "actionStepLength" => ds.get_action_step_length(),
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
-            _ => panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()),
+            _ => return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()))),
         };
-        utils::common::to_string::to_string(&value)
+        Ok(utils::common::to_string::to_string(&value))
     }
 
     /// C++: `void MSDevice_DriverState::setParameter(const std::string &, const std::string &)` [virtual]
@@ -293,29 +292,28 @@ impl MSDevice_DriverState {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let ds = self.driver_state_mut();
-        // shortcut: StringUtils::toDouble throws NumberFormatException in C++; the port panics with its message, upgrade when device setParameter returns Result
-        let to_double = || utils::common::string_utils::to_double(value).unwrap_or_else(|e| panic!("{}", e));
+        let to_double = || utils::common::string_utils::to_double(value);
         match key {
-            "awareness" => ds.set_awareness(to_double()),
-            "errorState" => ds.set_error_state(to_double()),
-            "errorTimeScale" => ds.set_error_time_scale(to_double()),
-            "errorNoiseIntensity" => ds.set_error_noise_intensity(to_double()),
-            "minAwareness" => ds.set_min_awareness(to_double()),
-            "initialAwareness" => ds.set_initial_awareness(to_double()),
-            "errorTimeScaleCoefficient" => ds.set_error_time_scale_coefficient(to_double()),
-            "errorNoiseIntensityCoefficient" => ds.set_error_noise_intensity_coefficient(to_double()),
-            "speedDifferenceErrorCoefficient" => ds.set_speed_difference_error_coefficient(to_double()),
-            "headwayErrorCoefficient" => ds.set_headway_error_coefficient(to_double()),
-            "freeSpeedErrorCoefficient" => ds.set_free_speed_error_coefficient(to_double()),
-            "speedDifferenceChangePerceptionThreshold" => ds.set_speed_difference_change_perception_threshold(to_double()),
-            "headwayChangePerceptionThreshold" => ds.set_headway_change_perception_threshold(to_double()),
-            "maximalReactionTime" => ds.set_maximal_reaction_time(to_double()),
-            "originalReactionTime" => ds.set_original_reaction_time(to_double()),
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
-            _ => panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()),
+            "awareness" => ds.set_awareness(to_double()?),
+            "errorState" => ds.set_error_state(to_double()?),
+            "errorTimeScale" => ds.set_error_time_scale(to_double()?),
+            "errorNoiseIntensity" => ds.set_error_noise_intensity(to_double()?),
+            "minAwareness" => ds.set_min_awareness(to_double()?),
+            "initialAwareness" => ds.set_initial_awareness(to_double()?),
+            "errorTimeScaleCoefficient" => ds.set_error_time_scale_coefficient(to_double()?),
+            "errorNoiseIntensityCoefficient" => ds.set_error_noise_intensity_coefficient(to_double()?),
+            "speedDifferenceErrorCoefficient" => ds.set_speed_difference_error_coefficient(to_double()?),
+            "headwayErrorCoefficient" => ds.set_headway_error_coefficient(to_double()?),
+            "freeSpeedErrorCoefficient" => ds.set_free_speed_error_coefficient(to_double()?),
+            "speedDifferenceChangePerceptionThreshold" => ds.set_speed_difference_change_perception_threshold(to_double()?),
+            "headwayChangePerceptionThreshold" => ds.set_headway_change_perception_threshold(to_double()?),
+            "maximalReactionTime" => ds.set_maximal_reaction_time(to_double()?),
+            "originalReactionTime" => ds.set_original_reaction_time(to_double()?),
+            _ => return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()))),
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_DriverState::MSDevice_DriverState(SUMOVehicle &, const std::string &, double, double, double, double, double, double, double, double, double, double)` [private]

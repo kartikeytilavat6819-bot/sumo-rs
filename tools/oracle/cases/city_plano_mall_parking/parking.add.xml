@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17 03:14:01.337835 by Eclipse SUMO generateParkingAreas.py v1.28.0
+<configuration>
+    <net-file value="ref_simple.net.xml"/>
+    <output-file value="parking.add.xml"/>
+    <probability value="0.15"/>
+    <seed value="1"/>
+</configuration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <parkingArea id="pa-1137432871" lane="-1137432871_0" roadsideCapacity="11" length="5"/>
+    <parkingArea id="pa-15197301#3" lane="-15197301#3_0" roadsideCapacity="22" length="5"/>
+    <parkingArea id="pa-15202345#4" lane="-15202345#4_0" roadsideCapacity="2" length="5"/>
+    <parkingArea id="pa-1564312733#3" lane="-1564312733#3_0" roadsideCapacity="11" length="5"/>
+    <parkingArea id="pa-1564313047#7" lane="-1564313047#7_0" roadsideCapacity="10" length="5"/>
+    <parkingArea id="pa-1567513882#0" lane="-1567513882#0_0" roadsideCapacity="2" length="5"/>
+    <parkingArea id="pa-220287482#2" lane="-220287482#2_0" roadsideCapacity="3" length="5"/>
+    <parkingArea id="pa-599989872" lane="-599989872_0" roadsideCapacity="11" length="5"/>
+    <parkingArea id="pa-599989873#0" lane="-599989873#0_0" roadsideCapacity="3" length="5"/>
+    <parkingArea id="pa1075988885" lane="1075988885_0" roadsideCapacity="9" length="5"/>
+    <parkingArea id="pa1157550110" lane="1157550110_0" roadsideCapacity="5" length="5"/>
+    <parkingArea id="pa1175188503" lane="1175188503_0" roadsideCapacity="4" length="5"/>
+    <parkingArea id="pa1175188514#1" lane="1175188514#1_0" roadsideCapacity="13" length="5"/>
+    <parkingArea id="pa1175188517#2" lane="1175188517#2_0" roadsideCapacity="1" length="5"/>
+    <parkingArea id="pa1482156261" lane="1482156261_0" roadsideCapacity="4" length="5"/>
+    <parkingArea id="pa15193578" lane="15193578_0" roadsideCapacity="22" length="5"/>
+    <parkingArea id="pa15197297#0" lane="15197297#0_0" roadsideCapacity="3" length="5"/>
+    <parkingArea id="pa15202345#3" lane="15202345#3_0" roadsideCapacity="1" length="5"/>
+    <parkingArea id="pa1564313047#1" lane="1564313047#1_0" roadsideCapacity="5" length="5"/>
+    <parkingArea id="pa220287480#1" lane="220287480#1_0" roadsideCapacity="1" length="5"/>
+    <parkingArea id="pa419057071#2" lane="419057071#2_0" roadsideCapacity="1" length="5"/>
+    <parkingArea id="pa419057075#0" lane="419057075#0_0" roadsideCapacity="3" length="5"/>
+    <parkingArea id="pa419058760#1" lane="419058760#1_0" roadsideCapacity="11" length="5"/>
+    <parkingArea id="pa419058770#1" lane="419058770#1_0" roadsideCapacity="12" length="5"/>
+    <parkingArea id="pa419058770#2" lane="419058770#2_0" roadsideCapacity="36" length="5"/>
+    <parkingArea id="pa419058771#1" lane="419058771#1_0" roadsideCapacity="6" length="5"/>
+    <parkingArea id="pa419058773" lane="419058773_0" roadsideCapacity="18" length="5"/>
+    <parkingArea id="pa450276890" lane="450276890_0" roadsideCapacity="1" length="5"/>
+    <parkingArea id="pa502179702" lane="502179702_0" roadsideCapacity="3" length="5"/>
+    <parkingArea id="pa502179703#0" lane="502179703#0_0" roadsideCapacity="7" length="5"/>
+    <parkingArea id="pa98229873" lane="98229873_0" roadsideCapacity="34" length="5"/>
+    <parkingArea id="pa98229882" lane="98229882_0" roadsideCapacity="9" length="5"/>
+</additional>

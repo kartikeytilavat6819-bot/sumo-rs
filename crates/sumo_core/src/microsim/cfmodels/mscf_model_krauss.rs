@@ -296,6 +296,12 @@ fn krauss_get_model_id(m: &MSCFModel) -> i32 {
 fn krauss_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
     cf_cast::<MSCFModel_Krauss>(m).duplicate(vtype)
 }
+fn krauss_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Krauss_VehicleVariables) }.save_state(out, m)
+}
+fn krauss_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Krauss_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn krauss_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
     cf_cast::<MSCFModel_Krauss>(m).create_vehicle_variables()
 }
@@ -308,6 +314,8 @@ pub const KRAUSS_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: krauss_get_model_id,
     duplicate: krauss_duplicate,
     create_vehicle_variables: krauss_create_vehicle_variables,
+    save_vehicle_variables: krauss_save_vehicle_variables,
+    load_vehicle_variables: krauss_load_vehicle_variables,
     ..KRAUSS_ORIG1_VT
 };
 

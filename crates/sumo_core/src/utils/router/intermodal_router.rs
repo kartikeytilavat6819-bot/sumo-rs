@@ -365,7 +365,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        self.base.set_bulk_mode(mode);
+        self.base.set_bulk_mode_base(mode);
         if !self.myInternalRouter.is_null() {
             self.myInternalRouter.m().set_bulk_mode(mode);
         }
@@ -577,8 +577,7 @@ where
                         let edgeLines: Vec<String> = edges.iter().map(|e| e.get_line().to_string()).collect();
                         self.myExternalEffort.m().init(&edgeLines);
                     }
-                    // shortcut: C++ uses &getCombined (AccessEdge-typed travel time plus external effort), not ported yet, so combined routing (mode 3) is unsupported
-                    panic!("shortcut: IntermodalRouter combined effort (getCombined) is not wired yet");
+                    self.set_internal_dijkstra(&edges, Some(Self::get_combined), Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), self.myExternalEffort);
                 }
                 _ => {}
             }
@@ -587,7 +586,7 @@ where
 
     /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
     fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, calc: Ptr<EffortCalculator>) {
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, ttOperation, false, calc, true, false);
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, ttOperation, false, calc, true, false).with_compute();
         self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 

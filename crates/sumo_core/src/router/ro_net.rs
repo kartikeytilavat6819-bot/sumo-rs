@@ -919,8 +919,7 @@ impl RONet {
         let cat = if category == SUMO_TAG_TRAIN_STOP { SUMO_TAG_BUS_STOP } else { category };
         let places = self.myStoppingPlaces.entry(cat).or_default();
         if places.contains_key(id) {
-            // shortcut: toString(SumoXMLTag) is not ported, the numeric tag is printed instead of the element name
-            write_errorf!("The % '%' occurs at least twice.", format!("{}", category), id);
+            write_errorf!("The % '%' occurs at least twice.", utils::xml::sumo_xml_definitions::Tags.get_string(category), id);
             drop(unsafe { Box::from_raw(stop.as_raw()) });
         } else {
             places.insert(id.to_string(), stop);
@@ -985,8 +984,7 @@ impl RONet {
                 return stop.actType.clone();
             }
         }
-        // shortcut: toString(SUMO_TAG_BUS_STOP) prints the numeric tag, the element name table is not ported
-        format!("{}", SUMO_TAG_BUS_STOP)
+        utils::xml::sumo_xml_definitions::Tags.get_string(SUMO_TAG_BUS_STOP).to_string()
     }
 
     /// C++: `bool RONet::checkVType(const std::string &)`
@@ -1655,7 +1653,7 @@ impl RONet {
             if self.myRoutesOutput.m().is_null() {
                 self.myRoutesOutput = Ptr::null();
             } else {
-                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oexists_in(options, "alternatives-output") && oset(options, "alternatives-output") && !(oexists_in(options, "write-trips") && ob(options, "write-trips")) {
@@ -1663,12 +1661,12 @@ impl RONet {
             if self.myRouteAlternativesOutput.m().is_null() {
                 self.myRouteAlternativesOutput = Ptr::null();
             } else {
-                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oset(options, "vtype-output") {
             self.myTypesOutput = get_device_ptr(&ostring(options, "vtype-output"));
-            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
         }
     }
 

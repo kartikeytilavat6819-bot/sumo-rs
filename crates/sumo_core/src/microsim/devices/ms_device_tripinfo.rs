@@ -341,7 +341,7 @@ impl MSDevice_Tripinfo {
                             // tripinfo is special and vehroute has its own write-unfinished option
                             continue;
                         }
-                        dev.generate_output(tripinfoOut);
+                        MSDevice::generate_output_of(*dev, tripinfoOut);
                     }
                     tripinfoOut.m().close_tag("");
                 }
@@ -1576,8 +1576,8 @@ impl MSDevice_Tripinfo {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == SUMO_ATTR_WAITINGTIME.attr_name() {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == SUMO_ATTR_WAITINGTIME.attr_name() {
             to_string(&steps2time(self.myWaitingTime))
         } else if key == SUMO_ATTR_WAITINGCOUNT.attr_name() {
             to_string(&self.myWaitingCount)
@@ -1594,8 +1594,8 @@ impl MSDevice_Tripinfo {
         } else if key == SUMO_ATTR_ARRIVALSPEED.attr_name() {
             to_string(&self.myArrivalSpeed)
         } else {
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `std::string MSDevice_Tripinfo::getGlobalParameter(const std::string &)` [static]

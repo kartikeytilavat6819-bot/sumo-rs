@@ -23,6 +23,22 @@ impl ROVehicle_Mandatory {
 
 }
 
+fn ro_vehicle_compute_route(r: &mut crate::router::ro_routable::RORoutable, provider: &RORouterProvider, removeLoops: bool, errorHandler: Ptr<MsgHandler>) {
+    Ptr::from_mut(r).cast::<ROVehicle>().m().compute_route(provider, removeLoops, errorHandler)
+}
+fn ro_vehicle_get_depart_edge(r: &crate::router::ro_routable::RORoutable) -> Ptr<ROEdge> {
+    Ptr::from_raw(r as *const _ as *mut crate::router::ro_routable::RORoutable).cast::<ROVehicle>().m().get_depart_edge()
+}
+fn ro_vehicle_save_as_xml(r: &crate::router::ro_routable::RORoutable, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont, cloneIndex: i32) {
+    Ptr::from_raw(r as *const _ as *mut crate::router::ro_routable::RORoutable).cast::<ROVehicle>().m().save_as_xml(os, typeos, asAlternatives, options, cloneIndex)
+}
+/// C++ ROVehicle overrides of the RORoutable virtual methods
+static RO_VEHICLE_ROUTABLE_VT: crate::router::ro_routable::RORoutableVt = crate::router::ro_routable::RORoutableVt {
+    compute_route: ro_vehicle_compute_route,
+    get_depart_edge: ro_vehicle_get_depart_edge,
+    save_as_xml: ro_vehicle_save_as_xml,
+};
+
 /// A vehicle as used by router
 /// C++ class `ROVehicle` (router/ROVehicle.h)
 #[repr(C)]
@@ -113,6 +129,7 @@ impl ROVehicle {
             myRoute: route,
             myJumpTime: -1,
         };
+        v.base.vt = &RO_VEHICLE_ROUTABLE_VT;
         v.get_parameter_mutable().stops.clear();
         if !route.is_null() {
             // shortcut: getFirstRoute() returns Rc (never null), so the C++ nullptr check is not repeated

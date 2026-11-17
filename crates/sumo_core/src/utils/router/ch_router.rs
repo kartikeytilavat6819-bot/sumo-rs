@@ -60,11 +60,21 @@ pub fn ch_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRo
     Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().prohibit(toProhibit)
 }
 
+pub fn ch_supports_prohibitions<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAbstractRouter<E, V>) -> bool {
+    Ptr::new(base).cast::<CHRouter<E, V>>().m().supports_prohibitions()
+}
+
+pub fn ch_reset<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, vehicle: Ptr<V>) {
+    Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().reset(vehicle)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
-    /// Installs this router's compute and prohibit into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
+    /// Installs this router's compute, prohibit and reset into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(ch_compute::<E, V>);
         self.base.myProhibit = Some(ch_prohibit::<E, V>);
+        self.base.mySupportsProhibitions = Some(ch_supports_prohibitions::<E, V>);
+        self.base.myReset = Some(ch_reset::<E, V>);
         self
     }
 }
@@ -166,10 +176,10 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
         let unbuildIsWarning = self.myErrorMsgHandler == msg_instance(true);
         if self.myWeightPeriod == utils::common::time::SUMOTIME_MAX && !self.myHierarchy.is_null() {
             // we only need one hierarchy
-            let cloned: CHRouter<E, V> = CHRouter::new_2(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myHierarchy, self.myHavePermissions, self.myHaveRestrictions);
+            let cloned: CHRouter<E, V> = CHRouter::new_2(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myHierarchy, self.myHavePermissions, self.myHaveRestrictions).with_compute();
         return Ptr::from_raw(Box::into_raw(Box::new(cloned))).cast();
         }
-        let cloned2: CHRouter<E, V> = CHRouter::new(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myWeightPeriod, self.myHavePermissions, self.myHaveRestrictions);
+        let cloned2: CHRouter<E, V> = CHRouter::new(self.myEdges.m(), unbuildIsWarning, self.myOperation, self.mySVC, self.myWeightPeriod, self.myHavePermissions, self.myHaveRestrictions).with_compute();
         Ptr::from_raw(Box::into_raw(Box::new(cloned2))).cast()
     }
 

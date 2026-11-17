@@ -1632,11 +1632,11 @@ impl MSVehicle_Influencer {
         if self.myRemoteRoute.len() != 0 && self.myRemoteRoute != *v.get_route().get_edges() {
             // needed for the insertion step
             // clear any prior stops because they cannot apply to the new route
-            unsafe { (*(v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter)).stops.clear() };
+            v.m().get_parameter_mutable().stops.clear();
             let _ = v.m().replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
             self.myRemoteRoute.clear();
         }
-        // shortcut: v->myCurrEdge = route.begin() + myRemoteEdgeOffset is not applied, MSRouteIterator is still Unmapped
+        v.m().myCurrEdge = self.myRemoteEdgeOffset as usize;
         if !self.myRemoteLane.is_null() && self.myRemotePos > self.myRemoteLane.get_length() {
             self.myRemotePos = self.myRemoteLane.get_length();
         }
@@ -2424,6 +2424,10 @@ fn ms_vehicle_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
     ms_vehicle_of_mut(v).get_next_stop_mutable()
 }
 
+fn ms_vehicle_get_parameter_mutable(v: &mut SUMOVehicle) -> &mut SUMOVehicleParameter {
+    ms_vehicle_of_mut(v).get_parameter_mutable()
+}
+
 fn ms_vehicle_unregister_waiting(v: &mut SUMOVehicle) {
     ms_vehicle_of_mut(v).unregister_waiting()
 }
@@ -2589,6 +2593,7 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_stops: ms_vehicle_get_stops,
     get_next_stop: ms_vehicle_get_next_stop,
     get_next_stop_mutable: ms_vehicle_get_next_stop_mutable,
+    get_parameter_mutable: ms_vehicle_get_parameter_mutable,
     unregister_waiting: ms_vehicle_unregister_waiting,
     get_next_stop_parameter: ms_vehicle_get_next_stop_parameter,
     get_stop_duration: ms_vehicle_get_stop_duration,
@@ -3618,9 +3623,7 @@ impl MSVehicle {
         // (Leo) to avoid tiny oscillations (< 1e-10) of vNext in a standing vehicle column (observed for ballistic update), we cap off vNext
         //       (We assure to do this only for vNext<<NUMERICAL_EPS since otherwise this would nullify the workaround for #2995
         // (Jakob) We also need to make sure to reach a stop at the start of the next edge
-        // shortcut: myCurrEdge == getNextStop().edge cannot be compared, MSRouteIterator is Unmapped, so this clause is false until ms_route.rs maps it
-        let currEdgeIsNextStopEdge = false;
-        if vNext.abs() < NUMERICAL_EPS_SPEED && (self.myStopDist > POSITION_EPS || (self.has_stops() && currEdgeIsNextStopEdge)) {
+        if vNext.abs() < NUMERICAL_EPS_SPEED && (self.myStopDist > POSITION_EPS || (self.has_stops() && self.myCurrEdge == self.get_next_stop().edge)) {
             vNext = 0.0;
         }
 
@@ -4557,7 +4560,6 @@ impl MSVehicle {
     pub fn get_slope(&self) -> f64 {
         if self.is_parking() && self.get_stops().front().map_or(false, |s| !s.parkingarea.is_null()) {
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
-            let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
             return parkingArea.m().get_vehicle_slope(self);
         }
         if self.myLane.is_null() {
@@ -4654,7 +4656,6 @@ impl MSVehicle {
             }
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
             if !parkingArea.is_null() {
-                let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
                 return parkingArea.m().get_vehicle_position(self);
             } else {
                 // position beside the road
@@ -4861,7 +4862,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_max_speed_on_lane(&self) -> f64 {
         if !self.myLane.is_null() {
-            return self.myLane.m().get_vehicle_max_speed(Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOTrafficObject>());
+            return self.myLane.m().get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>());
         }
         self.myType.m().get_max_speed()
     }
@@ -5658,9 +5659,14 @@ impl MSVehicle {
             self.myLastBestLanesEdge = Ptr::null();
             self.myLastBestLanesInternalLane = Ptr::null();
             self.myLaneChangeModel.m().reset_state();
-            // shortcut: MSStop::edge is an Unmapped route iterator (ms_route.rs), so the C++ while-loop that pops stops passed by the teleport cannot be evaluated; upgrade when MSRouteIterator is mapped
-            if !self.myStops.is_empty() {
-                panic!("enterLaneAtInsertion: teleport with pending stops needs MSRouteIterator, which is not ported yet");
+            while !self.myStops.is_empty()
+                && self.myStops[0].edge == self.myCurrEdge
+                && Ptr::new(self.myStops[0].lane.get_edge()) == Ptr::new(self.myLane.get_edge())
+                && self.myStops[0].pars.endPos < pos
+            {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops[0].lane.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                self.cleanup_parking_reservation();
+                self.myStops.pop_front();
             }
             // avoid startup-effects after teleport
             self.myTimeSinceStartup = self.get_car_follow_model().get_startup_delay() + delta_t();
@@ -6986,17 +6992,12 @@ impl MSVehicle {
         let mut nextStopLane: Ptr<MSLane> = Ptr::default();
         let mut nextStopPos: f64 = 0.0;
         if let Some(nextStop) = self.myStops.front() {
-            // shortcut: MSStop.edge is an unmapped route iterator, so the stop's route index is recovered
-            // as the first route position at or after myCurrEdge whose edge is the stop lane's edge; upgrade when MSRouteIterator is ported
-            let stopEdgePtr = Ptr::from_mut(nextStop.lane.get_edge());
             nextStopLane = nextStop.lane;
             if nextStop.isOpposite {
                 // target leftmost lane in forward direction
                 nextStopLane = *nextStopLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
             }
-            nextStopEdge = (self.myCurrEdge..routeSize as usize)
-                .find(|&i| self.myRoute.index_op(i as i32) == stopEdgePtr)
-                .unwrap_or(routeSize as usize);
+            nextStopEdge = nextStop.edge;
             nextStopPos = nextStop.pars.startPos;
         }
         // myArrivalTime = -1 in the context of validating departSpeed with departLane=best
@@ -10266,11 +10267,16 @@ impl MSVehicle {
         // save parameters and device states
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            // shortcut: no device vtable yet, the concrete type is recovered from the id prefix assigned by its constructor; other device types still only run the base MSDevice::saveState (warning)
-            if dev.m().base2.get_id().starts_with("tripinfo_") {
-                dev.cast::<MSDevice_Tripinfo>().m().save_state(out);
-            } else {
-                dev.m().base2.save_state(out);
+            // C++ dev->saveState() is virtual: dispatch by deviceName() as in get_parameter_of
+            match dev.base2.device_name().as_str() {
+                "battery" => dev.cast::<MSDevice_Battery>().m().save_state(out),
+                "rerouting" => dev.cast::<MSDevice_Routing>().m().save_state(out),
+                "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().save_state(out),
+                "taxi" => dev.cast::<MSDevice_Taxi>().m().save_state(out),
+                "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().save_state(out),
+                "person" | "container" => dev.cast::<MSDevice_Transportable>().m().save_state(out),
+                "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().save_state(out),
+                _ => dev.m().base2.save_state(out),
             }
         }
         if !self.myCFVariables.is_null() {
@@ -11227,9 +11233,7 @@ impl MSVehicle {
                             approachedLane = Ptr::null();
                             break;
                         }
-                        // shortcut: MSStop.edge is still an unmapped route iterator, so the rail double-stop check against myCurrEdge is skipped until MSRouteIterator is mapped
-                        let nextStopIsCurrEdge = false;
-                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && nextStopIsCurrEdge {
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && self.get_next_stop().edge == self.myCurrEdge {
                             // avoid skipping stop due to numerical instability
                             // this is a special case for rail vehicles because they
                             // continue myLFLinkLanes past stops
@@ -13666,8 +13670,7 @@ impl MSVehicle {
                                 stopSpeed = max2(cfModel.stop_speed(me, self.get_speed(), distToEnd, MSCFModel_CalcReason::CURRENT), vMinComfortable);
                                 waypointWithStop = true;
                                 if stopSpeed <= SUMO_const_haltingSpeed {
-                                    // const_cast in C++
-                                    me.m().myStops[stop_idx].waypointWithStop = true;
+                                    me.myStops[stop_idx].waypointWithStop.set(true);
                                 }
                             }
                         }

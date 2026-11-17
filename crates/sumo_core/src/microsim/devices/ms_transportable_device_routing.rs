@@ -203,12 +203,11 @@ impl MSTransportableDevice_Routing {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "period" {
-            return time2string(self.myPeriod);
+            return Ok(time2string(self.myPeriod));
         }
-        // C++ throws InvalidArgument
-        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSTransportableDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -235,11 +234,10 @@ impl MSTransportableDevice_Routing {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue: f64 = match to_double(value) {
             Ok(v) => v,
-            // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "period" {
             let oldPeriod = self.myPeriod;
@@ -250,9 +248,9 @@ impl MSTransportableDevice_Routing {
                 // shortcut: re-scheduling the WrappingCommand insertion event is not ported; upgrade when Command and MSEventControl take commands
             }
         } else {
-            // C++ throws InvalidArgument
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSTransportableDevice_Routing::MSTransportableDevice_Routing(MSTransportable &, const std::string &, SUMOTime)` [private]

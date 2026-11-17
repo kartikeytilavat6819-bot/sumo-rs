@@ -14,25 +14,98 @@ const MSPMODEL_SIDEWALK_OFFSET: f64 = 3.0;
 const CSTATE_LATERAL_OFFSET: f64 = 0.0;
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge) with the default svc = SVC_PEDESTRIAN (utils/router/IntermodalEdge.h)
-// shortcut: local copy of the pedestrian-only path, because the generic intermodal_edge.rs getSidewalk is still a stub, upgrade when it is ported
 fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    let lanes = edge.get_lanes();
-    // prefer lanes that are exclusive to pedestrians
-    for lane in lanes.iter() {
-        if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-            return *lane;
-        }
-    }
-    Ptr::null()
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, SVC_PEDESTRIAN)
 }
+
+// Virtual dispatch for the PState/CState overrides: the adapter base is the first field of both repr(C) structs.
+fn ni_pstate(a: &MSTransportableStateAdapter) -> &MSPModel_NonInteracting_PState {
+    unsafe { &*(a as *const MSTransportableStateAdapter as *const MSPModel_NonInteracting_PState) }
+}
+fn ni_cstate(a: &MSTransportableStateAdapter) -> &MSPModel_NonInteracting_CState {
+    unsafe { &*(a as *const MSTransportableStateAdapter as *const MSPModel_NonInteracting_CState) }
+}
+fn pstate_get_edge_pos(a: &MSTransportableStateAdapter, now: SUMOTime) -> f64 {
+    ni_pstate(a).get_edge_pos(now)
+}
+fn pstate_get_direction(a: &MSTransportableStateAdapter) -> i32 {
+    ni_pstate(a).get_direction()
+}
+fn pstate_get_position(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> Position {
+    ni_pstate(a).get_position(stage, now)
+}
+fn pstate_get_angle(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> f64 {
+    ni_pstate(a).get_angle(stage, now)
+}
+fn pstate_get_waiting_time(a: &MSTransportableStateAdapter) -> SUMOTime {
+    ni_pstate(a).get_waiting_time()
+}
+fn pstate_get_speed(a: &MSTransportableStateAdapter, stage: &MSStageMoving) -> f64 {
+    ni_pstate(a).get_speed(stage)
+}
+fn pstate_get_next_edge(a: &MSTransportableStateAdapter, stage: &MSStageMoving) -> Ptr<MSEdge> {
+    ni_pstate(a).get_next_edge(stage)
+}
+fn cstate_get_position(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> Position {
+    ni_cstate(a).get_position(stage, now)
+}
+fn cstate_get_angle(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> f64 {
+    ni_cstate(a).get_angle(stage, now)
+}
+
+fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
+    Ptr::from_mut(a).cast::<MSPModel_NonInteracting_PState>().m().save_state(out)
+}
+
+/// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
+static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
+    get_edge_pos: pstate_get_edge_pos,
+    get_direction: pstate_get_direction,
+    get_position: pstate_get_position,
+    get_angle: pstate_get_angle,
+    get_waiting_time: pstate_get_waiting_time,
+    get_total_waiting_time: adapter_default_get_total_waiting_time,
+    get_speed: pstate_get_speed,
+    get_next_edge: pstate_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: adapter_default_is_jammed,
+    is_finished: adapter_default_is_finished,
+    get_lane: adapter_default_get_lane,
+    get_path_length: adapter_default_get_path_length,
+    save_state: pstate_save_state,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
+};
+
+/// C++ CState overrides (getPosition, getAngle) on top of the PState table
+static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
+    get_edge_pos: pstate_get_edge_pos,
+    get_direction: pstate_get_direction,
+    get_position: cstate_get_position,
+    get_angle: cstate_get_angle,
+    get_waiting_time: pstate_get_waiting_time,
+    get_total_waiting_time: adapter_default_get_total_waiting_time,
+    get_speed: pstate_get_speed,
+    get_next_edge: pstate_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: adapter_default_is_jammed,
+    is_finished: adapter_default_is_finished,
+    get_lane: adapter_default_get_lane,
+    get_path_length: adapter_default_get_path_length,
+    save_state: pstate_save_state,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
+};
 
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
 #[repr(C)]
@@ -61,8 +134,10 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
+        let mut pstate = MSPModel_NonInteracting_PState::new(cmd, in_);
+        pstate.base.vt = &MSPMODEL_NONINTERACTING_CSTATE_VT;
         Self {
-            base: MSPModel_NonInteracting_PState::new(cmd, in_),
+            base: pstate,
             myCurrentBeginPosition: Position::default(),
             myCurrentEndPosition: Position::default(),
         }
@@ -170,6 +245,9 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     remove: noninteracting_vt_remove,
     using_internal_lanes: noninteracting_vt_using_internal_lanes,
     get_active_number: noninteracting_vt_get_active_number,
+    load_state: msp_model_default_load_state,
+    has_pedestrians: msp_model_default_has_pedestrians,
+    next_blocking: msp_model_default_next_blocking,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
@@ -225,7 +303,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, duration) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::null()))));
@@ -253,7 +331,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, eventTime) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::from_mut(in_)))));
@@ -387,7 +465,6 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
         let is_person = self.myTransportable.is_person();
         let old = self.myParent.get_edge();
         let dir = self.myParent.get_p_state().cast::<MSPModel_NonInteracting_PState>().get_direction();
-        // shortcut: MSStageMoving::move_to_next_edge is a panic stub (virtual dispatch to the walking/tranship stage is not ported), upgrade when stage subclasses dispatch
         let arrived = self.myParent.m().move_to_next_edge(self.myTransportable, currentTime, dir, Ptr::null(), false);
         if arrived {
             self.myModel.m().register_arrived();
@@ -476,7 +553,7 @@ impl MSPModel_NonInteracting_PState {
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
         // shortcut: `(*in) >> myLastEntryTime >> myCurrentDuration` is not ported (no istringstream type in the Rust port), upgrade when the loadState stream type is decided
         Self {
-            base: MSTransportableStateAdapter {},
+            base: MSTransportableStateAdapter { vt: &MSPMODEL_NONINTERACTING_PSTATE_VT },
             myLastEntryTime: 0,
             myCurrentDuration: 0,
             myCurrentBeginPos: 0.0,
@@ -682,8 +759,8 @@ impl MSPModel_NonInteracting_PState {
     //     out << " " << myLastEntryTime << " " << myCurrentDuration;
     // }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        // shortcut: `out << " " << myLastEntryTime << " " << myCurrentDuration` is not ported (no ostringstream type in the Rust port), upgrade when the saveState stream type is decided
+    pub fn save_state(&mut self, out: &mut String) {
+        out.push_str(&format!(" {} {}", self.myLastEntryTime, self.myCurrentDuration));
     }
 
 }

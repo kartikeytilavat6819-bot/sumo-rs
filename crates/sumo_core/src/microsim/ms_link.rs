@@ -54,6 +54,7 @@ use utils::common::std_defs::INVALID_DOUBLE;
 
 /// C++ implicit upcast MSVehicle* -> SUMOTrafficObject* (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
 fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base.base.base)
 }
 
@@ -63,17 +64,18 @@ use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 
 /// C++ implicit upcast SUMOVehicle* -> SUMOTrafficObject* (base sub-object, same address)
 fn veh_to_traffic_object(v: Ptr<SUMOVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base)
 }
 
 /// C++ implicit upcast MSPerson* -> SUMOTrafficObject* (through MSTransportable)
 fn person_to_traffic_object(p: Ptr<MSPerson>) -> Ptr<SUMOTrafficObject> {
+    if p.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut p.m().base.base)
 }
 
-// shortcut: ego->getRNG() (per-vehicle RNG) is not ported on SUMOTrafficObject, this uses the global rand helper, upgrade when the per-object RNG is ported
-fn ego_rand() -> f64 {
-    utils::common::rand_helper::rand()
+fn ego_rand(ego: Ptr<SUMOTrafficObject>) -> f64 {
+    ego.get_rng().m().rand()
 }
 use utils::geom::NUMERICAL_EPS;
 use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_degree, INVALID_OFFSET};
@@ -1952,7 +1954,7 @@ impl MSLink {
                 && (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < it.speed
-                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand(ego))
                 && !MSLink::ignore_foe(ego, vehObj)
                 && (!lastWasContRed || veh.get_speed() > SUMO_CONST_HALTING_SPEED)
                 && self.blocked_by_foe(veh, it, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, sameTargetLane, impatience, decel, waitingTime, ego)
@@ -1975,7 +1977,7 @@ impl MSLink {
                 if (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < person.get_speed()
-                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand(ego))
                     && !MSLink::ignore_foe(ego, personObj)
                     && !((arrivalTime > it.leavingTime + lookAhead) || (leaveTime + lookAhead < it.arrivalTime))
                 {
@@ -3820,8 +3822,7 @@ impl MSLink {
                 egoPath.move2side((if g_lefthand() { 1. } else { -1. }) * ego.get_lateral_position_on_lane(), 100.);
             }
             for &t in foeLane.get_edge().get_persons().iter() {
-                // shortcut: static_cast<MSPerson*>(t) relies on MSPerson being #[repr(C)] with base first, upgrade when MSEdge stores MSPerson pointers
-                let p: Ptr<MSPerson> = Ptr::from_raw(t.as_raw() as *mut MSPerson);
+                let p: Ptr<MSPerson> = t.cast();
                 let mut dist = ego.get_position(0.).distance_to2d(&p.base.get_position(0.)) - p.base.get_vehicle_type().get_length();
                 let inFront = self.is_in_front(ego, &egoPath, &p.base.get_position(0.)) || self.is_in_front(ego, &egoPath, &self.get_future_position(p, 1.));
                 if inFront {

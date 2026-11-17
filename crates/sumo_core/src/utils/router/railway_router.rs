@@ -109,10 +109,16 @@ pub fn railway_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstra
     Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
 }
 
+/// The `RailwayRouter::setBulkMode` reached from the base router's setBulkMode slot (C++ virtual dispatch)
+pub fn railway_set_bulk_mode<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, mode: bool) {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().set_bulk_mode(mode)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
-    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    /// Installs this router's compute and setBulkMode into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(railway_compute::<E, V>);
+        self.base.mySetBulkMode = Some(railway_set_bulk_mode::<E, V>);
         self
     }
 

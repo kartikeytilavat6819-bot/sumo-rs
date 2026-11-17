@@ -1,6 +1,7 @@
 //! Port of router/RORoute.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
 
 /// A complete router's route
 /// C++ class `RORoute` (router/RORoute.h)
@@ -8,10 +9,10 @@ use crate::prelude::*;
 pub struct RORoute {
     /// C++ base class `Named`
     pub base: Named,
-    /// The costs of the route
-    pub myCosts: f64,
+    /// The costs of the route (C++ shares RORoute* in RORouteDef, so these are written through the Rc)
+    pub myCosts: Cell<f64>,
     /// The probability the driver will take this route with
-    pub myProbability: f64,
+    pub myProbability: Cell<f64>,
     /// The edges the route consists of
     pub myRoute: ConstROEdgeVector,
     /// The color of the route
@@ -43,8 +44,14 @@ impl RORoute {
     //       myProbability(prop), myRoute(route), myColor(color), myStops(stops) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, costs: f64, prob: f64, route: &ConstROEdgeVector, color: Ptr<RGBColor>, stops: &StopParVector) -> Self {
-        // shortcut: C++ copies the stops into myStops; SUMOVehicleParameter::Stop has no Clone yet (utils/vehicle/sumo_vehicle_parameter.rs, outside this batch), add #[derive(Clone)] there and copy the stops
-        panic!("RORoute::RORoute: copying SUMOVehicleParameter::Stop is not ported yet")
+        RORoute {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            myCosts: Cell::new(costs),
+            myProbability: Cell::new(prob),
+            myRoute: route.clone(),
+            myColor: color,
+            myStops: stops.clone(),
+        }
     }
 
     /// C++: `void RORoute::RORoute(const std::string &, const ConstROEdgeVector &)`
@@ -56,8 +63,8 @@ impl RORoute {
     pub fn new_2(id: &str, route: &ConstROEdgeVector) -> Self {
         RORoute {
             base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
-            myCosts: 0.0,
-            myProbability: 0.0,
+            myCosts: Cell::new(0.0),
+            myProbability: Cell::new(0.0),
             myRoute: route.clone(),
             myColor: Ptr::null(),
             myStops: Vec::new(),
@@ -77,8 +84,8 @@ impl RORoute {
     pub fn new_3(src: &RORoute) -> Self {
         RORoute {
             base: Named::new(src.get_id()),
-            myCosts: src.myCosts,
-            myProbability: src.myProbability,
+            myCosts: Cell::new(src.myCosts.get()),
+            myProbability: Cell::new(src.myProbability.get()),
             myRoute: src.myRoute.clone(),
             myColor: if src.myColor.is_null() { Ptr::null() } else { Ptr::from_raw(Box::into_raw(Box::new(*src.myColor))) },
             myStops: Vec::new(),
@@ -125,7 +132,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_costs(&self) -> f64 {
-        self.myCosts
+        self.myCosts.get()
     }
 
     /// C++: `double RORoute::getProbability() const` [const]
@@ -135,7 +142,7 @@ impl RORoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_probability(&self) -> f64 {
-        self.myProbability
+        self.myProbability.get()
     }
 
     /// C++: `void RORoute::setCosts(double)`
@@ -145,8 +152,8 @@ impl RORoute {
     //     myCosts = costs;
     // }
     #[allow(unused_variables)]
-    pub fn set_costs(&mut self, costs: f64) {
-        self.myCosts = costs;
+    pub fn set_costs(&self, costs: f64) {
+        self.myCosts.set(costs);
     }
 
     /// C++: `void RORoute::setProbability(double)`
@@ -156,8 +163,8 @@ impl RORoute {
     //     myProbability = prob;
     // }
     #[allow(unused_variables)]
-    pub fn set_probability(&mut self, prob: f64) {
-        self.myProbability = prob;
+    pub fn set_probability(&self, prob: f64) {
+        self.myProbability.set(prob);
     }
 
     /// C++: `int RORoute::size() const` [const]
@@ -321,11 +328,11 @@ impl RORoute {
             dev.write_attr(SUMO_ATTR_ID, id);
         }
         if withCosts {
-            dev.write_attr(SUMO_ATTR_COST, &self.myCosts);
+            dev.write_attr(SUMO_ATTR_COST, &self.myCosts.get());
         }
         if asAlternatives {
             dev.set_precision(8);
-            dev.write_attr(SUMO_ATTR_PROB, &self.myProbability);
+            dev.write_attr(SUMO_ATTR_PROB, &self.myProbability.get());
             dev.set_precision(utils::common::std_defs::g_precision());
         }
         if !self.myColor.is_null() {
@@ -363,7 +370,7 @@ impl RORoute {
     // }
     #[allow(unused_variables)]
     pub fn add_probability(&mut self, prob: f64) {
-        self.myProbability += prob;
+        self.myProbability.set(self.myProbability.get() + prob);
     }
 
     /// C++: `const StopParVector & RORoute::getStops() const` [const]

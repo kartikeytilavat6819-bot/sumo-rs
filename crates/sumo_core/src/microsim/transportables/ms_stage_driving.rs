@@ -6,6 +6,9 @@ use utils::common::msg_handler::write_warning;
 use utils::options::options_cont;
 use utils::common::std_defs::g_precision;
 use utils::common::to_string::f64_to_string_prec;
+use crate::microsim::ms_train_helper::MSTrainHelper;
+use crate::microsim::devices::ms_device_transportable::MSDevice_Transportable;
+use utils::common::sumo_vehicle_class::DEFAULT_PEDTYPE_ID;
 
 const INVALID_DOUBLE: f64 = f64::MAX;
 
@@ -81,6 +84,12 @@ impl MSStageDriving_BookReservation {
         0 // do not repeat
     }
 
+}
+
+impl Command for MSStageDriving_BookReservation {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSStageDriving_BookReservation::execute(self, currentTime)
+    }
 }
 
 /// A "real" stage performing the travelling by a transport system The given route will be chosen. The travel time is computed by the simulation
@@ -291,8 +300,10 @@ impl MSStageDriving {
                 self.myWaitingPos = self.myOrigin.get_length() / 2.;
             }
             self.myReservationWaitingPos = self.myWaitingPos;
-            // shortcut: the BookReservation command is not a Command yet, so the earliestPickupTime reservation event is not scheduled
-            let _ = (reservationTime, earliestPickupTime);
+            let cmd = MSStageDriving_BookReservation::new(transportable, earliestPickupTime, Ptr::from_mut(self));
+            // shortcut: the BookReservation is leaked, C++ hands ownership to the event queue (same as the access ProceedCmd), upgrade when the event control owns Commands
+            let cmdPtr: Ptr<dyn Command> = Ptr::from_mut(Box::leak(Box::new(cmd)) as &mut dyn Command);
+            MSNet::get_instance().m().myBeginOfTimestepEvents.m().add_event(cmdPtr, reservationTime);
         }
     }
 
@@ -835,10 +846,10 @@ impl MSStageDriving {
     pub fn is_waiting_for(&self, vehicle: Ptr<SUMOVehicle>) -> bool {
         assert!(self.myLines.len() > 0);
         let line = vehicle.get_parameter().line.clone();
-        // shortcut: MSDevice_Taxi::compatibleLine (a static C++ helper) is not ported yet, so taxi line compatibility is not checked
         self.myLines.contains(vehicle.get_id())
             || ((self.myLines.contains(&line) || self.myLines.contains(LINE_ANY))
                 && (if self.myDestinationStop.is_null() { vehicle.stops_at_edge(self.myDestination) } else { vehicle.stops_at(self.myDestinationStop) }))
+            || crate::microsim::devices::ms_device_taxi::MSDevice_Taxi::compatible_line_2(&line, self.myLines.first().unwrap())
     }
 
     /// C++: `bool MSStageDriving::isWaiting4Vehicle() const` [const, virtual]
@@ -1058,7 +1069,47 @@ impl MSStageDriving {
                     }
                 }
                 if exit != MSStoppingPlace_AccessExit::PLATFORM {
-                    // shortcut: the train door and unboarding position logic (MSTrainHelper, MSDevice_Transportable) is not ported, so the arrival position is not re-sampled for trains
+                    // shortcut: dynamic_cast<MSVehicle*> is unchecked; only a mesoscopic vehicle would fail it, and meso is not ported
+                    let train = self.myVehicle.cast::<MSVehicle>();
+                    if !train.is_null() {
+                        let mut trainHelper = MSTrainHelper::new(train, -1., false, false, 1.0, 3);
+                        let lane = train.get_lane();
+                        if !net.m().get_person_control().get_movement_model().m().using_doors() {
+                            trainHelper.compute_door_positions();
+                            let carriages = trainHelper.get_carriages().clone();
+                            let randomCarriageIx = utils::common::rand_helper::with_default(|rng| rng.rand_int(trainHelper.get_num_carriages() - trainHelper.get_first_passenger_carriage())) + trainHelper.get_first_passenger_carriage();
+                            let randomCarriage = carriages[randomCarriageIx as usize];
+                            let randomDoorIx = utils::common::rand_helper::with_default(|rng| rng.rand_int(trainHelper.get_carriage_doors()));
+                            let mut randomDoor = randomCarriage.doorPositions[randomDoorIx as usize].clone();
+                            // Jitter the position before projection because of possible train curvature.
+                            let mut direction = randomCarriage.front.clone() - randomCarriage.back.clone();
+                            direction.norm2d();
+                            let doorWidth = train.get_vehicle_type().get_parameter().carriageDoorWidth;
+                            let jitter = utils::common::rand_helper::with_default(|rng| rng.rand_range(-0.5 * doorWidth, 0.5 * doorWidth));
+                            randomDoor.add(&(direction * jitter));
+                            // Project onto the lane.
+                            self.myArrivalPos = lane.get_shape(false).nearest_offset_to_point2d(&randomDoor, true);
+                            self.myArrivalPos = lane.interpolate_geometry_pos_to_lane_pos(self.myArrivalPos);
+                            self.myArrivalPos = self.myArrivalPos.max(0.).min(train.get_edge().get_length());
+                        } else {
+                            let mut dev = train.get_device("person");
+                            if dev.is_null() {
+                                dev = train.get_device("container");
+                            }
+                            let transportableDev = dev.cast::<MSDevice_Transportable>();
+                            let unboardingPositions = transportableDev.m().get_unboarding_positions();
+                            if unboardingPositions.is_empty() {
+                                let defaultPedestrianType = MSNet::get_instance().m().get_vehicle_control().get_v_type(DEFAULT_PEDTYPE_ID, Ptr::null(), true);
+                                let defaultPassengerRadius = defaultPedestrianType.get_length().max(defaultPedestrianType.get_width()) / 2.;
+                                trainHelper.compute_unboarding_positions(defaultPassengerRadius, unboardingPositions);
+                            }
+                            // Random shuffling of the positions has already been done in the train helper.
+                            let availableUnboardingPosition = unboardingPositions.pop().unwrap();
+                            let arrivalPos = lane.get_shape(false).transform_to_vector_coordinates(&availableUnboardingPosition, false);
+                            self.myArrivalPos = arrivalPos.x();
+                            self.myArrivalPosLat = arrivalPos.y();
+                        }
+                    }
                 }
             }
         } else {

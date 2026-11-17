@@ -1,0 +1,15 @@
+<routes>
+    <!-- lane 2 of edge A allows only delivery, so departLane="allowed" may not use it -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="del" vClass="delivery" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A"/>
+    <vehicle id="lane_best" type="car" depart="0" departLane="best" departSpeed="max" route="r"/>
+    <vehicle id="lane_free" type="car" depart="10" departLane="free" departSpeed="max" route="r"/>
+    <vehicle id="lane_allowed" type="car" depart="20" departLane="allowed" departSpeed="max" route="r"/>
+    <vehicle id="lane_first" type="car" depart="30" departSpeed="max" route="r"/>
+    <vehicle id="lane_del_allowed" type="del" depart="40" departLane="allowed" departSpeed="max" route="r"/>
+    <vehicle id="pos_last" type="car" depart="50" departPos="last" departSpeed="max" route="r"/>
+    <vehicle id="pos_random_free" type="car" depart="60" departPos="random_free" departSpeed="max" route="r"/>
+    <vehicle id="pos_base" type="car" depart="70" departSpeed="max" route="r"/>
+    <vehicle id="lane_free_pos_random_free" type="car" depart="80" departLane="free" departPos="random_free" departSpeed="max" route="r"/>
+</routes>

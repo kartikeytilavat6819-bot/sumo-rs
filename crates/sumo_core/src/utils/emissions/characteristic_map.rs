@@ -281,12 +281,35 @@ impl CharacteristicMap {
     // }
     #[allow(unused_variables)]
     pub fn new_2(ref_mapString: &str) -> Self {
-        // shortcut: std::stoi/std::stod accept trailing junk and C++ what() is "stoi"/"stod"; Rust parse is strict, upgrade if map strings carry junk
+        // std::stoi/std::stod: skip leading whitespace, parse the longest valid prefix, ignore trailing junk
         fn parse_int(s: &str) -> i32 {
-            s.trim().parse::<i32>().unwrap_or_else(|_| panic!("stoi"))
+            let t = s.trim_start();
+            let b = t.as_bytes();
+            let mut n = 0;
+            if n < b.len() && (b[n] == b'+' || b[n] == b'-') {
+                n += 1;
+            }
+            let digits_start = n;
+            while n < b.len() && b[n].is_ascii_digit() {
+                n += 1;
+            }
+            if n == digits_start {
+                panic!("stoi");
+            }
+            // out of int range is C++ out_of_range, reported with the same what() text
+            t[..n].parse::<i32>().unwrap_or_else(|_| panic!("stoi"))
         }
         fn parse_double(s: &str) -> f64 {
-            s.trim().parse::<f64>().unwrap_or_else(|_| panic!("stod"))
+            let t = s.trim_start();
+            // longest prefix that is a valid double; an overflow to inf is not reported as out_of_range
+            for n in (1..=t.len()).rev() {
+                if t.is_char_boundary(n) {
+                    if let Ok(v) = t[..n].parse::<f64>() {
+                        return v;
+                    }
+                }
+            }
+            panic!("stod")
         }
 
         let mut map = Self {
@@ -370,14 +393,21 @@ impl CharacteristicMap {
     // }
     #[allow(unused_variables)]
     pub fn to_string(&self) -> String {
-        // shortcut: std::to_string(double) is printf "%f"; Rust "{:.6}" prints NaN as "NaN" (C++ "nan"/"-nan"), upgrade if NaN maps are serialized
+        // C++ std::to_string(double) is printf("%f"): NaN prints as "nan" or "-nan", Rust's "{:.6}" would print "NaN"
+        fn std_to_string(v: f64) -> String {
+            if v.is_nan() {
+                if v.is_sign_negative() { "-nan".to_string() } else { "nan".to_string() }
+            } else {
+                format!("{:.6}", v)
+            }
+        }
         // Write the domain and image dimensions
         let mut mapString = format!("{},{}|", self.domainDim, self.imageDim);
 
         // Add the axes
         for i in 0..self.axes.len() {
             for j in 0..self.axes[i].len() {
-                mapString += &f64_to_string_prec(self.axes[i][j], 6);
+                mapString += &std_to_string(self.axes[i][j]);
                 mapString += if j == self.axes[i].len() - 1 { "" } else { "," };
             }
             mapString += if i == self.axes.len() - 1 { "|" } else { ";" };
@@ -385,7 +415,7 @@ impl CharacteristicMap {
 
         // Append the flattened map entries
         for i in 0..self.flattenedMap.len() {
-            mapString += &f64_to_string_prec(self.flattenedMap[i], 6);
+            mapString += &std_to_string(self.flattenedMap[i]);
             mapString += if i == self.flattenedMap.len() - 1 { "" } else { "," };
         }
 

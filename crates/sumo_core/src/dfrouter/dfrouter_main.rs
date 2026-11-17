@@ -253,7 +253,7 @@ pub fn start_computation(optNet: Ptr<RODFNet>, flows: &mut RODFDetectorFlows, de
     }
     // compute the detector types (optionally)
     if !detectors.detectors_have_complete_types() || oc.get_bool("revalidate-detectors").unwrap() {
-        optNet.compute_types(detectors, oc.get_bool("strict-sources").unwrap());
+        optNet.m().compute_types(detectors, oc.get_bool("strict-sources").unwrap());
     }
     let hasSource = detectors.get_detectors().iter().any(|d| matches!(d.get_type(), RODFDetectorType::SOURCE_DETECTOR));
     if !hasSource && !oc.get_bool("routes-for-all").unwrap() {
@@ -262,7 +262,7 @@ pub fn start_computation(optNet: Ptr<RODFNet>, flows: &mut RODFDetectorFlows, de
     // compute routes between the detectors (optionally)
     if !detectors.detectors_have_routes() || oc.get_bool("revalidate-routes").unwrap() || oc.get_bool("guess-empty-flows").unwrap() {
         progress_begin_message("Computing routes");
-        optNet.build_routes(detectors, oc.get_bool("keep-unfinished-routes").unwrap(),
+        optNet.m().build_routes(detectors, oc.get_bool("keep-unfinished-routes").unwrap(),
                             oc.get_bool("routes-for-all").unwrap(), !oc.get_bool("keep-longer-routes").unwrap(), oc.get_int("max-search-depth").unwrap());
         progress_done_message();
     }

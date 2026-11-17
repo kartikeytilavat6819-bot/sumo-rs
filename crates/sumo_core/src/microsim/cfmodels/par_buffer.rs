@@ -183,8 +183,8 @@ impl ParBuffer {
         } else {
             escaping
         };
-        // shortcut: bytes are rebuilt as UTF-8 lossily, only differs from C++ when ESC sits before a multi-byte character
-        String::from_utf8_lossy(&escaped).into_owned()
+        // SEP, ESC and QUO are ASCII, so every cut and inserted byte is a char boundary and the result stays valid UTF-8
+        String::from_utf8(escaped).expect("ASCII-only insertions keep UTF-8 valid")
     }
 
     /// C++: `std::string ParBuffer::unescape(std::string)`
@@ -223,12 +223,15 @@ impl ParBuffer {
             unescaped.extend_from_slice(&s[pos + 1..end]);
             last_pos = pos + 2;
         }
-        if last_pos < s.len() {
+        if last_pos != s.len() {
+            // C++ substr(last_pos) throws std::out_of_range when a trailing ESC pushes last_pos past the end
+            if last_pos > s.len() {
+                panic!("basic_string::substr: __pos (which is {}) > this->size() (which is {})", last_pos, s.len());
+            }
             unescaped.extend_from_slice(&s[last_pos..]);
         }
-        // shortcut: C++ throws std::out_of_range when a trailing ESC pushes last_pos past the end; here it is ignored
-        // shortcut: bytes are rebuilt as UTF-8 lossily, only differs from C++ when ESC sits before a multi-byte character
-        String::from_utf8_lossy(&unescaped).into_owned()
+        // only ASCII ESC bytes are dropped and every other byte is copied in order, so the result stays valid UTF-8
+        String::from_utf8(unescaped).expect("dropping ASCII ESC bytes keeps UTF-8 valid")
     }
 
     /// C++: `std::string ParBuffer::next()`
@@ -341,5 +344,21 @@ impl ParBuffer {
         self.outBuffer.clone()
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escape_and_unescape_keep_multibyte_text() {
+        let mut pb = ParBuffer::new();
+        // C++ escape("a:é"): "a" + ESC + ":" + "é"
+        assert_eq!(pb.escape("a:é".to_string()), "a\\:é");
+        // C++ escape(""): empty input is quoted
+        assert_eq!(pb.escape(String::new()), "\"\"");
+        assert_eq!(pb.unescape("a\\:é".to_string()), "a:é");
+        assert_eq!(pb.unescape("\"\"".to_string()), "");
+    }
 }
 

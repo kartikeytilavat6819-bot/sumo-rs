@@ -157,7 +157,7 @@ impl MSCFModel_Daniel1 {
         //  on lane changing
         let vMin = self.get_speed_after_max_decel(oldV);
         let vMax = min2(min2(veh.get_lane().get_vehicle_max_speed(Ptr::new(&veh.base.base.base)), self.max_next_speed(oldV, veh)), vSafe);
-        // shortcut: the _DEBUG-only warning for vMin > vMax is not ported, upgrade when debug-build output must match
+        // the vMin > vMax warning is inside C++ `#ifdef _DEBUG`, which release builds (the oracle) do not define
         let wanted = max2(vMin, self.dawdle(vMax, veh.get_rng()));
         veh.m().get_lane_change_model().patch_speed(vMin, wanted, vMax, self)
     }
@@ -246,7 +246,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        // shortcut: returns the MSCFModel base of a leaked Daniel1; virtual calls through it do not reach Daniel1 overrides, upgrade when car-following models get enum dispatch
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
         let p: *mut MSCFModel_Daniel1 = Box::into_raw(Box::new(MSCFModel_Daniel1::new(vtype)));
         Ptr::from_raw(unsafe { &mut (*p).base as *mut MSCFModel })
     }

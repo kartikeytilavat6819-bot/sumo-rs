@@ -178,6 +178,9 @@ impl MSTriggeredRerouter {
             myBlockedStoppingPlaces: BTreeSet::new(),
         });
         b.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        b.base2.parking_vt = &MS_TRIGGERED_REROUTER_PARKING_VT;
+        b.base2.kind = "MSTriggeredRerouter";
+        b.base4.vt = &MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT;
         // C++ `myInstances[id] = this` and `lane->addMoveReminder(this)`; the box keeps the address stable
         let this_ptr = Ptr::from_box(&b);
         MY_INSTANCES.with(|m| m.borrow_mut().insert(b.base.get_id().to_string(), this_ptr));
@@ -880,7 +883,7 @@ impl MSTriggeredRerouter {
                     // since the old route was closed, savings would be infinite. This isn't useful
                     let previousCost = router.recompute_costs(&prevEdges, Ptr::from_mut(v), now, Ptr::default());
                     let savings = previousCost - v.get_route().get_costs();
-                    Ptr::from_raw(v.get_route() as *const MSRoute as *mut MSRoute).m().set_savings(savings); // const_cast<MSRoute&>
+                    v.get_route().set_savings(savings);
                 }
                 if !rerouteDef.isVia && ok && newArrivalPos != -1.0 {
                     // must be called here because replaceRouteEdges may also set the arrivalPos
@@ -2620,7 +2623,7 @@ impl MSTriggeredRerouter_RerouteInterval {
 }
 
 
-fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
+pub fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
     // base2 is not the first field: step back from the embedded MSMoveReminder to the enclosing rerouter
     let p = (mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter;
     unsafe { &mut *p }
@@ -2639,4 +2642,58 @@ static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveRemind
     notify_enter: ms_triggered_rerouter_notify_enter,
     notify_move: ms_triggered_rerouter_notify_move,
     notify_leave: ms_triggered_rerouter_notify_leave,
+};
+
+fn ms_triggered_rerouter_is_parking_rerouter(mr: &MSMoveReminder) -> bool {
+    let p = (mr as *const MSMoveReminder as *const u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *const MSTriggeredRerouter;
+    unsafe { &*p }.is_parking_rerouter()
+}
+
+static MS_TRIGGERED_REROUTER_PARKING_VT: MSMoveReminderParkingVt = MSMoveReminderParkingVt {
+    is_parking_rerouter: ms_triggered_rerouter_is_parking_rerouter,
+};
+
+fn stopping_place_rerouter_of(spr: &mut MSStoppingPlaceRerouter) -> &mut MSTriggeredRerouter {
+    // base4 is not the first field: step back from the embedded MSStoppingPlaceRerouter to the enclosing rerouter
+    let p = (spr as *mut MSStoppingPlaceRerouter as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base4)) as *mut MSTriggeredRerouter;
+    unsafe { &mut *p }
+}
+fn ms_triggered_rerouter_get_stopping_place_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+    stopping_place_rerouter_of(spr).get_stopping_place_occupancy(sp, veh)
+}
+fn ms_triggered_rerouter_get_last_step_stopping_place_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+    stopping_place_rerouter_of(spr).get_last_step_stopping_place_occupancy(sp, veh)
+}
+fn ms_triggered_rerouter_get_stopping_place_capacity(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>) -> f64 {
+    stopping_place_rerouter_of(spr).get_stopping_place_capacity(sp)
+}
+fn ms_triggered_rerouter_remember_blocked_stopping_place(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, blocked: bool) {
+    stopping_place_rerouter_of(spr).remember_blocked_stopping_place(veh, sp, blocked)
+}
+fn ms_triggered_rerouter_remember_stopping_place_score(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, score: &str) {
+    stopping_place_rerouter_of(spr).remember_stopping_place_score(veh, sp, score)
+}
+fn ms_triggered_rerouter_reset_stopping_place_scores(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) {
+    stopping_place_rerouter_of(spr).reset_stopping_place_scores(veh)
+}
+fn ms_triggered_rerouter_saw_blocked_stopping_place(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
+    stopping_place_rerouter_of(spr).saw_blocked_stopping_place(veh, sp, local)
+}
+fn ms_triggered_rerouter_get_number_stopping_place_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) -> i32 {
+    stopping_place_rerouter_of(spr).get_number_stopping_place_reroutes(veh)
+}
+fn ms_triggered_rerouter_set_number_stopping_place_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, value: i32) {
+    stopping_place_rerouter_of(spr).set_number_stopping_place_reroutes(veh, value)
+}
+
+static MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouterVt = MSStoppingPlaceRerouterVt {
+    get_stopping_place_occupancy: ms_triggered_rerouter_get_stopping_place_occupancy,
+    get_last_step_stopping_place_occupancy: ms_triggered_rerouter_get_last_step_stopping_place_occupancy,
+    get_stopping_place_capacity: ms_triggered_rerouter_get_stopping_place_capacity,
+    remember_blocked_stopping_place: ms_triggered_rerouter_remember_blocked_stopping_place,
+    remember_stopping_place_score: ms_triggered_rerouter_remember_stopping_place_score,
+    reset_stopping_place_scores: ms_triggered_rerouter_reset_stopping_place_scores,
+    saw_blocked_stopping_place: ms_triggered_rerouter_saw_blocked_stopping_place,
+    get_number_stopping_place_reroutes: ms_triggered_rerouter_get_number_stopping_place_reroutes,
+    set_number_stopping_place_reroutes: ms_triggered_rerouter_set_number_stopping_place_reroutes,
 };

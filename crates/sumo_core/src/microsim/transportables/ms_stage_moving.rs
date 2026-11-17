@@ -8,38 +8,9 @@ use utils::options::options_cont;
 // C++ constant MSPModel::UNDEFINED_DIRECTION (MSPModel.h)
 const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
-/// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h), specialised here
-/// because the generic intermodal_edge.rs version is still a stub.
-fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    let lanes = edge.get_lanes();
-    // prefer lanes that are exclusive to pedestrians
-    for lane in lanes.iter() {
-        if lane.get_permissions() == svc as SVCPermissions {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(svc) {
-            return *lane;
-        }
-    }
-    if svc != SVC_PEDESTRIAN {
-        // persons should always be able to use the sidewalk
-        for lane in lanes.iter() {
-            if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
-                return *lane;
-            }
-        }
-        for lane in lanes.iter() {
-            if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-                return *lane;
-            }
-        }
-    }
-    Ptr::null()
+/// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h)
+pub(crate) fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, svc)
 }
 
 /// An abstract stage providing additional interface for the movement models

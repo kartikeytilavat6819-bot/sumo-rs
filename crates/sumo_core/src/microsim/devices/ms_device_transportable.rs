@@ -5,26 +5,22 @@ use utils::common::msg_handler::write_warning;
 use utils::common::time::{delta_t, time2steps, time2string};
 
 /// C++ `dynamic_cast<MSStageDriving*>(stage)`
-// shortcut: the stage hierarchy has no runtime downcast yet (MSStage carries no subtype tag), so no stage is
-// treated as MSStageDriving; passenger boarding/unboarding through this path is inert until the downcast exists
+// C++ `dynamic_cast<MSStageDriving*>(stage)`: the stage type tag guarantees the cast
 fn stage_driving(stage: Ptr<MSStage>) -> Option<Ptr<MSStageDriving>> {
-    let _ = stage;
-    None
+    if stage.is_null() || stage.get_stage_type() != MSStageType::DRIVING {
+        return None;
+    }
+    Some(stage.cast::<MSStageDriving>())
 }
 
-/// C++ `dynamic_cast<MSBaseVehicle*>(...)` on a SUMOVehicle (the base is embedded, so this is an upcast of a container)
-// shortcut: SUMOVehicle -> MSBaseVehicle downcast is not expressible yet; returns null, so the join-vehicle and
-// changeAttached paths are skipped until the vehicle hierarchy provides the downcast
+/// C++ `dynamic_cast<MSBaseVehicle*>(...)` on a SUMOVehicle: every vehicle reaching here is an MSBaseVehicle, null stays null
 fn base_vehicle_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
-    let _ = veh;
-    Ptr::default()
+    veh.cast::<MSBaseVehicle>()
 }
 
 /// C++ `static_cast<MSDevice_Taxi*>(veh.getDevice(typeid(MSDevice_Taxi)))`
-// shortcut: device lookup by C++ type id is not ported; no taxi device is found, so taxi customer hooks are skipped
 fn taxi_device_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSDevice_Taxi> {
-    let _ = veh;
-    Ptr::default()
+    MSDevice::get_device_by_name(&veh.cast::<MSVehicle>().m().myDevices, "taxi").cast::<MSDevice_Taxi>()
 }
 
 /// C++ `istringstream >> x`: whitespace token parsed as T, default on failure
@@ -404,13 +400,12 @@ impl MSDevice_Transportable {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "IDList" {
             let ids: Vec<String> = self.myTransportables.iter().map(|t| t.get_id().to_string()).collect();
-            return ids.join(" ");
+            return Ok(ids.join(" "));
         }
-        // C++ throws InvalidArgument here; the skeleton signature has no error channel
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Transportable::addTransportable(MSTransportable *)`
@@ -761,7 +756,6 @@ impl MSDevice_Transportable {
                 // C++ integer division before ceil()
                 let numAttached = ((self.myTransportables.len() as i32 / perAttached) as f64).ceil();
                 if numAttached > 0. {
-                    // shortcut: the singular-type update needs the MSBaseVehicle downcast (see base_vehicle_of)
                     if !veh.is_null() {
                         let stype = veh.m().get_singular_type();
                         stype.set_v_class(loaded.get_vehicle_class());

@@ -69,6 +69,16 @@ static MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt
     notify_leave: default_notify_leave,
 };
 
+fn ms_device_routing_notify_stop_ended(mr: &mut MSMoveReminder) {
+    Ptr::from_mut(mr).cast::<MSDevice_Routing>().m().notify_stop_ended()
+}
+
+static MS_DEVICE_ROUTING_MSMOVE_REMINDER_IDLE_VT: crate::microsim::ms_move_reminder::MSMoveReminderIdleVt = crate::microsim::ms_move_reminder::MSMoveReminderIdleVt {
+    notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+    notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+    notify_stop_ended: ms_device_routing_notify_stop_ended,
+};
+
 impl Drop for MSDevice_Routing {
     /// C++: `MSDevice_Routing::~MSDevice_Routing()`: make the rerouting command invalid if there is one
     fn drop(&mut self) {
@@ -506,7 +516,7 @@ impl MSDevice_Routing {
     // MSDevice_Routing::reroute(const SUMOTime currentTime, const bool onInit) {
     //     MSRoutingEngine::initEdgeWeights(myHolder.getVClass());
     //     //check whether the weights did change since the last reroute
-    //     if (myLastRouting > MSRoutingEngine::getLastAdaptation() || !myActive) {
+    //     if (myLastRouting >= MSRoutingEngine::getLastAdaptation() || !myActive) {
     //         return;
     //     }
     //     // Invalidation gate: even when the metric changed, skip the (expensive)
@@ -542,12 +552,29 @@ impl MSDevice_Routing {
         let holder = holderPtr.m();
         MSRoutingEngine::init_edge_weights(holder.get_v_class(), -1, -1);
         //check whether the weights did change since the last reroute
-        if self.myLastRouting > MSRoutingEngine::get_last_adaptation() || !self.myActive {
+        if self.myLastRouting >= MSRoutingEngine::get_last_adaptation() || !self.myActive {
             return;
         }
-        // shortcut: the invalidation gate (recomputeCosts over the remaining route) is skipped because MSRouteIterator and ConstMSEdgeVector are unmapped; it is off by default (device.rerouting.invalidation=false); upgrade when route iterators are ported
+        let canGate = self.myInvalidation && !onInit && holder.is_on_road();
+        if canGate && self.myLastRouteCost >= 0. {
+            let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+            let remaining: Vec<Ptr<MSEdge>> = holder.get_route().get_edges()[*holder.get_current_route_edge()..].to_vec();
+            if !remaining.is_empty() {
+                let costNow = router.recompute_costs(&remaining, holderPtr, currentTime, Ptr::null());
+                if costNow - self.myLastRouteCost <= self.myThresholdTime && costNow <= self.myLastRouteCost * self.myThresholdFactor {
+                    self.myLastRouting = currentTime;
+                    self.myLastRouteCost = costNow;
+                    return;
+                }
+            }
+        }
         self.myLastRouting = currentTime;
         MSRoutingEngine::reroute(holder, currentTime, "device.rerouting", onInit, false, &Default::default());
+        if self.myInvalidation && holder.is_on_road() {
+            let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+            let remaining: Vec<Ptr<MSEdge>> = holder.get_route().get_edges()[*holder.get_current_route_edge()..].to_vec();
+            self.myLastRouteCost = if remaining.is_empty() { -1. } else { router.recompute_costs(&remaining, holderPtr, currentTime, Ptr::null()) };
+        }
     }
 
     /// C++: `void MSDevice_Routing::skipRouting(const SUMOTime)`
@@ -596,19 +623,17 @@ impl MSDevice_Routing {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if let Some(edgeID) = key.strip_prefix("edge:") {
             let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
-                // C++ throws InvalidArgument
-                panic!("{}", format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.device_name()));
+                return Err(ProcessError::InvalidArgument(format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.device_name())));
             }
-            return to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.));
+            return Ok(to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.)));
         } else if key == "period" {
-            return time2string(self.myPeriod);
+            return Ok(time2string(self.myPeriod));
         }
-        // C++ throws InvalidArgument
-        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -637,16 +662,15 @@ impl MSDevice_Routing {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue: f64 = match value.parse::<f64>() {
             Ok(v) => v,
-            // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if let Some(edgeID) = key.strip_prefix("edge:") {
             let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
-                panic!("{}", format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.device_name()));
+                return Err(ProcessError::InvalidArgument(format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.device_name())));
             }
             MSRoutingEngine::set_edge_travel_time(edge, doubleValue);
         } else if key == "period" {
@@ -655,8 +679,9 @@ impl MSDevice_Routing {
             let now = MSNet::get_instance().m().get_current_time_step();
             self.rebuild_reroute_command(now + self.myPeriod);
         } else {
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Routing::setActive(bool)`
@@ -731,6 +756,7 @@ impl MSDevice_Routing {
             myLastRouteCost: -1.,
         });
         dev.base.base.vt = &MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT;
+        dev.base.base.idle_vt = &MS_DEVICE_ROUTING_MSMOVE_REMINDER_IDLE_VT;
         // we do always a pre insertion reroute for trips to fill the best lanes of the vehicle with somehow meaningful values (especially for deaprtLane="best")
         if preInsertionPeriod > 0 || holder.get_parameter().was_set(VEHPARS_FORCE_REROUTE) {
             let cmd: Ptr<MSDevice_Routing_WrappingCommand> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(&mut *dev), MSDevice_Routing::pre_insertion_reroute))));

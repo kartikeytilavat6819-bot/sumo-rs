@@ -133,18 +133,17 @@ impl MSDevice_Friction {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "frictionCoefficient" {
-            return utils::common::to_string::to_string(&self.myMeasuredFrictionCoefficient);
+            return Ok(utils::common::to_string::to_string(&self.myMeasuredFrictionCoefficient));
         } else if key == "stdDev" {
-            return utils::common::to_string::to_string(&self.myStdDeviation);
+            return Ok(utils::common::to_string::to_string(&self.myStdDeviation));
         } else if key == "offset" {
-            return utils::common::to_string::to_string(&self.myOffset);
+            return Ok(utils::common::to_string::to_string(&self.myOffset));
         } else if key == "rawFriction" {
-            return utils::common::to_string::to_string(&self.myRawFriction);
+            return Ok(utils::common::to_string::to_string(&self.myRawFriction));
         }
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Friction::setParameter(const std::string &, const std::string &)` [virtual]
@@ -167,11 +166,10 @@ impl MSDevice_Friction {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "frictionCoefficient" {
             self.myMeasuredFrictionCoefficient = doubleValue;
@@ -180,8 +178,9 @@ impl MSDevice_Friction {
         } else if key == "offset" {
             self.myOffset = doubleValue;
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `double MSDevice_Friction::getMeasuredFriction()`

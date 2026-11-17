@@ -28,7 +28,8 @@ impl MSVehicleTransfer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // destructor: the myVehicles Vec drops with the struct
+        // myInstance = nullptr; the myVehicles Vec drops with the struct
+        MSVehicleTransfer_MY_INSTANCE.with(|cell| cell.set(Ptr::null()));
     }
 
     /// C++: `void MSVehicleTransfer::add(const SUMOTime, MSVehicle *)`
@@ -344,8 +345,7 @@ impl MSVehicleTransfer {
                         desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
                     } else if desc.myProceedTime < time {
                         if desc.myVeh.succ_edge(1).is_null() {
-                            // shortcut: typeid(MSDevice_Taxi) cannot be expressed (get_device takes an unmapped type_info), taxis are not special-cased, upgrade when std::type_info is ported
-                            let isTaxi = false;
+                            let isTaxi = !desc.myVeh.get_device("taxi").is_null();
                             if isTaxi {
                                 // never teleport a taxi beyond the end of it's route
                                 desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));

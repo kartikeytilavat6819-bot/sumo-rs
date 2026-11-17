@@ -3,9 +3,18 @@
 use crate::prelude::*;
 use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
-// shortcut: the lookup is get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR)[id] downcast from MSDetectorFileOutput to MSE2Collector, but MSDetectorFileOutput is MSE2Collector's second base (MSMoveReminder is first), so a plain Ptr::cast is wrong; upgrade when a base-offset-aware downcast exists
+/// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`: MSDetectorFileOutput
+/// is the MSE2Collector base2 field, not its first base, so step back by the field offset.
+// shortcut: no runtime type check; the lane-area detector map holds only MSE2Collector, upgrade with a type flag check
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
-    panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
+    let det: Ptr<MSDetectorFileOutput> = match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
+        Some(d) => *d,
+        None => return Ptr::null(),
+    };
+    if det.is_null() {
+        return Ptr::null();
+    }
+    Ptr::from_raw((det.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector)
 }
 
 /// C++ enum `LightState`
@@ -167,6 +176,27 @@ fn nema_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
     Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_detector_states()
 }
 
+fn nema_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().get_parameter(key, defaultValue.to_string())
+}
+fn nema_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().set_parameter(key, value)
+}
+fn nema_ext_activate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().activate_program()
+}
+fn nema_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().deactivate_program()
+}
+
+static NEMA_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_parameter: nema_ext_get_parameter,
+    set_parameter: nema_ext_set_parameter,
+    activate_program: nema_ext_activate_program,
+    deactivate_program: nema_ext_deactivate_program,
+    ..super::ms_traffic_light_logic::DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT
+};
+
 static NEMA_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: nema_try_switch,
     init: nema_init,
@@ -219,6 +249,7 @@ impl NEMALogic {
             myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
         };
         this.base.base.vt = &NEMA_LOGIC_VT;
+        this.base.base.ext_vt = &NEMA_LOGIC_EXT_VT;
         this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
         this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
         let cycle_default = this.get_parameter("cycleTime", "60".to_string());
@@ -566,7 +597,10 @@ impl NEMALogic {
                         }
                         let mut index = lane.get_index();
                         let mut id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
-                        // shortcut: the while-loop that bumps `index` until the detector id is unused needs the typed detector lookup (Unmapped getTypedDetectors); skipped until detector control is ported
+                        while MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).contains_key(&id) {
+                            index += 1;
+                            id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
+                        }
                         //createE2Detector() method will lead to bad detector showing in sumo-gui
                         //so it is better to use build2Detector() rather than createE2Detector()
                         let _built = nb.build_e2_detector(
@@ -963,7 +997,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        MSTrafficLightLogic::activate_program(&mut self.base.base);
+        MSTrafficLightLogic::activate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(true);
         }
@@ -979,7 +1013,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        MSTrafficLightLogic::deactivate_program(&mut self.base.base);
+        MSTrafficLightLogic::deactivate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(false);
         }
@@ -2190,7 +2224,6 @@ impl NEMALogic {
     #[allow(unused_variables)]
     pub fn string2int(&mut self, s: String) -> i32 {
         // emulates `std::stringstream ss(s) >> ret` with ret = 0 on failure
-        // shortcut: no clamp to the i32 range on overflow (C++11 stream extraction saturates), upgrade if an overflowing phase name ever matters
         let bytes = s.trim_start().as_bytes().to_vec();
         let mut i = 0usize;
         let mut neg = false;
@@ -2201,15 +2234,15 @@ impl NEMALogic {
         let start = i;
         let mut v: i64 = 0;
         while i < bytes.len() && bytes[i].is_ascii_digit() {
-            v = v * 10 + (bytes[i] - b'0') as i64;
+            v = (v * 10 + (bytes[i] - b'0') as i64).min(i32::MAX as i64 + 1);
             i += 1;
         }
         if i == start {
             0
         } else if neg {
-            (-v) as i32
+            (-v).max(i32::MIN as i64) as i32
         } else {
-            v as i32
+            v.min(i32::MAX as i64) as i32
         }
     }
 

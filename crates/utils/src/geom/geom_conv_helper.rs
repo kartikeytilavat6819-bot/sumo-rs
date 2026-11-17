@@ -33,7 +33,7 @@ pub fn parse_shape_reporting(
     }
     let mut shape = PositionVector::new();
     for st in tokenize(shpdef, " ") {
-        let pos = tokenize(st, ",");
+        let pos = tokenize(&st, ",");
         if pos.len() != 2 && pos.len() != 3 {
             emit_error(report, "Shape", objecttype, objectid, "the position is neither x,y nor x,y,z");
             return None;

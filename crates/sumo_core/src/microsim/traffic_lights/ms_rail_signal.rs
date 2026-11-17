@@ -457,6 +457,39 @@ fn rail_get_blocking_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MS
     Ptr::from_mut(l).cast::<MSRailSignal>().m().get_blocking_vehicles(linkIndex)
 }
 
+fn rail_get_rival_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_rival_vehicles(linkIndex)
+}
+
+fn rail_get_priority_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_priority_vehicles(linkIndex)
+}
+
+fn rail_get_blocking_drive_ways(l: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_blocking_drive_ways(linkIndex)
+}
+
+fn rail_get_requested_drive_way(l: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_requested_drive_way(linkIndex)
+}
+
+fn rail_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().set_parameter(key, value)
+}
+
+static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: rail_get_rival_vehicles,
+    get_priority_vehicles: rail_get_priority_vehicles,
+    get_blocking_drive_ways: rail_get_blocking_drive_ways,
+    get_requested_drive_way: rail_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::MSTrafficLightLogic::get_detector_state_base,
+    get_tl_queue_length: super::ms_traffic_light_logic::MSTrafficLightLogic::get_tl_queue_length_base,
+    get_parameter: super::ms_traffic_light_logic::default_ext_get_parameter,
+    set_parameter: rail_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
+};
+
 static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: rail_try_switch,
     get_phase_number: rail_get_phase_number,
@@ -503,6 +536,7 @@ impl MSRailSignal {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_SIGNAL, delay, parameters);
         base.vt = &MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT;
+        base.ext_vt = &MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let numerical_id = MY_RS_INDEX.with(|c| {
             let value = c.get();
             c.set(value + 1);
@@ -970,9 +1004,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_blocking_vehicle_i_ds(&self) -> String {
+    pub fn get_blocking_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_blocking_vehicles(0))
         } else {
@@ -1017,9 +1051,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_rival_vehicle_i_ds(&self) -> String {
+    pub fn get_rival_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_rival_vehicles(0))
         } else {
@@ -1055,9 +1089,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_priority_vehicle_i_ds(&self) -> String {
+    pub fn get_priority_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_priority_vehicles(0))
         } else {
@@ -1097,9 +1131,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_constraint_info_2(&self) -> String {
+    pub fn get_constraint_info_2(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             rs.m().get_constraint_info(0)
         } else {
@@ -1138,9 +1172,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_blocking_drive_way_i_ds(&self) -> String {
+    pub fn get_blocking_drive_way_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             drive_way_vector_to_string(&rs.m().get_blocking_drive_ways(0))
         } else {
@@ -1192,9 +1226,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_requested_drive_way_2(&self) -> String {
+    pub fn get_requested_drive_way_2(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             rs.m().get_requested_drive_way(0)
         } else {

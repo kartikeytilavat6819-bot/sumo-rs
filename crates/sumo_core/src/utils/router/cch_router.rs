@@ -289,7 +289,7 @@ impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        self.base.set_bulk_mode(mode);
+        self.base.set_bulk_mode_base(mode);
         self.myFallback.m().set_bulk_mode(mode);
     }
 
@@ -374,9 +374,8 @@ impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     pub fn prohibitions_covered_by_metric(&self, vClass: SUMOVehicleClass) -> bool {
         for item in self.myProhibited.iter() {
             if (item.1.permissions & vClass) != vClass
-                // shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
                 && ({
-                    let perm: SVCPermissions = panic!("shortcut: CCHRouter::prohibitionsCoveredByMetric needs E::getPermissions, not in RouterEdge");
+                    let perm: SVCPermissions = item.0.cast::<E>().edge_permissions();
                     (perm & vClass) != 0
                 })
             {
