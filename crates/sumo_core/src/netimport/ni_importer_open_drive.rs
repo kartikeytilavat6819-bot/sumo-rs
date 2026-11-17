@@ -31,6 +31,8 @@ const OPEN_DRIVE_TAGS: &[(&str, i32)] = &[
     ("line", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LINE as i32),
     ("spiral", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SPIRAL as i32),
     ("arc", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ARC as i32),
+    ("poly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_POLY3 as i32),
+    ("paramPoly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_PARAMPOLY3 as i32),
     ("laneSection", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANESECTION as i32),
     ("laneOffset", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANEOFFSET as i32),
     ("left", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT as i32),

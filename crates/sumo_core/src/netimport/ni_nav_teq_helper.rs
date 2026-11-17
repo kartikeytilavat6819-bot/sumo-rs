@@ -150,9 +150,7 @@ impl NINavTeqHelper {
     pub fn add_vehicle_classes(e: &mut NBEdge, classS: &str, allPermissions: SVCPermissions, defaultPermissions: SVCPermissions) {
         use utils::common::sumo_vehicle_class::*;
         let full = format!("0000000000{classS}");
-        // shortcut: non-ASCII bytes in the class string would shift the indices (C++ indexes bytes), fine for valid input
-        let cs = String::from_utf8_lossy(&full.as_bytes()[full.len() - 10..]).into_owned();
-        let c = cs.as_bytes();
+        let c = &full.as_bytes()[full.len() - 10..];
         // 0: allow all vehicle types
         if c[0] == b'1' {
             e.set_permissions(allPermissions, -1);
@@ -167,7 +165,7 @@ impl NINavTeqHelper {
         } else {
             e.disallow_vehicle_class(-1, SVC_PASSENGER);
         }
-        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 2);
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, c, 2);
         if !haveCar {
             e.set_permissions(0, -1);
         }
@@ -237,9 +235,7 @@ impl NINavTeqHelper {
     pub fn add_vehicle_classes_v6(e: &mut NBEdge, classS: &str, allPermissions: SVCPermissions, defaultPermissions: SVCPermissions) {
         use utils::common::sumo_vehicle_class::*;
         let full = format!("0000000000{classS}");
-        // shortcut: non-ASCII bytes in the class string would shift the indices (C++ indexes bytes), fine for valid input
-        let cs = String::from_utf8_lossy(&full.as_bytes()[full.len() - 12..]).into_owned();
-        let c = cs.as_bytes();
+        let c = &full.as_bytes()[full.len() - 12..];
         // 0: allow all vehicle types
         if c[0] == b'1' {
             e.set_permissions(allPermissions, -1);
@@ -259,7 +255,7 @@ impl NINavTeqHelper {
             e.allow_vehicle_class(-1, SVC_PASSENGER);
             haveCar = true;
         }
-        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, &cs, 3);
+        haveCar |= NINavTeqHelper::add_common_vehicle_classes(e, c, 3);
         if !haveCar {
             e.set_permissions(0, -1);
         }
@@ -336,9 +332,8 @@ impl NINavTeqHelper {
     //     return haveCar;
     // }
     #[allow(unused_variables)]
-    pub fn add_common_vehicle_classes(e: &mut NBEdge, classS: &str, offset: i32) -> bool {
+    pub fn add_common_vehicle_classes(e: &mut NBEdge, c: &[u8], offset: i32) -> bool {
         use utils::common::sumo_vehicle_class::*;
-        let c = classS.as_bytes();
         let o = offset as usize;
         let mut haveCar = false;
         // High Occupancy Vehicle -- becomes SVC_PASSENGER|SVC_HOV
