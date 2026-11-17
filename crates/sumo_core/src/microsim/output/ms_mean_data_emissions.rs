@@ -311,7 +311,7 @@ fn emissions_values_write(v: &MSMeanData_MeanDataValues, dev: &mut OutputDevice,
 }
 
 /// Virtual dispatch table of MSMeanData_Emissions (overrides getAttributeNames and createValues)
-static MS_MEAN_DATA_EMISSIONS_VT: MSMeanDataVt = MSMeanDataVt {
+pub(crate) static MS_MEAN_DATA_EMISSIONS_VT: MSMeanDataVt = MSMeanDataVt {
     create_values: emissions_mean_data_create_values,
     get_attribute_names: emissions_mean_data_get_attribute_names,
     write_xml_detector_prolog: MSMeanData::write_xml_detector_prolog_base,
