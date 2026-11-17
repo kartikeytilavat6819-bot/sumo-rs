@@ -5501,6 +5501,13 @@ impl NBNodeCont {
             }
         }
 
+        if std::env::var_os("NC_JTRACE").is_some() {
+            let jin: BTreeSet<String> = newNode.m().get_incoming_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+            let jout: BTreeSet<String> = newNode.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+            let p = newNode.m().get_position();
+            eprintln!("JTRACE join {} pos={:.10},{:.10} in={} out={}", newNode.m().get_id(), p.x(), p.y(),
+                jin.iter().cloned().collect::<Vec<_>>().join(","), jout.iter().cloned().collect::<Vec<_>>().join(","));
+        }
         // remove original nodes
         self.register_joined_cluster(&cluster);
         for n in nodes_by_id(&cluster) {

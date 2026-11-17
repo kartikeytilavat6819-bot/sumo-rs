@@ -24,6 +24,7 @@
 // Container for nodes during the netbuilding process
 /****************************************************************************/
 #include <config.h>
+#include <iomanip>
 
 #include <string>
 #include <map>
@@ -2051,6 +2052,24 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
         }
     }
 
+    {
+        std::set<std::string> jin, jout;
+        for (NBEdge* e : newNode->getIncomingEdges()) {
+            jin.insert(e->getID());
+        }
+        for (NBEdge* e : newNode->getOutgoingEdges()) {
+            jout.insert(e->getID());
+        }
+        std::string sin, sout;
+        for (const std::string& s : jin) {
+            sin += (sin.empty() ? "" : ",") + s;
+        }
+        for (const std::string& s : jout) {
+            sout += (sout.empty() ? "" : ",") + s;
+        }
+        std::cerr << std::fixed << std::setprecision(10) << "JTRACE join " << newNode->getID() << " pos=" << newNode->getPosition().x() << "," << newNode->getPosition().y()
+                  << " in=" << sin << " out=" << sout << "\n";
+    }
     // remove original nodes
     registerJoinedCluster(cluster);
     for (NBNode* n : cluster) {
