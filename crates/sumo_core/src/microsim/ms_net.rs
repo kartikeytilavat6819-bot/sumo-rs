@@ -837,9 +837,19 @@ impl MSNet {
         MSEdge::clear();
         MSLane::clear();
         MSRoute::clear();
-        // shortcut: MSVehicleTransfer::getInstance() deletion and the trigger instance deletions (LaneSpeedTrigger, TriggeredRerouter) are not wired yet
+        let transfer = MSVehicleTransfer::get_instance();
+        transfer.m().drop_();
+        delete_ptr(transfer);
         MSDevice::cleanup_all();
         MSCalibrator::cleanup();
+        while let Some(trigger) = MSLaneSpeedTrigger::get_instances().values().next().copied() {
+            trigger.m().drop_();
+            delete_ptr(trigger);
+        }
+        while let Some(rerouter) = MSTriggeredRerouter::get_instances().values().next().copied() {
+            rerouter.m().drop_();
+            delete_ptr(rerouter);
+        }
         MSDevice_SSM::cleanup();
         MSDevice_ToC::cleanup();
         MSRailSignalConstraint::cleanup();
