@@ -1409,7 +1409,7 @@ impl MSRouteHandler {
     #[allow(unused_variables)]
     pub fn close_route_distribution(&mut self) {
         if !self.myCurrentRouteDistribution.is_null() {
-            let haveSameID = MSRoute::has_route(&self.myCurrentRouteDistributionID);
+            let haveSameID = lookup_route(&self.myCurrentRouteDistributionID).is_some();
             if state_loaded() && haveSameID {
                 delete_ptr(self.myCurrentRouteDistribution);
                 self.myCurrentRouteDistribution = Ptr::null();
