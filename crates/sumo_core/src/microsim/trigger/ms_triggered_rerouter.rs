@@ -178,6 +178,7 @@ impl MSTriggeredRerouter {
             myBlockedStoppingPlaces: BTreeSet::new(),
         });
         b.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        b.base2.parking_vt = &MS_TRIGGERED_REROUTER_PARKING_VT;
         b.base2.kind = "MSTriggeredRerouter";
         b.base4.vt = &MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT;
         // C++ `myInstances[id] = this` and `lane->addMoveReminder(this)`; the box keeps the address stable
@@ -2644,6 +2645,15 @@ static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveRemind
     notify_enter: ms_triggered_rerouter_notify_enter,
     notify_move: ms_triggered_rerouter_notify_move,
     notify_leave: ms_triggered_rerouter_notify_leave,
+};
+
+fn ms_triggered_rerouter_is_parking_rerouter(mr: &MSMoveReminder) -> bool {
+    let p = (mr as *const MSMoveReminder as *const u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *const MSTriggeredRerouter;
+    unsafe { &*p }.is_parking_rerouter()
+}
+
+static MS_TRIGGERED_REROUTER_PARKING_VT: MSMoveReminderParkingVt = MSMoveReminderParkingVt {
+    is_parking_rerouter: ms_triggered_rerouter_is_parking_rerouter,
 };
 
 fn stopping_place_rerouter_of(spr: &mut MSStoppingPlaceRerouter) -> &mut MSTriggeredRerouter {
