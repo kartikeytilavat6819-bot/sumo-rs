@@ -1,0 +1,1 @@
+--trip-files tools/oracle/cases/duarouter_trips/trips.xml --routing-algorithm astar --astar.all-distances @CASE@/all.txt --output-file @DIR@/routes.rou.xml

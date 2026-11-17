@@ -170,12 +170,41 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 use crate::router::ro_net::ROMapMatcher;
+use crate::utils::router::a_star_lookup_table::{AStarLookupTableKind, FullLookupTable, LandmarkLookupTable};
+use crate::utils::router::reversed_edge::ReversedEdge;
+use crate::router::ro_vehicle::ROVehicle;
+use crate::utils::emissions::pollutants_interface::PollutantsInterface_EmissionType;
+use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
+use crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter;
 use crate::utils::router::a_star_router::AStarRouter;
 use crate::utils::router::ch_router::CHRouter;
 use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+
+// C++ `&ROEdge::getEmissionEffort<PollutantsInterface::X>`: one fn item per template instantiation
+fn effort_co(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO, edge, veh, time)
+}
+fn effort_co2(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO2, edge, veh, time)
+}
+fn effort_pm_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::PM_X, edge, veh, time)
+}
+fn effort_hc(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::HC, edge, veh, time)
+}
+fn effort_no_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::NO_X, edge, veh, time)
+}
+fn effort_fuel(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::FUEL, edge, veh, time)
+}
+fn effort_elec(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::ELEC, edge, veh, time)
+}
 
 /// C++ `new` of a router, held as its SUMOAbstractRouter base (the routers live until the process exits)
 fn leak_router<R>(r: R) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
@@ -208,11 +237,21 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         if routingAlgorithm == "dijkstra" {
             leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "astar" {
-            // shortcut: the astar.all-distances and astar.landmark-distances lookup tables are not ported, upgrade when AStarRouter's lookup tables are
-            if oc.is_set("astar.all-distances", true).unwrap() || oc.is_set("astar.landmark-distances", true).unwrap() {
-                panic!("shortcut: astar lookup tables are not wired in duarouter yet");
+            let mut lookup: Option<std::rc::Rc<AStarLookupTableKind<ROEdge, ROVehicle, ROMapMatcher>>> = None;
+            if oc.is_set("astar.all-distances", true).unwrap() {
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Full(FullLookupTable::new(&oc.get_string("astar.all-distances").unwrap(), ROEdge::get_all_edges().len() as i32))));
+            } else if oc.is_set("astar.landmark-distances", true).unwrap() {
+                let forward = leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), true, Some(ROEdge::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute());
+                let reversed: Vec<Ptr<ReversedEdge<ROEdge, ROVehicle>>> = ROEdge::get_all_edges().iter().map(|edge| edge.get_reversed_routing_edge()).collect();
+                for redge in reversed.iter() {
+                    redge.m().init();
+                }
+                let backward = Ptr::from_raw(Box::into_raw(Box::new(DijkstraRouter::new(&reversed, true, Some(ReversedEdge::<ROEdge, ROVehicle>::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute()))).cast::<SUMOAbstractRouter<ReversedEdge<ROEdge, ROVehicle>, ROVehicle>>();
+                let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
+                let saveFile = if oc.is_set("astar.save-landmark-distances", true).unwrap() { oc.get_string("astar.save-landmark-distances").unwrap() } else { String::new() };
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Landmark(LandmarkLookupTable::new(&oc.get_string("astar.landmark-distances").unwrap(), ROEdge::get_all_edges(), forward, backward, defaultVehicle, &saveFile, oc.get_int("routing-threads").unwrap(), Ptr::null()))));
             }
-            leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), None, net.has_permissions(), restrictionParams).with_compute())
+            leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), lookup, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CH" && !net.has_permissions() && !utils::common::std_defs::g_routing_preferences() && !net.has_speed_restrictions() {
             leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), SVC_IGNORING, weightPeriod, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CHWrapper" || routingAlgorithm == "CH" {
@@ -223,9 +262,14 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         }
     } else {
         op = match measure.as_str() {
+            "CO" => effort_co,
+            "CO2" => effort_co2,
+            "PMx" => effort_pm_x,
+            "HC" => effort_hc,
+            "NOx" => effort_no_x,
+            "fuel" => effort_fuel,
+            "electricity" => effort_elec,
             "noise" => ROEdge::get_noise_effort,
-            // shortcut: the emission efforts take the PollutantsInterface type as a template argument, a plain fn pointer cannot carry it, upgrade when the effort is a closure or typed per pollutant
-            "CO" | "CO2" | "PMx" | "HC" | "NOx" | "fuel" | "electricity" => panic!("shortcut: emission effort '{}' is not wired in duarouter yet", measure),
             _ => ROEdge::get_stored_effort,
         };
         if !net.has_loaded_effort() {
