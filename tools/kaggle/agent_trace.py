@@ -41,7 +41,9 @@ def main():
     print(f'[{tag}] TL rows ours={len(a)} cpp={len(b)}')
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:
-            print(f'[{tag}] first TL diff at row {i}:\n  ours: {x}\n  cpp : {y}')
+            print(f'[{tag}] first TL diff at row {i}:')
+            for j in range(max(0, i - 12), min(len(a), i + 3)):
+                print(f'  {j} ours: {a[j]}\n  {j} cpp : {b[j]}')
             break
     else:
         if len(a) != len(b):
