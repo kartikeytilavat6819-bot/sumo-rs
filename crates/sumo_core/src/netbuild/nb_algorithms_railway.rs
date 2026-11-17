@@ -1672,10 +1672,7 @@ impl NBRailwayTopologyAnalyzer {
             return Ptr::null();
         }
         if ec.retrieve(&id2, false).is_null() {
-            // shortcut: NBEdge(id, from, to, tpl, geom) copy constructor is not ported; the reversed edge
-            // gets the template's type, speed, friction, lane count, width, offsets and per-lane speed,
-            // friction, permissions, width and type. Lane parameters, stop offsets and signal position of the
-            // template are not copied yet; upgrade when NBEdge::NBEdge(id, from, to, tpl, geom, numLanes) lands.
+            // C++ NBEdge(id, from, to, tpl, geom) constructor: new_2 with the template's values, then the copies below
             let geom = edge.get_geometry().reverse();
             let tryIgnoreNodePositions = !geom.0.is_empty();
             let mut e2box = NBEdge::new_2(
@@ -1704,10 +1701,22 @@ impl NBRailwayTopologyAnalyzer {
                 let lane = &edge.get_lanes()[tplIndex as usize];
                 e2.m().set_lane_width(i, lane.width);
                 e2.m().set_lane_type(i, &lane.type_);
+                e2.m().myLanes[i as usize].update_parameters(lane.get_parameters_map());
                 if e2.get_to_node() == edge.get_to_node() {
                     e2.m().set_end_offset(i, lane.endOffset);
+                    e2.m().set_edge_stop_offset(i, &lane.laneStopOffset, false);
                 }
             }
+            if e2.get_to_node() == edge.get_to_node() {
+                e2.m().mySignalPosition = edge.mySignalPosition;
+                e2.m().mySignalNode = edge.mySignalNode;
+            }
+            e2.m().myIsBidi = edge.myIsBidi;
+            // geom is edge.getGeometry().reverse() by construction, so the C++ loaded-length geometry check holds
+            if edge.myLoadedLength > 0.0 {
+                e2.m().myLoadedLength = edge.myLoadedLength;
+            }
+            e2.m().base2.update_parameters(edge.base2.get_parameters_map());
             if edge.base2.get_parameter(OSM_DIRECTION, "") == "forward" {
                 e2.m().base2.set_parameter(OSM_DIRECTION, "backward");
             } else if edge.base2.get_parameter(OSM_DIRECTION, "") == "backward" {
@@ -1756,10 +1765,16 @@ impl NBRailwayTopologyAnalyzer {
     // }
     #[allow(unused_variables)]
     pub fn extend_bidi_edges(ec: &mut NBEdgeCont) -> i32 {
-        // shortcut: C++ walks the live ec map while addBidiEdge inserts into it; this walks a snapshot, so
-        // edges inserted during the walk are not visited. Upgrade when NBEdgeCont exposes live iteration.
+        // C++ iterates the live map while addBidiEdge inserts into it: each step re-reads the map after the last key
         let mut added = 0;
-        for e in ec.get_all_edges() {
+        let mut cursor: Option<String> = None;
+        loop {
+            let next = match &cursor {
+                None => ec.myEdges.iter().next(),
+                Some(k) => ec.myEdges.range::<String, _>((std::ops::Bound::Excluded(k), std::ops::Bound::Unbounded)).next(),
+            };
+            let Some((key, e)) = next.map(|(k, e)| (k.clone(), *e)) else { break };
+            cursor = Some(key);
             if e.is_bidi_rail(false) {
                 added += Self::extend_bidi_edges_2(ec, e.get_from_node(), e.get_turn_destination(true));
                 added += Self::extend_bidi_edges_2(ec, e.get_to_node(), e);
@@ -2648,9 +2663,7 @@ impl NBRailwayTopologyAnalyzer {
         }
         */
 
-        // shortcut: SUMOAbstractRouter<Track, NBVehicle> / DijkstraRouter<Track, NBVehicle> is not usable yet
-        // (DijkstraRouter::new is still unported and SUMOAbstractRouter::Operation is Unmapped), so compute() is replaced by
-        // an empty route and every stop pair is reported as disconnected. Upgrade when DijkstraRouter::new lands.
+        let mut router = DijkstraRouter::new(&tracks, true, Some(NBRailwayTopologyAnalyzer::get_travel_time_static), None, true, Ptr::null(), false, false);
         let mut added = 0;
         let mut numDisconnected = 0;
         // determinism: std::set<std::shared_ptr<NBPTStop>> and the edge sets are ordered by id here
@@ -2703,7 +2716,7 @@ impl NBRailwayTopologyAnalyzer {
                     continue;
                 }
                 let mut needBidi = visited.contains(&reverseTrip);
-                let _veh = NBVehicle::new(line.get_ref(), fromEdge.get_permissions(-1) & SVC_RAIL_CLASSES);
+                let mut veh = NBVehicle::new(line.get_ref(), fromEdge.get_permissions(-1) & SVC_RAIL_CLASSES);
                 let mut route: Vec<Ptr<Track>> = Vec::new();
                 let from = if fromRevised { tracks[fromEdge.get_numerical_id() as usize] } else { stopTracks[&fromEdge].0 };
                 let to = if toRevised { tracks[toEdge.get_numerical_id() as usize] } else { stopTracks[&toEdge].1 };
@@ -2716,8 +2729,7 @@ impl NBRailwayTopologyAnalyzer {
                     iDeltaEnd = 0;
                     needBidi = true;
                 } else {
-                    // router->compute(from, to, &veh, 0, route) is not available yet, see shortcut above
-                    let _ = (from, to);
+                    router.compute(from, to, Ptr::from_mut(&mut veh), 0, &mut route, false);
                 }
                 if route.len() > 0 {
                     debug_assert!(route.len() as i32 > iStart + iDeltaEnd);
@@ -3055,8 +3067,9 @@ pub struct NBRailwayTopologyAnalyzer_Track {
     pub successors: Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>,
     pub viaSuccessors: Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>,
     pub minPermissions: SVCPermissions,
-    pub svcSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>>>,
-    pub svcViaSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const Track *, const Track *>>>
+    // boxed so the cached vectors keep their address when the map grows (the router borrows them)
+    pub svcSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Box<Vec<Ptr<NBRailwayTopologyAnalyzer_Track>>>>>,
+    pub svcViaSuccessors: std::cell::RefCell<BTreeMap<SUMOVehicleClass, Box<Vec<(Ptr<NBRailwayTopologyAnalyzer_Track>, Ptr<NBRailwayTopologyAnalyzer_Track>)>>>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const Track *, const Track *>>>
 }
 
 impl NBRailwayTopologyAnalyzer_Track {
@@ -3112,9 +3125,9 @@ impl NBRailwayTopologyAnalyzer_Track {
                     succ.push(*t);
                 }
             }
-            self.svcSuccessors.borrow_mut().insert(svc, succ);
+            self.svcSuccessors.borrow_mut().insert(svc, Box::new(succ));
         }
-        self.svcSuccessors.borrow()[&svc].clone()
+        self.svcSuccessors.borrow()[&svc].to_vec()
     }
 
     /// C++: `const std::vector<std::pair<const Track *, const Track *>> & Track::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -3132,9 +3145,9 @@ impl NBRailwayTopologyAnalyzer_Track {
                     succ.push((*t, Ptr::null()));
                 }
             }
-            self.svcViaSuccessors.borrow_mut().insert(svc, succ);
+            self.svcViaSuccessors.borrow_mut().insert(svc, Box::new(succ));
         }
-        self.svcViaSuccessors.borrow()[&svc].clone()
+        self.svcViaSuccessors.borrow()[&svc].to_vec()
     }
 
     /// C++: `const std::string & Track::getID() const` [const]
@@ -3208,5 +3221,79 @@ impl NBRailwayTopologyAnalyzer_Track {
         panic!("NBRailwayTopologyAnalyzer::Track::operator= is deleted in C++")
     }
 
+}
+
+impl RouterEdgeInfo for NBRailwayTopologyAnalyzer_Track {
+    fn edge_numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.get_id().to_string()
+    }
+    // C++ Track has no getPermissions(); only the ch/cch/sptree routers read it, and C++ never runs them on a Track
+    fn edge_permissions(&self) -> SVCPermissions {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getPermissions in C++")
+    }
+}
+
+impl RouterEdge<NBVehicle> for NBRailwayTopologyAnalyzer_Track {
+    type Node = NBNode;
+    type Lane = NBEdge_Lane;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    // C++ Track defines none of the following; DijkstraRouter<Track> never calls them (only the AF/A* routers do, and C++ never instantiates those with a Track)
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getLengthGeometryFactor in C++")
+    }
+    fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getDistanceTo in C++")
+    }
+    fn speed_limit(&self) -> f64 {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getSpeedLimit in C++")
+    }
+    fn minimum_travel_time(&self, _veh: Ptr<NBVehicle>) -> f64 {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getMinimumTravelTime in C++")
+    }
+    fn travel_time_aggregated(_edge: Ptr<Self>, _veh: Ptr<NBVehicle>, _time: f64) -> f64 {
+        panic!("NBRailwayTopologyAnalyzer::Track has no getTravelTimeAggregated in C++")
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        if (self.minPermissions & vclass) != 0 {
+            return &self.successors;
+        }
+        self.get_successors(vclass);
+        // SAFETY: the cache entry is a Box that is never removed, and the RefCell is not borrowed here
+        unsafe { (*self.svcSuccessors.as_ptr()).get(&vclass).unwrap().as_slice() }
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        if (self.minPermissions & vclass) != 0 {
+            return &self.viaSuccessors;
+        }
+        self.get_via_successors(vclass, ignore_transient);
+        // SAFETY: as in successors above
+        unsafe { (*self.svcViaSuccessors.as_ptr()).get(&vclass).unwrap().as_slice() }
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        self.get_bidi_edge()
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<NBVehicle>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<NBVehicle>) -> bool {
+        self.restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
+        NBRailwayTopologyAnalyzer::get_travel_time_static(edge, veh, time)
+    }
 }
 

@@ -2514,9 +2514,7 @@ impl NBNodeCont {
                 tlc.remove_fully(def.m().get_id().to_string());
             } else {
                 def.m().set_participants_information();
-                // shortcut: C++ virtual setTLControllingInformation() is dispatched statically to NBOwnTLDef here, because every
-                // definition reachable from myGuessedTLS is created by guessTLs as an NBOwnTLDef; upgrade when virtual dispatch exists
-                def.cast::<NBOwnTLDef>().m().set_tl_controlling_information();
+                def.m().set_tl_controlling_information();
                 utils::options::options_cont::with_options(|oc| tlc.compute_single_logic(oc, def));
             }
         }
