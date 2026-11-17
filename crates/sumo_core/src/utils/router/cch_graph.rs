@@ -322,8 +322,7 @@ impl<E: RouterEdge<V>, V> CCHGraph<E, V> {
         if maskClass != utils::common::sumo_vehicle_class::SVC_IGNORING
                 && (((self.myArcPerm.borrow()[a as usize] & maskClass) == 0)
                     || ({
-                        // shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
-                        let perm: SVCPermissions = panic!("shortcut: CCHGraph::computeArcWeight needs E::getPermissions, not in RouterEdge");
+                        let perm: SVCPermissions = self.edge_of(self.myArcHead[a as usize]).edge_permissions();
                         (perm & maskClass) == 0
                     }))
         {
