@@ -23,6 +23,22 @@ pub struct MSStoppingPlace_Access {
 impl MSStoppingPlace_Access {
 }
 
+/// Virtual dispatch table for the overridable methods of MSStoppingPlace (C++ virtuals).
+/// Each subclass constructor installs its own table in `vt`; the base table forwards to the `*_base` methods.
+pub struct MSStoppingPlaceVt {
+    pub enter: fn(&mut MSStoppingPlace, Ptr<SUMOVehicle>, bool),
+    pub leave_from: fn(&mut MSStoppingPlace, Ptr<SUMOVehicle>),
+    pub get_last_free_pos: fn(&MSStoppingPlace, &SUMOVehicle, f64) -> f64,
+    pub accepts: fn(&MSStoppingPlace, Ptr<SUMOVehicle>) -> bool,
+}
+
+pub static MS_STOPPING_PLACE_VT: MSStoppingPlaceVt = MSStoppingPlaceVt {
+    enter: MSStoppingPlace::enter_base,
+    leave_from: MSStoppingPlace::leave_from_base,
+    get_last_free_pos: MSStoppingPlace::get_last_free_pos_base,
+    accepts: MSStoppingPlace::accepts_base,
+};
+
 /// A lane area vehicles can halt at
 /// C++ class `MSStoppingPlace` (microsim/MSStoppingPlace.h)
 #[repr(C)]
@@ -66,6 +82,8 @@ pub struct MSStoppingPlace {
     pub myWaitingSpots: BTreeSet<i32>,
     /// lanes and positions connected to this stop
     pub myAccessPos: Vec<MSStoppingPlace_Access>,
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSStoppingPlaceVt,
 }
 
 impl std::ops::Deref for MSStoppingPlace {
@@ -139,6 +157,7 @@ impl MSStoppingPlace {
             myWaitingTransportables: BTreeMap::new(),
             myWaitingSpots: BTreeSet::new(),
             myAccessPos: Vec::new(),
+            vt: &MS_STOPPING_PLACE_VT,
         };
         sp.compute_last_free_pos();
         for i in 0..capacity {
@@ -222,8 +241,15 @@ impl MSStoppingPlace {
     //     myEndPositions[veh] = std::make_pair(beg, end);
     //     computeLastFreePos();
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MSStoppingPlace::enter`: dispatches to the subclass table
     pub fn enter(&mut self, veh: Ptr<SUMOVehicle>, parking: bool) {
+        let vt = self.vt;
+        (vt.enter)(self, veh, parking)
+    }
+
+    /// C++ body of `MSStoppingPlace::enter`, the base entry of `MSStoppingPlaceVt::enter`
+    #[allow(unused_variables)]
+    pub fn enter_base(&mut self, veh: Ptr<SUMOVehicle>, parking: bool) {
         let factor = if parking { self.myParkingFactor } else { 1.0 };
         let beg = veh.get_position_on_lane() + veh.get_vehicle_type().get_min_gap() * factor;
         let end = beg - veh.get_vehicle_type().get_length_with_gap() * factor;
@@ -239,8 +265,15 @@ impl MSStoppingPlace {
     //     myEndPositions.erase(myEndPositions.find(what));
     //     computeLastFreePos();
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MSStoppingPlace::leaveFrom`: dispatches to the subclass table
     pub fn leave_from(&mut self, what: Ptr<SUMOVehicle>) {
+        let vt = self.vt;
+        (vt.leave_from)(self, what)
+    }
+
+    /// C++ body of `MSStoppingPlace::leaveFrom`, the base entry of `MSStoppingPlaceVt::leave_from`
+    #[allow(unused_variables)]
+    pub fn leave_from_base(&mut self, what: Ptr<SUMOVehicle>) {
         self.myEndPositions.remove(&what);
         self.compute_last_free_pos();
     }
@@ -289,8 +322,14 @@ impl MSStoppingPlace {
     //     }
     //     return myLastFreePos;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MSStoppingPlace::getLastFreePos`: dispatches to the subclass table
     pub fn get_last_free_pos(&self, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
+        (self.vt.get_last_free_pos)(self, forVehicle, brakePos)
+    }
+
+    /// C++ body of `MSStoppingPlace::getLastFreePos`, the base entry of `MSStoppingPlaceVt::get_last_free_pos`
+    #[allow(unused_variables)]
+    pub fn get_last_free_pos_base(&self, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
         if self.get_stopped_vehicle_number() > 0 {
             let vehGap = forVehicle.get_vehicle_type().get_min_gap();
             let mut pos = self.myLastFreePos - vehGap - utils::geom::NUMERICAL_EPS;
@@ -346,8 +385,14 @@ impl MSStoppingPlace {
     // virtual bool accepts(SUMOVehicle* /*veh*/) const {
     //         return true;
     //     }
-    #[allow(unused_variables)]
+    /// C++ virtual `MSStoppingPlace::accepts`: dispatches to the subclass table
     pub fn accepts(&self, arg0: Ptr<SUMOVehicle>) -> bool {
+        (self.vt.accepts)(self, arg0)
+    }
+
+    /// C++ body of `MSStoppingPlace::accepts`, the base entry of `MSStoppingPlaceVt::accepts`
+    #[allow(unused_variables)]
+    pub fn accepts_base(&self, arg0: Ptr<SUMOVehicle>) -> bool {
         let _ = arg0;
         true
     }
