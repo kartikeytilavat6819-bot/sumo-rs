@@ -3850,6 +3850,7 @@ impl MSLink {
                         continue;
                     }
                     distToPeds = min2(distToPeds, dist);
+                    if ego.get_id().to_string() == "car12" { println!("TRACE t={} ev=CWAF foe={} ped={} dist={} inFront={}", MSNet::get_instance().get_current_time_step(), foeLane.get_id(), p.get_id(), (dist * 1000.) as i64, inFront as i32); }
                     if !collectBlockers.is_null() {
                         collectBlockers.m().push(p);
                     }

@@ -1,5 +1,5 @@
 diff --git a/src/microsim/MSLink.cpp b/src/microsim/MSLink.cpp
-index 72e6ba2..8e85af6 100644
+index 72e6ba2..30551aa 100644
 --- a/src/microsim/MSLink.cpp
 +++ b/src/microsim/MSLink.cpp
 @@ -774,6 +774,7 @@ MSLink::setApproachingPerson(const MSPerson* approaching, const SUMOTime arrival
@@ -34,6 +34,14 @@ index 72e6ba2..8e85af6 100644
              // can access the movement model here since we already checked for existing persons above
              if (distToPeds >= -MSPModel::SAFETY_GAP && MSNet::getInstance()->getPersonControl().getMovementModel()->blockedAtDist(ego, foeLane, vehCenter, vehWidth,
                      ego->getVehicleType().getParameter().getJMParam(SUMO_ATTR_JM_CROSSING_GAP, JM_CROSSING_GAP_DEFAULT),
+@@ -2076,6 +2080,7 @@ MSLink::checkWalkingAreaFoe(const MSVehicle* ego, const MSLane* foeLane, std::ve
+                     continue;
+                 }
+                 distToPeds = MIN2(distToPeds, dist);
++                if (ego->getID() == "car12") std::cout << "TRACE t=" << MSNet::getInstance()->getCurrentTimeStep() << " ev=CWAF foe=" << foeLane->getID() << " ped=" << p->getID() << " dist=" << (int)(dist * 1000) << " inFront=" << (int)inFront << "\n";
+                 if (collectBlockers != nullptr) {
+                     collectBlockers->push_back(p);
+                 }
 diff --git a/src/microsim/transportables/MSPModel_Interacting.cpp b/src/microsim/transportables/MSPModel_Interacting.cpp
 index f204d55..773d59d 100644
 --- a/src/microsim/transportables/MSPModel_Interacting.cpp
