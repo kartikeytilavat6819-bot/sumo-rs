@@ -39,12 +39,25 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 | constants (#define block) | OK | |
 | getParameter | OK | |
 | setParameter | OK | |
-| initDerivedParameters | NOT AUDITED | |
-| wantsChange / _wantsChange and wantsChangeSublane (SL2015 decision path) | NOT AUDITED | |
-| patchSpeed (SL2015) | NOT AUDITED | |
-| informLeader / informFollower / informLeaders / informFollowers (SL2015) | NOT AUDITED | |
-| checkBlocking / checkBlockingVehicles / checkStrategicChange / keepLatGap / mustOvertakeStopped | NOT AUDITED | |
-| computeSpeedLat, getDesiredAlignment, updateSafeLatDist, commitManoeuvre, commitFollowSpeed | NOT AUDITED | |
+| constructor / drop / getModelID / initDerivedParameters | OK | |
+| debugVehicle / setOwnState / updateSafeLatDist | OK | |
+| patchSpeed / _patchSpeed (Rust patch_speed_2) | OK | |
+| inform / msg / changed / resetState | OK | |
+| getSafetyFactor / getOppositeSafetyFactor / prepareStep | OK | |
+| getLateralDrift / getPosLat / computeSublaneShift | OK | |
+| informLeader / informFollower / informLeaders / informFollowers | OK | |
+| _wantsChangeSublane (C++ 1067-2069, Rust wants_change_sublane_2) | OK (helpers it calls audited separately) | |
+| slowDownForBlocked / isBidi / updateExpectedSublaneSpeeds / sublaneEnds / forecastAverageSpeed / computeSpeedGain | OK | |
+| getLongest / tieBrakeLeader / getSlowest / getStopped / hasBidiLeader | OK | |
+| checkBlocking / checkBlockingVehicles / updateCFRelated / overlap / lowest_bit / decideDirection / getLCA | OK | |
+| wantsChangeSublane wrapper (keepLatGap, getLCA, computeSpeedLat calls) | OK | |
+| checkStrategicChange / mustOvertakeStopped / computeGapFactor / keepLatGap / updateGaps / getWidth (+ MIN3/MAX3 from StdDefs.h) | OK | |
+| computeSpeedLat, emergencySpeedLat, getDesiredAlignment, commitManoeuvre, commitFollowSpeed | OK | |
+| getParameter (41 keys, same expressions, same InvalidArgument text) | OK | |
+| setParameter (same keys, PUSHYGAP = 1 - v/minGapLat, initDerivedParameters at end) | OK | |
+| wantsChange, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, saveBlockerLength, outsideEdge | OK | |
+| wantsChangeSublane (definition at C++ 182, not only the pasted comment) | OK | |
+| OPEN (lc03): stress cases sl2015_lat04 / sl2015_lat08 diverge from pristine. First FCD diff: lat04 t=47 m5 angle 90.00 vs 90.01 (x diverges t=48); lat08 t=44 c2 y 3.30 vs 3.90 (0.6 m lateral jump). Cause not isolated (needs instrumented C++ trace). Not fixed. | OPEN | |
 | getLca, overlap, getLowestBit, decideDirection, hasBidiLeader, getLongest/getSlowest/getStopped | NOT AUDITED | |
 | updateExpectedSublaneSpeeds, computeSublaneShift, forecastAverageSpeed, computeSpeedGain | NOT AUDITED | |
 | remaining helpers (getWidth, getSublaneWidth, getPosLat, getLateralDrift, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, isBidi, emergencySpeedLat, saveState/loadState) | NOT AUDITED | |
