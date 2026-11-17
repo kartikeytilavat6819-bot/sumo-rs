@@ -1,0 +1,1 @@
+--osm-files tools/oracle/cases/city_tokyo_lefthand/input.osm --simple-projection --lefthand --osm.stop-output.length 12 --osm.stop-output.length.bus 9

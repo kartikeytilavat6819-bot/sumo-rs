@@ -27,8 +27,10 @@
     result arrives, because its completion is what wakes you. Rerunning it for the same commit reattaches; it never re-queues.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
   * Instrumented C++ traces: build in WSL (~/sumo-<ID>, make -j2, only the target you need) - that is C++, allowed.
-- Do NOT run gates on `main`. Main's numbers: run_all PASS=151 FAIL=5 SKIP=18 (sim FAIL: city_kansas_rural,
-  city_karlsruhe_tram, city_london_lh, city_paris_dense, city_tokyo_lefthand), depart 15/15, unit tests ok.
+- Do NOT run gates on `main`. Main's numbers (262ab8f3 or later): run_all PASS=214 FAIL=4 SKIP=14 (known FAILs, all
+  new cases with owners: peds_crossing PANIC [pd02], routeprobe + bluelight PANIC [rp01], calibrator_multi [ca03]),
+  depart 15/15, unit tests ok. These are NOT your regressions: never investigate them. If you merged main before 6c696d3d and see calibrator
+  FAIL, merge main again. Merge main into your branch often.
   Any other failing row on your branch is a regression you must fix.
 - TraCI harness (tools/oracle/cases/traci_basic/client.py) uses port+i per probe: use the base port given to you.
 - Method: MEASURE first (env-gated trace on both sides, find the first differing quantity), then fix faithfully to the

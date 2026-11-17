@@ -335,10 +335,10 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        // shortcut: pure virtual with no vtable; the subclass installs its compute in myCompute, a router without one still panics, upgrade when routers are trait objects
+        // the subclass installs its override in myCompute (C++ virtual dispatch); a base object without one is a pure virtual call, which aborts in C++
         match self.myCompute {
             Some(compute) => compute(self, from, to, vehicle, msTime, into, silent),
-            None => panic!("shortcut: SUMOAbstractRouter::compute is pure virtual and this router has no compute installed"),
+            None => panic!("pure virtual method called"),
         }
     }
 

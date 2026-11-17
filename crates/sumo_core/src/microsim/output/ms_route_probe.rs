@@ -33,6 +33,16 @@ impl std::ops::DerefMut for MSRouteProbe {
     }
 }
 
+fn ms_route_probe_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSRouteProbe, base2)) as *mut MSRouteProbe).m().notify_enter(veh, reason, enteredLane)
+}
+/// Virtual table of MSRouteProbe (MSMoveReminder override: notifyEnter; notifyMove and notifyLeave are inherited)
+static MS_ROUTE_PROBE_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_route_probe_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
+
 fn ms_route_probe_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
     Ptr::from_mut(d).cast::<MSRouteProbe>().m().write_xml_output(dev, startTime, stopTime)
 }
@@ -74,7 +84,10 @@ impl MSRouteProbe {
     pub fn new(id: &str, edge: Ptr<MSEdge>, distID: &str, lastID: &str, vTypes: &str) -> Box<Self> {
         let mut base = MSDetectorFileOutput::new(id, vTypes, "", 0).unwrap_or_else(|e| panic!("{e}"));
         base.vt = &MS_ROUTE_PROBE_DETECTOR_FILE_OUTPUT_VT;
-        let base2 = MSMoveReminder::new(id, Ptr::null(), true);
+        let base2 = MSMoveReminder {
+            vt: &MS_ROUTE_PROBE_MSMOVE_REMINDER_VT,
+            ..MSMoveReminder::new(id, Ptr::null(), true)
+        };
         let mut b = Box::new(MSRouteProbe {
             base,
             base2,
@@ -84,9 +97,13 @@ impl MSRouteProbe {
             myCurrentRouteDistribution: Ptr::null(),
             myEdge: edge,
         });
-        // C++ registers `this` on each lane of the edge (meso segment branch not ported: meso is off by default)
+        // C++ registers `this` on each meso segment of the edge, or on each lane otherwise
         if crate::microsim::ms_globals::use_meso_sim() {
-            // shortcut: meso branch needs MELoop::getSegmentForEdge(edge) without a position, not ported; meso is off by default
+            let mut seg = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+            while !seg.is_null() {
+                seg.m().add_detector(Ptr::from_mut(&mut b.base2), -1);
+                seg = seg.m().get_next_segment();
+            }
         } else {
             for lane in edge.get_lanes().iter() {
                 lane.m().add_move_reminder(Ptr::from_mut(&mut b.base2), true);
