@@ -171,7 +171,6 @@ impl Simulation {
         // the GUI branch is not compiled into this build (HAVE_LIBSUMOGUI is off)
         Simulation::close("Libsumo issued load command.");
         // C++ try/catch rethrowing ProcessError as TraCIException(e.what()): the errors below unwind with the same text
-        const VERSION_STRING: &str = "v1.28.0-0000000000";
         utils::options::options_cont::with_options(|oc| oc.set_application_name("libsumo", &format!("Eclipse SUMO libsumo {VERSION_STRING}")));
         utils::common::std_defs::set_g_simulation(true);
         utils::xml::xml_sub_sys::init();
