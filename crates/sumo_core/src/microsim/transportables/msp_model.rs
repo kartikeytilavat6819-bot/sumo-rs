@@ -26,6 +26,18 @@ pub struct MSPModelVt {
     pub load_state: fn(&mut MSPModel, Ptr<MSTransportable>, Ptr<MSStageMoving>, &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter>,
     pub has_pedestrians: fn(&mut MSPModel, Ptr<MSLane>) -> bool,
     pub next_blocking: fn(&mut MSPModel, Ptr<MSLane>, f64, f64, f64, f64, bool) -> PersonDist,
+    pub blocked_at_dist: fn(&mut MSPModel, Ptr<SUMOTrafficObject>, Ptr<MSLane>, f64, f64, f64, Ptr<Vec<Ptr<MSPerson>>>) -> bool,
+    pub using_shortcuts: fn(&mut MSPModel) -> bool,
+}
+
+/// C++ MSPModel::blockedAtDist base implementation (returns false)
+pub fn msp_model_default_blocked_at_dist(_m: &mut MSPModel, _ego: Ptr<SUMOTrafficObject>, _lane: Ptr<MSLane>, _vehCenter: f64, _vehWidth: f64, _oncomingGap: f64, _collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
+    false
+}
+
+/// C++ MSPModel::usingShortcuts base implementation (returns false)
+pub fn msp_model_default_using_shortcuts(_m: &mut MSPModel) -> bool {
+    false
 }
 
 /// C++ MSPModel::loadState base implementation (returns nullptr)
@@ -110,7 +122,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn blocked_at_dist(&mut self, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
-        false
+        (self.vt.blocked_at_dist)(self, ego, lane, vehCenter, vehWidth, oncomingGap, collectBlockers)
     }
 
     /// C++: `bool MSPModel::hasPedestrians(const MSLane *)` [virtual]
@@ -155,7 +167,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn using_shortcuts(&mut self) -> bool {
-        false
+        (self.vt.using_shortcuts)(self)
     }
 
     /// C++: `bool MSPModel::usingDoors()` [virtual]
