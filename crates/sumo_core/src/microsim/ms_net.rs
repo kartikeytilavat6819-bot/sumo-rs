@@ -1111,7 +1111,7 @@ impl MSNet {
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().update_signals(self.myStep);
         }
-        // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) is not ported yet
+        // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) only waits for the routing thread pool (device.rerouting.threads > 0), which is not ported; a no-op without it
         if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_EVENTS);
         }
@@ -1152,7 +1152,7 @@ impl MSNet {
         if !self.myContainerControl.is_null() && self.myContainerControl.has_transportables() {
             self.myContainerControl.m().check_waiting(net, self.myStep);
         }
-        // shortcut: processPendingRouting() of person/container controls (HAVE_FOX) is not ported yet
+        // shortcut: processPendingRouting() (HAVE_FOX) only handles person trips queued on the routing thread pool (device.rerouting.threads > 0), which is not ported; a no-op without it
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().reset_wait_relations();
             // preserve waitRelation from insertion for the next step
@@ -3308,7 +3308,7 @@ impl MSNet {
                 let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
                 Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
             } else if routingAlgorithm == "CCH" {
-                // shortcut: CCHRouter over MSCCHGraph is not ported, upgrade with the CCH port
+                // shortcut: needs MSRoutingEngine::ensureCCHGraph / getFreeflowCCHMetric (devices/ms_routing_engine.rs, still panicking stubs), upgrade with them
                 panic!("shortcut: routing algorithm 'CCH' for TraCI and triggers is not ported")
             } else {
                 if routingAlgorithm != "astar" {
@@ -3412,7 +3412,7 @@ impl MSNet {
             let carWalk = utils::options::options_cont::with_options(|oc| SUMOVehicleParserHelper::parse_car_walk_transfer(oc, hasTaxi));
             let routingAlgorithm = get_string("routing-algorithm");
             let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&get_string("persontrip.taxi.waiting-time")).unwrap());
-            // shortcut: FareModul (the effort calculator of ROUTING_MODE_COMBINED) is not ported, so combined routing cannot be built yet
+            // shortcut: FareModul exists (utils/router/fare_modul.rs) but EffortCalculator has no virtual dispatch to it (every method panics as pure virtual), upgrade with that vtable
             let calc: Ptr<EffortCalculator> = if routingMode == 3 { panic!("shortcut: FareModul is not ported, combined intermodal routing is unsupported") } else { Ptr::null() };
             let router = IntermodalRouter::new(MSNet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, routingMode, calc);
             me.myIntermodalRouter.borrow_mut().insert(key, Ptr::from_raw(Box::into_raw(Box::new(router))));
@@ -3645,8 +3645,18 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_map_matcher(&self) -> Ptr<MSMapMatcher> {
-        // shortcut: MSMapMatcher is Unmapped and the route loader's route handler is not ported yet
-        Ptr::null()
+        let loader = self.myRouteLoaders.get_first_loader();
+        if !loader.is_null() {
+            // dynamic_cast<MSMapMatcher*>: every route loader of a simulation holds an MSRouteHandler (NLBuilder::buildRouteLoaderControl);
+            // MapMatcher is its second base, so take the base2 field address, not a plain pointer cast
+            let handler = loader.m().get_route_handler();
+            if handler.is_null() {
+                return Ptr::null();
+            }
+            Ptr::from_mut(&mut handler.cast::<MSRouteHandler>().m().base2)
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `MSTractionSubstation * MSNet::findTractionSubstation(const std::string &)`
@@ -3827,7 +3837,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSNet) -> Self {
-        // shortcut: copy construction of a network is not allowed in C++ either (MSNet(const MSNet&) is private)
+        // MSNet(const MSNet&) is private and never defined: C++ cannot call it either
         panic!("MSNet cannot be copy-constructed");
     }
 
@@ -3836,7 +3846,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSNet) -> &mut MSNet {
-        // shortcut: assignment of a network is not allowed in C++ either (operator= is private)
+        // operator= is private and never defined: C++ cannot call it either
         panic!("MSNet cannot be assigned");
     }
 

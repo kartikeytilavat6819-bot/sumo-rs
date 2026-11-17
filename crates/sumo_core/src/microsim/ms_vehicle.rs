@@ -8406,7 +8406,7 @@ impl MSVehicle {
 
             if stop.duration <= 0 && !stop.pars.join.is_empty() {
                 // join this train (part) to another one
-                // shortcut: dynamic_cast<MSVehicle*> is unchecked, the vehicle control only holds MSVehicle instances here
+                // dynamic_cast<MSVehicle*>: in a microsim run the vehicle control only holds MSVehicles, so the cast is exact (null stays null)
                 let joinVeh: Ptr<MSVehicle> = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.join).cast::<MSVehicle>();
                 if !joinVeh.is_null() && joinVeh.has_departed() && (joinVeh.m().join_train_part(me) || joinVeh.m().join_train_part_front(me)) {
                     stop.m().joinTriggered = false;
@@ -8633,7 +8633,7 @@ impl MSVehicle {
                     }
                     if stop.pars.split != "" {
                         // split the train
-                        // shortcut: dynamic_cast<MSVehicle*> is unchecked, the vehicle control only holds MSVehicle instances here
+                        // dynamic_cast<MSVehicle*>: in a microsim run the vehicle control only holds MSVehicles, so the cast is exact (null stays null)
                         let splitVeh: Ptr<MSVehicle> = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.split).cast::<MSVehicle>();
                         if splitVeh.is_null() {
                             utils::common::msg_handler::write_warning(&format!("Vehicle '{}' to split from vehicle '{}' is not known. time={}.", stop.pars.split, self.get_id(), time2string(MSNet::get_instance().get_current_time_step())));
