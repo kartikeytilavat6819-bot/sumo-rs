@@ -4,7 +4,7 @@ set -u
 C=tools/oracle/cases/city_german_level_crossing
 O=/tmp/rx01; rm -rf $O; mkdir -p $O
 CPP=$(bash tools/gcloud/vm_cpp_trace.sh rx01 tools/kaggle/rx01_cpp.patch 2>$O/cppbuild.log | tail -1)
-echo "cpp bin: $CPP build-errors: $(grep -c -i error $O/cppbuild.log)"
+echo "cpp bin: $CPP build-errors: $(grep -c -i error $O/cppbuild.log)"; head -c 1500 $O/cppbuild.log
 run() {
   RX01=1 $1 -n $C/ref_simple.net.xml -r $C/routes.rou --tripinfo-output $O/$2.ti.xml --fcd-output $O/$2.fcd.xml \
      --statistic-output $O/$2.stat.xml --no-step-log true --end 600 > $O/$2.log 2> $O/$2.trace
