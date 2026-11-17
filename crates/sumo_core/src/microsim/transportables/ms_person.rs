@@ -341,8 +341,7 @@ impl MSPerson {
                     let endP = prevStop.get_lane().geometry_position_at_offset(arrivalAtBs, 0.);
                     MSPerson_MSPersonStage_Access::new(stopEdge, prevStop, arrivalAtBs, 0.0, access.length, false, &startP, &endP)
                 } else {
-                    // shortcut: MSTransportableControl::getMovementModel is not ported, so usingDoors() is assumed false here
-                    let usingDoors = false;
+                    let usingDoors = MSNet::get_instance().m().get_person_control().get_movement_model().m().using_doors();
                     let useDoors = access.exit == MSStoppingPlace_AccessExit::DOORS || (!usingDoors && access.exit == MSStoppingPlace_AccessExit::CARRIAGE);
                     if access.exit == MSStoppingPlace_AccessExit::CARRIAGE {
                         let startPos = if prior.get_stage_type() == MSStageType::TRIP { prior.get_edge_pos(0) } else { prior.get_arrival_pos() };
@@ -704,7 +703,7 @@ impl MSPerson_MSPersonStage_Access {
         let cmd = MSPersonStage_Access_ProceedCmd::new(person, edge);
         let cmdPtr: Ptr<dyn Command> = Ptr::from_mut(Box::leak(Box::new(cmd)) as &mut dyn Command);
         net.myBeginOfTimestepEvents.m().add_event(cmdPtr, self.myEstimatedArrival);
-        // shortcut: MSTransportableControl::startedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().started_access();
         edge.add_transportable(person);
         true
     }
@@ -849,7 +848,7 @@ impl MSPerson_MSPersonStage_Access {
         let cmd = MSPersonStage_Access_ProceedCmd::new(person, edge);
         let cmdPtr: Ptr<dyn Command> = Ptr::from_mut(Box::leak(Box::new(cmd)) as &mut dyn Command);
         net.myBeginOfTimestepEvents.m().add_event(cmdPtr, self.myEstimatedArrival);
-        // shortcut: MSTransportableControl::startedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().started_access();
         edge.add_transportable(person);
     }
 
@@ -903,7 +902,7 @@ impl MSPersonStage_Access_ProceedCmd {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        // shortcut: MSTransportableControl::endedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().ended_access();
         self.myStopEdge.remove_transportable(self.myPerson);
         if !self.myPerson.m().proceed(MSNet::get_instance(), currentTime, false) {
             MSNet::get_instance().m().get_person_control().erase(self.myPerson);

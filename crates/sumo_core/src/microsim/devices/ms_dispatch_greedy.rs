@@ -28,6 +28,26 @@ impl std::ops::DerefMut for MSDispatch_Greedy {
     }
 }
 
+fn greedy_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    // SAFETY: installed only by MSDispatch_Greedy::new, so d is the base of an MSDispatch_Greedy (repr(C), base first)
+    let g = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_Greedy) };
+    g.compute_dispatch(now, fleet);
+}
+
+pub(crate) const MS_DISPATCH_GREEDY_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: greedy_compute_dispatch,
+};
+
+fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    // SAFETY: installed only by MSDispatch_GreedyClosest::new, so d is the base of an MSDispatch_GreedyClosest (repr(C), base first)
+    let g = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_GreedyClosest) };
+    g.compute_dispatch(now, fleet);
+}
+
+pub(crate) const MS_DISPATCH_GREEDY_CLOSEST_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: greedy_closest_compute_dispatch,
+};
+
 impl MSDispatch_Greedy {
     /// C++: `void MSDispatch_Greedy::MSDispatch_Greedy(const Parameterised::Map &)`
     // MSDispatch_Greedy(const Parameterised::Map& params) :
@@ -38,7 +58,8 @@ impl MSDispatch_Greedy {
     //     { }
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        let base = MSDispatch::new(params);
+        let mut base = MSDispatch::new(params);
+        base.vt = &MS_DISPATCH_GREEDY_VT;
         let myMaximumWaitingTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("maxWaitingTime", "300")).unwrap() as f64);
         let myRecheckTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckTime", "120")).unwrap() as f64);
         let myRecheckSafety = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckSafety", "3600")).unwrap() as f64);
@@ -309,9 +330,9 @@ impl MSDispatch_GreedyClosest {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        MSDispatch_GreedyClosest {
-            base: MSDispatch_Greedy::new(params),
-        }
+        let mut base = MSDispatch_Greedy::new(params);
+        base.base.vt = &MS_DISPATCH_GREEDY_CLOSEST_VT;
+        MSDispatch_GreedyClosest { base }
     }
 
     /// C++: `void MSDispatch_GreedyClosest::computeDispatch(SUMOTime, const std::vector<MSDevice_Taxi *> &)` [virtual]

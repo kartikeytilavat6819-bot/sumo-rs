@@ -420,30 +420,29 @@ impl MSDevice_Battery {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
-            to_string(&self.get_actual_battery_capacity())
+            Ok(to_string(&self.get_actual_battery_capacity()))
         } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
-            to_string(&self.get_consum())
+            Ok(to_string(&self.get_consum()))
         } else if key == "chargePower" {
-            to_string(&(self.get_energy_charged() * 3600.))
+            Ok(to_string(&(self.get_energy_charged() * 3600.)))
         } else if key == "usedAverage" {
-            to_string(&(self.get_total_consumption() * 3600. / steps2time(MSNet::get_instance().get_current_time_step() - self.get_holder().get_departure())))
+            Ok(to_string(&(self.get_total_consumption() * 3600. / steps2time(MSNet::get_instance().get_current_time_step() - self.get_holder().get_departure()))))
         } else if key == attr_str(SUMO_ATTR_TOTALENERGYCONSUMED) {
-            to_string(&self.get_total_consumption())
+            Ok(to_string(&self.get_total_consumption()))
         } else if key == attr_str(SUMO_ATTR_TOTALENERGYREGENERATED) {
-            to_string(&self.get_total_regenerated())
+            Ok(to_string(&self.get_total_regenerated()))
         } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
-            to_string(&self.get_energy_charged())
+            Ok(to_string(&self.get_energy_charged()))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) || key == "capacity" {
-            to_string(&self.get_maximum_battery_capacity())
+            Ok(to_string(&self.get_maximum_battery_capacity()))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
-            to_string(&self.get_maximum_charge_rate())
+            Ok(to_string(&self.get_maximum_charge_rate()))
         } else if key == attr_str(SUMO_ATTR_CHARGINGSTATIONID) {
-            self.get_charging_station_id()
+            Ok(self.get_charging_station_id())
         } else {
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -468,10 +467,10 @@ impl MSDevice_Battery {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
             self.set_actual_battery_capacity(doubleValue);
@@ -480,8 +479,9 @@ impl MSDevice_Battery {
         } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
             self.set_maximum_charge_rate(doubleValue);
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Battery::notifyParking()` [virtual]
