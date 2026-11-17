@@ -33,7 +33,9 @@ for n in rerouter_parking containers; do
   if [ "$n" = containers ]; then
     echo "-- ref stops:"; stops $C/ref.fcd.xml
     echo "-- ours stops:"; stops $OUT/$n.ours.fcd.xml
+    echo "-- RC01 trace:"; grep RC01 $OUT/$n.ours.log | head -60
     grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
   fi
+  echo "-- v2 ref/ours:"; grep 'id="v2"' $C/ref.tripinfo.xml | cut -c1-260; grep 'id="v2"' $OUT/$n.ours.ti.xml | cut -c1-260
   python tools/oracle/compare_sim.py --tripinfo $C/ref.tripinfo.xml $OUT/$n.ours.ti.xml 2>&1 | head -6
 done
