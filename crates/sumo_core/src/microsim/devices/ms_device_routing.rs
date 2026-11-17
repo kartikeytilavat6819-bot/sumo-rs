@@ -413,8 +413,19 @@ impl MSDevice_Routing {
             // build repetition trigger if routing shall be done more often
             self.rebuild_reroute_command(now + self.myPeriod);
         }
-        // shortcut: MSGlobals::gWeightsSeparateTurns is not ported and is treated as 0, so junction travel-time recording is skipped; upgrade when MSGlobals is ported
-        false
+        if MSGlobals::weights_separate_turns() > 0. && !enteredLane.is_null() {
+            if reason == MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
+                let t = MSNet::get_instance().m().get_current_time_step();
+                if self.myLastLaneEntryTime >= 0 && enteredLane.m().is_internal() {
+                    // record travel time on the previous edge but store on the internal ledge
+                    MSRoutingEngine::add_edge_travel_time(&enteredLane.m().get_edge(), t - self.myLastLaneEntryTime);
+                }
+                self.myLastLaneEntryTime = t;
+            }
+            true
+        } else {
+            false
+        }
     }
 
     /// C++: `void MSDevice_Routing::notifyStopEnded()` [virtual]

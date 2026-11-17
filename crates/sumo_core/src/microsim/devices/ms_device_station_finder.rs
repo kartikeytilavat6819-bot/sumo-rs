@@ -1196,8 +1196,7 @@ impl MSDevice_StationFinder {
         let holderPtr = self.myHolder;
         let stoppingPlaceMemory = time2steps(self.base2.get_weight(holderPtr.m(), "memory".to_string(), 600., true));
         let now = MSNet::get_instance().m().get_current_time_step();
-                // shortcut: MSNet::get_stopping_places returns an unmapped container, so no candidates are collected until it is ported
-        let stopping_places: Vec<Ptr<MSStoppingPlace>> = Vec::new();
+        let stopping_places: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().m().get_stopping_places(SUMO_TAG_CHARGING_STATION).values().copied().collect();
         for cs in stopping_places.iter() {
             let cs = as_charging_station(*cs);
             if cs.get_efficency() < utils::geom::NUMERICAL_EPS || cs.get_charging_power(false) < utils::geom::NUMERICAL_EPS {
