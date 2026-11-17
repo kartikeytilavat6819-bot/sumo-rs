@@ -7,9 +7,19 @@ fn jdump(st: &str, ec: &NBEdgeCont) {
     if std::env::var_os("NC_JTRACE").is_none() {
         return;
     }
+    let mut shapePrinted = false;
     for e in ec.myEdges.values().copied() {
         if !e.m().get_from_node().m().get_id().contains("#29more") && !e.m().get_to_node().m().get_id().contains("#29more") && !e.m().get_id().contains("27202251") {
             continue;
+        }
+        if !shapePrinted && e.m().get_to_node().m().get_id().contains("#29more") {
+            shapePrinted = true;
+            let tn = e.m().get_to_node();
+            let mut pts = String::new();
+            for p in tn.m().get_shape().iter() {
+                pts += &format!(" {:.6},{:.6}", p.x(), p.y());
+            }
+            eprintln!("JTRACE st {} nodeshape {} pts{}", st, tn.m().get_id(), pts);
         }
         let mut s = format!("JTRACE st {} e {} {}>{}", st, e.m().get_id(), e.m().get_from_node().m().get_id(), e.m().get_to_node().m().get_id());
         let l0 = e.m().get_lane_shape(0);

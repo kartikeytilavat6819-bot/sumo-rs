@@ -73,7 +73,7 @@ index 03cb4fa..7b1ab11 100644
      }
      myStep = EdgeBuildingStep::EDGE2EDGES;
 diff --git a/src/netbuild/NBNetBuilder.cpp b/src/netbuild/NBNetBuilder.cpp
-index dc52035..96a47ba 100644
+index dc52035..4a53a86 100644
 --- a/src/netbuild/NBNetBuilder.cpp
 +++ b/src/netbuild/NBNetBuilder.cpp
 @@ -23,6 +23,7 @@
@@ -84,7 +84,7 @@ index dc52035..96a47ba 100644
  
  #include <string>
  #include <fstream>
-@@ -75,6 +76,24 @@ NBNetBuilder::applyOptions(OptionsCont& oc) {
+@@ -75,6 +76,33 @@ NBNetBuilder::applyOptions(OptionsCont& oc) {
  }
  
  
@@ -93,9 +93,18 @@ index dc52035..96a47ba 100644
 +    if (getenv("NC_JTRACE") == nullptr) {
 +        return;
 +    }
++    bool shapePrinted = false;
 +    for (NBEdge* e : ec.getAllEdges()) {
 +        if (e->getFromNode()->getID().find("#29more") == std::string::npos && e->getToNode()->getID().find("#29more") == std::string::npos && e->getID().find("27202251") == std::string::npos) {
 +            continue;
++        }
++        if (!shapePrinted && e->getToNode()->getID().find("#29more") != std::string::npos) {
++            shapePrinted = true;
++            std::cerr << std::fixed << std::setprecision(6) << "JTRACE st " << st << " nodeshape " << e->getToNode()->getID() << " pts";
++            for (const Position& p : e->getToNode()->getShape()) {
++                std::cerr << " " << p.x() << "," << p.y();
++            }
++            std::cerr << "\n";
 +        }
 +        std::cerr << "JTRACE st " << st << " e " << e->getID() << " " << e->getFromNode()->getID() << ">" << e->getToNode()->getID();
 +        std::cerr << std::fixed << std::setprecision(6) << " L0=" << e->getLaneShape(0).front().x() << "," << e->getLaneShape(0).front().y() << ">" << e->getLaneShape(0).back().x() << "," << e->getLaneShape(0).back().y();
@@ -109,7 +118,7 @@ index dc52035..96a47ba 100644
  void
  NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurnarounds, bool mayAddOrRemove) {
      GeoConvHelper& geoConvHelper = GeoConvHelper::getProcessing();
-@@ -255,6 +274,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -255,6 +283,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
      if (mayAddOrRemove && oc.getBool("junctions.join")) {
          before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Joining junction clusters"));
          numJoined += myNodeCont.joinJunctions(oc.getFloat("junctions.join-dist"), myDistrictCont, myEdgeCont, myTLLCont, myPTStopCont);
@@ -117,7 +126,7 @@ index dc52035..96a47ba 100644
          PROGRESS_TIME_MESSAGE(before);
      }
      if (numJoined > 0) {
-@@ -367,6 +387,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -367,6 +396,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
          }
      }
      myNodeCont.guessTLs(oc, myTLLCont);
@@ -125,7 +134,7 @@ index dc52035..96a47ba 100644
      PROGRESS_TIME_MESSAGE(before);
  
      // guess ramps (after guessing tls because ramps should not be build at traffic lights)
-@@ -447,9 +468,11 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -447,9 +477,11 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
      }
      PROGRESS_TIME_MESSAGE(before);
      //
@@ -137,7 +146,7 @@ index dc52035..96a47ba 100644
      // resort edges based on the node and edge shapes
      NBNodesEdgesSorter::sortNodesEdges(myNodeCont, true);
      NBTurningDirectionsComputer::computeTurnDirections(myNodeCont, false);
-@@ -518,7 +541,9 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -518,7 +550,9 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
      PROGRESS_TIME_MESSAGE(before);
      //
      before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Computing approached edges"));
@@ -147,7 +156,7 @@ index dc52035..96a47ba 100644
      PROGRESS_TIME_MESSAGE(before);
      //
      if (oc.getBool("roundabouts.guess")) {
-@@ -538,6 +563,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -538,6 +572,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
      before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Dividing of lanes on approached lanes"));
      myNodeCont.computeLanes2Lanes();
      myEdgeCont.sortOutgoingLanesConnections();
@@ -155,7 +164,7 @@ index dc52035..96a47ba 100644
      PROGRESS_TIME_MESSAGE(before);
      //
      if (oc.getBool("fringe.guess")) {
-@@ -569,6 +595,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+@@ -569,6 +604,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
      //
      before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Rechecking of lane endings"));
      myEdgeCont.recheckLanes();
