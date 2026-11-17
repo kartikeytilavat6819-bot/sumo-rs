@@ -171,6 +171,7 @@ use crate::prelude::*;
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
     // initialise the loader
+    eprintln!("DBGDU all_edges={} net_edges={} net_nodes_edgemap={}", ROEdge::get_all_edges().len(), net.get_edge_number(), net.get_edge_map().len());
     loader.open_routes(net);
     // build the router
     let measure = oc.get_string("weight-attribute").unwrap();
