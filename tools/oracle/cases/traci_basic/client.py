@@ -718,6 +718,7 @@ def probes(lane, tl_id):
     }
     base.update(domain_probes(lane, edge, tl, run_n, summary))
     base.update(infra_probes(run_n))
+    base.update(h06_probes(lane, edge, tl, run_n, summary))
     return base
 
 
@@ -1139,6 +1140,188 @@ def infra_probes(run_n):
     return P
 
 
+def h06_probes(lane, edge, tl, run_n, summary):
+    """Probes for domains and error paths not covered above (agent h06). Labels start with 'h06 ', so
+    --filter "h06 " selects them. 'h06 infra' rows load infra.add.xml; 'h06 tl' rows need the signal case.
+    A DIFF on an h06 row is reported as a NEW-PROBE mismatch and does not fail the run (see main)."""
+    E1, E2, E3 = "-103224#1", "-103224#2", "-103224#3"
+    L1, L2 = "-103224#1_0", "-103224#2_0"
+    VCTX = tc.CMD_GET_VEHICLE_VARIABLE
+    P = {}
+
+    def add(label, fn):
+        P["h06 " + label] = fn
+
+    def stops(t):
+        last = t.vehicle.getRoute("v0")[-1]
+        t.vehicle.setStop("v0", last, pos=10.0)
+        t.vehicle.setStop("v0", last, pos=20.0)
+        return last
+
+    def xy(t):
+        return t.vehicle.getPosition("v0")
+
+    def person(t):
+        t.person.add("p0", E1, 5.0)
+        t.person.appendWalkingStage("p0", [E1, E2], 20.0)
+        run_n(t, 1)
+
+    def ctx(t, flt, dist=500.0, var=tc.VAR_SPEED, steps=3):
+        flt(t)
+        t.vehicle.subscribeContext("v0", VCTX, dist, [var])
+        run_n(t, steps)
+        return t.vehicle.getContextSubscriptionResults("v0")
+
+    # simulation
+    add("sim.findRoute(E1,E3) edges/length/travelTime/cost",
+        lambda t: (lambda r: (r.edges, r.length, r.travelTime, r.cost))(t.simulation.findRoute(E1, E3)))
+    add("sim.findRoute(E1,E3,DEFAULT,departPos=5,arrivalPos=10)",
+        lambda t: t.simulation.findRoute(E1, E3, vType="DEFAULT_VEHTYPE", departPos=5.0, arrivalPos=10.0).edges)
+    add("sim.findRoute(E1,E3,vType=nope)", lambda t: t.simulation.findRoute(E1, E3, vType="nope").edges)
+    add("sim.findRoute(E1,nope)", lambda t: t.simulation.findRoute(E1, "nope").edges)
+    add("sim.findIntermodalRoute(E1,E3) stages", lambda t: [vars(s) for s in t.simulation.findIntermodalRoute(E1, E3)])
+    add("sim.findIntermodalRoute(E1,nope)", lambda t: t.simulation.findIntermodalRoute(E1, "nope"))
+    add("sim.getDistanceRoad(E1,5,E3,5,driving)", lambda t: t.simulation.getDistanceRoad(E1, 5.0, E3, 5.0, True))
+    add("sim.getDistanceRoad(E1,5,E3,5,not driving)", lambda t: t.simulation.getDistanceRoad(E1, 5.0, E3, 5.0, False))
+    add("sim.getDistanceRoad(E1,5,nope,5)", lambda t: t.simulation.getDistanceRoad(E1, 5.0, "nope", 5.0, True))
+    add("sim.getDistanceRoad(E1,999,E3,5)", lambda t: t.simulation.getDistanceRoad(E1, 999.0, E3, 5.0, True))
+    add("sim.convertGeo(v0 x,y)", lambda t: (run_n(t, 10), t.simulation.convertGeo(*xy(t)))[1])
+    add("sim.convertGeo(8,49,fromGeo)", lambda t: t.simulation.convertGeo(8.0, 49.0, fromGeo=True))
+    add("sim.convertRoad(1e6,1e6)", lambda t: t.simulation.convertRoad(1e6, 1e6))
+    add("sim.convertRoad(v0 x,y,vClass=nope)", lambda t: t.simulation.convertRoad(*xy(t), vClass="nope"))
+    add("sim.convert3D(E1,5)", lambda t: t.simulation.convert3D(E1, 5.0))
+    add("sim.getOption(step-length)", lambda t: t.simulation.getOption("step-length"))
+    add("sim.subscribe([0x01]) + step + results",
+        lambda t: (t.simulation.subscribe([0x01]), run_n(t, 1), t.simulation.getSubscriptionResults())[2])
+
+    # vehicle
+    add("vehicle.setStop x2 + getStops(v0)", lambda t: (stops(t), t.vehicle.getStops("v0"))[1])
+    add("vehicle.getStops(nope)", lambda t: t.vehicle.getStops("nope"))
+    add("vehicle.setStop(v0, nope edge)", lambda t: t.vehicle.setStop("v0", "nope", pos=10.0))
+    add("vehicle.getStopParameter(v0,0,actType) after stops",
+        lambda t: (stops(t), t.vehicle.getStopParameter("v0", 0, "actType"))[1])
+    add("vehicle.setStopParameter(v0,0,actType,x) + get",
+        lambda t: (stops(t), t.vehicle.setStopParameter("v0", 0, "actType", "x"), t.vehicle.getStopParameter("v0", 0, "actType"))[2])
+    add("vehicle.getFollower(v0,100)", lambda t: t.vehicle.getFollower("v0", 100.0))
+    add("vehicle.getNeighbors(v0,0)", lambda t: t.vehicle.getNeighbors("v0", 0))
+    add("vehicle.getFollowSpeed(v0,5,20,5,4)", lambda t: t.vehicle.getFollowSpeed("v0", 5.0, 20.0, 5.0, 4.0))
+    add("vehicle.getDrivingDistance(v0,E3,5)", lambda t: t.vehicle.getDrivingDistance("v0", E3, 5.0))
+    add("vehicle.rerouteEffort(v0) + getRoute", lambda t: (t.vehicle.rerouteEffort("v0"), t.vehicle.getRoute("v0"))[1])
+    add("vehicle.openGap(v0,2,2,5,1) + step + getSpeed",
+        lambda t: (t.vehicle.openGap("v0", 2.0, 2.0, 5.0, 1.0), run_n(t, 1), t.vehicle.getSpeed("v0"))[2])
+    add("vehicle.changeLaneRelative(v0,1,5) + step + getLaneIndex",
+        lambda t: (t.vehicle.changeLaneRelative("v0", 1, 5.0), run_n(t, 1), t.vehicle.getLaneIndex("v0"))[2])
+    add("vehicle.setVia(v0,[E3]) + getVia", lambda t: (t.vehicle.setVia("v0", [E3]), t.vehicle.getVia("v0"))[1])
+    add("vehicle.subscribeLeader(v0,100) + step + results",
+        lambda t: (t.vehicle.subscribeLeader("v0", 100.0), run_n(t, 1), t.vehicle.getSubscriptionResults("v0"))[2])
+    add("vehicle.setRoute(v0,[nope])", lambda t: t.vehicle.setRoute("v0", ["nope"]))
+    add("vehicle.setRoute(v0,[])", lambda t: t.vehicle.setRoute("v0", []))
+    add("vehicle.changeTarget(v0,nope)", lambda t: t.vehicle.changeTarget("v0", "nope"))
+    add("vehicle.changeTarget(nope,E3)", lambda t: t.vehicle.changeTarget("nope", E3))
+    add("vehicle.add(vx,r0,typeID=nope)", lambda t: t.vehicle.add("vx", "r0", typeID="nope"))
+    add("vehicle.add(vx,r0,departLane=9)", lambda t: t.vehicle.add("vx", "r0", departLane=9))
+    add("vehicle.setSpeedMode(nope,0)", lambda t: t.vehicle.setSpeedMode("nope", 0))
+    add("vehicle.getLaneIndex(nope)", lambda t: t.vehicle.getLaneIndex("nope"))
+    add("vehicle.getRoute(nope)", lambda t: t.vehicle.getRoute("nope"))
+    for name in ["getCO2Emission", "getFuelConsumption"]:
+        add(f"vehicle.{name}(v0) after 10 steps", (lambda n: lambda t: getattr(t.vehicle, n)("v0"))(name))
+    add("vehicle.subscribe(v0,[0xFF]) + step + results",
+        lambda t: (t.vehicle.subscribe("v0", [0xFF]), run_n(t, 1), t.vehicle.getSubscriptionResults("v0"))[2])
+    add("vehicle.subscribe then unsubscribe + step + results",
+        lambda t: (t.vehicle.subscribe("v0", [tc.VAR_SPEED]), run_n(t, 1), t.vehicle.unsubscribe("v0"), run_n(t, 1),
+                   t.vehicle.getSubscriptionResults("v0"))[4])
+    add("vehicle.subscribeContext(v0, lane domain) + step",
+        lambda t: (t.vehicle.subscribeContext("v0", tc.CMD_GET_LANE_VARIABLE, 100.0, [tc.VAR_SPEED]), run_n(t, 1),
+                   t.vehicle.getContextSubscriptionResults("v0"))[2])
+    add("vehicle.subscribeContext+FOV(90) + 3 steps",
+        lambda t: ctx(t, lambda u: u.vehicle.addSubscriptionFilterFieldOfVision(90.0)))
+    add("vehicle.subscribeContext+LATERAL(3) + 3 steps",
+        lambda t: ctx(t, lambda u: u.vehicle.addSubscriptionFilterLateralDistance(3.0)))
+    add("vehicle.subscribeContext+LCMANEUVER(dir 1) + 3 steps",
+        lambda t: ctx(t, lambda u: u.vehicle.addSubscriptionFilterLCManeuver(direction=1)))
+    add("vehicle.subscribeContext+VCLASS(nope) + 3 steps",
+        lambda t: ctx(t, lambda u: u.vehicle.addSubscriptionFilterVClass(["nope"])))
+    add("edge.subscribeContext(E1, vehicle, 100) + 3 steps",
+        lambda t: (t.edge.subscribeContext(E1, VCTX, 100.0, [tc.VAR_SPEED]), run_n(t, 3), t.edge.getContextSubscriptionResults(E1))[2])
+    add("route.subscribe(r0, edges) + step",
+        lambda t: (t.route.subscribe("r0", [tc.VAR_EDGES]), run_n(t, 1), t.route.getSubscriptionResults("r0"))[2])
+    add("junction.subscribe(first, position) + step",
+        lambda t: (t.junction.subscribe(t.junction.getIDList()[0], [tc.VAR_POSITION]), run_n(t, 1),
+                   t.junction.getSubscriptionResults(t.junction.getIDList()[0]))[2])
+
+    # raw access: wrong variable for the domain, unknown variable id, string sent for a double
+    add("lane._getUniversal(VAR_SPEED, L1) wrong variable", lambda t: t.lane._getUniversal(tc.VAR_SPEED, L1))
+    add("junction._getUniversal(VAR_SPEED, first) wrong variable",
+        lambda t: t.junction._getUniversal(tc.VAR_SPEED, t.junction.getIDList()[0]))
+    add("vehicle._getUniversal(0x7e, v0) unknown variable", lambda t: t.vehicle._getUniversal(0x7e, "v0"))
+    add("vehicle._setCmd(MAXSPEED, v0, string 'fast') + step",
+        lambda t: (t.vehicle._setCmd(tc.VAR_MAXSPEED, "v0", "s", "fast"), run_n(t, 1), t.vehicle.getSpeed("v0"))[2])
+
+    # junction, route
+    add("junction.getIDList()", lambda t: t.junction.getIDList())
+    add("junction.getIDCount()", lambda t: t.junction.getIDCount())
+    add("junction.getShape(nope)", lambda t: t.junction.getShape("nope"))
+    add("junction.getIncomingEdges(nope)", lambda t: t.junction.getIncomingEdges("nope"))
+    add("route.add(r0 duplicate)", lambda t: t.route.add("r0", [E1]))
+    add("route.add(rx, [nope])", lambda t: t.route.add("rx", ["nope"]))
+    add("route.remove(nope)", lambda t: t.route.remove("nope"))
+
+    # lane and edge setters (validation and effect)
+    add("lane.setAllowed(L1,[nope])", lambda t: t.lane.setAllowed(L1, ["nope"]))
+    add("lane.setDisallowed(L1,[nope])", lambda t: t.lane.setDisallowed(L1, ["nope"]))
+    add("lane.setMaxSpeed(L1,-1)", lambda t: t.lane.setMaxSpeed(L1, -1.0))
+    add("edge.setMaxSpeed(E1,-1)", lambda t: t.edge.setMaxSpeed(E1, -1.0))
+    add("edge.setDisallowed(E1,[nope])", lambda t: t.edge.setDisallowed(E1, ["nope"]))
+    add("lane.setChangePermissions(L1,[passenger],2)+get",
+        lambda t: (t.lane.setChangePermissions(L1, ["passenger"], 2), t.lane.getChangePermissions(L1, 2))[1])
+    add("lane.getFoes(L1,L2)", lambda t: t.lane.getFoes(L1, L2))
+    add("edge.getStreetName(nope)", lambda t: t.edge.getStreetName("nope"))
+    add("edge.getAdaptedTraveltime(nope,0)", lambda t: t.edge.getAdaptedTraveltime("nope", 0.0))
+
+    # poi and polygon
+    add("poi.add(p1) twice", lambda t: (t.poi.add("p1", 1.0, 2.0), t.poi.add("p1", 3.0, 4.0)))
+    add("polygon.add(pg1) twice", lambda t: (t.polygon.add("pg1", [(0.0, 0.0), (1.0, 0.0)], (1, 2, 3, 255)),
+                                             t.polygon.add("pg1", [(0.0, 0.0), (1.0, 0.0)], (1, 2, 3, 255))))
+    add("polygon.add(pg2, one point)", lambda t: t.polygon.add("pg2", [(0.0, 0.0)], (1, 2, 3, 255)))
+
+    # infrastructure from infra.add.xml (label 'h06 infra')
+    add("infra routeprobe.getIDList()", lambda t: (run_n(t, 5), t.routeprobe.getIDList())[1])
+    add("infra calibrator.setFlow(cal0, vType nope)",
+        lambda t: t.calibrator.setFlow("cal0", 0.0, 1000.0, 120.0, 10.0, "nope", "r0"))
+    add("infra busstop.getIDList()", lambda t: t.busstop.getIDList())
+    add("infra simulation.getBusStopWaiting(bs0) after 5 steps", lambda t: (run_n(t, 5), t.simulation.getBusStopWaiting("bs0"))[1])
+    add("infra simulation.getBusStopWaiting(nope)", lambda t: t.simulation.getBusStopWaiting("nope"))
+    add("infra parkingarea.getAcceptedBadges(nope)", lambda t: t.parkingarea.getAcceptedBadges("nope"))
+    add("infra chargingstation.setChargingPower(nope,1)", lambda t: t.chargingstation.setChargingPower("nope", 1.0))
+    add("infra inductionloop.getIDList()", lambda t: t.inductionloop.getIDList())
+    add("infra vehicle.setBusStop(v0,bs0,duration=5) + getStops",
+        lambda t: (t.vehicle.setBusStop("v0", "bs0", duration=5.0), run_n(t, 1), t.vehicle.getStops("v0"))[2])
+    add("infra vehicle.rerouteParkingArea(v0,pa0)", lambda t: (t.vehicle.rerouteParkingArea("v0", "pa0"), t.vehicle.getRoute("v0"))[1])
+    add("infra person.getStage(p0,0) after walk", lambda t: (person(t), t.person.getStage("p0", 0))[1])
+    add("infra person.getStage(p0,5) after walk", lambda t: (person(t), t.person.getStage("p0", 5))[1])
+    add("infra person.getStage(nope)", lambda t: t.person.getStage("nope"))
+    add("infra person.appendWalkingStage(p0,[nope],5)",
+        lambda t: (t.person.add("p0", E1, 5.0), t.person.appendWalkingStage("p0", ["nope"], 5.0)))
+    add("infra person.rerouteTraveltime(p0) after walk",
+        lambda t: (person(t), t.person.rerouteTraveltime("p0"), t.person.getEdges("p0"))[2])
+    add("infra person.moveTo(p0,nope,0)", lambda t: (person(t), t.person.moveTo("p0", "nope", 0.0)))
+
+    # traffic light (signal case only: label 'h06 tl')
+    add("tl.setPhaseName(tl,x) + getPhaseName",
+        lambda t: (t.trafficlight.setPhaseName(tl, "x"), t.trafficlight.getPhaseName(tl))[1])
+    add("tl.getBlockingVehicles(tl,0) after 3 steps", lambda t: (run_n(t, 3), t.trafficlight.getBlockingVehicles(tl, 0))[1])
+    add("tl.getPriorityVehicles(tl,0) after 3 steps", lambda t: (run_n(t, 3), t.trafficlight.getPriorityVehicles(tl, 0))[1])
+    add("tl.getConstraints(tl)", lambda t: t.trafficlight.getConstraints(tl))
+    add("tl.setPhaseDuration(nope,5)", lambda t: t.trafficlight.setPhaseDuration("nope", 5.0))
+    add("tl.setLinkState(nope,0,G)", lambda t: t.trafficlight.setLinkState("nope", 0, "G"))
+    add("tl.setNemaCycleLength(tl,90) (not NEMA)", lambda t: t.trafficlight.setNemaCycleLength(tl, 90.0))
+    add("tl.getNemaPhaseCalls(tl) (not NEMA)", lambda t: t.trafficlight.getNemaPhaseCalls(tl))
+    add("tl.subscribe(tl, redYellowGreenState) + step",
+        lambda t: (t.trafficlight.subscribe(tl, [tc.TL_RED_YELLOW_GREEN_STATE]), run_n(t, 1),
+                   t.trafficlight.getSubscriptionResults(tl))[2])
+    return P
+
+
 def run_probe(side, port, net, rou, ours, fn, extra=()):
     """One fresh server for one probe. Returns {"type", "value"}."""
     log = Path(os.environ.get("TEMP", ".")) / f"traci_{side}_{net.parent.name}.log"
@@ -1189,7 +1372,7 @@ def run_side(side, port, ours, case, flt=(), skip=()):
     for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
         extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
-        if label.startswith("infra "):
+        if label.startswith(("infra ", "h06 infra ")):
             infra = str(CASE / "infra.add.xml")
             extra = ("--additional-files", wsl_path(infra) if side == "cpp" and not PRISTINE_BIN else infra)
         out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
@@ -1220,6 +1403,8 @@ def main():
         return 0
 
     total = bad_total = 0
+    new_total = 0
+    new_bad = []  # h06 probes (agent h06): a mismatch is a finding, listed below, and does not fail the run
     for case in ([a.case] if a.case != "all" else sorted(CASE_PARAMS)):
         cpp = run_side("cpp", a.port, a.ours, case, flt, skip)
         ours = run_side("ours", a.port, a.ours, case, flt, skip)
@@ -1228,12 +1413,23 @@ def main():
         for label in cpp:
             c, o = cpp[label], ours[label]
             same = c == o
-            bad += not same
-            print(f"{label:<42} {(c['type'] + ' ' + c['value'])[:38]:<38} {(o['type'] + ' ' + o['value'])[:38]:<38} {'MATCH' if same else 'DIFF'}")
+            new_probe = label.startswith("h06 ")
+            if not same and new_probe:
+                new_bad.append((case, label, c, o))
+            elif not same:
+                bad += 1
+            print(f"{label:<42} {(c['type'] + ' ' + c['value'])[:38]:<38} {(o['type'] + ' ' + o['value'])[:38]:<38} "
+                  f"{'MATCH' if same else ('DIFF (h06, not gating)' if new_probe else 'DIFF')}")
         print(f"[{case}] {len(cpp) - bad}/{len(cpp)} match\n")
         total += len(cpp)
         bad_total += bad
-    print(f"TOTAL {total - bad_total}/{total} match")
+        new_total += sum(1 for label in cpp if label.startswith("h06 "))
+    if new_bad:
+        print("NEW-PROBE MISMATCHES (h06, reported, not failing the run): probe: ours vs official")
+        for case, label, c, o in new_bad:
+            print(f"  [{case}] {label}: ours {o['type']} {o['value']} | official {c['type']} {c['value']}")
+    print(f"TOTAL {total - bad_total}/{total} match (gating rows)")
+    print(f"h06 new probes: {new_total - len(new_bad)}/{new_total} match")
     return 1 if bad_total else 0
 
 
