@@ -3494,17 +3494,9 @@ impl MSLane {
         }
         self.myVehBuffer.clear();
         if g_lateral_resolution() > 0. || !self.myOpposite.is_null() {
-            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal lateral positions tie)
             let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
-            self.myVehicles.sort_by(|a, b| {
-                if natSorter.call_op(*a, *b) != 0 {
-                    std::cmp::Ordering::Less
-                } else if natSorter.call_op(*b, *a) != 0 {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            utils::common::std_sort::std_sort_vec(&mut self.myVehicles, |a, b| natSorter.call_op(*a, *b) != 0);
         }
         self.sort_partial_vehicles();
     }
@@ -7178,17 +7170,9 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn sort_partial_vehicles(&mut self) {
         if self.myPartialVehicles.len() > 1 {
-            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal lateral positions tie)
             let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
-            self.myPartialVehicles.sort_by(|a, b| {
-                if natSorter.call_op(*a, *b) != 0 {
-                    std::cmp::Ordering::Less
-                } else if natSorter.call_op(*b, *a) != 0 {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            utils::common::std_sort::std_sort_vec(&mut self.myPartialVehicles, |a, b| natSorter.call_op(*a, *b) != 0);
         }
     }
 
@@ -7214,17 +7198,9 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn sort_maneuver_reservations(&mut self) {
         if self.myManeuverReservations.len() > 1 {
-            // determinism: C++ std::sort is unstable on ties; sort_by is stable here
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal lateral positions tie)
             let natSorter = MSLane_vehicle_natural_position_sorter::new(Ptr::new(self));
-            self.myManeuverReservations.sort_by(|a, b| {
-                if natSorter.call_op(*a, *b) != 0 {
-                    std::cmp::Ordering::Less
-                } else if natSorter.call_op(*b, *a) != 0 {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            utils::common::std_sort::std_sort_vec(&mut self.myManeuverReservations, |a, b| natSorter.call_op(*a, *b) != 0);
         }
     }
 

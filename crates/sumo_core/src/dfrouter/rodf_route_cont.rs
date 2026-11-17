@@ -165,16 +165,8 @@ impl RODFRouteCont {
     #[allow(unused_variables)]
     pub fn sort_by_distance(&mut self) {
         let mut sorter = RODFRouteCont_by_distance_sorter::new();
-        // determinism: C++ std::sort is unstable and Rust sort_by is stable, so routes with equal distance2Last may end up in a different order
-        self.myRoutes.sort_by(|a, b| {
-            if sorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal distance2Last tie)
+        utils::common::std_sort::std_sort_vec(&mut self.myRoutes, |a, b| sorter.call_op(a, b) != 0);
     }
 
     /// C++: `void RODFRouteCont::removeIllegal(const std::vector<ROEdgeVector> &)`

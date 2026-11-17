@@ -2042,8 +2042,8 @@ impl NBRailwayTopologyAnalyzer {
         if seqsToReverse.len() > 0 {
             write_messagef!("Found % reversible edge sequences between broken rail nodes", seqsToReverse.len());
         }
-        // determinism: std::sort is not stable; sequences of equal length keep their discovery order here
-        seqsToReverse.sort_by(|a, b| a.len().cmp(&b.len()));
+        // determinism: C++ std::sort is unstable and the comparator only orders by length; std_sort reproduces libstdc++ tie order
+        utils::common::std_sort::std_sort_vec(&mut seqsToReverse, |a, b| a.len() < b.len());
         let mut numReversed = 0;
         let mut affectedEndpoints: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
         let mut reversedIDs: BTreeSet<String> = BTreeSet::new();
