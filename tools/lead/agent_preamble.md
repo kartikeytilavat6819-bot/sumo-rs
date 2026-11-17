@@ -3,6 +3,8 @@
 - Repo: C:\Users\karti\sumo-rs (Rust port of SUMO 1.28.0). Create your worktree:
   `git -C C:\Users\karti\sumo-rs worktree add .claude/worktrees/agent-<ID> -b worktree-agent-<ID> main` (main = 1820f92c or later).
   If your branch already exists, reuse its worktree and first `git merge origin/main` (fix conflicts faithfully).
+  NEVER edit files under C:\Users\karti\sumo-rs\ directly (that is the lead's main checkout) — only inside your
+  worktree C:\Users\karti\sumo-rs\.claude\worktrees\agent-<ID>\. Double-check paths before every edit.
   Read AGENTS.md in the repo, but these rules override its build notes.
 - C++ oracle (WSL): `~/sumo-pristine/bin/{sumo,netconvert}`, SUMO_HOME=/home/karti/sumo-pristine/lib/python3.12/site-packages/sumo.
   Official source (READ-ONLY): `~/sumo-src/src` or `C:\Users\karti\sumo-src\src`. Never edit it. For C++ instrumentation,
