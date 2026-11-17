@@ -20,6 +20,10 @@ pub struct MSCFModel_Rail {
     pub myTrainParams: MSCFModel_Rail_TrainParams,
 }
 
+fn rx01_on(veh: Ptr<MSVehicle>) -> bool {
+    let t = MSNet::get_instance().get_current_time_step();
+    std::env::var_os("RX01").is_some() && format!("{}", veh.get_id()) == "train3" && t >= 180000 && t <= 185000
+}
 fn rail_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
     cf_cast::<MSCFModel_Rail>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
 }
@@ -328,6 +332,7 @@ impl MSCFModel_Rail {
         let vsafe = self.base.maximum_safe_stop_speed(gap, self.myDecel, speed, false, ts(), false); // absolute breaking distance
         let vmin = self.min_next_speed(speed, veh);
         let vmax = self.max_next_speed(speed, veh);
+        if rx01_on(veh) { eprintln!("RX01 follow t={} speed={:x} gap={:x} vsafe={:x} vmin={:x} vmax={:x}", MSNet::get_instance().get_current_time_step(), speed.to_bits(), gap.to_bits(), vsafe.to_bits(), vmin.to_bits(), vmax.to_bits()); }
 
         if g_semi_implicit_euler_update() {
             min2(vsafe, vmax)
@@ -445,6 +450,7 @@ impl MSCFModel_Rail {
         }
         let maxNextSpeed = speed + accel2speed(a);
 
+        if rx01_on(veh) { eprintln!("RX01 max t={} speed={:x} res={:x} gr={:x} cr={:x} trac={:x} a={:x} mns={:x}", MSNet::get_instance().get_current_time_step(), speed.to_bits(), res.to_bits(), gr.to_bits(), cr.to_bits(), trac.to_bits(), a.to_bits(), maxNextSpeed.to_bits()); }
         min2(self.myTrainParams.vmax, maxNextSpeed)
     }
 
@@ -475,6 +481,7 @@ impl MSCFModel_Rail {
         let totalRes = res + gr + cr; //kN
         let a = self.myTrainParams.decl + totalRes / self.get_rot_weight(veh);
         let vMin = speed - accel2speed(a);
+        if rx01_on(veh) { eprintln!("RX01 min t={} speed={:x} res={:x} gr={:x} cr={:x} a={:x} vMin={:x}", MSNet::get_instance().get_current_time_step(), speed.to_bits(), res.to_bits(), gr.to_bits(), cr.to_bits(), a.to_bits(), vMin.to_bits()); }
         if g_semi_implicit_euler_update() {
             max2(vMin, 0.)
         } else {
@@ -594,6 +601,7 @@ impl MSCFModel_Rail {
     // }
     #[allow(unused_variables)]
     pub fn stop_speed(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+        if rx01_on(veh) { eprintln!("RX01 stop t={} speed={:x} gap={:x} decel={:x} vsafe={:x} mns={:x}", MSNet::get_instance().get_current_time_step(), speed.to_bits(), gap.to_bits(), decel.to_bits(), self.base.maximum_safe_stop_speed(gap, decel, speed, false, ts(), false).to_bits(), self.max_next_speed(speed, veh).to_bits()); }
         min2(self.base.maximum_safe_stop_speed(gap, decel, speed, false, ts(), false), self.max_next_speed(speed, veh))
     }
 
