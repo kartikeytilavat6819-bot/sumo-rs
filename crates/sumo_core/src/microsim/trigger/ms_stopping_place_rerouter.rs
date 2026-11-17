@@ -605,7 +605,6 @@ impl MSStoppingPlaceRerouter {
         }
 
         let destIsFull = !destStoppingPlace.is_null() && self.get_last_step_stopping_place_occupancy(destStoppingPlace, vp) >= self.get_stopping_place_capacity(destStoppingPlace);
-        if std::env::var_os("RR_TRACE").is_some() { let dOcc = if destStoppingPlace.is_null() { -1. } else { self.get_last_step_stopping_place_occupancy(destStoppingPlace, vp) }; eprintln!("RRTRACE rsp t={} veh={} dest={} destVisible={} ignoreDest={} stopAnywhere={} destFull={} onTheWay={} destOcc={:.6}", now, vp.get_id(), if destStoppingPlace.is_null() { "null".to_string() } else { destStoppingPlace.get_id().to_string() }, destVisible, ignoreDest, stopAnywhere, destIsFull, if onTheWay.is_null() { "null".to_string() } else { onTheWay.get_id().to_string() }, dOcc); }
         if ignoreDest || destIsFull || !onTheWay.is_null() {
             // if the current route ends at the stopping place, the new route will
             // also end at the new stopping place
@@ -674,7 +673,6 @@ impl MSStoppingPlaceRerouter {
                         blockedTimes.push((blockedTime, cand.0, i));
                     }
                 }
-                if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE cand {} vis={} occ={:.6} cap={:.6}", cand.0.get_id(), visible, occupancy, self.get_stopping_place_capacity(cand.0)); }
                 if occupancy < self.get_stopping_place_capacity(cand.0) {
                     if self.evaluate_destination(vp.m(), brakeGap, *newDestination, cand.0, occupancy, probs[i], router.m(), &mut stoppingPlaces, &mut newRoutes, &mut stopApproaches, &mut maxValues, scores, insertStopIndex, keepCurrentStop) {
                         numAlternatives += 1;
@@ -770,7 +768,6 @@ impl MSStoppingPlaceRerouter {
 
                 // get the parking area cost
                 let stoppingPlaceCost = Self::get_target_value(&stoppingPlaceValues, &maxValues, &weights, &self.myNormParams, &self.myInvertParams);
-                if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE score {} cost={:.6}", sp.get_id(), stoppingPlaceCost); }
                 self.remember_stopping_place_score(vp.m(), sp, &to_string(&stoppingPlaceCost));
 
                 // get the parking area with minimum cost
@@ -954,7 +951,6 @@ impl MSStoppingPlaceRerouter {
         let mut edgesToStop: ConstMSEdgeVector = Vec::new();
         let mut edgesUpstream: ConstMSEdgeVector = Vec::new();
         let targetPos = alternative.get_last_free_pos(vp.m(), 0.);
-        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE eval {} targetPos={:.6} occ={:.6}", alternative.get_id(), targetPos, occupancy); }
         let rerouteOriginIdx = self.determine_reroute_origin(vp.m(), insertStopIndex);
         let edges = route.get_edges();
         let mut posOnLane = vp.get_position_on_lane();

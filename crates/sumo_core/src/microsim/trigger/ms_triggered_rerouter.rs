@@ -625,7 +625,6 @@ impl MSTriggeredRerouter {
         // shortcut: router prohibitions (SUMOAbstractRouter_Prohibitions) are Unmapped (`()`), so every router lookup receives `&()` instead of the closed-edge prohibitions; upgrade when that alias is ported
         let tObject = veh;
         let net = MSNet::get_instance();
-        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE enter t={} veh={} reason={} speed={:.6} pos={:.6}", net.get_current_time_step(), tObject.get_id(), reason as i32, tObject.get_speed(), tObject.get_position_on_lane()); }
         if !self.applies(tObject) {
             return false;
         }
@@ -661,7 +660,6 @@ impl MSTriggeredRerouter {
             false
         };
         let lastEdge = tObject.get_reroute_destination();
-        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE trig t={} veh={} rr={} park={:.6}", now, tObject.get_id(), self.base.get_id(), rerouteDef.parkProbs.get_overall_prob()); }
 
         if rerouteDef.parkProbs.get_overall_prob() > 0.0 {
             if !tObject.is_vehicle() {
@@ -1368,7 +1366,6 @@ impl MSTriggeredRerouter {
         // shortcut: closed-edge prohibitions (rerouteDef->getClosed()) are not forwarded, since SUMOAbstractRouter_Prohibitions is still Unmapped (`()`); upgrade when that alias is ported
         let probs = rerouteDef.parkProbs.get_probs().to_vec();
         let dest = self.base4.reroute_stopping_place(destStoppingPlace, &parks, &probs, veh, newDestination, newRoute, &mut addInput, &Default::default(), 0, true);
-        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE park dest={} parks={} result={}", if destStoppingPlace.is_null() { "null".to_string() } else { destStoppingPlace.get_id().to_string() }, parks.len(), if dest.is_null() { "null".to_string() } else { dest.get_id().to_string() }); }
         if !dest.is_null() && dest.get_element() == SUMO_TAG_PARKING_AREA {
             Ptr::from_raw(dest.as_raw() as *mut MSParkingArea)
         } else {
