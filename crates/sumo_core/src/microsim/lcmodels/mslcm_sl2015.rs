@@ -3244,6 +3244,9 @@ impl MSLCM_SL2015 {
                 }
             }
         }
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-MG {} {} maxR={} maxL={} spR={} spL={} dt={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(maxGainRight), lctw_bits(maxGainLeft), lctw_bits(self.mySpeedGainProbabilityRight), lctw_bits(self.mySpeedGainProbabilityLeft), lctw_bits(self.myVehicle.get_action_step_length_secs()));
+        }
         // updated change probabilities
         if maxGainRight != -f64::MAX {
             self.mySpeedGainProbabilityRight += self.myVehicle.get_action_step_length_secs() * maxGainRight;
