@@ -4505,15 +4505,119 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_stop(&mut self, nextStopIndex: i32, stop: SUMOVehicleParameter_Stop, info: &str, teleport: bool, errorMsg: &mut String) -> bool {
-        // shortcut: route-iterator based stop replacement (MSRouteIterator is Unmapped) is not ported yet
         let n = self.myStops.len() as i32;
         if nextStopIndex < 0 || nextStopIndex >= n {
             *errorMsg = utils::tlf!("invalid nextStopIndex % for % remaining stops", nextStopIndex, n);
             return false;
         }
-        *errorMsg = "replaceStop is not ported yet".to_string();
-        let _ = (stop, info, teleport);
-        false
+        if nextStopIndex == 0 && self.is_stopped() {
+            *errorMsg = "cannot replace reached stop".to_string();
+            return false;
+        }
+        let t = MSNet::get_instance().get_current_time_step();
+        let stopLane = MSLane::dictionary_2(&stop.lane);
+        let stopEdge: Ptr<MSEdge> = Ptr::new(stopLane.get_edge());
+
+        // check parking access rights
+        if stop.parkingarea != "" {
+            let pa = MSNet::get_instance().get_stopping_place(&stop.parkingarea, SUMO_TAG_PARKING_AREA).cast::<MSParkingArea>();
+            if !pa.is_null() && !pa.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
+                *errorMsg = utils::tlf!("vehicle '%' does not have the right badge to access parkingArea '%'", self.get_id(), stop.parkingarea);
+                return false;
+            }
+        }
+
+        {
+            let replacedStop = &mut self.myStops[nextStopIndex as usize];
+            if replacedStop.lane == stopLane && replacedStop.pars.endPos == stop.endPos && !teleport {
+                // only replace stop attributes
+                replacedStop.pars = stop.clone();
+                replacedStop.init_pars(&stop);
+                return true;
+            }
+        }
+
+        if !stopLane.allows_vehicle_class_2(self.get_v_class(), self.get_routing_mode()) {
+            *errorMsg = utils::tlf!("disallowed stop lane '%'", stopLane.get_id());
+            return false;
+        }
+
+        let oldEdges: ConstMSEdgeVector = self.myRoute.get_edges().clone();
+        let junctionOffset = if !self.get_lane().is_null() && self.get_lane().is_internal() { 1 } else { 0 };
+        let itStart: MSRouteIterator = if nextStopIndex == 0 { *self.get_current_route_edge() + junctionOffset } else { self.myStops[nextStopIndex as usize - 1].edge };
+        let startPos: f64 = if nextStopIndex == 0 { self.get_position_on_lane() } else { self.myStops[nextStopIndex as usize - 1].pars.endPos };
+        let itEnd: MSRouteIterator = if nextStopIndex == n - 1 { oldEdges.len() - 1 } else { self.myStops[nextStopIndex as usize + 1].edge };
+        let endPos: f64 = if nextStopIndex == n - 1 { self.get_arrival_pos() } else { self.myStops[nextStopIndex as usize + 1].pars.endPos };
+
+        let newDestination = nextStopIndex == n - 1 && self.myStops[nextStopIndex as usize].edge == oldEdges.len() - 1;
+        let me: Ptr<SUMOVehicle> = Ptr::from_mut(self).cast::<SUMOVehicle>();
+
+        let mut toNewStop: ConstMSEdgeVector = Vec::new();
+        if !teleport {
+            self.get_router_tt().compute_2(oldEdges[itStart], startPos, stopEdge, stop.endPos, me, t, &mut toNewStop, true);
+            if toNewStop.is_empty() {
+                *errorMsg = utils::tlf!("no route found from edge '%' to stop edge '%'", oldEdges[itStart].get_id(), stopEdge.get_id());
+                return false;
+            }
+        }
+
+        let mut fromNewStop: ConstMSEdgeVector = Vec::new();
+        if !newDestination {
+            self.get_router_tt().compute_2(stopEdge, stop.endPos, oldEdges[itEnd], endPos, me, t, &mut fromNewStop, true);
+            if fromNewStop.is_empty() {
+                *errorMsg = utils::tlf!("no route found from stop edge '%' to edge '%'", stopEdge.get_id(), oldEdges[itEnd].get_id());
+                return false;
+            }
+        }
+
+        self.cleanup_parking_reservation();
+        let routeEnd = self.myRoute.get_edges().len();
+        {
+            let replacedStop = &mut self.myStops[nextStopIndex as usize];
+            replacedStop.pars = stop.clone();
+            replacedStop.init_pars(&stop);
+            replacedStop.edge = routeEnd; // will be patched in replaceRoute
+            replacedStop.lane = stopLane;
+            if MSGlobals::use_meso_sim() {
+                replacedStop.segment = meso_net().m().get_segment_for_edge(replacedStop.lane.get_edge(), replacedStop.get_end_pos(&self.base));
+                if replacedStop.lane.is_internal() {
+                    *errorMsg = utils::tlf!("Mesoscopic simulation does not allow stopping on internal edge '%' for vehicle '%'.", stop.edge, self.get_id());
+                    return false;
+                }
+            }
+        }
+
+        let oldRemainingEdges: ConstMSEdgeVector = oldEdges[self.myCurrEdge..].to_vec();
+        let mut newEdges: ConstMSEdgeVector = oldEdges[self.myCurrEdge..itStart].to_vec(); // only remaining
+        if !teleport {
+            newEdges.extend_from_slice(&toNewStop[..toNewStop.len() - 1]);
+        } else {
+            newEdges.push(oldEdges[itStart]);
+        }
+        if !newDestination {
+            newEdges.extend_from_slice(&fromNewStop[..fromNewStop.len() - 1]);
+            newEdges.extend_from_slice(&oldEdges[itEnd..]);
+        } else {
+            newEdges.push(stopEdge);
+        }
+
+        let routeCost = self.get_router_tt().recompute_costs(&newEdges, me, t, Ptr::null());
+        let previousCost = self.get_router_tt().recompute_costs(&oldRemainingEdges, me, t, Ptr::null());
+        let savings = previousCost - routeCost;
+        if !self.has_departed() && self.myParameter.stops.len() as i32 > nextStopIndex {
+            // stops will be rebuilt from scratch so we must patch the stops in myParameter
+            self.myParameter.m().stops[nextStopIndex as usize] = stop.clone();
+        }
+        if teleport {
+            // let the vehicle jump rather than teleport
+            // we add a jump-stop at the end of the edge (unless the vehicle is
+            // already configure to jump before the replaced stop)
+            if !self.insert_jump(nextStopIndex, itStart, errorMsg) {
+                return false;
+            }
+        }
+        let onInit = !self.has_departed();
+        self.replace_route_edges(&mut newEdges, routeCost, savings, info, onInit, false, false, Ptr::from_mut(errorMsg))
     }
 
     /// C++: `bool MSBaseVehicle::rerouteBetweenStops(int, const std::string &, bool, std::string &)`
