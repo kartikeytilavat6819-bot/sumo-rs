@@ -31,6 +31,8 @@ const OPEN_DRIVE_TAGS: &[(&str, i32)] = &[
     ("line", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LINE as i32),
     ("spiral", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SPIRAL as i32),
     ("arc", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ARC as i32),
+    ("poly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_POLY3 as i32),
+    ("paramPoly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_PARAMPOLY3 as i32),
     ("laneSection", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANESECTION as i32),
     ("laneOffset", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANEOFFSET as i32),
     ("left", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT as i32),
@@ -4205,7 +4207,6 @@ impl NIImporter_OpenDrive {
             ret.push(Position::new(g.x + xnew, g.y + ynew));
             p += pStep;
         }
-        eprintln!("DBG pp pMax={} pStep={} len={} ret={} params={:?}", pMax, pStep, g.length, ret.len(), g.params);
         ret.get_subpart2d(0.0, g.length)
     }
 
@@ -4469,7 +4470,6 @@ impl NIImporter_OpenDrive {
                 prevType = g.type_;
                 index += 1;
             }
-            eprintln!("DBG shape id={} ngeoms={} geom={}", e.id.clone(), geometries.len(), e.geom.len());
             if e.geom.len() == 1 && *e.geom.front() != last {
                 // avoid length-1 geometry due to almostSame check
                 e.geom.push(last);
