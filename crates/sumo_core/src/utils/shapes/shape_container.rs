@@ -1,6 +1,7 @@
 //! Port of utils/shapes/ShapeContainer.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::parametrised_wrapping_command::ParametrisedWrappingCommand;
 use super::shape::{DEFAULT_HEIGHT, DEFAULT_NAME};
 
 /// C++ typedef `NamedObjectCont<PointOfInterest *> ShapeContainer::POIs`
@@ -25,7 +26,7 @@ pub struct ShapeContainer {
     /// stored POIs
     pub myPOIs: ShapeContainer_POIs,
     /// Command pointers for scheduled polygon update. Maps PolyID->Command
-    pub myPolygonUpdateCommands: BTreeMap<String, Ptr<Unmapped /* ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> */>>, // C++: std::map<const std::string, ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> *>
+    pub myPolygonUpdateCommands: BTreeMap<String, Ptr<ParametrisedWrappingCommand<ShapeContainer, Ptr<PolygonDynamics>>>>, // C++: std::map<const std::string, ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> *>
     pub myListeners: Vec<Ptr<ShapeListener>>,
 }
 
@@ -327,8 +328,8 @@ impl ShapeContainer {
             // Dynamics have expired => remove polygon
             let polyID = pd.get_polygon_id().to_string();
             // shortcut: C++ operator[] would insert null and crash here, guarded lookup used instead
-            if let Some(cmd) = self.myPolygonUpdateCommands.get(&polyID) {
-                panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+            if let Some(cmd) = self.myPolygonUpdateCommands.get(&polyID).copied() {
+                cmd.m().deschedule();
             }
             // Don't aquire lock (in GUI case GUIShapeContainer::polygonDynamicsUpdate() does this)
             self.remove_polygon(&polyID, false);
@@ -343,7 +344,7 @@ impl ShapeContainer {
     //     myPolygonUpdateCommands.insert(std::make_pair(polyID, cmd));
     // }
     #[allow(unused_variables)]
-    pub fn add_polygon_update_command(&mut self, polyID: String, cmd: Ptr<Unmapped /* ParametrisedWrappingCommand<ShapeContainer, PolygonDynamics *> */>) {
+    pub fn add_polygon_update_command(&mut self, polyID: String, cmd: Ptr<ParametrisedWrappingCommand<ShapeContainer, Ptr<PolygonDynamics>>>) {
         self.myPolygonUpdateCommands.entry(polyID).or_insert(cmd);
     }
 
@@ -410,7 +411,7 @@ impl ShapeContainer {
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
         for item in self.myPolygonUpdateCommands.values() {
-            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+            item.m().deschedule();
         }
         self.myPolygonUpdateCommands.clear();
     }
@@ -491,7 +492,7 @@ impl ShapeContainer {
     #[allow(unused_variables)]
     pub fn cleanup_polygon_dynamics(&mut self, id: &str) {
         if let Some(cmd) = self.myPolygonUpdateCommands.remove(id) {
-            panic!("shortcut: ParametrisedWrappingCommand is unported (Unmapped), deschedule needs it; upgrade with the command port");
+            cmd.m().deschedule();
         }
     }
 
