@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
+use utils::common::stable_cache::StableCache;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
 /// C++ `#define BEST_LANE_LOOKAHEAD 3000.0` (MSEdge.cpp)
@@ -101,10 +102,10 @@ pub struct MSEdge {
     /// the right side for each sublane on this edge
     pub mySublaneSides: Vec<f64>,
     /// The successors available for a given vClass
-    pub myClassesSuccessorMap: BTreeMap<SUMOVehicleClass, MSEdgeVector>,
+    pub myClassesSuccessorMap: StableCache<SUMOVehicleClass, MSEdgeVector>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, MSConstEdgePairVector>,
-    pub myOrigClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, MSConstEdgePairVector>,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, MSConstEdgePairVector>,
+    pub myOrigClassesViaSuccessorMap: StableCache<SUMOVehicleClass, MSConstEdgePairVector>,
     /// The bounding rectangle of end nodes incoming or outgoing edges for taz connectors or of my own start and end node for normal edges
     pub myBoundary: Boundary,
     /// List of waiting vehicles
@@ -116,8 +117,8 @@ pub struct MSEdge {
     /// the oppositing superposable edge
     pub myBidiEdge: Ptr<MSEdge>,
     /// a reversed version for backward routing
-    pub myReversedRoutingEdge: Ptr<ReversedEdge<MSEdge, SUMOVehicle>>,
-    pub myRailwayRoutingEdge: Ptr<RailEdge<MSEdge, SUMOVehicle>>,
+    pub myReversedRoutingEdge: std::cell::Cell<Ptr<ReversedEdge<MSEdge, SUMOVehicle>>>,
+    pub myRailwayRoutingEdge: std::cell::Cell<Ptr<RailEdge<MSEdge, SUMOVehicle>>>,
 }
 
 impl RouterEdge<SUMOVehicle> for MSEdge {
@@ -365,16 +366,16 @@ impl MSEdge {
             myAmRoundabout: false,
             myAmFringe: true,
             mySublaneSides: Vec::new(),
-            myClassesSuccessorMap: BTreeMap::new(),
-            myClassesViaSuccessorMap: BTreeMap::new(),
-            myOrigClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesSuccessorMap: StableCache::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myOrigClassesViaSuccessorMap: StableCache::new(),
             myBoundary: Boundary::default(),
             myWaiting: std::cell::RefCell::new(Vec::new()),
             myCachedMesoPos: BTreeMap::new(),
             myLastCacheUpdate: -1,
             myBidiEdge: Ptr::null(),
-            myReversedRoutingEdge: Ptr::null(),
-            myRailwayRoutingEdge: Ptr::null(),
+            myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
         }
     }
 
@@ -391,11 +392,11 @@ impl MSEdge {
         if !self.myLaneChanger.is_null() {
             drop(unsafe { Box::from_raw(self.myLaneChanger.as_raw()) });
         }
-        if !self.myReversedRoutingEdge.is_null() {
-            drop(unsafe { Box::from_raw(self.myReversedRoutingEdge.as_raw()) });
+        if !self.myReversedRoutingEdge.get().is_null() {
+            drop(unsafe { Box::from_raw(self.myReversedRoutingEdge.get().as_raw()) });
         }
-        if !self.myRailwayRoutingEdge.is_null() {
-            drop(unsafe { Box::from_raw(self.myRailwayRoutingEdge.as_raw()) });
+        if !self.myRailwayRoutingEdge.get().is_null() {
+            drop(unsafe { Box::from_raw(self.myRailwayRoutingEdge.get().as_raw()) });
         }
     }
 
@@ -1702,9 +1703,8 @@ impl MSEdge {
         if vClass == SVC_IGNORING || !MSNet::get_instance().has_permissions() || self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
             return &self.mySuccessors;
         }
-        // C++ caches into mutable maps; mutate through a raw handle as C++ does
-        let me = Ptr::new(self).get_mut().unwrap();
-        if !me.myClassesSuccessorMap.contains_key(&vClass) {
+        // C++ `mutable` cache: filled on first request, returned by reference
+        self.myClassesSuccessorMap.get_or_insert_with(vClass, || {
             // this vClass is requested for the first time. rebuild all successors
             let mut entry: MSEdgeVector = Vec::new();
             for it in self.mySuccessors.iter() {
@@ -1717,10 +1717,8 @@ impl MSEdge {
                     }
                 }
             }
-            me.myClassesSuccessorMap.insert(vClass, entry);
-        }
-        // can use cached value
-        me.myClassesSuccessorMap.get(&vClass).unwrap()
+            entry
+        })
     }
 
     /// C++: `const MSConstEdgePairVector & MSEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -1758,14 +1756,13 @@ impl MSEdge {
         if vClass == SVC_IGNORING || !MSNet::get_instance().has_permissions() || self.myFunction == SumoXMLEdgeFunc::CONNECTOR {
             return &self.myViaSuccessors;
         }
-        // C++ caches into mutable maps; mutate through a raw handle as C++ does
-        let me = Ptr::new(self).get_mut().unwrap();
+        // C++ `mutable` caches: filled on first request, returned by reference
         let viaMap = if ignoreTransientPermissions && self.myHaveTransientPermissions {
-            &mut me.myOrigClassesViaSuccessorMap
+            &self.myOrigClassesViaSuccessorMap
         } else {
-            &mut me.myClassesViaSuccessorMap
+            &self.myClassesViaSuccessorMap
         };
-        if !viaMap.contains_key(&vClass) {
+        viaMap.get_or_insert_with(vClass, || {
             // this vClass is requested for the first time. rebuild all successors
             let mut result: MSConstEdgePairVector = Vec::new();
             for viaPair in self.myViaSuccessors.iter() {
@@ -1778,9 +1775,8 @@ impl MSEdge {
                     }
                 }
             }
-            viaMap.insert(vClass, result);
-        }
-        viaMap.get(&vClass).unwrap()
+            result
+        })
     }
 
     /// C++: `int MSEdge::getNumPredecessors() const` [const]
@@ -4003,11 +3999,10 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_reversed_routing_edge(&self) -> Ptr<ReversedEdge<MSEdge, SUMOVehicle>> {
-        let meP = Ptr::new(self); let me = meP.m();
-        if me.myReversedRoutingEdge.is_null() {
-            me.myReversedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self)))));
+        if self.myReversedRoutingEdge.get().is_null() {
+            self.myReversedRoutingEdge.set(Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self))))));
         }
-        me.myReversedRoutingEdge
+        self.myReversedRoutingEdge.get()
     }
 
     /// C++: `RailEdge<MSEdge, SUMOVehicle> * MSEdge::getRailwayRoutingEdge() const` [const]
@@ -4019,11 +4014,10 @@ impl MSEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
-        let meP = Ptr::new(self); let me = meP.m();
-        if me.myRailwayRoutingEdge.is_null() {
-            me.myRailwayRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self)))));
+        if self.myRailwayRoutingEdge.get().is_null() {
+            self.myRailwayRoutingEdge.set(Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self))))));
         }
-        me.myRailwayRoutingEdge
+        self.myRailwayRoutingEdge.get()
     }
 
     /// C++: `const std::map<const MEVehicle *, std::pair<double, int>> & MSEdge::getMesoPositions() const` [const]

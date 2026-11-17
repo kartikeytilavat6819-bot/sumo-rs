@@ -5,6 +5,7 @@ pub mod parameterised;
 pub mod ptr;
 pub mod rand_helper;
 pub mod rgb_color;
+pub mod stable_cache;
 pub mod std_defs;
 pub mod string_bijection;
 pub mod string_tokenizer;
