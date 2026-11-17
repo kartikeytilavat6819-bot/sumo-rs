@@ -1395,15 +1395,6 @@ impl MSRoutingEngine {
         }
     }
 
-    /// C++: `SumoRNG * MSRoutingEngine::getThreadRNG()` [static, private]
-    /// returns RNG associated with the current thread
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn get_thread_rng() -> Ptr<SumoRNG> {
-        // shortcut: C++ declares getThreadRNG() in MSRoutingEngine.h but never defines or calls it (dead declaration), so this is unreachable; delete it, not port it
-        panic!("shortcut: MSRoutingEngine::getThreadRNG is a dead C++ declaration with no definition")
-    }
-
     /// C++: `SUMOVehicle * MSRoutingEngine::buildCCHRefVehicle(const MSVehicleType *, int)` [static, private]
     /// construct the unregistered effort-reference vehicle for a type: never counted, inserted or given devices, with the type's mean speed factor and a deterministic random seed (the family's RefVehicleFactory; the slot picks the frozen random-factor realization, see device.rerouting.cch-ensemble)
     // SUMOVehicle*
