@@ -1957,7 +1957,7 @@ impl NBEdge {
         if angle >= 360.0 {
             angle -= 360.0;
         }
-        // shortcut: gDebugFlag1 debug print omitted, no debug-flag global ported yet, upgrade with the debug-flag port
+        // C++ prints the angle only if gDebugFlag1, which is set only under DEBUG_NODE_BORDER (off in release builds)
         angle
     }
 

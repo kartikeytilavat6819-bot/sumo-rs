@@ -1,24 +1,12 @@
 #!/bin/bash
-# TEMPORARY (nx03): JTRACE of join clusters, city_munich + --junctions.join-dist 20, ours vs C++.
+# TEMPORARY (nb03): netopts (188 variants) C++ 1.28.0 vs ours after the netbuild shortcut port. Removed before merge.
 set -u
-W=/tmp/nx03; rm -rf $W; mkdir -p $W
-ARGS="--simple-projection true --junctions.join true --junctions.join-dist 20"
-IN=tools/oracle/cases/city_munich/input.osm
-export SUMO_HOME=/home/gate/sumo_pkg/sumo
-CPPNC=$(bash tools/gcloud/vm_cpp_trace.sh nx03 tools/kaggle/nc_trace/nx03.patch netconvert) || { echo "CPP BUILD FAILED"; exit 0; }
-echo "cpp netconvert: $CPPNC"
-NC_JTRACE=1 $CARGO_TARGET_DIR/debug/netconvert $ARGS --osm-files $IN -o $W/ours.net.xml > $W/ours.out 2> $W/ours.err
-echo "ours rc=$?"
-NC_JTRACE=1 $CPPNC $ARGS --osm-files $IN -o $W/cpp.net.xml > $W/cpp.out 2> $W/cpp.err
-echo "cpp rc=$?"
-grep -a '^JTRACE' $W/ours.err > $W/ours.trace
-grep -a '^JTRACE' $W/cpp.err > $W/cpp.trace
-echo "trace lines: ours=$(wc -l < $W/ours.trace) cpp=$(wc -l < $W/cpp.trace)"
-sed -i 's/ true/ 1/; s/ false/ 0/' $W/ours.trace; sed -i 's/ true/ 1/; s/ false/ 0/' $W/cpp.trace
-diff $W/cpp.trace $W/ours.trace | head -60
-echo "first diff stage: $(diff $W/cpp.trace $W/ours.trace | head -1)"
-echo "junctions: cpp=$(grep -c '<junction ' $W/cpp.net.xml) ours=$(grep -c '<junction ' $W/ours.net.xml)"
-python3 tools/oracle/compare_net.py $W/cpp.net.xml $W/ours.net.xml 2>&1 | head -40
-grep -a '29more' $W/cpp.net.xml | head -3 | cut -c1-200
-grep -a '29more' $W/ours.net.xml | head -3 | cut -c1-200
-echo "NX03 DIFF END"
+export RUST_NETCONVERT=$CARGO_TARGET_DIR/debug/netconvert
+export CPP_NETCONVERT=$SUMO_PRISTINE_BIN/netconvert
+export NETOPTS_OUT=/tmp/nb03_netopts
+rm -rf $NETOPTS_OUT
+bash tools/oracle/run_netopts.sh > /tmp/nb03_netopts.log 2>&1
+echo "netopts rc=$?"
+grep -h 'TOTAL' /tmp/nb03_netopts.log
+cat $NETOPTS_OUT/*/summary.tsv | grep -v -P '\tPASS\t' | head -40
+echo "NB03 NETOPTS END"
