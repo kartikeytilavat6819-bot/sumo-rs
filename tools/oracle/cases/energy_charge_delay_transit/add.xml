@@ -1,0 +1,10 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE" emissionClass="Energy/unknown">
+        <param key="has.battery.device" value="true"/>
+        <param key="device.battery.capacity" value="35000"/>
+        <param key="device.battery.chargeLevel" value="10000"/>
+        <param key="device.battery.maximumChargeRate" value="150000"/>
+        <param key="device.battery.stoppingThreshold" value="0.1"/>
+    </vType>
+    <chargingStation id="cs_transit" lane="-103224#2_0" startPos="20" endPos="60" power="50000" efficiency="0.8" chargeInTransit="true" chargeDelay="5"/>
+</additional>

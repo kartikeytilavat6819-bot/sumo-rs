@@ -1,0 +1,1 @@
+--additional-files tools/oracle/cases/energy_battery_params/vt.add.xml --end 200 --device.battery.probability 1 --battery-output.precision 4

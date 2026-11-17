@@ -1,0 +1,5 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE" emissionClass="HBEFA3/PC_G_EU4">
+        <param key="has.battery.device" value="true"/>
+    </vType>
+</additional>

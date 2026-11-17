@@ -1,0 +1,3 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE" emissionClass="MMPEVEM/unknown" mass="1900" frontSurfaceArea="2.4" airDragCoefficient="0.28" rollDragCoefficient="0.009" wheelRadius="0.36" gearRatio="9" gearEfficiency="0.95"/>
+</additional>
