@@ -225,6 +225,9 @@ impl MSPModel_Interacting {
     pub fn next_blocking(&mut self, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
         let mut result: PersonDist = (Ptr::null(), f64::MAX);
         for ped in self.get_pedestrians(lane).iter().copied() {
+            if std::env::var_os("PT03").is_some() && format!("{}", lane.get_id()) == "E1_0" {
+                eprintln!("PT03ped edgePos={:.4} lat={:.4} dir={} minPos={:.4} minRight={:.4} maxLeft={:.4} bidi={} laneW={:.4}", ped.get_edge_pos(0), ped.get_lat_offset(), ped.get_direction(), minPos, minRight, maxLeft, bidi, lane.get_width());
+            }
             // account for distance covered by oncoming pedestrians
             let relX2 = ped.get_edge_pos(0) - (if ped.get_direction() == MSPMODEL_FORWARD { 0.0 } else { stopTime * ped.get_person().get_max_speed() });
             let dist = ((relX2 - minPos) * (if bidi { -1.0 } else { 1.0 }) - (if ped.get_direction() == MSPMODEL_FORWARD { ped.get_person().get_vehicle_type().get_length() } else { 0.0 }));
@@ -375,6 +378,7 @@ impl std::ops::DerefMut for MSPModel_InteractingState {
 
 /// virtual overrides of MSPModel_InteractingState (the others keep the MSTransportableStateAdapter base implementation)
 pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lat_offset_base(),
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: adapter_default_get_position,
@@ -531,6 +535,11 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
+        (self.base.vt.get_lat_offset)(&self.base)
+    }
+
+    /// base implementation of the virtual getLatOffset (dispatched through the state vtable)
+    pub fn get_lat_offset_base(&self) -> f64 {
         self.myPosLat
     }
 
