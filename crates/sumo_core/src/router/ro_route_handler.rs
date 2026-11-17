@@ -657,7 +657,6 @@ impl RORouteHandler {
             }
         } else {
             let desc: String = attrs.get_opt(SUMO_ATTR_FROM, &self.myVehicleParameter.id, ok, String::new(), true);
-            eprintln!("DBGDU from has={} desc='{}' tag={}", attrs.has_attribute(SUMO_ATTR_FROM), desc, element);
             let mut route = std::mem::take(&mut self.myActiveRoute);
             self.parse_edges(&desc, &mut route, &rid, ok);
             self.myActiveRoute = route;
