@@ -1,6 +1,7 @@
 //! Port of utils/handlers/RouteHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 use utils::xml::common_xml_structure::{CommonXMLStructure_PlanParameters, CommonXMLStructure_SumoBaseObject};
 use crate::utils::handlers::common_handler::{attr_str, tag_str};
 use utils::common::msg_handler::write_warning;
@@ -170,7 +171,7 @@ impl RouteHandler {
     //     myFlowEndDefault(string2time(OptionsCont::getOptions().getString("end"))) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>, hardFail: bool) -> Self {
+    pub fn new(fileBucket: Ptr<FileBucket>, hardFail: bool) -> Self {
         Self {
             base: CommonHandler::new(fileBucket),
             myHardFail: hardFail,
@@ -1243,8 +1244,8 @@ impl RouteHandler {
     #[allow(unused_variables)]
     pub fn parse_v_type(&mut self, attrs: &SUMOSAXAttributes) {
         // parse vehicleType
-        // shortcut: myFileBucket->getFilename() is unavailable (FileBucket is not ported), the file name passed to beginVTypeParsing is empty
-        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, "", Ptr::null());
+        let file_name = self.myFileBucket.get_filename().to_string();
+        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, &file_name, Ptr::null());
         if !vehicleTypeParameter.is_null() {
             let id = vehicleTypeParameter.id.clone();
             // set tag
