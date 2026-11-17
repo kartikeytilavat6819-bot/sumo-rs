@@ -43,13 +43,14 @@ pub enum MSVehicle_ChangeRequest {
     REQUEST_HOLD = 3,
 }
 
-/// C++ enum `MSVehicle::LaneChangeMode`
+/// C++ enum `MSVehicle::LaneChangeMode`; C++ stores it as a plain int (setLaneChangeMode can hold 3), so this is a newtype
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(i64)]
-pub enum MSVehicle_LaneChangeMode {
-    LC_NEVER = 0,
-    LC_NOCONFLICT = 1,
-    LC_ALWAYS = 2,
+pub struct MSVehicle_LaneChangeMode(pub i64);
+
+impl MSVehicle_LaneChangeMode {
+    pub const LC_NEVER: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(0);
+    pub const LC_NOCONFLICT: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(1);
+    pub const LC_ALWAYS: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(2);
 }
 
 /// C++ enum `MSVehicle::ManoeuvreType`
@@ -772,12 +773,12 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_mode(&self) -> i32 {
-        (1 * (self.myStrategicLC as i64)
-            + 4 * (self.myCooperativeLC as i64)
-            + 16 * (self.mySpeedGainLC as i64)
-            + 64 * (self.myRightDriveLC as i64)
+        (1 * self.myStrategicLC.0
+            + 4 * self.myCooperativeLC.0
+            + 16 * self.mySpeedGainLC.0
+            + 64 * self.myRightDriveLC.0
             + 256 * (self.myTraciLaneChangePriority as i64)
-            + 1024 * (self.mySublaneLC as i64)) as i32
+            + 1024 * self.mySublaneLC.0) as i32
     }
 
     /// C++: `SUMOTime Influencer::getLaneTimeLineDuration()`
@@ -1434,13 +1435,8 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(&mut self, value: i32) {
-        // shortcut: C++ casts out-of-range ints to LaneChangeMode (value 3 is not a variant); mapped to LC_ALWAYS, revisit if it matters
         fn lc_mode_from(v: i32) -> MSVehicle_LaneChangeMode {
-            match v {
-                0 => MSVehicle_LaneChangeMode::LC_NEVER,
-                1 => MSVehicle_LaneChangeMode::LC_NOCONFLICT,
-                _ => MSVehicle_LaneChangeMode::LC_ALWAYS,
-            }
+            MSVehicle_LaneChangeMode(v as i64)
         }
         fn traci_lc_priority_from(v: i32) -> MSVehicle_TraciLaneChangePriority {
             match v {
@@ -2018,7 +2014,7 @@ fn ms_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
 fn ms_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
     false
 }
-static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+pub(crate) static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: ms_vehicle_is_vehicle,
     is_person: ms_vehicle_is_person,
     is_container: ms_vehicle_is_container,
@@ -12001,7 +11997,6 @@ impl MSVehicle {
             let mut clane = enteredLane;
             let mut routeIndex = self.get_route_position();
             while leftLength > 0. {
-                let mut guessed = false;
                 if routeIndex > 0 && clane.get_edge().is_normal() {
                     // get predecessor lane that corresponds to prior route
                     routeIndex -= 1;
@@ -12015,15 +12010,12 @@ impl MSVehicle {
                         }
                     }
                 } else {
-                    // only the predecessor of a normal lane is a guess
-                    guessed = clane.get_edge().is_normal();
                     clane = clane.get_logical_predecessor_lane();
                 }
                 if clane.is_null()
                     || clane == self.myLane
                     || clane == self.myLane.get_bidi_lane()
-                    || (guessed
-                        && clane.is_internal()
+                    || (clane.is_internal()
                         && matches!(clane.get_link_cont()[0].get_direction(), LinkDirection::TURN | LinkDirection::TURN_LEFTHAND))
                 {
                     break;

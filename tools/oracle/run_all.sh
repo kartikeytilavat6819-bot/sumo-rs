@@ -7,9 +7,10 @@ cd "$(dirname "$0")/../.." || exit 1
 export PATH="/c/Users/karti/.cargo/bin:$PATH"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target-main}
 export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-8}
-BIN="$CARGO_TARGET_DIR/debug"
+PROFILE=${PROFILE:-debug}   # PROFILE=release runs the release binaries
+BIN="$CARGO_TARGET_DIR/$PROFILE"
 if [ "${1:-}" = "--build" ]; then
-  cargo build -q -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
+  cargo build -q $([ "$PROFILE" = release ] && echo --release) -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
 else
   # Refuse to print a scoreboard from binaries older than the sources: it looks authoritative and is
   # not. This has produced false readings for the lead and for several agents.
@@ -58,6 +59,14 @@ for dir in tools/oracle/cases/*/; do
       line "$c" net PASS; PASS=$((PASS+1))
     else
       line "$c" net FAIL "$(grep SUMMARY "$OUT/$c.net.log" | head -1)"; FAIL=$((FAIL+1))
+    fi
+  elif [ -f "$dir/ref_plain.net.xml" ] && [ -f "$dir/net_plain.args" ]; then
+    # plain-XML import: net_plain.args lists the exact node/edge/connection/type/tllogic files (make_plain_net_refs.sh)
+    "$BIN/netconvert.exe" $(cat "$dir/net_plain.args") -o "$OUT/$c.plain.net.xml" >/dev/null 2>&1
+    if python tools/oracle/compare_net.py "$dir/ref_plain.net.xml" "$OUT/$c.plain.net.xml" >"$OUT/$c.plain.net.log" 2>&1; then
+      line "$c" net-plain PASS; PASS=$((PASS+1))
+    else
+      line "$c" net-plain FAIL "$(grep SUMMARY "$OUT/$c.plain.net.log" | head -1)"; FAIL=$((FAIL+1))
     fi
   else
     line "$c" net SKIP "no input.osm and no net.args"; SKIP=$((SKIP+1))

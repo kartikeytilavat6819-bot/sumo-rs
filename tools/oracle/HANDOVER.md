@@ -1,5 +1,19 @@
 references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation only
 
+# Night run 2026-11-17 (lead loop, 20 Haiku agents, VM gate only) — read this first
+
+- `main` went 151/5 → **216/4** (run_all PASS/FAIL), depart 15/15, unit tests ok. All 4 FAILs are NEW cases with owners:
+  calibrator_multi (ref regenerated, fix merging), emissions/ref_meso_edgedata (mc04), peds_crossing PANIC (pd02),
+  routeprobe PANIC (rp01). Every original city row passes (London/Kansas/Karlsruhe/Tokyo: isLeader→MSBitSetLogic
+  dispatch, in01; Paris: computeFurtherLanes break, cb01).
+- Infra: Kaggle disabled (`gate.ps1.off`, dispatcher stopped). VM gate only: 2 × e2-custom-16-40960 spot (CPU quota
+  32 total), 8 slots each, auto-retry on ssh drops / rustc ICE, VM chosen by fewest active runs, account pinned to
+  personal Gmail. Official C++ 1.28.0 source built on the VMs at /home/gate/sumo-cpp (`tools/gcloud/vm_cpp_trace.sh`).
+- Agent rules + current baseline: `tools/lead/agent_preamble.md`. Merge flow: finished branch → `merge_two.sh` into
+  wave2 → `vm_gate.ps1 -Branch wave2` → if no previously passing row is lost, merge wave2 into main and push.
+- Not merged on purpose: ls07 (duplicates tc03/ir01 fixes, 4 conflicts). ou04 is carried by pd02, na01 by na02.
+- Free OpenCode models (glm/deepseek flash) worked for docs/cases but hit their usage limit; Haiku carries on.
+
 # Handover — 2026-11-16 (end of session, everything stopped)
 
 Start here in a new session. Then read `tools/lead/agent_preamble.md` (rules every agent gets),

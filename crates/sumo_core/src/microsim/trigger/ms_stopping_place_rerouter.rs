@@ -48,10 +48,9 @@ fn lane_edge(sp: Ptr<MSStoppingPlace>) -> Ptr<MSEdge> {
     Ptr::from_mut(sp.get_lane().get_edge())
 }
 
-/// shortcut: SUMOVehicle::getRerouteOrigin and getCurrentRouteEdge are Unmapped (not ported), so the
-/// route position is taken as index 0; upgrade when they return route indices.
-fn route_cursor_index(_veh: &SUMOVehicle) -> usize {
-    0
+/// C++ `veh.getCurrentRouteEdge()` as a route index
+fn route_cursor_index(veh: &SUMOVehicle) -> usize {
+    *veh.get_current_route_edge()
 }
 
 /// C++ `MSRoute::getDistanceBetween(double, double, MSRouteIterator, MSRouteIterator, bool)`.
@@ -591,8 +590,7 @@ impl MSStoppingPlaceRerouter {
                 self.remember_stopping_place_score(vp.m(), destStoppingPlace, "occupied");
                 self.remember_blocked_stopping_place(vp.m(), destStoppingPlace, lane_edge(destStoppingPlace) == vp.get_edge());
             }
-            // shortcut: TIME2STEPS(x) is taken as x * 1000 (1 s step); upgrade when the step length is read from the net
-            let stoppingPlaceMemory = (self.get_weight(vp.m(), "memory".to_string(), 600., false) * 1000.) as SUMOTime;
+            let stoppingPlaceMemory = utils::common::time::time2steps(self.get_weight(vp.m(), "memory".to_string(), 600., false));
             let stoppingPlaceFrustration = self.get_weight(vp.m(), "frustration".to_string(), 100., false);
             let stoppingPlaceKnowledge = self.get_weight(vp.m(), "knowledge".to_string(), 0., false);
 
@@ -654,8 +652,7 @@ impl MSStoppingPlaceRerouter {
                     let mut dummy = self.saw_blocked_stopping_place(vp.m(), stoppingPlaceCandidate.0, true);
                     if dummy < 0 {
                         // randomize among the unvisited
-                        // shortcut: C++ RandHelper::rand(int) draws an integer in [0, 1000000); here a real is drawn and truncated, so the random sequence differs from SUMO
-                        dummy = -((utils::common::rand_helper::rand() * 1000000.) as SUMOTime);
+                        dummy = -(utils::common::rand_helper::with_default(|r| r.rand_int(1000000)) as SUMOTime);
                     }
                     candidates.push((dummy, stoppingPlaceCandidate.0));
                 }
@@ -1293,13 +1290,11 @@ impl MSStoppingPlaceRerouter {
     pub fn determine_reroute_origin(&mut self, veh: &mut SUMOVehicle, insertStopIndex: i32) -> usize {
         let stopCount = veh.get_stops().len() as i32;
         if insertStopIndex == 0 || stopCount == 0 {
-            return route_cursor_index(veh);
+            return veh.get_reroute_origin();
         }
         // if the stop index is too high cap to route end
         let stopIndex = insertStopIndex.min(stopCount - 1) as usize;
-        let _relevantStop = &veh.get_stops()[stopIndex];
-        // shortcut: MSStop::edge is Unmapped, so the stop's route index is unknown and the origin falls back to the route cursor
-        route_cursor_index(veh)
+        veh.get_stops()[stopIndex].edge
     }
 
     /// C++: `void MSStoppingPlaceRerouter::MSStoppingPlaceRerouter()` [private]

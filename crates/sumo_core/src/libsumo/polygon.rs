@@ -585,7 +585,6 @@ impl Polygon {
         // First try to find a vehicle with the given id
         let sumo_vehicle = net.m().get_vehicle_control().get_vehicle(id);
         if !sumo_vehicle.is_null() {
-            // shortcut: static_cast to the SUMOTrafficObject base; SUMOVehicle is not repr(C) yet, upgrade when sumo_vehicle.rs adds it
             return sumo_vehicle.cast::<SUMOTrafficObject>();
         }
         let transportable = net.m().get_person_control().get(id);

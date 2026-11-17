@@ -86,7 +86,6 @@ fn copy_subscription(s: &Subscription) -> Subscription {
 }
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (std::make_shared<TraCIDouble>(...) stored as a base pointer)
-// shortcut: relies on #[repr(C)] with `base: TraCIResult` first on the TraCIResult subclasses in tra_ci_defs.rs, add it there
 pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }
@@ -94,13 +93,11 @@ pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
 
 /// C++ `libsumo::Helper::getEdge` lookup by id (MSEdge::dictionary)
 fn edge_dictionary(id: &str) -> Ptr<MSEdge> {
-    // shortcut: MSEdge::dictionary_2 still takes an Unmapped (string_view) argument, pass the id once ms_edge.rs maps it to &str
-    let _ = id;
     MSEdge::dictionary_2(id)
 }
 
 /// C++ `checkTimeBounds(time)` returns false where it throws TimeFormatException
-fn check_time_bounds(time: f64) -> bool {
+pub fn check_time_bounds(time: f64) -> bool {
     !(time > steps2time(SUMOTIME_MAX))
 }
 
@@ -662,7 +659,7 @@ impl Helper {
         }
         let from = Ptr::from_mut(roadPos1.0.m().get_edge());
         let to = Ptr::from_mut(roadPos2.0.m().get_edge());
-        // shortcut: the prohibitions map is Unmapped (), an empty map is passed
+        // C++ `getRouterTT(0)` default argument `prohibited = {}`: an empty prohibitions map
         let now = MSNet::get_instance().get_current_time_step();
         MSNet::get_instance().get_router_tt(0, &Default::default()).compute(from, to, Ptr::null(), now, &mut newRoute, true);
         if newRoute.is_empty() {
@@ -1732,7 +1729,7 @@ impl Helper {
         let vehLane = v.get_lane();
         let vehEdge = Ptr::from_mut(vehLane.m().get_edge());
         // This is to remember the lanes checked in the driving direction of the vehicle (their opposites can be added in a second pass)
-        let checkedLanesInDrivingDir: Rc<LaneCoverageInfo> = Rc::new(LaneCoverageInfo::new());
+        let checkedLanesInDrivingDir: Rc<std::cell::RefCell<LaneCoverageInfo>> = Rc::new(std::cell::RefCell::new(LaneCoverageInfo::new()));
         for &offset in filterLanes.iter() {
             let mut lane = vehLane.get_parallel_lane(offset, false);
             if !lane.is_null() {
@@ -1744,7 +1741,7 @@ impl Helper {
                 for nv in newVehs.iter() {
                     vehs.insert(nv.cast::<SUMOTrafficObject>());
                 }
-                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), Rc::new(checkedLanes.borrow().clone()));
+                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), &checkedLanes.borrow());
             } else if !disregardOppositeDirection && offset > 0 {
                 // Check opposite edge, too
                 // index points beyond this edge
@@ -1777,7 +1774,7 @@ impl Helper {
                 let nOpp = i32::max(0, maxOffset - (vehEdge.get_lanes().len() as i32 - 1 - vehLane.get_index()));
                 // Collect vehicles from opposite lanes
                 if nOpp > 0 {
-                    for (l, range) in checkedLanesInDrivingDir.iter() {
+                    for (l, range) in checkedLanesInDrivingDir.borrow().iter() {
                         let l = *l;
                         if l.is_null() || l.get_edge().get_opposite_edge().is_null() {
                             continue;
@@ -3409,10 +3406,9 @@ impl Helper {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn fuse_lane_coverage(aggregatedLaneCoverage: Rc<LaneCoverageInfo>, newLaneCoverage: Rc<LaneCoverageInfo>) {
+    pub fn fuse_lane_coverage(aggregatedLaneCoverage: Rc<std::cell::RefCell<LaneCoverageInfo>>, newLaneCoverage: &LaneCoverageInfo) {
+        let mut agg = aggregatedLaneCoverage.borrow_mut();
         for (lane, range2) in newLaneCoverage.iter() {
-            // shortcut: Rc<LaneCoverageInfo> is mutated in place like the C++ shared_ptr, needs interior mutability in ms_lane.rs to be sound
-            let agg: &mut LaneCoverageInfo = unsafe { &mut *(Rc::as_ptr(&aggregatedLaneCoverage) as *mut LaneCoverageInfo) };
             match agg.get(lane).copied() {
                 None => {
                     // Lane has no coverage in aggregatedLaneCoverage, yet

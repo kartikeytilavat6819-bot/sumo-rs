@@ -120,8 +120,7 @@ fn vissim_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
 }
 
 /// C++ `from >> double`: a token that does not parse gives 0 (C++11 behaviour)
-// shortcut: numbers are read as whitespace-delimited tokens, C++ `>>` stops at the first character that does not fit
 fn vissim_read_f64(from: &mut std::io::Cursor<Vec<u8>>) -> f64 {
-    vissim_raw_token(from).parse::<f64>().unwrap_or(0.0)
+    crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, true).parse::<f64>().unwrap_or(0.0)
 }
 
