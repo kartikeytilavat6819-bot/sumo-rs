@@ -2080,8 +2080,6 @@ pub struct NIImporter_OpenStreetMap {
     pub myImportTurnSigns: bool,
     /// whether edges should carry information on the use of typemap defaults
     pub myAnnotateDefaults: bool,
-    /// whether ETCS signals default to moving block
-    pub myETCS_movingBlock: bool,
     /// number of placement skips due to non-explicit oneway
     pub myPlacementSkippedNonExplicitOneWay: i32,
     /// number of placement skips due to generated opposite-direction auxiliary edges
@@ -2200,7 +2198,6 @@ impl NIImporter_OpenStreetMap {
             myImportCrossings: false,
             myImportTurnSigns: false,
             myAnnotateDefaults: false,
-            myETCS_movingBlock: false,
             myPlacementSkippedNonExplicitOneWay: 0,
             myPlacementSkippedAuxOppositeDirection: 0,
         }
@@ -2537,7 +2534,6 @@ impl NIImporter_OpenStreetMap {
         self.myImportCrossings = oc.get_bool("osm.crossings").unwrap();
         self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk").unwrap();
         self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults").unwrap();
-        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block").unwrap();
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
@@ -2920,9 +2916,6 @@ impl NIImporter_OpenStreetMap {
                 node.m().reinit(&pos, SumoXMLNodeType::RAIL_SIGNAL, false);
                 if (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32) == 0 {
                     node.m().base2.set_parameter("virtual", "true");
-                }
-                if self.myETCS_movingBlock && (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32) != 0 {
-                    node.m().base2.set_parameter("moving-block", "true");
                 }
             } else if n.tlsControlled {
                 // ok, this node is a traffic light node where no other nodes

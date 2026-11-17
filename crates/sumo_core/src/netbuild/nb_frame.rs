@@ -1350,19 +1350,6 @@ impl NBFrame {
         oc.do_register("tls.rebuild", SumoOption::bool(false));
         oc.add_description("tls.rebuild", "TLS Building", "rebuild all traffic light plans in the network");
 
-        oc.do_register("tls.actuated.jam-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.jam-threshold", "Processing", "Sets default jam-threshold parameter for all actuation detectors");
-        oc.do_register("tls.actuated.show-detectors", SumoOption::bool(false));
-        oc.add_description("tls.actuated.show-detectors", "Processing", "Sets default show-detectors parameter for all actuation detectors");
-        oc.do_register("tls.actuated.passing-time", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.passing-time", "Processing", "Sets default passing-time parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-gap", SumoOption::float(0.));
-        oc.add_description("tls.actuated.detector-gap", "Processing", "Sets default detector-gap parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-length", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.detector-length", "Processing", "Sets default detector-length parameter for all actuation detectors");
-        oc.do_register("tls.actuated.inactive-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.inactive-threshold", "Processing", "Sets default inactive-threshold parameter for all actuation detectors");
-
         // edge pruning
         oc.do_register("keep-edges.min-speed", SumoOption::float(-1.0));
         oc.add_synonyme("keep-edges.min-speed", "edges-min-speed", true);

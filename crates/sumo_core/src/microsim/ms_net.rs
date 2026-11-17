@@ -3273,7 +3273,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
-        // shortcut: PedestrianRouter::new (utils/router/pedestrian_router.rs) is a stub needing E::getAllEdges via the router trait bounds, upgrade when those bounds land; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myPedestrianRouter.get(&rngIndex).copied() {
@@ -3281,7 +3280,12 @@ impl MSNet {
                 router.m().prohibit(prohibited);
                 router.get_mut().unwrap()
             }
-            None => panic!("shortcut: pedestrian router is not creatable yet"),
+            None => {
+                let router: Ptr<MSPedestrianRouter> = Ptr::from_raw(Box::into_raw(Box::new(MSPedestrianRouter::new())));
+                me.myPedestrianRouter.insert(rngIndex, router);
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
         }
     }
 
@@ -3308,17 +3312,22 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
-        // shortcut: IntermodalRouter::new needs the IntermodalRouter_CreateNetCallback (Unmapped fn-pointer type in intermodal_router.rs), upgrade when that is typed; until then only an already-created router is returned
         let key = rngIndex * get_int("thread-rngs") + routingMode;
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        match me.myIntermodalRouter.get(&key).copied() {
-            Some(router) => {
-                router.m().prohibit(prohibited);
-                router.get_mut().unwrap()
-            }
-            None => panic!("shortcut: intermodal router is not creatable yet"),
+        if !me.myIntermodalRouter.contains_key(&key) {
+            let hasTaxi = MSDevice_Taxi::has_fleet() || me.myInserter.has_taxi_flow();
+            let carWalk = utils::options::options_cont::with_options(|oc| SUMOVehicleParserHelper::parse_car_walk_transfer(oc, hasTaxi));
+            let routingAlgorithm = get_string("routing-algorithm");
+            let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&get_string("persontrip.taxi.waiting-time")).unwrap());
+            // shortcut: FareModul (the effort calculator of ROUTING_MODE_COMBINED) is not ported, so combined routing cannot be built yet
+            let calc: Ptr<EffortCalculator> = if routingMode == 3 { panic!("shortcut: FareModul is not ported, combined intermodal routing is unsupported") } else { Ptr::null() };
+            let router = IntermodalRouter::new(MSNet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, routingMode, calc);
+            me.myIntermodalRouter.insert(key, Ptr::from_raw(Box::into_raw(Box::new(router))));
         }
+        let router = me.myIntermodalRouter[&key];
+        router.m().prohibit(prohibited);
+        router.get_mut().unwrap()
     }
 
     /// C++: `void MSNet::resetIntermodalRouter() const` [const]

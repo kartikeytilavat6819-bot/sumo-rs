@@ -138,6 +138,36 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn is_walking_area(&self) -> bool {
         self.is_walking_area()
     }
+    fn is_normal(&self) -> bool {
+        self.is_normal()
+    }
+    fn function(&self) -> SumoXMLEdgeFunc {
+        self.get_function()
+    }
+    fn other_taz_connector(&self) -> Ptr<MSEdge> {
+        self.get_other_taz_connector()
+    }
+    fn stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
+        MSEdge::get_stop_position(stop)
+    }
+    fn lane_edge(lane: Ptr<MSLane>) -> Ptr<MSEdge> {
+        Ptr::from_mut(lane.m().get_edge())
+    }
+    fn lane_outgoing_via_lanes(lane: Ptr<MSLane>) -> Vec<(Ptr<MSLane>, Ptr<MSEdge>)> {
+        lane.m().get_outgoing_via_lanes()
+    }
+    fn time_penalty(&self) -> f64 {
+        self.get_time_penalty()
+    }
+    fn lane_incoming_link_state(lane: Ptr<MSLane>) -> LinkState {
+        lane.m().get_incoming_link_state()
+    }
+    fn lane_permissions(lane: Ptr<MSLane>) -> SVCPermissions {
+        lane.get_permissions()
+    }
+    fn lane_allows_vehicle_class(lane: Ptr<MSLane>, svc: SUMOVehicleClass) -> bool {
+        lane.allows_vehicle_class(svc)
+    }
     fn railway_routing_edge(&self) -> Ptr<RailEdge<MSEdge, SUMOVehicle>> {
         self.get_railway_routing_edge()
     }

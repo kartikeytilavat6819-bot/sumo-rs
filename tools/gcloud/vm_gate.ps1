@@ -7,6 +7,9 @@ param(
     [string]$Vm = ""
 )
 $ErrorActionPreference = "Continue"
+# user's order: only the personal account, never the work account
+$env:CLOUDSDK_CORE_ACCOUNT = "kartikeytilavat6819@gmail.com"
+$env:CLOUDSDK_CORE_PROJECT = "project-b17b0335-3081-4c61-89b"
 # two VMs; a branch always goes to the same one so its incremental build stays warm (wave2 = lead -> sumo-gate)
 $vms = @(@{ n = "sumo-gate"; z = "us-central1-a" }, @{ n = "sumo-gate2"; z = "us-central1-b" })
 if (-not $Vm) { $Vm = if ($Branch -eq "wave2") { "sumo-gate" } else { $vms[([int[]][char[]]$Branch | Measure-Object -Sum).Sum % 2].n } }
@@ -19,7 +22,14 @@ git -C $Repo archive --format=tar.gz -o $tgz $sha
 $st = gcloud compute instances describe $Vm --zone $Zone --format "value(status)" 2>$null
 if ($st -ne "RUNNING") { gcloud compute instances start $Vm --zone $Zone --quiet 2>&1 | Out-Null; Start-Sleep 30 }
 $run = Join-Path $PSScriptRoot "vm_gate_run.sh"
-gcloud compute scp $tgz $run "${Vm}:/tmp/" --zone $Zone --quiet 2>&1 | Out-Null
-gcloud compute ssh $Vm --zone $Zone --quiet --command "while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha'; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh" 2>&1 |
-    Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s*\+|\s*~)' }
+# an ssh/scp drop (many agents connect at once) loses the whole run: retry until the run script reports an end
+for ($try = 1; $try -le 3; $try++) {
+    gcloud compute scp $tgz $run "${Vm}:/tmp/" --zone $Zone --quiet 2>&1 | Out-Null
+    $out = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha'; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh" 2>&1 |
+        Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s*\+|\s*~)' })
+    if (($out -join "`n") -match 'GATE DONE|BUILD FAILED') { $out; break }
+    "vm_gate: attempt $try ended without a result (ssh/scp drop); retrying"
+    if ($try -eq 3) { $out }
+    Start-Sleep (15 * $try)
+}
 Remove-Item $tgz -ErrorAction SilentlyContinue
