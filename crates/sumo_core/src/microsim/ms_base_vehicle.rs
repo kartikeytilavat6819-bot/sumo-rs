@@ -502,7 +502,7 @@ impl MSBaseVehicle {
             match self.try_get_device_parameter(&tok[1], &key[tok[0].len() + tok[1].len() + 2..]) {
                 Ok(v) => return v,
                 Err(e) => {
-                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e);
+                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e.to_string());
                     return String::new();
                 }
             }
@@ -588,13 +588,13 @@ impl MSBaseVehicle {
     }
 
     /// Fallible form of `getDeviceParameter` (C++ throws InvalidArgument); the Err carries `what()`
-    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, String> {
+    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
         for dev in self.myDevices.iter() {
             if dev.base2.device_name() == deviceName {
-                return Ok(MSDevice::get_parameter_of(*dev, key));
+                return MSDevice::get_parameter_of(*dev, key);
             }
         }
-        Err(utils::tlf!("no device of type '%' exists", deviceName))
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `bool MSBaseVehicle::hasDevice(const std::string &) const` [const]
@@ -671,8 +671,8 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> String {
-        self.try_get_device_parameter(deviceName, key).unwrap_or_else(|e| panic!("{}", e))
+    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
+        self.try_get_device_parameter(deviceName, key)
     }
 
     /// C++: `void MSBaseVehicle::setDeviceParameter(const std::string &, const std::string &, const std::string &)`
@@ -688,14 +688,13 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) {
+    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) -> Result<(), ProcessError> {
         for dev in self.myDevices.iter_mut() {
             if dev.base2.device_name() == deviceName {
-                MSDevice::set_parameter_of(*dev, key, value);
-                return;
+                return MSDevice::set_parameter_of(*dev, key, value);
             }
         }
-        panic!("{}", utils::tlf!("no device of type '%' exists", deviceName));
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `void MSBaseVehicle::setJunctionModelParameter(const std::string &, const std::string &)`

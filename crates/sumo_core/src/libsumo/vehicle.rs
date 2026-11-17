@@ -1905,7 +1905,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
                 panic!("{}", format!("Invalid device parameter '{}' for vehicle '{}'", key, vehID));
             }
             // InvalidArgument from setDeviceParameter is rethrown as TraCIException
-            veh.m().set_device_parameter(tok[1], &key[tok[0].len() + tok[1].len() + 2..], value);
+            veh.m().set_device_parameter(tok[1], &key[tok[0].len() + tok[1].len() + 2..], value).unwrap_or_else(|e| panic!("{}", e));
         } else if key.starts_with("laneChangeModel.") {
             let attrName = &key[16..];
             if attrName == "lcContRight" {
