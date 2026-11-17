@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/ped_persontrip_public/ped_pt.nod.xml --edge-files tools/oracle/cases/ped_persontrip_public/ped_pt.edg.xml --sidewalks.guess --crossings.guess --walkingareas
