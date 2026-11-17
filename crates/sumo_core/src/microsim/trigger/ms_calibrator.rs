@@ -177,6 +177,20 @@ impl std::ops::DerefMut for MSCalibrator {
     }
 }
 
+impl utils::xml::generic_sax_handler::SaxHandler for MSCalibrator {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+        utils::xml::generic_sax_handler::SaxHandler::handler(&mut self.base)
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        MSCalibrator::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        MSCalibrator::my_end_element(self, element);
+        Ok(())
+    }
+}
+
 // C++ static members of MSCalibrator (port as module-level statics, see AGENTS.md):
 //   static std::vector<MSMoveReminder *> MSCalibrator::myLeftoverReminders;
 //   static std::vector<SUMOVehicleParameter *> MSCalibrator::myLeftoverVehicleParameters;
@@ -362,7 +376,10 @@ impl MSCalibrator {
             b.write_xml_detector_prolog(b.myOutput.m());
         }
         if !aXMLFilename.is_empty() {
-            // shortcut: XMLSubSys::runParser(*this, file) is not wired (MSCalibrator is no SaxHandler and SUMORouteHandler has no GenericSAXHandler base yet), so the <flow> intervals of the file are not read and init() is not run here, upgrade when SUMORouteHandler is ported
+            utils::xml::xml_sub_sys::run_parser(&mut *b, aXMLFilename, false, false, false, true).unwrap_or(false);
+            if !b.myDidInit {
+                b.init();
+            }
         }
         my_instances().insert(id.to_string(), this);
         if addLaneMeanData && !edge.is_null() {
@@ -1142,9 +1159,9 @@ impl MSCalibrator {
             if !self.myDidInit {
                 self.init();
             }
-            // shortcut: callParentEnd(element) is not ported (SUMORouteHandler has no GenericSAXHandler base), so the SUMORouteHandler element stack is not kept in sync, upgrade when SUMORouteHandler is ported
+            // callParentEnd forwards to myParentHandler, which is unset: the calibrator is the top-level parser of its own file
         } else if element != SUMO_TAG_FLOW {
-            // shortcut: MSRouteHandler::myEndElement(element) is not ported, the element is not forwarded to the route handler, upgrade when MSRouteHandler has myEndElement
+            utils::xml::generic_sax_handler::SaxHandler::my_end_element(&mut self.base, element).unwrap_or_else(|e| std::panic::panic_any(e));
         }
     }
 
