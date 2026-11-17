@@ -769,7 +769,7 @@ impl MSActuatedTrafficLightLogic {
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| induct_loop_of_detector(d)).unwrap_or(Ptr::null());
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| induct_loop_of_detector(*d)).unwrap_or(Ptr::null());
                     if loop_.is_null() {
                         panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
                     }
