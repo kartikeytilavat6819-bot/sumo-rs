@@ -91,6 +91,13 @@ fn join_node_ids(nodes: &NodeSet, sep: &str) -> String {
     nodes_by_id(nodes).iter().map(|n| n.get_id().to_string()).collect::<Vec<_>>().join(sep)
 }
 
+// TEMP-JTRACE
+fn jtrace(stage: &str, nodes: &NodeSet) {
+    if std::env::var_os("NC_JTRACE").is_some() {
+        eprintln!("JTRACE {} {}", stage, join_node_ids(nodes, ","));
+    }
+}
+
 /// C++ `delete node`
 fn delete_node(node: Ptr<NBNode>) {
     node.m().drop_();
@@ -729,17 +736,21 @@ impl NBNodeCont {
             }
         }
         self.generate_node_clusters(maxDist, &mut cands);
-        for cluster in cands.iter_mut() {
+        for (ci, cluster) in cands.iter_mut().enumerate() {
+            jtrace(&format!("c{} gen", ci), cluster);
             // remove join exclusions
             cluster.retain(|n| !self.myJoinExclusions.contains(n.get_id()));
+            jtrace(&format!("c{} excl", ci), cluster);
             let mut origCluster = join_node_ids(cluster, ",");
             // remove nodes that can be eliminated by geometry.remove
             self.prune_cluster_fringe(cluster, maxDist, false);
+            jtrace(&format!("c{} fringe1", ci), cluster);
             if cluster.len() < 2 {
                 continue;
             }
             // remove nodes that are part of a bypass lane (typically for turning right without waiting at a traffic light)
             self.prune_slip_lane_nodes(cluster, maxDist);
+            jtrace(&format!("c{} slip1", ci), cluster);
             if cluster.len() < 2 {
                 write_warningf!("Not joining junctions % (%).", origCluster, "slip lane");
                 continue;
@@ -754,6 +765,7 @@ impl NBNodeCont {
                 origReason = "long edge".to_string();
                 feasible = false;
             }
+            jtrace(&format!("c{} feas0 {} {}", ci, feasible, origReason), cluster);
             if !feasible {
                 let start = cluster.clone();
                 if self.reduce_to_circle(cluster, 4, start, maxDist, Vec::new()) {
@@ -763,6 +775,7 @@ impl NBNodeCont {
                     }
                 }
             }
+            jtrace(&format!("c{} red4 {}", ci, feasible), cluster);
             if !feasible {
                 let start = cluster.clone();
                 if self.reduce_to_circle(cluster, 2, start, maxDist, Vec::new()) {
@@ -772,6 +785,7 @@ impl NBNodeCont {
                     }
                 }
             }
+            jtrace(&format!("c{} red2 {}", ci, feasible), cluster);
             while !feasible && !tryRemove.is_null() {
                 cluster.remove(&tryRemove);
                 self.prune_cluster_fringe(cluster, maxDist, false);
@@ -781,12 +795,14 @@ impl NBNodeCont {
                     write_warningf!("Reducing junction cluster % (%).", origCluster, origReason);
                 }
             }
+            jtrace(&format!("c{} while {}", ci, feasible), cluster);
             if cluster.len() < 2 {
                 write_warningf!("Not joining junctions % (%).", origCluster, "after reduction");
                 continue;
             }
             // avoid removal of long edges (must have been added via an alternative path).
             let numPruned = Self::prune_long_edges(cluster, maxDist, false);
+            jtrace(&format!("c{} longedge {}", ci, numPruned), cluster);
             if cluster.len() < 2 {
                 write_warningf!("Not joining junctions % (%).", origCluster, "long edge");
                 continue;
@@ -794,17 +810,20 @@ impl NBNodeCont {
             // after pruning long edges we have to recheck
             if numPruned > 0 {
                 self.prune_cluster_fringe(cluster, maxDist, false);
+                jtrace(&format!("c{} fringe2", ci), cluster);
                 if cluster.len() < 2 {
                     write_warningf!("Not joining junctions % (%).", origCluster, "long edge");
                     continue;
                 }
                 self.prune_slip_lane_nodes(cluster, maxDist);
+                jtrace(&format!("c{} slip2", ci), cluster);
                 if cluster.len() < 2 {
                     write_warningf!("Not joining junctions % (%).", origCluster, "slip lane");
                     continue;
                 }
             }
             feasible = self.feasible_cluster(cluster, &ptStopEnds, maxDist, &mut origReason, &mut tryRemove);
+            jtrace(&format!("c{} final {}", ci, feasible), cluster);
             if !feasible {
                 write_warningf!("Not joining junctions % (%).", origCluster, origReason);
                 continue;
@@ -831,6 +850,7 @@ impl NBNodeCont {
                 components.push(newComp);
             }
             for comp in components {
+                jtrace(&format!("c{} comp", ci), &comp);
                 if comp.len() > 1 {
                     clusters.push(comp);
                 }

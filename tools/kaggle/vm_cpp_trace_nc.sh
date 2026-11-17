@@ -1,0 +1,14 @@
+#!/bin/bash
+# TEMPORARY (nx03): like tools/gcloud/vm_cpp_trace.sh, but builds netconvert and replaces one source file.
+#   bash tools/kaggle/vm_cpp_trace_nc.sh <ID> <file.cpp>   -> prints the path of an instrumented netconvert binary
+set -e
+ID=$1 FILE=$(realpath "$2")
+D=/home/gate/cpp-$ID
+[ -d /home/gate/sumo-cpp/bin ] || { echo "vm_cpp_trace_nc: no C++ tree on this VM" >&2; exit 1; }
+exec 8>/home/gate/cpp-$ID.lock; flock 8
+[ -d "$D" ] || cp -a /home/gate/sumo-cpp "$D"
+cd "$D"
+git checkout -q -- src
+cp "$FILE" src/netbuild/NBNodeCont.cpp
+(cd build && make -j8 netconvert 2>&1 | grep -E 'error|Error' | head -20) >&2
+echo "$D/bin/netconvert"
