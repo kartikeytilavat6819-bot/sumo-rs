@@ -4,7 +4,7 @@ use crate::prelude::*;
 use super::mscf_model::*;
 use crate::microsim::ms_globals::MSGlobals;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
 
 fn idm_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_IDM>(m).finalize_speed(veh, vPos) }
 fn idm_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_IDM>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage) }
@@ -17,6 +17,12 @@ fn idm_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, 
 fn idm_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 { cf_cast::<MSCFModel_IDM>(m).min_next_speed(speed, veh) }
 fn idm_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_IDM>(m).get_model_id() }
 fn idm_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_IDM>(m).duplicate(vtype) }
+fn idm_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_IDM_VehicleVariables) }.save_state(out, m)
+}
+fn idm_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_IDM_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn idm_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_IDM>(m).create_vehicle_variables() }
 
 /// Virtual table of MSCFModel_IDM: its overrides on top of the MSCFModel default table
@@ -33,6 +39,8 @@ pub const IDM_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: idm_get_model_id,
     duplicate: idm_duplicate,
     create_vehicle_variables: idm_create_vehicle_variables,
+    save_vehicle_variables: idm_save_vehicle_variables,
+    load_vehicle_variables: idm_load_vehicle_variables,
     ..DEFAULT_MSCF_MODEL_VT
 };
 use utils::geom::NUMERICAL_EPS;
@@ -574,7 +582,7 @@ impl MSCFModel_IDM_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "IDMM");
-        let internals = f64_to_string_prec(self.levelOfService, 6);
+        let internals = f64_to_string_default(self.levelOfService);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;

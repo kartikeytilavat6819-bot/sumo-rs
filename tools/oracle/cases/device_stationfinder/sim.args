@@ -1,0 +1,1 @@
+--end 150 --additional-files tools/oracle/cases/device_stationfinder/chargingstation.add.xml --device.stationfinder.probability 1 --precision 6

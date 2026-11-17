@@ -116,8 +116,12 @@ impl ODDistrictCont {
             }
             utils::common::msg_handler::progress_begin_message(&format!("Loading districts from '{}'", districtfile));
             // build the xml-parser and handler
-            // shortcut: ODDistrictHandler does not implement SaxHandler yet, so the XML parse cannot run, upgrade once od_district_handler.rs is ported
-            panic!("ODDistrictCont::loadDistricts: XML parsing of '{}' needs ODDistrictHandler as a SaxHandler", districtfile);
+            let mut handler = ODDistrictHandler::new(self, districtfile);
+            if !utils::xml::xml_sub_sys::run_parser(&mut handler, districtfile, true, false, false, true).unwrap_or_else(|e| panic!("{e}")) {
+                utils::common::msg_handler::progress_failed_message();
+            } else {
+                utils::common::msg_handler::progress_done_message();
+            }
         }
     }
 

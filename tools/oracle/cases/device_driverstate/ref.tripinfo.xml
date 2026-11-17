@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:10:22.059397-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_driverstate/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_driverstate/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_driverstate/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_driverstate/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_driverstate/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <driver_state_device>
+        <device.driverstate.probability value="1"/>
+    </driver_state_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="follow" depart="2.00" departLane="-103224#0_1" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="21.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="20.00" duration="19.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.42" rerouteNo="0" devices="tripinfo_follow driverstatefollow fcd_follow" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="follow2" depart="6.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="25.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="20.00" duration="19.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.34" rerouteNo="0" devices="tripinfo_follow2 driverstatefollow2 fcd_follow2" vType="car" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="lead" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="50.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="20.00" duration="50.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="25.00" timeLoss="3.38" rerouteNo="0" devices="tripinfo_lead driverstatelead fcd_lead" vType="car" speedFactor="1.06" vaporized=""/>
+</tripinfos>
