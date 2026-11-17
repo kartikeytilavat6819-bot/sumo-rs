@@ -3000,6 +3000,7 @@ impl MSRouteHandler {
                 let departLane: i32 = attrs.get_opt(SUMO_ATTR_DEPARTLANE, "", &mut ok, -1, true);
                 let departPosLatStr: String = attrs.get_opt(SUMO_ATTR_DEPARTPOS_LAT, "", &mut ok, String::new(), true);
                 let departPosLat = self.interpret_depart_pos_lat(&departPosLatStr, departLane, "walk");
+                if std::env::var_os("CD01").is_some() { eprintln!("CD01 WALKNEW {} bs_null={}", self.myVehicleParameter.id, bs.is_null()); }
                 let mut stage = MSStageWalking::new(
                     &self.myVehicleParameter.id,
                     &self.myActiveRoute,
@@ -3377,6 +3378,7 @@ impl MSRouteHandler {
     #[allow(unused_variables)]
     pub fn parse_walk_positions(&mut self, attrs: &SUMOSAXAttributes, personID: &str, fromEdge: Ptr<MSEdge>, toEdge: &Ptr<MSEdge>, departPos: &mut f64, arrivalPos: &mut f64, bs: &mut Ptr<MSStoppingPlace>, lastStage: Ptr<MSStage>, ok: &mut bool) {
         // C++ try/catch(ProcessError&): deleteActivePlanAndVehicleParameter, then rethrow
+        if std::env::var_os("CD01").is_some() { eprintln!("CD01 PWENTRY {}", personID); }
         let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
             let rng = SUMORouteHandler::get_parsing_rng();
             let description = format!("person '{}' walking from edge '{}'", personID, fromEdge.get_id());
