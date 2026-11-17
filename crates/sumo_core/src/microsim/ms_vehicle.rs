@@ -2931,6 +2931,7 @@ impl MSVehicle {
     pub fn work_on_move_reminders(&mut self, oldPos: f64, newPos: f64, newSpeed: f64) {
         // This erasure-idiom works for all stl-sequence-containers
         // See Meyers: Effective STL, Item 9
+        if self.get_id() == "truck0" { eprintln!("RC01 wom t={} len={} oldPos={} newPos={} lane={}", MSNet::get_instance().get_current_time_step(), self.myMoveReminders.len(), oldPos, newPos, self.myLane.get_id()); } // RC01 TRACE
         let mut i = 0;
         while i < self.myMoveReminders.len() {
             let (rem, relPos) = self.myMoveReminders[i];
@@ -5976,6 +5977,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn leave_lane(&mut self, reason: MSMoveReminder_Notification, approachedLane: Ptr<MSLane>) {
+        if self.get_id() == "truck0" { eprintln!("RC01 leave t={} len={} reason={}", MSNet::get_instance().get_current_time_step(), self.myMoveReminders.len(), reason as i32); } // RC01 TRACE
         let mut i = 0;
         while i < self.myMoveReminders.len() {
             let mut rem = self.myMoveReminders[i].0;
