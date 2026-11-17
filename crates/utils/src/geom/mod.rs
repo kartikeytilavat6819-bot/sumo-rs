@@ -20,17 +20,12 @@ pub const POSITION_EPS: f64 = 0.1;
 pub const NUMERICAL_EPS: f64 = 0.001;
 
 /// C++ `InvalidArgument`
-// shortcut: local stand-in for UtilExceptions; switch to common's exception types once ported
+// shortcut: local stand-in for UtilExceptions::InvalidArgument (common has ProcessError::InvalidArgument);
+// switching changes the return type of split_at / move2side_custom and their callers, do it in one pass
 #[derive(Debug, Clone, PartialEq)]
 pub struct InvalidArgument(pub String);
 
-// shortcut: prints like MsgHandler's default console output; route through MsgHandler once it is ported
-pub(crate) fn write_warning(msg: &str) {
-    eprintln!("Warning: {msg}");
-}
-pub(crate) fn write_error(msg: &str) {
-    eprintln!("Error: {msg}");
-}
+pub(crate) use crate::common::msg_handler::{write_error, write_warning};
 
 /// MIN2/MAX2 from StdDefs.h (differ from f64::min/max for NaN)
 #[inline]
@@ -42,7 +37,19 @@ pub(crate) fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
 
-/// shortcut: minimal StringTokenizer(str, token) splitting, replace with common::StringTokenizer once ported
-pub(crate) fn tokenize<'a>(s: &'a str, token: &str) -> Vec<&'a str> {
-    if s.is_empty() { Vec::new() } else { s.split(token).collect() }
+/// StringTokenizer(str, token) (no empty tokens, like C++)
+pub(crate) fn tokenize(s: &str, token: &str) -> Vec<String> {
+    crate::common::string_tokenizer::StringTokenizer::with_token(s, token, false).get_vector()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tokenize;
+
+    #[test]
+    fn tokenize_skips_empty_tokens() {
+        // StringTokenizer("1,2  3,4", " ") yields two tokens, a split would yield an empty one
+        assert_eq!(tokenize("1,2  3,4", " "), ["1,2", "3,4"]);
+        assert_eq!(tokenize("", " "), Vec::<String>::new());
+    }
 }

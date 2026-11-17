@@ -1,6 +1,6 @@
 //! Port of utils/common/Named.h
-// shortcut: ComparatorIdLess / ComparatorNumericalIdLess are not ported;
-// sort with `sort_by(|a, b| a.get_id().cmp(b.get_id()))` until a container needs them
+// shortcut: ComparatorNumericalIdLess is not ported (no shared numerical-id trait yet); lanes sort by
+// `get_numerical_id()` inline, add the trait when a templated container needs it
 use super::ptr::Ptr;
 use super::to_string::ToStringPrec;
 use std::collections::BTreeSet;
@@ -8,6 +8,25 @@ use std::collections::BTreeSet;
 /// Anything with an id (the virtual getID() of Named subclasses)
 pub trait HasId {
     fn get_id(&self) -> &str;
+}
+
+/// C++ `ComparatorIdLess`: `a->getID() < b->getID()` (bytewise, like std::string)
+pub fn id_less<T: HasId + ?Sized>(a: &T, b: &T) -> bool {
+    a.get_id() < b.get_id()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn id_comparator_is_bytewise() {
+        let (a, b) = (Named::new("a10"), Named::new("a9"));
+        // "a10" < "a9" as std::string (no numerical ordering)
+        assert!(id_less(&a, &b));
+        assert!(!id_less(&b, &a));
+        assert!(!id_less(&a, &a));
+    }
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
