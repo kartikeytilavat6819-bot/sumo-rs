@@ -19,5 +19,23 @@ for spec in "sl2015_lat04 m5" "sl2015_lat08 c2"; do
   cmp -s "$d/ref.fcd.xml" "$O/$c.cpp.fcd.xml" && echo "$c cpp fcd == ref" || echo "$c cpp fcd != ref"
   cmp -s "$d/ref.fcd.xml" "$O/$c.ours.fcd.xml" && echo "$c ours fcd == ref" || echo "$c ours fcd != ref"
   echo "$c LCT lines ours=$(grep -c '^LCT' "$O/$c.ours.trace") cpp=$(grep -c '^LCT' "$O/$c.cpp.trace")"
-  diff <(grep '^LCT' "$O/$c.ours.trace") <(grep '^LCT' "$O/$c.cpp.trace") | head -12 | cut -c1-400
+  diff <(grep '^LCT' "$O/$c.ours.trace") <(grep '^LCT' "$O/$c.cpp.trace") | head -4 | cut -c1-200
+  python - "$O/$c.ours.trace" "$O/$c.cpp.trace" <<'EOF'
+import sys
+def load(p): return [l.rstrip('\n') for l in open(p) if l.startswith('LCT')]
+a = load(sys.argv[1]); b = load(sys.argv[2])
+for i, (x, y) in enumerate(zip(a, b)):
+    if x != y:
+        xs = x.replace(',', ' ').split(); ys = y.replace(',', ' ').split()
+        for j, (p, q) in enumerate(zip(xs, ys)):
+            if p != q:
+                print('first diff line', i + 1, 'token', j, 'ours', p, 'cpp', q)
+                break
+        else:
+            print('first diff line', i + 1, 'length differs')
+        print('ours:', x[:260]); print('cpp :', y[:260])
+        break
+else:
+    print('no diff in common prefix', len(a), len(b))
+EOF
 done
