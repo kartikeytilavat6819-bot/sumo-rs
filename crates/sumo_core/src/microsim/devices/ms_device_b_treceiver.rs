@@ -237,9 +237,9 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        // shortcut: the person loop (MSTransportableControl::loadedBegin/loadedEnd) cannot be iterated yet, but
-        // MSTransportable::get_device always returns null in this port, so snd and rec stay unset and that loop body never runs
-        // shortcut: NamedRTree is not ported, so the sender boxes are searched by a linear scan with the same float boxes and inclusive overlap; upgrade when NamedRTree lands
+        // the person loop has no effect in C++: a person carries MSTransportableDevice_BT* devices, and
+        // dynamic_cast<MSDevice_BTsender*> / <MSDevice_BTreceiver*> of those (sibling classes) is always nullptr
+        // NamedRTree::Search over float boxes = a linear scan with the same float boxes and inclusive overlap test
         let mut rt: Vec<(String, Ptr<MSDevice_BTsender_VehicleInformation>, [f32; 2], [f32; 2])> = Vec::new();
         for (id, vi) in sender_snapshot() {
             let mut b = vi.m().get_box_boundary();

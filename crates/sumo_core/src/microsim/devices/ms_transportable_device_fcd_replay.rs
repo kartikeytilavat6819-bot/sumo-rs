@@ -197,15 +197,26 @@ impl MSTransportableDevice_FCDReplay {
                 if teSpeed == 0. && (v.m().get_position_on_lane() - teLanePos).abs() >= POSITION_EPS { // leaving the vehicle
                     let lane = v.m().get_lane();
                     lane.m().get_vehicles_secure(); // lock the lane
-                    // shortcut: removeTransportable on v's MSDevice_Transportable is skipped, because the typeid device lookup is not ported (get_device returns null); upgrade with the device type ids
+                    // getDevice(typeid(MSDevice_Transportable)): the first person or container device
+                    let transDev = v.m().get_devices().iter().copied().find(|d| { let n = d.base2.device_name(); n == "person" || n == "container" }).unwrap_or_default();
+                    transDev.cast::<MSDevice_Transportable>().m().remove_transportable(holder);
                     holder.m().proceed(MSNet::get_instance(), currentTime, false);
                     lane.m().release_vehicles(); // unlock the lane
                 }
             }
         }
         if matches!(holder.m().get_current_stage_type(), MSStageType::WALKING) {
-            // shortcut: the libsumo::TraCIException catch (WRITE_WARNING) is not ported; move_to_xy panics on error instead
-            crate::libsumo::person::Person::move_to_xy(holder.m().get_id(), &teEdge, tePos.x(), tePos.y(), teAngle, 7, 0.1);
+            let pid = holder.m().get_id().to_string();
+            // C++ catch (libsumo::TraCIException& e) { WRITE_WARNING(e.what()); }: TraCI errors travel as String panic payloads
+            let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                crate::libsumo::person::Person::move_to_xy(&pid, &teEdge, tePos.x(), tePos.y(), teAngle, 7, 0.1);
+            }));
+            if let Err(payload) = res {
+                match payload.downcast_ref::<String>() {
+                    Some(msg) => utils::common::msg_handler::write_warning(msg),
+                    None => std::panic::resume_unwind(payload),
+                }
+            }
             let walk: Ptr<MSStageWalking> = holder.m().get_current_stage().cast::<MSStageWalking>();
             if self.myTrajectoryIndex > 0 && self.myTrajectory.m()[(self.myTrajectoryIndex - 1) as usize].edgeOrLane != teEdge {
                 walk.m().move_to_next_edge(holder, currentTime, 1, Ptr::null(), true);
@@ -306,8 +317,15 @@ impl MSTransportableDevice_FCDReplay_MovePedestrians {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        // shortcut: the MSTransportableControl loadedBegin/loadedEnd iterator is Unmapped and get_device is a null shortcut, so no replay devices are collected; upgrade both together
-        let devices: Vec<Ptr<MSTransportableDevice_FCDReplay>> = Vec::new();
+        let mut net = MSNet::get_instance();
+        let c = net.m().get_person_control();
+        let mut devices: Vec<Ptr<MSTransportableDevice_FCDReplay>> = Vec::new();
+        for (_, t) in c.loaded_begin() {
+            let device = t.get_device("fcd-replay");
+            if !device.is_null() {
+                devices.push(device.cast::<MSTransportableDevice_FCDReplay>());
+            }
+        }
         for d in devices {
             if d.m().move_(currentTime) {
                 d.m().get_holder().remove_stage(0, false);
