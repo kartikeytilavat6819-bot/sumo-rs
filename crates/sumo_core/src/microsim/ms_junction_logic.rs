@@ -30,7 +30,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_response_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        &myDummyFoes
+        self.bit_set().get_response_for(linkIndex)
     }
 
     /// C++: `const MSLogicJunction::LinkBits & MSJunctionLogic::getFoesFor(int) const` [const, virtual]
@@ -41,7 +41,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_foes_for(&self, linkIndex: i32) -> &MSLogicJunction_LinkBits {
-        &myDummyFoes
+        self.bit_set().get_foes_for(linkIndex)
     }
 
     /// C++: `bool MSJunctionLogic::getIsCont(int) const` [const, virtual]
@@ -51,7 +51,7 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_is_cont(&self, linkIndex: i32) -> bool {
-        false
+        self.bit_set().get_is_cont(linkIndex)
     }
 
     /// C++: `int MSJunctionLogic::getLogicSize() const` [const]
@@ -69,7 +69,14 @@ impl MSJunctionLogic {
     //     }
     #[allow(unused_variables)]
     pub fn has_foes(&self) -> bool {
-        false
+        self.bit_set().has_foes()
+    }
+
+    /// Virtual dispatch: MSBitSetLogic is the only subclass and every logic is built as one
+    /// (NLJunctionControlBuilder::closeJunction), so the base bodies above are never reached in C++.
+    fn bit_set(&self) -> &MSBitSetLogic<SUMO_MAX_CONNECTIONS> {
+        // SAFETY: MSBitSetLogic is #[repr(C)] with `base: MSJunctionLogic` as its first field.
+        unsafe { &*(self as *const Self as *const MSBitSetLogic<SUMO_MAX_CONNECTIONS>) }
     }
 
     /// C++: `void MSJunctionLogic::MSJunctionLogic(int)` [protected]
@@ -85,3 +92,24 @@ impl MSJunctionLogic {
     // equivalent exists: the type is intentionally non-copyable.
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn base_virtuals_dispatch_to_the_bitset_logic() {
+        let mut foes = MSLogicJunction_LinkBits::new();
+        foes.set(2, true);
+        let mut resp = MSLogicJunction_LinkBits::new();
+        resp.set(1, true);
+        let mut conts = MSLogicJunction_LinkBits::new();
+        conts.set(0, true);
+        let b = MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(1, &vec![resp], &vec![foes], conts);
+        let base: &MSJunctionLogic = &b.base;
+        assert!(base.get_foes_for(0).test(2));
+        assert!(base.get_response_for(0).test(1));
+        assert!(base.get_is_cont(0));
+        assert!(base.has_foes());
+    }
+}
