@@ -6,4 +6,3 @@ pub mod vehicle;
 pub mod named_rtree;
 pub mod parametrised_wrapping_command;
 pub mod wrapping_command;
-pub mod parametrised_wrapping_command;
