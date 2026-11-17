@@ -70,3 +70,42 @@ index 41e69ee..e77560e 100644
      MSLane* source = from->lane;
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
+diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
+index c892b2d..f9b3e65 100644
+--- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
++++ b/src/microsim/lcmodels/MSLCM_SL2015.cpp
+@@ -178,6 +178,21 @@ MSLCM_SL2015::debugVehicle() const {
+ }
+ 
+ 
++#include <cstring>
++#include <cstdio>
++#include <cstdlib>
++static bool lcTr(const MSVehicle& v) {
++    static const char* t = std::getenv("LCTRACE_ID");
++    return t != nullptr && v.getID() == t;
++}
++static std::string lcBits(double d) {
++    unsigned long long u;
++    std::memcpy(&u, &d, sizeof u);
++    char b[20];
++    std::snprintf(b, sizeof b, "%016llx", u);
++    return b;
++}
++
+ int
+ MSLCM_SL2015::wantsChangeSublane(
+     int laneOffset,
+@@ -220,10 +235,12 @@ MSLCM_SL2015::wantsChangeSublane(
+                                      neighLane, preb,
+                                      lastBlocked, firstBlocked, latDist, maneuverDist, blocked);
+ 
++    if (lcTr(myVehicle)) std::cerr << "LCT-W1 " << MSNet::getInstance()->getCurrentTimeStep() << " " << myVehicle.getID() << " lo=" << laneOffset << " raw=" << result << " latDist=" << lcBits(latDist) << " manDist=" << lcBits(maneuverDist) << " blocked=" << blocked << "\n";
+     result = keepLatGap(result, leaders, followers, blockers,
+                         neighLeaders, neighFollowers, neighBlockers,
+                         neighLane, laneOffset, latDist, maneuverDist, blocked);
+ 
++    if (lcTr(myVehicle)) std::cerr << "LCT-W2 " << MSNet::getInstance()->getCurrentTimeStep() << " " << myVehicle.getID() << " lo=" << laneOffset << " keep=" << result << " latDist=" << lcBits(latDist) << " manDist=" << lcBits(maneuverDist) << " blocked=" << blocked << "\n";
+     result |= getLCA(result, latDist);
+     // take into account lateral acceleration
+ #if defined(DEBUG_MANEUVER) || defined(DEBUG_STATE)

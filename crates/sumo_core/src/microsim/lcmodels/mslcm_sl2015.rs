@@ -3,6 +3,13 @@
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
+fn lctw_on(v: Ptr<MSVehicle>) -> bool {
+    std::env::var("LCTRACE_ID").map(|t| t == v.get_id().to_string()).unwrap_or(false)
+}
+fn lctw_bits(d: f64) -> String {
+    format!("{:016x}", d.to_bits())
+}
+
 /// C++ typedef `std::pair<double, int> MSLCM_SL2015::Info`
 pub type MSLCM_SL2015_Info = (f64, i32);
 
@@ -519,7 +526,13 @@ impl MSLCM_SL2015 {
     #[allow(unused_variables)]
     pub fn wants_change_sublane(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, maneuverDist: &mut f64, blocked: &mut i32) -> i32 {
         let mut result = self.wants_change_sublane_2(laneOffset, alternatives, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, preb, lastBlocked, firstBlocked, latDist, maneuverDist, blocked);
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-W1 {} {} lo={} raw={} latDist={} manDist={} blocked={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, result, lctw_bits(*latDist), lctw_bits(*maneuverDist), *blocked);
+        }
         result = self.keep_lat_gap(result, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, laneOffset, latDist, maneuverDist, blocked);
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-W2 {} {} lo={} keep={} latDist={} manDist={} blocked={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, result, lctw_bits(*latDist), lctw_bits(*maneuverDist), *blocked);
+        }
         result |= Self::get_lca(result, *latDist);
         // take into account lateral acceleration
         *latDist = speed2dist(self.compute_speed_lat(*latDist, maneuverDist, (result & LCA_URGENT) != 0));
