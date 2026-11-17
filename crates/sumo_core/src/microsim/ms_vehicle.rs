@@ -1660,7 +1660,7 @@ impl MSVehicle_Influencer {
                 v.m().myState.myPos = self.myRemotePos;
                 v.m().myState.myPosLat = self.myRemotePosLat;
                 if needFurtherUpdate {
-                    // shortcut: furtherLanes are moved out of the vehicle during the call to avoid aliasing &mut
+                    // updateFurtherLanes modifies myFurtherLanes(+PosLat) in place: move them out to avoid aliasing &mut self
                     let mut furtherLanes = std::mem::take(&mut v.m().myFurtherLanes);
                     let mut furtherLanesPosLat = std::mem::take(&mut v.m().myFurtherLanesPosLat);
                     let backPos = v.m().update_further_lanes(&mut furtherLanes, &mut furtherLanesPosLat, &Vec::new());
@@ -3614,7 +3614,7 @@ impl MSVehicle {
         // Determine vNext = speed after current sim step (ballistic), resp. in current simstep (euler)
         // Call to finalizeSpeed applies speed reduction due to dawdling / lane changing but ensures minimum safe speed
         let mut vNext = vSafe;
-        // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
+        // the car-following model is owned by the vehicle type, not the vehicle: the raw deref only detaches the borrow from &mut self
         let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
         let rawAccel = speed2accel(max2(vNext, 0.0) - self.myState.mySpeed);
         if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED * TS && self.myWaitingTime > crate::microsim::ms_globals::startup_wait_threshold() && rawAccel <= self.accel_threshold_for_waiting() && self.myActionStep {
@@ -9472,7 +9472,9 @@ impl MSVehicle {
         let mut newFurther: Vec<Ptr<MSLane>> = Vec::new();
         let mut newFurtherPosLat: Vec<f64> = Vec::new();
         let mut backPosOnPreviousLane: f64 = self.myState.myPos - self.get_length();
-        let widthShift = self.myFurtherLanesPosLat.len() > self.myFurtherLanes.len();
+        // C++ reads the members myFurtherLanesPosLat / myFurtherLanes here; both callers pass exactly those (moved out
+        // into the arguments to avoid aliasing &mut self), so read the arguments
+        let widthShift = furtherLanesPosLat.len() > furtherLanes.len();
         if passedLanes.len() > 1 {
             // There are candidates for further lanes. (passedLanes[-1] is the current lane, or current shadow lane in context of updateShadowLanes())
             let mut fi: usize = 0;
@@ -9500,7 +9502,7 @@ impl MSVehicle {
                     // we assign the last known lateral position.
                     if newFurtherPosLat.len() == 0 {
                         if widthShift {
-                            newFurtherPosLat.push(*self.myFurtherLanesPosLat.last().unwrap());
+                            newFurtherPosLat.push(*furtherLanesPosLat.last().unwrap());
                         } else {
                             newFurtherPosLat.push(self.myState.myPosLat);
                         }
@@ -9720,7 +9722,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_influencer(&mut self) -> &mut MSVehicle_Influencer {
         if self.myInfluencer.is_null() {
-            // shortcut: C++ owns myInfluencer and deletes it in the destructor; Box::leak keeps it alive for the process, upgrade with an owned field
+            // C++ owns myInfluencer and deletes it in ~MSVehicle: drop_ runs that destructor's side effects, the memory itself stays leaked
             self.myInfluencer = Ptr::from_mut(Box::leak(Box::new(MSVehicle_Influencer::new())));
         }
         self.myInfluencer.m()
@@ -10878,7 +10880,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn process_link_approaches(&mut self, vSafe: &mut f64, vSafeMin: &mut f64, vSafeMinDist: &mut f64) {
         let TS = ts();
-        // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
+        // the car-following model is owned by the vehicle type, not the vehicle: the raw deref only detaches the borrow from &mut self
         let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
         let this: Ptr<MSVehicle> = Ptr::from_mut(self);
         // Speed limit due to zipper merging
