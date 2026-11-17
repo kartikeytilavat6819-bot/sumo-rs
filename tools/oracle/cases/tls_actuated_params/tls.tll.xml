@@ -1,0 +1,15 @@
+<tlLogics>
+    <tlLogic id="nC" type="actuated" programID="0" offset="0">
+        <param key="max-gap" value="2.5"/>
+        <param key="detector-gap" value="3.0"/>
+        <param key="passing-time" value="2.0"/>
+        <param key="inactive-threshold" value="20"/>
+        <param key="jam-threshold" value="25"/>
+        <param key="build-all-detectors" value="true"/>
+        <param key="show-detectors" value="false"/>
+        <phase duration="6" minDur="6" maxDur="40" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="6" minDur="6" maxDur="40" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+</tlLogics>
