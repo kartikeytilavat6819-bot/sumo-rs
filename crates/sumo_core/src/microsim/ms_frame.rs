@@ -1396,7 +1396,7 @@ impl MSFrame {
             oc.do_register("phemlight-path", SumoOption::file_name_with(vec!["./PHEMlight/".to_string()]));
             oc.add_description("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from");
             oc.do_register("phemlight-year", SumoOption::integer(0));
-            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modeling with the given reference year in PHEMlight5");
+            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modelling with the given reference year in PHEMlight5");
             oc.do_register("phemlight-temperature", SumoOption::float(f64::MAX));
             oc.add_description("phemlight-temperature", "Emissions", "Set ambient temperature to correct NOx emissions in PHEMlight5");
             oc.add_option_sub_topic("Communication");
@@ -1461,7 +1461,7 @@ impl MSFrame {
             oc.add_description("thread-rngs", "Random Number", "Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).");
             oc.add_option_sub_topic("GUI Only");
             oc.do_register_abbr("gui-settings-file", 'g', SumoOption::file_name());
-            oc.add_description("gui-settings-file", "GUI Only", "Load visualization settings from FILE");
+            oc.add_description("gui-settings-file", "GUI Only", "Load visualisation settings from FILE");
             oc.do_register_abbr("quit-on-end", 'Q', SumoOption::bool(false));
             oc.add_description("quit-on-end", "GUI Only", "Quits the GUI when the simulation stops");
             oc.do_register_abbr("game", 'G', SumoOption::bool(false));
