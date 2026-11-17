@@ -561,9 +561,6 @@ impl NIFrame {
         oc.do_register("osm.annotate-defaults", SumoOption::bool(false));
         oc.add_description("osm.annotate-defaults", "Formats", "Whether edges shoulds carry information on the usage of typemap defaults");
 
-        oc.do_register("osm.etcs-moving-block", SumoOption::bool(false));
-        oc.add_description("osm.etcs-moving-block", "Formats", "Whether ETCS2 track sections should default to moving-block mode");
-
         // register matsim options
         oc.do_register("matsim.keep-length", SumoOption::bool(false));
         oc.add_description("matsim.keep-length", "Formats", "The edge lengths given in the MATSim-file will be kept");

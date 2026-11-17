@@ -1,7 +1,8 @@
 #!/bin/bash
 # GCE startup script for the sumo-rs gate VM: toolchain + oracle wheel on first boot, idle auto-shutdown always.
 if [ ! -f /opt/gate_ready ]; then
-  apt-get update -q && apt-get install -yq build-essential git python3-pip python3-venv python-is-python3 pkg-config curl
+  apt-get update -q && apt-get install -yq build-essential git python3-pip python3-venv python-is-python3 pkg-config curl \
+    libxrender1 libgl1 libglu1-mesa libxft2 libxext6 libfontconfig1 libxcursor1 libxinerama1 libxfixes3
   id gate || useradd -m -s /bin/bash gate
   sudo -u gate bash -lc 'curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal'
   sudo -u gate bash -lc 'python3 -m pip install -q --break-system-packages --target /home/gate/sumo_pkg eclipse-sumo==1.28.0'
