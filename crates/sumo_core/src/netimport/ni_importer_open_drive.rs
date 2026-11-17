@@ -3801,7 +3801,7 @@ impl NIImporter_OpenDrive {
                             ));
                             cn.shape.clear();
                         }
-                        if cn.toCP == CP::OPENDRIVE_CP_END {
+                        if c.toCP == CP::OPENDRIVE_CP_END {
                             cn.shape = cn.shape.reverse();
                         }
                     }
