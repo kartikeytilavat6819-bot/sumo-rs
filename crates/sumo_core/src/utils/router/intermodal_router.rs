@@ -365,7 +365,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        self.base.set_bulk_mode(mode);
+        self.base.set_bulk_mode_base(mode);
         if !self.myInternalRouter.is_null() {
             self.myInternalRouter.m().set_bulk_mode(mode);
         }

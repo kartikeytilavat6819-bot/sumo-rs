@@ -38,30 +38,8 @@ impl std::ops::DerefMut for MSSOTLPolicyBasedTrafficLightLogic {
     }
 }
 
-/// shortcut: MSPhaseDefinition has no Clone yet, so countVehicles' by-value copy is made field by field; upgrade to .clone() once ms_phase_definition.rs derives Clone.
 fn copy_phase_definition(p: &MSPhaseDefinition) -> MSPhaseDefinition {
-    MSPhaseDefinition {
-        duration: p.duration,
-        lastDuration: p.lastDuration,
-        minDuration: p.minDuration,
-        maxDuration: p.maxDuration,
-        earliestEnd: p.earliestEnd,
-        latestEnd: p.latestEnd,
-        earlyTarget: p.earlyTarget.clone(),
-        finalTarget: p.finalTarget.clone(),
-        myLastSwitch: p.myLastSwitch,
-        myLastEnd: p.myLastEnd,
-        nextPhases: p.nextPhases.clone(),
-        name: p.name.clone(),
-        yellow: p.yellow,
-        red: p.red,
-        vehext: p.vehext,
-        myTransientNotDecisional: p.myTransientNotDecisional,
-        myCommit: p.myCommit,
-        myUndefined: p.myUndefined,
-        myTargetLaneSet: p.myTargetLaneSet.clone(),
-        myState: p.myState.clone(),
-    }
+    p.clone()
 }
 
 impl MSSOTLPolicyBasedTrafficLightLogic {
