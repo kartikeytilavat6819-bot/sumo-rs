@@ -68,32 +68,6 @@ impl std::ops::DerefMut for MSPModel_Interacting {
 // C++ static members of MSPModel_Interacting (port as module-level statics, see AGENTS.md):
 //   static Pedestrians MSPModel_Interacting::noPedestrians;
 
-fn msp_model_interacting_add(_m: &mut MSPModel, _t: Ptr<MSTransportable>, _s: Ptr<MSStageMoving>, _now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-    panic!("MSPModel_Interacting::add is pure virtual; call it on a concrete pedestrian model")
-}
-fn msp_model_interacting_clear_state(m: &mut MSPModel) {
-    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().clear_state()
-}
-fn msp_model_interacting_remove(m: &mut MSPModel, state: Ptr<MSTransportableStateAdapter>) {
-    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().remove(state)
-}
-fn msp_model_interacting_using_internal_lanes(m: &mut MSPModel) -> bool {
-    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().using_internal_lanes()
-}
-fn msp_model_interacting_get_active_number(m: &mut MSPModel) -> i32 {
-    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().get_active_number()
-}
-
-/// Dispatch table for the Interacting family (Striping and JuPedSim inherit getActiveNumber from here)
-pub static MSPMODEL_INTERACTING_VT: MSPModelVt = MSPModelVt {
-    add: msp_model_interacting_add,
-    clear_state: msp_model_interacting_clear_state,
-    remove: msp_model_interacting_remove,
-    using_internal_lanes: msp_model_interacting_using_internal_lanes,
-    get_active_number: msp_model_interacting_get_active_number,
-    load_state: msp_model_default_load_state,
-};
-
 impl MSPModel_Interacting {
     /// C++: `void MSPModel_Interacting::~MSPModel_Interacting() noexcept` [virtual]
     // MSPModel_Interacting::~MSPModel_Interacting() {

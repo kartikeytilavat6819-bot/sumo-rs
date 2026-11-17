@@ -12,9 +12,9 @@ pub struct FlippedNode<E, N, V> {
     /// The original node
     pub myOriginalNode: Ptr<N>,
     /// The incoming edges
-    pub myIncoming: FlippedNode_ConstFlippedEdgeVector<E, N, V>,
+    pub myIncoming: std::cell::OnceCell<FlippedNode_ConstFlippedEdgeVector<E, N, V>>,
     /// The outgoing edges
-    pub myOutgoing: FlippedNode_ConstFlippedEdgeVector<E, N, V>,
+    pub myOutgoing: std::cell::OnceCell<FlippedNode_ConstFlippedEdgeVector<E, N, V>>,
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
 
@@ -27,8 +27,8 @@ impl<E, N, V> FlippedNode<E, N, V> {
     pub fn new(originalNode: Ptr<N>) -> Self {
         Self {
             myOriginalNode: originalNode,
-            myIncoming: Vec::new(),
-            myOutgoing: Vec::new(),
+            myIncoming: std::cell::OnceCell::new(),
+            myOutgoing: std::cell::OnceCell::new(),
             _p: std::marker::PhantomData,
         }
     }
@@ -84,14 +84,15 @@ impl<E, N, V> FlippedNode<E, N, V> {
         N: RouterNode<Edge = E>,
         E: RouterEdge<V, Node = N>,
     {
-        if self.myIncoming.is_empty() {
-            // C++ mutable cache: the const method fills myIncoming in place
-            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
+        // C++ mutable cache: filled on first use. Routing starts after the network is built, so
+        // caching an empty result matches C++ re-filling an empty vector.
+        self.myIncoming.get_or_init(|| {
+            let mut incoming = Vec::new();
             for edge in self.myOriginalNode.outgoing().iter() {
-                me.myIncoming.push(edge.flipped_routing_edge());
+                incoming.push(edge.flipped_routing_edge());
             }
-        }
-        &self.myIncoming
+            incoming
+        })
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getOutgoing() const` [const]
@@ -111,14 +112,14 @@ impl<E, N, V> FlippedNode<E, N, V> {
         N: RouterNode<Edge = E>,
         E: RouterEdge<V, Node = N>,
     {
-        if self.myOutgoing.is_empty() {
-            // C++ mutable cache: the const method fills myOutgoing in place
-            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
+        // C++ mutable cache: filled on first use (see get_incoming)
+        self.myOutgoing.get_or_init(|| {
+            let mut outgoing = Vec::new();
             for edge in self.myOriginalNode.incoming().iter() {
-                me.myOutgoing.push(edge.flipped_routing_edge());
+                outgoing.push(edge.flipped_routing_edge());
             }
-        }
-        &self.myOutgoing
+            outgoing
+        })
     }
 
     /// C++: `const N * FlippedNode::getOriginalNode() const` [const]

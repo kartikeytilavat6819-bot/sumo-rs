@@ -404,7 +404,6 @@ pub fn is_hex(s: &str) -> bool {
 }
 
 /// strtod(data, &end): (value, consumed bytes, ERANGE)
-// shortcut: hexadecimal floats ("0x1p3") are not recognized, add if a test needs them
 pub fn strtod(s: &str) -> (f64, usize, bool) {
     let t = lead_trim(s);
     let skipped = s.len() - t.len();
@@ -427,6 +426,50 @@ pub fn strtod(s: &str) -> (f64, usize, bool) {
             let v: f64 = if word == "nan" { f64::NAN } else { f64::INFINITY };
             let v = if b[0] == b'-' { -v } else { v };
             return (v, skipped + end, false);
+        }
+    }
+    // hexadecimal floats: "0x10", "0x1.8p1"; without hex digits strtod stops after the "0"
+    if b.len() > i + 2 && b[i] == b'0' && (b[i + 1] == b'x' || b[i + 1] == b'X') {
+        let hex = |c: u8| (c as char).to_digit(16);
+        let (mut j, mut mant, mut hex_digits, mut frac_digits, mut nonzero) = (i + 2, 0f64, 0, 0i32, false);
+        while let Some(d) = b.get(j).and_then(|&c| hex(c)) {
+            nonzero |= d != 0;
+            mant = mant * 16. + d as f64;
+            hex_digits += 1;
+            j += 1;
+        }
+        if b.get(j) == Some(&b'.') {
+            j += 1;
+            while let Some(d) = b.get(j).and_then(|&c| hex(c)) {
+                nonzero |= d != 0;
+                mant = mant * 16. + d as f64;
+                hex_digits += 1;
+                frac_digits += 1;
+                j += 1;
+            }
+        }
+        if hex_digits > 0 {
+            let mut exp: i32 = 0;
+            if matches!(b.get(j), Some(b'p' | b'P')) {
+                let mut k = j + 1;
+                let neg = b.get(k) == Some(&b'-');
+                if matches!(b.get(k), Some(b'+' | b'-')) {
+                    k += 1;
+                }
+                if b.get(k).is_some_and(|c| c.is_ascii_digit()) {
+                    let mut e: i32 = 0;
+                    while let Some(c) = b.get(k).filter(|c| c.is_ascii_digit()) {
+                        e = e.saturating_mul(10).saturating_add((c - b'0') as i32);
+                        k += 1;
+                    }
+                    exp = if neg { -e } else { e };
+                    j = k;
+                }
+            }
+            let v = mant * 2f64.powi(exp - 4 * frac_digits);
+            let v = if b[0] == b'-' { -v } else { v };
+            let range = v.is_infinite() || (nonzero && (v == 0. || v.is_subnormal()));
+            return (v, skipped + j, range);
         }
     }
     let mut digits = 0;
@@ -676,6 +719,16 @@ pub fn format(fmt: &str, args: &[&dyn ToStringPrec]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn hex_floats_like_strtod() {
+        // glibc strtod: "0x10" = 16, "0x1.8p1" = 3, "-0x1p-2" = -0.25, "0x" stops after the "0"
+        assert_eq!(to_double("0x10").unwrap(), 16.);
+        assert_eq!(to_double("0x1.8p1").unwrap(), 3.);
+        assert_eq!(to_double("-0x1p-2").unwrap(), -0.25);
+        assert_eq!(strtod("0x"), (0., 1, false));
+        assert!(to_double("0x").is_err());
+    }
 
     #[test]
     fn parse() {
