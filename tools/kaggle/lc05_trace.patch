@@ -71,7 +71,7 @@ index 41e69ee..e77560e 100644
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
-index c892b2d..5b634c9 100644
+index c892b2d..e9f4a7f 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
 +++ b/src/microsim/lcmodels/MSLCM_SL2015.cpp
 @@ -178,6 +178,21 @@ MSLCM_SL2015::debugVehicle() const {
@@ -117,7 +117,15 @@ index c892b2d..5b634c9 100644
      if ((ret & LCA_STAY) != 0 && latDist == 0) {
          // ensure that mySafeLatDistLeft / mySafeLatDistRight are up to date for the
          // subsquent check with laneOffset = 0
-@@ -1656,6 +1674,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1531,6 +1549,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+         std::cout << "   sublaneSides[rightmostOnEdge]=" << sublaneSides[rightmostOnEdge] << " rightVehSide=" << rightVehSide << "\n";
+     }
+ #endif
++    if (lcTr(myVehicle)) { std::cerr << "LCT-SS " << MSNet::getInstance()->getCurrentTimeStep() << " " << myVehicle.getID() << " dns=" << lcBits(defaultNextSpeed) << " sp="; for (double s : myExpectedSublaneSpeeds) std::cerr << lcBits(s) << ","; std::cerr << "\n"; }
+     double maxGain = -std::numeric_limits<double>::max();
+     double maxGainRight = -std::numeric_limits<double>::max();
+     double maxGainLeft = -std::numeric_limits<double>::max();
+@@ -1656,6 +1675,7 @@ MSLCM_SL2015::_wantsChangeSublane(
              }
          }
      }
@@ -125,7 +133,7 @@ index c892b2d..5b634c9 100644
      // updated change probabilities
      if (maxGainRight != -std::numeric_limits<double>::max()) {
  #ifdef DEBUG_WANTSCHANGE
-@@ -1757,6 +1776,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1757,6 +1777,7 @@ MSLCM_SL2015::_wantsChangeSublane(
              }
              const double deltaProb = (myChangeProbThresholdRight * (fullSpeedDrivingSeconds / acceptanceTime) / KEEP_RIGHT_TIME) * myVehicle.getActionStepLengthSecs();
              const bool isSlide = preventSliding(latLaneDist);
@@ -133,7 +141,7 @@ index c892b2d..5b634c9 100644
              // stay below threshold
              if (!isSlide || !wantsKeepRight(myKeepRightProbability + deltaProb)) {
                  myKeepRightProbability += deltaProb;
-@@ -1814,6 +1834,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1814,6 +1835,7 @@ MSLCM_SL2015::_wantsChangeSublane(
          }
  #endif
  
@@ -141,7 +149,7 @@ index c892b2d..5b634c9 100644
          // make changing on the right more attractive on bidi edges
          if (latDist < 0 && mySpeedGainProbabilityRight >= myChangeProbThresholdRight * bidiRightFactor
                  && neighDist / MAX2(.1, myVehicle.getSpeed()) > mySpeedGainRemainTime) {
-@@ -1958,6 +1979,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1958,6 +1980,7 @@ MSLCM_SL2015::_wantsChangeSublane(
          }
      }
      // only factor in preferred lateral alignment if there is no speedGain motivation or it runs in the same direction
