@@ -265,7 +265,6 @@ impl MSVehicleTransfer {
                         lane.release_vehicles();
                     }
                 }
-                if desc.myVeh.get_id() == "taxi0" { eprintln!("TX01 park t={} keep={} stops={} dur={} persons={}", time, desc.myVeh.keep_stopping(true), desc.myVeh.m().get_stops().len(), if desc.myVeh.m().get_stops().is_empty() { -9 } else { desc.myVeh.m().get_stops().front().unwrap().duration }, desc.myVeh.get_person_number()); } // tx01-trace
                 if desc.myVeh.keep_stopping(true) {
                     i += 1;
                     continue;

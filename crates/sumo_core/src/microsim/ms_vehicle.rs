@@ -2840,7 +2840,6 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn on_removal_from_net(&mut self, reason: MSMoveReminder_Notification) {
-        eprintln!("TX01 removal veh={} t={} nrem={}", self.get_id(), MSNet::get_instance().get_current_time_step(), self.myMoveReminders.len()); // tx01-trace
         MSVehicleTransfer::get_instance().m().remove(Ptr::from_mut(self));
         self.remove_approaching_information(&self.myLFLinkLanes);
         self.leave_lane(reason, Ptr::null());
@@ -5496,7 +5495,6 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn enter_lane_at_move(&mut self, enteredLane: Ptr<MSLane>, onTeleporting: bool) {
-        eprintln!("TX01 enter veh={} t={} nrem={} lane={} tele={}", self.get_id(), MSNet::get_instance().get_current_time_step(), self.myMoveReminders.len(), enteredLane.get_id(), onTeleporting); // tx01-trace
         self.myAmOnNet = !onTeleporting;
         // vaporizing edge block is commented out in C++ as well
         // Adjust MoveReminder offset to the next lane
