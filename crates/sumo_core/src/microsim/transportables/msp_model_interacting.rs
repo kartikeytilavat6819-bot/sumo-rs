@@ -165,6 +165,7 @@ impl MSPModel_Interacting {
             let leaderFrontDist = (if ped.get_direction() == MSPMODEL_FORWARD { vehCenter - ped.get_edge_pos(0) } else { ped.get_edge_pos(0) - vehCenter }) - vehWidth * 0.5;
             let leaderBackDist = leaderFrontDist + ped.get_person().get_vehicle_type().get_length();
             // DEBUG_INTERACTING output (compile-time debug logging) is not ported
+            if !ego.is_null() && ego.get_id().to_string() == "car12" { println!("TRACE t={} ev=BADP lane={} ped={} lfd={} lbd={} wt={} pdir={}", MSNet::get_instance().get_current_time_step(), lane.get_id(), ped.get_person().get_id(), (leaderFrontDist * 1000.) as i64, (leaderBackDist * 1000.) as i64, ped.get_waiting_time(), ped.get_direction() as i32); }
             if leaderBackDist >= -vehWidth && (leaderFrontDist < 0.0 || (leaderFrontDist <= oncomingGap && ped.get_waiting_time() < utils::common::time::time2steps(2.0))) {
                 let person = ped.get_person();
                 if MSLink::ignore_foe(ego, Ptr::from_mut(&mut person.m().base.base)) {
