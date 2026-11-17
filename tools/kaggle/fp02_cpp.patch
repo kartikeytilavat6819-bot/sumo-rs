@@ -43,10 +43,14 @@ index 72e6ba2..30551aa 100644
                      collectBlockers->push_back(p);
                  }
 diff --git a/src/microsim/transportables/MSPModel_Interacting.cpp b/src/microsim/transportables/MSPModel_Interacting.cpp
-index f204d55..773d59d 100644
+index f204d55..d9e4009 100644
 --- a/src/microsim/transportables/MSPModel_Interacting.cpp
 +++ b/src/microsim/transportables/MSPModel_Interacting.cpp
-@@ -74,6 +74,7 @@ MSPModel_Interacting::blockedAtDist(const SUMOTrafficObject* ego, const MSLane*
+@@ -71,9 +71,11 @@ MSPModel_Interacting::remove(MSTransportableStateAdapter* state) {
+ bool
+ MSPModel_Interacting::blockedAtDist(const SUMOTrafficObject* ego, const MSLane* lane, double vehCenter, double vehWidth,
+                                     double oncomingGap, std::vector<const MSPerson*>* collectBlockers) {
++    if (ego != nullptr && ego->getID() == "car12") std::cout << "TRACE t=" << MSNet::getInstance()->getCurrentTimeStep() << " ev=GPED lane=" << lane->getID() << " n=" << getPedestrians(lane).size() << "\n";
      for (const MSPModel_InteractingState* ped : getPedestrians(lane)) {
          const double leaderFrontDist = (ped->getDirection() == FORWARD ? vehCenter - ped->getEdgePos(0) : ped->getEdgePos(0) - vehCenter) - vehWidth * 0.5;
          const double leaderBackDist = leaderFrontDist + ped->getPerson()->getVehicleType().getLength();
@@ -55,10 +59,18 @@ index f204d55..773d59d 100644
          if DEBUGCOND(ped) {
              std::cout << SIMTIME << " lane=" << lane->getID() << " dir=" << ped->getDirection() << " pX=" << ped->getEdgePos(0) << " pL=" << ped->getPerson()->getVehicleType().getLength()
 diff --git a/src/microsim/transportables/MSPModel_Striping.cpp b/src/microsim/transportables/MSPModel_Striping.cpp
-index ca74850..45a90da 100644
+index ca74850..89f8e10 100644
 --- a/src/microsim/transportables/MSPModel_Striping.cpp
 +++ b/src/microsim/transportables/MSPModel_Striping.cpp
-@@ -1776,6 +1776,7 @@ MSPModel_Striping::PState::distToLaneEnd() const {
+@@ -990,6 +990,7 @@ MSPModel_Striping::moveInDirection(SUMOTime currentTime, std::set<MSPerson*>& ch
+         } else {
+             moveInDirectionOnLane(pedestrians, lane, currentTime, changedLane, dir, false);
+             arriveAndAdvance(pedestrians, currentTime, changedLane, dir);
++            if (lane->getID() == ":8243813901_c0_0") std::cout << "TRACE t=" << MSNet::getInstance()->getCurrentTimeStep() << " ev=PUT lane=" << lane->getID() << " n=" << pedestrians.size() << "\n";
+         }
+     }
+ }
+@@ -1776,6 +1777,7 @@ MSPModel_Striping::PState::distToLaneEnd() const {
  bool
  MSPModel_Striping::PState::moveToNextLane(SUMOTime currentTime) {
      double dist = distToLaneEnd();
@@ -66,7 +78,7 @@ index ca74850..45a90da 100644
      if (DEBUGCOND(*this)) {
          std::cout << SIMTIME << " ped=" << myPerson->getID() << " myEdgePos=" << myEdgePos << " dist=" << dist << "\n";
      }
-@@ -1913,6 +1914,7 @@ MSPModel_Striping::getReserved(int stripes, double factor) {
+@@ -1913,6 +1915,7 @@ MSPModel_Striping::getReserved(int stripes, double factor) {
  void
  MSPModel_Striping::PState::walk(const Obstacles& obs) {
      const int stripes = (int)obs.size();

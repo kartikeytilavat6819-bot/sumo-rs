@@ -161,6 +161,7 @@ impl MSPModel_Interacting {
     // }
     #[allow(unused_variables)]
     pub fn blocked_at_dist(&mut self, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
+        if !ego.is_null() && ego.get_id().to_string() == "car12" { println!("TRACE t={} ev=GPED lane={} n={}", MSNet::get_instance().get_current_time_step(), lane.get_id(), self.get_pedestrians(lane).len()); }
         for ped in self.get_pedestrians(lane).iter().copied() {
             let leaderFrontDist = (if ped.get_direction() == MSPMODEL_FORWARD { vehCenter - ped.get_edge_pos(0) } else { ped.get_edge_pos(0) - vehCenter }) - vehWidth * 0.5;
             let leaderBackDist = leaderFrontDist + ped.get_person().get_vehicle_type().get_length();

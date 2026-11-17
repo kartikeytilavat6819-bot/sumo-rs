@@ -789,6 +789,7 @@ impl MSPModel_Striping {
                 self.move_in_direction_on_lane(&mut pedestrians, lane, currentTime, changedLane, dir, false);
                 self.arrive_and_advance(&mut pedestrians, currentTime, changedLane, dir);
             }
+            if lane.get_id().to_string() == ":8243813901_c0_0" { println!("TRACE t={} ev=PUT lane={} n={}", currentTime, lane.get_id(), pedestrians.len()); }
             self.put_back_lane(lane, pedestrians);
         }
     }
