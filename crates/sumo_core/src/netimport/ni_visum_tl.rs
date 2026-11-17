@@ -168,7 +168,7 @@ impl NIVisumTL {
                 continue;
             }
             let type_ = throw(TrafficLightTypes.get(&get_string("tls.default-type")));
-            let leaked: &'static mut NBLoadedTLDef = Box::leak(Box::new(NBLoadedTLDef::new_2(ec, node.m().get_id(), node, self.myOffset, type_)));
+            let leaked: &'static mut NBLoadedTLDef = Box::leak(NBLoadedTLDef::new_2(ec, node.m().get_id(), node, self.myOffset, type_));
             let def = Ptr::from_mut(leaked);
             tlc.insert(Ptr::from_mut(&mut def.m().base), false);
             def.m().set_cycle_duration(self.myCycleTime);

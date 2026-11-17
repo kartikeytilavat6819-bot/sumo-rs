@@ -209,7 +209,7 @@ impl NGNode {
             // check whether it is a traffic light junction
             if NBNode::is_traffic_light(type_) {
                 let tlType = TrafficLightTypes.get(&options_cont::get_string("tls.default-type")).unwrap();
-                let tlDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new_2(self.get_id(), node, 0, tlType))));
+                let tlDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(NBOwnTLDef::new_2(self.get_id(), node, 0, tlType)));
                 if !nb.get_tl_logic_cont().insert(tlDef.cast::<NBTrafficLightDefinition>(), false) {
                     // actually, nothing should fail here
                     drop(unsafe { Box::from_raw(tlDef.as_raw()) });

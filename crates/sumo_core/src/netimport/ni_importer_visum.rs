@@ -3088,7 +3088,7 @@ impl NIImporter_VISUM {
 
             let length = opt_float("osm.stop-output.length");
             let element = if is_railway(permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
-            let ptStop = std::rc::Rc::new(NBPTStop::new(element, id.clone(), pos, edge.get_id().to_string(), edge.get_id().to_string(), length, name.clone(), permissions, 0.0, RGBColor::new_valid(false), -1.0));
+            let ptStop = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(element, id.clone(), pos, edge.get_id().to_string(), edge.get_id().to_string(), length, name.clone(), permissions, 0.0, RGBColor::new_valid(false), -1.0))));
             self.myNetBuilder.m().get_pt_stop_cont().insert(ptStop, false);
         }
     }
