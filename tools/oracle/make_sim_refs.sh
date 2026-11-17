@@ -67,7 +67,8 @@ for c in $CASES; do
     v=$(basename "$vf" .tripinfo.xml); v=${v#ref_}
     vflags=$(cat "$src/sim_$v.args" 2>/dev/null)
     vouts="--tripinfo-output $(wp "$o")/ref_$v.tripinfo.xml"
-    [ -f "$src/ref_$v.fcd.xml" ] && vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"
+    # run_all always passes --fcd-output, which adds fcd_<id> to every device list: write a scratch fcd when none is committed
+    if [ -f "$src/ref_$v.fcd.xml" ]; then vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"; else vouts="$vouts --fcd-output /tmp/fcd_$v.xml"; fi
     [ -f "$src/ref_$v.stat.xml" ] && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
     run_ref "$LOG/ref_${c}_$v.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" "$(echo "$vflags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" "ref_$v"
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
