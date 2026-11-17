@@ -38,6 +38,7 @@ pub enum IntermodalEdgeKind {
     Access,
     Pedestrian,
     Car,
+    Stop,
 }
 
 impl<E, L, N, V> std::ops::Deref for IntermodalEdge<E, L, N, V> {
@@ -200,6 +201,7 @@ where
         match self.myKind {
             IntermodalEdgeKind::Base => false,
             IntermodalEdgeKind::Access => false,
+            IntermodalEdgeKind::Stop => true,
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().include_in_route(arg0),
             IntermodalEdgeKind::Car => self.as_car().include_in_route(arg0),
         }
@@ -325,7 +327,7 @@ where
     #[allow(unused_variables)]
     pub fn prohibits(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> bool {
         match self.myKind {
-            IntermodalEdgeKind::Base => false,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Stop => false,
             IntermodalEdgeKind::Access => self.as_access().prohibits(arg0),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().prohibits(arg0),
             IntermodalEdgeKind::Car => self.as_car().prohibits(arg0),
@@ -348,7 +350,7 @@ where
     #[allow(unused_variables)]
     pub fn get_partial_length(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::Stop => self.myLength,
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_partial_length(arg0),
             IntermodalEdgeKind::Car => self.as_car().get_partial_length(arg0),
         }
@@ -361,7 +363,7 @@ where
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base => 0.,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Stop => 0.,
             IntermodalEdgeKind::Access => self.as_access().get_travel_time(arg0, arg1),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_travel_time(arg0, arg1),
             IntermodalEdgeKind::Car => self.as_car().get_travel_time(arg0, arg1),
@@ -518,7 +520,8 @@ where
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => 0.,
+            // shortcut: StopEdge::getStartPos (myStartPos) is not reached through this dispatch, upgrade when stop edges are read via the base
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::Stop => 0.,
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_start_pos(),
             IntermodalEdgeKind::Car => self.as_car().get_start_pos(),
         }
@@ -531,7 +534,7 @@ where
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::Stop => self.myLength,
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_end_pos(),
             IntermodalEdgeKind::Car => self.as_car().get_end_pos(),
         }
