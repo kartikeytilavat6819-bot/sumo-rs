@@ -486,8 +486,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_prefixed_parameter(&self, key: &str, error: &mut String) -> String {
-        // shortcut: dynamic_cast<const MSVehicle*>(this) has no downcast from the base yet, so micro_veh is always None
-        let micro_veh: Option<Ptr<MSVehicle>> = None;
+        let micro_veh: Option<Ptr<MSVehicle>> = self.as_micro_vehicle();
         if utils::common::string_utils::starts_with(key, "device.") {
             let tok = utils::common::string_tokenizer::StringTokenizer::with_token(key, ".", false).get_vector();
             if tok.len() < 3 {
@@ -502,21 +501,19 @@ impl MSBaseVehicle {
                 }
             }
         } else if utils::common::string_utils::starts_with(key, "laneChangeModel.") {
-            if micro_veh.is_none() {
+            let Some(microVeh) = micro_veh else {
                 *error = utils::tlf!("Mesoscopic vehicle '%' does not support laneChangeModel parameters.", self.get_id());
                 return String::new();
-            }
+            };
             let attrName = &key[16..];
-            // shortcut: getLaneChangeModel().getParameter(attrName) not reachable (micro_veh is None)
-            return String::new();
+            return microVeh.m().get_lane_change_model().get_parameter(attrName);
         } else if utils::common::string_utils::starts_with(key, "carFollowModel.") {
-            if micro_veh.is_none() {
+            let Some(microVeh) = micro_veh else {
                 *error = utils::tlf!("Mesoscopic vehicle '%' does not support carFollowModel parameters.", self.get_id());
                 return String::new();
-            }
+            };
             let attrName = &key[15..];
-            // shortcut: getCarFollowModel().getParameter(microVeh, attrName) not reachable (micro_veh is None)
-            return String::new();
+            return microVeh.get_car_follow_model().get_parameter(microVeh, attrName);
         } else if utils::common::string_utils::starts_with(key, "has.") && utils::common::string_utils::ends_with(key, ".device") {
             let tok = utils::common::string_tokenizer::StringTokenizer::with_token(key, ".", false).get_vector();
             if tok.len() != 3 {
@@ -725,15 +722,28 @@ impl MSBaseVehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_car_follow_model_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_car_follow_model_parameter(&mut self, key: &str, value: &str) -> Result<(), InvalidArgument> {
         // handle some generic params first and then delegate to the carFollowModel itself
         // toString(SUMO_ATTR_CF_IGNORE_IDS / SUMO_ATTR_CF_IGNORE_TYPES)
         if key == "carFollowModel.ignoreIDs" || key == "carFollowModel.ignoreTypes" {
             self.myParameter.m().parametersSet |= VEHPARS_CFMODEL_PARAMS_SET;
             self.myParameter.m().set_parameter(key, value);
             // checked in MSVehicle::planMove
+        } else if let Some(microVeh) = self.as_micro_vehicle() {
+            // remove 'carFollowModel.' prefix
+            let attrName = &key[15..];
+            return microVeh.get_car_follow_model().set_parameter(microVeh, attrName, value);
+        }
+        Ok(())
+    }
+
+    /// C++ `dynamic_cast<MSVehicle*>(this)`: a checked downcast. MSVehicle is the only class that installs
+    /// MS_VEHICLE_VT in its SUMOTrafficObject base, and MSBaseVehicle is its first (repr(C)) field.
+    pub(crate) fn as_micro_vehicle(&self) -> Option<Ptr<MSVehicle>> {
+        if std::ptr::eq(self.base.base.vt, &crate::microsim::ms_vehicle::MS_VEHICLE_VT) {
+            Some(Ptr::from_raw(self as *const MSBaseVehicle as *mut MSVehicle))
         } else {
-            // shortcut: dynamic_cast<MSVehicle*>(this) has no downcast yet, so the carFollowModel delegation is skipped
+            None
         }
     }
 
@@ -1685,8 +1695,9 @@ impl MSBaseVehicle {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
         }
-        // shortcut: the route color is not copied (null means the default color)
-        let mut newRoute = MSRoute::new(&id, edges, false, Ptr::default(), &StopParVector::new(), -1, -1);
+        // C++ copies the color unless it is the default one (then nullptr)
+        let routeColor: Ptr<RGBColor> = if self.myRoute.myColor.is_null() { Ptr::null() } else { Ptr::from_raw(Box::into_raw(Box::new(*self.myRoute.get_color()))) };
+        let mut newRoute = MSRoute::new(&id, edges, false, routeColor, &StopParVector::new(), -1, -1);
         newRoute.set_costs(cost);
         newRoute.set_savings(savings);
         let constRoute: ConstMSRoutePtr = Rc::new(newRoute);
@@ -2988,14 +2999,26 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        // shortcut: the speedFactor distribution (getSpeedFactor()) is Unmapped, so the speed factor
-        // remapping onto the new type's distribution is not applied; the chosen factor is kept
+        let oldMu = self.myType.get_speed_factor().get_parameter(0);
+        let oldDev = self.myType.get_speed_factor().get_parameter(1);
         if self.myType.is_vehicle_specific() && type_ != self.myType {
-            // shortcut: MSNet::getVehicleControl().removeVType(myType) is not ported
+            MSNet::get_instance().m().get_vehicle_control().remove_v_type(self.myType);
+        }
+        if oldDev == 0. {
+            self.myChosenSpeedFactor = type_.compute_chosen_speed_deviation(self.get_parameter().speedFactor, self.get_rng(), -1.);
+        } else {
+            let distPoint = (self.myChosenSpeedFactor - oldMu) / oldDev;
+            let newMu = type_.get_speed_factor().get_parameter(0);
+            let newDev = type_.get_speed_factor().get_parameter(1);
+            self.myChosenSpeedFactor = newMu + distPoint * newDev;
+            let max = type_.get_speed_factor().get_max();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor < max { self.myChosenSpeedFactor } else { max };
+            let min = type_.get_speed_factor().get_min();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor > min { self.myChosenSpeedFactor } else { min };
         }
         self.myType = type_;
         if !self.myEnergyParams.is_null() {
-            // shortcut: EnergyParams::setSecondary(type->getEmissionParameters()) is not ported
+            self.myEnergyParams.m().set_secondary(type_.get_emission_parameters());
         }
     }
 

@@ -28,6 +28,19 @@ pub struct NBTrafficLightDefinitionVt {
     pub replace_removed: fn(&mut NBTrafficLightDefinition, Ptr<NBEdge>, i32, Ptr<NBEdge>, i32, bool),
     pub my_compute: fn(&mut NBTrafficLightDefinition, i32) -> Ptr<NBTrafficLightLogic>,
     pub get_max_index: fn(&mut NBTrafficLightDefinition) -> i32,
+    pub set_program_id: fn(&mut NBTrafficLightDefinition, &str),
+    pub shift_tl_connection_lane_index: fn(&mut NBTrafficLightDefinition, Ptr<NBEdge>, i32, i32),
+    pub remove_connection: fn(&mut NBTrafficLightDefinition, &NBConnection, bool),
+    pub set_type: fn(&mut NBTrafficLightDefinition, TrafficLightType),
+    pub extra_conflict: fn(&NBTrafficLightDefinition, i32, i32) -> bool,
+    pub using_signal_groups: fn(&NBTrafficLightDefinition) -> bool,
+    pub final_checks: fn(&NBTrafficLightDefinition),
+    pub collect_edges: fn(&mut NBTrafficLightDefinition),
+    pub am_invalid: fn(&NBTrafficLightDefinition) -> bool,
+    pub init_needs_cont_relation: fn(&NBTrafficLightDefinition),
+    pub get_max_valid_index: fn(&mut NBTrafficLightDefinition) -> i32,
+    pub set_participants_information: fn(&mut NBTrafficLightDefinition),
+    pub get_layout: fn(&NBTrafficLightDefinition) -> TrafficLightLayout,
 }
 
 fn default_collect_links(_: &mut NBTrafficLightDefinition) {
@@ -54,14 +67,79 @@ fn default_get_max_index(_: &mut NBTrafficLightDefinition) -> i32 {
     panic!("NBTrafficLightDefinition::getMaxIndex is pure virtual")
 }
 
-static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+fn default_set_program_id(d: &mut NBTrafficLightDefinition, programID: &str) {
+    d.set_program_id_base(programID)
+}
+fn default_shift_tl_connection_lane_index(d: &mut NBTrafficLightDefinition, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
+    d.shift_tl_connection_lane_index_base(edge, offset, threshold)
+}
+fn default_remove_connection(d: &mut NBTrafficLightDefinition, conn: &NBConnection, reconstruct: bool) {
+    d.remove_connection_base(conn, reconstruct)
+}
+fn default_set_type(d: &mut NBTrafficLightDefinition, type_: TrafficLightType) {
+    d.set_type_base(type_)
+}
+fn default_extra_conflict(d: &NBTrafficLightDefinition, index: i32, foeIndex: i32) -> bool {
+    d.extra_conflict_base(index, foeIndex)
+}
+fn default_using_signal_groups(d: &NBTrafficLightDefinition) -> bool {
+    d.using_signal_groups_base()
+}
+fn default_final_checks(d: &NBTrafficLightDefinition) {
+    d.final_checks_base()
+}
+fn default_collect_edges(d: &mut NBTrafficLightDefinition) {
+    d.collect_edges_base()
+}
+fn default_am_invalid(d: &NBTrafficLightDefinition) -> bool {
+    d.am_invalid_base()
+}
+fn default_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    d.init_needs_cont_relation_base()
+}
+fn default_get_max_valid_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    d.get_max_valid_index_base()
+}
+fn default_set_participants_information(d: &mut NBTrafficLightDefinition) {
+    d.set_participants_information_base()
+}
+fn default_get_layout(d: &NBTrafficLightDefinition) -> TrafficLightLayout {
+    d.get_layout_base()
+}
+
+pub(crate) static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
     collect_links: default_collect_links,
     set_tl_controlling_information: default_set_tl_controlling_information,
     remap_removed: default_remap_removed,
     replace_removed: default_replace_removed,
     my_compute: default_my_compute,
     get_max_index: default_get_max_index,
+    set_program_id: default_set_program_id,
+    shift_tl_connection_lane_index: default_shift_tl_connection_lane_index,
+    remove_connection: default_remove_connection,
+    set_type: default_set_type,
+    extra_conflict: default_extra_conflict,
+    using_signal_groups: default_using_signal_groups,
+    final_checks: default_final_checks,
+    collect_edges: default_collect_edges,
+    am_invalid: default_am_invalid,
+    init_needs_cont_relation: default_init_needs_cont_relation,
+    get_max_valid_index: default_get_max_valid_index,
+    set_participants_information: default_set_participants_information,
+    get_layout: default_get_layout,
 };
+
+/// Runtime type tag standing in for the C++ dynamic_cast checks on traffic light definitions.
+/// Set by each subclass constructor, read where C++ tests `dynamic_cast<NBLoadedSUMOTLDef*>` / `<NBOwnTLDef*>`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NBTrafficLightDefinitionKind {
+    /// Any other definition (the base class and NBLoadedTLDef)
+    Other,
+    /// C++ NBLoadedSUMOTLDef
+    LoadedSUMOTL,
+    /// C++ NBOwnTLDef
+    OwnTL,
+}
 
 /// The base class for traffic light logic definitions
 /// C++ class `NBTrafficLightDefinition` (netbuild/NBTrafficLightDefinition.h)
@@ -93,6 +171,8 @@ pub struct NBTrafficLightDefinition {
     pub myNeedsContRelationReady: std::cell::Cell<bool>,
     pub myExtraConflicts: std::cell::RefCell<NBTrafficLightDefinition_ExtraConflicts>,
     pub myExtraConflictsReady: std::cell::Cell<bool>,
+    /// Runtime type tag (see NBTrafficLightDefinitionKind)
+    pub myKind: NBTrafficLightDefinitionKind,
 }
 
 impl std::ops::Deref for NBTrafficLightDefinition {
@@ -183,6 +263,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -217,6 +298,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -249,6 +331,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -368,6 +451,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn remove_connection(&mut self, conn: &NBConnection, reconstruct: bool) {
+        (self.vt.remove_connection)(self, conn, reconstruct)
+    }
+
+    pub fn remove_connection_base(&mut self, conn: &NBConnection, reconstruct: bool) {
         // C++ body only marks the parameters as unused; the base implementation does nothing
     }
 
@@ -685,6 +772,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn set_participants_information(&mut self) {
+        (self.vt.set_participants_information)(self)
+    }
+
+    pub fn set_participants_information_base(&mut self) {
         // collect the information about participating edges and links
         self.collect_edges();
         self.collect_links();
@@ -737,6 +828,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn shift_tl_connection_lane_index(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
+        (self.vt.shift_tl_connection_lane_index)(self, edge, offset, threshold)
+    }
+
+    pub fn shift_tl_connection_lane_index_base(&mut self, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
         // C++ base body only marks the parameters as unused; subclasses patch their plans
 
     }
@@ -789,6 +884,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
+        (self.vt.set_program_id)(self, programID)
+    }
+
+    pub fn set_program_id_base(&mut self, programID: &str) {
         self.mySubID = programID.to_string();
     }
 
@@ -798,6 +897,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_layout(&self) -> TrafficLightLayout {
+        (self.vt.get_layout)(self)
+    }
+
+    pub fn get_layout_base(&self) -> TrafficLightLayout {
         TrafficLightLayout::DEFAULT
     }
 
@@ -828,6 +931,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn set_type(&mut self, type_: TrafficLightType) {
+        (self.vt.set_type)(self, type_)
+    }
+
+    pub fn set_type_base(&mut self, type_: TrafficLightType) {
         self.myType = type_;
     }
 
@@ -859,6 +966,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn extra_conflict(&self, index: i32, foeIndex: i32) -> bool {
+        (self.vt.extra_conflict)(self, index, foeIndex)
+    }
+
+    pub fn extra_conflict_base(&self, index: i32, foeIndex: i32) -> bool {
         self.init_extra_conflicts();
         self.myExtraConflicts.borrow().contains(&(index, foeIndex))
     }
@@ -878,6 +989,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
+        (self.vt.init_needs_cont_relation)(self)
+    }
+
+    pub fn init_needs_cont_relation_base(&self) {
         if !self.am_invalid() {
             let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
             dummy.init_needs_cont_relation();
@@ -941,6 +1056,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_valid_index(&mut self) -> i32 {
+        (self.vt.get_max_valid_index)(self)
+    }
+
+    pub fn get_max_valid_index_base(&mut self) -> i32 {
         self.get_max_index()
     }
 
@@ -990,6 +1109,10 @@ impl NBTrafficLightDefinition {
     //     }
     #[allow(unused_variables)]
     pub fn using_signal_groups(&self) -> bool {
+        (self.vt.using_signal_groups)(self)
+    }
+
+    pub fn using_signal_groups_base(&self) -> bool {
         false
     }
 
@@ -1009,6 +1132,10 @@ impl NBTrafficLightDefinition {
     // virtual void finalChecks() const {}
     #[allow(unused_variables)]
     pub fn final_checks(&self) {
+        (self.vt.final_checks)(self)
+    }
+
+    pub fn final_checks_base(&self) {
         // virtual with an empty base body
 
     }
@@ -1081,6 +1208,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn collect_edges(&mut self) {
+        (self.vt.collect_edges)(self)
+    }
+
+    pub fn collect_edges_base(&mut self) {
         self.myIncomingEdges.clear();
         self.myEdgesWithin.clear();
         let mut myOutgoing: EdgeVector = Vec::new();
@@ -1135,6 +1266,10 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn am_invalid(&self) -> bool {
+        (self.vt.am_invalid)(self)
+    }
+
+    pub fn am_invalid_base(&self) -> bool {
         self.myControlledLinks.len() == 0
     }
 

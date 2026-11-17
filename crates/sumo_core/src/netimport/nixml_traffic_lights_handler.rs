@@ -9,9 +9,12 @@ const DEFAULT_PROGRAM_ID: &str = "0";
 // C++ NBConnection::InvalidTlIndex
 const INVALID_TL_INDEX: i32 = -1;
 
-// shortcut: C++ dynamic_cast<NBLoadedSUMOTLDef*> needs a runtime type tag on NBTrafficLightDefinition (not in the port), and NBLoadedSUMOTLDef is not #[repr(C)] so Ptr::cast would be unsound; every definition is reported as not loaded (null, the dynamic_cast failure value), upgrade when a type tag is added
-fn loaded_tl_def(_def: Ptr<NBTrafficLightDefinition>) -> Ptr<NBLoadedSUMOTLDef> {
-    Ptr::null()
+// C++ dynamic_cast<NBLoadedSUMOTLDef*>: the subclass's vtable identifies its type (NBLoadedSUMOTLDef is #[repr(C)], base first)
+fn loaded_tl_def(def: Ptr<NBTrafficLightDefinition>) -> Ptr<NBLoadedSUMOTLDef> {
+    if def.is_null() || !std::ptr::eq(def.vt, &NB_LOADED_SUMOTL_DEF_VT) {
+        return Ptr::null();
+    }
+    def.cast::<NBLoadedSUMOTLDef>()
 }
 
 /// Importer for edge connections stored in XML
@@ -459,8 +462,7 @@ impl NIXMLTrafficLightsHandler {
             return;
         }
         // retrieve connection
-        // shortcut: NBEdge::myConnections is typed Vec<CHBuilder_Connection> in nb_edge.rs (no fromLane/toEdge/toLane/tlLinkIndex fields), so the std::find_if over from->getConnections() with NBEdge::connections_finder cannot run; upgrade when NBEdge::myConnections is retyped to Vec<NBEdge_Connection> and connections_finder is ported
-        let con: Option<NBEdge_Connection> = panic!("{}", ProcessError::new("shortcut: connection lookup in NIXMLTrafficLightsHandler::addTlConnection is not available (NBEdge::myConnections has the wrong element type)"));
+        let con: Option<NBEdge_Connection> = from.get_connections().iter().find(|c| NBEdge_connections_finder::new(fromLane, to, toLane, false).call_op(c)).cloned();
         let c: NBEdge_Connection = match con {
             Some(c) => c,
             None => {

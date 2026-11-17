@@ -229,6 +229,12 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn restricts(&self, veh: Ptr<SUMOVehicle>) -> bool {
         self.restricts(veh)
     }
+    fn is_connected_to(&self, e: &MSEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
+        self.is_connected_to(e, vclass, ignoreTransientPermissions)
+    }
+    fn reversed_routing_edge(&self) -> Ptr<ReversedEdge<MSEdge, SUMOVehicle>> {
+        self.get_reversed_routing_edge()
+    }
 }
 
 impl std::ops::Deref for MSEdge {

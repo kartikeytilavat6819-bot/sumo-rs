@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use crate::utils::router::flipped_edge::FlippedEdge;
 use crate::utils::router::rail_edge::RailEdge;
+use crate::utils::router::reversed_edge::ReversedEdge;
 
 /// Accessors the generic router code calls on its edge type `E` (`E::getID()`, `E::getSuccessors()`, ...).
 /// `Node` and `Lane` are the junction and lane types of the network (C++ `N` and `L` templates).
@@ -124,6 +125,21 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     // shortcut: IntermodalEdge has no isTazConnector in C++, upgrade when an edge type needs it
     fn is_taz_connector(&self) -> bool {
         panic!("shortcut: this edge type has no taz connector flag")
+    }
+    /// C++ `E::isConnectedTo(const E&, SUMOVehicleClass, bool)`; not a member of IntermodalEdge (C++ would not compile).
+    fn is_connected_to(&self, e: &Self, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
+        panic!("this edge type has no isConnectedTo")
+    }
+    /// C++ `E::getReversedRoutingEdge()`; only the network edge types have it (C++ would not compile for the others).
+    fn reversed_routing_edge(&self) -> Ptr<ReversedEdge<Self, V>>
+    where
+        Self: Sized,
+    {
+        panic!("this edge type has no reversed routing edge")
+    }
+    /// C++ member `E::getTravelTime(const V*, double)`; only ROEdge has it (C++ would not compile for the others).
+    fn travel_time(&self, veh: Ptr<V>, time: f64) -> f64 {
+        panic!("this edge type has no getTravelTime member")
     }
     fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool;
     fn restricts(&self, veh: Ptr<V>) -> bool;

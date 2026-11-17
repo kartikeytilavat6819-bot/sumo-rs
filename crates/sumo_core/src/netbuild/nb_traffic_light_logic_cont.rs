@@ -443,10 +443,72 @@ impl NBTrafficLightLogicCont {
             delete_ptr(logic);
         }
         self.myComputed.clear();
-        // shortcut: tls.rebuild, tls.group-signals and tls.ungroup-signals need dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which NBTrafficLightDefinition cannot answer (no type tag). Refuse them instead of silently skipping, upgrade when a type tag is added
-        for opt in ["tls.rebuild", "tls.group-signals", "tls.ungroup-signals"] {
-            if oc.get_bool(opt).unwrap() {
-                panic!("shortcut: option --{opt} is not supported by this port yet (its C++ branch needs runtime type information for traffic light definitions)");
+        if oc.get_bool("tls.rebuild").unwrap() {
+            for def in self.get_definitions() {
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    let mut ty = def.m().get_type();
+                    if !oc.is_default("tls.default-type") {
+                        ty = TrafficLightTypes.get(&oc.get_string("tls.default-type").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+                    }
+                    let id = def.m().get_id().to_string();
+                    let nodes = def.m().get_nodes().clone();
+                    let offset = def.m().get_offset();
+                    let programID = def.m().get_program_id().to_string();
+                    let oDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, offset, ty))));
+                    oDef.m().set_program_id(&programID);
+                    oDef.m().set_participants_information();
+                    for e in oDef.m().get_incoming_edges().clone() {
+                        e.m().clear_controlling_tl_information();
+                    }
+                    oDef.m().set_tl_controlling_information();
+                    for node in oDef.m().get_nodes().clone() {
+                        node.m().remove_traffic_light(def);
+                        for c in node.m().get_crossings() {
+                            c.m().customTLIndex = -1;
+                            c.m().customTLIndex2 = -1;
+                            c.m().tlLinkIndex2 = -1;
+                        }
+                    }
+                    self.remove_program(id, programID, true);
+                    self.insert(oDef.cast::<NBTrafficLightDefinition>(), false);
+                }
+            }
+        }
+        if oc.get_bool("tls.group-signals").unwrap() {
+            // replace NBOwnTLDef tld with NBLoadedSUMOTLDef
+            for def in self.get_definitions() {
+                let mut lDef: Ptr<NBLoadedSUMOTLDef> = Ptr::null();
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    lDef = def.cast::<NBLoadedSUMOTLDef>();
+                } else {
+                    let logic = def.m().compute(oc);
+                    if !logic.is_null() {
+                        lDef = Ptr::from_raw(Box::into_raw(Box::new(NBLoadedSUMOTLDef::new_2(def.m(), logic.m()))));
+                        lDef.m().set_participants_information();
+                        for node in lDef.m().get_nodes().clone() {
+                            node.m().remove_traffic_light(def);
+                            node.m().add_traffic_light(lDef.cast::<NBTrafficLightDefinition>());
+                        }
+                        let id = def.m().get_id().to_string();
+                        let programID = def.m().get_program_id().to_string();
+                        self.remove_program(id, programID, true);
+                        self.insert(lDef.cast::<NBTrafficLightDefinition>(), false);
+                        delete_ptr(logic);
+                    }
+                }
+                if !lDef.is_null() {
+                    lDef.m().group_signals();
+                }
+            }
+        } else if oc.get_bool("tls.ungroup-signals").unwrap() {
+            for def in self.get_definitions() {
+                // NBOwnTLDef are always ungrouped
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    let lDef = def.cast::<NBLoadedSUMOTLDef>();
+                    if lDef.m().using_signal_groups() {
+                        lDef.m().ungroup_signals();
+                    }
+                }
             }
         }
         let mut numPrograms = 0;
@@ -660,6 +722,7 @@ impl NBTrafficLightLogicCont {
             let n = *n;
             if n.get_type() == SumoXMLNodeType::RAIL_SIGNAL || n.get_type() == SumoXMLNodeType::RAIL_CROSSING {
                 let mut dummy = NBOwnTLDef::new_2(n.get_id(), n, 0, TrafficLightType::STATIC);
+                n.m().add_traffic_light(Ptr::from_mut(&mut dummy.base));
                 dummy.set_participants_information();
                 dummy.set_tl_controlling_information();
                 n.m().set_crossing_tl_indices(dummy.get_id(), dummy.get_controlled_links().len() as i32, false);
@@ -806,7 +869,7 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_open_drive_controllers(&mut self, oc: &mut OptionsCont) {
-        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters) and rebuilds NBLoadedSUMOTLDef via dynamic_cast (needs runtime type info), so no OpenDRIVE controller groups are formed; upgrade when both are ported
+        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters), so no OpenDRIVE controller groups are formed; upgrade when NBEdge::Connection is ported
         let _ = oc;
     }
 

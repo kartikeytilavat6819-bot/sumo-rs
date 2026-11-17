@@ -66,15 +66,9 @@ struct NBNodeWaLane {
     width: f64,
 }
 
-// C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
-// nb_edge.rs / nb_node.rs expose them as statics).
-// shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
+// C++ static constants of NBNode used as defaults below
 const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.;
-const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
-const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
+use crate::netbuild::nb_edge::{UNSPECIFIED_SPEED as NBEDGE_UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION as NBEDGE_UNSPECIFIED_FRICTION, UNSPECIFIED_CONTPOS as NBEDGE_UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE as NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_CONNECTION_UNCONTROLLED as NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED};
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
@@ -1164,8 +1158,22 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_tls(&mut self, tlCont: &mut NBTrafficLightLogicCont, addedConnections: bool, removedConnections: bool) {
-        // shortcut: the dynamic_cast checks (NBLoadedSUMOTLDef / NBOwnTLDef) need RTTI, and NBTrafficLightDefinition has no type tag yet; the TL-controlled node is left unchanged, upgrade when a type tag or downcast exists
-        let _ = (tlCont, addedConnections, removedConnections);
+        if self.is_tl_controlled() {
+            let oldDefs = self.myTrafficLights.clone();
+            for orig in oldDefs {
+                if orig.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    orig.cast::<NBLoadedSUMOTLDef>().m().register_modifications(addedConnections, removedConnections);
+                } else if orig.m().myKind != NBTrafficLightDefinitionKind::OwnTL {
+                    let newDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new_3(orig.m().get_id(), orig.m().get_offset(), orig.m().get_type()))));
+                    while let Some(node) = orig.get_nodes().first().copied() {
+                        newDef.m().add_node(node);
+                        node.m().remove_traffic_light(orig);
+                    }
+                    tlCont.remove_fully(orig.m().get_id().to_string());
+                    tlCont.insert(newDef.cast::<NBTrafficLightDefinition>(), false);
+                }
+            }
+        }
     }
 
     /// C++: `void NBNode::shiftTLConnectionLaneIndex(NBEdge *, int, int)`
@@ -7455,7 +7463,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn init_rail_signal_classes(nc: &NBNodeCont) {
-        // toString(vector<string>) joins with spaces (shortcut: assumed separator, verify against ToString.h)
+        // toString(vector<string>) joins with spaces (ToString.h joinToString(v, " "))
         let permit = utils::options::options_cont::get_string_vector("railway.signal.permit-unsignalized").join(" ");
         MY_PERMIT_UNSIGNALIZED_CLASSES.with(|c| c.set(utils::common::sumo_vehicle_class::parse_vehicle_classes(&permit)));
         MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.set(0));

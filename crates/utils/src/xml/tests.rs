@@ -79,7 +79,8 @@ fn gz_and_include() {
 fn errors() {
     let mut h = Recorder::new();
     let e = SUMOSAXReader::new("never").parse_string(&mut h, "<a>\n<b></a>").unwrap_err().to_string();
-    assert!(e.ends_with(" In file ''\n At line/column 3/4.\n"), "{e}");
+    assert!(e.starts_with("expected end of tag 'b'\n"), "{e}");
+    assert!(e.ends_with(" In file ''\n At line/column 3/6.\n"), "{e}");
     let e = SUMOSAXReader::new("never").parse_string(&mut h, "<a>").unwrap_err();
     assert!(matches!(e, ProcessError::Process(_)));
     let e = SUMOSAXReader::new("never").parse(&mut h, "does/not/exist.xml").unwrap_err();

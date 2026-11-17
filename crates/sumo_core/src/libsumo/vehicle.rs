@@ -1906,7 +1906,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
                 microVeh.m().get_lane_change_model().set_parameter(attrName, value);
             }
         } else if key.starts_with("carFollowModel.") {
-            veh.m().set_car_follow_model_parameter(key, value);
+            veh.m().set_car_follow_model_parameter(key, value).unwrap_or_else(|e| panic!("{}", e.0));
         } else if key.starts_with("junctionModel.") {
             // use the whole key (including junctionModel prefix)
             veh.m().set_junction_model_parameter(key, value);

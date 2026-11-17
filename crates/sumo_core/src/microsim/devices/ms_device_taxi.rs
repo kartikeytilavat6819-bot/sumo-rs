@@ -842,8 +842,7 @@ impl MSDevice_Taxi {
         let holderPtr = self.myHolder;
         let holder = holderPtr.m();
         let mut lastPos: f64 = holder.get_position_on_lane();
-        // shortcut: C++ `*getRerouteOrigin()` is an iterator into the route; MSBaseVehicle::getRerouteOrigin is not ported yet and returns its current edge, upgrade when it returns Ptr<MSEdge>
-        let rerouteOrigin: Ptr<MSEdge> = holder.get_edge();
+        let rerouteOrigin: Ptr<MSEdge> = holder.get_route().index_op(holder.get_reroute_origin() as i32);
         if self.is_empty() {
             // start fresh from the current edge
             if holder.is_stopped_parking() {
@@ -2307,16 +2306,32 @@ impl MSDevice_Taxi {
         let holder = holderPtr.m();
         let swapGroup = holder.get_string_param("device.taxi.swapGroup", false, "");
         if swapGroup != "" {
+            let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+            let router = dispatcher.m().get_router();
+            let now: SUMOTime = MSNet::get_instance().get_current_time_step();
             let stopTime: f64 = if holder.is_stopped() { f64::max(0.0, steps2time(holder.get_next_stop().duration)) } else { 0.0 };
             let mut maxSaving: f64 = 0.0;
             let mut bestSwap: Ptr<MSDevice_Taxi> = Ptr::null();
             for taxi in MY_FLEET.with(|f| f.borrow().clone()) {
                 if taxi.get_holder().has_departed() && taxi.get_state() == MSDevice_Taxi_TaxiState::PICKUP as i32
                     && taxi.get_holder().get_string_param("device.taxi.swapGroup", false, "") == swapGroup {
-                    // shortcut: C++ builds toPickup from the route iterator range (getCurrentRouteEdge() .. stop.edge + 1) and costs it with the router; MSRouteIterator is not mapped yet (Unmapped), so the candidate evaluation is skipped and no swap happens, upgrade when MSRouteIterator is ported
+                    let veh = taxi.get_holder();
+                    let vehPtr = taxi.m().myHolder;
+                    let stop = veh.get_next_stop();
+                    let toPickup: ConstMSEdgeVector = veh.get_route().get_edges()[*veh.get_current_route_edge()..stop.edge + 1].to_vec();
+                    let cost = router.recompute_costs_pos(&toPickup, vehPtr, veh.get_position_on_lane(), stop.pars.endPos, now, Ptr::default());
+                    let mut toPickup2: ConstMSEdgeVector = Vec::new();
+                    router.compute_2(holder.get_edge(), holder.get_position_on_lane(), veh.get_route().index_op(stop.edge as i32), stop.pars.endPos, holderPtr, now, &mut toPickup2, true);
+                    if !toPickup2.is_empty() {
+                        let cost2 = router.recompute_costs_pos(&toPickup2, holderPtr, holder.get_position_on_lane(), stop.pars.endPos, now, Ptr::default());
+                        let saving = cost - cost2 - stopTime;
+                        if saving > maxSaving {
+                            maxSaving = saving;
+                            bestSwap = taxi;
+                        }
+                    }
                 }
             }
-            let _ = stopTime;
             if maxSaving > 5.0 {
                 self.dispatch_shared(bestSwap.m().myLastDispatch.clone());
                 bestSwap.m().myCurrentReservations.clear();

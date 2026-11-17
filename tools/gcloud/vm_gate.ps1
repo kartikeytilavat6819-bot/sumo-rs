@@ -10,9 +10,16 @@ $ErrorActionPreference = "Continue"
 # user's order: only the personal account, never the work account
 $env:CLOUDSDK_CORE_ACCOUNT = "kartikeytilavat6819@gmail.com"
 $env:CLOUDSDK_CORE_PROJECT = "project-b17b0335-3081-4c61-89b"
-# two VMs; a branch always goes to the same one so its incremental build stays warm (wave2 = lead -> sumo-gate)
+# two VMs; slots are first-free (no per-branch warmth), so go to the VM with fewer runs from this machine
 $vms = @(@{ n = "sumo-gate"; z = "us-central1-a" }, @{ n = "sumo-gate2"; z = "us-central1-b" })
-if (-not $Vm) { $Vm = if ($Branch -eq "wave2") { "sumo-gate" } else { $vms[([int[]][char[]]$Branch | Measure-Object -Sum).Sum % 2].n } }
+$mark = Join-Path $env:TEMP "vmgate_runs"
+New-Item -ItemType Directory -Force $mark | Out-Null
+Get-ChildItem $mark -File | Where-Object { -not (Get-Process -Id ([int]($_.Name -split '_')[-1]) -ErrorAction SilentlyContinue) } | Remove-Item -ErrorAction SilentlyContinue
+if (-not $Vm) {
+    $Vm = ($vms | Sort-Object { @(Get-ChildItem $mark -Filter "$($_.n)_*").Count }, { $_.n } | Select-Object -First 1).n
+}
+$markFile = Join-Path $mark "${Vm}_$PID"
+New-Item -ItemType File -Force $markFile | Out-Null
 $Zone = ($vms | Where-Object { $_.n -eq $Vm }).z
 $sha = (git -C $Repo rev-parse --short $Branch).Trim()
 if (-not $sha) { "unknown branch $Branch"; exit 1 }
@@ -32,4 +39,4 @@ for ($try = 1; $try -le 3; $try++) {
     if ($try -eq 3) { $out }
     Start-Sleep (15 * $try)
 }
-Remove-Item $tgz -ErrorAction SilentlyContinue
+Remove-Item $tgz, $markFile -ErrorAction SilentlyContinue

@@ -4,6 +4,15 @@ use crate::prelude::*;
 use utils::options::options_cont::with_options;
 use utils::common::to_string::f64_to_string_prec;
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
+
+/// C++ `new WrappingCommand<MSDevice_ToC>(this, op)` followed by `getBeginOfTimestepEvents()->addEvent(cmd, t)`
+fn schedule_to_c_command(dev: &mut MSDevice_ToC, op: fn(&mut MSDevice_ToC, SUMOTime) -> SUMOTime, t: SUMOTime) -> Ptr<WrappingCommand<MSDevice_ToC>> {
+    let cmd: Ptr<WrappingCommand<MSDevice_ToC>> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(dev), op))));
+    MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), t);
+    cmd
+}
 
 
 
@@ -49,11 +58,11 @@ pub struct MSDevice_ToC {
     pub myState: MSDevice_ToC_ToCState,
     /// The holder vehicle casted to MSVehicle*
     pub myHolderMS: Ptr<MSVehicle>,
-    pub myTriggerMRMCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myTriggerToCCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myRecoverAwarenessCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myExecuteMRMCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myPrepareToCCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
+    pub myTriggerMRMCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myTriggerToCCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myRecoverAwarenessCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myExecuteMRMCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myPrepareToCCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
     /// The file the devices output goes to
     pub myOutputFile: Ptr<OutputDevice>,
     /// Storage for events to be written to the output
@@ -458,7 +467,23 @@ impl MSDevice_ToC {
         // unregister from static instance container
         let me = Ptr::from_mut(self);
         MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
-        // shortcut: C++ deschedules the device's WrappingCommands here; commands are not ported, so nothing is descheduled, upgrade when Command/event control is ported
+        // deschedule commands associated to this device
+        if !self.myTriggerMRMCommand.is_null() {
+            self.myTriggerMRMCommand.m().deschedule();
+        }
+        if !self.myTriggerToCCommand.is_null() {
+            self.myTriggerToCCommand.m().deschedule();
+        }
+        if !self.myRecoverAwarenessCommand.is_null() {
+            self.myRecoverAwarenessCommand.m().deschedule();
+        }
+        if !self.myExecuteMRMCommand.is_null() {
+            self.myExecuteMRMCommand.m().deschedule();
+            // skip resetDeliberateLCs(): vehicle is being destroyed
+        }
+        if !self.myPrepareToCCommand.is_null() {
+            self.myPrepareToCCommand.m().deschedule();
+        }
         // skip resetDeliberateLCs(): vehicle is being destroyed
         self.base.drop_();
     }
@@ -903,7 +928,7 @@ impl MSDevice_ToC {
                 }
             }
         } else {
-            // shortcut: C++ schedules MRMExecutionStep as a WrappingCommand at begin-of-timestep events; commands are not ported, so the MRM execution step is not scheduled here, upgrade when Command/event control is ported
+            self.myExecuteMRMCommand = schedule_to_c_command(self, MSDevice_ToC::mrm_execution_step, MSNet::get_instance().get_current_time_step() + delta_t());
         }
         if self.myState == MSDevice_ToC_ToCState::MANUAL || self.myState == MSDevice_ToC_ToCState::RECOVERING {
             let target = self.myAutomatedTypeID.clone();
@@ -1014,7 +1039,7 @@ impl MSDevice_ToC {
         // Eventually abort MRM
         self.deschedule_mrm();
         // Start awareness recovery process
-        // shortcut: C++ schedules awarenessRecoveryStep as a WrappingCommand at begin-of-timestep events; commands are not ported, upgrade when Command/event control is ported
+        self.myRecoverAwarenessCommand = schedule_to_c_command(self, MSDevice_ToC::awareness_recovery_step, MSNet::get_instance().get_current_time_step() + delta_t());
         self.set_state(MSDevice_ToC_ToCState::RECOVERING);
         // @todo: Sample initial awareness
         let initialAwareness = self.myInitialAwareness;
@@ -1158,7 +1183,10 @@ impl MSDevice_ToC {
         }
         let awarenessRecoveryCompleted = self.myCurrentAwareness == 1.0;
         if awarenessRecoveryCompleted {
-            // shortcut: C++ deschedules the recovery WrappingCommand here; commands are not ported, upgrade when Command/event control is ported
+            if !self.myRecoverAwarenessCommand.is_null() {
+                self.myRecoverAwarenessCommand.m().deschedule();
+                self.myRecoverAwarenessCommand = Ptr::null();
+            }
             self.set_state(MSDevice_ToC_ToCState::MANUAL);
             return 0;
         }
@@ -1706,9 +1734,16 @@ impl MSDevice_ToC {
                 // this needs to be a separate line because TIME2STEPS may otherwise do two calls to sampleResponseTime
                 responseTime = time2steps(sample);
             }
-            // shortcut: C++ schedules the ToC trigger, MRM trigger and ToC preparation as WrappingCommands; commands are not ported, so nothing is scheduled, upgrade when Command/event control is ported
+            // Schedule ToC Event
+            self.myTriggerToCCommand = schedule_to_c_command(self, MSDevice_ToC::trigger_downward_to_c, MSNet::get_instance().get_current_time_step() + responseTime);
             assert!(self.myExecuteMRMCommand.is_null());
             assert!(self.myTriggerMRMCommand.is_null());
+            if responseTime > timeTillMRM && self.myState != MSDevice_ToC_ToCState::MRM {
+                // Schedule new MRM if driver response time is higher than permitted
+                self.myTriggerMRMCommand = schedule_to_c_command(self, MSDevice_ToC::trigger_mrm, MSNet::get_instance().get_current_time_step() + timeTillMRM);
+            }
+            // Start ToC preparation process
+            self.myPrepareToCCommand = schedule_to_c_command(self, MSDevice_ToC::to_c_preparation_step, MSNet::get_instance().get_current_time_step() + delta_t());
             self.set_state(MSDevice_ToC_ToCState::PREPARING_TOC);
             if self.myOpenGapParams.active {
                 // Start gap controller
@@ -1801,12 +1836,12 @@ impl MSDevice_ToC {
     pub fn deschedule_mrm(&mut self) {
         // Eventually abort scheduled MRM
         if !self.myTriggerMRMCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myTriggerMRMCommand.m().deschedule();
             self.myTriggerMRMCommand = Ptr::null();
         }
         // Eventually abort ongoing MRM
         if !self.myExecuteMRMCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myExecuteMRMCommand.m().deschedule();
             self.reset_deliberate_l_cs();
             self.myExecuteMRMCommand = Ptr::null();
         }
@@ -1824,7 +1859,7 @@ impl MSDevice_ToC {
     #[allow(unused_variables)]
     pub fn deschedule_to_c(&mut self) {
         if !self.myTriggerToCCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myTriggerToCCommand.m().deschedule();
             self.myTriggerToCCommand = Ptr::null();
         }
     }
@@ -1846,7 +1881,7 @@ impl MSDevice_ToC {
     pub fn deschedule_to_c_preparation(&mut self) {
         // Eventually stop ToC preparation process
         if !self.myPrepareToCCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myPrepareToCCommand.m().deschedule();
             if self.myState != MSDevice_ToC_ToCState::MRM {
                 self.reset_deliberate_l_cs();
             }
@@ -1868,7 +1903,7 @@ impl MSDevice_ToC {
     pub fn deschedule_recovery(&mut self) {
         // Eventually stop ToC preparation process
         if !self.myRecoverAwarenessCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myRecoverAwarenessCommand.m().deschedule();
             self.myRecoverAwarenessCommand = Ptr::null();
         }
     }

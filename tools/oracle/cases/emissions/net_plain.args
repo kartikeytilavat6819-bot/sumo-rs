@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/emissions/plain/net.nod.xml --edge-files tools/oracle/cases/emissions/plain/net.edg.xml --connection-files tools/oracle/cases/emissions/plain/net.con.xml --type-files tools/oracle/cases/emissions/plain/net.typ.xml --tllogic-files tools/oracle/cases/emissions/plain/net.tll.xml

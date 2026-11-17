@@ -6,6 +6,8 @@ use utils::geom::POSITION_EPS;
 use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
 use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_PASSENGER, SVC_PEDESTRIAN, SVC_PUBLIC_CLASSES, SVC_TRAM, SVC_UNSPECIFIED, SVC_VULNERABLE, is_railway, is_tram};
 use super::nb_cont::KeepClear;
+use crate::utils::named_rtree::NamedRTree;
+use utils::common::named::{Named, NamedStoringVisitor};
 
 /// `std::istringstream(id) >> long long`: optional leading whitespace, optional sign, then digits;
 /// None when no number can be read
@@ -3928,13 +3930,12 @@ impl NBEdgeCont {
             return 0;
         }
         let mut numJoined: i32 = 0;
-        // bounding boxes of the tram edges (C++ NamedRTree, emulated by a linear scan with the same float boxes)
-        let mut tramBoxes: Vec<([f32; 2], [f32; 2], Ptr<NBEdge>)> = Vec::new();
+        let mut tramTree = NamedRTree::new();
         for edge in tramEdges.iter().copied() {
             let bound = edge.m().get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            tramBoxes.push((min, max, edge));
+            tramTree.insert(&min, &max, &edge.cast::<Named>());
         }
         // {targetEdge, laneIndex : tramEdge}; C++ MinLaneComparatorIdLess orders by id then lane
         let mut matches: BTreeMap<(String, i32), (Ptr<NBEdge>, i32, Ptr<NBEdge>)> = BTreeMap::new();
@@ -3945,12 +3946,13 @@ impl NBEdgeCont {
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
             // the nearby set is actually just re-sorting according to the id to make the tests comparable
+            let mut near: BTreeSet<Ptr<Named>> = BTreeSet::new();
+            let visitor = NamedStoringVisitor::new(&mut near);
+            tramTree.search(&min, &max, &visitor, |d, c| d.add_to(c));
             let mut nearby: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
-            for (tmin, tmax, namedEdge) in tramBoxes.iter() {
-                let overlaps = (0..2).all(|d| !(min[d] > tmax[d] || tmin[d] > max[d]));
-                if overlaps {
-                    nearby.entry(namedEdge.m().get_id().to_string()).or_insert(*namedEdge);
-                }
+            for namedEdge in &near {
+                let e = namedEdge.cast::<NBEdge>();
+                nearby.entry(e.m().get_id().to_string()).or_insert(e);
             }
             for tramEdge in nearby.values().copied() {
                 // find a continous stretch of tramEdge that runs along one of the lanes of the road edge
