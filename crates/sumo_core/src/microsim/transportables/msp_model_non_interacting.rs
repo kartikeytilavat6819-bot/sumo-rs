@@ -315,7 +315,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, duration) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::null()))));
@@ -343,7 +343,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, eventTime) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::from_mut(in_)))));
@@ -477,7 +477,6 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
         let is_person = self.myTransportable.is_person();
         let old = self.myParent.get_edge();
         let dir = self.myParent.get_p_state().cast::<MSPModel_NonInteracting_PState>().get_direction();
-        // shortcut: MSStageMoving::move_to_next_edge is a panic stub (virtual dispatch to the walking/tranship stage is not ported), upgrade when stage subclasses dispatch
         let arrived = self.myParent.m().move_to_next_edge(self.myTransportable, currentTime, dir, Ptr::null(), false);
         if arrived {
             self.myModel.m().register_arrived();
