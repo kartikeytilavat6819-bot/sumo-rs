@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T03:16:54.711477-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/city_grenoble_tram_bus/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/city_grenoble_tram_bus/routes.rou"/>
+        <additional-files value="tools/oracle/cases/city_grenoble_tram_bus/ptstops.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="L1f.0" depart="60.00" departLane="519254533#1_0" departPos="12.10" departSpeed="5.34" departDelay="0.00" arrival="265.00" arrivalLane="-30986828#5_0" arrivalPos="40.47" arrivalSpeed="0.93" duration="205.00" routeLength="665.81" waitingTime="17.00" waitingCount="2" stopTime="60.00" timeLoss="45.17" rerouteNo="0" devices="tripinfo_L1f.0 fcd_L1f.0 person_L1f.0" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="L1f.1" depart="180.00" departLane="519254533#1_0" departPos="12.10" departSpeed="5.34" departDelay="0.00" arrival="384.00" arrivalLane="-30986828#5_0" arrivalPos="40.47" arrivalSpeed="0.73" duration="204.00" routeLength="665.81" waitingTime="13.00" waitingCount="2" stopTime="60.00" timeLoss="44.16" rerouteNo="0" devices="tripinfo_L1f.1 fcd_L1f.1 person_L1f.1" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="L2f.2" depart="300.00" departLane="-30986828#5_0" departPos="12.10" departSpeed="8.33" departDelay="0.00" arrival="491.00" arrivalLane="33100107_0" arrivalPos="22.31" arrivalSpeed="0.78" duration="191.00" routeLength="728.08" waitingTime="6.00" waitingCount="3" stopTime="60.00" timeLoss="22.89" rerouteNo="0" devices="tripinfo_L2f.2 fcd_L2f.2" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="L1f.2" depart="300.00" departLane="519254533#1_0" departPos="12.10" departSpeed="5.34" departDelay="0.00" arrival="504.00" arrivalLane="-30986828#5_0" arrivalPos="40.47" arrivalSpeed="0.91" duration="204.00" routeLength="665.81" waitingTime="15.00" waitingCount="3" stopTime="60.00" timeLoss="46.00" rerouteNo="0" devices="tripinfo_L1f.2 fcd_L1f.2 person_L1f.2" vType="bus" speedFactor="1.00" vaporized=""/>
+</tripinfos>

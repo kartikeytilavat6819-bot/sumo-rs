@@ -134,11 +134,25 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<MSStage> {
-        // shortcut: the routeDistribution lookup (MSRoute::distDictionary/dictionary) is not ported, so the clone keeps the current route
-        let route = self.myRoute.clone();
-        let departPos = self.myDepartPos;
-        let arrivalPos = self.myArrivalPos;
-        let departLane = self.myDepartLane;
+        let mut route = self.myRoute.clone();
+        let mut departPos = self.myDepartPos;
+        let mut arrivalPos = self.myArrivalPos;
+        let mut departLane = self.myDepartLane;
+        if self.myRouteID != "" && !MSRoute::dist_dictionary(&self.myRouteID).is_null() {
+            route = MSRoute::dictionary_3(&self.myRouteID, SUMORouteHandler::get_parsing_rng()).get_edges().clone();
+            if departPos > route[0].get_length() {
+                write_warningf!("Adjusting departPos for cloned walk with routeDistribution '%'", self.myRouteID.clone());
+                departPos = route[0].get_length();
+            }
+            if arrivalPos > route.last().unwrap().get_length() {
+                write_warningf!("Adjusting arrivalPos for cloned walk with routeDistribution '%'", self.myRouteID.clone());
+                arrivalPos = route.last().unwrap().get_length();
+            }
+            if departLane >= route[0].get_num_lanes() {
+                write_warningf!("Adjusting departLane for cloned walk with routeDistribution '%'", self.myRouteID.clone());
+                departLane = route[0].get_num_lanes() - 1;
+            }
+        }
         let routeID = self.myRouteID.clone();
         let clon = MSStageWalking::new("dummyID", &route, self.myDestinationStop, self.myWalkingTime, self.mySpeed, departPos, arrivalPos, self.myDepartPosLat, departLane, &routeID);
         let clonPtr = Ptr::from_mut(Box::leak(Box::new(clon))).cast::<MSStage>();

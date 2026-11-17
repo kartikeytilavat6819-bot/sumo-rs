@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/speedfactor/speedfactor.nod.xml --edge-files tools/oracle/cases/speedfactor/speedfactor.edg.xml

@@ -1492,7 +1492,7 @@ impl MSDevice_ToC {
             let id = this.myManualTypeID.clone();
             this.myManualTypeID = vehCtrl.get_v_type(&id, SUMORouteHandler::get_parsing_rng(), false).get_id().to_string();
         }
-        // shortcut: C++ inserts `this` into myInstances here; the Rust constructor returns by value, so the registration is done by the caller (buildVehicleDevices) at the final address
+        // C++ inserts `this` into myInstances in the constructor; buildVehicleDevices registers the boxed device at its final address
         this.init_color_scheme();
         assert!(this.myInitialAwareness <= 1.0 && this.myInitialAwareness >= 0.0);
         this

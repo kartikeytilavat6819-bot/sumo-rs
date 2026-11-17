@@ -1606,9 +1606,8 @@ fn oc_bool(oc: &OptionsCont, name: &str) -> bool {
     oc.get_bool(name).unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
-// shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
 fn weights_random_factor() -> f64 {
-    get_float("weights.random-factor")
+    utils::common::std_defs::g_weights_random_factor()
 }
 
 fn weights_separate_turns() -> f64 {

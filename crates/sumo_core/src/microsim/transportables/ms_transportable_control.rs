@@ -133,13 +133,11 @@ impl MSTransportableControl {
         let mut movementModel = nonInteracting;
         if isPerson {
             let model = get_string("pedestrian.model");
-            // shortcut: C++ compiles the jupedsim branches only with HAVE_JUPEDSIM_GRPC / HAVE_JUPEDSIM_LEGACY; the port has no such build flags, so they are always on, upgrade when build flags are ported
+            // the jupedsim branch is always on: the pristine 1.28.0 build has HAVE_JUPEDSIM (build features list JuPedSim)
             if model == "striping" {
                 movementModel = leak_ptr(with_options(|oc| MSPModel_Striping::new(oc, net))).cast::<MSPModel>();
             } else if model == "jupedsim" {
                 movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim::new(oc, net))).cast::<MSPModel>();
-            } else if model == "jupedsim_legacy" {
-                movementModel = leak_ptr(with_options(|oc| MSPModel_JuPedSim_legacy::new(oc, net))).cast::<MSPModel>();
             } else if model != "nonInteracting" {
                 // C++ deletes myNonInteractingModel here before throwing; the port does not own models yet
                 panic!("{}", ProcessError::new(utils::tlf!("Unknown pedestrian model '%'", model)));
