@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="vIgn" length="5.00" maxSpeed="8.33" accel="2.60" decel="4.50" jmIgnoreFoeProb="0.50"/>
+    <route id="ra" edges="W2C C2E"/>
+    <route id="rb" edges="S2C C2N"/>
+    <flow id="fa" type="vIgn" route="ra" begin="0.00" end="150.00" period="4.00" departSpeed="max"/>
+    <flow id="fb" type="vIgn" route="rb" begin="1.00" end="150.00" period="4.00" departSpeed="max"/>
+    <flow id="fc" type="car" route="rb" begin="2.00" end="150.00" period="5.00" departSpeed="max"/>
+</routes>

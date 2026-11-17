@@ -1,0 +1,14 @@
+<routes>
+    <vType id="sl" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="slow" length="5.00" maxSpeed="4.00" accel="2.60" decel="4.50"/>
+    <vType id="lc2013" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="E0 E1"/>
+    <vehicle id="s0" type="slow" route="r0" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="s1" type="slow" route="r0" depart="30.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f0" type="sl" route="r0" depart="2.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f1" type="sl" route="r0" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f2" type="sl" route="r0" depart="22.00" departLane="1" departSpeed="max"/>
+    <vehicle id="f3" type="sl" route="r0" depart="40.00" departLane="0" departSpeed="max"/>
+    <vehicle id="g0" type="lc2013" route="r0" depart="8.00" departLane="0" departSpeed="max"/>
+    <vehicle id="g1" type="lc2013" route="r0" depart="28.00" departLane="1" departSpeed="max"/>
+</routes>
