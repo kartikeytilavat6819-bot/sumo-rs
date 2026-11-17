@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 /// C++ typedef `std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> ReversedEdge::ConstEdgePairVector`
 pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, Ptr<ReversedEdge<E, V>>)>;
@@ -53,8 +54,21 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors/getReversedRoutingEdge are not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+        if !self.myOriginal.is_internal() {
+            let this: Ptr<ReversedEdge<E, V>> = Ptr::from_mut(self);
+            let original = self.myOriginal;
+            for viaPair in original.via_successors(SVC_IGNORING, false).to_vec() {
+                let revSource = viaPair.0.reversed_routing_edge();
+                let mut via = viaPair.1;
+                let mut preVia: Ptr<ReversedEdge<E, V>> = Ptr::null();
+                while !via.is_null() && via.is_internal() {
+                    via.reversed_routing_edge().m().myViaSuccessors.push((this, preVia));
+                    preVia = via.reversed_routing_edge();
+                    via = via.via_successors(SVC_IGNORING, false)[0].1;
+                }
+                revSource.m().myViaSuccessors.push((this, preVia));
+            }
+        }
     }
 
     /// C++: `const E * ReversedEdge::getOriginalEdge() const` [const]
@@ -103,8 +117,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<ReversedEdge<E, V>> {
-        // shortcut: needs router trait bounds (lead), E::getBidiEdge is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getBidiEdge")
+        self.myOriginal.bidi_edge().reversed_routing_edge()
     }
 
     /// C++: `bool ReversedEdge::isInternal() const` [const]
@@ -141,8 +154,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<ReversedEdge<E, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTravelTime is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTravelTime")
+        edge.myOriginal.travel_time(veh, time)
     }
 
     /// C++: `const ConstEdgePairVector & ReversedEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -171,11 +183,22 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector<E, V> {
-        if vClass == SVC_IGNORING {
+        if vClass == SVC_IGNORING || self.myOriginal.is_taz_connector() {
             return &self.myViaSuccessors;
         }
-        // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the cache rebuild also needs Ptr::new(self).m()
-        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
+        if let Some(cached) = self.myClassesViaSuccessorMap.get(&vClass) {
+            return cached;
+        }
+        // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
+        let me: &mut ReversedEdge<E, V> = Ptr::new(self).get_mut().unwrap();
+        let mut result: ReversedEdge_ConstEdgePairVector<E, V> = Vec::new();
+        for viaPair in self.myViaSuccessors.iter() {
+            if viaPair.0.myOriginal.is_taz_connector() || viaPair.0.myOriginal.is_connected_to(&self.myOriginal, vClass, ignoreTransientPermissions) {
+                result.push(*viaPair);
+            }
+        }
+        me.myClassesViaSuccessorMap.insert(vClass, result);
+        me.myClassesViaSuccessorMap.get(&vClass).unwrap()
     }
 
 }

@@ -110,6 +110,15 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn bidi_edge(&self) -> Ptr<ROEdge> {
         self.get_bidi_edge()
     }
+    fn is_connected_to(&self, e: &ROEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
+        self.is_connected_to(e, vclass, ignoreTransientPermissions)
+    }
+    fn reversed_routing_edge(&self) -> Ptr<ReversedEdge<ROEdge, ROVehicle>> {
+        self.get_reversed_routing_edge()
+    }
+    fn travel_time(&self, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        self.get_travel_time(veh, time)
+    }
     fn to_junction(&self) -> Ptr<RONode> {
         self.get_to_junction()
     }
