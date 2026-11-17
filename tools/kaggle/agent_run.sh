@@ -7,7 +7,7 @@ SA=$(cat $D/sim.args)
 $OURS -n $D/ref_simple.net.xml -r $D/routes.rou $SA --tripinfo-output $O/ours.ti.xml --fcd-output $O/ours.fcd.xml --statistic-output $O/ours.stat.xml --personinfo-output $O/ours.pi.xml --no-step-log true > $O/ours.log 2>&1; echo "ours exit $?"
 for s in ref ours; do
   if [ $s = ref ]; then F=$D/ref.fcd.xml; else F=$O/ours.fcd.xml; fi
-  awk '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} /id="car8"/{sub(/^ */,""); print t, $0}' $F > $O/$s.car8.txt
+  tr -d '\r' < $F | awk '/<timestep/{match($0,/time="[^"]*"/); t=substr($0,RSTART+6,RLENGTH-7)} /id="car8"/{sub(/^ */,""); print t, $0}' > $O/$s.car8.txt
 done
 echo "ref $(wc -l < $O/ref.car8.txt) ours $(wc -l < $O/ours.car8.txt)"
 diff $O/ref.car8.txt $O/ours.car8.txt | head -8
