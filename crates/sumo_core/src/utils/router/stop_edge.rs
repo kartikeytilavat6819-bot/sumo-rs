@@ -1,6 +1,7 @@
 //! Port of utils/router/StopEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// the stop edge type representing bus and train stops
 /// C++ class `StopEdge` (utils/router/StopEdge.h)
@@ -27,7 +28,13 @@ impl<E, L, N, V> std::ops::DerefMut for StopEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> StopEdge<E, L, N, V> {
+impl<E, L, N, V> StopEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     /// C++: `void StopEdge::StopEdge<E, L, N, V>(const std::string, int, const E *, const double, const double)`
     // StopEdge(const std::string id, int numericalID, const E* edge, const double startPos, const double endPos) :
     //         IntermodalEdge<E, L, N, V>(id, numericalID, edge, "!stop", 0), myStartPos(startPos), myEndPos(endPos) { }

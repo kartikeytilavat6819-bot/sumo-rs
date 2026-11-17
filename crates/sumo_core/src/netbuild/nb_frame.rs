@@ -9,12 +9,7 @@ use utils::common::util_exceptions::ProcessError;
 use utils::geom::POSITION_EPS;
 use utils::xml::sumo_xml_definitions::{LaneSpreadFunctions, NodeTypes, RightOfWayValues, TrafficLightTypes};
 use utils::{write_errorf};
-// shortcut: NBEdge static constants are not ported yet (nb_edge.rs keeps them as comments), mirrored from NBEdge.cpp; switch to NBEDGE_UNSPECIFIED_* when nb_edge.rs ports them
-const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.;
-const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
-const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+use crate::netbuild::nb_edge::{UNSPECIFIED_WIDTH as NBEDGE_UNSPECIFIED_WIDTH, UNSPECIFIED_FRICTION as NBEDGE_UNSPECIFIED_FRICTION, UNSPECIFIED_CONTPOS as NBEDGE_UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE as NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_LOADED_LENGTH as NBEDGE_UNSPECIFIED_LOADED_LENGTH};
 
 /// Sets and checks options for netbuild
 /// C++ class `NBFrame` (netbuild/NBFrame.h)
@@ -1349,19 +1344,6 @@ impl NBFrame {
 
         oc.do_register("tls.rebuild", SumoOption::bool(false));
         oc.add_description("tls.rebuild", "TLS Building", "rebuild all traffic light plans in the network");
-
-        oc.do_register("tls.actuated.jam-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.jam-threshold", "Processing", "Sets default jam-threshold parameter for all actuation detectors");
-        oc.do_register("tls.actuated.show-detectors", SumoOption::bool(false));
-        oc.add_description("tls.actuated.show-detectors", "Processing", "Sets default show-detectors parameter for all actuation detectors");
-        oc.do_register("tls.actuated.passing-time", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.passing-time", "Processing", "Sets default passing-time parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-gap", SumoOption::float(0.));
-        oc.add_description("tls.actuated.detector-gap", "Processing", "Sets default detector-gap parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-length", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.detector-length", "Processing", "Sets default detector-length parameter for all actuation detectors");
-        oc.do_register("tls.actuated.inactive-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.inactive-threshold", "Processing", "Sets default inactive-threshold parameter for all actuation detectors");
 
         // edge pruning
         oc.do_register("keep-edges.min-speed", SumoOption::float(-1.0));

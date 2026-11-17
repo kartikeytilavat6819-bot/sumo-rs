@@ -163,6 +163,30 @@ impl std::ops::DerefMut for MSPModel_NonInteracting {
     }
 }
 
+// C++ virtual overrides of MSPModel, dispatched through MSPModel::vt
+static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
+    add: noninteracting_vt_add,
+    clear_state: noninteracting_vt_clear_state,
+    remove: noninteracting_vt_remove,
+    using_internal_lanes: noninteracting_vt_using_internal_lanes,
+    get_active_number: noninteracting_vt_get_active_number,
+};
+fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
+}
+fn noninteracting_vt_clear_state(m: &mut MSPModel) {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().clear_state()
+}
+fn noninteracting_vt_remove(m: &mut MSPModel, state: Ptr<MSTransportableStateAdapter>) {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().remove(state)
+}
+fn noninteracting_vt_using_internal_lanes(m: &mut MSPModel) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().using_internal_lanes()
+}
+fn noninteracting_vt_get_active_number(m: &mut MSPModel) -> i32 {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().get_active_number()
+}
+
 impl MSPModel_NonInteracting {
     /// C++: `void MSPModel_NonInteracting::MSPModel_NonInteracting(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
@@ -175,7 +199,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
         Self {
-            base: MSPModel {},
+            base: MSPModel { vt: &MSPMODEL_NONINTERACTING_VT },
             myNet: net,
             myNumActivePedestrians: 0,
         }
