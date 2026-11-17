@@ -568,8 +568,7 @@ impl MSAbstractLaneChangeModel {
             myCooperativeHelpThreshold: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_HELPTHRESHOLD, -1.),
             myCooperativeMinSpeed: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_MINSPEED, 0.),
             // see MSVehicle::initDevices
-            // shortcut: get_device(typeid) matches no device yet, so the blue light flag is always false until the device type key is ported
-            myHaveBlueLight: !v.get_device(&()).is_null(),
+            myHaveBlueLight: !v.get_device("bluelight").is_null(),
             myLCAccelerationAdvices: Vec::new(),
             myLastLaneChangeOffset: 0,
             myApproachedByShadow: std::cell::RefCell::new(Vec::new()),
