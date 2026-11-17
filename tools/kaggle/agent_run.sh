@@ -5,7 +5,7 @@ W=/tmp/nx03; rm -rf $W; mkdir -p $W
 ARGS="--simple-projection true --junctions.join true --junctions.join-dist 20"
 IN=tools/oracle/cases/city_munich/input.osm
 export SUMO_HOME=/home/gate/sumo_pkg/sumo
-CPPNC=$(bash tools/kaggle/vm_cpp_trace_nc.sh nx03 tools/kaggle/nc_trace/NBNodeCont.cpp) || { echo "CPP BUILD FAILED"; exit 0; }
+CPPNC=$(bash tools/gcloud/vm_cpp_trace.sh nx03 tools/kaggle/nc_trace/nx03.patch netconvert) || { echo "CPP BUILD FAILED"; exit 0; }
 echo "cpp netconvert: $CPPNC"
 NC_JTRACE=1 $CARGO_TARGET_DIR/debug/netconvert $ARGS --osm-files $IN -o $W/ours.net.xml > $W/ours.out 2> $W/ours.err
 echo "ours rc=$?"
