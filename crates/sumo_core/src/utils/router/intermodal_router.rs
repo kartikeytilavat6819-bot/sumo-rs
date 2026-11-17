@@ -577,8 +577,7 @@ where
                         let edgeLines: Vec<String> = edges.iter().map(|e| e.get_line().to_string()).collect();
                         self.myExternalEffort.m().init(&edgeLines);
                     }
-                    // shortcut: C++ uses &getCombined (AccessEdge-typed travel time plus external effort), not ported yet, so combined routing (mode 3) is unsupported
-                    panic!("shortcut: IntermodalRouter combined effort (getCombined) is not wired yet");
+                    self.set_internal_dijkstra(&edges, Some(Self::get_combined), Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), self.myExternalEffort);
                 }
                 _ => {}
             }
