@@ -21,6 +21,8 @@ use utils::xml::xml_sub_sys;
 /// C++ `delete net`; deleting null is a no-op
 fn delete_net(net: Ptr<MSNet>) {
     if !net.is_null() {
+        // ~MSNet: writes pending output (Command_SaveTLSProgram etc.) before the memory goes
+        net.m().drop_();
         unsafe { drop(Box::from_raw(net.as_raw())) }
     }
 }

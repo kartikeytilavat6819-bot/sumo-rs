@@ -4,6 +4,10 @@
 use super::std_defs::g_precision;
 
 pub fn f64_to_string_prec(v: f64, accuracy: i32) -> String {
+    // libstdc++ prints non-finite values as nan/-nan/inf/-inf (Rust: NaN/inf)
+    if v.is_nan() {
+        return if v.is_sign_negative() { "-nan" } else { "nan" }.into();
+    }
     format!("{:.*}", accuracy.max(0) as usize, v)
 }
 pub fn f64_to_string(v: f64) -> String {

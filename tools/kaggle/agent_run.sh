@@ -5,5 +5,5 @@ $B -n $c/ref_simple.net.xml -r $c/routes.rou --tripinfo-output $O/ti.xml --fcd-o
 tail -3 $O/log
 for s in elechybrid overheadwires substations; do
   echo "== $s"; python3 tools/oracle/compare_xml.py $c/ref.$s.xml $O/$s.xml | head -8
-  diff <(head -12 $c/ref.$s.xml) <(head -12 $O/$s.xml) | head -12
+  diff <(sed '1,/-->/d' $c/ref.$s.xml) <(sed '1,/-->/d' $O/$s.xml) | cut -c1-400 | head -16
 done
