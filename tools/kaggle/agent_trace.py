@@ -20,7 +20,8 @@ def trace(binary, case, port, end):
         for d in sorted(traci.inductionloop.getIDList()):
             det.append(f"{t:.2f} {d} gap={traci.inductionloop.getTimeSinceDetection(d):.2f} "
                        f"pos={traci.inductionloop.getPosition(d):.2f} "
-                       f"len={traci.inductionloop.getLength(d):.2f}")
+                       f"occ={traci.inductionloop.getLastStepOccupancy(d):.2f} "
+                       f"veh={traci.inductionloop.getLastStepVehicleNumber(d)}")
     traci.close()
     return tl, det
 
