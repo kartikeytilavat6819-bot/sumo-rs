@@ -29,7 +29,7 @@
     result arrives, because its completion is what wakes you. Rerunning it for the same commit reattaches; it never re-queues.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
   * Instrumented C++ traces: build in WSL (~/sumo-<ID>, make -j2, only the target you need) - that is C++, allowed.
-- Do NOT run gates on `main`. Main's numbers (4367de5c or later): run_all PASS=384 FAIL=7 SKIP=63, duarouter oracle 16/16, depart 15/15, unit
+- Do NOT run gates on `main`. Main's numbers (b3bfb127 or later): run_all PASS=386 FAIL=7 SKIP=67, duarouter oracle 18/18, duarouter oracle 16/16, depart 15/15, unit
   tests ok. Known FAILs (new cases, each has an owner): 
   city_phoenix_scale_grid PANIC [px01], city_delft_campus_crossings + city_grenoble_tram_bus [cd01], lc_opposite PANIC + sublane_bikes [lo01], tls_nema_loops hang/TIMEOUT [nm01], city_rotterdam_rail_yard [rr01]. run_all has a per-case sim timeout (SIM_TIMEOUT, default 600 s).
   These are NOT your regressions: never investigate them unless they are your target.
