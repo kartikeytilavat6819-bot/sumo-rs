@@ -327,7 +327,7 @@ impl MSLaneChangerSublane {
         let current = self.check_change_helper(vehicle, 0, alternatives);
         let inner = vehicle.m().get_lane_change_model().decide_direction(sd_copy(&right), sd_copy(&left));
         let decision = vehicle.m().get_lane_change_model().decide_direction(sd_copy(&current), inner);
-        // shortcut: C++ debugVehicle() output is not ported
+        // C++ debugVehicle() output sits under #ifdef DEBUG_DECISION (compiled out), not ported
         vehicle.m().get_lane_change_model().set_own_state(decision.state);
         if (decision.state & LCA_WANTS_LANECHANGE) != 0 && (decision.state & LCA_BLOCKED) == 0 {
             let mut from = self.myCandi;
