@@ -3,8 +3,8 @@
 use crate::prelude::*;
 
 const DOMAIN_ID: i32 = CMD_GET_SIM_VARIABLE; // C++ `const int Simulation::DOMAIN_ID`
-// shortcut: C++ `#define VERSION_STRING` is generated (version.h); same build stamp as crates/sumo/src/main.rs
-const VERSION_STRING: &str = "v1.28.0-0000000000";
+// official 1.28.0 reply, measured against the pristine binary (getVersion -> 'SUMO 1.28.0')
+const VERSION_STRING: &str = "1.28.0";
 
 fn leak<T>(v: T) -> Ptr<T> {
     Ptr::from_raw(Box::into_raw(Box::new(v)))

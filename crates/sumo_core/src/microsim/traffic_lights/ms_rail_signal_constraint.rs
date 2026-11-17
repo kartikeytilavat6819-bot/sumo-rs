@@ -735,6 +735,15 @@ impl MSRailSignalConstraint_Predecessor {
 
 }
 
+fn ms_rail_signal_passed_tracker_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSRailSignalConstraint_Predecessor_PassedTracker>().m().notify_enter(veh, reason, enteredLane)
+}
+static MS_RAIL_SIGNAL_PASSED_TRACKER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_rail_signal_passed_tracker_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
+
 /// C++ class `MSRailSignalConstraint_Predecessor::PassedTracker` (microsim/traffic_lights/MSRailSignalConstraint.h)
 #[repr(C)]
 pub struct MSRailSignalConstraint_Predecessor_PassedTracker {
@@ -768,7 +777,10 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>) -> Self {
         MSRailSignalConstraint_Predecessor_PassedTracker {
-            base: MSMoveReminder::new(&format!("PassedTracker_{}", lane.get_id()), lane, true),
+            base: MSMoveReminder {
+                vt: &MS_RAIL_SIGNAL_PASSED_TRACKER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(&format!("PassedTracker_{}", lane.get_id()), lane, true)
+            },
             myPassed: vec![String::new()],
             myLastIndex: -1,
         }
