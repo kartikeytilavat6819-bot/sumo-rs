@@ -59,6 +59,12 @@ fn own_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> 
 fn own_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
     own_tl_def_of_mut(d).get_max_index()
 }
+fn own_tl_def_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    own_tl_def_of(d).init_needs_cont_relation()
+}
+fn own_tl_def_get_layout(d: &NBTrafficLightDefinition) -> TrafficLightLayout {
+    own_tl_def_of(d).get_layout()
+}
 static NB_OWN_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
     collect_links: own_tl_def_collect_links,
     set_tl_controlling_information: own_tl_def_set_tl_controlling_information,
@@ -66,6 +72,9 @@ static NB_OWN_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt
     replace_removed: own_tl_def_replace_removed,
     my_compute: own_tl_def_my_compute,
     get_max_index: own_tl_def_get_max_index,
+    init_needs_cont_relation: own_tl_def_init_needs_cont_relation,
+    get_layout: own_tl_def_get_layout,
+    ..DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT
 };
 
 /// A traffic light logics which must be computed (only nodes/edges are given)
