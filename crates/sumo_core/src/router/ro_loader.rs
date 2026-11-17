@@ -475,7 +475,7 @@ impl ROLoader {
             self.myLoaders.load_next(begin);
             if !net.further_stored() {
                 if error_informed() {
-                    panic!("{}", "");
+                    panic!("{}", ProcessError::default_msg());
                 } else if !net.have_skipped_routes() {
                     let error = "No route input specified or all routes were invalid.";
                     if utils::options::options_cont::get_bool("ignore-errors") {
