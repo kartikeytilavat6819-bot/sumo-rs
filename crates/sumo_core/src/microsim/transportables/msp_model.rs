@@ -233,6 +233,10 @@ pub struct MSTransportableStateAdapterVt {
     pub get_path_length: fn(&MSTransportableStateAdapter) -> f64,
     pub save_state: fn(&mut MSTransportableStateAdapter, &mut String),
     pub get_id: fn(&MSTransportableStateAdapter) -> &str,
+    pub get_min_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_max_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_width: fn(&MSTransportableStateAdapter) -> f64,
+    pub get_o_type: fn(&MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType,
 }
 
 /// C++ MSTransportableStateAdapter base implementations (pure virtuals panic, as the concrete state must provide them)
@@ -283,6 +287,18 @@ pub fn adapter_default_save_state(_: &mut MSTransportableStateAdapter, _: &mut S
 pub fn adapter_default_get_id(_: &MSTransportableStateAdapter) -> &str {
     panic!("getID is virtual on MSPModel_InteractingState only; call it on an interacting state")
 }
+pub fn adapter_default_get_min_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMinX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_max_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMaxX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_width(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("getWidth is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_o_type(_: &MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType {
+    panic!("getOType is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
 
 /// base vtable of MSTransportableStateAdapter, used by states that do not override the virtual methods
 pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
@@ -302,6 +318,10 @@ pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MST
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
     get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
 };
 
 impl MSTransportableStateAdapter {

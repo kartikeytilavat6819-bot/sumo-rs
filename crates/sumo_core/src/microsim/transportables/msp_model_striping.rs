@@ -257,10 +257,18 @@ static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransporta
     get_path_length: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_path_length(),
     save_state: |a, out| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().save_state(out),
     get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myPerson.get_id(),
+    get_min_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_min_x_base(g),
+    get_max_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_max_x_base(g),
+    get_width: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_width_base(),
+    get_o_type: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_o_type_base(),
 };
-/// PStateVehicle overrides getID (C++ `PStateVehicle::getID` returns the vehicle's ID)
+/// PStateVehicle overrides getID, getMinX, getMaxX, getWidth, getOType (C++ PStateVehicle)
 static MSPMODEL_STRIPING_PSTATE_VEHICLE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
     get_id: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_id(),
+    get_min_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_min_x(g),
+    get_max_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_max_x(g),
+    get_width: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_width(),
+    get_o_type: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_o_type(),
     ..MSPMODEL_STRIPING_PSTATE_VT
 };
 fn striping_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
@@ -3357,8 +3365,11 @@ impl MSPModel_Striping_PState {
     //     }
     //     return myEdgePos - (includeMinGap ? getMinGap() : 0.);
     // }
-    #[allow(unused_variables)]
     pub fn get_min_x(&self, includeMinGap: bool) -> f64 {
+        (self.base.base.vt.get_min_x)(&self.base.base, includeMinGap)
+    }
+    #[allow(unused_variables)]
+    pub fn get_min_x_base(&self, includeMinGap: bool) -> f64 {
         if self.myDir == MSPMODEL_FORWARD {
             return self.myEdgePos - self.get_length();
         }
@@ -3375,8 +3386,11 @@ impl MSPModel_Striping_PState {
     //     }
     //     return myEdgePos + getLength();
     // }
-    #[allow(unused_variables)]
     pub fn get_max_x(&self, includeMinGap: bool) -> f64 {
+        (self.base.base.vt.get_max_x)(&self.base.base, includeMinGap)
+    }
+    #[allow(unused_variables)]
+    pub fn get_max_x_base(&self, includeMinGap: bool) -> f64 {
         if self.myDir == MSPMODEL_FORWARD {
             return self.myEdgePos + (if includeMinGap { self.get_min_gap() } else { 0. });
         }
@@ -4385,6 +4399,9 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
+        (self.base.base.vt.get_width)(&self.base.base)
+    }
+    pub fn get_width_base(&self) -> f64 {
         self.myPerson.get_vehicle_type().get_width()
     }
 
@@ -4394,6 +4411,9 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_o_type(&self) -> MSPModel_Striping_ObstacleType {
+        (self.base.base.vt.get_o_type)(&self.base.base)
+    }
+    pub fn get_o_type_base(&self) -> MSPModel_Striping_ObstacleType {
         MSPModel_Striping_ObstacleType::OBSTACLE_PED
     }
 
