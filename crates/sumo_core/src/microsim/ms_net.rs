@@ -2925,6 +2925,8 @@ impl MSNet {
                 TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
             } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
                 crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {
+                crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::get_instance().vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }
