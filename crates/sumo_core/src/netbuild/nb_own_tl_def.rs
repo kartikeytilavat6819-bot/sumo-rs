@@ -1919,8 +1919,8 @@ impl NBOwnTLDef {
                 // we use a dummy node just to maintain const-correctness
                 self.myNeedsContRelation.borrow_mut().clear();
                 for n in self.myControlledNodes.clone() {
-                    // shortcut: C++ registers the dummy with node n via its constructor; the port's constructor does not, upgrade: construct the definition boxed/in place
                     let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
+                    n.m().add_traffic_light(Ptr::from_mut(&mut dummy.base));
                     dummy.set_participants_information();
                     let tllDummy = dummy.compute_logic_and_conts(0, true);
                     let _ = tllDummy; // C++: delete tllDummy
