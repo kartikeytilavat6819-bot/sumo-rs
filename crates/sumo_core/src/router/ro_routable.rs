@@ -34,8 +34,12 @@ impl RORoutable {
     //         myRoutingSuccess(false) {}
     #[allow(unused_variables)]
     pub fn new(pars: &SUMOVehicleParameter, type_: Ptr<SUMOVTypeParameter>) -> Self {
-        // shortcut: C++ copies pars into myParameter; SUMOVehicleParameter has no Clone yet (utils/vehicle/sumo_vehicle_parameter.rs, outside this batch), add #[derive(Clone)] there and restore the copy
-        panic!("RORoutable::RORoutable: copying SUMOVehicleParameter is not ported yet");
+        RORoutable {
+            myParameter: pars.clone(),
+            myType: type_,
+            myRandomSeed: utils::common::rand_helper::murmur3_32(&pars.id, utils::common::rand_helper::with_default(|r| r.orig_seed)) as i64,
+            myRoutingSuccess: false,
+        }
     }
 
     /// C++: `void RORoutable::~RORoutable() noexcept` [virtual]
