@@ -3,6 +3,14 @@
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
+fn lctw_on(v: Ptr<MSVehicle>) -> bool {
+    let s = v.get_id().to_string();
+    std::env::var("LCTRACE_ID").map(|t| t == s).unwrap_or(false) || std::env::var("LCTRACE_ID2").map(|t| t == s).unwrap_or(false)
+}
+fn lctw_bits(d: f64) -> String {
+    format!("{:016x}", d.to_bits())
+}
+
 /// C++ typedef `std::pair<double, int> MSLCM_SL2015::Info`
 pub type MSLCM_SL2015_Info = (f64, i32);
 
@@ -519,7 +527,13 @@ impl MSLCM_SL2015 {
     #[allow(unused_variables)]
     pub fn wants_change_sublane(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, maneuverDist: &mut f64, blocked: &mut i32) -> i32 {
         let mut result = self.wants_change_sublane_2(laneOffset, alternatives, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, preb, lastBlocked, firstBlocked, latDist, maneuverDist, blocked);
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-W1 {} {} lo={} raw={} latDist={} manDist={} blocked={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, result, lctw_bits(*latDist), lctw_bits(*maneuverDist), *blocked);
+        }
         result = self.keep_lat_gap(result, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, laneOffset, latDist, maneuverDist, blocked);
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-W2 {} {} lo={} keep={} latDist={} manDist={} blocked={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, result, lctw_bits(*latDist), lctw_bits(*maneuverDist), *blocked);
+        }
         result |= Self::get_lca(result, *latDist);
         // take into account lateral acceleration
         *latDist = speed2dist(self.compute_speed_lat(*latDist, maneuverDist, (result & LCA_URGENT) != 0));
@@ -3009,6 +3023,9 @@ impl MSLCM_SL2015 {
 
         ret = self.check_strategic_change(ret, neighLane, laneOffset, leaders, neighLeaders, &curr, &neigh, &best, bestLaneOffset, changeToBest, &mut currentDist, neighDist, laDist, roundaboutBonus, latLaneDist, checkOpposite, latDist);
 
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-SC {} {} lo={} ret={} latDist={} laDist={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, ret, lctw_bits(*latDist), lctw_bits(laDist));
+        }
         if (ret & LCA_STAY) != 0 && *latDist == 0. {
             // ensure that mySafeLatDistLeft / mySafeLatDistRight are up to date for the
             // subsquent check with laneOffset = 0
@@ -3147,6 +3164,9 @@ impl MSLCM_SL2015 {
         }
         defaultNextSpeed = min2(defaultNextSpeed, self.myExpectedSublaneSpeeds[rightmostOnEdge as usize]);
 
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-SS {} {} dns={} sp={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(defaultNextSpeed), self.myExpectedSublaneSpeeds.iter().map(|x| lctw_bits(*x)).collect::<Vec<_>>().join(",") + &format!(" rvs={} lvs={} lm={} rm={} sides={}", lctw_bits(rightVehSide), lctw_bits(leftVehSide), leftmostOnEdge, rightmostOnEdge, sublaneSides.iter().map(|x| lctw_bits(*x)).collect::<Vec<_>>().join(",")));
+        }
         let mut maxGain = -f64::MAX;
         let mut maxGainRight = -f64::MAX;
         let mut maxGainLeft = -f64::MAX;
@@ -3228,6 +3248,9 @@ impl MSLCM_SL2015 {
                 }
             }
         }
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-MG {} {} maxR={} maxL={} spR={} spL={} dt={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(maxGainRight), lctw_bits(maxGainLeft), lctw_bits(self.mySpeedGainProbabilityRight), lctw_bits(self.mySpeedGainProbabilityLeft), lctw_bits(self.myVehicle.get_action_step_length_secs()));
+        }
         // updated change probabilities
         if maxGainRight != -f64::MAX {
             self.mySpeedGainProbabilityRight += self.myVehicle.get_action_step_length_secs() * maxGainRight;
@@ -3293,6 +3316,9 @@ impl MSLCM_SL2015 {
                 }
                 let deltaProb = (self.myChangeProbThresholdRight * (fullSpeedDrivingSeconds / acceptanceTime) / KEEP_RIGHT_TIME) * self.myVehicle.get_action_step_length_secs();
                 let isSlide = self.prevent_sliding(latLaneDist);
+                if lctw_on(self.myVehicle) {
+                    eprintln!("LCT-KR {} {} acc={} fsg={} fsd={} dProb={} kr={} slide={} neighDist={} vMax={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(acceptanceTime), lctw_bits(fullSpeedGap), lctw_bits(fullSpeedDrivingSeconds), lctw_bits(deltaProb), lctw_bits(self.myKeepRightProbability), isSlide as i32, lctw_bits(neighDist), lctw_bits(vMax));
+                }
                 // stay below threshold
                 if !isSlide || !self.wants_keep_right(self.myKeepRightProbability + deltaProb) {
                     self.myKeepRightProbability += deltaProb;
@@ -3313,6 +3339,9 @@ impl MSLCM_SL2015 {
 
             let bidiRightFactor = if self.myVehicle.get_lane().get_bidi_lane().is_null() && !self.is_opposite() { 1. } else { 0.05 };
 
+            if lctw_on(self.myVehicle) {
+                eprintln!("LCT-SG {} {} latDist={} spR={} thR={} bidi={} neighDist={} speed={} remain={} ret={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(*latDist), lctw_bits(self.mySpeedGainProbabilityRight), lctw_bits(self.myChangeProbThresholdRight), lctw_bits(bidiRightFactor), lctw_bits(neighDist), lctw_bits(self.myVehicle.get_speed()), lctw_bits(self.mySpeedGainRemainTime), ret);
+            }
             // make changing on the right more attractive on bidi edges
             if *latDist < 0. && self.mySpeedGainProbabilityRight >= self.myChangeProbThresholdRight * bidiRightFactor && neighDist / max2(0.1, self.myVehicle.get_speed()) > self.mySpeedGainRemainTime {
                 ret |= LCA_SPEEDGAIN;
@@ -3429,6 +3458,9 @@ impl MSLCM_SL2015 {
             }
         }
         // only factor in preferred lateral alignment if there is no speedGain motivation or it runs in the same direction
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-AL {} {} lo={} latDist={} latDistSublane={} ret={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, lctw_bits(*latDist), lctw_bits(latDistSublane), ret);
+        }
         if latDist.abs() <= utils::geom::NUMERICAL_EPS * self.myVehicle.get_action_step_length_secs() || latDistSublane * *latDist > 0. {
             if (latDistSublane < 0. && self.mySpeedGainProbabilityRight < self.mySpeedLossProbThreshold)
                 || (latDistSublane > 0. && self.mySpeedGainProbabilityLeft < self.mySpeedLossProbThreshold)
@@ -4375,6 +4407,10 @@ impl MSLCM_SL2015 {
                         vSafe = myVehicle.get_car_follow_model().follow_speed(myVehicle, vMax, gap, leader.get_speed(), leader.get_car_follow_model().get_max_decel(), Ptr::null(), MSCFModel_CalcReason::CURRENT);
                         vSafe = self.forecast_average_speed(vSafe, vMax, gap, leader.get_speed());
                     }
+                }
+                if lctw_on(self.myVehicle) {
+                    let lid = if leader.is_null() { "none".to_string() } else { leader.get_id().to_string() };
+                    eprintln!("LCT-UE {} {} esub={} leader={} gap={} vSafe={} vMax={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), edgeSublane, lid, lctw_bits(gap), lctw_bits(vSafe), lctw_bits(vMax));
                 }
                 // take pedestrians into account
                 if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {

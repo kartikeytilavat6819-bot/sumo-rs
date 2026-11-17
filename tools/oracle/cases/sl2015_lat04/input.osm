@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<osm version='0.6' generator='hand'>
+  <node id='1' visible='true' lat='0.0000' lon='0.0000' />
+  <node id='2' visible='true' lat='0.0000' lon='0.0027' />
+  <way id='100' visible='true'>
+    <nd ref='1' />
+    <nd ref='2' />
+    <tag k='highway' v='primary' />
+    <tag k='oneway' v='yes' />
+    <tag k='lanes' v='3' />
+    <tag k='maxspeed' v='50' />
+  </way>
+</osm>
