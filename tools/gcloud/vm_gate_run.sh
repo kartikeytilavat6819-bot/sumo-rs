@@ -19,11 +19,11 @@ export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOB
 cd "$SRC"
 # run_all writes a new run-$$ dir per run; the slot is locked, so its old results can go (they filled the disk)
 rm -rf "$SCORE_OUT"; find /tmp -maxdepth 1 -name '*.tgz' -mmin +60 -delete 2>/dev/null
-cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+cargo build -p sumo -p netconvert -p duarouter --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 # a stale incremental cache can crash rustc (ICE): drop it and build once more
 if [ $rc -ne 0 ] && grep -aqE 'internal compiler error|incremental' /tmp/build$slot.log; then
   echo "ICE: clearing slot $slot incremental cache"; rm -rf "$CARGO_TARGET_DIR/debug/incremental"
-  cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+  cargo build -p sumo -p netconvert -p duarouter --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 fi
 grep -aE ': error|^error' /tmp/build$slot.log | head -40
 # a failed build leaves the previous snapshot's binary behind: never test it
