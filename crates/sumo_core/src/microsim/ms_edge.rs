@@ -2177,8 +2177,20 @@ impl MSEdge {
                     // additive term must come after multiplication!
                     vMax += crate::microsim::ms_base_vehicle::SPEED_EPS;
                     if pars.departSpeed > vMax {
-                        // shortcut: MSVehicleType::getSpeedFactor() is Unmapped, so the speed-factor deviation (parameter 1 > 0) cannot be read; the no-deviation branch is taken and the departure is rejected. Upgrade when getSpeedFactor() returns Distribution_Parameterized.
-                        return false;
+                        let vto: Ptr<SUMOTrafficObject> = vp.cast();
+                        let vtype = vto.m().get_vehicle_type();
+                        if vtype.get_speed_factor().get_parameter(1) > 0. {
+                            let limit = self.get_speed_limit();
+                            let desired = vtype.get_desired_max_speed() - crate::microsim::ms_base_vehicle::SPEED_EPS;
+                            let minSpeed = if limit < desired { limit } else { desired };
+                            let chosen = vtype.compute_chosen_speed_deviation(pars.speedFactor, Ptr::null(), pars.departSpeed / minSpeed);
+                            vp.m().set_chosen_speed_factor(chosen);
+                            if vp.m().get_chosen_speed_factor() > vtype.get_speed_factor().get_parameter(0) + 2. * vtype.get_speed_factor().get_parameter(1) {
+                                utils::write_warningf!("Choosing new speed factor % for vehicle '%' to match departure speed % (max %).", vp.m().get_chosen_speed_factor(), pars.id.as_str(), pars.departSpeed, vMax);
+                            }
+                        } else {
+                            return false;
+                        }
                     }
                 }
             }
@@ -3636,15 +3648,14 @@ impl MSEdge {
                     return vehicle;
                 }
                 if !vehicle.is_line_stop(position) && vehicle.allows_boarding(transportable) {
-                    // shortcut: C++ toString(double) uses the global output precision; Rust default formatting is used here
                     utils::common::msg_handler::write_warning(&format!(
                         "{} '{}' at edge '{}' position {} cannot use waiting vehicle '{}' at position {} because it is too far away.",
                         if transportable.is_person() { "Person" } else { "Container" },
                         transportable.get_id(),
                         self.get_id(),
-                        position,
+                        utils::common::to_string::to_string(&position),
                         vehicle.get_id(),
-                        vehicle.get_position_on_lane()
+                        utils::common::to_string::to_string(&vehicle.get_position_on_lane())
                     ));
                 }
             }
