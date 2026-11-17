@@ -6189,7 +6189,18 @@ impl MSBaseVehicle {
                 }
             }
         }
-        let routingModeStr = self.get_string_param("device.rerouting.mode", false, "");
+        // SUMOTrafficObject::getStringParam(name, false, ""), run in the constructor where C++ resolves the virtuals to
+        // MSBaseVehicle's (the Rust vtable is not installed yet), so read this object's own parameters
+        let paramName = "device.rerouting.mode";
+        let routingModeStr = if MSBaseVehicle::get_parameter(self).has_parameter(paramName) {
+            MSBaseVehicle::get_parameter(self).get_parameter(paramName, "")
+        } else if MSBaseVehicle::get_v_type_parameter(self).has_parameter(paramName) {
+            MSBaseVehicle::get_v_type_parameter(self).get_parameter(paramName, "")
+        } else if utils::options::options_cont::exists(paramName) {
+            utils::options::options_cont::with_options(|oc| oc.get_value_string(paramName)).unwrap_or_else(|e| panic!("{e}"))
+        } else {
+            String::new()
+        };
         match utils::common::string_utils::to_int(&routingModeStr) {
             Ok(routingMode) => {
                 if routingMode != ROUTING_MODE_DEFAULT {

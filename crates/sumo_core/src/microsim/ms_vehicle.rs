@@ -426,6 +426,17 @@ impl Influencer_GapControlState {
 
 }
 
+/// Whether `listener` is GapControlState's static GapControlVehStateListener (MSNet dispatches listeners by identity)
+pub fn is_gap_control_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+    let l = MY_VEH_STATE_LISTENER.with(|l| l.get());
+    !l.is_null() && listener == l.as_raw().cast::<MSNet_VehicleStateListener>()
+}
+
+/// Forwards to GapControlVehStateListener::vehicleStateChanged of GapControlState's static listener
+pub fn gap_control_vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+    MY_VEH_STATE_LISTENER.with(|l| l.get()).m().vehicle_state_changed(vehicle, to, info);
+}
+
 /// A static instance of this class in GapControlState deactivates gap control for vehicles whose reference vehicle is removed from the road network
 /// C++ class `Influencer::GapControlVehStateListener` (microsim/MSVehicle.h)
 #[repr(C)]

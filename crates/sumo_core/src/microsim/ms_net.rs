@@ -2228,10 +2228,30 @@ impl MSNet {
 
         // elecHybrid dumps
         if is_set("elechybrid-output") {
+            let output = get_string("elechybrid-output");
             if get_bool("elechybrid-output.aggregated") {
                 MSElecHybridExport::write_aggregated(&mut device_by_option("elechybrid-output").borrow_mut(), self.myStep, get_int("elechybrid-output.precision"));
+            } else {
+                // build a separate xml file for each vehicle equipped with device.elechybrid
+                let vehs: Vec<Ptr<SUMOVehicle>> = self.myVehicleControl.myVehicleDict.values().copied().collect();
+                for veh in vehs {
+                    if !veh.is_on_road() {
+                        continue;
+                    }
+                    let elecHybrid = veh.cast::<MSBaseVehicle>().get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+                    if !elecHybrid.is_null() {
+                        let vehID = veh.get_id().to_string();
+                        let filename2 = format!("{}_{}.xml", output, vehID);
+                        let dev = OutputDevice::get_device(&filename2, true).unwrap_or_else(|e| panic!("{e}"));
+                        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+                        attrs.insert(SUMO_ATTR_VEHICLE, vehID);
+                        attrs.insert(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, utils::common::to_string::to_string(&elecHybrid.get_maximum_battery_capacity()));
+                        attrs.insert(SUMO_ATTR_RECUPERATIONENABLE, utils::common::to_string::to_string(&MSGlobals::overhead_wire_recuperation()));
+                        dev.borrow_mut().write_xml_header("elecHybrid-export", "", attrs, true);
+                        MSElecHybridExport::write(&mut dev.borrow_mut(), veh, self.myStep, get_int("elechybrid-output.precision"));
+                    }
+                }
             }
-            // shortcut: the per-vehicle elecHybrid files need the loaded-vehicle iteration and the typeid device lookup, upgrade when MSNet::writeOutput can iterate MSVehicleControl's loaded vehicles
         }
         // check full dumps
         if is_set("full-output") {
@@ -2935,7 +2955,19 @@ impl MSNet {
         let oc_begin = opt_time("begin");
         self.clear_state(oc_begin, true);
         NLBuilder::init_randomness();
-        // shortcut: the additional-files reload (MSRouteHandler + XMLSubSys::runParser) is not wired yet, upgrade when quickReload loads them
+        // load traffic from additional files
+        if !get_bool("ignore.additionalelements") {
+            for file in utils::options::options_cont::get_string_vector("additional-files") {
+                // ignore failure on parsing calibrator flow
+                let mut rh = MSRouteHandler::new(&file, true);
+                utils::common::msg_handler::progress_begin_message(&format!("Loading traffic from '{}'", file));
+                let before = get_current_millis();
+                if !utils::xml::xml_sub_sys::run_parser(&mut rh, &file, false, false, false, true).unwrap_or(false) {
+                    std::panic::panic_any(ProcessError::new(utils::tlf!("Loading of % failed.", file)));
+                }
+                utils::common::msg_handler::progress_time_message(get_current_millis() - before);
+            }
+        }
         delete_ptr(self.myRouteLoaders);
         self.myRouteLoaders = utils::options::options_cont::with_options(|oc| NLBuilder::build_route_loader_control(oc));
         self.update_gui();
@@ -2988,7 +3020,8 @@ impl MSNet {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
         let dsu = self.get_dynamic_shape_updater();
         for listener in self.myVehicleStateListeners.iter() {
-            // shortcut: no vtable on MSNet_VehicleStateListener, so the Helper and TraCIServer overrides are reached by identity; other overrides still hit the base no-op, upgrade when listeners are trait objects
+            // MSNet_VehicleStateListener has no vtable: the overrides of all six C++ subclasses (libsumo Helper, TraCIServer,
+            // MSDynamicShapeUpdater, MSDevice_Vehroutes::StateListener, MSRailSignalControl, GapControlVehStateListener) are reached by identity
             if crate::libsumo::helper::Helper::is_vehicle_state_listener(listener.as_raw()) {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
@@ -2999,6 +3032,8 @@ impl MSNet {
                 crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
             } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {
                 crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::get_instance().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::ms_vehicle::is_gap_control_listener(listener.as_raw()) {
+                crate::microsim::ms_vehicle::gap_control_vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }
