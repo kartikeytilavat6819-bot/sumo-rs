@@ -33,11 +33,6 @@ fn default_bike_length_with_gap() -> f64 {
     get_default_vehicle_length(SVC_BICYCLE) + 0.5
 }
 
-// the MSDetectorFileOutput of a loop is its base2 field, not the first one: step back to the enclosing MSInductLoop
-fn induct_loop_of_detector(d: Ptr<MSDetectorFileOutput>) -> Ptr<MSInductLoop> {
-    Ptr::from_raw((d.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2)) as *mut MSInductLoop)
-}
-
 /// C++ typedef `std::map<std::string, Function> MSActuatedTrafficLightLogic::FunctionMap`
 pub type MSActuatedTrafficLightLogic_FunctionMap = BTreeMap<String, MSActuatedTrafficLightLogic_Function>;
 
