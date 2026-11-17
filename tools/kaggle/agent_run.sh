@@ -5,7 +5,7 @@ B=${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo
 cd tools/oracle/cases/city_florence_pedestrians || exit 1
 FP01_DBG=1 $B -n ref_simple.net.xml -r routes.rou --tripinfo-output /tmp/fl.ti.xml --fcd-output /tmp/fl.fcd.xml --statistic-output /tmp/fl.stat.xml --no-step-log true --end 600 > /tmp/fl.log 2>&1
 echo "exit=$?"
-grep -A4 'FP01 t=7[0-3]' /tmp/fl.log | head -40
+grep -E 'FP01 (AP )?t=7[0-3]' /tmp/fl.log | head -60
 python3 - <<'EOF'
 import re
 def steps(path):
