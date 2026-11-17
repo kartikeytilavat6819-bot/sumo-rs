@@ -1,0 +1,59 @@
+diff --git a/src/microsim/trigger/MSStoppingPlaceRerouter.cpp b/src/microsim/trigger/MSStoppingPlaceRerouter.cpp
+index 1cd6aba..6d25f64 100644
+--- a/src/microsim/trigger/MSStoppingPlaceRerouter.cpp
++++ b/src/microsim/trigger/MSStoppingPlaceRerouter.cpp
+@@ -129,6 +129,7 @@ MSStoppingPlaceRerouter::rerouteStoppingPlace(MSStoppingPlace* destStoppingPlace
+     }
+ 
+     const bool destIsFull = destStoppingPlace != nullptr && getLastStepStoppingPlaceOccupancy(destStoppingPlace, &veh) >= getStoppingPlaceCapacity(destStoppingPlace);
++    fprintf(stderr, "RRTRACE rsp t=%ld veh=%s dest=%s destVisible=%s ignoreDest=%s stopAnywhere=%d destFull=%s onTheWay=%s destOcc=%.6f\n", (long)SIMSTEP, veh.getID().c_str(), destStoppingPlace == nullptr ? "null" : destStoppingPlace->getID().c_str(), destVisible ? "true" : "false", ignoreDest ? "true" : "false", stopAnywhere, destIsFull ? "true" : "false", onTheWay == nullptr ? "null" : onTheWay->getID().c_str(), destStoppingPlace == nullptr ? -1. : getLastStepStoppingPlaceOccupancy(destStoppingPlace, &veh));
+     if (ignoreDest || destIsFull || onTheWay != nullptr) {
+         // if the current route ends at the stopping place, the new route will
+         // also end at the new stopping place
+@@ -210,6 +211,7 @@ MSStoppingPlaceRerouter::rerouteStoppingPlace(MSStoppingPlace* destStoppingPlace
+ #endif
+                 }
+             }
++            fprintf(stderr, "RRTRACE cand %s vis=%s occ=%.6f cap=%.6f\n", stoppingPlaceCandidates[i].first->getID().c_str(), visible ? "true" : "false", occupancy, getStoppingPlaceCapacity(stoppingPlaceCandidates[i].first));
+             if (occupancy < getStoppingPlaceCapacity(stoppingPlaceCandidates[i].first)) {
+                 if (evaluateDestination(veh, brakeGap, newDestination, stoppingPlaceCandidates[i].first, occupancy, probs[i], router, stoppingPlaces, newRoutes, stopApproaches, maxValues, scores, insertStopIndex, keepCurrentStop)) {
+                     numAlternatives++;
+@@ -345,6 +347,7 @@ MSStoppingPlaceRerouter::rerouteStoppingPlace(MSStoppingPlace* destStoppingPlace
+ 
+             // get the parking area cost
+             double stoppingPlaceCost = getTargetValue(stoppingPlaceValues, maxValues, weights, myNormParams, myInvertParams);
++            fprintf(stderr, "RRTRACE score %s cost=%.6f\n", it->first->getID().c_str(), stoppingPlaceCost);
+             rememberStoppingPlaceScore(veh, it->first, toString(stoppingPlaceCost));
+ 
+             // get the parking area with minimum cost
+@@ -403,6 +406,7 @@ MSStoppingPlaceRerouter::evaluateDestination(SUMOVehicle& veh, double brakeGap,
+     ConstMSEdgeVector edgesToStop;
+     ConstMSEdgeVector edgesUpstream;
+     const double targetPos = alternative->getLastFreePos(veh);
++    fprintf(stderr, "RRTRACE eval %s targetPos=%.6f occ=%.6f\n", alternative->getID().c_str(), targetPos, occupancy);
+     MSRouteIterator rerouteOriginIt = determineRerouteOrigin(veh, insertStopIndex);
+     double posOnLane = veh.getPositionOnLane();
+     if (insertStopIndex > 0) {
+diff --git a/src/microsim/trigger/MSTriggeredRerouter.cpp b/src/microsim/trigger/MSTriggeredRerouter.cpp
+index a28695b..b317626 100644
+--- a/src/microsim/trigger/MSTriggeredRerouter.cpp
++++ b/src/microsim/trigger/MSTriggeredRerouter.cpp
+@@ -528,6 +528,7 @@ MSTriggeredRerouter::triggerRouting(SUMOTrafficObject& tObject, MSMoveReminder::
+     // Even if the topology stays unchanged, vehicles with a rerouting device could reroute around jams that form due to capacity reduction
+     const bool hasReroutingDevice = tObject.getDevice(typeid(MSDevice_Routing)) != nullptr;
+     const MSEdge* lastEdge = tObject.getRerouteDestination();
++    fprintf(stderr, "RRTRACE trig t=%ld veh=%s rr=%s park=%.6f\n", (long)now, tObject.getID().c_str(), getID().c_str(), rerouteDef->parkProbs.getOverallProb());
+ #ifdef DEBUG_REROUTER
+     if (DEBUGCOND(tObject)) {
+         std::cout << SIMTIME << " veh=" << tObject.getID() << " check rerouter " << getID() << " lane=" << Named::getIDSecure(tObject.getLane()) << " edge=" << tObject.getEdge()->getID() << " finalEdge=" << lastEdge->getID() /*<< " arrivalPos=" << tObject.getArrivalPos()*/ << "\n";
+@@ -977,7 +978,9 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
+         }
+     }
+     StoppingPlaceParamMap_t addInput = {};
+-    return dynamic_cast<MSParkingArea*>(rerouteStoppingPlace(destStoppingPlace, parks, rerouteDef->parkProbs.getProbs(), veh, newDestination, newRoute, addInput, rerouteDef->getClosed()));
++    MSStoppingPlace* resultSp = rerouteStoppingPlace(destStoppingPlace, parks, rerouteDef->parkProbs.getProbs(), veh, newDestination, newRoute, addInput, rerouteDef->getClosed());
++    fprintf(stderr, "RRTRACE park dest=%s parks=%d result=%s\n", destStoppingPlace->getID().c_str(), (int)parks.size(), resultSp == nullptr ? "null" : resultSp->getID().c_str());
++    return dynamic_cast<MSParkingArea*>(resultSp);
+ }
+ 
+ 
