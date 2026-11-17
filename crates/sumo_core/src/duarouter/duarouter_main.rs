@@ -192,7 +192,7 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     // C++ `new`: the routers live until the process exits
     let router: &mut crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = if measure == "traveltime" {
         if routingAlgorithm == "dijkstra" {
-            Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams)))
+            Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute()))
         } else {
             // shortcut: AStarRouter, CHRouter, CHRouterWrapper, CCHRouter and AFRouter are not wired in duarouter yet (their lookup tables and map matcher are not ported), upgrade when computeRoutes can construct them
             panic!("shortcut: routing algorithm '{}' is not wired in duarouter yet", routingAlgorithm);
@@ -207,7 +207,7 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         if !net.has_loaded_effort() {
             write_warningf!("No weight data was loaded for attribute '%'.", measure);
         }
-        Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttFunction), false, Ptr::null(), net.has_permissions(), restrictionParams)))
+        Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttFunction), false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute()))
     };
     let carWalk = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_car_walk_transfer(oc, true);
     let taxiWait = utils::common::time::steps2time(string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
