@@ -1,0 +1,26 @@
+<routes>
+    <vehicle id="v0" depart="0.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v1" depart="6.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v2" depart="12.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v3" depart="20.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v4" depart="46.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v5" depart="52.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v6" depart="60.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+    <vehicle id="v7" depart="70.00" departSpeed="max">
+        <route edges="E0 E1 E3"/>
+    </vehicle>
+</routes>

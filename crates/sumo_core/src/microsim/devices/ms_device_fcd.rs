@@ -516,9 +516,11 @@ impl MSDevice_FCD {
         if !MY_SHAPE_FILTER_INITIALIZED.get() {
             MSDevice_FCD::build_shape_filter();
         }
-        // shortcut: dynamic_cast<const MSVehicle*> has no Rust equivalent for SUMOTrafficObject, so the back-position test (msVeh->getBackPosition()) is skipped, upgrade when a SUMOTrafficObject-to-MSVehicle downcast exists
+        let msVeh = if veh.is_vehicle() { Some(veh.cast::<MSVehicle>()) } else { None };
         let pos = veh.get_position(0.0);
-        MY_SHAPE4_FILTERS.with(|c| c.borrow().iter().any(|shape| shape.around(&pos, 0.0)))
+        MY_SHAPE4_FILTERS.with(|c| {
+            c.borrow().iter().any(|shape| shape.around(&pos, 0.0) || msVeh.map_or(false, |m| shape.around(&m.get_back_position(), 0.0)))
+        })
     }
 
     /// C++: `bool MSDevice_FCD::hasShapeFilter()` [static]

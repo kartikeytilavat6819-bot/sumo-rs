@@ -355,8 +355,14 @@ impl MSDevice_Vehroutes {
         }
         // unfinished persons
         if net.has_persons() {
-            // shortcut: MSTransportableControl::loadedBegin/loadedEnd are Unmapped iterators, so the
-            // loop that erases still-loaded persons is skipped; port it once the iterator is mapped
+            let pc = net.m().get_person_control();
+            loop {
+                let first = pc.loaded_begin().next().map(|(_, t)| *t);
+                match first {
+                    Some(t) => pc.erase(t),
+                    None => break,
+                }
+            }
         }
         // Flush any remaining sorted outputs that may still be buffered
         if MY_SORTED.load(Relaxed) {

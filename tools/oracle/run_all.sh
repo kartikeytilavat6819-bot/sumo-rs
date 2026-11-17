@@ -60,6 +60,14 @@ for dir in tools/oracle/cases/*/; do
     else
       line "$c" net FAIL "$(grep SUMMARY "$OUT/$c.net.log" | head -1)"; FAIL=$((FAIL+1))
     fi
+  elif [ -f "$dir/ref_plain.net.xml" ] && [ -f "$dir/net_plain.args" ]; then
+    # plain-XML import: net_plain.args lists the exact node/edge/connection/type/tllogic files (make_plain_net_refs.sh)
+    "$BIN/netconvert.exe" $(cat "$dir/net_plain.args") -o "$OUT/$c.plain.net.xml" >/dev/null 2>&1
+    if python tools/oracle/compare_net.py "$dir/ref_plain.net.xml" "$OUT/$c.plain.net.xml" >"$OUT/$c.plain.net.log" 2>&1; then
+      line "$c" net-plain PASS; PASS=$((PASS+1))
+    else
+      line "$c" net-plain FAIL "$(grep SUMMARY "$OUT/$c.plain.net.log" | head -1)"; FAIL=$((FAIL+1))
+    fi
   else
     line "$c" net SKIP "no input.osm and no net.args"; SKIP=$((SKIP+1))
   fi
