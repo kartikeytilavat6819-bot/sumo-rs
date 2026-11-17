@@ -9,6 +9,11 @@ EXTRA=$(cat "$D/sim.args")
 "$BIN/sumo.exe" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --fcd-output "$O/fcd.xml" \
     --tripinfo-output "$O/ti.xml" --no-step-log true $EXTRA >"$O/sumo.log" 2>&1
 echo "rust exit=$?"
+S=/home/gate/sumo-cpp/src/microsim/MSVehicle.cpp
+echo "== VM src: $(md5sum $S 2>&1) $(file -b $S 2>&1)"
+sed -n '6023,6028p' $S | cat -A | cut -c1-120
+git -C /home/gate/sumo-cpp status --short 2>&1 | head -5
+echo "== repo patch head"; head -8 tools/kaggle/rb02_ubl.patch | cat -A | cut -c1-100
 P=$(bash tools/gcloud/vm_cpp_trace.sh rb02 tools/kaggle/rb02_ubl.patch) || { echo "cpp trace build failed"; exit 1; }
 "$P" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --fcd-output "$O/cfcd.xml" \
     --tripinfo-output "$O/cti.xml" --no-step-log true $EXTRA >"$O/cpp.log" 2>&1
