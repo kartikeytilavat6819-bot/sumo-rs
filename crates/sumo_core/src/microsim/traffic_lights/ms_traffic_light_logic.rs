@@ -61,6 +61,7 @@ pub struct MSTrafficLightLogicExtVt {
     pub get_requested_drive_way: fn(&mut MSTrafficLightLogic, i32) -> String,
     pub get_detector_state: fn(&MSTrafficLightLogic, String) -> f64,
     pub get_tl_queue_length: fn(&MSTrafficLightLogic, String) -> f64,
+    pub load_extra_state: fn(&mut MSTrafficLightLogic, &str),
     pub get_parameter: fn(&mut MSTrafficLightLogic, &str, &str) -> String,
     pub set_parameter: fn(&mut MSTrafficLightLogic, &str, &str),
     pub activate_program: fn(&mut MSTrafficLightLogic),
@@ -162,6 +163,8 @@ pub(crate) fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneI
     logic.get_tl_queue_length_base(laneID)
 }
 
+pub(crate) fn default_ext_load_extra_state(_: &mut MSTrafficLightLogic, _: &str) {}
+
 pub(crate) fn default_ext_get_parameter(logic: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
     logic.base2.get_parameter(key, defaultValue)
 }
@@ -185,6 +188,7 @@ pub(crate) static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtV
     get_requested_drive_way: default_ext_get_requested_drive_way,
     get_detector_state: default_ext_get_detector_state,
     get_tl_queue_length: default_ext_get_tl_queue_length,
+    load_extra_state: default_ext_load_extra_state,
     get_parameter: default_ext_get_parameter,
     set_parameter: default_ext_set_parameter,
     activate_program: default_ext_activate_program,
@@ -1673,6 +1677,11 @@ impl MSTrafficLightLogic {
 
     pub fn save_state_base(&self, arg0: &mut OutputDevice) {
         // C++ default body is empty; subclasses write their state
+    }
+
+    /// C++: `virtual void MSTrafficLightLogic::loadExtraState(const std::string &) {}` [virtual]
+    pub fn load_extra_state(&mut self, state: &str) {
+        (self.ext_vt.load_extra_state)(self, state)
     }
 
     /// C++: `void MSTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]

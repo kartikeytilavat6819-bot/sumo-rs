@@ -484,6 +484,7 @@ static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic:
     get_requested_drive_way: rail_get_requested_drive_way,
     get_detector_state: super::ms_traffic_light_logic::MSTrafficLightLogic::get_detector_state_base,
     get_tl_queue_length: super::ms_traffic_light_logic::MSTrafficLightLogic::get_tl_queue_length_base,
+    load_extra_state: super::ms_traffic_light_logic::default_ext_load_extra_state,
     get_parameter: super::ms_traffic_light_logic::default_ext_get_parameter,
     set_parameter: rail_ext_set_parameter,
     activate_program: super::ms_traffic_light_logic::default_ext_activate_program,

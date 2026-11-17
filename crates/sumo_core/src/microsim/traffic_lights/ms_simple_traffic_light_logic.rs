@@ -86,6 +86,7 @@ pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_
     get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
     get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
     get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: super::ms_traffic_light_logic::default_ext_load_extra_state,
     get_parameter: simple_ext_get_parameter,
     set_parameter: simple_ext_set_parameter,
     activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
