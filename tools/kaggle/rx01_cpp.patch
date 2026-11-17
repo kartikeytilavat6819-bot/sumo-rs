@@ -1,7 +1,7 @@
 diff --git a/src/microsim/traffic_lights/MSRailCrossing.cpp b/src/microsim/traffic_lights/MSRailCrossing.cpp
 --- a/src/microsim/traffic_lights/MSRailCrossing.cpp
 +++ b/src/microsim/traffic_lights/MSRailCrossing.cpp
-@@ -31,3 +31,5 @@
+@@ -31,4 +31,6 @@
  #include "MSTrafficLightLogic.h"
  #include "MSRailCrossing.h"
 +#include <iostream>
