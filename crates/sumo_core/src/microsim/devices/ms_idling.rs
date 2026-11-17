@@ -313,10 +313,6 @@ impl MSIdling_Stop {
         let now = MSNet::get_instance().m().get_current_time_step();
         let veh: &mut SUMOVehicle = taxi.get_holder();
         let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
-        let tx02 = std::env::var_os("TX02_TRACE").is_some() && veh.get_id() == "taxi0";
-        if tx02 {
-            eprintln!("TX02 idle t={} hasStops={}", now, vehB.has_stops());
-        }
         if !vehB.has_stops() {
             let mut errorOut = String::new();
             let mut brakeGap = 0.0;
@@ -365,9 +361,6 @@ impl MSIdling_Stop {
                 }
                 stop.actType = "idling".to_string();
                 vehB.m().add_traci_stop(stop, &mut errorOut);
-                if tx02 {
-                    eprintln!("TX02 idle addstop pos={:.6} err={}", stopPos.1, errorOut);
-                }
                 if errorOut != "" {
                     utils::common::msg_handler::write_warning(&errorOut);
                 }

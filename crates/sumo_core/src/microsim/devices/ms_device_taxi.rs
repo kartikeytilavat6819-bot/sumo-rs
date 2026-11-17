@@ -1311,9 +1311,6 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn customer_arrived(&mut self, person: Ptr<MSTransportable>) {
-        if std::env::var_os("TX02_TRACE").is_some() && self.myHolder.m().get_id() == "taxi0" {
-            eprintln!("TX02 arrived t={} state={} persons={} stops={}", MSNet::get_instance().get_current_time_step(), self.myState, self.myHolder.m().get_person_number(), self.myHolder.m().get_stops().len());
-        }
         self.myCustomersServed += 1;
         self.myCustomers.remove(&person);
         let holderPtr = self.myHolder;
@@ -1982,9 +1979,6 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn update_move(&mut self, traveltime: SUMOTime, travelledDist: f64) {
-        if std::env::var_os("TX02_TRACE").is_some() && self.myHolder.m().get_id() == "taxi0" && MSNet::get_instance().get_current_time_step() >= 160000 {
-            eprintln!("TX02 upd t={} state={} stops={} stopped={} serviceEnd={}", MSNet::get_instance().get_current_time_step(), self.myState, self.myHolder.m().get_stops().len(), self.myHolder.m().is_stopped(), self.myServiceEnd);
-        }
         let holderPtr = self.myHolder;
         let holder = holderPtr.m();
         if holder.get_person_number() > 0 || holder.get_container_number() > 0 {
