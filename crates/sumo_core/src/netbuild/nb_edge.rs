@@ -4079,7 +4079,7 @@ impl NBEdge {
         let jt = std::env::var_os("NC_JTRACE").is_some() && myTo.get_id().contains("#29more");
         if jt {
             let td = this.myTurnDestination;
-            eprintln!("JTRACE e2e-start {} turn={}", this.get_id(), if td.is_null() { "null".to_string() } else { td.m().get_id().to_string() });
+            eprintln!("JTRACE e2e-start {} turn={} rail={}", this.get_id(), if td.is_null() { "null".to_string() } else { td.m().get_id().to_string() }, is_railway(this.get_permissions(-1)) as i32);
         }
         for out in outgoing {
             if noLeftMovers && myTo.is_left_mover(this, out) {
@@ -4091,6 +4091,9 @@ impl NBEdge {
             // avoid sharp railway turns
             if fromRail && is_railway(out.get_permissions(-1)) {
                 let angle = NBHelpers::norm_rel_angle(this.get_angle_at_node(myTo), out.get_angle_at_node(myTo)).abs();
+                if jt {
+                    eprintln!("JTRACE e2e rail {} {} angle={:.6}", this.get_id(), out.get_id(), angle);
+                }
                 if angle > 150.0 {
                     continue;
                 } else if angle > 90.0 {
@@ -4100,6 +4103,9 @@ impl NBEdge {
                     let shape = myTo.compute_smooth_shape(&fromShape, &toShape, 5, this.get_turn_destination(false) == out, 5.0, 5.0, Ptr::default(), 0);
                     let radius = shape.length2d() / utils::geom::geom_helper::deg2rad(angle);
                     let minRadius = if (this.get_permissions(-1) & SVC_TRAM) != 0 { 20.0 } else { 80.0 };
+                    if jt {
+                        eprintln!("JTRACE e2e rail {} {} radius={:.6}", this.get_id(), out.get_id(), radius);
+                    }
                     if radius < minRadius {
                         continue;
                     }

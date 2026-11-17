@@ -1,22 +1,23 @@
 diff --git a/src/netbuild/NBEdge.cpp b/src/netbuild/NBEdge.cpp
-index 03cb4fa..85a0d94 100644
+index 03cb4fa..436961d 100644
 --- a/src/netbuild/NBEdge.cpp
 +++ b/src/netbuild/NBEdge.cpp
-@@ -23,6 +23,7 @@
+@@ -23,6 +23,8 @@
  // Methods for the representation of a single edge
  /****************************************************************************/
  #include <config.h>
 +#include <iostream>
++#include <iomanip>
  
  #include <vector>
  #include <string>
-@@ -2618,8 +2619,15 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+@@ -2618,13 +2620,23 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
          return true;
      }
      const bool fromRail = isRailway(getPermissions());
 +    const bool jt = getenv("NC_JTRACE") != nullptr && myTo->getID().find("#29more") != std::string::npos;
 +    if (jt) {
-+        std::cerr << "JTRACE e2e-start " << getID() << " turn=" << (myTurnDestination != nullptr ? myTurnDestination->getID() : std::string("null")) << "\n";
++        std::cerr << "JTRACE e2e-start " << getID() << " turn=" << (myTurnDestination != nullptr ? myTurnDestination->getID() : std::string("null")) << " rail=" << fromRail << "\n";
 +    }
      for (NBEdge* out : myTo->getOutgoingEdges()) {
          if (noLeftMovers && myTo->isLeftMover(this, out)) {
@@ -26,7 +27,25 @@ index 03cb4fa..85a0d94 100644
              continue;
          }
          // avoid sharp railway turns
-@@ -2642,12 +2650,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+         if (fromRail && isRailway(out->getPermissions())) {
+             const double angle = fabs(NBHelpers::normRelAngle(getAngleAtNode(myTo), out->getAngleAtNode(myTo)));
++            if (jt) {
++                std::cerr << "JTRACE e2e rail " << getID() << " " << out->getID() << " angle=" << std::fixed << std::setprecision(6) << angle << "\n";
++            }
+             if (angle > 150) {
+                 continue;
+             } else if (angle > 90) {
+@@ -2635,6 +2647,9 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+                 const double radius = shape.length2D() / DEG2RAD(angle);
+                 const double minRadius = (getPermissions() & SVC_TRAM) != 0 ? 20 : 80;
+                 //std::cout << getID() << " to=" << out->getID() << " radius=" << radius << " minRadius=" << minRadius << "\n";
++                if (jt) {
++                    std::cerr << "JTRACE e2e rail " << getID() << " " << out->getID() << " radius=" << std::fixed << std::setprecision(6) << radius << "\n";
++                }
+                 if (radius < minRadius) {
+                     continue;
+                 }
+@@ -2642,12 +2657,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
          }
          if (out == myTurnDestination) {
              // will be added by appendTurnaround
