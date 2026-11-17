@@ -501,6 +501,27 @@ def probes(lane, tl_id):
         run_n(t, 30)
         return summary(t)
 
+    def two_stops(t):
+        last = t.vehicle.getRoute("v0")[-1]
+        t.vehicle.setStop("v0", last, pos=10.0)
+        t.vehicle.setStop("v0", last, pos=20.0)
+        return last
+
+    def stop_replace(t):
+        last = two_stops(t)
+        t.vehicle.replaceStop("v0", 1, last, pos=30.0, duration=2.0)
+        return t.vehicle.getNextStops("v0")
+
+    def stop_insert(t):
+        last = two_stops(t)
+        t.vehicle.insertStop("v0", 1, last, pos=30.0, duration=2.0)
+        return t.vehicle.getNextStops("v0")
+
+    def reroute_between_stops(t):
+        two_stops(t)
+        t.vehicle.rerouteTraveltime("v0")
+        return t.vehicle.getRoute("v0")
+
     base = {
         "effect: lane.setDisallowed(all) +30 + summary": lane_close,
         "effect: lane.setDisallowed(all) +15, reopen +30": lane_close_reopen,
@@ -668,6 +689,13 @@ def probes(lane, tl_id):
         "junction.getPosition(nope)": lambda t: t.junction.getPosition("nope"),
         "poi.add(p0) + getPosition": poi_add,
         "poi.getPosition(nope)": lambda t: t.poi.getPosition("nope"),
+        "vehicle.setStop(v0) x2 + getNextStops": lambda t: (two_stops(t), t.vehicle.getNextStops("v0"))[1],
+        "vehicle.replaceStop(v0, 1, last) between stops + getNextStops": stop_replace,
+        "vehicle.insertStop(v0, 1, last) between stops + getNextStops": stop_insert,
+        "vehicle.replaceStop(v0, 5, last) index out of range": lambda t: (two_stops(t), t.vehicle.replaceStop("v0", 5, t.vehicle.getRoute("v0")[-1]))[1],
+        "vehicle.insertStop(v0, 9, last) index out of range": lambda t: (two_stops(t), t.vehicle.insertStop("v0", 9, t.vehicle.getRoute("v0")[-1]))[1],
+        "vehicle.replaceStop(v0, 1, nope edge)": lambda t: (two_stops(t), t.vehicle.replaceStop("v0", 1, "nope"))[1],
+        "vehicle.rerouteTraveltime(v0) between stops + getRoute": reroute_between_stops,
     }
     base.update(domain_probes(lane, edge, tl, run_n, summary))
     return base
