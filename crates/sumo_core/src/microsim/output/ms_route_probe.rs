@@ -32,6 +32,16 @@ impl std::ops::DerefMut for MSRouteProbe {
     }
 }
 
+fn ms_route_probe_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSRouteProbe, base2)) as *mut MSRouteProbe).m().notify_enter(veh, reason, enteredLane)
+}
+/// Virtual table of MSRouteProbe (MSMoveReminder override: notifyEnter; notifyMove and notifyLeave are inherited)
+static MS_ROUTE_PROBE_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_route_probe_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
+
 impl MSRouteProbe {
     /// C++: `void MSRouteProbe::MSRouteProbe(const std::string &, const MSEdge *, const std::string &, const std::string &, const std::string &)`
     /// Constructor
@@ -58,7 +68,10 @@ impl MSRouteProbe {
     #[allow(unused_variables)]
     pub fn new(id: &str, edge: Ptr<MSEdge>, distID: &str, lastID: &str, vTypes: &str) -> Box<Self> {
         let base = MSDetectorFileOutput::new(id, vTypes, "", 0).unwrap_or_else(|e| panic!("{e}"));
-        let base2 = MSMoveReminder::new(id, Ptr::null(), true);
+        let base2 = MSMoveReminder {
+            vt: &MS_ROUTE_PROBE_MSMOVE_REMINDER_VT,
+            ..MSMoveReminder::new(id, Ptr::null(), true)
+        };
         let mut b = Box::new(MSRouteProbe {
             base,
             base2,
