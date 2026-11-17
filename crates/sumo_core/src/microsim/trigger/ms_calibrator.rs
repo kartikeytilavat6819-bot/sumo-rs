@@ -661,7 +661,6 @@ impl MSCalibrator {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        if std::env::var("CAL_TRACE").is_ok() { eprintln!("CALTRACE execute t={} idx={} n={} q={} v={} begin={} end={} passed={} inserted={} removed={} cleared={}", currentTime, self.myCurrentStateInterval, self.myIntervals.len(), self.myIntervals[self.myCurrentStateInterval].q, self.myIntervals[self.myCurrentStateInterval].v, self.myIntervals[self.myCurrentStateInterval].begin, self.myIntervals[self.myCurrentStateInterval].end, self.passed(), self.myInserted, self.myRemoved, self.myClearedInJam); }
         let calibrateFlow = self.myIntervals[self.myCurrentStateInterval].q >= 0.;
         let calibrateSpeed = self.myIntervals[self.myCurrentStateInterval].v >= 0.;
         // get current simulation values (valid for the last simulation second)
@@ -773,7 +772,6 @@ impl MSCalibrator {
                         std::panic::resume_unwind(payload);
                     }
                 };
-                if std::env::var("CAL_TRACE").is_ok() { eprintln!("CALTRACE insert t={} id={} success={} wished={} adapted={} slack={}", currentTime, newID, success, wishedNum, adaptedNum, insertionSlack); }
                 if success {
                     let vid = vehicleSV.get_id().to_string();
                     if !vc.add_vehicle(&vid, vehicleSV) {
@@ -1190,7 +1188,6 @@ impl MSCalibrator {
         self.myRemoved = 0;
         self.myClearedInJam = 0;
         self.myHaveWarnedAboutClearingJam = false;
-        if std::env::var("CAL_TRACE").is_ok() { eprintln!("CALTRACE intervalEnd idx={}", self.myCurrentStateInterval); }
         self.reset();
     }
 
