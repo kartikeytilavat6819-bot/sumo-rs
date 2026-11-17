@@ -7,7 +7,7 @@ pub type PersonDist = (Ptr<MSPerson>, f64);
 
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
-const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+pub const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)

@@ -6,6 +6,7 @@ use utils::common::to_string::f64_to_string_prec;
 use utils::common::std_defs::g_precision;
 use utils::options::options_cont::{get_bool, get_string};
 use crate::microsim::transportables::msp_model_striping::walking_sidewalk;
+use crate::microsim::trigger::ms_triggered_rerouter::{MSTriggeredRerouter, rerouter_of};
 
 /// C++ `std::istringstream >> value` for the saved state format
 fn next_token<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
@@ -671,7 +672,24 @@ impl MSStageWalking {
                 }
             }
         }
-        // shortcut: the C++ hasParameter("rerouter") branch (nearest MSTriggeredRerouter triggerRouting for a walk) is not ported, Parameterised has no port yet; upgrade when Parameterised is ported
+        if self.base.base.base.has_parameter("rerouter") {
+            let mut minDist = f64::MAX;
+            let mut nearest: Ptr<MSTriggeredRerouter> = Ptr::null();
+            for rem in self.myMoveReminders.clone() {
+                if rem.m().kind == "MSTriggeredRerouter" {
+                    let rerouter = rerouter_of(rem.m());
+                    let dist2 = rerouter.get_position().distance_squared_to2d(&person.get_position_2());
+                    if dist2 < minDist {
+                        nearest = Ptr::from_mut(rerouter);
+                        minDist = dist2;
+                    }
+                }
+            }
+            if !nearest.is_null() {
+                nearest.m().trigger_routing(&mut person.m().base, MSMoveReminder_Notification::NOTIFICATION_JUNCTION);
+            }
+            // TODO maybe removal of the reminders? Or can we rely on movetonextedge to clean everything up?
+        }
     }
 
     /// C++: `void MSStageWalking::activateMoveReminders(MSTransportable *, double, double, double)`
