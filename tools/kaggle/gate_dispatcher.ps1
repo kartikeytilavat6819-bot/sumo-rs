@@ -3,7 +3,7 @@
 # Every 30 s: collect queued requests ($HOME\.kaggle\gateq\*.req), pack up to $PerBatch snapshots into one dataset,
 # run batch_kernel.py on a free worker (account x index), and turn finished outputs into <id>.result files.
 param(
-    [string[]]$TokenFiles = @("$HOME\.kaggle\gate_token", "$HOME\.kaggle\gate_token_acct3"),
+    [string[]]$TokenFiles = @("$HOME\.kaggle\gate_token", "$HOME\.kaggle\gate_token_acct3", "$HOME\.kaggle\gate_token_acct1"),
     # leave 1 of each account's 5 sessions free for agents' own diagnostic kernels
     [int]$WorkersPerAccount = 4,
     # small batches: snapshots run serially in a notebook and agent_run.sh can take minutes each

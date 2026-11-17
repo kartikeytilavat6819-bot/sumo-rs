@@ -1,15 +1,20 @@
 //! Port of utils/xml/SUMOSAXReader.{h,cpp} (and IStreamInputSource.h) over quick-xml.
 //! The handler is passed to each parse call instead of being stored (C++ setHandler).
 // shortcut: no schema validation or DTD/entity handling (tests run with --xml-validation never);
-// parse error texts come from quick-xml, not Xerces; input must be UTF-8
+// parse errors are worded and positioned like Xerces only for the cases measured against C++
+// (tools/kaggle/agent_run.sh probes); other error states still use quick-xml's text. input must be UTF-8
 use super::generic_sax_handler::{self, SaxHandler};
 use super::stand_ins::{is_readable, write_warning, ProcessError};
 use super::sumo_sax_attributes::SUMOSAXAttributes;
 use super::sumo_xml_definitions::Tags;
+use quick_xml::errors::{IllFormedError, SyntaxError};
 use quick_xml::events::Event;
 use quick_xml::{Reader, XmlVersion};
 use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
+
+/// Xerces reports errors at end of input at this position
+const EOF_POS: u64 = u64::MAX;
 
 pub struct SUMOSAXReader {
     my_validation_scheme: String,
@@ -28,7 +33,10 @@ struct XmlStream {
     source: Source,
     buf: Vec<u8>,
     pending: Option<Event<'static>>,
-    depth: usize,
+    /// byte offset where the last event read from the reader started
+    event_start: u64,
+    /// names of the elements that are still open
+    open: Vec<String>,
     root_seen: bool,
 }
 
@@ -47,22 +55,44 @@ fn open_input(path: &str) -> std::io::Result<Box<dyn BufRead>> {
     })
 }
 
+/// first reference `&name;` at or after `from` that is neither a character reference nor predefined:
+/// (name, offset just past its ';')
+fn first_undeclared_reference(data: &[u8], from: usize) -> Option<(String, usize)> {
+    let mut i = from;
+    while let Some(k) = data.get(i..)?.iter().position(|&c| c == b'&') {
+        let amp = i + k;
+        let semi = amp + data[amp..].iter().position(|&c| c == b';')?;
+        let name = String::from_utf8_lossy(&data[amp + 1..semi]).into_owned();
+        if !name.starts_with('#') && quick_xml::escape::resolve_predefined_entity(&name).is_none() {
+            return Some((name, semi + 1));
+        }
+        i = semi + 1;
+    }
+    None
+}
+
 impl XmlStream {
     fn new(input: Box<dyn BufRead>, source: Source) -> Self {
-        XmlStream { reader: Reader::from_reader(input), source, buf: Vec::new(), pending: None, depth: 0, root_seen: false }
+        XmlStream { reader: Reader::from_reader(input), source, buf: Vec::new(), pending: None, event_start: 0, open: Vec::new(), root_seen: false }
     }
 
-    /// 1-based line and column of byte offset `pos`
-    fn line_col(&self, pos: u64) -> (u64, u64) {
+    /// the whole input (re-read from the file: only used on the error path)
+    fn data(&self) -> Vec<u8> {
         let mut data = Vec::new();
         match &self.source {
             Source::Str(s) => data.extend_from_slice(s.as_bytes()),
             Source::File(f) => {
                 if let Ok(r) = open_input(f) {
-                    let _ = r.take(pos).read_to_end(&mut data);
+                    let _ = r.take(u64::MAX).read_to_end(&mut data);
                 }
             }
         }
+        data
+    }
+
+    /// 1-based line and column of byte offset `pos`
+    fn line_col(&self, pos: u64) -> (u64, u64) {
+        let data = self.data();
         let before = &data[..(pos as usize).min(data.len())];
         let line = before.iter().filter(|&&c| c == b'\n').count() as u64 + 1;
         let col = before.iter().rev().take_while(|&&c| c != b'\n').count() as u64 + 1;
@@ -74,14 +104,46 @@ impl XmlStream {
         ProcessError::Process(h.handler().build_error_message(msg, line, col))
     }
 
+    /// Xerces' "entity 'x' not found" for the first undeclared reference at or after `pos`, else `fallback`
+    fn reference_error(&self, h: &mut dyn SaxHandler, pos: u64, fallback: &str) -> ProcessError {
+        match first_undeclared_reference(&self.data(), pos as usize) {
+            Some((name, end)) => self.fatal(h, &format!("entity '{name}' not found"), end as u64),
+            None => self.fatal(h, fallback, pos),
+        }
+    }
+
+    /// a quick-xml error, worded and positioned as Xerces reports it
+    fn read_error(&self, h: &mut dyn SaxHandler, e: &quick_xml::Error) -> ProcessError {
+        match e {
+            quick_xml::Error::Syntax(SyntaxError::UnclosedTag) => {
+                // Xerces names the state it was in when the input ended
+                let data = self.data();
+                let tail = data.get(self.event_start as usize..).unwrap_or_default().trim_ascii_end();
+                let msg = match tail.last().copied() {
+                    Some(b'=') => "attribute value expected",
+                    Some(b'"' | b'\'') => "whitespace expected",
+                    _ => "unexpected end of input", // shortcut: other Xerces states inside a tag are not measured
+                };
+                self.fatal(h, msg, EOF_POS)
+            }
+            quick_xml::Error::Syntax(SyntaxError::InvalidBangMarkup) => self.fatal(h, &e.to_string(), self.reader.error_position()),
+            quick_xml::Error::Syntax(_) => self.fatal(h, "unexpected end of input", EOF_POS),
+            quick_xml::Error::IllFormed(IllFormedError::MismatchedEndTag { expected, .. }) => {
+                self.fatal(h, &format!("expected end of tag '{expected}'"), self.event_start + 2)
+            }
+            _ => self.fatal(h, &e.to_string(), self.reader.error_position()),
+        }
+    }
+
     fn next_event(&mut self, h: &mut dyn SaxHandler) -> Result<Event<'static>, ProcessError> {
         if let Some(e) = self.pending.take() {
             return Ok(e);
         }
         self.buf.clear();
+        self.event_start = self.reader.buffer_position();
         match self.reader.read_event_into(&mut self.buf) {
             Ok(e) => Ok(e.into_owned()),
-            Err(e) => Err(self.fatal(h, &e.to_string(), self.reader.error_position())),
+            Err(e) => Err(self.read_error(h, &e)),
         }
     }
 
@@ -102,41 +164,43 @@ impl XmlStream {
 
     /// Processes the next token (parseNext); false at the end of the document.
     fn step(&mut self, h: &mut dyn SaxHandler) -> Result<bool, ProcessError> {
-        let pos = self.reader.buffer_position();
         let e = self.next_event(h)?;
+        let pos = self.event_start;
         match e {
             Event::Start(ref s) | Event::Empty(ref s) => {
-                if self.depth == 0 && self.root_seen {
-                    return Err(self.fatal(h, "Extra content at the end of the document (second root element)", pos));
+                if self.root_seen && self.open.is_empty() {
+                    return Err(self.fatal(h, "comment or processing instruction expected", pos));
                 }
                 self.root_seen = true;
                 let name = s.name().as_ref().to_string();
                 let mut attrs = Vec::new();
                 for a in s.attributes() {
                     let a = a.map_err(|err| self.fatal(h, &err.to_string(), pos))?;
-                    let v = a.normalized_value(XmlVersion::Implicit1_0).map_err(|err| self.fatal(h, &err.to_string(), pos))?;
+                    let v = a.normalized_value(XmlVersion::Implicit1_0).map_err(|err| self.reference_error(h, pos, &err.to_string()))?;
                     attrs.push((a.key.as_ref().to_string(), v.into_owned()));
                 }
                 generic_sax_handler::start_element(h, &name, attrs)?;
                 if matches!(e, Event::Empty(_)) {
                     generic_sax_handler::end_element(h, &name)?;
                 } else {
-                    self.depth += 1;
+                    self.open.push(name);
                 }
             }
             Event::End(ref s) => {
-                self.depth -= 1;
+                self.open.pop();
                 generic_sax_handler::end_element(h, s.name().as_ref())?;
             }
             Event::Text(ref t) => {
-                if self.depth > 0 {
+                if !self.open.is_empty() {
                     generic_sax_handler::characters(h, &t.xml10_content());
                 } else if !t.trim_ascii().is_empty() {
-                    return Err(self.fatal(h, "Text is not allowed outside of the root element", pos));
+                    let at = pos + (t.len() - t.trim_ascii_start().len()) as u64;
+                    let msg = if self.root_seen { "comment or processing instruction expected" } else { "invalid document structure" };
+                    return Err(self.fatal(h, msg, at));
                 }
             }
             Event::CData(ref c) => {
-                if self.depth > 0 {
+                if !self.open.is_empty() {
                     generic_sax_handler::characters(h, &c.xml10_content());
                 }
             }
@@ -145,18 +209,22 @@ impl XmlStream {
                     Ok(Some(c)) => c.to_string(),
                     Ok(None) => match quick_xml::escape::resolve_predefined_entity(r.as_ref()) {
                         Some(s) => s.to_string(),
-                        None => return Err(self.fatal(h, &format!("The entity '{}' was referenced, but not declared", r.as_ref()), pos)),
+                        None => return Err(self.reference_error(h, pos, &format!("entity '{}' not found", r.as_ref()))),
                     },
                     Err(err) => return Err(self.fatal(h, &err.to_string(), pos)),
                 };
-                if self.depth > 0 {
+                if !self.open.is_empty() {
                     generic_sax_handler::characters(h, &resolved);
                 }
             }
             Event::Decl(_) | Event::PI(_) | Event::Comment(_) | Event::DocType(_) => {}
             Event::Eof => {
-                if self.depth > 0 || !self.root_seen {
-                    return Err(self.fatal(h, "Unexpected end of file", pos));
+                if !self.root_seen {
+                    return Err(self.fatal(h, "invalid document structure", EOF_POS));
+                }
+                if let Some(last) = self.open.last() {
+                    let msg = format!("input ended before all started tags were ended; last tag started is '{last}'");
+                    return Err(self.fatal(h, &msg, EOF_POS));
                 }
                 return Ok(false);
             }

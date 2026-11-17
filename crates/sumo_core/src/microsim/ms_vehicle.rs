@@ -1,6 +1,8 @@
 //! Port of microsim/MSVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_bit_set_logic::MSBitSetLogic;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 use utils::common::to_string::to_string;
 use utils::geom::POSITION_EPS;
 
@@ -2016,7 +2018,7 @@ fn ms_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
 fn ms_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
     false
 }
-static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+pub(crate) static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: ms_vehicle_is_vehicle,
     is_person: ms_vehicle_is_person,
     is_container: ms_vehicle_is_container,
@@ -9988,9 +9990,9 @@ impl MSVehicle {
                         response2 = self.get_speed() >= veh.get_speed();
                     } else {
                         // fallback if pedestrian crossings are involved
-                        // shortcut: needs logic->getResponseFor(i).test(j) on MSLogicJunction_LinkBits, which is not ported (Unmapped), so no response is assumed, upgrade when ms_logic_junction is ported
-                        response = false;
-                        response2 = false;
+                        let logic = link.get_junction().get_logic().cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
+                        response = logic.get_response_for(link.get_index()).test(foeLink.get_index());
+                        response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index());
                     }
                     if !response {
                         // if we have right of way over the foe, entryTime does not matter
@@ -11997,7 +11999,6 @@ impl MSVehicle {
             let mut clane = enteredLane;
             let mut routeIndex = self.get_route_position();
             while leftLength > 0. {
-                let mut guessed = false;
                 if routeIndex > 0 && clane.get_edge().is_normal() {
                     // get predecessor lane that corresponds to prior route
                     routeIndex -= 1;
@@ -12011,15 +12012,12 @@ impl MSVehicle {
                         }
                     }
                 } else {
-                    // only the predecessor of a normal lane is a guess
-                    guessed = clane.get_edge().is_normal();
                     clane = clane.get_logical_predecessor_lane();
                 }
                 if clane.is_null()
                     || clane == self.myLane
                     || clane == self.myLane.get_bidi_lane()
-                    || (guessed
-                        && clane.is_internal()
+                    || (clane.is_internal()
                         && matches!(clane.get_link_cont()[0].get_direction(), LinkDirection::TURN | LinkDirection::TURN_LEFTHAND))
                 {
                     break;

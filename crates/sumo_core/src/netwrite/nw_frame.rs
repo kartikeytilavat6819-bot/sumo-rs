@@ -145,7 +145,10 @@ impl NWFrame {
         oc.do_register("prefix.edge", SumoOption::string_with(""));
         oc.add_description("prefix.edge", "Output", "Defines a prefix for edge IDs");
 
-        // shortcut: the PROJ_API_FILE branch (proj.plain-geo) is not built in this port, same as ni_frame.rs
+        if !forNetgen {
+            oc.do_register("proj.plain-geo", SumoOption::bool(false));
+            oc.add_description("proj.plain-geo", "Projection", "Write geo coordinates in plain-xml");
+        }
 
         oc.do_register("amitran-output", SumoOption::file_name());
         oc.add_description("amitran-output", "Output", "The generated net will be written to FILE using Amitran format");

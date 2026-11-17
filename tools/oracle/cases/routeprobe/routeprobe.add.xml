@@ -1,0 +1,9 @@
+<additional>
+    <route id="alt" edges="E0 E2 E4" color="0,1,0"/>
+    <routeProbe id="rp0" edge="E0" period="30.00" file="probe.xml"/>
+    <rerouter id="rr0" edges="E0">
+        <interval begin="40.00" end="1000.00">
+            <routeProbReroute id="alt" probability="1.00"/>
+        </interval>
+    </rerouter>
+</additional>

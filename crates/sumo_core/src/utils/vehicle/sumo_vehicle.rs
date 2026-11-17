@@ -558,6 +558,15 @@ impl crate::utils::router::router_edge::RouterVehicle for SUMOVehicle {
     fn v_class(&self) -> SUMOVehicleClass {
         self.get_v_class()
     }
+    fn v_type_parameter(&self) -> &SUMOVTypeParameter {
+        self.get_v_type_parameter()
+    }
+    fn vehicle_type_length(&self) -> f64 {
+        self.get_vehicle_type().get_length()
+    }
+    fn vtype_id(&self) -> String {
+        self.get_parameter().vtypeid.clone()
+    }
 }
 
 impl std::ops::Deref for SUMOVehicle {

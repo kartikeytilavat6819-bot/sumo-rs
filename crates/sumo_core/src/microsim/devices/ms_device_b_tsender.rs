@@ -237,7 +237,15 @@ impl MSTransportableDevice_BTsender {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_devices(t: &mut MSTransportable, into: &mut Vec<Ptr<MSTransportableDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported with the C++ parameters (oc, "btsender", t, false, true), so no btsender device is attached to transportables; upgrade when ms_device.rs gets the C++ signature
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "btsender", t.get_id(), t.get_parameter(), t.get_vehicle_type().get_parameter(), false, true)
+        });
+        if equipped {
+            let id = format!("btsender_{}", t.get_id());
+            let device = Box::leak(Box::new(MSTransportableDevice_BTsender::new(t, &id)));
+            into.push(Ptr::from_mut(&mut device.base2));
+            MSDevice_BTreceiver::has_sending_persons();
+        }
     }
 
     /// C++: `const std::string MSTransportableDevice_BTsender::deviceName() const` [const, virtual]
@@ -330,7 +338,14 @@ impl MSVehicleDevice_BTsender {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported with the C++ parameters (oc, "btsender", v, false), so no btsender device is attached to vehicles; upgrade when ms_device.rs gets the C++ signature
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "btsender", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            let id = format!("btsender_{}", v.get_id());
+            let device = Box::leak(Box::new(MSVehicleDevice_BTsender::new(v, &id)));
+            into.push(Ptr::from_mut(&mut device.base2));
+        }
     }
 
     /// C++: `const std::string MSVehicleDevice_BTsender::deviceName() const` [const, virtual]

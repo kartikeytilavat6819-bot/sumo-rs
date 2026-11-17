@@ -1,7 +1,10 @@
 //! Port of utils/router/IntermodalEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
+use crate::utils::router::access_edge::AccessEdge;
+use crate::utils::router::car_edge::CarEdge;
+use crate::utils::router::pedestrian_edge::PedestrianEdge;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterVehicle};
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalEdge` (utils/router/IntermodalEdge.h)
@@ -23,7 +26,18 @@ pub struct IntermodalEdge<E, L, N, V> {
     pub myLength: f64,
     /// Container for passing effort varying over time for the edge
     pub myEfforts: Ptr<Unmapped /* ValueTimeLine<double> */>,
+    /// C++ virtual dispatch: which subclass this base object really is (dispatched by the virtual methods below)
+    pub myKind: IntermodalEdgeKind,
     _p: std::marker::PhantomData<(E, L, N, V,)>,
+}
+
+/// The C++ subclasses of IntermodalEdge that override its virtual methods. PublicTransportEdge and StopEdge are not ported yet (shortcut).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntermodalEdgeKind {
+    Base,
+    Access,
+    Pedestrian,
+    Car,
 }
 
 impl<E, L, N, V> std::ops::Deref for IntermodalEdge<E, L, N, V> {
@@ -38,7 +52,13 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V> {
+impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     fn edge_numerical_id(&self) -> i32 {
         <IntermodalEdge<E, L, N, V> as RouterEdge<IntermodalTrip<E, N, V>>>::numerical_id(self)
     }
@@ -51,7 +71,13 @@ impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N, V> {
+impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     type Node = N;
     type Lane = L;
     fn bidi_edge(&self) -> Ptr<IntermodalEdge<E, L, N, V>> {
@@ -105,7 +131,13 @@ impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N,
     }
 }
 
-impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
+impl<E, L, N, V> IntermodalEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     /// C++: `void IntermodalEdge::IntermodalEdge<E, L, N, V>(const std::string, int, const E *, const std::string &, const double)`
     // IntermodalEdge(const std::string id, int numericalID, const E* edge, const std::string& line, const double length = -1) :
     //         Named(id),
@@ -119,8 +151,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         let my_length = if edge.is_null() || length >= 0. {
             if 0.0 > length { 0.0 } else { length }
         } else {
-            // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getLength")
+            edge.length()
         };
         Self {
             base: Named::new(&id),
@@ -131,8 +162,29 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
             myLine: line.to_string(),
             myLength: my_length,
             myEfforts: Ptr::null(),
+            myKind: IntermodalEdgeKind::Base,
             _p: std::marker::PhantomData,
         }
+    }
+
+    /// Tags a freshly built base object as one of the subclasses (the subclass ctor calls the base ctor first in C++)
+    pub fn with_kind(mut self, kind: IntermodalEdgeKind) -> Self {
+        self.myKind = kind;
+        self
+    }
+
+    /// The subclass view of this base object (C++ virtual dispatch target); only valid when myKind matches.
+    pub fn as_access(&self) -> &AccessEdge<E, L, N, V> {
+        assert!(self.myKind == IntermodalEdgeKind::Access);
+        unsafe { &*(self as *const Self as *const AccessEdge<E, L, N, V>) }
+    }
+    pub fn as_pedestrian(&self) -> &PedestrianEdge<E, L, N, V> {
+        assert!(self.myKind == IntermodalEdgeKind::Pedestrian);
+        unsafe { &*(self as *const Self as *const PedestrianEdge<E, L, N, V>) }
+    }
+    pub fn as_car(&self) -> &CarEdge<E, L, N, V> {
+        assert!(self.myKind == IntermodalEdgeKind::Car);
+        unsafe { &*(self as *const Self as *const CarEdge<E, L, N, V>) }
     }
 
     /// C++: `void IntermodalEdge::~IntermodalEdge<E, L, N, V>()` [virtual]
@@ -148,7 +200,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn include_in_route(&self, arg0: bool) -> bool {
-        false
+        match self.myKind {
+            IntermodalEdgeKind::Base => false,
+            IntermodalEdgeKind::Access => false,
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().include_in_route(arg0),
+            IntermodalEdgeKind::Car => self.as_car().include_in_route(arg0),
+        }
     }
 
     /// C++: `const std::string & IntermodalEdge::getLine() const` [const]
@@ -243,7 +300,10 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &Vec<Ptr<IntermodalEdge<E, L, N, V>>> {
-        &self.myFollowingEdges
+        match self.myKind {
+            IntermodalEdgeKind::Car => self.as_car().get_successors(vClass),
+            _ => &self.myFollowingEdges,
+        }
     }
 
     /// C++: `const std::vector<std::pair<const IntermodalEdge<E, L, N, V> *, const IntermodalEdge<E, L, N, V> *>> & IntermodalEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -255,7 +315,10 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)> {
-        &self.myFollowingViaEdges
+        match self.myKind {
+            IntermodalEdgeKind::Car => self.as_car().get_via_successors(vClass, ignoreTransientPermissions),
+            _ => &self.myFollowingViaEdges,
+        }
     }
 
     /// C++: `bool IntermodalEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const, virtual]
@@ -264,7 +327,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> bool {
-        false
+        match self.myKind {
+            IntermodalEdgeKind::Base => false,
+            IntermodalEdgeKind::Access => self.as_access().prohibits(arg0),
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().prohibits(arg0),
+            IntermodalEdgeKind::Car => self.as_car().prohibits(arg0),
+        }
     }
 
     /// C++: `bool IntermodalEdge::restricts(const IntermodalTrip<E, N, V> *const) const` [const, virtual]
@@ -282,7 +350,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_partial_length(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
-        self.myLength
+        match self.myKind {
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_partial_length(arg0),
+            IntermodalEdgeKind::Car => self.as_car().get_partial_length(arg0),
+        }
     }
 
     /// C++: `double IntermodalEdge::getTravelTime(const IntermodalTrip<E, N, V> *const, double) const` [const, virtual]
@@ -291,7 +363,12 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
-        0.
+        match self.myKind {
+            IntermodalEdgeKind::Base => 0.,
+            IntermodalEdgeKind::Access => self.as_access().get_travel_time(arg0, arg1),
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_travel_time(arg0, arg1),
+            IntermodalEdgeKind::Car => self.as_car().get_travel_time(arg0, arg1),
+        }
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeAggregated(const IntermodalTrip<E, N, V> *const, double) const` [const, virtual]
@@ -300,7 +377,10 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        self.get_travel_time(trip, time)
+        match self.myKind {
+            IntermodalEdgeKind::Car => self.as_car().get_travel_time_aggregated(trip, time),
+            _ => self.get_travel_time(trip, time),
+        }
     }
 
     /// C++: `double IntermodalEdge::getIntended(const double, std::string &) const` [const, virtual]
@@ -365,8 +445,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         if !utils::common::std_defs::g_routing_preferences() || edge.is_null() || edge.myEdge.is_null() || trip.is_null() {
             1.
         } else {
-            // shortcut: needs router trait bounds (lead), E::getPreference is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getPreference")
+            1. / edge.myEdge.preference(trip.get_v_type_parameter())
         }
     }
 
@@ -422,8 +501,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         if self.myEdge.is_null() {
             false
         } else {
-            // shortcut: needs router trait bounds (lead), E::isInternal is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::isInternal")
+            self.myEdge.is_internal()
         }
     }
 
@@ -442,7 +520,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
-        0.
+        match self.myKind {
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => 0.,
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_start_pos(),
+            IntermodalEdgeKind::Car => self.as_car().get_start_pos(),
+        }
     }
 
     /// C++: `double IntermodalEdge::getEndPos() const` [const, virtual]
@@ -451,7 +533,11 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
-        self.myLength
+        match self.myKind {
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_end_pos(),
+            IntermodalEdgeKind::Car => self.as_car().get_end_pos(),
+        }
     }
 
     /// C++: `double IntermodalEdge::getSpeedLimit() const` [const]
@@ -463,8 +549,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         if self.myEdge.is_null() {
             200. / 3.6
         } else {
-            // shortcut: needs router trait bounds (lead), E::getSpeedLimit is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getSpeedLimit")
+            self.myEdge.speed_limit()
         }
     }
 
@@ -477,8 +562,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         if self.myEdge.is_null() {
             1.
         } else {
-            // shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getLengthGeometryFactor")
+            self.myEdge.length_geometry_factor()
         }
     }
 
@@ -491,8 +575,7 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
         if self.myEdge.is_null() || other.myEdge.is_null() || self.myEdge == other.myEdge {
             0.
         } else {
-            // shortcut: needs router trait bounds (lead), E::getDistanceTo is not callable on generic E
-            panic!("shortcut: needs router trait bounds (lead), E::getDistanceTo")
+            self.myEdge.distance_to(other.myEdge, true)
         }
     }
 
@@ -567,11 +650,38 @@ impl<E, L, N, V> IntermodalEdge<E, L, N, V> {
 //     return nullptr;
 // }
 #[allow(unused_variables)]
-pub fn get_sidewalk<E, L>(edge: Ptr<E>, svc: SUMOVehicleClass) -> Ptr<L> {
+pub fn get_sidewalk<E, L, V>(edge: Ptr<E>, svc: SUMOVehicleClass) -> Ptr<L>
+where
+    E: RouterEdge<V, Lane = L>,
+{
     if edge.is_null() {
         return Ptr::null();
     }
-    // shortcut: needs router trait bounds (lead), E::getLanes, L::getPermissions and L::allowsVehicleClass are not callable on generic E, L
-    panic!("shortcut: needs router trait bounds (lead), E::getLanes / L::getPermissions")
+    // prefer lanes that are exclusive to pedestrians
+    let lanes: Vec<Ptr<L>> = edge.lanes().to_vec();
+    for &lane in &lanes {
+        if E::lane_permissions(lane) == svc {
+            return lane;
+        }
+    }
+    for &lane in &lanes {
+        if E::lane_allows_vehicle_class(lane, svc) {
+            return lane;
+        }
+    }
+    if svc != SVC_PEDESTRIAN {
+        // persons should always be able to use the sidewalk
+        for &lane in &lanes {
+            if E::lane_permissions(lane) == SVC_PEDESTRIAN {
+                return lane;
+            }
+        }
+        for &lane in &lanes {
+            if E::lane_allows_vehicle_class(lane, SVC_PEDESTRIAN) {
+                return lane;
+            }
+        }
+    }
+    Ptr::null()
 }
 
