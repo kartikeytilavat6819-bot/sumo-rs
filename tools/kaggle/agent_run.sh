@@ -17,4 +17,8 @@ echo "trace lines: ours=$(wc -l < $W/ours.trace) cpp=$(wc -l < $W/cpp.trace)"
 sed -i 's/ true/ 1/; s/ false/ 0/' $W/ours.trace; sed -i 's/ true/ 1/; s/ false/ 0/' $W/cpp.trace
 diff $W/cpp.trace $W/ours.trace | head -60
 echo "first diff stage: $(diff $W/cpp.trace $W/ours.trace | head -1)"
+echo "junctions: cpp=$(grep -c '<junction ' $W/cpp.net.xml) ours=$(grep -c '<junction ' $W/ours.net.xml)"
+python3 tools/oracle/compare_net.py $W/cpp.net.xml $W/ours.net.xml 2>&1 | head -40
+grep -a '29more' $W/cpp.net.xml | head -3 | cut -c1-200
+grep -a '29more' $W/ours.net.xml | head -3 | cut -c1-200
 echo "NX03 DIFF END"
