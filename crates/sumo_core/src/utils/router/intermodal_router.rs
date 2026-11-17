@@ -257,7 +257,6 @@ where
         let iFrom = if originStopID != "" { self.myIntermodalNet.get_stop_edge(originStopID) } else { self.myIntermodalNet.get_depart_edge(from, trip.departPos) };
         let iTo = if stopID != "" { self.myIntermodalNet.get_stop_edge(stopID) } else { self.myIntermodalNet.get_arrival_edge(to, trip.arrivalPos) };
         let success = self.myInternalRouter.m().compute(iFrom, iTo, Ptr::from_mut(&mut trip), msTime, &mut intoEdges, true);
-        if std::env::var("GR01_TRACE").is_ok() { eprintln!("GR01 compute from={} to={} dPos={:?} aPos={:?} iFrom={} iTo={} ok={} n={} speed={:?}", from.id(), if to.is_null() { String::new() } else { to.id().to_string() }, trip.departPos, trip.arrivalPos, iFrom.get_id(), iTo.get_id(), success as i32, intoEdges.len(), speed); }
         if success {
             let mut lastLine = String::new();
             let mut lastLineEdge: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
@@ -316,7 +315,6 @@ where
                 let prevEffort = effort;
                 let prevLength = length;
                 self.myInternalRouter.update_via_cost(prev, iEdge, Ptr::from_mut(&mut trip), &mut time, &mut effort, &mut length);
-                if std::env::var("GR01_TRACE").is_ok() { eprintln!("GR01 e={} line={} num={} t={:?} eff={:?} len={:?}", iEdge.get_id(), iEdge.get_line(), iEdge.get_numerical_id(), time, effort, length); }
                 // correct intermodal length:
                 length += iEdge.get_partial_length(Ptr::from_mut(&mut trip)) - iEdge.get_length();
                 prev = iEdge;
