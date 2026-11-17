@@ -289,7 +289,7 @@ impl Influencer_GapControlState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // implicit C++ destructor: no members need explicit cleanup
+        self.deactivate();
     }
 
     /// C++: `void GapControlState::init()` [static]
@@ -627,8 +627,10 @@ impl MSVehicle_Influencer {
     // MSVehicle::Influencer::~Influencer() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // implicit C++ destructor body is empty; the shared_ptr<GapControlState> member is not released here
-        // shortcut: myGapControlState is a raw Ptr with no owner-side delete, freed never (leaks one GapControlState per influencer), upgrade with Rc/owned box when gap control is exercised
+        // the shared_ptr<GapControlState> member is its only owner (refVehMap holds raw pointers): ~GapControlState runs
+        if !self.myGapControlState.is_null() {
+            self.myGapControlState.m().drop_();
+        }
     }
 
     /// C++: `void Influencer::cleanup()` [static]
@@ -677,7 +679,7 @@ impl MSVehicle_Influencer {
     #[allow(unused_variables)]
     pub fn activate_gap_controller(&mut self, originalTau: f64, newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, refVeh: Ptr<MSVehicle>) {
         if self.myGapControlState.is_null() {
-            // shortcut: std::make_shared<GapControlState> owned via Box::into_raw, never freed (see Influencer destructor)
+            // std::make_shared<GapControlState>; its destructor side effect runs in Influencer::drop_, the memory stays leaked
             self.myGapControlState = Ptr::from_raw(Box::into_raw(Box::new(Influencer_GapControlState::new())));
             self.init(); // only does things on first call
         }
@@ -2733,10 +2735,14 @@ impl MSVehicle {
     pub fn drop_(&mut self) {
         self.cleanup_parking_reservation();
         self.cleanup_further_lanes();
-        // shortcut: delete myLaneChangeModel, delete myInfluencer and delete myCFVariables are not performed, the raw owners are not modelled yet
+        // delete myLaneChangeModel: ~MSLCM_*() only calls changed(), which resets the model's own members
         if self.myType.is_vehicle_specific() {
             MSNet::get_instance().get_vehicle_control().remove_v_type(self.myType);
         }
+        if !self.myInfluencer.is_null() {
+            self.myInfluencer.m().drop_();
+        }
+        // delete myCFVariables: the car-following variable destructors have no side effects
     }
 
     /// C++: `void MSVehicle::initDevices()` [virtual]
@@ -3643,7 +3649,27 @@ impl MSVehicle {
         // Check for speed advices from the traci client
         vNext = self.process_tra_ci_speed_control(vSafe, vNext);
 
-        // shortcut: the elecHybrid acceleration limit (MSDevice_ElecHybrid via getDevice(typeid(...))) is skipped, typeid device lookup is Unmapped, upgrade when get_device takes a typed key
+        // the acceleration of a vehicle equipped with the elecHybrid device is restricted by the maximal power of the electric drive as well
+        let elecHybridOfVehicle = MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").cast::<MSDevice_ElecHybrid>();
+        if !elecHybridOfVehicle.is_null() {
+            let sv: &mut SUMOVehicle = unsafe { &mut *(self as *mut MSVehicle as *mut SUMOVehicle) };
+            // this is the consumption given by the car following model-computed acceleration
+            let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+            elecHybridOfVehicle.m().set_consum(c);
+            // but the maximum power of the electric motor may be lower
+            // it needs to be converted from [W] to [Wh/s] (3600s / 1h) so that TS can be taken into account
+            let maxPower = self.get_emission_parameters().get_double_optional(SUMO_ATTR_MAXIMUMPOWER, 100000.) / 3600.;
+            if elecHybridOfVehicle.get_consum() / ts() > maxPower {
+                // no, we cannot accelerate that fast, recompute the maximum possible acceleration
+                let accel = elecHybridOfVehicle.m().acceleration(sv, maxPower, self.get_speed());
+                // and update the speed of the vehicle
+                vNext = min2(vNext, self.get_speed() + accel * ts());
+                vNext = max2(vNext, 0.);
+                // and set the vehicle consumption to reflect this
+                let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+                elecHybridOfVehicle.m().set_consum(c);
+            }
+        }
         self.set_braking_signals(vNext);
 
         // update position and speed
@@ -13407,7 +13433,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn plan_move_internal(&self, t: SUMOTime, ahead: &MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
-        // shortcut: DEBUG_PLAN_MOVE output is not ported
+        // DEBUG_PLAN_MOVE output is compiled out of the release C++ (the macro is not defined)
         const CRLL_LOOK_AHEAD: f64 = 5.0;
         const DIST_TO_STOPLINE_EXPECT_PRIORITY: f64 = 1.0;
         const SUMO_const_haltingSpeed: f64 = 0.1;
@@ -15037,8 +15063,7 @@ impl MSVehicle {
         if !self.get_parameter().was_set(VEHPARS_CFMODEL_PARAMS_SET) {
             return false;
         }
-        // shortcut: foe is always an MSVehicle here (SUMOTrafficObject::getVehicleType is not ported), the cast reads the vehicle type of the vehicle
-        let foeType = foe.cast::<MSBaseVehicle>().get_vehicle_type().get_id().to_string();
+        let foeType = foe.get_vehicle_type().get_id().to_string();
         for typeID in StringTokenizer::new(&self.get_parameter().get_parameter("carFollowModel.ignoreTypes", "")).get_vector() {
             if typeID == foeType {
                 return true;
@@ -16066,7 +16091,7 @@ impl MSVehicle {
             }
             let laneName = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
             utils::common::msg_handler::write_warning(&format!("Request backPos of vehicle '{}' for invalid lane '{}' time={}.", self.get_id(), laneName, utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
-            // shortcut: SOFT_ASSERT(false) is not ported, it is a debug-only check
+            // SOFT_ASSERT(false) is assert(false): compiled out of the release C++ (NDEBUG)
             self.myState.myBackPos
         }
     }

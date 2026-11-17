@@ -17,6 +17,15 @@ fn as_base(v: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
     v.cast::<MSBaseVehicle>()
 }
 
+/// C++ `delete veh`: runs ~MSVehicle (microsim only; ~MEVehicle has no body, gUseMesoSim selects the class), then
+/// ~MSBaseVehicle. The memory stays leaked (vehicles are Box::leak'ed by build_vehicle), only the destructor side effects run
+fn delete_vehicle_object(veh: Ptr<SUMOVehicle>) {
+    if !crate::microsim::ms_globals::use_meso_sim() {
+        as_ms_vehicle(veh).m().drop_();
+    }
+    as_base(veh).m().drop_();
+}
+
 /// C++ `static_cast<MSVehicle*>(SUMOVehicle*)`
 fn as_ms_vehicle(v: Ptr<SUMOVehicle>) -> Ptr<MSVehicle> {
     v.cast::<MSVehicle>()
@@ -386,16 +395,8 @@ impl MSVehicleControl {
         if let Some(ptVehIt) = self.myPTVehicles.iter().position(|p| *p == veh) {
             self.myPTVehicles.remove(ptVehIt);
         }
-        // `delete veh` runs ~MSVehicle (cleanupParkingReservation, cleanupFurtherLanes), then ~MSBaseVehicle (checkRouteRemoval);
-        // ~MEVehicle has no such cleanup, so only microsim vehicles get it (gUseMesoSim selects the vehicle class)
-        // shortcut: C++ `delete veh` frees the vehicle, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
         if !veh.is_null() {
-            if !crate::microsim::ms_globals::use_meso_sim() {
-                let ms = as_ms_vehicle(veh);
-                ms.m().cleanup_parking_reservation();
-                ms.m().cleanup_further_lanes();
-            }
-            as_base(veh).m().check_route_removal();
+            delete_vehicle_object(veh);
         }
     }
 
@@ -1396,7 +1397,9 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, reinit: bool) {
-        // shortcut: C++ deletes the vehicles, distributions and types here; they are Box::leak'ed and are not freed
+        // shortcut: the vehicle destructors (delete_vehicle_object) are not run here: C++ runs ~MSTransportable first
+        // (MSTransportableControl::clearState removes riders from their vehicles), which the Rust transportable clearState
+        // does not do yet, so ~MSDevice_Transportable would warn about riders C++ already removed; upgrade with that port
         self.myVehicleDict.clear();
         self.myVTypeDistDict.clear();
         self.myVTypeDict.clear();

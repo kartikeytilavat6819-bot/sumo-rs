@@ -222,6 +222,22 @@ thread_local! {
     /// C++ `MSBaseVehicle::myCurrentNumericalIndex`
     static MS_BASE_VEHICLE_CURRENT_NUMERICAL_INDEX: std::cell::Cell<SUMOTrafficObject_NumericalID> = const { std::cell::Cell::new(0) };
 }
+/// C++ `delete dev` (virtual destructor, dispatched by deviceName like MSDevice::get_parameter_of); only the
+/// destructors with side effects are listed, the memory itself stays leaked
+fn delete_vehicle_device(dev: Ptr<MSVehicleDevice>) {
+    match dev.base2.device_name().as_str() {
+        "rerouting" => dev.cast::<MSDevice_Routing>().m().drop_(),
+        "ssm" => dev.cast::<MSDevice_SSM>().m().drop_(),
+        "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().drop_(),
+        "taxi" => dev.cast::<MSDevice_Taxi>().m().drop_(),
+        "toc" => dev.cast::<MSDevice_ToC>().m().drop_(),
+        "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().drop_(),
+        "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().drop_(),
+        "person" | "container" => dev.cast::<MSDevice_Transportable>().m().drop_(),
+        _ => {}
+    }
+}
+
 /// C++ `new StoppingPlaceMemory()` owned by the vehicle
 // shortcut: the memory is leaked (never freed), because the vehicle destructor does not free it yet
 fn new_stopping_place_memory() -> Ptr<StoppingPlaceMemory> {
@@ -368,11 +384,14 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ frees owned devices/params; Rust ownership handles that.
         if self.myParameter.repetitionNumber == -1 {
             // this is not a flow (flows call checkDist in MSInsertionControl::determineCandidates)
             MSRoute::check_dist(&self.myParameter.routeid);
         }
+        for dev in self.myDevices.clone() {
+            delete_vehicle_device(dev);
+        }
+        // myEdgeWeights, myEnergyParams, the stopping place memories and myParameter have no destructor side effects
         self.check_route_removal();
     }
 
