@@ -128,13 +128,6 @@ thread_local! {
 // determinism: C++ orders mySidings by driveway id (ComparatorIdLess) while the BTreeMap here orders by pointer
 // address; this only affects the order of the "sidings" tags in the block output.
 
-// TEMP rr02 trace (env RR02_DW)
-fn rr02_on() -> bool { std::env::var_os("RR02_DW").is_some() }
-fn rr02_l(l: Ptr<MSLink>) -> String { if l.is_null() { "NULL".to_string() } else { format!("{}>{}", l.get_lane_before().get_id(), l.get_lane().get_id()) } }
-fn rr02_e(v: &[Ptr<MSEdge>]) -> String { v.iter().map(|x| format!("{},", x.get_id())).collect() }
-fn rr02_ln(v: &[Ptr<MSLane>]) -> String { v.iter().map(|x| format!("{},", x.get_id())).collect() }
-fn rr02_d(v: &[Ptr<MSDriveWay>]) -> String { v.iter().map(|x| format!("{},", x.base2.get_id())).collect() }
-
 /// `toString(std::vector<const MSEdge*>)`: the edge ids joined by " ".
 fn edge_ids(v: &[Ptr<MSEdge>]) -> String {
     v.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>().join(" ")
@@ -2143,14 +2136,6 @@ impl MSDriveWay {
         }
         // add driveways that reverse along this driveways route
         dwm.add_reversal_foes(moving_block);
-        if rr02_on() {
-            let fs: String = flank_switches.iter().map(|l| format!("{},", rr02_l(*l))).collect();
-            let cl: String = dwm.myConflictLinks.iter().map(|l| format!("{},", rr02_l(*l))).collect();
-            eprintln!("DWR {} {} link={} route={} fwd={} bidi={} bidiEx={} flank={} fs={} clinks={} raw={}",
-                MSNet::get_instance().get_current_time_step(),
-                dw.base2.get_id(), rr02_l(link), rr02_e(&dwm.myRoute), rr02_ln(&dwm.myForward), rr02_ln(&dwm.myBidi),
-                rr02_ln(&dwm.myBidiExtended), rr02_ln(&dwm.myFlank), fs, cl, rr02_d(&dwm.myFoes));
-        }
         // make foes unique and symmetrical
         // determinism: std::set<MSDriveWay*, ComparatorNumericalIdLess> keeps the first driveway per numerical id
         // and iterates in numerical id order (this drives the sub-driveway ids "<parent>.<n>")
@@ -2249,10 +2234,6 @@ impl MSDriveWay {
                     }
                 }
             }
-        }
-        if rr02_on() {
-            let cl: String = dwm.myConflictLinks.iter().map(|l| format!("{},", rr02_l(*l))).collect();
-            eprintln!("DWF {} foes={} clinks={}", dw.base2.get_id(), rr02_d(&dwm.myFoes), cl);
         }
         dw
     }
@@ -3376,11 +3357,6 @@ impl MSDriveWay {
         if !rs.is_null() {
             let this_ptr = Ptr::new(&*self);
             for foe in rs.retrieve_drive_ways(link.get_tl_index()) {
-                if rr02_on() {
-                    eprintln!("DWAF {} link={} cand={} {}{}{}{}", self.base2.get_id(), rr02_l(link), foe.base2.get_id(),
-                        self.flank_conflict(&*foe) as i32, foe.flank_conflict(&*self) as i32,
-                        self.crossing_conflict(&*foe) as i32, foe.crossing_conflict(&*self) as i32);
-                }
                 if foe != this_ptr
                     && (self.flank_conflict(&*foe)
                         || foe.flank_conflict(&*self)
@@ -4237,7 +4213,6 @@ impl MSDriveWay {
         //
         // For movingBlock the logic is changed:
         // We remove the conflict-free part as before but then keep removing the conflict part until another non-conconflit part is found
-        if rr02_on() { eprintln!("DWSF {} foe={}", self.base2.get_id(), foe.base2.get_id()); }
         let self_ptr = Ptr::from_mut(self);
         if self.myForward.len() < foe.myForward.len()
             && self.myForward[..] == foe.myForward[..self.myForward.len()]
@@ -4409,7 +4384,6 @@ impl MSDriveWay {
             }
         }
 
-        if rr02_on() { eprintln!("DWSUB {} foe={} sub={} fwd={}", self.base2.get_id(), foe.base2.get_id(), sub.base2.get_id(), rr02_ln(&sub.myForward)); }
         foe.m().myFoes.push(sub);
         if foe.bidi_blocked_by_end(&*sub) {
             foe.m().add_sidings(sub, false);
@@ -4757,10 +4731,6 @@ impl MSDriveWay {
     #[allow(unused_variables)]
     pub fn add_switch_foes(&mut self, link: Ptr<MSLink>) {
         let foes = MY_SWITCH_DRIVE_WAYS.with(|m| m.borrow().get(&link).cloned().unwrap_or_default());
-        if rr02_on() {
-            let n = MY_SWITCH_DRIVE_WAYS.with(|m| m.borrow().get(&link).map(|v| v.len() as i32).unwrap_or(-1));
-            eprintln!("DWSW {} link={} n={}", self.base2.get_id(), rr02_l(link), n);
-        }
         let this_ptr = Ptr::new(&*self);
         for foe in foes {
             if foe != this_ptr
