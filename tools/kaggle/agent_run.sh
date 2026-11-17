@@ -2,7 +2,10 @@
 # du05 temporary (removed in the final commit): repeat the duarouter oracle, valgrind every case, release parity.
 cd "$(dirname "$0")/../.." || exit 1
 BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug/duarouter
-command -v valgrind >/dev/null 2>&1 || sudo apt-get install -y valgrind >/dev/null 2>&1 || echo "valgrind install failed"
+if ! command -v valgrind >/dev/null 2>&1; then
+  sudo apt-get update -y >/tmp/du05_apt.log 2>&1; sudo apt-get install -y valgrind >>/tmp/du05_apt.log 2>&1
+  command -v valgrind >/dev/null 2>&1 || { echo "valgrind missing:"; tail -8 /tmp/du05_apt.log; }
+fi
 CASES=$(cd tools/oracle/cases && ls -d duarouter_* | tr '\n' ' ')
 
 for i in 1 2 3 4 5; do
