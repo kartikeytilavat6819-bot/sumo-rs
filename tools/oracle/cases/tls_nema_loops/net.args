@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/tls_nema_loops/tls_nema_loops.nod.xml --edge-files tools/oracle/cases/tls_nema_loops/tls_nema_loops.edg.xml --tls.default-type NEMA

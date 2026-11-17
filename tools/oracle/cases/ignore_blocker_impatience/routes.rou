@@ -1,0 +1,33 @@
+<routes>
+    <vType id="normal" maxSpeed="13.89"/>
+    <vType id="impatient" maxSpeed="13.89" impatience="1.00"/>
+    <vType id="patient" maxSpeed="13.89" impatience="0.00"/>
+    <vehicle id="st" type="normal" depart="0.00" departSpeed="0.00">
+        <route edges="M1"/>
+        <stop lane="M1_0" endPos="150.00" duration="60.00"/>
+    </vehicle>
+    <vehicle id="m0" type="normal" depart="0.00" departSpeed="max">
+        <route edges="M0 M1"/>
+    </vehicle>
+    <vehicle id="m1" type="normal" depart="4.00" departSpeed="max">
+        <route edges="M0 M1"/>
+    </vehicle>
+    <vehicle id="s1" type="impatient" depart="6.00" departSpeed="max">
+        <route edges="S0 S1"/>
+    </vehicle>
+    <vehicle id="s2" type="patient" depart="9.00" departSpeed="max">
+        <route edges="S0 S1"/>
+    </vehicle>
+    <vehicle id="m2" type="normal" depart="12.00" departSpeed="max">
+        <route edges="M0 M1"/>
+    </vehicle>
+    <vehicle id="s3" type="normal" depart="15.00" departSpeed="max">
+        <route edges="S0 S1"/>
+    </vehicle>
+    <vehicle id="m3" type="normal" depart="20.00" departSpeed="max">
+        <route edges="M0 M1"/>
+    </vehicle>
+    <vehicle id="s4" type="impatient" depart="25.00" departSpeed="max">
+        <route edges="S0 S1"/>
+    </vehicle>
+</routes>
