@@ -885,17 +885,17 @@ impl MSStageWalking {
                     let mut toPos = Position::new(0., 0.);
                     if !from.is_null() && !to.is_null() {
                         if fromEdge.get_to_junction() == toEdge.get_from_junction() {
-                            fromPos = from.get_shape().back().clone();
-                            toPos = to.get_shape().front().clone();
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).front().clone();
                         } else if fromEdge.get_to_junction() == toEdge.get_to_junction() {
-                            fromPos = from.get_shape().back().clone();
-                            toPos = to.get_shape().back().clone();
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).back().clone();
                         } else if fromEdge.get_from_junction() == toEdge.get_from_junction() {
-                            fromPos = from.get_shape().front().clone();
-                            toPos = to.get_shape().front().clone();
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).front().clone();
                         } else if fromEdge.get_from_junction() == toEdge.get_to_junction() {
-                            fromPos = from.get_shape().front().clone();
-                            toPos = to.get_shape().back().clone();
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).back().clone();
                         }
                         length += fromPos.distance_to2d(&toPos);
                     }
