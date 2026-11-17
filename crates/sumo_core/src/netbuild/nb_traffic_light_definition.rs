@@ -319,17 +319,6 @@ impl NBTrafficLightDefinition {
         }
         let ret = self.my_compute(brakingTime);
         ret.m().base2.update_parameters(self.base2.get_parameters_map());
-        if ret.get_type() == TrafficLightType::ACTUATED {
-            for param in ["jam-threshold", "passing-time", "detector-gap", "detector-length", "inactive-threshold"] {
-                let opt = format!("tls.actuated.{}", param);
-                if !oc.is_default(&opt) && !ret.base2.has_parameter(param) {
-                    ret.m().base2.set_parameter(param, &oc.get_value_string(&opt).unwrap());
-                }
-            }
-            if !oc.is_default("tls.actuated.show-detectors") && !ret.base2.has_parameter("show-detectors") {
-                ret.m().base2.set_parameter("show-detectors", &oc.get_value_string("tls.actuated.show-detectors").unwrap());
-            }
-        }
         ret
     }
 

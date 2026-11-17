@@ -8,6 +8,9 @@ One command measures everything:
 bash tools/oracle/run_all.sh --build
 ```
 
+The authoritative full-gate measurement runs on the VM: `powershell -File tools/gcloud/vm_gate.ps1`
+(see `SCOREBOARD.md` for the latest result).
+
 It runs every case in `tools/oracle/cases/` through the Rust binaries and prints a scoreboard:
 
 ```
@@ -48,20 +51,18 @@ A panic is reported as `sim-PANIC` with the first message line.
 
 ## Known failing rows and their owners
 
-Current state, 2026-11-16 late — **four** rows fail. Everything else in the old table is fixed and must not
-be re-investigated:
+Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at `8093db8c`:
+**PASS=151 FAIL=5 SKIP=18; depart 15/15; unit tests ok.** Only these five rows fail — everything
+previously listed is fixed and must not be re-investigated. All five fail at the sim stage; their
+net stages PASS.
 
-| Row | Symptom | Owner |
-|---|---|---|
-| sublanes/ref sim | **PANIC** `ms_leader_info.rs:503` index out of bounds — any `--lateral-resolution` run crashes | sl01 |
-| reroute_alt/ref sim | `v0` stays on the closed edge `11` at t=8; C++ detours to `12` — rerouting never runs | rr01 |
-| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.60 | op02 |
-| vtypes/ref sim | `EIDM_1` timeLoss 4.05 vs 4.02 (0.10 m at t=62) | rt03 |
-
-Newly PASSING and now covered by a case (these were unverifiable this morning):
-
-- `lanechange` — `MSEdgeControl::change_lanes` / `gComputeLC` fix
-- `lefthand` net + sim — LHT net generation is element-identical to C++ given `net.args` = `--lefthand`
+| Row | Owner |
+|---|---|
+| city_london_lh/ref sim | in01 (fix being merged) |
+| city_kansas_rural/ref sim | ck01 |
+| city_karlsruhe_tram/ref sim | ck02 |
+| city_paris_dense/ref sim | cb01 |
+| city_tokyo_lefthand/ref sim | cb01 |
 
 Fixed since the table below was written, do **not** reopen:
 
