@@ -13,4 +13,5 @@ for d in "$OUT"/duarouter_*/; do
   for f in "$d"*.diff; do
     [ -f "$f" ] && { echo "== $f"; head -8 "$f"; }
   done
+  echo "== $d cand.log"; grep -v '^$' "$d/cand.log" | head -12 | cut -c1-200
 done
