@@ -144,7 +144,8 @@ const VEHPARS_COLOR_SET: i64 = 1;
 
 thread_local! {
     /// MSDevice_ToC::myInstances (registered devices)
-    static MY_INSTANCES: std::cell::RefCell<BTreeSet<Ptr<MSDevice_ToC>>> = std::cell::RefCell::new(BTreeSet::new());
+    // ordered by holder numerical id, as C++ ComparatorNumericalIdLess on MSVehicleDevice::getNumericalID()
+    static MY_INSTANCES: std::cell::RefCell<BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_ToC>>> = std::cell::RefCell::new(BTreeMap::new());
     /// MSDevice_ToC::createdOutputFiles
     static CREATED_OUTPUT_FILES: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
     /// MSDevice_ToC::myResponseTimeRNG, seeded as in C++ (`SumoRNG MSDevice_ToC::myResponseTimeRNG("toc")`)
@@ -309,7 +310,7 @@ impl MSDevice_ToC {
                 &mrmSafeSpot, mrmSafeSpotDuration, useColoring, ogp))));
             // register at static instance container (C++ does this in the constructor; done here because
             // the Rust constructor returns by value and the address must be the final one)
-            MY_INSTANCES.with(|m| m.borrow_mut().insert(device));
+            MY_INSTANCES.with(|m| m.borrow_mut().insert(v.get_numerical_id(), device));
             into.push(device.cast::<MSVehicleDevice>());
         }
     }
@@ -320,7 +321,7 @@ impl MSDevice_ToC {
     //         return myInstances;
     //     }
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static BTreeSet<Ptr<MSDevice_ToC>> {
+    pub fn get_instances() -> &'static BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_ToC>> {
         // SAFETY: thread-local storage lives for the thread; C++ returns a reference to the global set
         unsafe { &*MY_INSTANCES.with(|m| m.as_ptr()) }
     }
@@ -465,8 +466,8 @@ impl MSDevice_ToC {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // unregister from static instance container
-        let me = Ptr::from_mut(self);
-        MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
+        let id = self.base.get_numerical_id();
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&id));
         // deschedule commands associated to this device
         if !self.myTriggerMRMCommand.is_null() {
             self.myTriggerMRMCommand.m().deschedule();
