@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <trips>
-  <!-- XY positions on the straight road at y~150 of the trips net; mapped with --mapmatch.distance -->
+  <!-- XY positions on the straight road at y~150 of the trips net, mapped with the mapmatch distance option -->
   <trip id="m1" depart="0" fromXY="30,150" toXY="280,149"/>
   <trip id="m2" depart="2" fromXY="100,150" toXY="200,150"/>
 </trips>
