@@ -5602,8 +5602,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_route_removal(&mut self) {
-        // shortcut: MSNet::hasInstance / hasFlow(getFlowID()) is not checked; MSRoute::checkRemoval is called directly
-        self.myRoute.check_removal(false);
+        // the check for an instance is needed for the unit tests which do not construct a network
+        if MSNet::has_instance() && !MSNet::get_instance().m().has_flow(&self.get_flow_id()) {
+            self.myRoute.check_removal(false);
+        }
     }
 
     /// C++: `bool MSBaseVehicle::insertJump(int, MSRouteIterator, std::string &)` [private]
