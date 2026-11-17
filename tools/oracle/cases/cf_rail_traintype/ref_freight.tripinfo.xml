@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:10:56.510940-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/cf_rail_traintype/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/cf_rail_traintype/routes.rou"/>
+        <additional-files value="tools/oracle/cases/cf_rail_traintype/freight.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h11/tools/oracle/cases/cf_rail_traintype/ref_freight.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h11/tools/oracle/cases/cf_rail_traintype/ref_freight.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h11/tools/oracle/cases/cf_rail_traintype/ref_freight.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="slowEast" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="10.00" departDelay="0.00" arrival="126.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="10.00" duration="126.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_slowEast fcd_slowEast" vType="slowTrain" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fe0" depart="30.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="22.00" arrival="206.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="18.39" duration="176.00" routeLength="1250.10" waitingTime="49.00" waitingCount="1" stopTime="0.00" timeLoss="133.78" rerouteNo="0" devices="tripinfo_fe0 fcd_fe0" vType="DEFAULT_RAILTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="fe1" depart="124.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="76.00" arrival="296.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="18.39" duration="172.00" routeLength="1250.10" waitingTime="45.00" waitingCount="1" stopTime="0.00" timeLoss="129.78" rerouteNo="0" devices="tripinfo_fe1 fcd_fe1" vType="DEFAULT_RAILTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>
