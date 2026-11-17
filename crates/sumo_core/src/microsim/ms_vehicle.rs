@@ -11654,12 +11654,12 @@ impl MSVehicle {
         let stopOk = self.myStops.is_empty()
             || self.myStops.front().unwrap().edge != self.myCurrEdge
             || (self.myStops.front().unwrap().get_speed() > 0.0 && self.myState.myPos > self.myStops.front().unwrap().pars.endPos - 2.0 * POSITION_EPS);
-        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class())
+        if (self.get_v_class() & utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0
             && self.get_previous_speed() <= speedThreshold
             && self.myState.myPos <= self.myLane.get_length()
             && !self.myLane.is_internal()
             && self.myCurrEdge + 1 != self.myRoute.size() as usize
-            && self.myLane.get_edge().get_bidi_edge() == self.get_next_edge_ptr()
+            && self.myLane.get_edge().get_bidi_edge() == self.succ_edge(1)
             // ensure there are no further stops on this edge
             && stopOk
         {
