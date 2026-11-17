@@ -253,7 +253,7 @@ pub fn check_options() -> bool {
     with_options(|oc| {
         ok &= NBFrame::check_options(oc);
         ok &= NWFrame::check_options(oc);
-        // shortcut: SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here, upgrade when system_frame is ported
+        ok &= utils::common::system_frame::check_options(oc);
     });
     ok
 }
@@ -308,7 +308,7 @@ pub fn fill_options() {
         oc.set_additional_help_message(" Either \"--grid\", \"--spider\" or \"--rand\" must be supplied.\n  In dependence to these switches other options are used.");
 
         // insert options sub-topics
-        // shortcut: SystemFrame::addConfigurationOptions(oc) is not ported, so its subtopic is not filled here, upgrade when system_frame is ported
+        utils::common::system_frame::add_configuration_options(oc);
         oc.add_option_sub_topic("Grid Network");
         oc.add_option_sub_topic("Spider Network");
         oc.add_option_sub_topic("Random Network");
@@ -322,15 +322,14 @@ pub fn fill_options() {
         oc.add_option_sub_topic("Junctions");
         oc.add_option_sub_topic("Pedestrian");
         oc.add_option_sub_topic("Bicycle");
-        // shortcut: SystemFrame::addReportOptions(oc) is not ported, so its subtopic is not filled here, upgrade when system_frame is ported
+        utils::common::system_frame::add_report_options(oc);
     });
 
     NGFrame::fill_options();
     with_options(|oc| {
         NBFrame::fill_options(oc, true);
         NWFrame::fill_options(oc, true);
-        // shortcut: RandHelper::insertRandOptions(oc) is not ported, so the rand options are not registered here, upgrade when rand_helper registers them
-        // (RandHelper::insertRandOptions is not in this port)
+        utils::common::rand_helper::insert_rand_options(oc);
 
         oc.do_register("tls.discard-simple", SumoOption::bool(false));
         oc.add_description("tls.discard-simple", "TLS Building", "Does not instantiate traffic lights at geometry-like nodes");

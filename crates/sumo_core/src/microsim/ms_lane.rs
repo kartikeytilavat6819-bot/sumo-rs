@@ -341,9 +341,9 @@ pub struct MSLane {
     /// All direct internal and direct (disregarding internal predecessors) non-internal predecessor lanes of this lane
     pub myApproachingLanes: BTreeMap<Ptr<MSEdge>, Vec<Ptr<MSLane>>>,
     /// leaders on all sublanes as seen by approaching vehicles (cached)
-    pub myLeaderInfo: MSLeaderInfo,
+    pub myLeaderInfo: std::cell::RefCell<MSLeaderInfo>,
     /// followers on all sublanes as seen by vehicles on consecutive lanes (cached)
-    pub myFollowerInfo: MSLeaderInfo,
+    pub myFollowerInfo: std::cell::RefCell<MSLeaderInfo>,
     /// time step for which myLeaderInfo was last updated
     pub myLeaderInfoTime: std::cell::Cell<SUMOTime>,
     /// time step for which myFollowerInfo was last updated
@@ -598,8 +598,8 @@ impl MSLane {
             myRecalculateBruttoSum: false,
             myLinks: Vec::new(),
             myApproachingLanes: BTreeMap::new(),
-            myLeaderInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
-            myFollowerInfo: MSLeaderInfo::new(width, Ptr::null(), 0.),
+            myLeaderInfo: std::cell::RefCell::new(MSLeaderInfo::new(width, Ptr::null(), 0.)),
+            myFollowerInfo: std::cell::RefCell::new(MSLeaderInfo::new(width, Ptr::null(), 0.)),
             myLeaderInfoTime: std::cell::Cell::new(SUMOTIME_MIN),
             myFollowerInfoTime: std::cell::Cell::new(SUMOTIME_MIN),
             myLengthGeometryFactor: utils::geom::POSITION_EPS.max(shape.length()) / length,
@@ -2551,12 +2551,12 @@ impl MSLane {
             }
             if ego.is_null() && minPos == 0.0 {
                 // update cached value
-                Ptr::new(self).m().myLeaderInfo = leader_info_copy(&leaderTmp);
+                *self.myLeaderInfo.borrow_mut() = leader_info_copy(&leaderTmp);
                 self.myLeaderInfoTime.set(MSNet::get_instance().get_current_time_step());
             }
             return leaderTmp;
         }
-        leader_info_copy(&self.myLeaderInfo)
+        leader_info_copy(&self.myLeaderInfo.borrow())
     }
 
     /// C++: `const MSLeaderInfo MSLane::getFirstVehicleInformation(const MSVehicle *, double, bool, double, bool) const` [const]
@@ -2629,12 +2629,12 @@ impl MSLane {
             }
             if ego.is_null() && maxPos == f64::MAX {
                 // update cached value
-                Ptr::new(self).m().myFollowerInfo = leader_info_copy(&followerTmp);
+                *self.myFollowerInfo.borrow_mut() = leader_info_copy(&followerTmp);
                 self.myFollowerInfoTime.set(MSNet::get_instance().get_current_time_step());
             }
             return followerTmp;
         }
-        leader_info_copy(&self.myFollowerInfo)
+        leader_info_copy(&self.myFollowerInfo.borrow())
     }
 
     /// C++: `int MSLane::getVehicleNumber() const` [const]
@@ -9065,8 +9065,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn may_continue(&self, veh: Ptr<MSVehicle>) -> bool {
-        // shortcut: get_device() is not keyed by type yet, so the MSDevice_Taxi lookup never finds a device
-        if !veh.get_device(&()).is_null() {
+        if !veh.get_device("taxi").is_null() {
             // taxi device may assign a new route that continues past the end of the initial route
             return true;
         }

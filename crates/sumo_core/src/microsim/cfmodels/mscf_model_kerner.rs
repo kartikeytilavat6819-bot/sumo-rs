@@ -31,6 +31,12 @@ fn kerner_get_model_id(m: &MSCFModel) -> i32 {
 fn kerner_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
     cf_cast::<MSCFModel_Kerner>(m).duplicate(vtype)
 }
+fn kerner_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Kerner_VehicleVariables) }.save_state(out, m)
+}
+fn kerner_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Kerner_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn kerner_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
     cf_cast::<MSCFModel_Kerner>(m).create_vehicle_variables()
 }
@@ -47,6 +53,8 @@ pub const KERNER_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: kerner_get_model_id,
     duplicate: kerner_duplicate,
     create_vehicle_variables: kerner_create_vehicle_variables,
+    save_vehicle_variables: kerner_save_vehicle_variables,
+    load_vehicle_variables: kerner_load_vehicle_variables,
     ..DEFAULT_MSCF_MODEL_VT
 };
 

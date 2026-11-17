@@ -245,7 +245,8 @@ impl MSDevice {
 
     /// C++: `MSDevice * MSVehicle::getDevice(typeid(T))` [type-keyed lookup, emulated by device kind]
     /// returns the first device of the given kind (its deviceName), or null
-    // shortcut: matches the device kind by deviceName instead of typeid, upgrade when devices carry a type tag
+    /// Port note: C++ `typeid(*dev) == type` is an exact class test, and each device class has a unique deviceName()
+    /// which C++ getDeviceName also derives from the id prefix (see get_device_name), so the name is the class key
     pub fn get_device_by_name(devices: &[Ptr<MSVehicleDevice>], name: &str) -> Ptr<MSVehicleDevice> {
         for dev in devices.iter() {
             if dev.base2.device_name() == name {
@@ -256,7 +257,7 @@ impl MSDevice {
     }
 
     /// C++: `std::string MSDevice::getParameter(const std::string &) const` [virtual, run as the most derived override]
-    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    /// (dispatch by deviceName, the exact-class key, as in get_device_by_name)
     pub fn get_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str) -> String {
         match dev.base2.device_name().as_str() {
             "battery" => dev.cast::<MSDevice_Battery>().get_parameter(key),
@@ -277,7 +278,7 @@ impl MSDevice {
     }
 
     /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual, run as the most derived override]
-    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    /// (dispatch by deviceName, the exact-class key, as in get_device_by_name)
     pub fn set_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str, value: &str) {
         match dev.base2.device_name().as_str() {
             "battery" => dev.cast::<MSDevice_Battery>().m().set_parameter(key, value),
@@ -297,7 +298,7 @@ impl MSDevice {
     }
 
     /// C++: `void MSDevice::generateOutput(OutputDevice *) const` [virtual, run as the most derived override]
-    /// shortcut: dispatch by deviceName like get_parameter_of, upgrade when devices carry a type tag
+    /// (dispatch by deviceName, the exact-class key, as in get_device_by_name)
     pub fn generate_output_of(dev: Ptr<MSVehicleDevice>, tripinfoOut: Ptr<OutputDevice>) {
         match dev.base2.device_name().as_str() {
             "battery" => dev.cast::<MSDevice_Battery>().generate_output(tripinfoOut),

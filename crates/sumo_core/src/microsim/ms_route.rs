@@ -30,7 +30,7 @@ pub struct MSRoute {
     /// The assigned or calculated costs
     pub myCosts: f64,
     /// The estimated savings when rerouting
-    pub mySavings: f64,
+    pub mySavings: std::cell::Cell<f64>,
     /// Whether this route is incomplete and requires rerouting
     pub myReroute: bool,
     /// List of the stops on the parsed route
@@ -117,7 +117,7 @@ impl MSRoute {
             myColor: c,
             myPeriod: 0,
             myCosts: -1.0,
-            mySavings: 0.0,
+            mySavings: std::cell::Cell::new(0.0),
             myReroute: false,
             myStops: stops.clone(),
             myReplacedTime: replacedTime,
@@ -621,7 +621,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_savings(&self) -> f64 {
-        self.mySavings
+        self.mySavings.get()
     }
 
     /// C++: `SUMOTime MSRoute::getReplacedTime() const` [const]
@@ -670,8 +670,8 @@ impl MSRoute {
     //         mySavings = savings;
     //     }
     #[allow(unused_variables)]
-    pub fn set_savings(&mut self, savings: f64) {
-        self.mySavings = savings;
+    pub fn set_savings(&self, savings: f64) {
+        self.mySavings.set(savings);
     }
 
     /// C++: `bool MSRoute::mustReroute() const` [const]

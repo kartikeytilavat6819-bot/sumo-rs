@@ -61,7 +61,7 @@ impl AGFrame {
         utils::options::options_cont::with_options(|oc| {
             oc.add_call_example("--net-file <INPUT>.net.xml --stat-file <INPUT>.stat.xml --output <OUTPUT>.rou.xml --rand", "generate a trips file from a stats file on a given net using arbitrary random seed");
             oc.add_call_example("--net-file <INPUT>.net.xml --stat-file <INPUT>.stat.xml --output <OUTPUT>.rou.xml --duration-d <NBR_OF_DAYS>", "generate a trips file from a stats file on a given net for numerous days (with fixed random seed)");
-            // shortcut: SystemFrame::addConfigurationOptions, SystemFrame::addReportOptions and RandHelper::insertRandOptions are not ported yet, so their options are not registered here; upgrade when they land
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Processing");
@@ -83,6 +83,8 @@ impl AGFrame {
             oc.add_description("end", "Time", "Sets the time of ending of the simulation during the last day (in seconds)");
             oc.do_register("duration-d", SumoOption::integer(1));
             oc.add_description("duration-d", "Time", "Sets the duration of the simulation in days");
+            utils::common::system_frame::add_report_options(oc);
+            utils::common::rand_helper::insert_rand_options(oc);
         });
     }
 

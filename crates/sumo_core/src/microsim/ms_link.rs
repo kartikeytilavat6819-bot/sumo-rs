@@ -71,10 +71,8 @@ fn person_to_traffic_object(p: Ptr<MSPerson>) -> Ptr<SUMOTrafficObject> {
     Ptr::from_mut(&mut p.m().base.base)
 }
 
-// shortcut: ego->getRNG() is reverted: the per-object RNG is null for some ego objects (null Ptr deref), so the global rand helper is used; upgrade when every SUMOTrafficObject owns its RNG
 fn ego_rand(ego: Ptr<SUMOTrafficObject>) -> f64 {
-    let _ = ego;
-    utils::common::rand_helper::rand()
+    ego.get_rng().m().rand()
 }
 use utils::geom::NUMERICAL_EPS;
 use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_degree, INVALID_OFFSET};

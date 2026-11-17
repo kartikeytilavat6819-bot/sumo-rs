@@ -15,7 +15,7 @@ pub struct RONode {
     /// Outgoing edges
     pub myOutgoing: ConstROEdgeVector,
     /// Flipped routing node
-    pub myFlippedRoutingNode: Ptr<FlippedNode<ROEdge, RONode, ROVehicle>>,
+    pub myFlippedRoutingNode: std::cell::Cell<Ptr<FlippedNode<ROEdge, RONode, ROVehicle>>>,
 }
 
 impl std::ops::Deref for RONode {
@@ -53,7 +53,7 @@ impl RONode {
     //     : Named(id) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        RONode { base: Named::new(id), myPosition: Position::default(), myIncoming: Vec::new(), myOutgoing: Vec::new(), myFlippedRoutingNode: Ptr::null() }
+        RONode { base: Named::new(id), myPosition: Position::default(), myIncoming: Vec::new(), myOutgoing: Vec::new(), myFlippedRoutingNode: std::cell::Cell::new(Ptr::null()) }
     }
 
     /// C++: `void RONode::~RONode() noexcept` [virtual]
@@ -63,9 +63,9 @@ impl RONode {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        if !self.myFlippedRoutingNode.is_null() {
+        if !self.myFlippedRoutingNode.get().is_null() {
             // delete myFlippedRoutingNode (allocated with Box in getFlippedRoutingNode)
-            drop(unsafe { Box::from_raw(self.myFlippedRoutingNode.as_raw()) });
+            drop(unsafe { Box::from_raw(self.myFlippedRoutingNode.get().as_raw()) });
         }
     }
 
@@ -136,10 +136,10 @@ impl RONode {
     #[allow(unused_variables)]
     pub fn get_flipped_routing_node(&self) -> Ptr<FlippedNode<ROEdge, RONode, ROVehicle>> {
         let node = Ptr::new(self);
-        if node.myFlippedRoutingNode.is_null() {
-            node.m().myFlippedRoutingNode = Ptr::from_raw(Box::into_raw(Box::new(FlippedNode::new(node))));
+        if self.myFlippedRoutingNode.get().is_null() {
+            self.myFlippedRoutingNode.set(Ptr::from_raw(Box::into_raw(Box::new(FlippedNode::new(node)))));
         }
-        self.myFlippedRoutingNode
+        self.myFlippedRoutingNode.get()
     }
 
     /// C++: `void RONode::RONode(const RONode &)` [private]

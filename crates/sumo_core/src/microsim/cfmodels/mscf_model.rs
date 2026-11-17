@@ -88,6 +88,8 @@ pub struct MSCFModelVt {
     pub get_model_id: fn(&MSCFModel) -> i32,
     pub duplicate: fn(&MSCFModel, Ptr<MSVehicleType>) -> Ptr<MSCFModel>,
     pub create_vehicle_variables: fn(&MSCFModel) -> Ptr<MSCFModel_VehicleVariables>,
+    pub save_vehicle_variables: fn(&MSCFModel, &MSCFModel_VehicleVariables, &mut OutputDevice),
+    pub load_vehicle_variables: fn(&MSCFModel, &mut MSCFModel_VehicleVariables, &SUMOSAXAttributes),
     pub get_headway_time: fn(&MSCFModel) -> f64,
     pub set_headway_time: fn(&mut MSCFModel, f64),
     pub get_imperfection: fn(&MSCFModel) -> f64,
@@ -143,6 +145,10 @@ fn default_duplicate(_m: &MSCFModel, _vtype: Ptr<MSVehicleType>) -> Ptr<MSCFMode
 fn default_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
     m.create_vehicle_variables_base()
 }
+fn default_save_vehicle_variables(m: &MSCFModel, _vars: &MSCFModel_VehicleVariables, _out: &mut OutputDevice) {
+    utils::common::msg_handler::write_warning(&format!("carFollowModel of vType '{}' cannot save state", m.myType.get_id()));
+}
+fn default_load_vehicle_variables(_m: &MSCFModel, _vars: &mut MSCFModel_VehicleVariables, _attrs: &SUMOSAXAttributes) {}
 fn default_get_headway_time(m: &MSCFModel) -> f64 {
     m.get_headway_time_base()
 }
@@ -214,6 +220,8 @@ pub(crate) const DEFAULT_MSCF_MODEL_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: default_get_model_id,
     duplicate: default_duplicate,
     create_vehicle_variables: default_create_vehicle_variables,
+    save_vehicle_variables: default_save_vehicle_variables,
+    load_vehicle_variables: default_load_vehicle_variables,
     get_headway_time: default_get_headway_time,
     set_headway_time: default_set_headway_time,
     get_imperfection: default_get_imperfection,
@@ -257,6 +265,12 @@ impl MSCFModel {
     }
     pub fn create_vehicle_variables(&self) -> Ptr<MSCFModel_VehicleVariables> {
         (self.vt.create_vehicle_variables)(self)
+    }
+    pub fn save_vehicle_variables(&self, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+        (self.vt.save_vehicle_variables)(self, vars, out)
+    }
+    pub fn load_vehicle_variables(&self, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+        (self.vt.load_vehicle_variables)(self, vars, attrs)
     }
     pub fn get_headway_time(&self) -> f64 {
         (self.vt.get_headway_time)(self)
@@ -2508,7 +2522,7 @@ impl MSCFModel {
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::from_raw(pred.as_raw() as *mut ()));
         let perceivedSpeedDifference = ds_mut.get_perceived_speed_difference(*predSpeed - speed, *gap, Ptr::from_raw(pred.as_raw() as *mut ()));
-        // shortcut: the C++ accelError recomputation via followSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
         *predSpeed = speed + perceivedSpeedDifference;
     }
@@ -2556,7 +2570,7 @@ impl MSCFModel {
         let ds = veh.get_driver_state();
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::default());
-        // shortcut: the C++ accelError recomputation via stopSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
     }
 
@@ -2584,7 +2598,7 @@ impl MSCFModel_VehicleVariables {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
-        utils::common::msg_handler::write_warning(&format!("carFollowModel of vType '{}' cannot save state", cfm.myType.get_id()));
+        cfm.save_vehicle_variables(self, out);
     }
 
     /// C++: `void VehicleVariables::loadState(const SUMOSAXAttributes &)` [virtual]

@@ -2370,7 +2370,7 @@ impl NBNodeCont {
                                 tlc.remove_fully(s.m().get_id().to_string());
                             }
                         }
-                        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_)));
+                        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_));
                         // @todo patch endOffset for all incoming lanes according to the signal positions
                         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
                         node.m().add_traffic_light(tlDef);
@@ -2415,7 +2415,7 @@ impl NBNodeCont {
                     self.myGuessedTLS.insert(node);
                 }
                 let id = self.create_cluster_id(nodeSet, "joinedG_");
-                let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+                let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
                 let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
                 for n in nodes.iter().copied() {
                     n.m().add_traffic_light(tlDef);
@@ -2632,7 +2632,7 @@ impl NBNodeCont {
                 }
             }
             let nodes: Vec<Ptr<NBNode>> = c.iter().copied().collect();
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
             for n in nodes.iter().copied() {
                 n.m().add_traffic_light(tlDef);
@@ -2665,7 +2665,7 @@ impl NBNodeCont {
     #[allow(unused_variables)]
     pub fn set_as_tl_controlled(&mut self, node: Ptr<NBNode>, tlc: &mut NBTrafficLightLogicCont, type_: TrafficLightType, id: String) {
         let id = if id == "" { node.get_id().to_string() } else { id };
-        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&id, node, 0, type_)));
+        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&id, node, 0, type_));
         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
         node.m().add_traffic_light(tlDef);
         if !tlc.insert(tlDef, false) {
@@ -5325,7 +5325,7 @@ impl NBNodeCont {
             newNode.m().base2.set_parameter(SUMO_PARAM_ORIGID, &clusterNames.join(" "));
         }
         if setTL && !newNode.m().is_tl_controlled() {
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&tlID, newNode, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&tlID, newNode, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
             newNode.m().add_traffic_light(tlDef);
             if !tlc.insert(tlDef, false) {

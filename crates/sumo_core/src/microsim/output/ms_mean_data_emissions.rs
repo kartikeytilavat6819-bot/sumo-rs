@@ -319,6 +319,7 @@ static MS_MEAN_DATA_EMISSIONS_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: MSMeanData::open_interval_base,
     write_prefix: MSMeanData::write_prefix_base,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
 };
 
 fn emissions_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {

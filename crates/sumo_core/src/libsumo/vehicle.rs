@@ -4255,8 +4255,35 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn dispatch_taxi(vehID: &str, reservations: &Vec<String>) {
-        // shortcut: needs a typed MSBaseVehicle::getDevice(typeid(MSDevice_Taxi)) and a runtime tag for dynamic_cast<MSDispatch_TraCI*>; MSDispatch_TraCI::interpretDispatch itself is ported, upgrade when getDevice takes a typed device id and MSDispatch has a type tag
-        panic!("Vehicle::dispatchTaxi not yet ported: depends on typed getDevice and the MSDispatch type tag")
+        let veh = Helper::get_vehicle(vehID);
+        let dev = veh.m().get_device("taxi");
+        let taxi = if dev.is_null() { Ptr::null() } else { dev.cast::<MSDevice_Taxi>() };
+        if !veh.m().has_departed() {
+            panic!("{}", format!("Vehicle '{}' has not yet departed", vehID));
+        }
+        if taxi.is_null() {
+            panic!("{}", format!("Vehicle '{}' is not a taxi", vehID));
+        }
+        let dispatcher = MSDevice_Taxi::get_dispatch_algorithm();
+        if dispatcher.is_null() {
+            panic!("Cannot dispatch taxi because no reservations have been made");
+        }
+        // replaces dynamic_cast: MSDevice_Taxi::initDispatch creates MSDispatch_TraCI only when the algo option is "traci"
+        if utils::options::options_cont::get_string("device.taxi.dispatch-algorithm") != "traci" {
+            panic!("device.taxi.dispatch-algorithm 'traci' has not been loaded");
+        }
+        let traciDispatcher = dispatcher.cast::<MSDispatch_TraCI>();
+        if reservations.len() == 0 {
+            panic!("{}", format!("No reservations have been specified for vehicle '{}'", vehID));
+        }
+        // C++ `catch (InvalidArgument& e)` around interpretDispatch
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| traciDispatcher.m().interpret_dispatch(taxi, reservations)));
+        if let Err(e) = res {
+            if let Some(ProcessError::InvalidArgument(msg)) = e.downcast_ref::<ProcessError>() {
+                panic!("{}", format!("Could not interpret reservations for vehicle '{}' ({}).", vehID, msg));
+            }
+            std::panic::resume_unwind(e);
+        }
     }
 
     /// C++: `void Vehicle::setLength(const std::string &, double)` [static]

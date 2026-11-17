@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:33:25.356269-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/vtypes/plain/net.nod.xml"/>
+        <edge-files value="tools/oracle/cases/vtypes/plain/net.edg.xml"/>
+        <connection-files value="tools/oracle/cases/vtypes/plain/net.con.xml"/>
+        <tllogic-files value="tools/oracle/cases/vtypes/plain/net.tll.xml"/>
+        <type-files value="tools/oracle/cases/vtypes/plain/net.typ.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/netwrite_variants/ref/street_sign/net.xml"/>
+        <street-sign-output value="tools/oracle/cases/netwrite_variants/ref/street_sign/signs.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <poi id="--103226#1.55.53" type="yield" color="red" x="70.17" y="139.72" angle="0.59"/>
+    <poi id="--103227#1.115.16" type="priority" color="yellow" x="151.93" y="271.82" angle="0.34"/>
+    <poi id="--103227#2.139.31" type="priority" color="yellow" x="151.14" y="139.26" angle="0.35"/>
+    <poi id="-103224#0.47.46" type="priority" color="yellow" x="47.43" y="145.49" angle="90.35"/>
+    <poi id="-103224#1.57.12" type="yield" color="red" x="129.97" y="144.99" angle="90.35"/>
+    <poi id="-103224#2.106.99" type="priority" color="yellow" x="260.76" y="144.20" angle="90.35"/>
+    <poi id="-103226#0.47.59" type="yield" color="red" x="61.17" y="160.24" angle="180.58"/>
+    <poi id="-103227#0.20.34" type="priority" color="yellow" x="136.46" y="292.32" angle="180.34"/>
+    <poi id="-103227#1.115.16" type="priority" color="yellow" x="135.66" y="159.76" angle="180.34"/>
+    <poi id="-103228.66.15" type="yield" color="red" x="157.60" y="286.63" angle="270.00"/>
+    <poi id="-103230.59.35" type="yield" color="red" x="272.20" y="138.53" angle="1.03"/>
+</additional>
