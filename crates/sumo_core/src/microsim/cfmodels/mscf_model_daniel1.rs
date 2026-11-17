@@ -157,7 +157,7 @@ impl MSCFModel_Daniel1 {
         //  on lane changing
         let vMin = self.get_speed_after_max_decel(oldV);
         let vMax = min2(min2(veh.get_lane().get_vehicle_max_speed(Ptr::new(&veh.base.base.base)), self.max_next_speed(oldV, veh)), vSafe);
-        // shortcut: the _DEBUG-only warning for vMin > vMax is not ported, upgrade when debug-build output must match
+        // the vMin > vMax warning is inside C++ `#ifdef _DEBUG`, which release builds (the oracle) do not define
         let wanted = max2(vMin, self.dawdle(vMax, veh.get_rng()));
         veh.m().get_lane_change_model().patch_speed(vMin, wanted, vMax, self)
     }
