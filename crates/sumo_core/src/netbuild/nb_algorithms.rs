@@ -17,15 +17,7 @@ fn sort_by_less<T>(v: &mut Vec<T>, less: impl Fn(&T, &T) -> bool) {
 }
 
 fn sort_edges_by(v: &mut Vec<Ptr<NBEdge>>, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
-    v.sort_by(|a, b| {
-        if less(*a, *b) {
-            std::cmp::Ordering::Less
-        } else if less(*b, *a) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
+    utils::common::std_sort::std_sort(v.as_mut_slice(), less);
 }
 
 /// Stores the information about the angle between an incoming ("from") and an outgoing ("to") edge
