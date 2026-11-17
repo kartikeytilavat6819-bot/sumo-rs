@@ -13,7 +13,9 @@
   (commit first; it builds + runs run_all, depart, unit tests).
   GOOGLE VM GATE (enabled, faster, use it first): `powershell -ExecutionPolicy Bypass -File
   C:\Users\karti\sumo-rs\tools\gcloud\vm_gate.ps1 -Branch worktree-agent-<ID>` (~2-5 min warm, same output as Kaggle,
-  also runs agent_run.sh). If it errors or hangs >30 min, fall back to the Kaggle gate.ps1 below.
+  also runs agent_run.sh). USER'S ORDER: use ONLY the VM gate, never the Kaggle gate.ps1 (it is too slow). If a VM
+  run fails for an infrastructure reason (ICE, cache, ssh), just rerun vm_gate.ps1.
+  NEVER ssh into the VMs or delete anything there (it breaks other agents' builds); the gate retries cache errors itself.
   NO LOCAL RUST BUILDS AT ALL (user's order; the laptop ran out of RAM). Never run cargo on this machine; any cargo
   process is killed. All Rust building/running happens on Kaggle:
   * To run YOUR OWN commands there (traces, single cases, diffs), commit an executable script
