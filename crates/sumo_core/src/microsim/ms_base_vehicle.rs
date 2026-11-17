@@ -2425,8 +2425,13 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_transportable_device(&mut self, isPerson: bool) {
-        // shortcut: MSDevice_Transportable::buildVehicleDevices is not wired to myDevices yet, so the device stays null
-        let _ = isPerson;
+        if isPerson {
+            self.myPersonDevice = MSDevice_Transportable::build_vehicle_devices(&mut self.base, &mut self.myDevices, false);
+            self.myMoveReminders.insert(0, (self.myPersonDevice.cast::<MSMoveReminder>(), 0.));
+        } else {
+            self.myContainerDevice = MSDevice_Transportable::build_vehicle_devices(&mut self.base, &mut self.myDevices, true);
+            self.myMoveReminders.insert(0, (self.myContainerDevice.cast::<MSMoveReminder>(), 0.));
+        }
     }
 
     /// C++: `void MSBaseVehicle::removeTransportable(MSTransportable *)` [virtual]
