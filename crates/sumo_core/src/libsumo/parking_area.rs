@@ -95,7 +95,6 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_accepted_badges(stopID: &str) -> Vec<String> {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
         Self::get_parking_area(stopID).cast::<MSParkingArea>().get_accepted_badges()
     }
 
@@ -235,7 +234,6 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_accepted_badges(stopID: &str, badges: &Vec<String>) {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
         let pa = Self::get_parking_area(stopID).cast::<MSParkingArea>();
         pa.m().myAcceptedBadges.clear();
         pa.m().myAcceptedBadges.extend(badges.iter().cloned());

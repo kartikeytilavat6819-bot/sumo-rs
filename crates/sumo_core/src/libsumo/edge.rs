@@ -860,13 +860,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(edgeID: &str) -> Ptr<MSEdge> {
-        // shortcut: MSEdge::dictionary_2 takes an Unmapped std::string_view, so the id is looked up by a linear scan over MSEdgeControl::get_edges (normal edges only), upgrade when dictionary_2 takes &str
-        for e in MSNet::get_instance().m().get_edge_control().get_edges().iter() {
-            if e.get_id() == edgeID {
-                return *e;
-            }
+        let e = MSEdge::dictionary_2(edgeID);
+        if e.is_null() {
+            panic!("{}", format!("Edge '{}' is not known", edgeID));
         }
-        panic!("{}", format!("Edge '{}' is not known", edgeID));
+        e
     }
 
     /// C++: `void Edge::Edge()` [private]

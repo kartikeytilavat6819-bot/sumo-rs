@@ -115,14 +115,15 @@ impl NBOwnTLDef {
     //     myLayout(TrafficLightLayout::DEFAULT) {
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        let mut d = Self {
+    pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(Self {
             base: NBTrafficLightDefinition::new(id, junctions, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        };
+        });
         d.base.vt = &NB_OWN_TL_DEF_VT;
         d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
+        d.base.register_junctions(junctions);
         d
     }
 
@@ -135,14 +136,15 @@ impl NBOwnTLDef {
     //     myLayout(TrafficLightLayout::DEFAULT) {
     // }
     #[allow(unused_variables)]
-    pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        let mut d = Self {
+    pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(Self {
             base: NBTrafficLightDefinition::new_2(id, junction, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        };
+        });
         d.base.vt = &NB_OWN_TL_DEF_VT;
         d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
+        d.base.add_node(junction);
         d
     }
 
@@ -1932,7 +1934,6 @@ impl NBOwnTLDef {
                 self.myNeedsContRelation.borrow_mut().clear();
                 for n in self.myControlledNodes.clone() {
                     let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
-                    n.m().add_traffic_light(Ptr::from_mut(&mut dummy.base));
                     dummy.set_participants_information();
                     let tllDummy = dummy.compute_logic_and_conts(0, true);
                     let _ = tllDummy; // C++: delete tllDummy

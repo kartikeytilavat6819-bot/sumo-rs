@@ -271,9 +271,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(detID: &str, key: &str) -> String {
-        // shortcut: MSE2Collector has no ported getParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (detID, key);
-        panic!("LaneArea::getParameter: detector parameters not ported")
+        Self::get_detector(detID).base2.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> LaneArea::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -290,9 +288,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(detID: &str, key: &str, value: &str) {
-        // shortcut: MSE2Collector has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (detID, key, value);
-        panic!("LaneArea::setParameter: detector parameters not ported")
+        Self::get_detector(detID).m().base2.base2.set_parameter(key, value);
     }
 
     /// C++: `void LaneArea::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]

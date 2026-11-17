@@ -244,10 +244,10 @@ pub struct MSNet {
     pub myCollisions: MSNet_CollisionMap,
     /// container to record warnings that shall only be issued once
     pub myWarnedOnce: BTreeMap<String, bool>,
-    pub myRouterTT: BTreeMap<i32, Ptr<MSVehicleRouter>>,
+    pub myRouterTT: std::cell::RefCell<BTreeMap<i32, Ptr<MSVehicleRouter>>>,
     pub myRouterEffort: BTreeMap<i32, Ptr<MSVehicleRouter>>,
-    pub myPedestrianRouter: BTreeMap<i32, Ptr<MSPedestrianRouter>>,
-    pub myIntermodalRouter: BTreeMap<i32, Ptr<MSTransportableRouter>>,
+    pub myPedestrianRouter: std::cell::RefCell<BTreeMap<i32, Ptr<MSPedestrianRouter>>>,
+    pub myIntermodalRouter: std::cell::RefCell<BTreeMap<i32, Ptr<MSTransportableRouter>>>,
     /// An RTree structure holding lane IDs
     pub myLanesRTree: (bool, Unmapped /* NamedRTree */),
     /// Updater for dynamic shapes that are tracking traffic objects (ensures removal of shape dynamics when the objects are removed)
@@ -460,10 +460,10 @@ impl MSNet {
             myTransportableStateListeners: Vec::new(),
             myCollisions: BTreeMap::new(),
             myWarnedOnce: BTreeMap::new(),
-            myRouterTT: BTreeMap::new(),
+            myRouterTT: std::cell::RefCell::new(BTreeMap::new()),
             myRouterEffort: BTreeMap::new(),
-            myPedestrianRouter: BTreeMap::new(),
-            myIntermodalRouter: BTreeMap::new(),
+            myPedestrianRouter: std::cell::RefCell::new(BTreeMap::new()),
+            myIntermodalRouter: std::cell::RefCell::new(BTreeMap::new()),
             myLanesRTree: (false, ()), // shortcut: NamedRTree is not ported yet
             myDynamicShapeUpdater: None,
         });
@@ -573,13 +573,13 @@ impl MSNet {
             delete_ptr(crate::microsim::ms_globals::meso_net());
             crate::microsim::ms_globals::set_meso_net(Ptr::null());
         }
-        for (_, router) in std::mem::take(&mut self.myRouterTT) {
+        for (_, router) in self.myRouterTT.take() {
             delete_ptr(router);
         }
         for (_, router) in std::mem::take(&mut self.myRouterEffort) {
             delete_ptr(router);
         }
-        for (_, router) in std::mem::take(&mut self.myPedestrianRouter) {
+        for (_, router) in self.myPedestrianRouter.take() {
             delete_ptr(router);
         }
         self.reset_intermodal_router();
@@ -3211,7 +3211,7 @@ impl MSNet {
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
-        if !me.myRouterTT.contains_key(&rngIndex) {
+        if !me.myRouterTT.borrow().contains_key(&rngIndex) {
             let routingAlgorithm = get_string("routing-algorithm");
             let router: Ptr<MSVehicleRouter> = if routingAlgorithm == "dijkstra" {
                 let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
@@ -3226,9 +3226,9 @@ impl MSNet {
                 let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, true, false).with_compute();
                 Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
             };
-            me.myRouterTT.insert(rngIndex, router);
+            me.myRouterTT.borrow_mut().insert(rngIndex, router);
         }
-        let router = me.myRouterTT[&rngIndex];
+        let router = me.myRouterTT.borrow()[&rngIndex];
         router.m().prohibit(prohibited);
         router.get_mut().unwrap()
     }
@@ -3275,14 +3275,15 @@ impl MSNet {
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        match me.myPedestrianRouter.get(&rngIndex).copied() {
+        let found = me.myPedestrianRouter.borrow().get(&rngIndex).copied();
+        match found {
             Some(router) => {
                 router.m().prohibit(prohibited);
                 router.get_mut().unwrap()
             }
             None => {
                 let router: Ptr<MSPedestrianRouter> = Ptr::from_raw(Box::into_raw(Box::new(MSPedestrianRouter::new())));
-                me.myPedestrianRouter.insert(rngIndex, router);
+                me.myPedestrianRouter.borrow_mut().insert(rngIndex, router);
                 router.m().prohibit(prohibited);
                 router.get_mut().unwrap()
             }
@@ -3315,7 +3316,7 @@ impl MSNet {
         let key = rngIndex * get_int("thread-rngs") + routingMode;
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        if !me.myIntermodalRouter.contains_key(&key) {
+        if !me.myIntermodalRouter.borrow().contains_key(&key) {
             let hasTaxi = MSDevice_Taxi::has_fleet() || me.myInserter.has_taxi_flow();
             let carWalk = utils::options::options_cont::with_options(|oc| SUMOVehicleParserHelper::parse_car_walk_transfer(oc, hasTaxi));
             let routingAlgorithm = get_string("routing-algorithm");
@@ -3323,9 +3324,9 @@ impl MSNet {
             // shortcut: FareModul (the effort calculator of ROUTING_MODE_COMBINED) is not ported, so combined routing cannot be built yet
             let calc: Ptr<EffortCalculator> = if routingMode == 3 { panic!("shortcut: FareModul is not ported, combined intermodal routing is unsupported") } else { Ptr::null() };
             let router = IntermodalRouter::new(MSNet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, routingMode, calc);
-            me.myIntermodalRouter.insert(key, Ptr::from_raw(Box::into_raw(Box::new(router))));
+            me.myIntermodalRouter.borrow_mut().insert(key, Ptr::from_raw(Box::into_raw(Box::new(router))));
         }
-        let router = me.myIntermodalRouter[&key];
+        let router = me.myIntermodalRouter.borrow()[&key];
         router.m().prohibit(prohibited);
         router.get_mut().unwrap()
     }
@@ -3343,7 +3344,7 @@ impl MSNet {
     pub fn reset_intermodal_router(&self) {
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        for (_, router) in std::mem::take(&mut me.myIntermodalRouter) {
+        for (_, router) in me.myIntermodalRouter.take() {
             delete_ptr(router);
         }
     }

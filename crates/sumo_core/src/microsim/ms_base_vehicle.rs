@@ -3031,9 +3031,8 @@ impl MSBaseVehicle {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        // shortcut: typeid(*dev) == type needs a device-type key; no device matches until that is ported
-        Ptr::default()
+    pub fn get_device(&self, kind: &str) -> Ptr<MSVehicleDevice> {
+        MSDevice::get_device_by_name(&self.myDevices, kind)
     }
 
     /// C++: `void MSBaseVehicle::replaceVehicleType(const MSVehicleType *)` [virtual]
@@ -3165,7 +3164,7 @@ impl MSBaseVehicle {
         let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
         utils::options::options_cont::with_options(|oc| self.myParameter.write(out, oc, SUMO_TAG_VEHICLE, &typeID));
         out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
-        let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
+        let os = format!("{} {}", utils::common::to_string::f64_to_string_default(self.myOdometer), self.myNumberReroutes);
         out.write_attr(SUMO_ATTR_DISTANCE, &os);
         if self.myParameter.arrivalPosProcedure == ArrivalPosDefinition::RANDOM {
             out.write_attr(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &self.myArrivalPos);
@@ -5731,6 +5730,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_route_removal(&mut self) {
+        // the check for an instance is needed for the unit tests which do not construct a network
         if MSNet::has_instance() && !MSNet::get_instance().m().has_flow(&self.get_flow_id()) {
             self.myRoute.check_removal(false);
         }
