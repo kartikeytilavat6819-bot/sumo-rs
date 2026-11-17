@@ -516,7 +516,7 @@ impl MSDevice_Routing {
     // MSDevice_Routing::reroute(const SUMOTime currentTime, const bool onInit) {
     //     MSRoutingEngine::initEdgeWeights(myHolder.getVClass());
     //     //check whether the weights did change since the last reroute
-    //     if (myLastRouting > MSRoutingEngine::getLastAdaptation() || !myActive) {
+    //     if (myLastRouting >= MSRoutingEngine::getLastAdaptation() || !myActive) {
     //         return;
     //     }
     //     // Invalidation gate: even when the metric changed, skip the (expensive)
@@ -552,12 +552,29 @@ impl MSDevice_Routing {
         let holder = holderPtr.m();
         MSRoutingEngine::init_edge_weights(holder.get_v_class(), -1, -1);
         //check whether the weights did change since the last reroute
-        if self.myLastRouting > MSRoutingEngine::get_last_adaptation() || !self.myActive {
+        if self.myLastRouting >= MSRoutingEngine::get_last_adaptation() || !self.myActive {
             return;
         }
-        // shortcut: the invalidation gate (recomputeCosts over the remaining route) is skipped because MSRouteIterator and ConstMSEdgeVector are unmapped; it is off by default (device.rerouting.invalidation=false); upgrade when route iterators are ported
+        let canGate = self.myInvalidation && !onInit && holder.is_on_road();
+        if canGate && self.myLastRouteCost >= 0. {
+            let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+            let remaining: Vec<Ptr<MSEdge>> = holder.get_route().get_edges()[*holder.get_current_route_edge()..].to_vec();
+            if !remaining.is_empty() {
+                let costNow = router.recompute_costs(&remaining, holderPtr, currentTime, Ptr::null());
+                if costNow - self.myLastRouteCost <= self.myThresholdTime && costNow <= self.myLastRouteCost * self.myThresholdFactor {
+                    self.myLastRouting = currentTime;
+                    self.myLastRouteCost = costNow;
+                    return;
+                }
+            }
+        }
         self.myLastRouting = currentTime;
         MSRoutingEngine::reroute(holder, currentTime, "device.rerouting", onInit, false, &Default::default());
+        if self.myInvalidation && holder.is_on_road() {
+            let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+            let remaining: Vec<Ptr<MSEdge>> = holder.get_route().get_edges()[*holder.get_current_route_edge()..].to_vec();
+            self.myLastRouteCost = if remaining.is_empty() { -1. } else { router.recompute_costs(&remaining, holderPtr, currentTime, Ptr::null()) };
+        }
     }
 
     /// C++: `void MSDevice_Routing::skipRouting(const SUMOTime)`
