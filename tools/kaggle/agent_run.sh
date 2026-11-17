@@ -25,14 +25,25 @@ import sys
 def load(p): return [l.rstrip('\n') for l in open(p) if l.startswith('LCT')]
 a = load(sys.argv[1]); b = load(sys.argv[2])
 def toks(l): return l.replace(',', ' ').split()
-for i, (x, y) in enumerate(zip(a, b)):
-    xs = toks(x); ys = toks(y)
-    if xs != ys:
-        j = next((k for k, (p, q) in enumerate(zip(xs, ys)) if p != q), min(len(xs), len(ys)))
-        print('first real diff line', i + 1, 'token', j, 'ours', xs[j] if j < len(xs) else '-', 'cpp', ys[j] if j < len(ys) else '-', 'ntok', len(xs), len(ys))
-        print('ours:', x[:300]); print('cpp :', y[:300])
-        break
-else:
-    print('no real diff in common prefix', len(a), len(b))
+def per_veh(lines):
+    d = {}
+    for l in lines:
+        t = toks(l)
+        if len(t) > 2: d.setdefault(t[2], []).append(l)
+    return d
+pa = per_veh(a); pb = per_veh(b)
+for vid in sorted(set(pa) | set(pb)):
+    la = pa.get(vid, []); lb = pb.get(vid, [])
+    for i in range(min(len(la), len(lb))):
+        if toks(la[i]) != toks(lb[i]):
+            x = la[i]; y = lb[i]
+            xs = toks(x); ys = toks(y)
+            j = next((k for k, (p, q) in enumerate(zip(xs, ys)) if p != q), min(len(xs), len(ys)))
+            print('veh', vid, 'first real diff at its entry', i, 'token', j, 'ours', xs[j] if j < len(xs) else '-', 'cpp', ys[j] if j < len(ys) else '-')
+            print('  ours:', x[:240]); print('  cpp :', y[:240])
+            break
+    else:
+        if len(la) != len(lb): print('veh', vid, 'entry count differs', len(la), len(lb))
+        else: print('veh', vid, 'identical', len(la))
 EOF
 done
