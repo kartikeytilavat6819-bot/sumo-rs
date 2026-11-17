@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/fringe_maxveh/fringe_maxveh.nod.xml --edge-files tools/oracle/cases/fringe_maxveh/fringe_maxveh.edg.xml

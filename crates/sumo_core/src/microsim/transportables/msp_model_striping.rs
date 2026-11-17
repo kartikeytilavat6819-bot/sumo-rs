@@ -206,6 +206,7 @@ static MSPMODEL_STRIPING_VT: MSPModelVt = MSPModelVt {
     get_active_number: striping_vt_get_active_number,
     load_state: striping_vt_load_state,
     has_pedestrians: striping_vt_has_pedestrians,
+    blocked_at_dist: striping_vt_blocked_at_dist,
     next_blocking: striping_vt_next_blocking,
     blocked_at_dist: striping_vt_blocked_at_dist,
     using_shortcuts: msp_model_default_using_shortcuts,
@@ -215,6 +216,9 @@ fn striping_vt_blocked_at_dist(m: &mut MSPModel, ego: Ptr<SUMOTrafficObject>, la
 }
 fn striping_vt_has_pedestrians(m: &mut MSPModel, lane: Ptr<MSLane>) -> bool {
     Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().has_pedestrians(lane)
+}
+fn striping_vt_blocked_at_dist(m: &mut MSPModel, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().blocked_at_dist(ego, lane, vehCenter, vehWidth, oncomingGap, collectBlockers)
 }
 fn striping_vt_next_blocking(m: &mut MSPModel, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
     Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().next_blocking(lane, minPos, minRight, maxLeft, stopTime, bidi)
