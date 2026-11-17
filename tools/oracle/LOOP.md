@@ -51,24 +51,24 @@ A panic is reported as `sim-PANIC` with the first message line.
 
 ## Known failing rows and their owners
 
-Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at `933e39f6`:
-**PASS=271 FAIL=9 SKIP=26; depart 15/15; unit tests ok.** Only these nine rows fail — everything
-previously listed is fixed and must not be re-investigated. All nine fail at the sim stage; their
-net stages PASS. Full verdicts and SKIP reasons: `SCOREBOARD.md`.
+Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at `fbc6f780` (branch `f9476459`):
+**PASS=350 FAIL=7 SKIP=63; depart 15/15; duarouter 16/16; unit tests ok.** Only these seven rows fail.
+All seven fail at the sim stage; their net stages PASS. Full verdicts and SKIP reasons: `SCOREBOARD.md`.
 
 | Row | Owner |
 |---|---|
-| busride/ref sim (panic: no connection E1 → bs0) | pt02 |
-| city_paris_etoile/ref sim (arrivalSpeed) | rb02 |
-| city_portland_actuated/ref sim (arrivalSpeed) | tl01 |
-| containers/ref sim (panic msp_model) | rc01 |
-| rerouter_parking/ref sim (panic ms_stopping_place) | rc01 |
-| taxi/ref sim (panic ms_device_taxi) | tx01 |
-| taxi/ref_closest sim (panic ms_device_taxi) | tx01 |
-| tls_actuated_loops/ref sim (arrival) | tl01 |
-| tls_waut/ref sim (arrival) | tl01 |
+| city_delft_campus_crossings/ref sim (car8 arrival 387 vs 388) | cd01 |
+| city_grenoble_tram_bus/ref sim (L1f.0 devices field) | cd01 |
+| city_florence_pedestrians/ref sim (car12 depart 72 vs 73) | fp02 |
+| city_german_level_crossing/ref sim (car81 arrivalSpeed 7.65 vs 7.90) | rx01 |
+| city_phoenix_scale_grid/ref sim-PANIC (mslcm_lc2013.rs) | px01 |
+| jmparams/ref sim (fa.10 arrivalSpeed 12.72 vs 11.61) | jm01 |
+| routedist/ref sim-PANIC (route 'rd' for flow 'fDist' not known) | jm01 |
 
 Fixed since the table below was written, do **not** reopen:
+
+- the nine rows that failed on 933e39f6 (busride, paris_etoile, portland_actuated, containers, rerouter_parking,
+  taxi x2, tls_actuated_loops, tls_waut) — all PASS on fbc6f780
 
 - junction `v0` 18 s vs 20 s — stale local `g_ignore_junction_blocker()` stub returning 0
 - roundabout `v1` release 15 s early — same mechanism
