@@ -1,41 +1,27 @@
 //! Minimal stand-ins for pieces of utils/common and utils/geom that xml and iodevices need.
-// shortcut: replace with utils::geom/common once merged (UtilExceptions, MsgHandler, StringTokenizer,
-// FileHelpers, StringUtils::isoTimeString/escapeXML, Position, PositionVector, Boundary)
-use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+// shortcut: Position/PositionVector/Boundary below are xml-local copies, because sumo_sax_attributes reads
+// PositionVector.0 directly; switch them to utils::geom once that code uses the geom types
+use crate::common::msg_handler::{with_instance, MsgType};
 
+pub use crate::common::msg_handler::{write_error, write_message, write_warning};
 pub use crate::common::util_exceptions::ProcessError;
 
-static ERROR_INFORMED: AtomicBool = AtomicBool::new(false);
-
-/// WRITE_ERROR: MsgHandler::getErrorInstance()->inform(msg)
-pub fn write_error(msg: &str) {
-    eprintln!("Error: {msg}");
-    ERROR_INFORMED.store(true, Relaxed);
-}
-/// WRITE_WARNING
-pub fn write_warning(msg: &str) {
-    eprintln!("Warning: {msg}");
-}
-/// WRITE_MESSAGE
-pub fn write_message(msg: &str) {
-    println!("{msg}");
-}
 /// MsgHandler::getErrorInstance()->wasInformed()
 pub fn error_was_informed() -> bool {
-    ERROR_INFORMED.load(Relaxed)
+    with_instance(MsgType::Error, |h| h.was_informed())
 }
 /// MsgHandler::getErrorInstance()->clear()
 pub fn clear_errors() {
-    ERROR_INFORMED.store(false, Relaxed);
+    with_instance(MsgType::Error, |h| h.clear(true));
 }
 
 /// StringTokenizer(s).getVector(): split at chars <= ' ', no empty tokens
 pub fn tokenize_white(s: &str) -> Vec<&str> {
     s.split(|c: char| c <= ' ').filter(|t| !t.is_empty()).collect()
 }
-/// StringTokenizer(s, sep).getVector(): keeps empty tokens, but "" gives no token
+/// StringTokenizer(s, sep).getVector(): split at the separator, empty tokens are dropped (as in C++)
 pub fn tokenize<'a>(s: &'a str, sep: &str) -> Vec<&'a str> {
-    if s.is_empty() { Vec::new() } else { s.split(sep).collect() }
+    s.split(sep).filter(|t| !t.is_empty()).collect()
 }
 
 /// utils/geom/Position
@@ -170,7 +156,7 @@ mod tests {
     use super::*;
     #[test]
     fn helpers() {
-        assert_eq!(tokenize("1,,2,", ","), vec!["1", "", "2", ""]);
+        assert_eq!(tokenize("1,,2,", ","), vec!["1", "2"]);
         assert!(tokenize("", ",").is_empty());
         assert_eq!(tokenize_white("  a \t b\n"), vec!["a", "b"]);
         assert_eq!(append_before_extension("out/a.xml", "_x"), "out/a_x.xml");
