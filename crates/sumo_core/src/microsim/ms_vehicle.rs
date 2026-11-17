@@ -10865,7 +10865,6 @@ impl MSVehicle {
                 assert!(!link.get_lane_before().is_null());
                 let beyondStopLine = dDistance < link.get_lane_before().get_vehicle_stop_offset(this);
                 let ignoreRedLink = self.ignore_red(link, canBrake) || beyondStopLine;
-                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 lnk t={} link={} ls={} yel={} cb={} ign={} beyond={} dist={:x} vW={:x} vP={:x} req={} spd={:x}", MSNet::get_instance().get_current_time_step(), link.get_lane_before().get_id(), ls as i32, yellow as i32, canBrake as i32, ignoreRedLink as i32, beyondStopLine as i32, dDistance.to_bits(), dVLinkWait.to_bits(), dVLinkPass.to_bits(), dSetRequest as i32, self.myState.mySpeed.to_bits()); }
                 if yellow && canBrake && !ignoreRedLink {
                     *vSafe = dVLinkWait;
                     self.myHaveToWaitOnNextLink = true;
@@ -11652,13 +11651,12 @@ impl MSVehicle {
         let stopOk = self.myStops.is_empty()
             || self.myStops.front().unwrap().edge != self.myCurrEdge
             || (self.myStops.front().unwrap().get_speed() > 0.0 && self.myState.myPos > self.myStops.front().unwrap().pars.endPos - 2.0 * POSITION_EPS);
-        if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { let routeOk = self.myCurrEdge + 1 != self.myRoute.size() as usize; eprintln!("RX01 rev t={} rail={} spdOK={} posOK={} normal={} routeOK={} bidi={} stopOk={} prevSpd={:x} thr={:x} seen={:x}", MSNet::get_instance().get_current_time_step(), utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) as i32, (self.get_previous_speed() <= speedThreshold) as i32, (self.myState.myPos <= self.myLane.get_length()) as i32, (!self.myLane.is_internal()) as i32, routeOk as i32, (routeOk && self.myLane.get_edge().get_bidi_edge() == self.get_next_edge_ptr()) as i32, stopOk as i32, self.get_previous_speed().to_bits(), speedThreshold.to_bits(), seen.to_bits()); }
-        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class())
+        if (self.get_v_class() & utils::common::sumo_vehicle_class::SVC_RAIL_CLASSES) != 0
             && self.get_previous_speed() <= speedThreshold
             && self.myState.myPos <= self.myLane.get_length()
             && !self.myLane.is_internal()
             && self.myCurrEdge + 1 != self.myRoute.size() as usize
-            && self.myLane.get_edge().get_bidi_edge() == self.get_next_edge_ptr()
+            && self.myLane.get_edge().get_bidi_edge() == self.succ_edge(1)
             // ensure there are no further stops on this edge
             && stopOk
         {
@@ -13465,7 +13463,6 @@ impl MSVehicle {
         let mut seenNonInternal = 0.0;
         let mut seenInternal = if self.myLane.is_internal() { seen } else { 0.0 };
         let mut vLinkPass = min2(cfModel.estimate_speed_after_distance(seen, v, cfModel.get_max_accel()), laneMaxV); // upper bound
-        if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 init t={} seen={:x} v={:x} laneMaxV={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), seen.to_bits(), v.to_bits(), laneMaxV.to_bits(), vLinkPass.to_bits()); }
         let mut view: usize = 0;
         let mut lastLink: Ptr<MSVehicle_DriveProcessItem> = Ptr::null();
         let mut slowedDownForMinor = false; // whether the vehicle already had to slow down on approach to a minor link
@@ -13888,7 +13885,6 @@ impl MSVehicle {
 
             let mut canReverseEventually = false;
             let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
-            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 revret t={} vReverse={:x} canRev={}", MSNet::get_instance().get_current_time_step(), vReverse.to_bits(), canReverseEventually as i32); }
             v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
@@ -13925,7 +13921,6 @@ impl MSVehicle {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
                 }
                 // arrivalSpeed / arrivalTime when braking for red light is only relevent for rail signal switching
-                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 fin t={} seen={:x} v={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), seen.to_bits(), v.to_bits(), vLinkPass.to_bits()); }
                 let arrivalTime = self.get_arrival_time(t, seen, v, vLinkPass);
                 // the vehicle is able to brake in front of a yellow/red traffic light
                 lfLinks.push(MSVehicle_DriveProcessItem::new(linkP, v, vLinkWait, false, arrivalTime, vLinkWait, 0.0, seen, -1.0));
@@ -14066,7 +14061,6 @@ impl MSVehicle {
             };
             seen += lane.get_length();
             vLinkPass = min2(cfModel.estimate_speed_after_distance(lane.get_length(), v, cfModel.get_max_accel()), laneMaxV); // upper bound
-            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 nxt t={} lane={} laneMaxV={:x} v={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), lane.get_id(), laneMaxV.to_bits(), v.to_bits(), vLinkPass.to_bits()); }
             lastLink = Ptr::from_mut(lfLinks.last_mut().unwrap());
         }
     }
@@ -14614,7 +14608,6 @@ impl MSVehicle {
                 let futureVSafe = cfModel.follow_speed(me, lastLink.accelV, leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::FUTURE);
                 lastLink.m().adapt_leave_speed(futureVSafe);
             }
-            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 adL t={} leaderDist={:x} vsafeLeader={:x} vLinkPass={:x} v={:x}", MSNet::get_instance().get_current_time_step(), leaderInfo.1.to_bits(), vsafeLeader.to_bits(), (*vLinkPass).to_bits(), (*v).to_bits()); }
             *v = min2(*v, vsafeLeader);
             *vLinkPass = min2(*vLinkPass, vsafeLeader);
         }
@@ -14850,7 +14843,6 @@ impl MSVehicle {
                     vsafeLeader = max2(vsafeLeader, min2(v2, vStop));
                 }
             }
-            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 jl t={} leaderIsMe={} leaderDist={:x} distCP={:x} vsafeLeader={:x} vLinkPass={:x} v={:x}", MSNet::get_instance().get_current_time_step(), (leaderInfo.0 == me) as i32, leaderInfo.1.to_bits(), distToCrossing.to_bits(), vsafeLeader.to_bits(), (*vLinkPass).to_bits(), (*v).to_bits()); }
             if !lastLink.is_null() {
                 lastLink.m().adapt_leave_speed(vsafeLeader);
             }
@@ -15488,7 +15480,6 @@ impl MSVehicle {
                     gap -= pred.get_vehicle_type().get_length_with_gap();
                     oncoming = true;
                 }
-                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 alp t={} pred={} gap={:x} oncoming={} lane={} lastLinkNull={}", MSNet::get_instance().get_current_time_step(), pred.get_id(), gap.to_bits(), oncoming as i32, lane.get_id(), lastLink.is_null() as i32); }
                 if oncoming && gap >= 0.0 {
                     self.adapt_to_oncoming_leader((pred, gap), lastLink, v, vLinkPass);
                 } else {
