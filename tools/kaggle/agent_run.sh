@@ -1,22 +1,18 @@
 #!/bin/bash
-# TEMP ev01 precision-6 measurement: remove before final commit
+# TEMP ev01 precision-6 check: remove before final commit
 D=tools/oracle/cases/ev
+M=tools/oracle/cases/ev_mmpevem
 OUT=/tmp/ev6
 mkdir -p $OUT
-sed 's#Energy/unknown#MMPEVEM/unknown#' $D/routes.rou > $OUT/routes_mm.rou
-grep -c MMPEVEM $OUT/routes_mm.rou
 run() {
-  "$1" -n $D/ref_simple.net.xml -r "$2" --end 120 --additional-files $D/chargingstation.add.xml \
-    --precision 6 --battery-output "$3.battery.xml" --tripinfo-output "$3.tripinfo.xml" \
-    --emission-output "$3.emission.xml" --chargingstations-output "$3.chargingstations.xml" \
-    --fcd-output "$3.fcd.xml" > "$3.log" 2>&1
-  echo "$3 exit=$?"
-  grep -i 'panick' "$3.log" | head -3
+  /tmp/target/debug/sumo -n $D/ref_simple.net.xml -r "$1" --end 120 --additional-files $D/chargingstation.add.xml \
+    --precision 6 --battery-output "$2.battery.xml" --tripinfo-output "$2.tripinfo.xml" \
+    --emission-output "$2.emission.xml" --chargingstations-output "$2.chargingstations.xml" \
+    --fcd-output "$2.fcd.xml" > "$2.log" 2>&1
+  echo "$2 exit=$?"
+  grep -i 'panick' "$2.log" | head -3
 }
-for s in energy mmpevem; do
-  R=$D/routes.rou
-  [ $s = mmpevem ] && R=$OUT/routes_mm.rou
-  run /tmp/target/debug/sumo $R $OUT/ours_$s
-  run "$SUMO_PRISTINE_BIN/sumo" $R $OUT/ref_$s
-  python3 $D/compare_precision.py $OUT/ref_$s $OUT/ours_$s
-done
+run $D/routes.rou $OUT/ours_energy
+python3 $D/compare_precision.py $D/ref_energy $OUT/ours_energy
+run $M/routes.rou $OUT/ours_mmpevem
+python3 $D/compare_precision.py $M/ref $OUT/ours_mmpevem

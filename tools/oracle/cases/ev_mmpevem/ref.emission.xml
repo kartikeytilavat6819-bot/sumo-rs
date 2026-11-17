@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T22:37:07.243541-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_mmpevem/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev/chargingstation.add.xml"/>
+    </input>
+
+    <output>
+        <precision value="6"/>
+        <emission-output value="tools/oracle/cases/ev_mmpevem/ref.emission.xml"/>
+        <battery-output value="tools/oracle/cases/ev_mmpevem/ref.battery.xml"/>
+        <chargingstations-output value="tools/oracle/cases/ev_mmpevem/ref.chargingstations.xml"/>
+        <tripinfo-output value="tools/oracle/cases/ev_mmpevem/ref.tripinfo.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<emission-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/emission_file.xsd">
+    <timestep time="0.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="1.675104" noise="68.550918" route="r0" type="EV" waiting="0.000000" lane="-103224#0_0" pos="4.100000" speed="20.000000" angle="90.352826" x="4.090000" y="148.754752"/>
+    </timestep>
+    <timestep time="1.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-0.861699" noise="68.011311" route="r0" type="EV" waiting="0.000000" lane="-103224#0_0" pos="23.861558" speed="19.761558" angle="90.352826" x="23.851558" y="148.633059"/>
+    </timestep>
+    <timestep time="2.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-8.087831" noise="66.444913" route="r0" type="EV" waiting="0.000000" lane="-103224#0_0" pos="42.624967" speed="18.763410" angle="90.352826" x="42.614967" y="148.517513"/>
+    </timestep>
+    <timestep time="3.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="4.182462" noise="68.455558" route="r0" type="EV" waiting="0.000000" lane=":-137720_7_0" pos="3.184041" speed="19.019073" angle="90.325001" x="61.631834" y="148.402348"/>
+    </timestep>
+    <timestep time="4.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="8.033259" noise="69.583306" route="r0" type="EV" waiting="0.000000" lane="-103224#1_0" pos="8.369621" speed="19.615581" angle="90.352614" x="81.239621" y="148.288490"/>
+    </timestep>
+    <timestep time="5.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-1.514839" noise="67.629991" route="r0" type="EV" waiting="0.000000" lane="-103224#1_0" pos="27.680948" speed="19.311327" angle="90.352614" x="100.550948" y="148.169642"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="1.675104" noise="68.550918" route="r1" type="EV" waiting="0.000000" lane="-103227#0_0" pos="4.100000" speed="20.000000" angle="180.343672" x="139.555407" y="308.540000"/>
+    </timestep>
+    <timestep time="6.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-11.445454" noise="62.240229" route="r0" type="EV" waiting="0.000000" lane="-103224#1_0" pos="42.492275" speed="14.811327" angle="90.352614" x="115.362275" y="148.078487"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-10.753850" noise="66.182667" route="r1" type="EV" waiting="0.000000" lane="-103227#0_0" pos="22.818862" speed="18.718862" angle="180.343672" x="139.443126" y="289.821138"/>
+    </timestep>
+    <timestep time="7.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-8.975960" noise="57.445461" route="r0" type="EV" waiting="0.000000" lane="-103224#1_0" pos="52.803602" speed="10.311327" angle="90.352614" x="125.673602" y="148.015028"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="14.597148" noise="71.351698" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="4.978959" speed="19.900097" angle="180.344275" x="139.320082" y="269.921041"/>
+    </timestep>
+    <timestep time="8.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-5.781165" noise="50.376405" route="r0" type="EV" waiting="0.000000" lane="-103224#1_0" pos="58.638372" speed="5.834770" angle="90.352614" x="131.508372" y="147.979118"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-5.784160" noise="66.959251" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="24.133010" speed="19.154051" angle="180.344275" x="139.204990" y="250.766990"/>
+    </timestep>
+    <timestep time="9.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="9.103894" noise="69.171317" route="r0" type="EV" waiting="0.000000" lane=":-137721_9_0" pos="6.588255" speed="8.069883" angle="90.330549" x="139.578255" y="147.931991"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="6.580959" noise="69.263119" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="43.748825" speed="19.615816" angle="180.344275" x="139.087122" y="231.151175"/>
+    </timestep>
+    <timestep time="10.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="13.550551" noise="71.312958" route="r0" type="EV" waiting="0.000000" lane=":-137721_9_0" pos="17.123883" speed="10.535628" angle="90.330549" x="150.113883" y="147.871208"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-3.737509" noise="67.161605" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="62.829341" speed="19.080515" angle="180.344275" x="138.972471" y="212.070659"/>
+    </timestep>
+    <timestep time="11.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="10.353202" noise="68.261854" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="8.382629" speed="12.058747" angle="90.349011" x="162.172629" y="147.798938"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="5.608901" noise="68.978993" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="82.286862" speed="19.457521" angle="180.344275" x="138.855555" y="192.613138"/>
+    </timestep>
+    <timestep time="12.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="16.571932" noise="71.584506" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="22.538905" speed="14.156276" angle="90.349011" x="176.328905" y="147.712705"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-1.160782" noise="67.608408" route="r1" type="EV" waiting="0.000000" lane="-103227#1_0" pos="101.476581" speed="19.189719" angle="180.344275" x="138.740247" y="173.423419"/>
+    </timestep>
+    <timestep time="13.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="8.965372" noise="68.039725" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="37.668327" speed="15.129422" angle="90.349011" x="191.458327" y="147.620545"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-1.701030" noise="67.316119" route="r1" type="EV" waiting="0.000000" lane=":-137721_0_0" pos="2.181973" speed="18.865392" angle="180.330109" x="138.627878" y="154.558027"/>
+    </timestep>
+    <timestep time="14.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-9.575173" noise="59.217267" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="49.361318" speed="11.692990" angle="90.349011" x="203.151318" y="147.549317"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="4.671347" noise="68.632539" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="6.945484" speed="19.163510" angle="180.346243" x="138.518027" y="135.394516"/>
+    </timestep>
+    <timestep time="15.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-6.776020" noise="52.965188" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="56.594191" speed="7.232873" angle="90.349011" x="210.384191" y="147.505259"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-1.676638" noise="67.304675" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="25.787172" speed="18.841689" angle="180.346243" x="138.404164" y="116.552828"/>
+    </timestep>
+    <timestep time="16.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-3.551015" noise="42.532359" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.327064" speed="2.732873" angle="90.349011" x="213.117064" y="147.488611"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="3.952102" noise="68.439038" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="44.860931" speed="19.073759" angle="180.346243" x="138.288899" y="97.479069"/>
+    </timestep>
+    <timestep time="17.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-1.145391" noise="47.026911" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.972387" speed="0.645324" angle="90.349011" x="213.762387" y="147.484680"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="11.171580" noise="70.467337" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="64.801808" speed="19.940877" angle="180.346243" x="138.168393" y="77.538192"/>
+    </timestep>
+    <timestep time="18.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.005902" noise="53.173164" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.015156" angle="90.349011" x="213.777543" y="147.484588"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="-4.206074" noise="67.287371" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="84.162929" speed="19.361121" angle="180.346243" x="138.051391" y="58.177071"/>
+    </timestep>
+    <timestep time="19.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100234" noise="55.873590" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.203545" noise="67.860271" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="103.395988" speed="19.233059" angle="180.346243" x="137.935163" y="38.944012"/>
+    </timestep>
+    <timestep time="20.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+        <vehicle id="ev_drive" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="9.448136" noise="70.054324" route="r1" type="EV" waiting="0.000000" lane="-103227#2_0" pos="123.339292" speed="19.943305" angle="180.346243" x="137.814643" y="19.000708"/>
+    </timestep>
+    <timestep time="21.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="22.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="23.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="24.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="25.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="26.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="27.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="28.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="29.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="30.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="31.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="32.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="33.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="34.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="35.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="36.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="37.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="38.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="39.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="40.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="41.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="42.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="43.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="44.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="45.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="46.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="47.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="48.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="49.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="50.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="51.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="52.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="53.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="54.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="55.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="56.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="57.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="0.100026" noise="55.940276" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="59.987543" speed="0.000000" angle="90.349011" x="213.777543" y="147.484588"/>
+    </timestep>
+    <timestep time="58.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="1.038361" noise="64.630085" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="61.804351" speed="1.816808" angle="90.349011" x="215.594351" y="147.473521"/>
+    </timestep>
+    <timestep time="59.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="3.376839" noise="66.392266" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="65.650234" speed="3.845882" angle="90.349011" x="219.440234" y="147.450094"/>
+    </timestep>
+    <timestep time="60.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="7.432193" noise="69.554890" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="72.002002" speed="6.351768" angle="90.349011" x="225.792002" y="147.411402"/>
+    </timestep>
+    <timestep time="61.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="6.249870" noise="65.898145" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="79.836878" speed="7.834876" angle="90.349011" x="233.626878" y="147.363677"/>
+    </timestep>
+    <timestep time="62.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="12.372316" noise="70.563236" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="90.001383" speed="10.164505" angle="90.349011" x="243.791383" y="147.301760"/>
+    </timestep>
+    <timestep time="63.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="17.465975" noise="72.736612" route="r0" type="EV" waiting="0.000000" lane="-103224#2_0" pos="102.721112" speed="12.719729" angle="90.349011" x="256.511112" y="147.224278"/>
+    </timestep>
+    <timestep time="64.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="17.879842" noise="72.119401" route="r0" type="EV" waiting="0.000000" lane=":-137719_1_0" pos="7.593581" speed="14.862469" angle="90.309704" x="271.366746" y="147.138991"/>
+    </timestep>
+    <timestep time="65.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="19.021810" noise="72.405949" route="r0" type="EV" waiting="0.000000" lane="-103224#3_0" pos="13.305261" speed="16.821680" angle="90.352684" x="288.185261" y="147.038099"/>
+    </timestep>
+    <timestep time="66.000">
+        <vehicle id="ev_charge" eclass="MMPEVEM/default" CO2="0.000000" CO="0.000000" HC="0.000000" NOx="0.000000" PMx="0.000000" fuel="0.000000" electricity="23.611239" noise="74.112841" route="r0" type="EV" waiting="0.000000" lane="-103224#3_0" pos="32.252474" speed="18.947214" angle="90.352684" x="307.132474" y="146.921468"/>
+    </timestep>
+    <timestep time="67.000"/>
+    <timestep time="68.000"/>
+    <timestep time="69.000"/>
+    <timestep time="70.000"/>
+    <timestep time="71.000"/>
+    <timestep time="72.000"/>
+    <timestep time="73.000"/>
+    <timestep time="74.000"/>
+    <timestep time="75.000"/>
+    <timestep time="76.000"/>
+    <timestep time="77.000"/>
+    <timestep time="78.000"/>
+    <timestep time="79.000"/>
+    <timestep time="80.000"/>
+    <timestep time="81.000"/>
+    <timestep time="82.000"/>
+    <timestep time="83.000"/>
+    <timestep time="84.000"/>
+    <timestep time="85.000"/>
+    <timestep time="86.000"/>
+    <timestep time="87.000"/>
+    <timestep time="88.000"/>
+    <timestep time="89.000"/>
+    <timestep time="90.000"/>
+    <timestep time="91.000"/>
+    <timestep time="92.000"/>
+    <timestep time="93.000"/>
+    <timestep time="94.000"/>
+    <timestep time="95.000"/>
+    <timestep time="96.000"/>
+    <timestep time="97.000"/>
+    <timestep time="98.000"/>
+    <timestep time="99.000"/>
+    <timestep time="100.000"/>
+    <timestep time="101.000"/>
+    <timestep time="102.000"/>
+    <timestep time="103.000"/>
+    <timestep time="104.000"/>
+    <timestep time="105.000"/>
+    <timestep time="106.000"/>
+    <timestep time="107.000"/>
+    <timestep time="108.000"/>
+    <timestep time="109.000"/>
+    <timestep time="110.000"/>
+    <timestep time="111.000"/>
+    <timestep time="112.000"/>
+    <timestep time="113.000"/>
+    <timestep time="114.000"/>
+    <timestep time="115.000"/>
+    <timestep time="116.000"/>
+    <timestep time="117.000"/>
+    <timestep time="118.000"/>
+    <timestep time="119.000"/>
+</emission-export>
