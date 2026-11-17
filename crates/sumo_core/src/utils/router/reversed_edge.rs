@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::common::stable_cache::StableCache;
 
 /// C++ typedef `std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> ReversedEdge::ConstEdgePairVector`
 pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, Ptr<ReversedEdge<E, V>>)>;
@@ -12,7 +13,7 @@ pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, 
 pub struct ReversedEdge<E, V> {
     pub myOriginal: Ptr<E>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector<E, V>>,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector<E, V>>,
     pub myViaSuccessors: ReversedEdge_ConstEdgePairVector<E, V>,
     _p: std::marker::PhantomData<(E, V,)>,
 }
@@ -25,7 +26,7 @@ impl<E, V> ReversedEdge<E, V> {
     pub fn new(orig: Ptr<E>) -> Self {
         Self {
             myOriginal: orig,
-            myClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
             myViaSuccessors: Vec::new(),
             _p: std::marker::PhantomData,
         }
@@ -186,19 +187,16 @@ where
         if vClass == SVC_IGNORING || self.myOriginal.is_taz_connector() {
             return &self.myViaSuccessors;
         }
-        if let Some(cached) = self.myClassesViaSuccessorMap.get(&vClass) {
-            return cached;
-        }
         // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
-        let me: &mut ReversedEdge<E, V> = unsafe { &mut *Ptr::new(self).as_raw() };
-        let mut result: ReversedEdge_ConstEdgePairVector<E, V> = Vec::new();
-        for viaPair in self.myViaSuccessors.iter() {
-            if viaPair.0.myOriginal.is_taz_connector() || viaPair.0.myOriginal.is_connected_to(&self.myOriginal, vClass, false) {
-                result.push(*viaPair);
+        self.myClassesViaSuccessorMap.get_or_insert_with(vClass, || {
+            let mut result: ReversedEdge_ConstEdgePairVector<E, V> = Vec::new();
+            for viaPair in self.myViaSuccessors.iter() {
+                if viaPair.0.myOriginal.is_taz_connector() || viaPair.0.myOriginal.is_connected_to(&self.myOriginal, vClass, false) {
+                    result.push(*viaPair);
+                }
             }
-        }
-        me.myClassesViaSuccessorMap.insert(vClass, result);
-        me.myClassesViaSuccessorMap.get(&vClass).unwrap()
+            result
+        })
     }
 
 }

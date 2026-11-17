@@ -2,6 +2,13 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `RODUAEdgeBuilder::buildEdge` body, the target of the virtual dispatch in ROAbstractEdgeBuilder
+fn rodua_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+    let edge = Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType))));
+    ROEdge::register_in_all_edges(edge);
+    edge
+}
+
 /// Interface for building instances of duarouter-edges
 /// C++ class `RODUAEdgeBuilder` (duarouter/RODUAEdgeBuilder.h)
 #[repr(C)]
@@ -29,7 +36,9 @@ impl RODUAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        RODUAEdgeBuilder { base: ROAbstractEdgeBuilder::new() }
+        let mut base = ROAbstractEdgeBuilder::new();
+        base.buildEdgeFn = rodua_build_edge;
+        RODUAEdgeBuilder { base }
     }
 
     /// C++: `void RODUAEdgeBuilder::~RODUAEdgeBuilder() noexcept` [virtual]
@@ -47,7 +56,7 @@ impl RODUAEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType))))
+        rodua_build_edge(&mut self.base, name, from, to, priority, type_, routingType)
     }
 
 }

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="EV" vClass="passenger" emissionClass="Energy/unknown" accel="2.6" decel="4.5" length="4" maxSpeed="20">
+    <param key="has.battery.device" value="true"/>
+    <param key="device.battery.capacity" value="35000"/>
+    <param key="device.battery.chargeLevel" value="10000"/>
+    <param key="device.battery.maximumChargeRate" value="150000"/>
+    <param key="device.battery.stoppingThreshold" value="0.1"/>
+  </vType>
+  <vType id="EVfull" vClass="passenger" emissionClass="Energy/unknown" accel="2.6" decel="4.5" length="4" maxSpeed="20">
+    <param key="has.battery.device" value="true"/>
+    <param key="device.battery.capacity" value="35000"/>
+    <param key="device.battery.chargeLevel" value="30000"/>
+    <param key="device.battery.maximumChargeRate" value="150000"/>
+    <param key="device.battery.stoppingThreshold" value="0.1"/>
+  </vType>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <!-- low battery: searches for cs0 on its way -->
+  <vehicle id="sf_low" type="EV" route="r0" depart="0"/>
+  <vehicle id="sf_low2" type="EV" route="r1" depart="5"/>
+  <!-- enough charge: never searches -->
+  <vehicle id="sf_full" type="EVfull" route="r0" depart="10"/>
+  <!-- manual charging stop with the device present -->
+  <vehicle id="sf_stop" type="EV" route="r0" depart="12">
+    <stop chargingStation="cs0" duration="30"/>
+  </vehicle>
+</routes>

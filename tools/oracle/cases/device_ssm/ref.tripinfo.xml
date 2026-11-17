@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:10:20.738137-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_ssm/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_ssm/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_ssm/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_ssm/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_ssm/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <ssm_device>
+        <device.ssm.probability value="1"/>
+        <device.ssm.measures value="TTC,DRAC"/>
+        <device.ssm.thresholds value="4,3"/>
+        <device.ssm.trajectories value="true"/>
+        <device.ssm.range value="150"/>
+        <device.ssm.extratime value="5"/>
+        <device.ssm.file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_ssm/ref.ssm.xml"/>
+    </ssm_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="follow" depart="2.00" departLane="-103224#0_1" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="21.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="20.00" duration="19.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.42" rerouteNo="0" devices="tripinfo_follow ssm_follow fcd_follow" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="follow2" depart="6.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="25.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="20.00" duration="19.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.34" rerouteNo="0" devices="tripinfo_follow2 ssm_follow2 fcd_follow2" vType="car" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="lead" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="50.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="20.00" duration="50.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="25.00" timeLoss="3.38" rerouteNo="0" devices="tripinfo_lead ssm_lead fcd_lead" vType="car" speedFactor="1.06" vaporized=""/>
+</tripinfos>
