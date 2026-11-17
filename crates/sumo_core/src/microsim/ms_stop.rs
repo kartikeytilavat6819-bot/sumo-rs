@@ -1,6 +1,7 @@
 //! Port of microsim/MSStop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
 
 // shortcut: STOP_*_SET belong to SUMOVehicleParameter.h, not ported yet, move them there
 // C++ MSVehicle.h: static const int STOP_STARTED_SET = 2 << 17;
@@ -54,8 +55,8 @@ pub struct MSStop {
     pub skipOnDemand: bool,
     /// whether the 'started' value was loaded from simulaton state
     pub startedFromState: bool,
-    /// whehther the vehicle stopped despite having a waypoing
-    pub waypointWithStop: bool,
+    /// whehther the vehicle stopped despite having a waypoing (C++ const_cast-written from a const planMoveInternal)
+    pub waypointWithStop: Cell<bool>,
     /// route indices on looped route that were skipped before this stop (after pior stop or depart edge)
     pub skips: Vec<i32>,
     /// the exact position when entering the stop (for state saving)
@@ -90,7 +91,7 @@ impl MSStop {
             isOpposite: false,
             skipOnDemand: false,
             startedFromState: false,
-            waypointWithStop: false,
+            waypointWithStop: Cell::new(false),
             skips: Vec::new(),
             entryPos: -1.0,
         }

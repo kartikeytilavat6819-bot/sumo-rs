@@ -996,9 +996,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_blocking_vehicle_i_ds(&self) -> String {
+    pub fn get_blocking_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_blocking_vehicles(0))
         } else {
@@ -1043,9 +1043,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_rival_vehicle_i_ds(&self) -> String {
+    pub fn get_rival_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_rival_vehicles(0))
         } else {
@@ -1081,9 +1081,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_priority_vehicle_i_ds(&self) -> String {
+    pub fn get_priority_vehicle_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             vehicle_vector_to_string(&rs.m().get_priority_vehicles(0))
         } else {
@@ -1123,9 +1123,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_constraint_info_2(&self) -> String {
+    pub fn get_constraint_info_2(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             rs.m().get_constraint_info(0)
         } else {
@@ -1164,9 +1164,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_blocking_drive_way_i_ds(&self) -> String {
+    pub fn get_blocking_drive_way_i_ds(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             drive_way_vector_to_string(&rs.m().get_blocking_drive_ways(0))
         } else {
@@ -1218,9 +1218,9 @@ impl MSRailSignal {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_requested_drive_way_2(&self) -> String {
+    pub fn get_requested_drive_way_2(&mut self) -> String {
         // the C++ code const_casts this to call the non-const getters
-        let rs = Ptr::new(self);
+        let rs = Ptr::from_mut(self);
         if self.myLinkInfos.len() == 1 {
             rs.m().get_requested_drive_way(0)
         } else {

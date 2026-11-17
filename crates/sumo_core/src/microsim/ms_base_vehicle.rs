@@ -410,6 +410,11 @@ impl MSBaseVehicle {
         self.myParameter.get().unwrap()
     }
 
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this owner-based `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
+    }
+
     /// C++: `std::string MSBaseVehicle::getPrefixedParameter(const std::string &, std::string &) const` [const]
     /// retrieve parameters of devices, models and the vehicle itself
     // std::string

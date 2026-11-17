@@ -611,6 +611,11 @@ impl MSTransportable {
         &*self.myParameter
     }
 
+    /// C++ `mutable` parameter members are written through the owner's `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
+    }
+
     /// C++: `const MSVehicleType & MSTransportable::getVehicleType() const` [const, virtual]
     // inline const MSVehicleType& getVehicleType() const override {
     //         return *myVType;

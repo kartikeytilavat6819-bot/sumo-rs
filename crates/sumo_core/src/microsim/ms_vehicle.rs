@@ -1632,7 +1632,7 @@ impl MSVehicle_Influencer {
         if self.myRemoteRoute.len() != 0 && self.myRemoteRoute != *v.get_route().get_edges() {
             // needed for the insertion step
             // clear any prior stops because they cannot apply to the new route
-            unsafe { (*(v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter)).stops.clear() };
+            v.m().get_parameter_mutable().stops.clear();
             let _ = v.m().replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
             self.myRemoteRoute.clear();
         }
@@ -2424,6 +2424,10 @@ fn ms_vehicle_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
     ms_vehicle_of_mut(v).get_next_stop_mutable()
 }
 
+fn ms_vehicle_get_parameter_mutable(v: &mut SUMOVehicle) -> &mut SUMOVehicleParameter {
+    ms_vehicle_of_mut(v).get_parameter_mutable()
+}
+
 fn ms_vehicle_unregister_waiting(v: &mut SUMOVehicle) {
     ms_vehicle_of_mut(v).unregister_waiting()
 }
@@ -2589,6 +2593,7 @@ static MS_VEHICLE_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_stops: ms_vehicle_get_stops,
     get_next_stop: ms_vehicle_get_next_stop,
     get_next_stop_mutable: ms_vehicle_get_next_stop_mutable,
+    get_parameter_mutable: ms_vehicle_get_parameter_mutable,
     unregister_waiting: ms_vehicle_unregister_waiting,
     get_next_stop_parameter: ms_vehicle_get_next_stop_parameter,
     get_stop_duration: ms_vehicle_get_stop_duration,
@@ -4555,7 +4560,6 @@ impl MSVehicle {
     pub fn get_slope(&self) -> f64 {
         if self.is_parking() && self.get_stops().front().map_or(false, |s| !s.parkingarea.is_null()) {
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
-            let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
             return parkingArea.m().get_vehicle_slope(self);
         }
         if self.myLane.is_null() {
@@ -4652,7 +4656,6 @@ impl MSVehicle {
             }
             let parkingArea = self.get_stops().front().unwrap().parkingarea;
             if !parkingArea.is_null() {
-                let veh = Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOVehicle>();
                 return parkingArea.m().get_vehicle_position(self);
             } else {
                 // position beside the road
@@ -13667,8 +13670,7 @@ impl MSVehicle {
                                 stopSpeed = max2(cfModel.stop_speed(me, self.get_speed(), distToEnd, MSCFModel_CalcReason::CURRENT), vMinComfortable);
                                 waypointWithStop = true;
                                 if stopSpeed <= SUMO_const_haltingSpeed {
-                                    // const_cast in C++
-                                    me.m().myStops[stop_idx].waypointWithStop = true;
+                                    me.myStops[stop_idx].waypointWithStop.set(true);
                                 }
                             }
                         }
