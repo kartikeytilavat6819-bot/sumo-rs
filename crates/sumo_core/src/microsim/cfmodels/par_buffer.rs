@@ -183,8 +183,8 @@ impl ParBuffer {
         } else {
             escaping
         };
-        // shortcut: bytes are rebuilt as UTF-8 lossily, only differs from C++ when ESC sits before a multi-byte character
-        String::from_utf8_lossy(&escaped).into_owned()
+        // SEP, ESC and QUO are ASCII, so every cut and inserted byte is a char boundary and the result stays valid UTF-8
+        String::from_utf8(escaped).expect("ASCII-only insertions keep UTF-8 valid")
     }
 
     /// C++: `std::string ParBuffer::unescape(std::string)`
@@ -230,8 +230,8 @@ impl ParBuffer {
             }
             unescaped.extend_from_slice(&s[last_pos..]);
         }
-        // shortcut: bytes are rebuilt as UTF-8 lossily, only differs from C++ when ESC sits before a multi-byte character
-        String::from_utf8_lossy(&unescaped).into_owned()
+        // only ASCII ESC bytes are dropped and every other byte is copied in order, so the result stays valid UTF-8
+        String::from_utf8(unescaped).expect("dropping ASCII ESC bytes keeps UTF-8 valid")
     }
 
     /// C++: `std::string ParBuffer::next()`
@@ -344,5 +344,21 @@ impl ParBuffer {
         self.outBuffer.clone()
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn escape_and_unescape_keep_multibyte_text() {
+        let mut pb = ParBuffer::new();
+        // C++ escape("a:é"): "a" + ESC + ":" + "é"
+        assert_eq!(pb.escape("a:é".to_string()), "a\\:é");
+        // C++ escape(""): empty input is quoted
+        assert_eq!(pb.escape(String::new()), "\"\"");
+        assert_eq!(pb.unescape("a\\:é".to_string()), "a:é");
+        assert_eq!(pb.unescape("\"\"".to_string()), "");
+    }
 }
 

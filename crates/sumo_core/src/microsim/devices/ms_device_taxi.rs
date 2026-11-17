@@ -259,9 +259,7 @@ impl MSDevice_Taxi {
             if v.get_parameter().line.is_empty() {
                 // automatically set the line so that persons are willing to enter
                 // (see MSStageDriving::isWaitingFor)
-                // const_cast on the vehicle parameter, as in C++
-                let p = v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-                unsafe { (*p).line = TAXI_SERVICE.to_string(); }
+                v.get_parameter_mutable().line = TAXI_SERVICE.to_string();
             }
             let personCapacity = v.get_vehicle_type().get_person_capacity();
             let containerCapacity = v.get_vehicle_type().get_container_capacity();

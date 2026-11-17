@@ -742,6 +742,22 @@ SIM_GETTERS = [
 ]
 
 
+VEH_SETTERS = [
+    ("setSpeedMode", (0,), "getSpeedMode"), ("setLaneChangeMode", (0,), "getLaneChangeMode"),
+    ("setSpeedFactor", (1.3,), "getSpeedFactor"), ("setMaxSpeed", (15.0,), "getMaxSpeed"),
+    ("setMinGap", (4.0,), "getMinGap"), ("setWidth", (2.2,), "getWidth"), ("setLength", (7.0,), "getLength"),
+    ("setHeight", (1.9,), "getHeight"), ("setMass", (1200.0,), "getMass"),
+    ("setVehicleClass", ("bus",), "getVehicleClass"), ("setEmissionClass", ("HBEFA3/PC_G_EU4",), "getEmissionClass"),
+    ("setShapeClass", ("bus",), "getShapeClass"), ("setAccel", (2.0,), "getAccel"), ("setDecel", (4.0,), "getDecel"),
+    ("setEmergencyDecel", (8.0,), "getEmergencyDecel"), ("setApparentDecel", (5.0,), "getApparentDecel"),
+    ("setImpatience", (0.5,), "getImpatience"), ("setTau", (1.1,), "getTau"),
+    ("setActionStepLength", (0.5,), "getActionStepLength"), ("setMinGapLat", (0.7,), "getMinGapLat"),
+    ("setMaxSpeedLat", (2.0,), "getMaxSpeedLat"), ("setLateralAlignment", ("center",), "getLateralAlignment"),
+    ("setBoardingDuration", (1.5,), "getBoardingDuration"), ("setLine", ("L1",), "getLine"),
+    ("setSignals", (1,), "getSignals"), ("setRoutingMode", (0,), "getRoutingMode"),
+]
+
+
 def domain_probes(lane, edge, tl, run_n, summary):
     """Setter/getter probes for Lane, Edge, Junction, Route, TrafficLight, VehicleType, Simulation.
     Labels start with 'dom ' so --filter "dom " selects only these."""
@@ -829,6 +845,77 @@ def domain_probes(lane, edge, tl, run_n, summary):
     P["dom vehicletype.copy(DEFAULT, cp) + getMaxSpeed"] = read_after(
         lambda t: t.vehicletype.copy("DEFAULT_VEHTYPE", "cp"), lambda t: t.vehicletype.getMaxSpeed("cp"))
     P["dom vehicletype.getAccel(nope)"] = lambda t: t.vehicletype.getAccel("nope")
+
+    # vehicle setters with read-back (no step): setter(v0, args) then the matching getter
+    for setter, args, getter in VEH_SETTERS:
+        P[f"dom vehicle.{setter}(v0,{args[0]}) + {getter}"] = read_after(
+            (lambda s, a: lambda t: getattr(t.vehicle, s)("v0", *a))(setter, args),
+            (lambda g: lambda t: getattr(t.vehicle, g)("v0"))(getter))
+    P["dom vehicle.setRouteID(v0, first route) + getRouteID"] = read_after(
+        lambda t: t.vehicle.setRouteID("v0", t.route.getIDList()[0]), lambda t: t.vehicle.getRouteID("v0"))
+    P["dom vehicle.setVia(v0, route edges) + getVia"] = read_after(
+        lambda t: t.vehicle.setVia("v0", t.vehicle.getRoute("v0")), lambda t: t.vehicle.getVia("v0"))
+    P["dom vehicle.setMaxSpeed(v0,-1)"] = lambda t: t.vehicle.setMaxSpeed("v0", -1.0)
+    P["dom vehicle.setSpeedMode(v0,99)"] = lambda t: t.vehicle.setSpeedMode("v0", 99)
+    P["dom vehicle.setVehicleClass(v0,nope)"] = lambda t: t.vehicle.setVehicleClass("v0", "nope")
+    P["dom vehicle.setLength(v0,0)"] = lambda t: t.vehicle.setLength("v0", 0.0)
+    P["dom vehicle.setMass(nope,1)"] = lambda t: t.vehicle.setMass("nope", 1.0)
+    P["dom vehicle.setLaneChangeMode(v0,0) +30 summary"] = lambda t: (t.vehicle.setLaneChangeMode("v0", 0), run_n(t, 30), summary(t))[2]
+    P["dom vehicle.setSpeedFactor(v0,1.3) +30 summary"] = lambda t: (t.vehicle.setSpeedFactor("v0", 1.3), run_n(t, 30), summary(t))[2]
+    P["dom vehicle.setMinGap(v0,4) +30 summary"] = lambda t: (t.vehicle.setMinGap("v0", 4.0), run_n(t, 30), summary(t))[2]
+
+    # traffic light setters with read-back
+    def logic_view(lg):
+        return (lg.programID, lg.type, lg.currentPhaseIndex,
+                [(p.duration, p.state, p.minDur, p.maxDur, list(p.next), p.name) for p in lg.phases])
+
+    def tl_logic_dur(t):
+        lg = t.trafficlight.getAllProgramLogics(tl)[0]
+        lg.phases[0].duration = 9.0
+        t.trafficlight.setProgramLogic(tl, lg)
+        t.simulationStep(11)
+        return (t.trafficlight.getPhaseDuration(tl), logic_view(t.trafficlight.getAllProgramLogics(tl)[0]))
+
+    def tl_logic_new_program(t):
+        lg = t.trafficlight.getAllProgramLogics(tl)[0]
+        lg.programID = "trnew"
+        lg.currentPhaseIndex = 1
+        t.trafficlight.setProgramLogic(tl, lg)
+        t.trafficlight.setProgram(tl, "trnew")
+        return trace_tl(t, 20) + [t.trafficlight.getProgram(tl)]
+
+    def tl_logic_bad_index(t):
+        lg = t.trafficlight.getAllProgramLogics(tl)[0]
+        lg.currentPhaseIndex = len(lg.phases)
+        t.trafficlight.setProgramLogic(tl, lg)
+
+    def tl_logic_bad_type(t):
+        lg = t.trafficlight.getAllProgramLogics(tl)[0]
+        lg.programID = "trbad"
+        lg.type = 99
+        t.trafficlight.setProgramLogic(tl, lg)
+        return t.trafficlight.getAllProgramLogics(tl)
+
+    def tl_set_link_state_trace(t):
+        t.trafficlight.setLinkState(tl, 0, "G")
+        return trace_tl(t, 5)
+
+    P["dom trafficlight.setProgramLogic(phase0 dur 9) + step + get"] = tl_logic_dur
+    P["dom trafficlight.setProgramLogic(new prog, index 1) + trace"] = tl_logic_new_program
+    P["dom trafficlight.setProgramLogic(bad index)"] = tl_logic_bad_index
+    P["dom trafficlight.setProgramLogic(bad type 99)"] = tl_logic_bad_type
+    P["dom trafficlight.setRedYellowGreenState(Z) + get"] = read_after(
+        lambda t: t.trafficlight.setRedYellowGreenState(tl, "Z" * len(t.trafficlight.getRedYellowGreenState(tl))),
+        lambda t: t.trafficlight.getRedYellowGreenState(tl))
+    P["dom trafficlight.setLinkState(tl,0,G) + get"] = read_after(
+        lambda t: t.trafficlight.setLinkState(tl, 0, "G"), lambda t: t.trafficlight.getRedYellowGreenState(tl))
+    P["dom trafficlight.setLinkState(tl,0,G) + trace"] = tl_set_link_state_trace
+    P["dom trafficlight.setLinkState(tl,999,r)"] = lambda t: t.trafficlight.setLinkState(tl, 999, "r")
+    P["dom trafficlight.setLinkState(tl,0,Q)"] = lambda t: t.trafficlight.setLinkState(tl, 0, "Q")
+    P["dom trafficlight.setLinkState(tl,0,rr)"] = lambda t: t.trafficlight.setLinkState(tl, 0, "rr")
+    P["dom trafficlight.setPhase(tl,-1)"] = lambda t: t.trafficlight.setPhase(tl, -1)
+    P["dom trafficlight.setPhaseDuration(tl,-1) + get"] = read_after(
+        lambda t: t.trafficlight.setPhaseDuration(tl, -1.0), lambda t: t.trafficlight.getPhaseDuration(tl))
 
     # simulation: zero-argument getters
     for name in SIM_GETTERS:
