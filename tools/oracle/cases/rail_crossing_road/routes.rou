@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" vClass="passenger" length="5"/>
+    <vType id="train" vClass="rail" length="60" accel="1.0" decel="1.0" maxSpeed="20" minGap="2"/>
+    <route id="tr_east" edges="rw_rc rc_re"/>
+    <route id="tr_west" edges="re_rc rc_rw"/>
+    <route id="car_ns" edges="rn_rc rc_rs"/>
+    <route id="car_sn" edges="rs_rc rc_rn"/>
+    <vehicle id="tr1" type="train" route="tr_east" depart="0"/>
+    <vehicle id="c1" type="car" route="car_ns" depart="2"/>
+    <vehicle id="c2" type="car" route="car_sn" depart="6"/>
+    <vehicle id="c3" type="car" route="car_ns" depart="18"/>
+    <vehicle id="tr2" type="train" route="tr_west" depart="25"/>
+    <vehicle id="c4" type="car" route="car_sn" depart="27"/>
+</routes>

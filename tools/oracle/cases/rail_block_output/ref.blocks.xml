@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:56.037735-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_block_output/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_block_output/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_block_output/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_block_output/ref.tripinfo.xml"/>
+        <railsignal-block-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_block_output/ref.blocks.xml"/>
+        <railsignal-vehicle-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_block_output/ref.vehicles.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_block_output/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<railsignal-block-output>
+    <railSignal id="r1">
+        <link linkIndex="0" from="j1_r1_0" to=":r1_0_0">
+            <driveWay id="r1.1" vehicle="w1" edges="r1_w">
+                <forward lanes=":r1_0_0 r1_w_0"/>
+                <bidi lanes=":r1_1_0 w_r1_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="r1.1 w.d0 w.d1"/>
+            </driveWay>
+        </link>
+        <link linkIndex="1" from="w_r1_0" to=":r1_1_0">
+            <driveWay id="r1.0" vehicle="e1" edges="r1_j1 j1_j2_main j2_r2 r2_e">
+                <forward lanes=":r1_1_0 r1_j1_0 :j1_2_0 j1_j2_main_0 :j2_2_0 j2_r2_0"/>
+                <bidi lanes=":r1_0_0 j1_r1_0 :j1_1_0 j2_j1_main_0 :j2_1_0 r2_j2_0 :r2_0_0 e_r2_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="e.d0 e.d1 r1.0 r1.2 r2.1 r2.2"/>
+            </driveWay>
+            <driveWay id="r1.2" vehicle="e2" edges="r1_j1 j1_j2_loop j2_r2 r2_e">
+                <forward lanes=":r1_1_0 r1_j1_0 :j1_3_0 j1_j2_loop_0 :j2_3_0 j2_r2_0"/>
+                <bidi lanes=":r1_0_0 j1_r1_0 :j1_0_0 j2_j1_loop_0 :j2_0_0 r2_j2_0 :r2_0_0 e_r2_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="e.d0 e.d1 r1.0 r1.2 r2.1 r2.2"/>
+            </driveWay>
+        </link>
+    </railSignal>
+    <railSignal id="r2">
+        <link linkIndex="0" from="e_r2_0" to=":r2_0_0">
+            <driveWay id="r2.1" vehicle="w1" edges="r2_j2 j2_j1_main j1_r1 r1_w">
+                <forward lanes=":r2_0_0 r2_j2_0 :j2_1_0 j2_j1_main_0 :j1_1_0 j1_r1_0"/>
+                <bidi lanes=":r2_1_0 j2_r2_0 :j2_2_0 j1_j2_main_0 :j1_2_0 r1_j1_0 :r1_1_0 w_r1_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="r1.0 r1.2 r2.1 r2.2 w.d0 w.d1"/>
+            </driveWay>
+            <driveWay id="r2.2" vehicle="w2" edges="r2_j2 j2_j1_loop j1_r1 r1_w">
+                <forward lanes=":r2_0_0 r2_j2_0 :j2_0_0 j2_j1_loop_0 :j1_0_0 j1_r1_0"/>
+                <bidi lanes=":r2_1_0 j2_r2_0 :j2_3_0 j1_j2_loop_0 :j1_3_0 r1_j1_0 :r1_1_0 w_r1_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="r1.0 r1.2 r2.1 r2.2 w.d0 w.d1"/>
+            </driveWay>
+        </link>
+        <link linkIndex="1" from="j2_r2_0" to=":r2_1_0">
+            <driveWay id="r2.0" vehicle="e1" edges="r2_e">
+                <forward lanes=":r2_1_0 r2_e_0"/>
+                <bidi lanes=":r2_0_0 e_r2_0"/>
+                <flank lanes=""/>
+                <conflictLinks signals=""/>
+                <foes driveWays="e.d0 e.d1 r2.0"/>
+            </driveWay>
+        </link>
+    </railSignal>
+    <departJunction id="e">
+        <driveWay id="e.d0" vehicle="w1" edges="e_r2 r2_j2 j2_j1_main j1_r1 r1_w">
+            <forward lanes="e_r2_0"/>
+            <bidi lanes="r2_e_0 :r2_1_0 j2_r2_0 :j2_2_0 j1_j2_main_0 :j1_2_0"
+                    deadlockCheck="r1_j1_0 :r1_1_0 w_r1_0"/>
+            <flank lanes=""/>
+            <conflictLinks signals="r1_1"/>
+            <foes driveWays="e.d0 e.d1 r1.0 r1.2 r2.0 w.d0 w.d1"/>
+        </driveWay>
+        <driveWay id="e.d1" vehicle="w2" edges="e_r2 r2_j2 j2_j1_loop j1_r1 r1_w">
+            <forward lanes="e_r2_0"/>
+            <bidi lanes="r2_e_0 :r2_1_0 j2_r2_0 :j2_3_0 j1_j2_loop_0 :j1_3_0"
+                    deadlockCheck="r1_j1_0 :r1_1_0 w_r1_0"/>
+            <flank lanes=""/>
+            <conflictLinks signals="r1_1"/>
+            <foes driveWays="e.d0 e.d1 r1.0 r1.2 r2.0 w.d0 w.d1"/>
+        </driveWay>
+    </departJunction>
+    <departJunction id="w">
+        <driveWay id="w.d0" vehicle="e1" edges="w_r1 r1_j1 j1_j2_main j2_r2 r2_e">
+            <forward lanes="w_r1_0"/>
+            <bidi lanes="r1_w_0 :r1_0_0 j1_r1_0 :j1_1_0 j2_j1_main_0 :j2_1_0"
+                    deadlockCheck="r2_j2_0 :r2_0_0 e_r2_0"/>
+            <flank lanes=""/>
+            <conflictLinks signals="r2_0"/>
+            <foes driveWays="e.d0 e.d1 r1.1 r2.1 r2.2 w.d0 w.d1"/>
+        </driveWay>
+        <driveWay id="w.d1" vehicle="e2" edges="w_r1 r1_j1 j1_j2_loop j2_r2 r2_e">
+            <forward lanes="w_r1_0"/>
+            <bidi lanes="r1_w_0 :r1_0_0 j1_r1_0 :j1_0_0 j2_j1_loop_0 :j2_0_0"
+                    deadlockCheck="r2_j2_0 :r2_0_0 e_r2_0"/>
+            <flank lanes=""/>
+            <conflictLinks signals="r2_0"/>
+            <foes driveWays="e.d0 e.d1 r1.1 r2.1 r2.2 w.d0 w.d1"/>
+        </driveWay>
+    </departJunction>
+</railsignal-block-output>

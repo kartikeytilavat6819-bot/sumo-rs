@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_bidi_platoon/rail_bidi_platoon.nod.xml --edge-files tools/oracle/cases/rail_bidi_platoon/rail_bidi_platoon.edg.xml

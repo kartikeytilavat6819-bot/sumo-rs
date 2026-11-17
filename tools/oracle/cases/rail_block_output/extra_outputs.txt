@@ -1,0 +1,2 @@
+--railsignal-block-output blocks
+--railsignal-vehicle-output vehicles

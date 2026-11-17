@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_train_lengths/rail_train_lengths.nod.xml --edge-files tools/oracle/cases/rail_train_lengths/rail_train_lengths.edg.xml

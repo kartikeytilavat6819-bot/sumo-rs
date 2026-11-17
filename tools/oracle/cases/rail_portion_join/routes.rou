@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="train" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="to_e_back" edges="w_r1 r1_j j_e e_j j_r1 r1_w"/>
+    <route id="from_e" edges="e_j j_r1 r1_w w_r1 r1_j j_e"/>
+    <route id="fwd" edges="w_r1 r1_j j_e"/>
+    <vehicle id="lead" type="train" route="fwd" depart="0">
+        <stop lane="j_e_0" endPos="100" triggered="join"/>
+    </vehicle>
+    <vehicle id="foll" type="train" route="fwd" depart="10">
+        <stop lane="j_e_0" endPos="80" join="lead"/>
+    </vehicle>
+</routes>
