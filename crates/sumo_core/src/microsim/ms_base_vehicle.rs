@@ -486,8 +486,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_prefixed_parameter(&self, key: &str, error: &mut String) -> String {
-        // shortcut: dynamic_cast<const MSVehicle*>(this) has no downcast from the base yet, so micro_veh is always None
-        let micro_veh: Option<Ptr<MSVehicle>> = None;
+        let micro_veh: Option<Ptr<MSVehicle>> = self.as_micro_vehicle();
         if utils::common::string_utils::starts_with(key, "device.") {
             let tok = utils::common::string_tokenizer::StringTokenizer::with_token(key, ".", false).get_vector();
             if tok.len() < 3 {
@@ -502,21 +501,19 @@ impl MSBaseVehicle {
                 }
             }
         } else if utils::common::string_utils::starts_with(key, "laneChangeModel.") {
-            if micro_veh.is_none() {
+            let Some(microVeh) = micro_veh else {
                 *error = utils::tlf!("Mesoscopic vehicle '%' does not support laneChangeModel parameters.", self.get_id());
                 return String::new();
-            }
+            };
             let attrName = &key[16..];
-            // shortcut: getLaneChangeModel().getParameter(attrName) not reachable (micro_veh is None)
-            return String::new();
+            return microVeh.m().get_lane_change_model().get_parameter(attrName);
         } else if utils::common::string_utils::starts_with(key, "carFollowModel.") {
-            if micro_veh.is_none() {
+            let Some(microVeh) = micro_veh else {
                 *error = utils::tlf!("Mesoscopic vehicle '%' does not support carFollowModel parameters.", self.get_id());
                 return String::new();
-            }
+            };
             let attrName = &key[15..];
-            // shortcut: getCarFollowModel().getParameter(microVeh, attrName) not reachable (micro_veh is None)
-            return String::new();
+            return microVeh.get_car_follow_model().get_parameter(microVeh, attrName);
         } else if utils::common::string_utils::starts_with(key, "has.") && utils::common::string_utils::ends_with(key, ".device") {
             let tok = utils::common::string_tokenizer::StringTokenizer::with_token(key, ".", false).get_vector();
             if tok.len() != 3 {
@@ -725,15 +722,28 @@ impl MSBaseVehicle {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_car_follow_model_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_car_follow_model_parameter(&mut self, key: &str, value: &str) -> Result<(), InvalidArgument> {
         // handle some generic params first and then delegate to the carFollowModel itself
         // toString(SUMO_ATTR_CF_IGNORE_IDS / SUMO_ATTR_CF_IGNORE_TYPES)
         if key == "carFollowModel.ignoreIDs" || key == "carFollowModel.ignoreTypes" {
             self.myParameter.m().parametersSet |= VEHPARS_CFMODEL_PARAMS_SET;
             self.myParameter.m().set_parameter(key, value);
             // checked in MSVehicle::planMove
+        } else if let Some(microVeh) = self.as_micro_vehicle() {
+            // remove 'carFollowModel.' prefix
+            let attrName = &key[15..];
+            return microVeh.get_car_follow_model().set_parameter(microVeh, attrName, value);
+        }
+        Ok(())
+    }
+
+    /// C++ `dynamic_cast<MSVehicle*>(this)`: a checked downcast. MSVehicle is the only class that installs
+    /// MS_VEHICLE_VT in its SUMOTrafficObject base, and MSBaseVehicle is its first (repr(C)) field.
+    pub(crate) fn as_micro_vehicle(&self) -> Option<Ptr<MSVehicle>> {
+        if std::ptr::eq(self.base.base.vt, &crate::microsim::ms_vehicle::MS_VEHICLE_VT) {
+            Some(Ptr::from_raw(self as *const MSBaseVehicle as *mut MSVehicle))
         } else {
-            // shortcut: dynamic_cast<MSVehicle*>(this) has no downcast yet, so the carFollowModel delegation is skipped
+            None
         }
     }
 

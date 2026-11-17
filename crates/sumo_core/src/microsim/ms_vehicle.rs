@@ -2016,7 +2016,7 @@ fn ms_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
 fn ms_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
     false
 }
-static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+pub(crate) static MS_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: ms_vehicle_is_vehicle,
     is_person: ms_vehicle_is_person,
     is_container: ms_vehicle_is_container,
