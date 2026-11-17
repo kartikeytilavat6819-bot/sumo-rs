@@ -1,6 +1,7 @@
 //! Port of microsim/MSBaseVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
 /// C++ enum `MSBaseVehicle::RouteValidity`
@@ -177,6 +178,10 @@ pub const VEHPARS_PARKING_BADGES_SET: i64 = (2i64) << 30;
 pub const VEHPARS_INSERTION_CHECKS_SET: i64 = (2i64) << 31;
 /// C++ `STOP_INDEX_FIT` (SUMOVehicleParameter.h), not yet ported elsewhere
 pub const STOP_INDEX_FIT: i32 = -2;
+/// C++ `STOP_INDEX_END` (SUMOVehicleParameter.h)
+const STOP_INDEX_END: i32 = -1;
+/// C++ `STOP_INDEX_REPEAT` (SUMOVehicleParameter.h)
+const STOP_INDEX_REPEAT: i32 = -3;
 /// C++ `SPEED_EPS` (config.h.cmake), not yet ported elsewhere
 pub const SPEED_EPS: f64 = 0.01;
 thread_local! {
@@ -194,6 +199,14 @@ fn rand_helper_get_seed() -> i32 {
 }
 
 impl MSBaseVehicle {
+    // Downcast of this base to the concrete vehicle: micro sim is always MSVehicle, meso always MEVehicle.
+    fn as_ms_vehicle(&self) -> &crate::microsim::ms_vehicle::MSVehicle {
+        Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap()
+    }
+    fn as_me_vehicle(&self) -> &crate::mesosim::me_vehicle::MEVehicle {
+        Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap()
+    }
+
     /// C++: `double MSBaseVehicle::getPreviousSpeed() const` [const, virtual]
     /// Returns the vehicle's previous speed
     // double
@@ -202,7 +215,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_previous_speed(&self) -> f64 {
-        panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        if MSGlobals::use_meso_sim() {
+            panic!("getPreviousSpeed() is not available for non-MSVehicles.");
+        }
+        self.as_ms_vehicle().get_previous_speed()
     }
 
     /// C++: `void MSBaseVehicle::MSBaseVehicle(SUMOVehicleParameter *, ConstMSRoutePtr, MSVehicleType *, const double)`
@@ -343,13 +359,15 @@ impl MSBaseVehicle {
         let self_ptr = self as *mut MSBaseVehicle;
         let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
         let mut devices: Vec<Ptr<MSVehicleDevice>> = Vec::new();
-        // shortcut: only tripinfo device is built here; full MSDevice::build_vehicle_devices panics on unported devices (rerouting/emissions/example/...). Upgrade to full build once those are ported.
-        crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo::build_vehicle_devices(v, &mut devices);
-        crate::microsim::devices::ms_device_fcd::MSDevice_FCD::build_vehicle_devices(v, &mut devices);
+        MSDevice::build_vehicle_devices(v, &mut devices);
+        if !MSDevice::get_device_by_name(&devices, "rerouting").is_null() {
+            // C++ records this in createDevice; the rerouter uses it to tell a vehicle with a routing device
+            // from one without (see has_rerouting_device).
+            self.myParameter.m().set_parameter("has.rerouting.device", "true");
+        }
         self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
         self.myDevices = devices;
-        // shortcut: MSGlobals::gHaveEmissions is not ported yet, so the emission parameters are never forced here
-        if false {
+        if MSGlobals::have_emissions() {
             // ensure we have the emission parameters even if we don't have the device
             self.get_emission_parameters();
         }
@@ -555,7 +573,7 @@ impl MSBaseVehicle {
     fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, String> {
         for dev in self.myDevices.iter() {
             if dev.base2.device_name() == deviceName {
-                return Ok(dev.base2.get_parameter(key));
+                return Ok(MSDevice::get_parameter_of(*dev, key));
             }
         }
         Err(utils::tlf!("no device of type '%' exists", deviceName))
@@ -572,6 +590,14 @@ impl MSBaseVehicle {
     //     }
     //     return false;
     // }
+    /// C++: `tObject.getDevice(typeid(MSDevice_Routing)) != nullptr`.
+    ///
+    /// The port has no type-keyed device lookup and `MSDevice::device_name` is pure virtual with no vtable,
+    /// so ask the parameter that `createDevice` records for exactly this purpose (`has.rerouting.device`).
+    pub fn has_rerouting_device(&self) -> bool {
+        self.myParameter.get_parameter("has.rerouting.device", "false") == "true"
+    }
+
     #[allow(unused_variables)]
     pub fn has_device(&self, deviceName: &str) -> bool {
         for dev in self.myDevices.iter() {
@@ -649,7 +675,7 @@ impl MSBaseVehicle {
     pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) {
         for dev in self.myDevices.iter_mut() {
             if dev.base2.device_name() == deviceName {
-                dev.base2.set_parameter(key, value);
+                MSDevice::set_parameter_of(*dev, key, value);
                 return;
             }
         }
@@ -835,7 +861,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_edge(&self) -> Ptr<MSEdge> {
-        self.get_edge()
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().get_current_edge();
+        }
+        self.as_ms_vehicle().get_current_edge()
     }
 
     /// C++: `const std::set<SUMOTrafficObject::NumericalID> MSBaseVehicle::getUpcomingEdgeIDs() const` [const, virtual]
@@ -915,7 +944,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_edge_ptr(&self) -> Ptr<MSEdge> {
-        Ptr::default()
+        if MSGlobals::use_meso_sim() {
+            return Ptr::default();
+        }
+        self.as_ms_vehicle().get_next_edge_ptr()
     }
 
     /// C++: `bool MSBaseVehicle::isOnRoad() const` [const, virtual]
@@ -925,7 +957,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn is_on_road(&self) -> bool {
-        true
+        if MSGlobals::use_meso_sim() {
+            return self.as_me_vehicle().is_on_road();
+        }
+        self.as_ms_vehicle().is_on_road()
     }
 
     /// C++: `bool MSBaseVehicle::isRemoteControlled() const` [const, virtual]
@@ -966,7 +1001,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_lateral_position_on_lane(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_lateral_position_on_lane()
     }
 
     /// C++: `double MSBaseVehicle::getRightSideOnEdge(const MSLane *) const` [const, virtual]
@@ -987,7 +1025,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_reroute_origin(&self) -> usize /* ConstMSEdgeVector::const_iterator, as an index into myRoute */ {
-        self.myCurrEdge
+        if MSGlobals::use_meso_sim() {
+            return self.myCurrEdge;
+        }
+        self.as_ms_vehicle().get_reroute_origin()
     }
 
     /// C++: `const MSEdge * MSBaseVehicle::getRerouteDestination() const` [const, virtual]
@@ -1008,8 +1049,11 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_time_loss_seconds(&self) -> f64 {
-        // better timeLoss for meso?
-        0.0
+        if MSGlobals::use_meso_sim() {
+            // better timeLoss for meso?
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_time_loss_seconds()
     }
 
     /// C++: `double MSBaseVehicle::getWaitingSeconds() const` [const]
@@ -1066,18 +1110,12 @@ impl MSBaseVehicle {
     //     std::set<int> jumps;
     //
     //
-    //     double sourcePos = getPositionOnLane();
+    //     double sourcePos = onInit ? 0 : getPositionOnLane();
     // #ifdef DEBUG_REROUTE
     //     if (DEBUG_COND) {
     //         std::cout << " curEdge=" << (*myCurrEdge)->getID() << " source=" << source->getID() << " sourcePos=" << sourcePos << " lane=" << Named::getIDSecure(getLane()) << " departPos=" << myParameter->departPos << " oldEdgesRemaining=" << toString(oldEdgesRemaining) << "\n";
     //     }
     // #endif
-    //     if (onInit && myParameter->departPosProcedure == DepartPosDefinition::GIVEN) {
-    //         sourcePos = myParameter->departPos;
-    //     } else if (getLane() != nullptr && source != &getLane()->getEdge()) {
-    //         // routing starts on the next edge
-    //         sourcePos = 0;
-    //     }
     //     if (myParameter->via.size() == 0) {
     //         double firstPos = INVALID_DOUBLE;
     //         double lastPos = INVALID_DOUBLE;
@@ -1272,10 +1310,9 @@ impl MSBaseVehicle {
     //     }
     //     const double routeCost = router.recomputeCosts(edges, this, t);
     //     // trips have no loaded route to compare against when routed on insertion
-    //     const bool isTripInit = onInit && myParameter->wasSet(VEHPARS_FORCE_REROUTE);
-    //     const double previousCost = isTripInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
+    //     const double previousCost = onInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
     //     const double savings = previousCost - routeCost;
-    //     bool savingsOk = isTripInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
+    //     bool savingsOk = onInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
     //     if (!savingsOk) {
     //         MSDevice_Routing* routingDevice = static_cast<MSDevice_Routing*>(getDevice(typeid(MSDevice_Routing)));
     //         assert(routingDevice != 0);
@@ -1326,7 +1363,7 @@ impl MSBaseVehicle {
                 source = self.myRoute.get_first_edge();
             }
         } else {
-            source = self.myRoute.index_op(self.get_reroute_origin() as i32);
+            source = self.myRoute.index_op(self.base.get_reroute_origin() as i32);
         }
         let mut sink = sink;
         if sink.is_null() {
@@ -1345,13 +1382,7 @@ impl MSBaseVehicle {
         let mut stops: Vec<MSBaseVehicle_StopEdgeInfo> = Vec::new();
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
-        let mut sourcePos = self.get_position_on_lane();
-        if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
-            sourcePos = self.myParameter.departPos;
-        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            // routing starts on the next edge
-            sourcePos = 0.0;
-        }
+        let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
@@ -1475,7 +1506,7 @@ impl MSBaseVehicle {
                     continue;
                 } else if stops[idx].isSink {
                     edges.clear();
-                    if source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
+                    if onInit && source == stopEdge && stops.len() == 1 && sourcePos > self.myArrivalPos {
                         edges.push(stopEdge);
                         utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ignores arrivalPos % when driving from edge '%' to edge '%' with departPos %.",
                             self.get_id(), self.myArrivalPos, source.get_id(), stopEdge.get_id(), sourcePos));
@@ -1485,8 +1516,7 @@ impl MSBaseVehicle {
                     edges.clear();
                 } else {
                     let error = utils::tlf!("Vehicle '%' has no valid route from edge '%' to stop edge '%'.", self.get_id(), source.get_id(), stopEdge.get_id());
-                    // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-                    if silent {
+                    if MSGlobals::check_routes() || silent {
                         panic!("{}", error);
                     } else {
                         utils::common::msg_handler::write_warning(&error);
@@ -1524,11 +1554,10 @@ impl MSBaseVehicle {
         }
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
-        let isTripInit = onInit && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) != 0;
-        let previousCost = if isTripInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
+        let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
         let savings = previousCost - routeCost;
-        // shortcut: gWeightsRandomFactor (MSEdgeWeightsStorage global) is not ported, assumed 1
-        let mut savingsOk = isTripInit || info != "device.rerouting";
+        // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
+        let mut savingsOk = onInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
         if !savingsOk {
             // shortcut: MSDevice_Routing::sufficientSaving and hasValidRoute over an edge range need the
             // routing device and MSRouteIterator, neither reachable yet; the old route is treated as prohibited
@@ -1540,8 +1569,9 @@ impl MSBaseVehicle {
         // this must be called even if the route could not be replaced
         if onInit {
             if edges.is_empty() {
-                // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false
-                if source.is_taz_connector() {
+                if MSGlobals::check_routes() {
+                    std::panic::panic_any(ProcessError::new(utils::tlf!("Vehicle '%' has no valid route.", self.get_id())));
+                } else if source.is_taz_connector() {
                     utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' which has no valid route.", self.get_id()));
                     // shortcut: MSNet::getInstance()->getInsertionControl().descheduleDeparture(this) not ported
                     return false;
@@ -1639,7 +1669,7 @@ impl MSBaseVehicle {
         }
         let mut oldSize = edges.len() as i32;
         if !onInit {
-            let origin = self.myRoute.index_op(self.get_reroute_origin() as i32);
+            let origin = self.myRoute.index_op(self.base.get_reroute_origin() as i32);
             if origin != self.get_edge() && edges[0] == origin {
                 edges.insert(0, self.get_edge());
                 oldSize = edges.len() as i32;
@@ -1667,9 +1697,23 @@ impl MSBaseVehicle {
         let mut msg = String::new();
         if check && !self.has_valid_route(&mut msg, constRoute.clone()) {
             utils::common::msg_handler::write_warning(&utils::tlf!("Invalid route replacement for vehicle '%'. %", self.get_id(), msg));
-            // shortcut: MSGlobals::gCheckRoutes is not ported, treated as false (route is still replaced)
+            if MSGlobals::check_routes() {
+                if !msgReturn.is_null() {
+                    *msgReturn.m() = msg;
+                }
+                return false;
+            }
         }
-        if !self.replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn) {
+        // C++ calls the *virtual* replaceRoute here, so MSVehicle::replaceRoute runs and refreshes the
+        // best lanes afterwards. Calling MSBaseVehicle::replace_route directly skips that override, which
+        // is why a rerouted vehicle kept its stale best lanes and stopped at the end of the old edge.
+        // shortcut: the vehicle class is told apart by the use_meso_sim flag, not by a type tag; upgrade when MSBaseVehicle carries one
+        let replaced = if MSGlobals::use_meso_sim() {
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().replace_route(constRoute, info, onInit, edges.len() as i32 - oldSize, false, removeStops, msgReturn)
+        };
+        if !replaced {
             return false;
         }
         true
@@ -1937,7 +1981,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_acceleration(&self) -> f64 {
-        0.0
+        if MSGlobals::use_meso_sim() {
+            return 0.0;
+        }
+        self.as_ms_vehicle().get_acceleration()
     }
 
     /// C++: `void MSBaseVehicle::onDepart()` [virtual]
@@ -2154,7 +2201,13 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_odometer(&self) -> f64 {
-        -self.myDepartPos + self.myOdometer + (if self.has_arrived() { self.myArrivalPos } else { self.get_position_on_lane() })
+        // hasArrived() is virtual: MSVehicle / MEVehicle override it
+        let arrived = if MSGlobals::use_meso_sim() {
+            Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap().has_arrived()
+        } else {
+            Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap().has_arrived()
+        };
+        -self.myDepartPos + self.myOdometer + (if arrived { self.myArrivalPos } else { self.get_position_on_lane() })
     }
 
     /// C++: `void MSBaseVehicle::addToOdometer(double)`
@@ -2189,7 +2242,14 @@ impl MSBaseVehicle {
     pub fn get_impatience(&self) -> f64 {
         let time_to_impatience: SUMOTime = crate::microsim::ms_globals::time_to_impatience();
         let waiting_term = if time_to_impatience > 0 { self.get_waiting_time(false) as f64 / time_to_impatience as f64 } else { 0.0 };
-        let influence = if self.has_influencer() { self.get_base_influencer_2().get_extra_impatience() } else { 0.0 };
+        // hasInfluencer() / getBaseInfluencer() are virtual: MSVehicle / MEVehicle override them
+        let influence = if MSGlobals::use_meso_sim() {
+            let veh = Ptr::new(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get().unwrap();
+            if veh.has_influencer() { veh.get_base_influencer_2().get_extra_impatience() } else { 0.0 }
+        } else {
+            let veh = Ptr::new(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get().unwrap();
+            if veh.has_influencer() { veh.get_base_influencer_2().get_extra_impatience() } else { 0.0 }
+        };
         f64::max(0.0, f64::min(1.0, self.get_vehicle_type().get_impatience() + influence + waiting_term))
     }
 
@@ -2537,7 +2597,7 @@ impl MSBaseVehicle {
         let checkJumps = Rc::ptr_eq(&route, &self.myRoute);
         // the edge iterators in the stops are invalid for other routes
         let start = if checkJumps { self.myCurrEdge } else { 0 };
-        self.has_valid_route_2(msg, start, route.size() as usize, checkJumps)
+        self.has_valid_route_2(msg, route.get_edges(), start, route.size() as usize, checkJumps)
     }
 
     /// C++: `bool MSBaseVehicle::hasValidRoute(std::string &, MSRouteIterator, MSRouteIterator, bool) const` [const]
@@ -2567,9 +2627,8 @@ impl MSBaseVehicle {
     //     return true;
     // }
     #[allow(unused_variables)]
-    /// `start`/`last` are indices into myRoute's edges (MSRouteIterator is Unmapped)
-    pub fn has_valid_route_2(&self, msg: &mut String, start: usize, last: usize, checkJumps: bool) -> bool {
-        let edges = self.myRoute.get_edges();
+    /// `start`/`last` are indices into `edges`, the edges of the route being checked (MSRouteIterator is Unmapped)
+    pub fn has_valid_route_2(&self, msg: &mut String, edges: &ConstMSEdgeVector, start: usize, last: usize, checkJumps: bool) -> bool {
         let vclass = self.myType.get_vehicle_class();
         // check connectivity, first
         let lastValid = last as i64 - 1;
@@ -2686,7 +2745,7 @@ impl MSBaseVehicle {
                 *msgReturn.m() = msg.clone();
             }
         }
-        if self.myRoute.get_first_edge().is_internal()
+        if (MSGlobals::check_routes() || self.myRoute.get_first_edge().is_internal())
             && (self.myRouteValidity & MSBaseVehicle_RouteValidity::ROUTE_UNCHECKED as i32) != 0
             // we could check after the first rerouting
             && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) == 0
@@ -2826,7 +2885,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn is_rail(&self) -> bool {
-        utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || utils::common::sumo_vehicle_class::is_railway(self.get_current_edge().get_permissions())
+        // getCurrentEdge() is virtual (MSVehicle returns the lane's edge): go through the SUMOVehicle vtable
+        utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) || utils::common::sumo_vehicle_class::is_railway(self.base.get_current_edge().get_permissions())
     }
 
     /// C++: `double MSBaseVehicle::getWidth() const` [const]
@@ -2956,7 +3016,12 @@ impl MSBaseVehicle {
         }
         let id = format!("{}@{}", self.myType.get_id(), self.get_id());
         let type_ = self.myType.build_singular_type(&id);
-        self.replace_vehicle_type(type_);
+        // replaceVehicleType() is virtual: MSVehicle rebuilds myCFVariables for the new type
+        if MSGlobals::use_meso_sim() {
+            self.replace_vehicle_type(type_);
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().replace_vehicle_type(type_);
+        }
         type_.get_mut().unwrap()
     }
 
@@ -2995,7 +3060,7 @@ impl MSBaseVehicle {
     pub fn save_state(&mut self, out: &mut OutputDevice) {
         // the parameters may hold the name of a vTypeDistribution but we are interested in the actual type
         let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
-        self.myParameter.write(out, panic!("shortcut: the global OptionsCont (getOptions) is not ported yet, so the vehicle parameter write cannot run"), SUMO_TAG_VEHICLE, &typeID);
+        utils::options::options_cont::with_options(|oc| self.myParameter.write(out, oc, SUMO_TAG_VEHICLE, &typeID));
         out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
         let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
         out.write_attr(SUMO_ATTR_DISTANCE, &os);
@@ -3616,8 +3681,8 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the parking-area / bus-stop / container-stop / charging-station length and access checks,
-        // the meso segment lookup and the insertion after searchStart are not ported; stops are appended
+        // shortcut: the parking-area access, too-short-stop warning, meso segment lookup, departPos-before-stop check and
+        // stopPar.tripId registration are not ported, upgrade with the parking area and departPos port
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3630,8 +3695,8 @@ impl MSBaseVehicle {
             stop.lane = MSLane::dictionary_2(&stopPar.lane);
             if stop.lane.is_null() {
                 // must be an opposite stop
-                // shortcut: SUMOVehicleParameter::Stop is not Clone (durationDist is Unmapped), so the copy for interpretOppositeStop cannot be made yet
-                stop.lane = panic!("shortcut: opposite-stop interpretation needs a copy of SUMOVehicleParameter::Stop");
+                let mut tmp = stopPar.clone();
+                stop.lane = Self::interpret_opposite_stop(&mut tmp);
             }
             if !stop.lane.allows_vehicle_class_2(self.myType.get_vehicle_class(), self.get_routing_mode()) {
                 *errorMsg = format!("Vehicle '{}' is not allowed to stop on lane '{}'.", self.myParameter.id, stopPar.lane);
@@ -3645,12 +3710,170 @@ impl MSBaseVehicle {
         if stopPar.arrival != -1 {
             stop.pars.arrival += untilOffset;
         }
-        let errorMsgStart = if stopPar.edge == "" { "stop".to_string() } else { format!("stop '{}'", stopPar.edge) };
+        let mut stopType = "stop".to_string();
+        let mut stopID = String::new();
+        if !stop.busstop.is_null() {
+            stopType = if stop.busstop.get_element() == SUMO_TAG_TRAIN_STOP { "trainStop".to_string() } else { "busStop".to_string() };
+            stopID = stop.busstop.get_id().to_string();
+        } else if !stop.containerstop.is_null() {
+            stopType = "containerStop".to_string();
+            stopID = stop.containerstop.get_id().to_string();
+        } else if !stop.chargingStation.is_null() {
+            stopType = "chargingStation".to_string();
+            stopID = stop.chargingStation.get_id().to_string();
+        } else if !stop.overheadWireSegment.is_null() {
+            stopType = "overheadWireSegment".to_string();
+            stopID = stop.overheadWireSegment.get_id().to_string();
+        } else if !stop.parkingarea.is_null() {
+            stopType = "parkingArea".to_string();
+            stopID = stop.parkingarea.get_id().to_string();
+        }
+        let errorMsgStart = if stopID == "" { stopType.clone() } else { format!("{} '{}'", stopType, stopID) };
+
         if stop.pars.startPos < 0.0 || stop.pars.endPos > stop.lane.get_length() {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
         }
-        self.myStops.push_back(stop);
+        if stopType == "parkingArea" && !stop.parkingarea.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
+            // forbid access in case the parking requests other badges
+            *errorMsg = format!("{}on lane '{}' forbids access because vehicle '{}' does not provide any valid badge.", errorMsgStart, stop.lane.get_id(), self.myParameter.id);
+            return false;
+        }
+        let stopLaneEdge: Ptr<MSEdge> = Ptr::new(stop.lane.get_edge());
+        let stopEdge: Ptr<MSEdge>;
+        let oppositeEdge: Ptr<MSEdge> = stopLaneEdge.get_opposite_edge();
+        if !oppositeEdge.is_null() && oppositeEdge.get_id() == stopPar.edge {
+            // stop lane is on the opposite side
+            stopEdge = oppositeEdge;
+            stop.isOpposite = true;
+        } else {
+            // if stop is on an internal edge the normal edge before the intersection is used
+            stopEdge = stopLaneEdge.get_normal_before();
+        }
+        let edges: Vec<Ptr<MSEdge>> = self.myRoute.get_edges().to_vec();
+        let nEdges = edges.len();
+        let findEdge = |from: usize, to: usize, e: Ptr<MSEdge>| -> usize { (from..to).find(|&i| edges[i] == e).unwrap_or(to) };
+        let succ: usize = self.myCurrEdge + 1;
+        // we're using the address but only within the scope of this function (and recursive calls)
+        let searchStartIdx: usize = match searchStart.get() {
+            Some(s) => *s,
+            None => {
+                if stopLaneEdge.is_normal() && !self.get_lane().is_null() && self.get_lane().is_internal() {
+                    // already on the intersection but myCurrEdge is before it
+                    succ
+                } else {
+                    self.myCurrEdge
+                }
+            }
+        };
+        stop.edge = findEdge(searchStartIdx, nEdges, stopEdge);
+        let mut prevStopEdge: usize = self.myCurrEdge;
+        let mut prevEdge: Ptr<MSEdge> = if self.get_lane().is_null() { self.get_edge() } else { Ptr::new(self.get_lane().get_edge()) };
+        let mut prevStopPos: f64 = self.get_position_on_lane();
+        // where to insert the stop
+        let mut iter: usize = 0;
+        let nStops = self.myStops.len();
+        if stopPar.index == STOP_INDEX_END || stopPar.index >= nStops as i32 || stopPar.index == STOP_INDEX_REPEAT {
+            iter = nStops;
+            if nStops > 0 && self.myStops.back().unwrap().edge >= searchStartIdx {
+                prevStopEdge = self.myStops.back().unwrap().edge;
+                prevEdge = Ptr::new(self.myStops.back().unwrap().lane.get_edge());
+                prevStopPos = self.myStops.back().unwrap().pars.endPos;
+                stop.edge = findEdge(prevStopEdge, nEdges, stopEdge);
+                if prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && (prevStopPos > stop.pars.endPos || (prevStopPos == stop.pars.endPos && stopPar.index == STOP_INDEX_REPEAT)) {
+                    stop.edge = findEdge(prevStopEdge + 1, nEdges, stopEdge);
+                }
+            }
+            // skip a number of occurences of stopEdge in looped route
+            let skipLooped = stopPar.index - nStops as i32;
+            for _j in 0..skipLooped {
+                let nextIt = findEdge(stop.edge + 1, nEdges, stopEdge);
+                if nextIt == nEdges {
+                    if findEdge(0, stop.edge, stopEdge) != stop.edge {
+                        // only warn if the route loops over the stop edge at least once
+                        *errorMsg = format!("{} for vehicle '{}' could not skip {} occurences of stop edge '{}' in looped route.", errorMsgStart, self.myParameter.id, skipLooped, stopEdge.get_id());
+                    }
+                    break;
+                } else {
+                    stop.edge = nextIt;
+                }
+            }
+        } else {
+            if stopPar.index == STOP_INDEX_FIT {
+                while iter < nStops && (self.myStops[iter].edge < stop.edge || (self.myStops[iter].pars.endPos < stop.pars.endPos && self.myStops[iter].edge == stop.edge) || (stop.lane.get_edge().is_internal() && self.myStops[iter].edge == stop.edge)) {
+                    prevStopEdge = self.myStops[iter].edge;
+                    prevStopPos = self.myStops[iter].pars.endPos;
+                    iter += 1;
+                }
+            } else {
+                let mut index = stopPar.index;
+                while index > 0 {
+                    prevStopEdge = self.myStops[iter].edge;
+                    prevStopPos = self.myStops[iter].pars.endPos;
+                    iter += 1;
+                    index -= 1;
+                }
+                stop.edge = findEdge(prevStopEdge, nEdges, stopEdge);
+            }
+        }
+        let wasTooClose = !errorMsg.is_empty() && errorMsg.contains("too close");
+        if stop.edge == nEdges {
+            if !wasTooClose {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' is not downstream the current route.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
+            }
+            return false;
+        }
+
+        let tooClose = prevStopEdge == stop.edge && prevEdge == Ptr::new(stop.lane.get_edge()) && prevStopPos + (if iter == 0 && !self.instant_stopping() { self.get_brake_gap(false) } else { 0.0 }) > stop.pars.endPos + POSITION_EPS;
+
+        if prevStopEdge > stop.edge
+            // a collision-stop happens after vehicle movement and may move the
+            // vehicle backwards on its lane (prevStopPos is the vehicle position)
+            || (tooClose && !stop.pars.collision)
+            || (stop.lane.get_edge().is_internal() && edges.get(stop.edge + 1).map_or(true, |next| stop.lane.get_next_normal() != *next))
+        {
+            // check if the edge occurs again later in the route
+            if tooClose && prevStopPos <= stop.pars.endPos + POSITION_EPS {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' is too close to brake.", errorMsgStart, self.myParameter.id, stopPar.lane);
+            }
+            let mut next: usize = stop.edge + 1;
+            return self.add_stop(stopPar, errorMsg, untilOffset, Ptr::from_mut(&mut next));
+        }
+        // shortcut: the departPos check for a stop on the current edge before departure is not ported
+        let endPosOffset = if stop.lane.get_edge().is_internal() { edges[stop.edge].get_length() } else { 0.0 };
+        let distToStop = stop.pars.endPos + endPosOffset - self.get_position_on_lane();
+        if stop.pars.collision {
+            // handleCollisionStop() is virtual: MSVehicle overrides it
+            let handled = if MSGlobals::use_meso_sim() {
+                self.handle_collision_stop(&mut stop, distToStop)
+            } else {
+                Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().handle_collision_stop(&mut stop, distToStop)
+            };
+            if !handled {
+                return false;
+            }
+        }
+        if iter > 0 {
+            let iter2 = iter - 1;
+            if stop.get_until() >= 0 && self.myStops[iter2].get_until() > stop.get_until() && (!use_stop_ended() || self.myStops[iter2].pars.ended < 0 || stop.pars.ended >= 0) {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than previous stop at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(self.myStops[iter2].get_until()));
+            }
+            if stop.pars.arrival >= 0 && self.myStops[iter2].pars.arrival > stop.pars.arrival {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to start at {} earlier than previous stop end at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.pars.arrival), time2string(self.myStops[iter2].get_until()));
+            }
+            if stop.pars.arrival >= 0 && self.myStops[iter2].pars.arrival > stop.pars.arrival {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to start at {} earlier than previous stop arrival at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.pars.arrival), time2string(self.myStops[iter2].pars.arrival));
+            }
+        } else {
+            if stop.get_until() >= 0 && self.myParameter.depart > stop.get_until() && (!use_stop_ended() || stop.pars.ended < 0) {
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than departure at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(self.myParameter.depart));
+            }
+        }
+        if stop.get_until() >= 0 && stop.get_arrival() > stop.get_until() && *errorMsg == "" {
+            *errorMsg = format!("{} for vehicle '{}' on lane '{}' set to end at {} earlier than arrival at {}.", errorMsgStart, self.myParameter.id, stop.lane.get_id(), time2string(stop.get_until()), time2string(stop.get_arrival()));
+        }
+        self.set_skips(&mut stop, nStops as i32);
+        self.myStops.insert(iter, stop);
         true
     }
 
@@ -4023,7 +4246,12 @@ impl MSBaseVehicle {
     pub fn abort_next_stop(&mut self, nextStopIndex: i32) -> bool {
         if self.has_stops() && (nextStopIndex as usize) < self.myStops.len() {
             if nextStopIndex == 0 && self.is_stopped() {
-                self.resume_from_stopping();
+                // C++ resumeFromStopping() is virtual: dispatch to the MSVehicle / MEVehicle override
+                if MSGlobals::use_meso_sim() {
+                    Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().resume_from_stopping();
+                } else {
+                    Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().resume_from_stopping();
+                }
             } else {
                 let parkingarea = self.myStops[nextStopIndex as usize].parkingarea;
                 if !parkingarea.is_null() && parkingarea.is_reservable() {
@@ -4553,10 +4781,14 @@ impl MSBaseVehicle {
     //         return 0.;
     //     }
     #[allow(unused_variables)]
-    pub fn get_emissions(&self) -> f64 {
-        // shortcut: the C++ method is a template over PollutantsInterface::EmissionType and this generated
-        // signature has no ET parameter; the emission model is not reachable from here yet
-        0.0
+    pub fn get_emissions(&mut self, et: PollutantsInterface_EmissionType) -> f64 {
+        if self.is_on_road() || self.is_idling() {
+            // virtual calls in C++: read through SUMOTrafficObject so MSVehicle's acceleration is used, not the base 0
+            let obj: &SUMOTrafficObject = self;
+            PollutantsInterface::compute(obj.get_vehicle_type().get_emission_class(), et, obj.get_speed(), obj.get_acceleration(), obj.get_slope(), self.get_emission_parameters())
+        } else {
+            0.
+        }
     }
 
     /// C++: `double MSBaseVehicle::getStateOfCharge() const` [const]
@@ -4667,8 +4899,12 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_harmonoise_noise_emissions(&self) -> f64 {
-        // shortcut: HelpersHarmonoise::computeNoise (used when on road or idling) is not ported yet
-        0.0
+        if self.is_on_road() || self.is_idling() {
+            // virtual getAcceleration(): the MSBaseVehicle stub returns 0, so go through the SUMOVehicle vtable
+            crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::compute_noise(self.get_vehicle_type().get_emission_class(), self.get_speed(), self.base.get_acceleration())
+        } else {
+            0.
+        }
     }
 
     /// C++: `BaseInfluencer & MSBaseVehicle::getBaseInfluencer()` [virtual, pure virtual]
@@ -4725,8 +4961,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        // shortcut: MSRoutingEngine::getRouterTT (aggregated mode) and MSNet::getRouterTT are not ported
-        panic!("getRouterTT() needs MSRoutingEngine / MSNet router access, which is not ported yet")
+        if self.myRoutingMode == utils::traci::traci_constants::ROUTING_MODE_AGGREGATED {
+            MSRoutingEngine::get_router_tt(self.get_rng_index(), self.get_v_class(), &Default::default())
+        } else {
+            MSNet::get_instance().get_mut().unwrap().get_router_tt(self.get_rng_index(), &Default::default())
+        }
     }
 
     /// C++: `const MSEdgeWeightsStorage & MSBaseVehicle::getWeightsStorage() const` [const]
@@ -5514,7 +5753,12 @@ impl MSBaseVehicle {
                 self.myMoveReminders.remove(i);
             }
         }
-        self.reset_approach_on_reroute();
+        // resetApproachOnReroute() is virtual: MSVehicle overrides it (MEVehicle does not)
+        if MSGlobals::use_meso_sim() {
+            self.reset_approach_on_reroute();
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().reset_approach_on_reroute();
+        }
         // event only called once
         0
     }

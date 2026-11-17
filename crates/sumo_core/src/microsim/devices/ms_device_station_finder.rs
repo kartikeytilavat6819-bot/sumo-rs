@@ -230,8 +230,7 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: equippedByDefaultAssignmentOptions needs the holder parameter and vtype parameter (SUMOVehicle exposes no Parameterised yet), so it cannot be evaluated; upgrade when SUMOVehicle implements Parameterised
-        let equip: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions(oc, \"stationfinder\", v, ...) needs holder parameters that SUMOVehicle does not expose yet");
+        let equip: bool = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "stationfinder", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false));
         if equip {
             into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_StationFinder::new(v))) as *mut MSVehicleDevice));
         }
@@ -302,6 +301,29 @@ impl MSDevice_StationFinder {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_StationFinder>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        fn mr_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_StationFinder>().m().notify_idle(veh)
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: mr_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
+        };
+        let mut this = Self::new_device(holder);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle) -> Self {
         let base = MSVehicleDevice::new(holder, &format!("stationfinder_{}", holder.get_id()));
         let base2 = MSStoppingPlaceRerouter::new(
             "device.stationfinder.charging".to_string(),

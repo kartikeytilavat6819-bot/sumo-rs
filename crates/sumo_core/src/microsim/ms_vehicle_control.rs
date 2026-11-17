@@ -11,10 +11,6 @@ use utils::options::options_cont::{get_float, get_string, is_set};
 // VTYPEPARS_VEHICLECLASS_SET bit from utils/vehicle/SUMOVTypeParameter.h (not exported by the ported module yet)
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 /// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
 // shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
@@ -287,6 +283,18 @@ impl MSVehicleControl {
         let speedFactor = type_.compute_chosen_speed_deviation(defs.speedFactor, rng, -1.);
         let built: Ptr<MSVehicle> = Ptr::from_mut(Box::leak(Box::new(MSVehicle::new(defs, route, type_, speedFactor))));
         self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        // C++ MSDevice_Routing ctor schedules preInsertionReroute for trips (VEHPARS_FORCE_REROUTE); it runs before insertion
+        // shortcut: the event is run directly here instead of through MSEventControl, periodic pre-insertion rescheduling is not done
+        let forceReroute = built.m().base.get_parameter().was_set(crate::microsim::ms_base_vehicle::VEHPARS_FORCE_REROUTE);
+        let devices: Vec<Ptr<MSVehicleDevice>> = built.m().base.get_devices().clone();
+        for dev in devices {
+            if crate::microsim::devices::ms_device::MSDevice::get_device_name(dev.base2.get_id()) == "rerouting" {
+                let routing = dev.cast::<crate::microsim::devices::ms_device_routing::MSDevice_Routing>();
+                if forceReroute || routing.m().myPreInsertionPeriod > 0 {
+                    routing.m().pre_insertion_reroute(MSNet::get_instance().get_current_time_step());
+                }
+            }
+        }
         Ptr::from_mut(&mut built.m().base.base)
     }
 
@@ -480,14 +488,7 @@ impl MSVehicleControl {
             // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
             let hasTripinfo = !tripinfoOut.is_null();
             for dev in veh.get_devices().iter() {
-                let name = MSDevice::get_device_name(dev.base2.get_id());
-                // shortcut: C++ virtual dispatch to the device subclass is not available; dispatch tripinfo (and fall back to base) explicitly
-                if name == "tripinfo" {
-                    let tripDev: Ptr<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo> = dev.cast::<crate::microsim::devices::ms_device_tripinfo::MSDevice_Tripinfo>();
-                    tripDev.m().generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
-                } else {
-                    dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
-                }
+                MSDevice::generate_output_of(*dev, if hasTripinfo { tripinfoOut } else { Ptr::null() });
             }
             if !tripinfoOut.is_null() && hasTripinfo {
                 // close tag after tripinfo (possibly including emissions from another device) have been written
@@ -566,7 +567,7 @@ impl MSVehicleControl {
         if pars.departProcedure == DepartDefinition::TRIGGERED || pars.departProcedure == DepartDefinition::CONTAINER_TRIGGERED || pars.departProcedure == DepartDefinition::SPLIT {
             let firstEdge: Ptr<MSEdge> = v.get_route().get_edges()[pars.departEdge as usize];
             if add {
-                if !g_use_meso_sim() {
+                if !MSGlobals::use_meso_sim() {
                     // position will be checked against person position later
                     as_ms_vehicle(v).m().set_tentative_lane_and_position(Ptr::null(), pars.departPos, 0.);
                 }

@@ -50,11 +50,17 @@ fn unwrap_or_throw<T>(r: Result<T, ProcessError>) -> T {
 
 /// C++ implicit `MSStoppingPlace*` -> `Parameterised*` conversion (base2 is the Parameterised part)
 fn stopping_place_as_parameterised(p: Ptr<MSStoppingPlace>) -> Ptr<Parameterised> {
+    if p.is_null() {
+        return Ptr::null();
+    }
     Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
 }
 
 /// C++ implicit `MSLane*` -> `Parameterised*` conversion (base2 is the Parameterised part)
 fn lane_as_parameterised(p: Ptr<MSLane>) -> Ptr<Parameterised> {
+    if p.is_null() {
+        return Ptr::null();
+    }
     Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*p.as_raw()).base2) })
 }
 
@@ -71,6 +77,39 @@ fn parse_vehicle_classes_v(allowed: &str, disallowed: &str, network_version: (i3
     } else {
         invert_permissions(extra_disallowed(parse_vehicle_classes(disallowed), network_version))
     }
+}
+
+/// C++ `dynamic_cast<MSRailSignal*>(tll)`: only RAIL_SIGNAL logics are MSRailSignal instances, so the type is checked before the cast
+fn as_rail_signal(tll: Ptr<MSTrafficLightLogic>) -> Ptr<MSRailSignal> {
+    if !tll.is_null() && tll.m().get_logic_type() == TrafficLightType::RAIL_SIGNAL {
+        tll.cast::<MSRailSignal>()
+    } else {
+        Ptr::null()
+    }
+}
+
+/// C++ `StopOffset::StopOffset(const SUMOSAXAttributes&, bool& ok)` (SUMOVehicleClass.cpp); lives here until the utils port takes it
+fn stop_offset_from_attrs(attrs: &SUMOSAXAttributes, ok: &mut bool) -> StopOffset {
+    let mut stopOffset = StopOffset::default();
+    if attrs.has_attribute(SUMO_ATTR_VCLASSES) && attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+        write_error("Simultaneous specification of vClasses and exceptions is not allowed");
+        *ok = false;
+    }
+    if !attrs.has_attribute(SUMO_ATTR_VALUE) {
+        write_error("StopOffset requires an offset value");
+        *ok = false;
+    }
+    let vClasses = attrs.get_opt::<String>(SUMO_ATTR_VCLASSES, "", ok, String::new(), true);
+    let exceptions = attrs.get_opt::<String>(SUMO_ATTR_EXCEPTIONS, "", ok, String::new(), true);
+    if attrs.has_attribute(SUMO_ATTR_VCLASSES) {
+        stopOffset.set_permissions(parse_vehicle_classes(&vClasses));
+    } else if attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+        stopOffset.set_permissions(!parse_vehicle_classes(&exceptions));
+    } else {
+        stopOffset.set_permissions(parse_vehicle_classes("all"));
+    }
+    stopOffset.set_offset(attrs.get_opt::<f64>(SUMO_ATTR_VALUE, "", ok, 0., true));
+    stopOffset
 }
 
 /// The XML-Handler for network loading
@@ -355,8 +394,7 @@ impl NLHandler {
         if !tlsControl.knows(&signalID) {
             throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
         }
-        // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, so a non-rail-signal TLS is not rejected, upgrade when MSTrafficLightLogic exposes its subtype
-        let signal: Ptr<MSRailSignal> = tlsControl.get(&signalID).get_default().cast::<MSRailSignal>();
+        let signal: Ptr<MSRailSignal> = as_rail_signal(tlsControl.get(&signalID).get_default());
         if signal.is_null() {
             throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
         }
@@ -629,6 +667,22 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
+        // C++ registerParent made the trigger the active SAX handler; NLHandler sees nothing until its closing tag
+        let rerouter = self.myTriggerBuilder.m().myChildRerouter;
+        let laneSpeedTrigger = self.myTriggerBuilder.m().myChildLaneSpeedTrigger;
+        let calibrator = self.myTriggerBuilder.m().myChildCalibrator;
+        if !rerouter.is_null() {
+            rerouter.m().my_start_element(element, attrs);
+            return;
+        }
+        if !laneSpeedTrigger.is_null() {
+            laneSpeedTrigger.m().my_start_element(element, attrs);
+            return;
+        }
+        if !calibrator.is_null() {
+            calibrator.m().my_start_element(element, attrs);
+            return;
+        }
         let result = try_catch_args(|| match element {
             SUMO_TAG_NET => {
                 let mut ok = true;
@@ -749,8 +803,13 @@ impl NLHandler {
                 }
             }
             SUMO_TAG_STOPOFFSET => {
-                // shortcut: the StopOffset(attrs, ok) constructor is not ported (utils/common/sumo_vehicle_class.rs), so stop offsets from the net file are not applied yet; upgrade when it is
-                let _ = attrs;
+                let mut ok = true;
+                let stopOffset = stop_offset_from_attrs(attrs, &mut ok);
+                if !ok {
+                    write_error(&self.myEdgeControlBuilder.m().report_current_edge_or_lane());
+                } else {
+                    self.myEdgeControlBuilder.m().add_stop_offsets(&stopOffset);
+                }
             }
             SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
                 let mut ok = true;
@@ -760,8 +819,7 @@ impl NLHandler {
                 if !tls.knows(&signalID) {
                     throw_invalid_argument(format!("Rail signal '{}' in railSignalConstraints is not known", signalID));
                 }
-                // shortcut: dynamic_cast<MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
-                self.myConstrainedSignal = tls.get(&signalID).get_default().cast::<MSRailSignal>();
+                self.myConstrainedSignal = as_rail_signal(tls.get(&signalID).get_default());
                 if self.myConstrainedSignal.is_null() {
                     throw_invalid_argument(format!("Traffic light '{}' is not a rail signal", signalID));
                 }
@@ -771,7 +829,6 @@ impl NLHandler {
                 self.myLastParameterised.push(p);
             }
             SUMO_TAG_DEADLOCK => self.add_deadlock(attrs),
-            SUMO_TAG_ROUTEPART => self.add_deadlock_route(attrs),
             _ => {}
         });
         if let Err(what) = result {
@@ -894,6 +951,31 @@ impl NLHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_end_element(&mut self, element: i32) {
+        let rerouter = self.myTriggerBuilder.m().myChildRerouter;
+        let laneSpeedTrigger = self.myTriggerBuilder.m().myChildLaneSpeedTrigger;
+        let calibrator = self.myTriggerBuilder.m().myChildCalibrator;
+        if !rerouter.is_null() {
+            rerouter.m().my_end_element(element);
+            if element == SUMO_TAG_REROUTER {
+                // GenericSAXHandler::endElement: XMLSubSys::setHandler(*myParentHandler)
+                self.myTriggerBuilder.m().myChildRerouter = Ptr::null();
+            }
+            return;
+        }
+        if !laneSpeedTrigger.is_null() {
+            laneSpeedTrigger.m().my_end_element(element);
+            if element == SUMO_TAG_VSS {
+                self.myTriggerBuilder.m().myChildLaneSpeedTrigger = Ptr::null();
+            }
+            return;
+        }
+        if !calibrator.is_null() {
+            calibrator.m().my_end_element(element);
+            if element == SUMO_TAG_CALIBRATOR {
+                self.myTriggerBuilder.m().myChildCalibrator = Ptr::null();
+            }
+            return;
+        }
         match element {
             SUMO_TAG_EDGE => self.close_edge(),
             SUMO_TAG_LANE => {
@@ -1933,7 +2015,7 @@ impl NLHandler {
     //             throw InvalidArgument("Rail signal '" + toString(id) + "' in " + toString(SUMO_TAG_DEADLOCK) + " is not known");
     //         }
     //     }
-    //     MSRailSignalControl::getInstance().loadDeadlockCheck(signals);
+    //     MSRailSignalControl::getInstance().addDeadlockCheck(signals);
     // }
     #[allow(unused_variables)]
     pub fn add_deadlock(&mut self, attrs: &SUMOSAXAttributes) {
@@ -1942,31 +2024,14 @@ impl NLHandler {
         let mut signals: Vec<Ptr<MSRailSignal>> = Vec::new();
         for id in signalIDs {
             let tll = self.myJunctionControlBuilder.m().get_tl_logic_control_to_use().get_active(&id);
-            // shortcut: dynamic_cast<const MSRailSignal*> has no runtime type check here, upgrade when MSTrafficLightLogic exposes its subtype
-            let rs = tll.cast::<MSRailSignal>();
+            let rs = as_rail_signal(tll);
             if !rs.is_null() {
                 signals.push(rs);
             } else {
                 throw_invalid_argument(format!("Rail signal '{}' in {} is not known", id, tag_to_string(SUMO_TAG_DEADLOCK)));
             }
         }
-        MSRailSignalControl::get_instance().load_deadlock_check(signals);
-    }
-
-    /// C++: `void NLHandler::addDeadlockRoute(const SUMOSAXAttributes &)` [virtual, protected]
-    // void
-    // NLHandler::addDeadlockRoute(const SUMOSAXAttributes& attrs) {
-    //     bool ok = true;
-    //     ConstMSEdgeVector edges;
-    //     MSEdge::parseEdgesList(attrs.get<std::string>(SUMO_ATTR_EDGES, "deadlock", ok), edges, "deadlock");
-    //     MSRailSignalControl::getInstance().loadDeadlockRoute(edges);
-    // }
-    #[allow(unused_variables)]
-    pub fn add_deadlock_route(&mut self, attrs: &SUMOSAXAttributes) {
-        let mut ok = true;
-        let mut edges: ConstMSEdgeVector = Vec::new();
-        MSEdge::parse_edges_list(&attrs.get::<String>(SUMO_ATTR_EDGES, "deadlock", &mut ok, true), &mut edges, "deadlock");
-        MSRailSignalControl::get_instance().load_deadlock_route(&edges);
+        MSRailSignalControl::get_instance().add_deadlock_check(signals);
     }
 
     /// C++: `void NLHandler::closeEdge()` [virtual, protected]

@@ -69,6 +69,11 @@ fn delete_ptr<T>(p: Ptr<T>) {
     }
 }
 
+/// C++ `route != nullptr` on a `ConstMSRoutePtr` returned by `MSRoute::dictionary`
+pub fn is_null_route(route: &ConstMSRoutePtr) -> bool {
+    NULL_ROUTE.with(|nr| nr.borrow().as_ref().is_some_and(|n| Rc::ptr_eq(n, route)))
+}
+
 /// Stand-in for the nullptr MSRoute::dictionary returns when the id is unknown: `ConstMSRoutePtr`
 /// is a plain `Rc<MSRoute>` and cannot be null, so a leaked empty route is handed out instead.
 // shortcut: C++ nullptr return value cannot be represented through Rc<MSRoute>, callers that must

@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLPlatoonPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn platoon_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLPlatoonPolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_PLATOON_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: platoon_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
 
 /// Class for low-level platoon policy.
 /// C++ class `MSSOTLPlatoonPolicy` (microsim/traffic_lights/MSSOTLPlatoonPolicy.h)
@@ -39,6 +49,7 @@ impl MSSOTLPlatoonPolicy {
             base2: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
             base3: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
         };
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
         this.init();
         this
     }
@@ -58,6 +69,7 @@ impl MSSOTLPlatoonPolicy {
         };
         let mut desirability = this.get_desirability_algorithm();
         desirability.m().set_key_prefix("PLATOON".to_string());
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
         this.init();
         this
     }
@@ -78,6 +90,7 @@ impl MSSOTLPlatoonPolicy {
         };
         let mut desirability = this.get_desirability_algorithm();
         desirability.m().set_key_prefix("PLATOON".to_string());
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
         this.init();
         this
     }

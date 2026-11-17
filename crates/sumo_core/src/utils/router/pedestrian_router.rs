@@ -1,6 +1,7 @@
 //! Port of utils/router/PedestrianRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> PedestrianRouter::_IntermodalEdge`
 pub type PedestrianRouter__IntermodalEdge = Unmapped /* IntermodalEdge<E, L, N, V> */;
@@ -64,11 +65,11 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(net: Ptr<IntermodalNetwork<E, L, N, V>>) -> Self {
-        // shortcut: SUMOAbstractRouter::Operation is Unmapped (fn pointer), so the travel-time function and nullptr are passed as ()
+        // shortcut: gWeightsRandomFactor > 1 selects getTravelTimeStaticRandomized in C++; only the plain getTravelTimeStatic is wired here, upgrade when the random factor option is read here
         let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().iter().map(|e| (*e).cast()).collect();
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, (), (), false, Ptr::null(), true, false);
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false);
         Self {
-            base: SUMOAbstractRouter::new("PedestrianRouterClone", true, (), (), false, false),
+            base: SUMOAbstractRouter::new("PedestrianRouterClone", true, None, None, false, false),
             myAmClone: true,
             myInternalRouter: Ptr::from_raw(Box::into_raw(Box::new(internal))),
             myPedNet: net,
@@ -141,14 +142,18 @@ impl<E, L, N, V> PedestrianRouter<E, L, N, V> {
     //         return success ? time : -1.;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&self, from: Ptr<E>, to: Ptr<E>, departPos: f64, arrivalPos: f64, speed: f64, msTime: SUMOTime, onlyNode: Ptr<N>, pars: &SUMOVTypeParameter, into: &mut Vec<Ptr<E>>, allEdges: bool) -> f64 {
+    pub fn compute(&self, from: Ptr<E>, to: Ptr<E>, departPos: f64, arrivalPos: f64, speed: f64, msTime: SUMOTime, onlyNode: Ptr<N>, pars: &SUMOVTypeParameter, into: &mut Vec<Ptr<E>>, allEdges: bool) -> f64
+    where
+        E: RouterEdge<V>,
+        V: RouterVehicle,
+    {
         if get_sidewalk::<E, L>(from, SVC_PEDESTRIAN).is_null() {
-            // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E for the warning text
-            panic!("shortcut: needs router trait bounds (lead), E::getID");
+            utils::common::msg_handler::write_warning(&format!("Departure edge '{}' does not allow pedestrians.", from.edge_id()));
+            return 0.;
         }
         if get_sidewalk::<E, L>(to, SVC_PEDESTRIAN).is_null() {
-            // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E for the warning text
-            panic!("shortcut: needs router trait bounds (lead), E::getID");
+            utils::common::msg_handler::write_warning(&format!("Destination edge '{}' does not allow pedestrians.", to.edge_id()));
+            return 0.;
         }
         let trip = IntermodalTrip::new(from, to, departPos, arrivalPos, speed, msTime, onlyNode, pars, Ptr::null(), SVC_PEDESTRIAN, Ptr::null(), 0.);
         let mut intoPed: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = Vec::new();

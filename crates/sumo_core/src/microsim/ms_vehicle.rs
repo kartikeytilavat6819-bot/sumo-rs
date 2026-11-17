@@ -14,7 +14,6 @@ fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
 
-// shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported (ms_globals.rs has no static storage yet), always false until it is, then read the real static
 const SPEED_EPS: f64 = 0.01; // config.h.cmake
 const JUNCTION_BLOCKAGE_TIME: f64 = 5.0; // s, MSVehicle.cpp
 const SUMO_const_haltingSpeed: f64 = 0.1; // StdDefs.h
@@ -29,7 +28,7 @@ fn as_traffic_object(v: &mut MSVehicle) -> &mut SUMOTrafficObject {
 }
 
 fn semi_implicit_euler_update() -> bool {
-    MSGlobals::semi_implicit_euler_update()
+    crate::microsim::ms_globals::MSGlobals::semi_implicit_euler_update()
 }
 
 /// C++ enum `MSVehicle::ChangeRequest`
@@ -373,8 +372,7 @@ impl Influencer_GapControlState {
     // }
     #[allow(unused_variables)]
     pub fn activate(&mut self, tauOriginal: f64, tauTarget: f64, additionalGap: f64, duration: f64, changeRate: f64, maxDecel: f64, refVeh: Ptr<MSVehicle>) {
-        // shortcut: MSGlobals::gUseMesoSim is not ported yet (always false), upgrade when MSGlobals statics land
-        if false {
+        if crate::microsim::ms_globals::use_meso_sim() {
             utils::common::msg_handler::write_error("No gap control available for meso.");
         } else {
             // always deactivate control before activating (triggers clean-up of refVehMap)
@@ -2664,8 +2662,12 @@ impl MSVehicle {
             base: MSBaseVehicle::new(pars, route, type_, speedFactor),
             myManoeuvre: MSVehicle_Manoeuvre::new(),
             myWaitingTime: 0,
-            // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used
-            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(300 * 1000),
+            // C++: MSGlobals::gWaitingTimeMemory = string2time(oc.getString("waiting-time-memory"))
+            // (MSFrame.cpp:1213, option default "100" seconds). Was hardcoded to 300 s, which made the
+            // saved waitingTime three times C++'s.
+            myWaitingTimeCollector: MSVehicle_WaitingTimeCollector::new(
+                string2time(&utils::options::options_cont::get_string("waiting-time-memory")).unwrap_or(100 * 1000),
+            ),
             myTimeLoss: 0.0,
             myState: MSVehicle_State::new(0.0, 0.0, 0.0, 0.0, 0.0),
             myDriverState: Ptr::null(),
@@ -2744,8 +2746,8 @@ impl MSVehicle {
     pub fn init_devices(&mut self) {
         self.base.init_devices();
         self.myLaneChangeModel = MSAbstractLaneChangeModel::build(self.myType.get_lane_change_model(), self);
-        self.myDriverState = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped, the first device is taken
-        self.myFrictionDevice = Ptr::from_raw(self.get_device(&()).as_raw().cast()); // shortcut: typeid lookup of getDevice is Unmapped
+        self.myDriverState = MSDevice::get_device_by_name(&self.myDevices, "driverstate").cast::<MSDevice_DriverState>();
+        self.myFrictionDevice = MSDevice::get_device_by_name(&self.myDevices, "friction").cast::<MSDevice_Friction>();
     }
 
     /// C++: `bool MSVehicle::hasValidRouteStart(std::string &)` [virtual]
@@ -3151,8 +3153,7 @@ impl MSVehicle {
         self.plan_move_internal(t, ahead, lfLinks.m(), stopDist.m(), stopSpeed.m(), nextTurn.m());
         self.check_rewind_link_lanes(lengthsInFront, lfLinks.m());
         self.myNextDriveItem = 0;
-        // shortcut: MSGlobals::gModelParkingManoeuver is not ported, always false until it is
-        let gModelParkingManoeuver = false;
+        let gModelParkingManoeuver = crate::microsim::ms_globals::model_parking_manoeuver();
         if gModelParkingManoeuver {
             if self.get_manoeuvre_type() == MSVehicle_ManoeuvreType::MANOEUVRE_EXIT && self.manoeuvre_is_complete() {
                 self.set_manoeuvre_type(MSVehicle_ManoeuvreType::MANOEUVRE_NONE);
@@ -5020,8 +5021,7 @@ impl MSVehicle {
         if !accumulated {
             return self.myWaitingTime;
         }
-        // shortcut: MSGlobals::gWaitingTimeMemory is not ported, SUMO default memory of 300 s is used (same as the collector constructor)
-        self.myWaitingTimeCollector.cumulated_waiting_time(300 * 1000)
+        self.myWaitingTimeCollector.cumulated_waiting_time(crate::microsim::ms_globals::waiting_time_memory())
     }
 
     /// C++: `SUMOTime MSVehicle::getWaitingTimeFor(const MSLink *) const` [const]
@@ -6017,9 +6017,42 @@ impl MSVehicle {
             }
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_PARKING && reason != MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
-            // shortcut: the C++ while-loop over myStops also compares front().edge (MSStop::edge is an Unmapped MSRouteIterator, see ms_route.rs) with myCurrEdge; the stop-handling body is not ported, so this panics where the loop would run; upgrade when MSRouteIterator is mapped
-            if !self.myStops.is_empty() && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
-                panic!("leaveLane: stop handling on the same edge needs MSRouteIterator, which is not ported yet");
+            while !self.myStops.is_empty() && self.myStops.front().unwrap().edge == self.myCurrEdge && std::ptr::eq(self.myStops.front().unwrap().lane.get_edge(), self.myLane.get_edge()) {
+                if self.myStops.front().unwrap().get_speed() <= 0.0 {
+                    write_warningf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops.front().unwrap().lane.get_id(), time2string(MSNet::get_instance().get_current_time_step()));
+                    self.cleanup_parking_reservation();
+                    if MSStopOut::active() {
+                        // clean up if stopBlocked was called
+                        MSStopOut::get_instance().m().stop_not_started(Ptr::from_mut(self).cast::<SUMOVehicle>());
+                    }
+                    self.myStops.pop_front();
+                } else {
+                    let me: Ptr<MSVehicle> = Ptr::from_mut(self);
+                    let stop: Ptr<MSStop> = Ptr::from_mut(self.myStops.front_mut().unwrap());
+                    // passed waypoint at the end of the lane
+                    if !stop.reached {
+                        if MSStopOut::active() {
+                            MSStopOut::get_instance().m().stop_started(me.cast::<SUMOVehicle>(), self.get_person_number(), self.get_container_number(), MSNet::get_instance().get_current_time_step());
+                        }
+                        stop.m().reached = true;
+                        // enter stopping place so leaveFrom works as expected
+                        if !stop.busstop.is_null() {
+                            // let the bus stop know the vehicle
+                            stop.busstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        if !stop.containerstop.is_null() {
+                            // let the container stop know the vehicle
+                            stop.containerstop.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                        // do not enter parkingarea!
+                        if !stop.chargingStation.is_null() {
+                            // let the container stop know the vehicle
+                            stop.chargingStation.m().enter(me.cast::<SUMOVehicle>(), stop.pars.parking == ParkingType::OFFROAD);
+                        }
+                    }
+                    self.resume_from_stopping();
+                }
+                self.myStopDist = f64::MAX;
             }
         }
     }
@@ -7100,7 +7133,7 @@ impl MSVehicle {
         }
         // go backward through the lanes
         // track back best lane and compute the best prior lane(s)
-        let hasElecHybrid = !self.get_device(&()).is_null();
+        let hasElecHybrid = !MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").is_null();
         // Rng and contRight are read up front (side-effect free) so betterContinuation can run while myBestLanes is borrowed
         let rng = self.get_rng();
         let contRight = self.get_vehicle_type().get_parameter().get_lc_param(SUMO_ATTR_LCA_CONTRIGHT, 1.0);
@@ -8696,7 +8729,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_time_gap_on_lane(&self) -> f64 {
         // calling getLeader with 0 would induce a dist calculation but we only want to look for the leaders on the current lane
-        let leaderInfo = self.get_leader(-1.0, false);
+        let leaderInfo = self.get_leader(-1.0, true);
         if leaderInfo.0.is_null() || self.get_speed() == 0.0 {
             return -1.0;
         }
@@ -9152,7 +9185,7 @@ impl MSVehicle {
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
         if self.myCurrEdge == stop.edge && distToStop + POSITION_EPS < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
             if distToStop < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_emergency_decel(), 0.0) {
-                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, false);
+                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, true);
                 self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
                 self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
                 self.myCachedPosition.set(Position::INVALID);
@@ -10233,8 +10266,12 @@ impl MSVehicle {
         // save parameters and device states
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            // shortcut: virtual dispatch to MSVehicleDevice subclasses is not available, only the base MSDevice::saveState runs
-            dev.m().base2.save_state(out);
+            // shortcut: no device vtable yet, the concrete type is recovered from the id prefix assigned by its constructor; other device types still only run the base MSDevice::saveState (warning)
+            if dev.m().base2.get_id().starts_with("tripinfo_") {
+                dev.cast::<MSDevice_Tripinfo>().m().save_state(out);
+            } else {
+                dev.m().base2.save_state(out);
+            }
         }
         if !self.myCFVariables.is_null() {
             self.myCFVariables.save_state(out, self.get_car_follow_model());
@@ -11491,9 +11528,9 @@ impl MSVehicle {
     //         //if (isSelected()) std::cout << "   check1 passed\n";
     //
     //         // ensure that the vehicle is fully on bidi edges that allow reversal
-    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks()
-    //                                                 ? ceil((double)myFurtherLanes.size() / 2.0)
-    //                                                 : myFurtherLanes.size());
+    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes
+    //                                                 ? myFurtherLanes.size()
+    //                                                 : ceil((double)myFurtherLanes.size() / 2.0));
     //         const int remainingRoute = int(myRoute->end() - myCurrEdge) - 1;
     //         if (remainingRoute < neededFutureRoute) {
     // #ifdef DEBUG_REVERSE_BIDI
@@ -11623,10 +11660,10 @@ impl MSVehicle {
             && stopOk
         {
             // ensure that the vehicle is fully on bidi edges that allow reversal
-            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
-                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
-            } else {
+            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() {
                 self.myFurtherLanes.len() as f64
+            } else {
+                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
             }) as i32;
             let remainingRoute = (self.myRoute.size() as i32 - self.myCurrEdge as i32) - 1;
             if remainingRoute < neededFutureRoute {
@@ -11834,7 +11871,7 @@ impl MSVehicle {
                 let front = self.myStops.front().unwrap();
                 let brakeGap = self.get_car_follow_model().brake_gap_2(self.myLane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()), self.get_car_follow_model().get_max_decel(), 3.0);
                 let nearStop = front.reached || (self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) && self.myStopDist < brakeGap);
-                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, false).allows_vehicle_class(self.get_v_class());
+                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, true).allows_vehicle_class(self.get_v_class());
                 (nearStop, notStoppingRight, !front.reached && front.pars.parking == ParkingType::OFFROAD)
             };
             if reached {
@@ -13105,7 +13142,7 @@ impl MSVehicle {
     //             // check for train direction reversal
     //             if (lane->getBidiLane() != nullptr
     //                     && (*link)->getLane()->getBidiLane() == lane) {
-    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - NUMERICAL_EPS);
+    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - POSITION_EPS);
     //                 if (seen < 1) {
     //                     mustSeeBeforeReversal = 2 * seen + getLength();
     //                 }
@@ -13117,17 +13154,14 @@ impl MSVehicle {
     //                                 && seen > SPEED2DIST(v));
     //         }
     //
-    //         if (!planningToStop) {
-    //             // no need to slow down for reversal if we are alrady slowing down for a stop
-    //             bool canReverseEventually = false;
-    //             const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
-    //             v = MIN2(v, vReverse);
+    //         bool canReverseEventually = false;
+    //         const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
+    //         v = MIN2(v, vReverse);
     // #ifdef DEBUG_PLAN_MOVE
-    //             if (DEBUG_COND) {
-    //                 std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
-    //             }
-    // #endif
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
     //         }
+    // #endif
     //
     //         // check whether we need to slow down in order to finish a continuous lane change
     //         if (myLaneChangeModel->isChangingLanes()) {
@@ -13840,7 +13874,7 @@ impl MSVehicle {
             if self.is_rail() && !lane.is_internal() {
                 // check for train direction reversal
                 if !lane.get_bidi_lane().is_null() && linkP.get_lane().get_bidi_lane() == lane {
-                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - utils::geom::NUMERICAL_EPS, MSCFModel_CalcReason::CURRENT);
+                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT);
                     if seen < 1.0 {
                         mustSeeBeforeReversal = 2.0 * seen + self.get_length();
                     }
@@ -13852,12 +13886,9 @@ impl MSVehicle {
                     && seen > speed2dist(v);
             }
 
-            if !planningToStop {
-                // no need to slow down for reversal if we are alrady slowing down for a stop
-                let mut canReverseEventually = false;
-                let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
-                v = min2(v, vReverse);
-            }
+            let mut canReverseEventually = false;
+            let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+            v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
             if self.myLaneChangeModel.is_changing_lanes() {
@@ -13867,7 +13898,7 @@ impl MSVehicle {
                     ||
                     // slow down to finish lane change before the shadow lane ends
                     (!self.myLaneChangeModel.get_shadow_lane().is_null()
-                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), false).is_null())
+                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), true).is_null())
                 {
                     // XXX maybe this is too harsh. Vehicles could cut some corners here
                     let timeRemaining = steps2time(self.myLaneChangeModel.remaining_time());
@@ -16960,18 +16991,6 @@ fn ignore_red_decision(ignoreRedTime: f64, ignoreYellowTime: f64, haveYellow: bo
 }
 
 #[cfg(test)]
-mod semi_implicit_tests {
-    use super::*;
-
-    #[test]
-    fn vehicle_update_method_follows_msglobals_default() {
-        // C++ MSGlobals::gSemiImplicitEulerUpdate defaults to true; a local stub returning false sent vSafeMin down the ballistic branch
-        assert!(semi_implicit_euler_update());
-        assert_eq!(semi_implicit_euler_update(), MSGlobals::semi_implicit_euler_update());
-    }
-}
-
-#[cfg(test)]
 mod ignore_red_tests {
     use super::*;
 
@@ -17028,3 +17047,13 @@ mod vt_dispatch_tests {
     }
 }
 
+
+#[cfg(test)]
+mod globals_tests {
+    #[test]
+    fn semi_implicit_euler_follows_ms_globals() {
+        // was a local stub hardcoded to false (ballistic), C++ defaults to the Euler update
+        assert_eq!(super::semi_implicit_euler_update(), crate::microsim::ms_globals::semi_implicit_euler_update());
+        assert!(super::semi_implicit_euler_update());
+    }
+}

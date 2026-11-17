@@ -516,8 +516,15 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: MSTransportableControl::loadedBegin/End return an Unmapped map iterator, so the id list cannot be built yet; upgrade when the transportable dict iterator is mapped
-        panic!("getIDList not yet ported: MSTransportableControl loaded iterator is unmapped")
+        let mut ids = Vec::new();
+        let net = MSNet::get_instance();
+        let c = net.m().get_person_control();
+        for (id, t) in c.myTransportables.iter() {
+            if t.get_current_stage_type() != MSStageType::WAITING_FOR_DEPART {
+                ids.push(id.clone());
+            }
+        }
+        ids
     }
 
     /// C++: `int Person::getIDCount()` [static]
@@ -782,8 +789,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_lateral_alignment(personID: &str) -> String {
-        let _ = Self::get_person(personID).get_vehicle_type().get_preferred_lateral_alignment();
-        panic!("get_lateral_alignment: LatAlignmentDefinition to string not ported")
+        crate::libsumo::vehicle_type::lat_alignment_to_string(*Self::get_person(personID).get_vehicle_type().get_preferred_lateral_alignment()).to_string()
     }
 
     /// C++: `int Person::getPersonCapacity(const std::string &)` [static]
@@ -812,8 +818,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(personID: &str) -> f64 {
-        // shortcut: MSVehicleType::getSpeedFactor() returns an Unmapped Distribution_Parameterized, so getParameter(1) cannot be read; upgrade when that type is mapped
-        panic!("getSpeedDeviation not yet ported: VehicleType speed factor distribution is unmapped")
+        Self::get_person(personID).get_vehicle_type().get_speed_factor().get_parameter(1)
     }
 
     /// C++: `double Person::getBoardingDuration(const std::string &)` [static]
@@ -1967,8 +1972,9 @@ impl Person {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Person, PERSON)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: needs TraCIString stored as Rc<TraCIResult> inside TraCIResults, not ported in this pass; upgrade when the TraCIString wrapper is filled
-        panic!("Person::subscribeParameterWithKey not yet ported")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_PERSON_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Person::domainID()` [static]
@@ -1996,8 +2002,7 @@ impl Person {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Person::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Person::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

@@ -154,7 +154,7 @@ const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
 const RANDOM_POS_LAT: f64 = -f64::MAX;
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
-// shortcut: local copy because the Rust getSidewalk template (utils/router/intermodal_edge.rs) is still todo!(); use it once ported
+// shortcut: local copy because the generic getSidewalk in utils/router/intermodal_edge.rs is a stub (needs router trait bounds for E::getLanes and L::getPermissions); delete this copy and call that one once it is ported
 fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
     if edge.is_null() {
         return Ptr::null();

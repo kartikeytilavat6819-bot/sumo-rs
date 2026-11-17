@@ -1,13 +1,10 @@
 //! Port of microsim/devices/MSDevice_ToC.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::to_string::f64_to_string_prec;
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 
 /// C++ enum `MSDevice_ToC::ToCState`
@@ -274,9 +271,8 @@ impl MSDevice_ToC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
-    if panic!("shortcut: equipped_by_default_assignment_options not ported") {
-            if g_use_meso_sim() {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "toc", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
+            if MSGlobals::use_meso_sim() {
                 utils::common::msg_handler::write_warning("ToC device is not supported by the mesoscopic simulation.");
                 return;
             }
@@ -888,8 +884,7 @@ impl MSDevice_ToC {
         self.deschedule_mrm();
         // Start MRM process
         if self.myMRMSafeSpot != "" {
-            // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
-        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
+            let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
             let s = MSNet::get_instance().m().get_stopping_place(&self.myMRMSafeSpot, SUMO_TAG_PARKING_AREA);
             if s.is_null() {
                 write_warningf!("Ignoring unknown safe spot '%' for vehicle '%'.", self.myMRMSafeSpot, self.myHolder.get_id());
@@ -1369,6 +1364,20 @@ impl MSDevice_ToC {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, outputFilename: &str, manualType: &str, automatedType: &str, responseTime: SUMOTime, recoveryRate: f64, lcAbstinence: f64, initialAwareness: f64, mrmDecel: f64, dynamicToCThreshold: f64, dynamicMRMProbability: f64, maxPreparationAccel: f64, mrmKeepRight: bool, mrmSafeSpot: &str, mrmSafeSpotDuration: SUMOTime, useColorScheme: bool, ogp: MSDevice_ToC_OpenGapParams) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_ToC>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, outputFilename, manualType, automatedType, responseTime, recoveryRate, lcAbstinence, initialAwareness, mrmDecel, dynamicToCThreshold, dynamicMRMProbability, maxPreparationAccel, mrmKeepRight, mrmSafeSpot, mrmSafeSpotDuration, useColorScheme, ogp);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, outputFilename: &str, manualType: &str, automatedType: &str, responseTime: SUMOTime, recoveryRate: f64, lcAbstinence: f64, initialAwareness: f64, mrmDecel: f64, dynamicToCThreshold: f64, dynamicMRMProbability: f64, maxPreparationAccel: f64, mrmKeepRight: bool, mrmSafeSpot: &str, mrmSafeSpotDuration: SUMOTime, useColorScheme: bool, ogp: MSDevice_ToC_OpenGapParams) -> Self {
         let base = MSVehicleDevice::new(holder, id);
         let holderPtr = base.myHolder;
         let mut this = MSDevice_ToC {

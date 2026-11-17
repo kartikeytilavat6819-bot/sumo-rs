@@ -1,0 +1,8 @@
+<connections>
+    <connection from="LEAD" to="IN" fromLane="0" toLane="0"/>
+    <connection from="IN" to="AB" fromLane="0" toLane="0"/>
+    <connection from="IN" to="AC" fromLane="0" toLane="0"/>
+    <connection from="AC" to="CB" fromLane="0" toLane="0"/>
+    <connection from="AB" to="OUT" fromLane="0" toLane="0"/>
+    <connection from="CB" to="OUT" fromLane="0" toLane="0"/>
+</connections>

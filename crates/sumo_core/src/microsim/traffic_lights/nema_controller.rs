@@ -1,8 +1,9 @@
 //! Port of microsim/traffic_lights/NEMAController.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
-// shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so E2 detectors cannot be looked up by id yet; upgrade when detector control is ported
+// shortcut: the lookup is get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR)[id] downcast from MSDetectorFileOutput to MSE2Collector, but MSDetectorFileOutput is MSE2Collector's second base (MSMoveReminder is first), so a plain Ptr::cast is wrong; upgrade when a base-offset-aware downcast exists
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
     panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
 }
@@ -150,6 +151,31 @@ impl std::ops::DerefMut for NEMALogic {
     }
 }
 
+fn nema_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().init(nb)
+}
+fn nema_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().try_switch()
+}
+fn nema_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_current_phase_def()
+}
+fn nema_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().reset_last_switch(t)
+}
+fn nema_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_detector_states()
+}
+
+static NEMA_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: nema_try_switch,
+    init: nema_init,
+    get_current_phase_def: nema_get_current_phase_def,
+    reset_last_switch: nema_reset_last_switch,
+    get_detector_states: nema_get_detector_states,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 impl NEMALogic {
     /// C++: `void NEMALogic::NEMALogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const MSSimpleTrafficLightLogic::Phases &, int, SUMOTime, const std::map<std::string, std::string> &, const std::string &)`
     /// Constructor
@@ -192,6 +218,7 @@ impl NEMALogic {
             myControllerType: NEMALogic_controllerType::Type170,
             myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
         };
+        this.base.base.vt = &NEMA_LOGIC_VT;
         this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
         this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
         let cycle_default = this.get_parameter("cycleTime", "60".to_string());

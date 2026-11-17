@@ -6,9 +6,9 @@ use utils::common::to_string::f64_to_string_prec;
 use utils::common::util_exceptions::ProcessError;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 
-// shortcut: MSGlobals::gLateralResolution is a static that is not ported yet (ms_globals.rs has no statics), this stub returns the C++ default -1 (unit-test default, sublane model off), upgrade when MSGlobals statics are ported
+/// C++ `MSGlobals::gLateralResolution`; re-exported through the prelude, so ms_link.rs and others read it via this name
 pub fn g_lateral_resolution() -> f64 {
-    -1.
+    MSGlobals::lateral_resolution()
 }
 
 fn min2(a: f64, b: f64) -> f64 {
@@ -345,7 +345,11 @@ impl MSLeaderDistanceInfo {
         let mut base = MSLeaderInfo::new(laneWidth, Ptr::null(), 0.0);
         base.myVehicles[0] = cLeaderDist.0;
         base.myHasVehicles = !cLeaderDist.0.is_null();
-        MSLeaderDistanceInfo { base, myDistances: vec![cLeaderDist.1] }
+        // C++ sizes myDistances to 1 here while myVehicles has one entry per sublane; operator[] then reads past
+        // it. The extra entries are empty sublanes, so they get the same f64::MAX as the normal constructor.
+        let mut myDistances = vec![f64::MAX; base.myVehicles.len()];
+        myDistances[0] = cLeaderDist.1;
+        MSLeaderDistanceInfo { base, myDistances }
     }
 
     /// C++: `void MSLeaderDistanceInfo::~MSLeaderDistanceInfo() noexcept` [virtual]
@@ -1145,3 +1149,31 @@ impl MSLeaderInfo {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// C++ `MAX2(1, int(ceil(laneWidth / gLateralResolution)))` with gLateralResolution = 0.8
+    #[test]
+    fn sublane_count_follows_cpp_sizing_rule() {
+        let saved = MSGlobals::lateral_resolution();
+        MSGlobals::set_lateral_resolution(0.8);
+        assert_eq!(MSLeaderInfo::new(3.0, Ptr::null(), 0.0).myVehicles.len(), 4); // ceil(3.75)
+        assert_eq!(MSLeaderInfo::new(0.5, Ptr::null(), 0.0).myVehicles.len(), 1); // ceil(0.625)
+        assert_eq!(MSLeaderInfo::new(0.0, Ptr::null(), 0.0).myVehicles.len(), 1); // MAX2(1, 0)
+        MSGlobals::set_lateral_resolution(saved);
+    }
+
+    /// a single-leader info built for a multi-sublane lane must expose every sublane, as C++ numSublanes() does
+    #[test]
+    fn single_leader_info_indexes_every_sublane() {
+        let saved = MSGlobals::lateral_resolution();
+        MSGlobals::set_lateral_resolution(0.8);
+        let ldi = MSLeaderDistanceInfo::new_2(&(Ptr::null(), 12.5), 3.0);
+        assert_eq!(ldi.num_sublanes(), 4);
+        assert_eq!(ldi.index_op(0).1, 12.5);
+        assert_eq!(ldi.index_op(3).1, f64::MAX);
+        MSGlobals::set_lateral_resolution(saved);
+    }
+}

@@ -3,7 +3,23 @@
 Net: `tools/oracle/cases/real/ref_simple.net.xml`. Routes: `routes.rou` (10 vehicles, departs 0–20 s).
 Additional files: `reroute.closing.add.xml` (variant A, closing rerouter only) and `reroute.add.xml`
 (variant B, `device.rerouting.*` on the default vType + closing rerouter + destProbReroute rerouter).
-Closed edge: `1117867029#1`. Run with `--end 200 --tripinfo-output --statistic-output`.
+Closed edge: `1117867029#1`. Run with `--end 200 --tripinfo-output --statistic-output --fcd-output`.
+
+## Status as of 2026-11-16 — BOTH VARIANTS PASS, EXACTLY
+
+| Run | tripinfo | statistics | fcd |
+|---|---|---|---|
+| A: closing rerouter only (`sim_closing.args`) | MATCH | 0 differences in 0 groups | MATCH |
+| B: device attrs + 2 rerouters (`sim.args`) | MATCH | MATCH | MATCH |
+
+Both are on the scoreboard (`reroute/ref` and `reroute/ref_closing`) and need no manual step.
+
+The table and findings below are **historical**: they record a period when `--additional-files` panicked
+in the shape loader, before that path was ported. Neither panic reproduces. Left in place so the
+history of the defect is not lost, but do not read it as current.
+
+<details>
+<summary>Original report (historical, panics no longer reproduce)</summary>
 
 ## Results
 
@@ -26,3 +42,5 @@ Control (no `--additional-files`): ours runs, exit 0, output written.
 ## Verdict
 
 Ours panics on additional-file loading (not rerouting-specific). Rerouting cannot be evaluated until the XML additional loader is wired. The reference shows no reroute happened, so the test case itself needs a `<param>`-based device before it measures anything.
+
+</details>

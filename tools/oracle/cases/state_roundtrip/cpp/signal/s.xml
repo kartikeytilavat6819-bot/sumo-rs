@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T12:21:18.145110-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-st01/tools/oracle/cases/signal/ref_simple.net.xml"/>
+        <route-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-st01/tools/oracle/cases/signal/routes.rou"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="/mnt/c/Users/karti/rt_cpp/signal/save.ti.xml"/>
+        <save-state.times value="10"/>
+        <save-state.files value="/mnt/c/Users/karti/rt_cpp/signal/s.xml"/>
+    </output>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="10.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="r0" state="1" edges="324752522 324752521 324752524"/>
+    <route id="r1" state="1" edges="177308057 324752524"/>
+    <route id="r2" state="1" edges="-324752524 -324752521 -324752522"/>
+    <route id="r3" state="1" edges="324752524 -324752524"/>
+    <delay number="5" begin="5" end="0" depart="0.00" time="0.00" speedFactor="1.08" decel="4.50"/>
+    <vType id="DEFAULT_VEHTYPE"/>
+    <vehicle id="v0" depart="0.00" route="r0" distance="61.99 0" speedFactor="1.0600" state="2048 0 2 5.10 0 0.64 9000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="41.62 36.62 10.52" speed="10.52 11.29" angle="5.28" posLat="0.00" waitingTime="100000 0" lcStateBase="512.00" lcState2="0 0 0 115320286 0">
+        <device id="tripinfo_v0" state="324752522_0 0 11.11 56.89 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="v1" depart="1.00" route="r1" distance="0 0" speedFactor="0.9383" state="2048 1000 0 5.10 0 0.59 9000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="82.37 77.37 9.37" speed="9.37 9.89" angle="250.91" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_v1" state="177308057_0 0 10.4245 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="v2" depart="2.00" route="r2" distance="77.19 0" speedFactor="1.0104" state="2048 2000 2 5.10 0 0.39 9000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="2.15 7.17 11.22" speed="11.22 10.65" angle="189.34" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_v2" state="-324752524_0 0 11.11 72.09 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="v3" depart="3.00" route="r3" distance="53.78 0" speedFactor="1.0827" state="2048 3000 1 5.10 0 1.35 9000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="0.11 48.89 2.75" speed="2.75 3.48" angle="277.30" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_v3" state="324752524_1 0 11.11 48.68 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="v4" depart="4.00" route="r0" distance="50.38 0" speedFactor="1.0303" state="2048 4000 1 5.10 0 0.14 9000 0 0 0 9000 9000 9000" pos="10.40 5.40 11.37" speed="11.37 10.75" angle="6.96" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 113653783 0">
+        <device id="tripinfo_v4" state="324752522_0 0 11.11 45.28 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <lane id=":335683858_3_0">
+        <vehicles value="v4"/>
+    </lane>
+    <lane id="-324752522_0">
+        <vehicles value="v2"/>
+    </lane>
+    <lane id="-324752524_0">
+        <vehicles value="v3"/>
+    </lane>
+    <lane id="177308057_0">
+        <vehicles value="v1"/>
+    </lane>
+    <lane id="324752524_0">
+        <vehicles value="v0"/>
+    </lane>
+    <tlLogic id="1802245009" programID="0" phase="0" duration="10000" until="82000" cycleTime="10000" active="1"/>
+</snapshot>

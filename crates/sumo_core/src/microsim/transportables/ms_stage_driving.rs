@@ -1037,7 +1037,7 @@ impl MSStageDriving {
     // }
     #[allow(unused_variables)]
     pub fn set_arrived(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, vehicleArrived: bool) -> String {
-        self.base.set_arrived(net, transportable, now, vehicleArrived);
+        self.base.myArrived = now;
         if !self.myVehicle.is_null() {
             let v = self.myVehicle.cast::<MSVehicle>();
             // distance was previously set to driven distance upon embarking
@@ -1363,7 +1363,7 @@ impl MSStageDriving {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
-        if !self.base.equals(s) {
+        if !self.base.equals_base(s) {
             return false;
         }
         // this is safe because MSStage already checked that the type fits

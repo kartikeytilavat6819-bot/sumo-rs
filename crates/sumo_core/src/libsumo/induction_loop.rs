@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
 use utils::common::time::delta_t;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::InductionLoop` (libsumo/InductionLoop.h)
 pub struct InductionLoop {
@@ -20,11 +21,13 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `InductionLoop::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `InductionLoop::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
-/// C++ `MSGlobals::gUseMesoSim`. shortcut: MSGlobals is not ported, so this always reports the microscopic mode; upgrade when ms_globals.rs ports the static.
+/// C++ `MSGlobals::gUseMesoSim`
 fn use_meso_sim() -> bool {
-    false
+    crate::microsim::ms_globals::use_meso_sim()
 }
 
 impl InductionLoop {
@@ -145,7 +148,6 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_interval_occupancy(loopID: &str) -> f64 {
-        // shortcut: MSGlobals::gUseMesoSim is not ported (ms_globals.rs keeps it as a comment), so the micro branch is always taken; upgrade when MSGlobals is ported
         if use_meso_sim() {
             let det = Self::get_me_detector(loopID);
             let meanData = det.get_mean_data();
@@ -426,7 +428,9 @@ impl InductionLoop {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(InductionLoop, INDUCTIONLOOP)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        panic!("shortcut: InductionLoop::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_INDUCTIONLOOP_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int InductionLoop::domainID()` [static]
@@ -452,9 +456,20 @@ impl InductionLoop {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        panic!("shortcut: InductionLoop::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).iter() {
+                let il = i.cast::<MSInductLoop>();
+                let p = il.get_lane().get_shape_2().position_at_offset(il.get_position(), 0.0);
+                let cmin = [p.x() as f32, p.y() as f32];
+                let cmax = [p.x() as f32, p.y() as f32];
+                tree.m().insert(&cmin, &cmax, &Ptr::from_mut(&mut il.m().base2.base));
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void InductionLoop::cleanup()` [static]
@@ -465,7 +480,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void InductionLoop::storeShape(const std::string &, PositionVector &)` [static]
@@ -489,7 +504,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        panic!("shortcut: InductionLoop::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool InductionLoop::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

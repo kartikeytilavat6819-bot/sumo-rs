@@ -94,6 +94,9 @@ pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTr
     save_state: simple_save_state,
     load_state: simple_load_state,
     map_time_in_cycle: simple_map_time_in_cycle,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
 };
 
 impl MSSimpleTrafficLightLogic {
@@ -820,7 +823,6 @@ mod initial_switch_tests {
             oc.do_register("duration-log.statistics", SumoOption::bool(false));
             oc.do_register("meso-edgelength", SumoOption::float(98.0));
             oc.do_register("meso-jam-threshold", SumoOption::float(-1.0));
-            oc.do_register("meso-lookahead", SumoOption::float(0.0));
             oc.do_register("meso-junction-control", SumoOption::bool(false));
             oc.do_register("meso-tls-penalty", SumoOption::float(0.0));
             oc.do_register("meso-tls-flow-penalty", SumoOption::float(0.0));

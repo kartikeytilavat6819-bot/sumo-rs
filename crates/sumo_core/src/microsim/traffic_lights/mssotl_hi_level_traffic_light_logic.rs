@@ -2,16 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-fn sotl_hi_level_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
-    Ptr::from_mut(l).cast::<MSSOTLHiLevelTrafficLightLogic>().m().init(nb)
-}
-
-/// Virtual table of MSSOTLHiLevelTrafficLightLogic (overrides init; trySwitch is inherited from SOTL)
-pub(crate) static MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
-    init: sotl_hi_level_init,
-    ..MSSOTL_TRAFFIC_LIGHT_LOGIC_VT
-};
-
 /// A self-organizing high-level traffic light logic
 /// C++ class `MSSOTLHiLevelTrafficLightLogic` (microsim/traffic_lights/MSSOTLHiLevelTrafficLightLogic.h)
 #[repr(C)]
@@ -49,11 +39,7 @@ impl MSSOTLHiLevelTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         Self {
-            base: {
-                let mut b = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, parameters);
-                b.base.base.vt = &MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT;
-                b
-            },
+            base: MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, logicType, phases, step, delay, parameters),
             myPolicies: Vec::new(),
             myCurrentPolicy: Ptr::null(),
         }
@@ -74,11 +60,7 @@ impl MSSOTLHiLevelTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, sensors: Ptr<MSSOTLSensors>) -> Self {
         Self {
-            base: {
-                let mut b = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, parameters, sensors);
-                b.base.base.vt = &MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT;
-                b
-            },
+            base: MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, logicType, phases, step, delay, parameters, sensors),
             myPolicies: Vec::new(),
             myCurrentPolicy: Ptr::null(),
         }

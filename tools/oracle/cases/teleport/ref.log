@@ -1,0 +1,4 @@
+Warning: Teleporting vehicle 'f0'; waited too long (blocked), lane='E1_0', time=71.00.
+Warning: Vehicle 'f0' teleports beyond arrival edge 'E1', time=71.00.
+Warning: Teleporting vehicle 'f1'; waited too long (blocked), lane='E1_0', time=97.00.
+Warning: Vehicle 'f1' teleports beyond arrival edge 'E1', time=97.00.

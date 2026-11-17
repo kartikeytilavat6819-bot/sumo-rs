@@ -29,6 +29,7 @@ pub struct MSAbstractLaneChangeModelVt {
     pub debug_vehicle: fn(&MSAbstractLaneChangeModel) -> bool,
     pub get_parameter: fn(&MSAbstractLaneChangeModel, &str) -> String,
     pub get_desired_alignment: fn(&MSAbstractLaneChangeModel) -> LatAlignmentDefinition,
+    pub check_change_before_committing: fn(&MSAbstractLaneChangeModel, Ptr<MSVehicle>, i32) -> i32,
 }
 
 fn default_inform(_: &mut MSAbstractLaneChangeModel, _: Ptr<()>, _: Ptr<MSVehicle>) -> Ptr<()> {
@@ -43,7 +44,7 @@ fn default_changed(_: &mut MSAbstractLaneChangeModel) {
     panic!("MSAbstractLaneChangeModel::changed is pure virtual")
 }
 
-pub(crate) static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
     inform: default_inform,
     patch_speed: default_patch_speed,
     changed: default_changed,
@@ -68,6 +69,7 @@ pub(crate) static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChange
     debug_vehicle: MSAbstractLaneChangeModel::debug_vehicle_base,
     get_parameter: MSAbstractLaneChangeModel::get_parameter_base,
     get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
 };
 
 /// Interface for lane-change models
@@ -312,8 +314,12 @@ impl MSAbstractLaneChangeModel {
     //         UNUSED_PARAMETER(state);
     //         return 0;
     //     }
-    #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
+        (self.vt.check_change_before_committing)(self, veh, state)
+    }
+
+    #[allow(unused_variables)]
+    pub fn check_change_before_committing_base(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
         0
     }
 
@@ -2081,6 +2087,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_shadow_lane(&mut self) {
+        // C++: if (!MSGlobals::gSublane) return; — without sublanes every vehicle sits at lane center
+        if !crate::microsim::ms_globals::sublane() {
+            return;
+        }
         if !self.myShadowLane.is_null() {
             self.myShadowLane.m().reset_partial_occupation(self.myVehicle);
         }
@@ -2556,39 +2566,20 @@ impl MSAbstractLaneChangeModel {
             }
             let reason = format!("{}{}", actionString, self.myVehicle.get_parameter().get_parameter("lcReason", ""));
             of.write_attr("reason", &reason);
-            // NO_NEIGHBOR gaps are not written at all (C++ writeAttr with isNull=true)
-            if self.myLastLeaderGap != NO_NEIGHBOR {
-                of.write_attr("leaderGap", &f64_to_string(self.myLastLeaderGap));
-            }
-            if self.myLastLeaderSecureGap != NO_NEIGHBOR {
-                of.write_attr("leaderSecureGap", &f64_to_string(self.myLastLeaderSecureGap));
-            }
-            if self.myLastLeaderSpeed != NO_NEIGHBOR {
-                of.write_attr("leaderSpeed", &f64_to_string(self.myLastLeaderSpeed));
-            }
-            if self.myLastFollowerGap != NO_NEIGHBOR {
-                of.write_attr("followerGap", &f64_to_string(self.myLastFollowerGap));
-            }
-            if self.myLastFollowerSecureGap != NO_NEIGHBOR {
-                of.write_attr("followerSecureGap", &f64_to_string(self.myLastFollowerSecureGap));
-            }
-            if self.myLastFollowerSpeed != NO_NEIGHBOR {
-                of.write_attr("followerSpeed", &f64_to_string(self.myLastFollowerSpeed));
-            }
-            if self.myLastOrigLeaderGap != NO_NEIGHBOR {
-                of.write_attr("origLeaderGap", &f64_to_string(self.myLastOrigLeaderGap));
-            }
-            if self.myLastOrigLeaderSecureGap != NO_NEIGHBOR {
-                of.write_attr("origLeaderSecureGap", &f64_to_string(self.myLastOrigLeaderSecureGap));
-            }
-            if self.myLastOrigLeaderSpeed != NO_NEIGHBOR {
-                of.write_attr("origLeaderSpeed", &f64_to_string(self.myLastOrigLeaderSpeed));
-            }
+            // C++ writeAttr(name, value, isNull) always writes in XML output: NO_NEIGHBOR is written as "None"
+            let gap = |v: f64| if v == NO_NEIGHBOR { "None".to_string() } else { f64_to_string(v) };
+            of.write_attr("leaderGap", &gap(self.myLastLeaderGap));
+            of.write_attr("leaderSecureGap", &gap(self.myLastLeaderSecureGap));
+            of.write_attr("leaderSpeed", &gap(self.myLastLeaderSpeed));
+            of.write_attr("followerGap", &gap(self.myLastFollowerGap));
+            of.write_attr("followerSecureGap", &gap(self.myLastFollowerSecureGap));
+            of.write_attr("followerSpeed", &gap(self.myLastFollowerSpeed));
+            of.write_attr("origLeaderGap", &gap(self.myLastOrigLeaderGap));
+            of.write_attr("origLeaderSecureGap", &gap(self.myLastOrigLeaderSecureGap));
+            of.write_attr("origLeaderSpeed", &gap(self.myLastOrigLeaderSpeed));
             if MSGlobals::lateral_resolution() > 0. {
                 let latGap = if direction < 0 { self.myLastLateralGapRight } else { self.myLastLateralGapLeft };
-                if latGap != NO_NEIGHBOR {
-                    of.write_attr("latGap", &f64_to_string(latGap));
-                }
+                of.write_attr("latGap", &gap(latGap));
                 if maneuverDist != 0. {
                     of.write_attr("maneuverDistance", &f64_to_string(maneuverDist));
                 }

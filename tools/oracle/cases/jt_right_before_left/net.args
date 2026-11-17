@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_right_before_left/junction.nod.xml --edge-files tools/oracle/cases/jt_right_before_left/junction.edg.xml --connection-files tools/oracle/cases/jt_right_before_left/junction.con.xml

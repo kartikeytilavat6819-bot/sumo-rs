@@ -1,9 +1,49 @@
 //! Port of microsim/MSLogicJunction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
+
+/// C++ `std::bitset<SUMO_MAX_CONNECTIONS>`: bit `i` lives in word `i / 64`.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub struct LinkBits([u64; SUMO_MAX_CONNECTIONS / 64]);
+
+const _: () = assert!(SUMO_MAX_CONNECTIONS % 64 == 0);
+
+impl LinkBits {
+    /// C++ `std::bitset<N>()`: all bits clear.
+    pub const fn new() -> Self {
+        LinkBits([0; SUMO_MAX_CONNECTIONS / 64])
+    }
+
+    /// C++ `bitset::set(pos, value)`.
+    pub fn set(&mut self, pos: i32, value: bool) {
+        let word = pos as usize / 64;
+        let mask = 1u64 << (pos as usize % 64);
+        if value {
+            self.0[word] |= mask;
+        } else {
+            self.0[word] &= !mask;
+        }
+    }
+
+    /// C++ `bitset::test(pos)`; a position past the end panics (C++ throws `std::out_of_range`).
+    pub fn test(&self, pos: i32) -> bool {
+        (self.0[pos as usize / 64] >> (pos as usize % 64)) & 1 == 1
+    }
+
+    /// C++ `bitset::none()`.
+    pub fn none(&self) -> bool {
+        self.0.iter().all(|w| *w == 0)
+    }
+
+    /// C++ `bitset::any()`.
+    pub fn any(&self) -> bool {
+        !self.none()
+    }
+}
 
 /// C++ typedef `std::bitset<256> MSLogicJunction::LinkBits`
-pub type MSLogicJunction_LinkBits = Unmapped /* std::bitset<256> */;
+pub type MSLogicJunction_LinkBits = LinkBits;
 
 /// A junction which may not let all vehicles through, but must perform any kind of an operation to determine which cars are allowed to drive in this step.
 /// C++ class `MSLogicJunction` (microsim/MSLogicJunction.h)
@@ -159,5 +199,45 @@ impl MSLogicJunction {
         panic!("MSLogicJunction assignment operator is private and undefined in C++")
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn link_bits_set_test_none_across_word_boundaries() {
+        let mut b = LinkBits::new();
+        assert!(b.none());
+        assert!(!b.any());
+        for pos in [0, 63, 64, 255] {
+            assert!(!b.test(pos));
+        }
+        b.set(63, true);
+        assert!(b.test(63) && !b.test(62) && !b.test(64));
+        assert!(!b.none() && b.any());
+        b.set(0, true);
+        b.set(64, true);
+        b.set(255, true);
+        for pos in [0, 63, 64, 255] {
+            assert!(b.test(pos));
+        }
+        assert!(!b.test(1) && !b.test(128) && !b.test(254));
+        b.set(63, false);
+        assert!(!b.test(63) && b.test(64));
+        b.set(0, false);
+        b.set(64, false);
+        b.set(255, false);
+        assert!(b.none());
+    }
+
+    #[test]
+    fn link_bits_is_copy_and_new_is_clear() {
+        let mut b = LinkBits::new();
+        b.set(200, true);
+        let c = b;
+        assert!(c.test(200));
+        assert!(LinkBits::new().none());
+    }
 }
 

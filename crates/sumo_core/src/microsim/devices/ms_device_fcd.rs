@@ -16,7 +16,6 @@ fn mask_reset(m: &mut SumoXMLAttrMask, bit: i32) {
     m.0 &= !(1u128 << bit);
 }
 
-/// shortcut: MSGlobals is unported (no accessors); gUseMesoSim is set from the "mesosim" option in MSFrame::init, so read it from there
 /// Names read by `while (strm.good()) { strm >> name; ... }`: whitespace-separated tokens, plus one
 /// empty name when the stream hits EOF on a `>>` (trailing whitespace or an empty file)
 fn edge_filter_names(content: &str) -> Vec<&str> {
@@ -27,14 +26,6 @@ fn edge_filter_names(content: &str) -> Vec<&str> {
     names
 }
 
-fn g_use_meso_sim() -> bool {
-    get_bool("mesosim")
-}
-/// shortcut: MSGlobals is unported (no accessors); gSublane is set in MSFrame::init from lanechange.duration and lateral-resolution, re-derived here
-fn g_sublane() -> bool {
-    string2time(&get_string("lanechange.duration")).unwrap_or_else(|e| panic!("{e}")) > 0
-        || get_float("lateral-resolution") > 0.0
-}
 
 thread_local! {
     static MY_BEGIN: Cell<SUMOTime> = const { Cell::new(0) };
@@ -52,15 +43,6 @@ thread_local! {
     static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
     static MY_SKIP_EMPTY: Cell<bool> = const { Cell::new(false) };
 }
-
-fn ms_device_fcd_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_mut(mr).cast::<MSDevice_FCD>().m().notify_enter(veh, reason, enteredLane)
-}
-static MS_DEVICE_FCD_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
-    notify_enter: ms_device_fcd_notify_enter,
-    notify_move: default_notify_move,
-    notify_leave: default_notify_leave,
-};
 
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_FCD` (microsim/devices/MSDevice_FCD.h)
@@ -410,8 +392,7 @@ impl MSDevice_FCD {
             };
             for name in edge_filter_names(&content) {
                 let name = if starts_with(name, "edge:") { &name[5..] } else { name };
-                // shortcut: MSEdge::dictionary(const std::string&) is declared in ms_edge.rs as dictionary_2(&Unmapped string_view), so edge names cannot be resolved yet (name: {name}), upgrade when ms_edge.rs maps the string overload
-                panic!("shortcut: fcd-output.filter-edges.input-file cannot be used until MSEdge::dictionary(name) is ported (edge '{name}')");
+                MY_EDGE_FILTER.with(|c| c.borrow_mut().insert(MSEdge::dictionary_2(name)));
             }
         }
         let mut emissions = SumoXMLAttrMask::default();
@@ -466,7 +447,7 @@ impl MSDevice_FCD {
         if get_bool("fcd-output.acceleration") {
             written.set(SUMO_ATTR_ACCELERATION);
         }
-        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && g_sublane();
+        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && MSGlobals::sublane();
         if accel_lat {
             written.set(SUMO_ATTR_ACCELERATION_LAT);
         } else {
@@ -557,9 +538,23 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        let mut base = MSVehicleDevice::new(holder, id);
-        base.base.vt = &MS_DEVICE_FCD_MSMOVE_REMINDER_VT;
-        MSDevice_FCD { base }
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_FCD>().m().notify_enter(veh, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str) -> Self {
+        MSDevice_FCD {
+            base: MSVehicleDevice::new(holder, id),
+        }
     }
 
     /// C++: `SumoXMLAttrMask MSDevice_FCD::getDefaultMask()` [static, private]
@@ -600,7 +595,7 @@ impl MSDevice_FCD {
         mask.set(SUMO_ATTR_LANE); // for micro vehicles only
         mask.set(SUMO_ATTR_EDGE); // for persons and meso vehicles
         mask.set(SUMO_ATTR_SLOPE);
-        if !g_use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
+        if !MSGlobals::use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
             mask.set(SUMO_ATTR_LEADER_ID);
             mask.set(SUMO_ATTR_LEADER_SPEED);
             mask.set(SUMO_ATTR_LEADER_GAP);
@@ -650,8 +645,18 @@ impl MSDevice_FCD {
     #[allow(unused_variables)]
     pub fn build_shape_filter() {
         if is_set("fcd-output.filter-shapes") {
-            // shortcut: ShapeContainer::getPolygons() is Unmapped in utils/shapes/shape_container.rs (NamedObjectCont<SUMOPolygon*> unported), so the loaded polygons cannot be looked up (and the empty-container and missing-shape branches cannot run), upgrade when shape_container.rs maps myPolygons
-            panic!("shortcut: fcd-output.filter-shapes cannot be used until ShapeContainer polygons are ported");
+            let net = MSNet::get_instance();
+            let loadedShapes = net.m().get_shape_container();
+            if loadedShapes.get_polygons().len() > 0 {
+                for attrName in get_string_vector("fcd-output.filter-shapes") {
+                    match loadedShapes.get_polygons().get(&attrName).copied() {
+                        None => utils::common::msg_handler::write_error(&utils::tlf!("Specified shape '%' for filtering fcd-output could not be found.", attrName)),
+                        // store the PositionVector, not reference, as traci can manipulate / detete the polygons
+                        Some(poly) => MY_SHAPE4_FILTERS.with(|f| f.borrow_mut().push(poly.get_shape().clone())),
+                    }
+                }
+                MY_SHAPE_FILTER_INITIALIZED.set(true);
+            }
         } else {
             MY_SHAPE_FILTER_INITIALIZED.set(true);
         }

@@ -3,6 +3,9 @@
 use crate::prelude::*;
 use std::cell::Cell;
 use utils::geom::geom_helper;
+use utils::common::named::NamedStoringVisitor;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::libsumo::variable_wrapper::VariableWrapperSink;
 
 // shortcut: C++ `throw TraCIException(msg)` is `panic!("{}", msg)` in this file (the TraCI server catches panics per command).
 
@@ -36,8 +39,9 @@ thread_local! {
     static MY_REMOTE_CONTROLLED_VEHICLES: Ptr<BTreeMap<String, Ptr<MSVehicle>>> = leak(BTreeMap::new());
     // static std::map<std::string, MSPerson *> Helper::myRemoteControlledPersons
     static MY_REMOTE_CONTROLLED_PERSONS: Ptr<BTreeMap<String, Ptr<MSPerson>>> = leak(BTreeMap::new());
+    // static LANE_RTREE_QUAL* Helper::myLaneTree
+    static MY_LANE_TREE: Cell<Ptr<LANE_RTREE_QUAL>> = Cell::new(Ptr::null());
 }
-// shortcut: static myLaneTree (RTree<MSLane*>) is not ported yet, lane searches panic in collectObjectsInRange
 
 fn my_subscriptions() -> &'static mut Vec<Subscription> {
     unsafe { &mut *MY_SUBSCRIPTIONS.with(|p| p.as_raw()) }
@@ -83,7 +87,7 @@ fn copy_subscription(s: &Subscription) -> Subscription {
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (std::make_shared<TraCIDouble>(...) stored as a base pointer)
 // shortcut: relies on #[repr(C)] with `base: TraCIResult` first on the TraCIResult subclasses in tra_ci_defs.rs, add it there
-fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
+pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }
 }
@@ -121,6 +125,15 @@ pub struct Helper {
 //   static std::map<std::string, MSPerson *> Helper::myRemoteControlledPersons;
 
 impl Helper {
+    /// C++: `std::make_shared<Helper::SubscriptionWrapper>(handler, into, context)`; the wrapper is its own sink
+    pub fn make_subscription_wrapper(handler: VariableWrapper_SubscriptionHandler, into: &mut SubscriptionResults, context: &mut ContextSubscriptionResults) -> Rc<VariableWrapper> {
+        let mut rc = Rc::new(Helper_SubscriptionWrapper::new(handler, into, context));
+        let raw: *mut Helper_SubscriptionWrapper = Rc::get_mut(&mut rc).unwrap();
+        unsafe { (*raw).base.set_sink(raw as *mut dyn VariableWrapperSink) };
+        let p = Rc::into_raw(rc) as *const VariableWrapper;
+        unsafe { Rc::from_raw(p) }
+    }
+
     /// C++: `void Helper::subscribe(const int, const std::string &, const std::vector<int> &, const double, const double, const libsumo::TraCIResults &, const int, const double)` [static]
     // void
     // Helper::subscribe(const int commandId, const std::string& id, const std::vector<int>& variables,
@@ -875,8 +888,8 @@ impl Helper {
     // }
     #[allow(unused_variables)]
     pub fn build_stop_parameters(edgeOrStoppingPlaceID: &str, pos: f64, laneIndex: i32, startPos: f64, flags: i32, duration: f64, until: f64) -> SUMOVehicleParameter_Stop {
-        // shortcut: SUMOVehicleParameter::Stop has no Rust default constructor yet (C++ `Stop newStop;`), add one in sumo_vehicle_parameter.rs
-    let mut newStop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter::Stop default constructor is not ported yet");
+        let mut startPos = startPos;
+        let mut newStop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
         if !check_time_bounds(duration) || !check_time_bounds(until) {
             panic!("Duration or until parameter exceed the time value range.");
         }
@@ -1227,21 +1240,48 @@ impl Helper {
         let cmax = [b.xmax() as f32, b.ymax() as f32];
         match domain {
             CMD_GET_BUSSTOP_VARIABLE | CMD_GET_CHARGINGSTATION_VARIABLE | CMD_GET_PARKINGAREA_VARIABLE => {
-                // shortcut: MSNet::get_stopping_places returns Unmapped (NamedObjectCont), iteration needs ms_net.rs mapped
-                panic!("shortcut: MSNet::get_stopping_places is not mapped yet, cannot collect stopping places in range");
+                let category = match domain {
+                    CMD_GET_BUSSTOP_VARIABLE => SUMO_TAG_BUS_STOP,
+                    CMD_GET_CHARGINGSTATION_VARIABLE => SUMO_TAG_CHARGING_STATION,
+                    _ => SUMO_TAG_PARKING_AREA,
+                };
+                for (_, stop) in MSNet::get_instance().get_stopping_places(category).iter() {
+                    if shape.distance2d(&stop.get_center_pos(), false) <= range {
+                        into.insert(stop.cast::<Named>());
+                    }
+                }
             }
             CMD_GET_CALIBRATOR_VARIABLE => {
-                // shortcut: MSCalibrator::getInstances is not mapped yet
-                panic!("shortcut: MSCalibrator::getInstances is not mapped yet, cannot collect calibrators in range");
+                for (_, calib) in MSCalibrator::get_instances().iter() {
+                    if shape.distance2d(&calib.get_lane().get_shape(false)[0], false) <= range {
+                        into.insert(Ptr::from_mut(&mut calib.m().base3.base));
+                    }
+                }
             }
-            CMD_GET_INDUCTIONLOOP_VARIABLE | CMD_GET_JUNCTION_VARIABLE | CMD_GET_LANEAREA_VARIABLE | CMD_GET_POI_VARIABLE | CMD_GET_POLYGON_VARIABLE => {
-                // shortcut: NamedRTree is Unmapped in the detector and shape ports, Search cannot be called yet
-                let _ = (cmin, cmax);
-                panic!("shortcut: NamedRTree is Unmapped, Search not available yet");
+            CMD_GET_INDUCTIONLOOP_VARIABLE => {
+                InductionLoop::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_JUNCTION_VARIABLE => {
+                Junction::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_LANEAREA_VARIABLE => {
+                LaneArea::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_POI_VARIABLE => {
+                POI::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
+            }
+            CMD_GET_POLYGON_VARIABLE => {
+                Polygon::get_tree().search(&cmin, &cmax, &NamedStoringVisitor::new(into), |d, c| d.add_to(c));
             }
             CMD_GET_EDGE_VARIABLE | CMD_GET_LANE_VARIABLE | CMD_GET_PERSON_VARIABLE | CMD_GET_VEHICLE_VARIABLE => {
-                // shortcut: the MSLane R-tree (myLaneTree) is not ported yet
-                panic!("shortcut: MSLane R-tree is not ported yet, cannot search lanes in range");
+                // determinism: `into` is a std::set ordered by address, so the R-tree hit order does not reach the output
+                if MY_LANE_TREE.with(|t| t.get()).is_null() {
+                    let tree = Ptr::from_raw(Box::into_raw(Box::new(LANE_RTREE_QUAL::new())));
+                    MY_LANE_TREE.with(|t| t.set(tree));
+                    MSLane::fill(|cmin, cmax, l| tree.m().insert(cmin, cmax, &l));
+                }
+                let lsv = MSLane_StoringVisitor::new(into, shape, range, domain);
+                MY_LANE_TREE.with(|t| t.get()).search(&cmin, &cmax, &lsv, |l, c| l.visit(c));
             }
             _ => panic!("Infeasible context domain ({})", domain),
         }
@@ -1849,9 +1889,26 @@ impl Helper {
                 }
                 // Check vehicles approaching the entry link corresponding to this lane
                 let foeLink = foeLane.get_entry_link();
-                // shortcut: MSLink exposes no iterator over its approaching vehicles map yet (getApproaching(veh) only)
-                let _ = foeLink;
-                panic!("shortcut: MSLink approaching-vehicles iteration is not mapped yet, turn filter unavailable");
+                for (veh, vi) in foeLink.myApproachingVehicles.iter() {
+                    if vi.dist <= s.filterFoeDistToJunction {
+                        // shortcut: C++ dynamic_cast<const MSVehicle*> is not checked, approaching links only hold MSVehicles
+                        vehs.insert(veh.cast::<SUMOTrafficObject>());
+                    }
+                }
+                // add vehicles currently on the junction
+                for foe in foeLane.get_vehicles_secure().iter() {
+                    vehs.insert(foe.cast::<SUMOTrafficObject>());
+                }
+                foeLane.release_vehicles();
+                for laneInfo in foeLane.get_incoming_lanes().iter() {
+                    let foeLanePred = laneInfo.lane;
+                    if foeLanePred.is_internal() {
+                        for foe in foeLanePred.get_vehicles_secure().iter() {
+                            vehs.insert(foe.cast::<SUMOTrafficObject>());
+                        }
+                        foeLanePred.release_vehicles();
+                    }
+                }
             }
         }
     }
@@ -2214,7 +2271,10 @@ impl Helper {
         Polygon::cleanup();
         Helper::clear_state_changes();
         Helper::clear_subscriptions();
-        // shortcut: myLaneTree is not ported yet, nothing to delete
+        let lane_tree = MY_LANE_TREE.with(|t| t.replace(Ptr::null()));
+        if !lane_tree.is_null() {
+            drop(unsafe { Box::from_raw(lane_tree.as_raw()) });
+        }
         my_remote_controlled_vehicles().clear();
         my_remote_controlled_persons().clear();
     }
@@ -2233,6 +2293,17 @@ impl Helper {
             MSNet::get_instance().m().add_vehicle_state_listener(Ptr::from_mut(&mut my_vehicle_state_listener().base));
             MSNet::get_instance().m().add_transportable_state_listener(Ptr::from_mut(&mut my_transportable_state_listener().base));
         }
+    }
+
+    /// Identifies the Helper listener for MSNet's dispatch: the base listener has no vtable, so MSNet cannot
+    /// reach the Helper override through the base pointer; the Helper base sits at offset 0 (repr(C)).
+    pub fn is_vehicle_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+        std::ptr::eq(listener, &mut my_vehicle_state_listener().base)
+    }
+
+    /// C++: `Helper::VehicleStateListener::vehicleStateChanged` [virtual], reached by MSNet via `is_vehicle_state_listener`
+    pub fn vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+        my_vehicle_state_listener().vehicle_state_changed(vehicle, to, info);
     }
 
     /// C++: `const std::vector<std::string> & Helper::getVehicleStateChanges(const MSNet::VehicleState)` [static]
@@ -2725,7 +2796,7 @@ impl Helper {
                 let angle2 = if useCurrentAngle { currentAngle } else { angle };
                 let angleDiff = if angle2 == INVALID_DOUBLE_VALUE || l.is_walking_area() { 0. } else { geom_helper::get_min_angle_diff(angle2, langle) };
 
-                let mut origIDMatch: bool = panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised");
+                let mut origIDMatch: bool = l.base2.get_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &l.get_id()) == origID;
                 if origIDMatch && setLateralPos && perpendicularDist > l.get_width() / 2. {
                     origIDMatch = false;
                 }
@@ -2970,7 +3041,7 @@ impl Helper {
         if !(*lane).get_edge().is_internal() {
             let lanes = (*lane).get_edge().get_lanes().clone();
             for li in lanes.iter() {
-                if { panic!("shortcut: MSLane parameters not ported, upgrade when MSLane is Parameterised") } {
+                if li.base2.get_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &li.get_id()) == origID {
                     if setLateralPos {
                         // vehicle might end up on top of another lane with a big
                         // lateral offset to the lane with origID.
@@ -3306,8 +3377,11 @@ impl Helper {
                         container.m().empty(objID);
                     } else {
                         Ptr::new(&*s.parameters[k]).m().reset_pos();
-                        // shortcut: VariableWrapper::handle is Unmapped (), the variable handler dispatch is not ported yet
-                        panic!("shortcut: VariableWrapper::handle is Unmapped, cannot dispatch variable {}", to_hex(variable as u64, 2, 8));
+                        let handle = handler.handle.expect("VariableWrapper::handle is nullptr");
+                        if !handle(objID, variable, container, Ptr::new(&*s.parameters[k])) {
+                            panic!("Unsupported variable {} specified", to_hex(variable as u64, 2, 8));
+                        }
+                        k += 1;
                     }
                 }
             } else if s.contextDomain > 0 {
@@ -3444,6 +3518,88 @@ impl std::ops::Deref for Helper_SubscriptionWrapper {
 impl std::ops::DerefMut for Helper_SubscriptionWrapper {
     fn deref_mut(&mut self) -> &mut VariableWrapper {
         &mut self.base
+    }
+}
+
+/// The `VariableWrapper::wrap*` virtuals of C++ `Helper::SubscriptionWrapper`; slice arguments are copied into the Vec-typed inherent methods
+impl VariableWrapperSink for Helper_SubscriptionWrapper {
+    fn set_context(&mut self, refID: Ptr<String>) {
+        Helper_SubscriptionWrapper::set_context(self, refID)
+    }
+    fn clear(&mut self) {
+        Helper_SubscriptionWrapper::clear(self)
+    }
+    fn empty(&mut self, objID: &str) {
+        Helper_SubscriptionWrapper::empty(self, objID)
+    }
+    fn wrap_connection_vector(&mut self, objID: &str, variable: i32, value: &[TraCIConnection]) -> bool {
+        Helper_SubscriptionWrapper::wrap_connection_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        Helper_SubscriptionWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        Helper_SubscriptionWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        Helper_SubscriptionWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &[String]) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_double_list(&mut self, objID: &str, variable: i32, value: &[f64]) -> bool {
+        Helper_SubscriptionWrapper::wrap_double_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_position(&mut self, objID: &str, variable: i32, value: &TraCIPosition) -> bool {
+        Helper_SubscriptionWrapper::wrap_position(self, objID, variable, value)
+    }
+    fn wrap_position_vector(&mut self, objID: &str, variable: i32, value: &TraCIPositionVector) -> bool {
+        Helper_SubscriptionWrapper::wrap_position_vector(self, objID, variable, value)
+    }
+    fn wrap_color(&mut self, objID: &str, variable: i32, value: &TraCIColor) -> bool {
+        Helper_SubscriptionWrapper::wrap_color(self, objID, variable, value)
+    }
+    fn wrap_string_double_pair(&mut self, objID: &str, variable: i32, value: &(String, f64)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_double_pair(self, objID, variable, value)
+    }
+    fn wrap_string_double_pair_list(&mut self, objID: &str, variable: i32, value: &[(String, f64)]) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_double_pair_list(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_pair(self, objID, variable, value)
+    }
+    fn wrap_int_pair(&mut self, objID: &str, variable: i32, value: &(i32, i32)) -> bool {
+        Helper_SubscriptionWrapper::wrap_int_pair(self, objID, variable, value)
+    }
+    fn wrap_stage(&mut self, objID: &str, variable: i32, value: &TraCIStage) -> bool {
+        Helper_SubscriptionWrapper::wrap_stage(self, objID, variable, value)
+    }
+    fn wrap_reservation_vector(&mut self, objID: &str, variable: i32, value: &[TraCIReservation]) -> bool {
+        Helper_SubscriptionWrapper::wrap_reservation_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_logic_vector(&mut self, objID: &str, variable: i32, value: &[TraCILogic]) -> bool {
+        Helper_SubscriptionWrapper::wrap_logic_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_link_vector_vector(&mut self, objID: &str, variable: i32, value: &[Vec<TraCILink>]) -> bool {
+        Helper_SubscriptionWrapper::wrap_link_vector_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_signal_constraint_vector(&mut self, objID: &str, variable: i32, value: &[TraCISignalConstraint]) -> bool {
+        Helper_SubscriptionWrapper::wrap_signal_constraint_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_junction_foe_vector(&mut self, objID: &str, variable: i32, value: &[TraCIJunctionFoe]) -> bool {
+        Helper_SubscriptionWrapper::wrap_junction_foe_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_next_stop_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextStopData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_next_stop_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_vehicle_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIVehicleData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_vehicle_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_best_lanes_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCIBestLanesData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_best_lanes_data_vector(self, objID, variable, &value.to_vec())
+    }
+    fn wrap_next_tls_data_vector(&mut self, objID: &str, variable: i32, value: &[TraCINextTLSData]) -> bool {
+        Helper_SubscriptionWrapper::wrap_next_tls_data_vector(self, objID, variable, &value.to_vec())
     }
 }
 

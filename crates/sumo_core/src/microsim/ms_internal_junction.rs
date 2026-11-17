@@ -136,8 +136,7 @@ impl MSInternalJunction {
     #[allow(unused_variables)]
     pub fn postload_init(&mut self) {
         if self.base.myIncomingLanes.is_empty() {
-            // shortcut: C++ throws ProcessError here; postloadInit returns nothing yet, so panic with the same text
-            panic!("Internal junction {} has no incoming lanes", self.get_id());
+            std::panic::panic_any(ProcessError::new(format!("Internal junction {} has no incoming lanes", self.get_id())));
         }
         // the first lane in the list of incoming lanes is special. It defines the
         // link that needs to do all the checking for this internal junction
@@ -145,15 +144,8 @@ impl MSInternalJunction {
         assert!(specialLane.get_link_cont().len() == 1);
         let thisLink = specialLane.get_link_cont()[0];
         let parent = specialLane.get_edge().get_to_junction();
-        // shortcut: C++ dynamic_cast<const MSRightOfWayJunction*> needs RTTI, which is not ported. Approximated by the
-        // parent's node type (the junction kinds built without logic count as "not right-of-way"). Upgrade with a junction
-        // kind tag, then also use the parent's MSRightOfWayJunction logic instead of the empty response below.
-        if parent.is_null()
-            || matches!(
-                parent.get_type(),
-                SumoXMLNodeType::NOJUNCTION | SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED | SumoXMLNodeType::DISTRICT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION
-            )
-        {
+        // C++ dynamic_cast<const MSRightOfWayJunction*>(parent), answered by the node type in MSJunction::as_right_of_way
+        if parent.is_null() || parent.as_right_of_way().is_none() {
             // parent has no right-of-way logic
             return;
         }
@@ -295,7 +287,7 @@ impl MSInternalJunction {
 }
 
 /// `std::bitset::test` on the parent's response row (MSLogicJunction::LinkBits)
-fn response_test(response: &[bool; SUMO_MAX_CONNECTIONS], index: i32) -> bool {
-    response[index as usize]
+fn response_test(response: &LinkBits, index: i32) -> bool {
+    response.test(index)
 }
 

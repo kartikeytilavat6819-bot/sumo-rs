@@ -7,18 +7,6 @@ use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
 /// C++ `#define BEST_LANE_LOOKAHEAD 3000.0` (MSEdge.cpp)
 const BEST_LANE_LOOKAHEAD: f64 = 3000.0;
 
-// shortcut: MSGlobals is still an empty skeleton (ms_globals.rs), so the g* values used here are the
-// default-run values (lateral-resolution=-1, no-internal-links=false, no meso, zero penalties);
-// upgrade these to MSGlobals::g* reads once that module is ported.
-const G_LATERAL_RESOLUTION: f64 = -1.;
-const G_USING_INTERNAL_LANES: bool = true;
-const G_USE_MESO_SIM: bool = false;
-const G_TLS_PENALTY: f64 = 0.;
-const G_MINOR_PENALTY: f64 = 0.;
-const G_TURNAROUND_PENALTY: f64 = 0.;
-const G_LANE_CHANGE_DURATION: SUMOTime = 0;
-const G_STOP_TOLERANCE: f64 = 10.; // default of option ride.stop-tolerance
-
 /// C++ typedef `std::map<const MSEdge *, AllowedLanesCont> MSEdge::AllowedLanesByTarget`
 pub type MSEdge_AllowedLanesByTarget = BTreeMap<Ptr<MSEdge>, MSEdge_AllowedLanesCont>;
 
@@ -44,6 +32,8 @@ pub struct MSEdge {
     pub myLanes: Rc<Vec<Ptr<MSLane>>>,
     /// This member will do the lane-change
     pub myLaneChanger: Ptr<MSLaneChanger>,
+    /// true when myLaneChanger points into an MSLaneChangerSublane (its base field)
+    pub myLaneChangerIsSublane: bool,
     /// the purpose of the edge
     pub myFunction: SumoXMLEdgeFunc,
     /// Vaporizer counter
@@ -51,7 +41,7 @@ pub struct MSEdge {
     /// The time of last insertion failure
     pub myLastFailedInsertionTime: std::cell::Cell<SUMOTime>,
     /// A cache for the rejected insertion attempts. Used to assure that no further insertion attempts are made on a lane where an attempt has already failed in the current time step if MSInsertionControl::myEagerInsertionCheck is off.
-    pub myFailedInsertionMemory: BTreeSet<i32>,
+    pub myFailedInsertionMemory: std::cell::RefCell<BTreeSet<i32>>,
     /// The crossed edges id for a crossing edge. On not crossing edges it is empty
     pub myCrossingEdges: Vec<String>,
     /// The succeeding edges
@@ -118,7 +108,7 @@ pub struct MSEdge {
     /// The bounding rectangle of end nodes incoming or outgoing edges for taz connectors or of my own start and end node for normal edges
     pub myBoundary: Boundary,
     /// List of waiting vehicles
-    pub myWaiting: Vec<Ptr<SUMOVehicle>>,
+    pub myWaiting: std::cell::RefCell<Vec<Ptr<SUMOVehicle>>>,
     /// Mesoscopic vehicle positions
     pub myCachedMesoPos: BTreeMap<Ptr<MEVehicle>, (f64, i32)>, // C++: std::map<const MEVehicle *, std::pair<double, int>>
     /// time stamp of mesoscopic vehicle positions
@@ -303,10 +293,11 @@ impl MSEdge {
             myNumericalID: numericalID,
             myLanes: Rc::new(Vec::new()), // C++ null shared_ptr until initialize()
             myLaneChanger: Ptr::null(),
+            myLaneChangerIsSublane: false,
             myFunction: function,
             myVaporizationRequests: 0,
             myLastFailedInsertionTime: std::cell::Cell::new(-1),
-            myFailedInsertionMemory: BTreeSet::new(),
+            myFailedInsertionMemory: std::cell::RefCell::new(BTreeSet::new()),
             myCrossingEdges: Vec::new(),
             mySuccessors: Vec::new(),
             myViaSuccessors: Vec::new(),
@@ -342,7 +333,7 @@ impl MSEdge {
             myClassesViaSuccessorMap: BTreeMap::new(),
             myOrigClassesViaSuccessorMap: BTreeMap::new(),
             myBoundary: Boundary::default(),
-            myWaiting: Vec::new(),
+            myWaiting: std::cell::RefCell::new(Vec::new()),
             myCachedMesoPos: BTreeMap::new(),
             myLastCacheUpdate: -1,
             myBidiEdge: Ptr::null(),
@@ -403,7 +394,7 @@ impl MSEdge {
             lane.m().set_right_side_on_edge(self.myWidth, self.mySublaneSides.len() as i32);
             let ahead = MSLeaderInfo::new(lane.get_width(), Ptr::null(), 0.);
             for j in 0..ahead.num_sublanes() {
-                self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+                self.mySublaneSides.push(self.myWidth + j as f64 * MSGlobals::lateral_resolution());
             }
             self.myWidth += lane.get_width();
         }
@@ -480,10 +471,10 @@ impl MSEdge {
         let speed = self.get_speed_limit();
         // MAX2(getSpeedLimit(), NUMERICAL_EPS)
         self.myEmptyTraveltime = self.myLength / (if speed > NUMERICAL_EPS { speed } else { NUMERICAL_EPS });
-        if self.is_normal() && (G_USE_MESO_SIM || G_TLS_PENALTY > 0.) {
+        if self.is_normal() && (crate::microsim::ms_globals::use_meso_sim() || crate::microsim::ms_globals::tls_penalty() > 0.) {
             let mut minorPenalty: SUMOTime = 0;
-            let mut haveTLSPenalty = G_TLS_PENALTY > 0.;
-            if G_USE_MESO_SIM {
+            let mut haveTLSPenalty = crate::microsim::ms_globals::tls_penalty() > 0.;
+            if crate::microsim::ms_globals::use_meso_sim() {
                 let net = MSNet::get_instance();
                 let edgeType = net.m().get_meso_type(self.get_edge_type());
                 minorPenalty = edgeType.minorPenalty;
@@ -516,27 +507,27 @@ impl MSEdge {
                     self.myTimePenalty = steps2time(minPenalty);
                 }
             }
-        } else if self.is_crossing() && G_TLS_PENALTY > 0. {
+        } else if self.is_crossing() && crate::microsim::ms_globals::tls_penalty() > 0. {
             // penalties are recorded for the entering link
             for ili in self.myLanes[0].get_incoming_lanes() {
                 let mut penalty = steps2time(ili.viaLink.get_meso_tls_penalty());
                 if !ili.viaLink.have_off_priority() {
-                    penalty = if penalty > G_MINOR_PENALTY { penalty } else { G_MINOR_PENALTY };
+                    penalty = if penalty > crate::microsim::ms_globals::minor_penalty() { penalty } else { crate::microsim::ms_globals::minor_penalty() };
                 }
                 if penalty > 0. {
                     self.myEmptyTraveltime += penalty;
                     self.myTimePenalty = penalty;
                 }
             }
-        } else if self.is_internal() && G_USING_INTERNAL_LANES {
+        } else if self.is_internal() && crate::microsim::ms_globals::using_internal_lanes() {
             let link = self.myLanes[0].get_incoming_lanes()[0].viaLink;
             if !link.is_tls_controlled() && !link.have_priority() {
                 if link.is_turnaround() {
-                    self.myEmptyTraveltime += G_TURNAROUND_PENALTY;
-                    self.myTimePenalty = G_TURNAROUND_PENALTY;
+                    self.myEmptyTraveltime += crate::microsim::ms_globals::turnaround_penalty();
+                    self.myTimePenalty = crate::microsim::ms_globals::turnaround_penalty();
                 } else {
-                    self.myEmptyTraveltime += G_MINOR_PENALTY;
-                    self.myTimePenalty = G_MINOR_PENALTY;
+                    self.myEmptyTraveltime += crate::microsim::ms_globals::minor_penalty();
+                    self.myTimePenalty = crate::microsim::ms_globals::minor_penalty();
                 }
             }
         }
@@ -630,7 +621,7 @@ impl MSEdge {
             if !opposite.is_null() {
                 let ahead = MSLeaderInfo::new(opposite.get_width(), Ptr::null(), 0.);
                 for j in 0..ahead.num_sublanes() {
-                    self.mySublaneSides.push(self.myWidth + j as f64 * G_LATERAL_RESOLUTION);
+                    self.mySublaneSides.push(self.myWidth + j as f64 * MSGlobals::lateral_resolution());
                 }
             }
         }
@@ -661,14 +652,15 @@ impl MSEdge {
         if !self.myLanes.is_empty() {
             let allowChanging = self.allows_lane_changing();
             let lanes = Ptr::new(self.myLanes.as_ref());
-            if G_LATERAL_RESOLUTION > 0. {
+            if MSGlobals::lateral_resolution() > 0. {
                 // may always initiate sublane-change
-                if !self.is_internal() || G_USING_INTERNAL_LANES {
+                if !self.is_internal() || crate::microsim::ms_globals::using_internal_lanes() {
                     // shortcut: sublane changer is stored through its MSLaneChanger base pointer, only reachable when lateral-resolution > 0
                     let sub = Box::into_raw(Box::new(MSLaneChangerSublane::new(lanes, allowChanging)));
                     self.myLaneChanger = Ptr::from_raw(unsafe { &mut (*sub).base } as *mut MSLaneChanger);
+                    self.myLaneChangerIsSublane = true;
                 }
-            } else if G_LANE_CHANGE_DURATION > 0 || self.myLanes.len() > 1 || self.can_change_to_opposite() {
+            } else if crate::microsim::ms_globals::lane_change_duration() > 0 || self.myLanes.len() > 1 || self.can_change_to_opposite() {
                 self.myLaneChanger = Ptr::from_raw(Box::into_raw(Box::new(MSLaneChanger::new(lanes, allowChanging))));
             }
         }
@@ -697,7 +689,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn allows_lane_changing(&self) -> bool {
-        if self.is_internal() && G_USING_INTERNAL_LANES {
+        if self.is_internal() && crate::microsim::ms_globals::using_internal_lanes() {
             // allow changing only if all links leading to this internal lane have priority
             // or they are controlled by a traffic light
             for lane in self.myLanes.iter() {
@@ -860,7 +852,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn is_empty(&self) -> bool {
-        // shortcut: meso branch (MSGlobals::gMesoNet segment walk) not ported, unreachable while G_USE_MESO_SIM is false
+        // shortcut: meso branch (MSGlobals::gMesoNet segment walk) not ported, unreachable while MSGlobals::use_meso_sim() is false
         for lane in self.get_lanes() {
             if lane.get_vehicle_number() > 0 {
                 return false;
@@ -891,7 +883,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicles(&self) -> Vec<Ptr<SUMOVehicle>> {
-        // shortcut: meso branch (MEVehicle segment lists) not ported, unreachable while G_USE_MESO_SIM is false
+        // shortcut: meso branch (MEVehicle segment lists) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut result = Vec::new();
         for lane in self.get_lanes() {
             for veh in lane.get_vehicles_secure().iter() {
@@ -963,7 +955,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_seconds(&self) -> f64 {
-        // shortcut: meso branch (MESegment::getWaitingSeconds) not ported, unreachable while G_USE_MESO_SIM is false
+        // shortcut: meso branch (MESegment::getWaitingSeconds) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut wtime = 0.;
         for lane in self.get_lanes() {
             wtime += lane.get_waiting_seconds();
@@ -998,7 +990,7 @@ impl MSEdge {
         if self.myLanes.len() == 0 {
             return 0.;
         }
-        // shortcut: meso branch (vehicle-type length sum) not ported, unreachable while G_USE_MESO_SIM is false
+        // shortcut: meso branch (vehicle-type length sum) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut sum = 0.;
         for lane in self.get_lanes() {
             sum += lane.get_netto_occupancy();
@@ -2103,23 +2095,22 @@ impl MSEdge {
             return false;
         }
         // determinism: the failed-insertion memory is a set of lane indices, so iteration order does not matter
-        let me: Ptr<MSEdge> = Ptr::new(self);
         if !forceCheck {
             if self.myLastFailedInsertionTime.get() == time {
-                if self.myFailedInsertionMemory.contains(&insertionLane.get_index()) {
+                if self.myFailedInsertionMemory.borrow().contains(&insertionLane.get_index()) {
                     // A vehicle was already rejected for the proposed insertionLane in this timestep
                     return false;
                 }
             } else {
                 // last rejection occurred in a previous timestep, clear cache
-                me.m().myFailedInsertionMemory.clear();
+                self.myFailedInsertionMemory.borrow_mut().clear();
             }
         }
         let success = insertionLane.m().insert_vehicle(vp.cast::<MSVehicle>().m());
         if !success {
             // constraints may enforce explicit re-ordering so we need to try other vehicles after failure
             if !insertionLane.base2.has_parameter(&format!("insertionOrder{}", vp.m().get_id())) {
-                me.m().myFailedInsertionMemory.insert(insertionLane.get_index());
+                self.myFailedInsertionMemory.borrow_mut().insert(insertionLane.get_index());
             }
         }
         success
@@ -2568,7 +2559,11 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn change_lanes(&self, t: SUMOTime) {
         if !self.myLaneChanger.is_null() {
-            self.myLaneChanger.m().lane_change(t);
+            if self.myLaneChangerIsSublane {
+                self.myLaneChanger.cast::<MSLaneChangerSublane>().m().lane_change_sublane(t);
+            } else {
+                self.myLaneChanger.m().lane_change(t);
+            }
         }
     }
 
@@ -2656,7 +2651,7 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn get_normal_before(&self) -> Ptr<MSEdge> {
         let mut result = Ptr::new(self);
-        while result.is_internal() && G_USING_INTERNAL_LANES {
+        while result.is_internal() && crate::microsim::ms_globals::using_internal_lanes() {
             assert!(result.get_predecessors().len() == 1);
             result = result.get_predecessors()[0];
         }
@@ -2839,17 +2834,6 @@ impl MSEdge {
     //                 ili.viaLink->updatePermissions();
     //             }
     //         }
-    //         // permissions of links entering this edge also depend on its new permissions,
-    //         // so they must be refreshed as well (important for connections via internal lanes)
-    //         for (MSEdge* const pred : myPredecessors) {
-    //             for (MSLane* const lane : *pred->myLanes) {
-    //                 for (MSLink* link : lane->getLinkCont()) {
-    //                     if (&link->getLane()->getEdge() == this) {
-    //                         link->updatePermissions();
-    //                     }
-    //                 }
-    //             }
-    //         }
     //     }
     // }
     #[allow(unused_variables)]
@@ -2915,23 +2899,13 @@ impl MSEdge {
                 }
                 p.rebuild_allowed_targets(updateVehicles);
             }
-            // shortcut: meso segment updatePermissions (MSGlobals::gMesoNet) not ported, unreachable while G_USE_MESO_SIM is false
+            // shortcut: meso segment updatePermissions (MSGlobals::gMesoNet) not ported, unreachable while MSGlobals::use_meso_sim() is false
             for lane in laneList.iter() {
                 for link in lane.get_link_cont() {
                     link.m().update_permissions();
                 }
                 for ili in lane.get_incoming_lanes() {
                     ili.viaLink.m().update_permissions();
-                }
-            }
-            // permissions of links entering this edge also depend on its new permissions
-            for pred in preds.iter() {
-                for lane in pred.myLanes.iter() {
-                    for link in lane.get_link_cont() {
-                        if Ptr::new(link.get_lane().get_edge()) == me {
-                            link.m().update_permissions();
-                        }
-                    }
                 }
             }
         }
@@ -3346,7 +3320,7 @@ impl MSEdge {
             && !self.myLanes.last().unwrap().get_opposite().is_null()
             // do not change on curved internal lanes
             && (!self.is_internal()
-                || (G_USING_INTERNAL_LANES
+                || (crate::microsim::ms_globals::using_internal_lanes()
                     && self.myLanes.last().unwrap().get_incoming_lanes()[0].viaLink.get_direction() == LinkDirection::STRAIGHT))
     }
 
@@ -3412,7 +3386,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self) -> f64 {
-        // shortcut: meso branch (MESegment::getMeanSpeed) not ported, unreachable while G_USE_MESO_SIM is false
+        // shortcut: meso branch (MESegment::getMeanSpeed) not ported, unreachable while crate::microsim::ms_globals::use_meso_sim() is false
         let mut v = 0.;
         let mut totalNumVehs = 0.;
         for lane in self.myLanes.iter() {
@@ -3601,7 +3575,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        Ptr::new(self).m().myWaiting.push(vehicle);
+        self.myWaiting.borrow_mut().push(vehicle);
     }
 
     /// C++: `void MSEdge::removeWaiting(const SUMOVehicle *) const` [const]
@@ -3618,9 +3592,9 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_waiting(&self, vehicle: Ptr<SUMOVehicle>) {
-        let meP = Ptr::new(self); let me = meP.m();
-        if let Some(i) = me.myWaiting.iter().position(|v| *v == vehicle) {
-            me.myWaiting.remove(i);
+        let mut waiting = self.myWaiting.borrow_mut();
+        if let Some(i) = waiting.iter().position(|v| *v == vehicle) {
+            waiting.remove(i);
         }
     }
 
@@ -3649,10 +3623,12 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_vehicle(&self, transportable: Ptr<MSTransportable>, position: f64) -> Ptr<SUMOVehicle> {
-        for vehicle in self.myWaiting.iter() {
+        // snapshot: the lookup calls back into the transportable, which may add or remove waiting vehicles
+        let waiting = self.myWaiting.borrow().clone();
+        for vehicle in waiting.iter() {
             let vehicle = *vehicle;
             if transportable.is_waiting_for(vehicle) {
-                if vehicle.is_stopped_in_range(position, G_STOP_TOLERANCE, true)
+                if vehicle.is_stopped_in_range(position, crate::microsim::ms_globals::stop_tolerance(), false)
                     || (!vehicle.has_departed()
                         && (vehicle.get_parameter().departProcedure == DepartDefinition::TRIGGERED
                             || vehicle.get_parameter().departProcedure == DepartDefinition::CONTAINER_TRIGGERED))
@@ -3688,7 +3664,7 @@ impl MSEdge {
     pub fn clear_state(&mut self) {
         self.myPersons.clear();
         self.myContainers.clear();
-        self.myWaiting.clear();
+        self.myWaiting.get_mut().clear();
     }
 
     /// C++: `void MSEdge::postLoadInitLaneChanger()`

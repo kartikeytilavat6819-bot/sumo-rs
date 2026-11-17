@@ -29,16 +29,15 @@ pub(crate) fn max3(a: f64, b: f64, c: f64) -> f64 {
     max2(c, if a > b { a } else { b })
 }
 
-// shortcut: MSGlobals statics are not ported yet (ms_globals.rs is empty); these return the C++ defaults.
-// Upgrade to the real MSGlobals flags once ms_globals.rs is filled and MSFrame sets them.
+/// C++ `MSGlobals::gSemiImplicitEulerUpdate`, `gComputeLC`, `gDefaultEmergencyDecel`
 pub(crate) fn g_semi_implicit_euler_update() -> bool {
-    true
+    crate::microsim::ms_globals::semi_implicit_euler_update()
 }
 pub(crate) fn g_compute_lc() -> bool {
-    false
+    crate::microsim::ms_globals::compute_lc()
 }
 pub(crate) fn g_default_emergency_decel() -> f64 {
-    -1.
+    crate::microsim::ms_globals::default_emergency_decel()
 }
 
 /// C++ implicit upcast `MSVehicle* -> SUMOTrafficObject*` (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)

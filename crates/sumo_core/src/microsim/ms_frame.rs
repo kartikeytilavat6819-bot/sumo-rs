@@ -37,6 +37,32 @@ fn opt_is_set(oc: &utils::options::options_cont::OptionsCont, name: &str) -> boo
     or_panic(oc.is_set(name, true))
 }
 
+/// C++ `gTaxiClasses` is an `int`, so each `|=` keeps only the low 32 bits of the 64-bit SVCPermissions
+fn g_taxi_classes_mask(names: &[String]) -> i32 {
+    let mut taxiClasses: i32 = 0;
+    for vClassName in names {
+        taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(vClassName) as i32;
+    }
+    taxiClasses
+}
+
+#[cfg(test)]
+mod tests {
+    use super::g_taxi_classes_mask;
+
+    #[test]
+    fn taxi_mask_is_int_wide() {
+        let names = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        // SVC_TAXI = 1 << 8 is kept
+        assert_eq!(g_taxi_classes_mask(&names(&["taxi"])), 1 << 8);
+        // SVC_CUSTOM1 = 1 << 31 becomes INT_MIN in C++ int
+        assert_eq!(g_taxi_classes_mask(&names(&["custom1"])), i32::MIN);
+        // SVC_CUSTOM2 = 1 << 32 is dropped entirely
+        assert_eq!(g_taxi_classes_mask(&names(&["custom2"])), 0);
+        assert_eq!(g_taxi_classes_mask(&names(&["taxi", "custom2"])), 1 << 8);
+    }
+}
+
 fn opt_is_default(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
     oc.is_default(name)
 }
@@ -100,15 +126,9 @@ impl MSFrame {
     //     oc.addSynonyme("route-files", "routes");
     //     oc.addDescription("route-files", "Input", TL("Load routes descriptions from FILE(s)"));
     //
-    //     oc.doRegister("ignore.routeelements", new Option_Bool(false));
-    //     oc.addDescription("ignore.routeelements", "Input", TL("Ignore route elements during loading of sumo-configs"));
-    //
     //     oc.doRegister("additional-files", 'a', new Option_FileName());
     //     oc.addSynonyme("additional-files", "additional");
     //     oc.addDescription("additional-files", "Input", TL("Load further descriptions from FILE(s)"));
-    //
-    //     oc.doRegister("ignore.additionalelements", new Option_Bool(false));
-    //     oc.addDescription("ignore.additionalelements", "Input", TL("Ignore additional elements during loading of sumo-configs"));
     //
     //     oc.doRegister("weight-files", 'w', new Option_FileName());
     //     oc.addSynonyme("weight-files", "weights");
@@ -811,8 +831,6 @@ impl MSFrame {
     //     oc.addDescription("meso-multi-queue", "Mesoscopic", TL("Enable multiple queues at edge ends"));
     //     oc.doRegister("meso-lane-queue", new Option_Bool(false));
     //     oc.addDescription("meso-lane-queue", "Mesoscopic", TL("Enable separate queues for every lane"));
-    //     oc.doRegister("meso-lookahead", new Option_Float(0));
-    //     oc.addDescription("meso-lookahead", "Mesoscopic", TL("Choose lane queues by the route of the vehicle at all turns up to FLOAT m ahead"));
     //     oc.doRegister("meso-ignore-lanes-by-vclass", new Option_StringVector(StringVector({ "pedestrian", "bicycle" })));
     //     oc.addDescription("meso-ignore-lanes-by-vclass", "Mesoscopic", TL("Do not build queues (or reduce capacity) for lanes allowing only the given vclasses"));
     //     oc.addSynonyme("meso-ignore-lanes-by-vclass", "meso.ignore-lanes.by-vclass");
@@ -932,13 +950,9 @@ impl MSFrame {
             oc.do_register_abbr("route-files", 'r', SumoOption::file_name());
             oc.add_synonyme("route-files", "routes", false);
             oc.add_description("route-files", "Input", "Load routes descriptions from FILE(s)");
-            oc.do_register("ignore.routeelements", SumoOption::bool(false));
-            oc.add_description("ignore.routeelements", "Input", "Ignore route elements during loading of sumo-configs");
             oc.do_register_abbr("additional-files", 'a', SumoOption::file_name());
             oc.add_synonyme("additional-files", "additional", false);
             oc.add_description("additional-files", "Input", "Load further descriptions from FILE(s)");
-            oc.do_register("ignore.additionalelements", SumoOption::bool(false));
-            oc.add_description("ignore.additionalelements", "Input", "Ignore additional elements during loading of sumo-configs");
             oc.do_register_abbr("weight-files", 'w', SumoOption::file_name());
             oc.add_synonyme("weight-files", "weights", false);
             oc.add_description("weight-files", "Input", "Load edge/lane weights for online rerouting from FILE");
@@ -1382,7 +1396,7 @@ impl MSFrame {
             oc.do_register("phemlight-path", SumoOption::file_name_with(vec!["./PHEMlight/".to_string()]));
             oc.add_description("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from");
             oc.do_register("phemlight-year", SumoOption::integer(0));
-            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modeling with the given reference year in PHEMlight5");
+            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modelling with the given reference year in PHEMlight5");
             oc.do_register("phemlight-temperature", SumoOption::float(f64::MAX));
             oc.add_description("phemlight-temperature", "Emissions", "Set ambient temperature to correct NOx emissions in PHEMlight5");
             oc.add_option_sub_topic("Communication");
@@ -1423,8 +1437,6 @@ impl MSFrame {
             oc.add_description("meso-multi-queue", "Mesoscopic", "Enable multiple queues at edge ends");
             oc.do_register("meso-lane-queue", SumoOption::bool(false));
             oc.add_description("meso-lane-queue", "Mesoscopic", "Enable separate queues for every lane");
-            oc.do_register("meso-lookahead", SumoOption::float(0.0));
-            oc.add_description("meso-lookahead", "Mesoscopic", "Choose lane queues by the route of the vehicle at all turns up to FLOAT m ahead");
             oc.do_register("meso-ignore-lanes-by-vclass", SumoOption::string_vector_with(vec!["pedestrian".to_string(), "bicycle".to_string()]));
             oc.add_description("meso-ignore-lanes-by-vclass", "Mesoscopic", "Do not build queues (or reduce capacity) for lanes allowing only the given vclasses");
             oc.add_synonyme("meso-ignore-lanes-by-vclass", "meso.ignore-lanes.by-vclass", false);
@@ -1449,7 +1461,7 @@ impl MSFrame {
             oc.add_description("thread-rngs", "Random Number", "Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).");
             oc.add_option_sub_topic("GUI Only");
             oc.do_register_abbr("gui-settings-file", 'g', SumoOption::file_name());
-            oc.add_description("gui-settings-file", "GUI Only", "Load visualization settings from FILE");
+            oc.add_description("gui-settings-file", "GUI Only", "Load visualisation settings from FILE");
             oc.do_register_abbr("quit-on-end", 'Q', SumoOption::bool(false));
             oc.add_description("quit-on-end", "GUI Only", "Quits the GUI when the simulation stops");
             oc.do_register_abbr("game", 'G', SumoOption::bool(false));
@@ -1603,10 +1615,6 @@ impl MSFrame {
     //     if (oc.getBool("ignore.routeelements")) {
     //         oc.resetWritable("route-files");
     //         oc.resetDefault("route-files");
-    //     }
-    //     if (oc.getBool("ignore.additionalelements")) {
-    //         oc.resetWritable("additional-files");
-    //         oc.resetDefault("additional-files");
     //     }
     //     if (!oc.isSet("net-file") && oc.isDefault("remote-port")) {
     //         WRITE_ERROR(TL("No network file (-n) specified."));
@@ -1831,14 +1839,6 @@ impl MSFrame {
     pub fn check_options() -> bool {
         utils::options::options_cont::with_options(|oc| {
             let mut ok = true;
-            if opt_bool(oc, "ignore.routeelements") {
-                or_panic(oc.reset_writable_name("route-files"));
-                or_panic(oc.reset_default_name("route-files"));
-            }
-            if opt_bool(oc, "ignore.additionalelements") {
-                or_panic(oc.reset_writable_name("additional-files"));
-                or_panic(oc.reset_default_name("additional-files"));
-            }
             if !opt_is_set(oc, "net-file") && opt_is_default(oc, "remote-port") {
                 utils::common::msg_handler::write_error("No network file (-n) specified.");
                 ok = false;
@@ -2247,12 +2247,7 @@ impl MSFrame {
             mBdefaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
         }
         crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::init_signalized(defaultClasses, mBdefaultClasses);
-        // shortcut: gTaxiClasses is SVCPermissions (i64) in C++, but the utils global is i32, so the high bits are dropped
-        let mut taxiClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
-        for vClassName in opt_strs(oc, "device.taxi.vclasses") {
-            taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
-        }
-        utils::common::std_defs::set_g_taxi_classes(taxiClasses as i32);
+        utils::common::std_defs::set_g_taxi_classes(g_taxi_classes_mask(&opt_strs(oc, "device.taxi.vclasses")));
         let mut error = String::new();
         if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_lane(
             &opt_str(oc, "default.departlane"),

@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::traci::traci_constants::*;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::Junction` (libsumo/Junction.h)
 pub struct Junction {
@@ -17,8 +18,9 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `Junction::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `Junction::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
-//   static NamedRTree * Junction::myTree;
 
 impl Junction {
     /// C++: `libsumo::TraCIPosition Junction::getPosition(const std::string &, bool)` [static]
@@ -80,8 +82,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_id_list() -> Vec<String> {
-        // shortcut: MSNet junction control has no insertIDs yet (MSJunctionControl is a skeleton), upgrade when MSJunctionControl is ported
-        panic!("shortcut: Junction::getIDList needs MSJunctionControl::insertIDs")
+        let mut ids: Vec<String> = Vec::new();
+        for id in MSNet::get_instance().m().get_junction_control().base.keys() {
+            ids.push(id.clone());
+        }
+        ids
     }
 
     /// C++: `int Junction::getIDCount()` [static]
@@ -181,8 +186,9 @@ impl Junction {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Junction, JUNCTION)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: Junction::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_JUNCTION_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Junction::domainID()` [static]
@@ -218,10 +224,19 @@ impl Junction {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        // shortcut: NamedRTree is not ported yet, upgrade when the R-tree type is mapped
-        panic!("shortcut: Junction::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_junction_control().iter() {
+                let b = i.get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &i.cast::<Named>());
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void Junction::cleanup()` [static]
@@ -232,7 +247,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete yet
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `std::shared_ptr<VariableWrapper> Junction::makeWrapper()` [static]
@@ -242,8 +257,7 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Junction::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Junction::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -309,8 +323,11 @@ impl Junction {
     // }
     #[allow(unused_variables)]
     pub fn get_junction(id: &str) -> Ptr<MSJunction> {
-        // shortcut: MSJunctionControl::get is not mapped yet, and C++ throws TraCIException for unknown ids (here it panics), upgrade when MSJunctionControl is ported
-        panic!("shortcut: Junction '{id}' lookup needs MSJunctionControl::get")
+        // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
+        match MSNet::get_instance().m().get_junction_control().base.get(id) {
+            Some(j) => *j,
+            None => panic!("Junction '{id}' is not known"),
+        }
     }
 
     /// C++: `void Junction::Junction()` [private]

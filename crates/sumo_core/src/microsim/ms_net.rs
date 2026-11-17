@@ -8,6 +8,9 @@ use utils::geom::POSITION_EPS;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
 use utils::common::msg_handler::write_message;
+use crate::utils::router::dijkstra_router::DijkstraRouter;
+use crate::utils::router::a_star_router::AStarRouter;
+use crate::microsim::ms_router_defs::MSMapMatcher;
 
 thread_local! {
     static MY_INSTANCE: std::cell::Cell<Ptr<MSNet>> = const { std::cell::Cell::new(Ptr::null()) };
@@ -23,6 +26,8 @@ const STAGE_INSERTIONS: &str = "insertion";
 const STAGE_REMOTECONTROL: &str = "remoteControl";
 // C++ libsumo ROUTING_MODE_AGGREGATED_CUSTOM (TraCIConstants.h), not in utils::traci yet
 const ROUTING_MODE_AGGREGATED_CUSTOM: i32 = 0x04;
+// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// C++ `new` for a Ptr target that the net owns (freed with delete_ptr)
 fn leak_ptr<T>(v: T) -> Ptr<T> {
@@ -57,21 +62,6 @@ fn device_by_option(name: &str) -> OutputDeviceRef {
     OutputDevice::get_device_by_option(name).unwrap_or_else(|e| panic!("{e}"))
 }
 
-// shortcut: MSGlobals is not ported yet; these read the options that MSFrame::setMSGlobals copies into it
-fn g_use_meso_sim() -> bool {
-    get_bool("mesosim")
-}
-fn g_check_4_accidents() -> bool {
-    !get_bool("ignore-accidents")
-}
-fn g_using_internal_lanes() -> bool {
-    !get_bool("no-internal-links")
-}
-fn g_weights_separate_turns() -> f64 {
-    get_float("weights.separate-turns")
-}
-// shortcut: MSGlobals::gClearState is not ported yet, the flag is not kept
-fn set_g_clear_state(_v: bool) {}
 
 
 /// C++ enum `MSNet::SimulationState`
@@ -337,7 +327,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_static() {
-        if !g_use_meso_sim() {
+        if !MSGlobals::use_meso_sim() {
             MSVehicle_Influencer::cleanup();
         }
     }
@@ -411,7 +401,7 @@ impl MSNet {
         let step = opt_time("begin");
         let max_depart_delay = opt_time("max-depart-delay");
         let random_depart_offset = opt_time("random-depart-offset");
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             // shortcut: MSGlobals::gMesoNet (MELoop) is not wired into MSNet yet, mesoscopic runs are refused
             panic!("mesoscopic simulation is not wired into MSNet yet");
         }
@@ -622,8 +612,8 @@ impl MSNet {
         self.myHasPedestrianNetwork = self.check_walkingarea();
         self.myHasBidiEdges = self.check_bidi_edges();
         self.myVersion = *version;
-        if (!g_using_internal_lanes() || !self.myHasInternalLinks) && g_weights_separate_turns() > 0.0 {
-            panic!("Option weights.separate-turns is only supported when simulating with internal lanes");
+        if (!MSGlobals::using_internal_lanes() || !self.myHasInternalLinks) && MSGlobals::weights_separate_turns() > 0.0 {
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Option weights.separate-turns is only supported when simulating with internal lanes"));
         }
     }
 
@@ -799,7 +789,8 @@ impl MSNet {
                 minorPenalty: opt_time("meso-minor-penalty"),
                 overtaking: get_bool("meso-overtaking"),
                 edgeLength: get_float("meso-edgelength"),
-                lookahead: get_float("meso-lookahead"),
+                // shortcut: official 1.28 has no meso-lookahead option; 0 until the MESegment lookahead queue logic is removed
+                lookahead: 0.0,
             };
             self.myMesoEdgeTypes.insert(typeID.to_string(), edgeType);
         }
@@ -877,8 +868,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn simulate(&mut self, start: SUMOTime, stop: SUMOTime) -> MSNet_SimulationState {
-        // shortcut: VERSION_STRING is not ported yet, the version is reported as 'unknown'
-        write_messagef!("Simulation version % started with time: %.", "unknown", time2string(start));
+        write_messagef!("Simulation version % started with time: %.", VERSION_STRING, time2string(start));
         // the simulation loop
         let mut state = MSNet_SimulationState::SIMSTATE_RUNNING;
         // state loading may have changed the start time so we need to reinit it
@@ -1078,8 +1068,7 @@ impl MSNet {
             if self.myLogExecutionTime {
                 self.myTraCIStepDuration = current_millis() - self.myTraCIStepDuration;
             }
-            // shortcut: TraCI load arguments (TraCIServer::getLoadArgs) are not ported, so a load request does not end the step early
-            if TraCIServer::was_closed() {
+            if TraCIServer::was_closed() || !t.m().get_load_args().is_empty() {
                 return;
             }
         }
@@ -1103,17 +1092,21 @@ impl MSNet {
             }
         }
         self.myBeginOfTimestepEvents.m().execute(self.myStep);
+        // C++ schedules MSTriggeredRerouter::setPermissions on the begin-of-timestep events for every
+        // interval that closes edges or lanes. WrappingCommand is not ported, so the instances are
+        // applied here instead; setPermissions only acts at an interval begin or end.
+        crate::microsim::trigger::ms_triggered_rerouter::MSTriggeredRerouter::apply_scheduled_permissions(self.myStep);
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().update_signals(self.myStep);
         }
         // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) is not ported yet
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_EVENTS);
         }
         // check whether the tls programs need to be switched
         self.myLogics.m().check2_switch(self.myStep);
 
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             panic!("mesoscopic simulation is not wired into MSNet yet");
         } else {
             // assure all lanes with vehicles are 'active'
@@ -1125,12 +1118,12 @@ impl MSNet {
             self.myEdges.m().set_junction_approaches();
             // decide right-of-way and execute movements
             self.myEdges.m().execute_movements(self.myStep);
-            if g_check_4_accidents() {
+            if MSGlobals::check4_accidents() {
                 self.myEdges.m().detect_collisions(self.myStep, STAGE_MOVEMENTS);
             }
             // vehicles may change lanes
             self.myEdges.m().change_lanes(self.myStep);
-            if g_check_4_accidents() {
+            if MSGlobals::check4_accidents() {
                 self.myEdges.m().detect_collisions(self.myStep, STAGE_LANECHANGE);
             }
         }
@@ -1156,7 +1149,7 @@ impl MSNet {
         self.myInserter.m().determine_candidates(self.myStep);
         self.myInsertionEvents.m().execute(self.myStep);
         self.myInserter.m().emit_vehicles(self.myStep);
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_INSERTIONS);
         }
         MSVehicleTransfer::get_instance().m().check_insertions(self.myStep);
@@ -1797,7 +1790,9 @@ impl MSNet {
         if TraCIServer::was_closed() {
             return MSNet_SimulationState::SIMSTATE_CONNECTION_CLOSED;
         }
-        // shortcut: TraCI load arguments are not ported, so SIMSTATE_LOADING is never reported
+        if !TraCIServer::get_instance().is_null() && !TraCIServer::get_instance().m().get_load_args().is_empty() {
+            return MSNet_SimulationState::SIMSTATE_LOADING;
+        }
         if (stopTime < 0 || self.myStep > stopTime) && TraCIServer::get_instance().is_null() && (stopTime > 0 || self.myStep > self.myEdgeDataEndTime) {
             if self.myVehicleControl.get_active_vehicle_count() == 0
                 && self.myInserter.get_pending_flow_count() == 0
@@ -1826,7 +1821,10 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn adapt_to_state(&self, state: MSNet_SimulationState, isLibsumo: bool) -> MSNet_SimulationState {
         if state == MSNet_SimulationState::SIMSTATE_LOADING {
-            // shortcut: OptionsIO::setArgs with the TraCI load arguments is not ported yet
+            let t = TraCIServer::get_instance();
+            let args = t.m().get_load_args().clone();
+            utils::options::options_io::set_args(&args);
+            t.m().get_load_args().clear();
         } else if state != MSNet_SimulationState::SIMSTATE_RUNNING && ((!TraCIServer::get_instance().is_null() && !TraCIServer::was_closed()) || isLibsumo) {
             // overrides SIMSTATE_END_STEP_REACHED, e.g. (TraCI / Libsumo ignore SUMO's --end option)
             return MSNet_SimulationState::SIMSTATE_RUNNING;
@@ -1942,8 +1940,8 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, step: SUMOTime, quickReload: bool) {
-        set_g_clear_state(true);
-        if g_use_meso_sim() {
+        MSGlobals::set_clear_state(true);
+        if MSGlobals::use_meso_sim() {
             panic!("mesoscopic simulation is not wired into MSNet yet");
         } else {
             for edge in MSEdge::get_all_edges().iter() {
@@ -1985,7 +1983,7 @@ impl MSNet {
         MSRailSignalControl::clear_state();
         MSDriveWay::clear_state();
         self.myStep = step;
-        set_g_clear_state(false);
+        MSGlobals::set_clear_state(false);
     }
 
     /// C++: `SUMOTime MSNet::getLoaderTime() const` [const]
@@ -2172,6 +2170,11 @@ impl MSNet {
         // update detector values
         self.myDetectorControl.m().update_detectors(self.myStep);
 
+        // check state dumps
+        if is_set("netstate-dump") {
+            MSXMLRawOut::write(&mut device_by_option("netstate-dump").borrow_mut(), &self.myEdges, self.myStep, get_int("netstate-dump.precision"));
+        }
+
         // check fcd dumps
         if is_set("fcd-output") {
             // init before borrowing the device: initOnce borrows it too
@@ -2184,7 +2187,31 @@ impl MSNet {
             }
         }
 
-        // shortcut: the netstate, emission, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        // check emission dumps
+        if is_set("emission-output") {
+            MSEmissionExport::write(&mut device_by_option("emission-output").borrow_mut(), self.myStep);
+        }
+
+        // battery dumps
+        if is_set("battery-output") {
+            MSBatteryExport::write(&mut device_by_option("battery-output").borrow_mut(), self.myStep, get_int("battery-output.precision"));
+        }
+
+        // shortcut: the chargingstations (aggregated), elechybrid and vtk exports are not ported yet
+        // check full dumps
+        if is_set("full-output") {
+            MSGlobals::set_have_emissions(true);
+            MSFullExport::write(&mut device_by_option("full-output").borrow_mut(), self.myStep);
+        }
+
+        if is_set("queue-output") {
+            MSQueueExport::write(&mut device_by_option("queue-output").borrow_mut(), self.myStep);
+        }
+
+        if is_set("amitran-output") {
+            MSAmitranTrajectories::write(&mut device_by_option("amitran-output").borrow_mut(), self.myStep);
+        }
+
         self.write_summary_output(false);
 
         // write detector values
@@ -2651,8 +2678,7 @@ impl MSNet {
             let output = device_by_option("chargingstations-output");
             let mut output = output.borrow_mut();
             for (_, stop) in places.iter() {
-                // shortcut: MSChargingStation::writeChargingStationOutput is not ported yet, the static_cast is not safe until it is
-                let _ = (stop, &mut output);
+                stop.cast::<MSChargingStation>().m().write_charging_station_output(&mut output);
             }
         }
     }
@@ -2797,7 +2823,21 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, fileName: &str, catchExceptions: bool) -> SUMOTime {
-        panic!("shortcut: MSNet::loadState needs MSStateHandler, which is not ported yet ({})", fileName);
+        // load time only
+        let newTime = MSStateHandler_MSStateTimeHandler::get_time(fileName);
+        // clean up state
+        self.clear_state(newTime, false);
+        // load state
+        let mut h = MSStateHandler::new(fileName, 0);
+        let _ = utils::xml::xml_sub_sys::run_parser(&mut h, fileName, false, false, false, catchExceptions);
+        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |m| m.was_informed()) {
+            panic!("{}", ProcessError::new(utils::tlf!("Loading state from '%' failed.", fileName)));
+        }
+        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        // prevent loading errors on rewound route file
+        crate::microsim::ms_globals::set_state_loaded(true);
+        self.update_gui();
+        newTime
     }
 
     /// C++: `void MSNet::quickReload()`
@@ -2878,7 +2918,18 @@ impl MSNet {
     pub fn inform_vehicle_state_listener(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
         for listener in self.myVehicleStateListeners.iter() {
-            listener.m().vehicle_state_changed(vehicle, to, info);
+            // shortcut: no vtable on MSNet_VehicleStateListener, so the Helper and TraCIServer overrides are reached by identity; other overrides still hit the base no-op, upgrade when listeners are trait objects
+            if crate::libsumo::helper::Helper::is_vehicle_state_listener(listener.as_raw()) {
+                crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
+            } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
+                TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
+                crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {
+                crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::get_instance().vehicle_state_changed(vehicle, to, info);
+            } else {
+                listener.m().vehicle_state_changed(vehicle, to, info);
+            }
         }
     }
 
@@ -3058,7 +3109,7 @@ impl MSNet {
     pub fn get_travel_time(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
@@ -3100,7 +3151,7 @@ impl MSNet {
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
@@ -3141,16 +3192,29 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_tt(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter/AStarRouter/CCHRouter cannot be created yet (SUMOAbstractRouter_Operation and the lookup tables are Unmapped), so a router is only returned if one was already created
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
-        match me.myRouterTT.get(&rngIndex).copied() {
-            Some(router) => {
-                router.m().prohibit(prohibited);
-                router.get_mut().unwrap()
-            }
-            None => panic!("shortcut: routing algorithm routers for TraCI/triggers are not creatable yet"),
+        let rngIndex = if MSGlobals::num_sim_threads() == 1 { 0 } else { rngIndex };
+        if !me.myRouterTT.contains_key(&rngIndex) {
+            let routingAlgorithm = get_string("routing-algorithm");
+            let router: Ptr<MSVehicleRouter> = if routingAlgorithm == "dijkstra" {
+                let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
+                Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
+            } else if routingAlgorithm == "CCH" {
+                // shortcut: CCHRouter over MSCCHGraph is not ported, upgrade with the CCH port
+                panic!("shortcut: routing algorithm 'CCH' for TraCI and triggers is not ported")
+            } else {
+                if routingAlgorithm != "astar" {
+                    utils::common::msg_handler::write_warning(&format!("TraCI and Triggers cannot use routing algorithm '{}'. using 'astar' instead.", routingAlgorithm));
+                }
+                let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, true, false).with_compute();
+                Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
+            };
+            me.myRouterTT.insert(rngIndex, router);
         }
+        let router = me.myRouterTT[&rngIndex];
+        router.m().prohibit(prohibited);
+        router.get_mut().unwrap()
     }
 
     /// C++: `MSVehicleRouter & MSNet::getRouterEffort(int, const Prohibitions &) const` [const]
@@ -3167,7 +3231,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_router_effort(&self, rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSVehicleRouter {
-        // shortcut: DijkstraRouter cannot be created yet (SUMOAbstractRouter_Operation is Unmapped), so a router is only returned if one was already created
+        // shortcut: DijkstraRouter::new needs SUMOAbstractRouter_Operation (Unmapped fn-pointer type in sumo_abstract_router.rs) for the effort and tt operations, upgrade when that type is typed; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myRouterEffort.get(&rngIndex).copied() {
@@ -3193,7 +3257,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
-        // shortcut: PedestrianRouter::new is not ported yet, so a router is only returned if one was already created
+        // shortcut: PedestrianRouter::new (utils/router/pedestrian_router.rs) is a stub needing E::getAllEdges via the router trait bounds, upgrade when those bounds land; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myPedestrianRouter.get(&rngIndex).copied() {
@@ -3228,7 +3292,7 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router(&self, rngIndex: i32, routingMode: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut MSTransportableRouter {
-        // shortcut: IntermodalRouter::new (routing callback and effort calculator are Unmapped), so a router is only returned if one was already created
+        // shortcut: IntermodalRouter::new needs the IntermodalRouter_CreateNetCallback (Unmapped fn-pointer type in intermodal_router.rs), upgrade when that is typed; until then only an already-created router is returned
         let key = rngIndex * get_int("thread-rngs") + routingMode;
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
@@ -3590,14 +3654,14 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn post_move_step(&mut self) {
         let numControlled = crate::libsumo::helper::Helper::post_process_remote_control();
-        if numControlled > 0 && g_check_4_accidents() {
+        if numControlled > 0 && MSGlobals::check4_accidents() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_REMOTECONTROL);
         }
         if self.myLogExecutionTime {
             self.myTraCIStepDuration += current_millis();
             self.myTraCIMillis += self.myTraCIStepDuration;
         }
-        if g_check_4_accidents() && !g_use_meso_sim() {
+        if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             // collisions from the previous step were kept to avoid duplicate
             // warnings. we must remove them now to ensure correct output.
             self.remove_outdated_collisions();

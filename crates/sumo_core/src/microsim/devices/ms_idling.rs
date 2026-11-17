@@ -1,36 +1,25 @@
-//! Port of microsim/devices/MSIdling.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of microsim/devices/MSIdling.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// Dispatch table standing in for the C++ virtual `MSIdling::idle` (Rust has no vtable on the base).
+pub struct MSIdlingVt {
+    pub idle: fn(&mut MSIdling, Ptr<MSDevice_Taxi>),
+}
+
 /// An algorithm that performs distpach for a taxi fleet
 /// C++ class `MSIdling` (microsim/devices/MSIdling.h)
+#[repr(C)]
 pub struct MSIdling {
+    pub vt: &'static MSIdlingVt,
 }
 
 impl MSIdling {
-    /// C++: `void MSIdling::MSIdling()`
-    /// Constructor;
-    // MSIdling() {}
-    #[allow(unused_variables)]
-    pub fn new() -> Self {
-        MSIdling {}
-    }
-
-    /// C++: `void MSIdling::~MSIdling() noexcept` [virtual]
-    /// Destructor
-    // virtual ~MSIdling() { }
-    #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
-        // C++ destructor body is empty
-
-    }
-
     /// C++: `void MSIdling::idle(MSDevice_Taxi *)` [virtual, pure virtual]
     /// computes Idling and updates reservations
     // (pure virtual: no C++ body; subclasses implement it)
-    #[allow(unused_variables)]
     pub fn idle(&mut self, taxi: Ptr<MSDevice_Taxi>) {
-        panic!("MSIdling::idle is pure virtual; subclasses implement it")
+        (self.vt.idle)(self, taxi)
     }
 
 }
@@ -40,11 +29,41 @@ const STOP_END_SET: i32 = 2;
 const STOP_TRIGGER_SET: i32 = 2 << 4;
 const STOP_PARKING_SET: i32 = 2 << 5;
 
+/// C++ `delete myIdleAlgorithm` (virtual destructor): frees the object as its concrete subclass,
+/// because the allocation is that subclass and not the base.
+pub fn delete_idle_algorithm(idle: Ptr<MSIdling>) {
+    let vt: &'static MSIdlingVt = unsafe { (*idle.as_raw()).vt };
+    if std::ptr::eq(vt, &MSIDLING_RANDOM_CIRCLING_VT) {
+        drop(unsafe { Box::from_raw(idle.cast::<MSIdling_RandomCircling>().as_raw()) });
+    } else if std::ptr::eq(vt, &MSIDLING_STOP_VT) {
+        drop(unsafe { Box::from_raw(idle.cast::<MSIdling_Stop>().as_raw()) });
+    } else {
+        drop(unsafe { Box::from_raw(idle.cast::<MSIdling_TaxiStand>().as_raw()) });
+    }
+}
+
+static MSIDLING_RANDOM_CIRCLING_VT: MSIdlingVt = MSIdlingVt {
+    idle: |base, taxi| Ptr::from_mut(base).cast::<MSIdling_RandomCircling>().m().idle(taxi),
+};
+static MSIDLING_STOP_VT: MSIdlingVt = MSIdlingVt {
+    idle: |base, taxi| Ptr::from_mut(base).cast::<MSIdling_Stop>().m().idle(taxi),
+};
+static MSIDLING_TAXI_STAND_VT: MSIdlingVt = MSIdlingVt {
+    idle: |base, taxi| Ptr::from_mut(base).cast::<MSIdling_TaxiStand>().m().idle(taxi),
+};
+
 /// C++ class `MSIdling_RandomCircling` (microsim/devices/MSIdling.h)
 #[repr(C)]
 pub struct MSIdling_RandomCircling {
     /// C++ base class `MSIdling`
     pub base: MSIdling,
+}
+
+impl MSIdling_RandomCircling {
+    /// C++: implicit default constructor of `MSIdling_RandomCircling`
+    pub fn new() -> Self {
+        MSIdling_RandomCircling { base: MSIdling { vt: &MSIDLING_RANDOM_CIRCLING_VT } }
+    }
 }
 
 impl std::ops::Deref for MSIdling_RandomCircling {
@@ -148,7 +167,16 @@ impl MSIdling_RandomCircling {
             remainingEdges += 1;
             let mut successors: MSEdgeVector = lastEdge.get_successors(vehB.get_v_class()).clone();
             successors.retain(|e| e.get_function() != SumoXMLEdgeFunc::CONNECTOR);
-            // shortcut: the gRoutingPreferences filter (device.taxi.idleMinPref via getFloatParam/getPreference) is skipped, it only runs when routing preferences are enabled; upgrade when they are ported
+            if utils::common::std_defs::g_routing_preferences() && successors.len() > 1 {
+                let threshPref = veh.get_float_param("device.taxi.idleMinPref", false, 0.0, true);
+                let mut maxPref = -f64::MAX;
+                for edge in successors.iter() {
+                    maxPref = max2(maxPref, edge.get_preference(veh.get_v_type_parameter()));
+                }
+                if maxPref >= threshPref {
+                    successors.retain(|e| !(e.get_preference(veh.get_v_type_parameter()) < threshPref));
+                }
+            }
             if successors.is_empty() {
                 utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' ends idling in a cul-de-sac", veh.get_id()));
                 break;
@@ -187,6 +215,11 @@ impl std::ops::DerefMut for MSIdling_Stop {
 }
 
 impl MSIdling_Stop {
+    /// C++: implicit default constructor of `MSIdling_Stop`
+    pub fn new() -> Self {
+        MSIdling_Stop { base: MSIdling { vt: &MSIDLING_STOP_VT } }
+    }
+
     /// C++: `void MSIdling_Stop::idle(MSDevice_Taxi *)` [virtual, private]
     // void
     // MSIdling_Stop::idle(MSDevice_Taxi* taxi) {
@@ -308,8 +341,9 @@ impl MSIdling_Stop {
                 }
                 stopPos = (stopEdge.get_lanes()[0], stopOffset);
             } else {
-                // shortcut: CarFollowModel::brakeGap(speed, decel, headway) takes three arguments in C++, the ported base MSCFModel::brake_gap takes one, upgrade when MSCFModel gets the virtual 3-arg brakeGap
-                panic!("MSIdling_Stop: micro brakeGap(speed, decel, headway) is not ported on MSCFModel yet");
+                let veh = Ptr::from_mut(veh).cast::<MSVehicle>();
+                brakeGap = veh.get_car_follow_model().brake_gap_2(veh.get_speed(), veh.get_car_follow_model().get_max_decel(), 0.0);
+                stopPos = veh.m().get_lane_pos_after_dist(brakeGap);
             }
             if !stopPos.0.is_null() {
                 let mut stop = SUMOVehicleParameter_Stop::default();
@@ -331,7 +365,7 @@ impl MSIdling_Stop {
                     utils::common::msg_handler::write_warning(&errorOut);
                 }
             } else {
-                utils::common::msg_handler::write_warning(&utils::tlf!("Idle taxi '%' could not stop within %m", veh.get_id(), brakeGap.to_string()));
+                utils::common::msg_handler::write_warning(&utils::tlf!("Idle taxi '%' could not stop within %m", veh.get_id(), utils::common::to_string::to_string(&brakeGap)));
             }
         }
         if vehB.has_stops() {
@@ -382,7 +416,7 @@ impl MSIdling_TaxiStand {
     #[allow(unused_variables)]
     pub fn new(rerouter: Ptr<MSTriggeredRerouter>) -> Self {
         MSIdling_TaxiStand {
-            base: MSIdling {},
+            base: MSIdling { vt: &MSIDLING_TAXI_STAND_VT },
             myRerouter: rerouter,
             myHaveWarned: false,
         }
@@ -461,7 +495,7 @@ impl MSIdling_TaxiStand {
         let veh: &mut SUMOVehicle = taxi.get_holder();
         let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
         let now = MSNet::get_instance().m().get_current_time_step();
-        let rerouteDef = self.myRerouter.m().get_current_reroute(now, veh);
+        let rerouteDef = self.myRerouter.m().get_current_reroute_2(now);
         if rerouteDef.is_null() || rerouteDef.parkProbs.get_vals().len() == 0 {
             if !self.myHaveWarned {
                 utils::common::msg_handler::write_warning(&utils::tlf!("Could not determine taxi stand for vehicle '%' at time=%", veh.get_id(), time2string(now)));

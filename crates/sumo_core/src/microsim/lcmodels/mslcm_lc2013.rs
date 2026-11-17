@@ -159,6 +159,40 @@ pub static MSLCM_LC2013_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeMo
     debug_vehicle: lc2013_debug_vehicle,
     get_parameter: lc2013_get_parameter,
     get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
+};
+
+fn lc2013_cc_check_change_before_committing(lcm: &MSAbstractLaneChangeModel, veh: Ptr<MSVehicle>, state: i32) -> i32 {
+    Ptr::new(lcm).cast::<MSLCM_LC2013_CC>().m().check_change_before_committing(veh, state)
+}
+
+/// Virtual dispatch table of MSLCM_LC2013_CC; differs from MSLCM_LC2013_VT only in checkChangeBeforeCommitting
+pub static MSLCM_LC2013_CC_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: lc2013_inform,
+    patch_speed: lc2013_patch_speed,
+    changed: lc2013_changed,
+    wants_change: lc2013_wants_change,
+    wants_change_sublane: MSAbstractLaneChangeModel::wants_change_sublane_base,
+    update_expected_sublane_speeds: MSAbstractLaneChangeModel::update_expected_sublane_speeds_base,
+    decide_direction: MSAbstractLaneChangeModel::decide_direction_base,
+    set_own_state: MSAbstractLaneChangeModel::set_own_state_base,
+    prepare_step: lc2013_prepare_step,
+    reset_speed_lat: MSAbstractLaneChangeModel::reset_speed_lat_base,
+    update_safe_lat_dist: MSAbstractLaneChangeModel::update_safe_lat_dist_base,
+    get_safety_factor: lc2013_get_safety_factor,
+    compute_speed_lat: lc2013_compute_speed_lat,
+    save_blocker_length: lc2013_save_blocker_length,
+    get_extra_reservation: MSAbstractLaneChangeModel::get_extra_reservation_base,
+    set_parameter: lc2013_set_parameter,
+    avoid_overtake_right: MSAbstractLaneChangeModel::avoid_overtake_right_base,
+    save_state: lc2013_save_state,
+    load_state: lc2013_load_state,
+    reset_state: lc2013_reset_state,
+    get_opposite_safety_factor: lc2013_get_opposite_safety_factor,
+    debug_vehicle: lc2013_debug_vehicle,
+    get_parameter: lc2013_get_parameter,
+    get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: lc2013_cc_check_change_before_committing,
 };
 
 #[cfg(test)]

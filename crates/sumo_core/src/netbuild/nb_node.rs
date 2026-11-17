@@ -75,7 +75,6 @@ const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
 const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
 const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
 const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
-const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
@@ -105,7 +104,7 @@ fn nbnode_set_connection_same_dest(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<N
         NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
         NBEDGE_UNSPECIFIED_SPEED,
         NBEDGE_UNSPECIFIED_FRICTION,
-        NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+        crate::netbuild::nb_edge::my_default_connection_length(),
         &PositionVector::default(),
         NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
         SVC_UNSPECIFIED,
@@ -394,7 +393,7 @@ impl NBNode_ApproachingDivider {
                 NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
                 NBEDGE_UNSPECIFIED_SPEED,
                 NBEDGE_UNSPECIFIED_FRICTION,
-                NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+                crate::netbuild::nb_edge::my_default_connection_length(),
                 &PositionVector::default(),
                 NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
                 SVC_UNSPECIFIED,
@@ -1814,7 +1813,7 @@ impl NBNode {
                 && in_.is_connected_to(out, false)
             {
                 for i in inOffset..in_.get_num_lanes() {
-                    nbnode_set_connection_default(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED);
+                    nbnode_set_connection_same_dest(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED, true);
                 }
                 return;
             }

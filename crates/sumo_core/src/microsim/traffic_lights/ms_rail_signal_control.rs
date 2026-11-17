@@ -3,18 +3,6 @@
 use crate::prelude::*;
 use std::cell::{Cell, RefCell};
 
-/// storage for loaded deadlocks
-/// C++ class `MSRailSignalControl::Deadlock` (microsim/traffic_lights/MSRailSignalControl.h)
-#[derive(Clone)]
-pub struct MSRailSignalControl_Deadlock {
-    pub signals: Vec<Ptr<MSRailSignal>>,
-    pub edges: Vec<ConstMSEdgeVector>,
-    pub forwardEnds: ConstMSEdgeVector,
-}
-
-impl MSRailSignalControl_Deadlock {
-}
-
 /// A signal for rails
 /// C++ class `MSRailSignalControl` (microsim/traffic_lights/MSRailSignalControl.h)
 #[repr(C)]
@@ -25,8 +13,7 @@ pub struct MSRailSignalControl {
     pub myUsedEdges: BTreeSet<Ptr<MSEdge>>,
     pub myWaitRelations: BTreeMap<Ptr<SUMOVehicle>, MSRailSignalControl_WaitRelation>,
     pub myWrittenDeadlocks: BTreeSet<BTreeSet<Ptr<SUMOVehicle>>>,
-    pub myLoadedDeadlocks: Vec<MSRailSignalControl_Deadlock>,
-    pub mySignalDeadlocks: BTreeMap<Ptr<MSRailSignal>, Vec<(i32, i32)>>, // C++: std::map<const MSRailSignal *, std::vector<std::pair<int, int>>>
+    pub myDeadlockChecks: BTreeMap<Ptr<MSRailSignal>, Vec<Ptr<MSRailSignal>>>, // C++: std::map<const MSRailSignal *, std::vector<const MSRailSignal *>>
     pub myDriveWaySucc: BTreeMap<Ptr<MSDriveWay>, BTreeSet<Ptr<MSDriveWay>>>, // C++: std::map<const MSDriveWay *, std::set<const MSDriveWay *, ComparatorNumericalIdLess>>
     pub myDriveWayPred: BTreeMap<Ptr<MSDriveWay>, BTreeSet<Ptr<MSDriveWay>>>, // C++: std::map<const MSDriveWay *, std::set<const MSDriveWay *>>
     /// list of all rail signals
@@ -35,7 +22,6 @@ pub struct MSRailSignalControl {
     pub mySwitchedGreenFlanks: Vec<(Ptr<MSLink>, i32)>,
     pub myDriveWayCompatibility: BTreeMap<(i32, i32), bool>, // C++: std::map<std::pair<int, int>, bool>
     pub myActiveSignals: BTreeSet<Ptr<MSRailSignal>>, // C++: std::set<MSRailSignal *, ComparatorNumericalIdLess>
-    pub myMaxTrainLength: f64,
 }
 
 impl std::ops::Deref for MSRailSignalControl {
@@ -77,6 +63,11 @@ fn my_signalized_classes() -> SVCPermissions {
 /// static SVCPermissions MSRailSignalControl::myMBClasses
 fn my_mb_classes() -> SVCPermissions {
     MY_MB_CLASSES.with(|c| c.get())
+}
+
+/// whether `listener` is the rail signal control singleton (the port has no vtable: the caller dispatches to it by identity)
+pub fn is_listener(listener: *const MSNet_VehicleStateListener) -> bool {
+    my_instance_opt().map_or(false, |i| i.as_raw() as *const MSNet_VehicleStateListener == listener)
 }
 
 /// the current singleton, creating it (and registering the listener) on first use
@@ -147,8 +138,7 @@ impl MSRailSignalControl {
     //         myInstance->myDriveWaySucc.clear();
     //         myInstance->myDriveWayPred.clear();
     //         myInstance->myWrittenDeadlocks.clear();
-    //         myInstance->mySignalDeadlocks.clear();
-    //         myInstance->myLoadedDeadlocks.clear();
+    //         myInstance->myDeadlockChecks.clear();
     //         //myInstance->myActiveSignals.clear();
     //     }
     // }
@@ -160,8 +150,7 @@ impl MSRailSignalControl {
             instance.myDriveWaySucc.clear();
             instance.myDriveWayPred.clear();
             instance.myWrittenDeadlocks.clear();
-            instance.mySignalDeadlocks.clear();
-            instance.myLoadedDeadlocks.clear();
+            instance.myDeadlockChecks.clear();
             //myActiveSignals.clear();
         }
     }
@@ -210,60 +199,24 @@ impl MSRailSignalControl {
     /// check whether the given signal and driveway are part of a deadlock circle
     // void
     // MSRailSignalControl::addDWDeadlockChecks(const MSRailSignal* rs, MSDriveWay* dw) {
-    //     auto itDL = mySignalDeadlocks.find(rs);
-    //     if (itDL == mySignalDeadlocks.end()) {
+    //     auto itDL = MSRailSignalControl::getInstance().getDeadlockChecks().find(rs);
+    //     if (itDL == MSRailSignalControl::getInstance().getDeadlockChecks().end()) {
     //         return;
     //     }
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //     std::cout << "    needsDeadlockChecks? rs=" << rs->getID() << " dw=" << dw->getID() << "\n";
-    // #endif
-    //     // the driveway dw ends at signal rs and could be part of a deadlock.
-    //     // check whether we can form a sequence of driveways that link it with all others (railsignals)
-    //     // findDeadlockFoes calls itself recursively until all circles have been found
-    //     for (const auto& pair : itDL->second) {
-    //         const Deadlock& dl = myLoadedDeadlocks[pair.first];
-    //         std::vector<const MSDriveWay*> deadlockFoes;
-    //         if (dl.edges.empty()) {
-    //             findDeadlockFoes(dw, dl, pair.second, deadlockFoes);
-    //         } else {
-    //             const MSEdge* forwardEnd = dl.forwardEnds[pair.second];
-    //             if (forwardEnd == &dw->getForward().back()->getEdge()) {
-    //                 findDeadlockFoesFromRoutes(dw, dl, pair.second, deadlockFoes);
-    //             } else {
-    //                 for (MSDriveWay* cand : MSDriveWay::getEndingDriveWays(forwardEnd)) {
-    //                     findDeadlockFoesFromRoutes(cand, dl, pair.second, deadlockFoes);
-    //                 }
-    //             }
-    //         }
-    //     }
+    //     const std::vector<const MSRailSignal*>& others = itDL->second;
+    //     // the driveway could be part of a deadlock. check whether it would be blocked by the next signal in the circle
+    //     std::vector<const MSDriveWay*> deadlockFoes;
+    //     findDeadlockFoes(dw, others, deadlockFoes);
     // }
     #[allow(unused_variables)]
     pub fn add_dw_deadlock_checks(&mut self, rs: Ptr<MSRailSignal>, dw: Ptr<MSDriveWay>) {
-        let it_dl = match self.mySignalDeadlocks.get(&rs) {
+        let others: Vec<Ptr<MSRailSignal>> = match self.myDeadlockChecks.get(&rs) {
             Some(v) => v.clone(),
             None => return,
         };
-        // the driveway dw ends at signal rs and could be part of a deadlock.
-        // check whether we can form a sequence of driveways that link it with all others (railsignals)
-        // findDeadlockFoes calls itself recursively until all circles have been found
-        for pair in it_dl {
-            // cloned so that the recursive calls can borrow self mutably
-            let dl = self.myLoadedDeadlocks[pair.0 as usize].clone();
-            let deadlock_foes: Vec<Ptr<MSDriveWay>> = Vec::new();
-            if dl.edges.is_empty() {
-                self.find_deadlock_foes(dw, &dl, pair.1, deadlock_foes);
-            } else {
-                let forward_end = dl.forwardEnds[pair.1 as usize];
-                let dw_end_edge = dw.get_forward().last().map(|l| l.myEdge).unwrap_or_default();
-                if forward_end == dw_end_edge {
-                    self.find_deadlock_foes_from_routes(dw, &dl, pair.1, deadlock_foes);
-                } else {
-                    for cand in MSDriveWay::get_ending_drive_ways(forward_end).clone() {
-                        self.find_deadlock_foes_from_routes(cand, &dl, pair.1, deadlock_foes.clone());
-                    }
-                }
-            }
-        }
+        // the driveway could be part of a deadlock. check whether it would be blocked by the next signal in the circle
+        let deadlock_foes: Vec<Ptr<MSDriveWay>> = Vec::new();
+        self.find_deadlock_foes(dw, &others, deadlock_foes);
     }
 
     /// C++: `bool MSRailSignalControl::haveDeadlock(const SUMOVehicle *) const` [const]
@@ -324,9 +277,6 @@ impl MSRailSignalControl {
     //                     vehicles.push_back(item.foe->getID());
     //                     tripIDs.push_back(item.foe->getParameter().getParameter("tripId", item.foe->getID()));
     //                 }
-    //                 // rotate signals so their are aligned with the vehicle waiting
-    //                 // at that signal instead of the foe that is blocking the signal
-    //                 std::rotate(signals.begin(), signals.begin() + 1, signals.end());
     //                 OutputDevice& od = OutputDevice::getDeviceByOption("deadlock-output");
     //                 if (constraints.empty()) {
     //                     od.openTag(SUMO_TAG_DEADLOCK);
@@ -343,18 +293,6 @@ impl MSRailSignalControl {
     //                     od.openTag("resolvedConstraint");
     //                     od.writeAttr(SUMO_ATTR_ID, resolvedSignal->getID());
     //                     resolved->write(od, resolvedUnblocked->getParameter().getParameter("tripId", resolvedUnblocked->getID()));
-    //                     od.closeTag();
-    //                 }
-    //                 for (auto item : list) {
-    //                     int start = item.foe->getRoutePosition();
-    //                     if (!MSGlobals::gUseMesoSim) {
-    //                         const std::vector<MSLane*>& further = dynamic_cast<const MSVehicle*>(item.foe)->getFurtherLanes();
-    //                         start = MAX2(0, start - (int)(MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks() ? further.size() / 2 : further.size()));
-    //                     }
-    //                     const MSRoute& route = item.foe->getRoute();
-    //                     ConstMSEdgeVector future(route.begin() + start, route.end());
-    //                     od.openTag(SUMO_TAG_ROUTEPART);
-    //                     od.writeAttr(SUMO_ATTR_EDGES, toString(future));
     //                     od.closeTag();
     //                 }
     //                 od.closeTag();
@@ -427,9 +365,6 @@ impl MSRailSignalControl {
                                 .get_parameter("tripId", item.foe.get_id()),
                         );
                     }
-                    // rotate signals so their are aligned with the vehicle waiting
-                    // at that signal instead of the foe that is blocking the signal
-                    signals.rotate_left(1);
                     let od = OutputDevice::get_device_by_option("deadlock-output").unwrap_or_else(|e| panic!("{e}"));
                     let mut dev = od.borrow_mut();
                     if constraints.is_empty() {
@@ -454,30 +389,6 @@ impl MSRailSignalControl {
                         resolved.get().unwrap().write(&mut dev, &trip_id);
                         dev.close_tag("");
                     }
-                    for item in &list {
-                        let mut start = item.foe.cast::<MSBaseVehicle>().get_route_position();
-                        if !MSGlobals::use_meso_sim() {
-                            let mv = item.foe.cast::<MSVehicle>();
-                            let further = mv.get_further_lanes();
-                            let skipped = if MSGlobals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
-                                further.len() / 2
-                            } else {
-                                further.len()
-                            };
-                            start = std::cmp::max(0, start - skipped as i32);
-                        }
-                        let mb = item.foe.cast::<MSBaseVehicle>();
-                        let route = mb.get_route();
-                        let future: Vec<String> = route
-                            .get_edges()
-                            .iter()
-                            .skip(start as usize)
-                            .map(|e| e.get_id().to_string())
-                            .collect();
-                        dev.open_tag_id(SUMO_TAG_ROUTEPART);
-                        dev.write_attr(SUMO_ATTR_EDGES, &future.join(" "));
-                        dev.close_tag("");
-                    }
                     dev.close_tag("");
                 }
             }
@@ -488,118 +399,34 @@ impl MSRailSignalControl {
         }
     }
 
-    /// C++: `void MSRailSignalControl::loadDeadlockCheck(std::vector<const MSRailSignal *>)`
+    /// C++: `void MSRailSignalControl::addDeadlockCheck(std::vector<const MSRailSignal *>)`
     // void
-    // MSRailSignalControl::loadDeadlockCheck(std::vector<const MSRailSignal*> signals) {
+    // MSRailSignalControl::addDeadlockCheck(std::vector<const MSRailSignal*> signals) {
     //     if (MSDriveWay::haveDriveWays()) {
     //         WRITE_WARNING("Deadlocks should be loaded before any vehicles");
     //     }
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //     std::cout << "    loadedDeadlockCheck signals=" << toString(signals) << "\n";
-    // #endif
-    //     const int deadlockIndex = (int)myLoadedDeadlocks.size();
-    //     myLoadedDeadlocks.push_back(Deadlock());
-    //     myLoadedDeadlocks.back().signals = signals;
     //     const int n = (int)signals.size();
     //     for (int i = 0; i < n; i++) {
-    //         mySignalDeadlocks[signals[i]].push_back(std::make_pair(deadlockIndex, i));
+    //         std::vector<const MSRailSignal*> others;
+    //         for (int j = 0; j < n; j++) {
+    //             others.push_back(signals[(i + j + 1) % n]);
+    //         }
+    //         myDeadlockChecks[signals[i]] = others;
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn load_deadlock_check(&mut self, signals: Vec<Ptr<MSRailSignal>>) {
+    pub fn add_deadlock_check(&mut self, signals: Vec<Ptr<MSRailSignal>>) {
         if MSDriveWay::have_drive_ways() {
             utils::common::msg_handler::write_warning("Deadlocks should be loaded before any vehicles");
         }
-        let deadlock_index = self.myLoadedDeadlocks.len() as i32;
-        self.myLoadedDeadlocks.push(MSRailSignalControl_Deadlock {
-            signals: signals.clone(),
-            edges: Vec::new(),
-            forwardEnds: Vec::new(),
-        });
-        let n = signals.len() as i32;
+        let n = signals.len();
         for i in 0..n {
-            self.mySignalDeadlocks
-                .entry(signals[i as usize])
-                .or_default()
-                .push((deadlock_index, i));
-        }
-    }
-
-    /// C++: `void MSRailSignalControl::loadDeadlockRoute(const ConstMSEdgeVector &)`
-    // void
-    // MSRailSignalControl::loadDeadlockRoute(const ConstMSEdgeVector& edges) {
-    //     Deadlock& dl = myLoadedDeadlocks.back();
-    //     const int signalIndex = (int)dl.edges.size();
-    //     const MSRailSignal* rs = dl.signals[signalIndex];
-    //     const MSJunction* j = rs->getJunction();
-    //     auto it = edges.begin();
-    //     while (it != edges.end() && (*it)->getToJunction() != j) {
-    //         it++;
-    //     }
-    //     if (it == edges.end()) {
-    //         throw ProcessError("Rail signal junction '" + j->getID() + "' not passed by loaded deadlock edges '" + toString(edges) + "'.");
-    //     }
-    //     const MSEdge* firstSignalEdge = *it;
-    //     // maybe there is an earlier signal, in this case we must look for driveways that start there
-    //     for (auto it2 = edges.begin(); it2 != it; it2++) {
-    //         if ((*it2)->getToJunction()->getType() == SumoXMLNodeType::RAIL_SIGNAL) {
-    //             const MSLink* link = (*it2)->getLanes().front()->getLinkTo((*(it2 + 1))->getLanes().front());
-    //             if (link != nullptr && link->isTLSControlled()) {
-    //                 firstSignalEdge = *it2;
-    //                 break;
-    //             }
-    //         }
-    //     }
-    //     dl.forwardEnds.push_back(firstSignalEdge);
-    //     dl.edges.push_back(edges);
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //     std::cout << "      loadedDeadlockRoute signal=" << rs->getID() << " signalEdge=" << firstSignalEdge->getID() << " edges=" << toString(edges) << "\n";
-    // #endif
-    // }
-    #[allow(unused_variables)]
-    pub fn load_deadlock_route(&mut self, edges: &ConstMSEdgeVector) {
-        let (signal_index, rs) = {
-            let dl = self.myLoadedDeadlocks.last().unwrap();
-            let signal_index = dl.edges.len() as i32;
-            (signal_index, dl.signals[signal_index as usize])
-        };
-        let j = rs.get_junction();
-        let mut found: Option<usize> = None;
-        for (i, e) in edges.iter().enumerate() {
-            if e.get_to_junction() == j {
-                found = Some(i);
-                break;
+            let mut others: Vec<Ptr<MSRailSignal>> = Vec::new();
+            for j in 0..n {
+                others.push(signals[(i + j + 1) % n]);
             }
+            self.myDeadlockChecks.insert(signals[i], others);
         }
-        let index = match found {
-            Some(i) => i,
-            None => panic!(
-                "{}",
-                ProcessError::new(format!(
-                    "Rail signal junction '{}' not passed by loaded deadlock edges '{}'.",
-                    j.get_id(),
-                    edges.iter().map(|e| e.get_id().to_string()).collect::<Vec<_>>().join(" ")
-                ))
-            ),
-        };
-        let mut first_signal_edge = edges[index];
-        // maybe there is an earlier signal, in this case we must look for driveways that start there
-        for i in 0..index {
-            if edges[i].get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
-                let link = edges[i]
-                    .get_lanes()
-                    .first()
-                    .unwrap()
-                    .get_link_to(*edges[i + 1].get_lanes().first().unwrap());
-                if !link.is_null() && link.is_tls_controlled() {
-                    first_signal_edge = edges[i];
-                    break;
-                }
-            }
-        }
-        let dl = self.myLoadedDeadlocks.last_mut().unwrap();
-        dl.forwardEnds.push(first_signal_edge);
-        dl.edges.push(edges.clone());
     }
 
     /// C++: `void MSRailSignalControl::vehicleStateChanged(const SUMOVehicle *const, MSNet::VehicleState, const std::string &)` [virtual]
@@ -614,9 +441,6 @@ impl MSRailSignalControl {
     //             if (vehicle->getEdge()->getFunction() != SumoXMLEdgeFunc::CONNECTOR && isRailwayOrShared(vehicle->getEdge()->getPermissions())) {
     //                 MSRailSignal::initDriveWays(vehicle, to == MSNet::VehicleState::NEWROUTE);
     //             }
-    //         }
-    //         if (to == MSNet::VehicleState::BUILT) {
-    //             myMaxTrainLength = MAX2(myMaxTrainLength, vehicle->getLength());
     //         }
     //     }
     // }
@@ -636,9 +460,6 @@ impl MSRailSignalControl {
                 {
                     MSRailSignal::init_drive_ways(vehicle, to == MSNet_VehicleState::NEWROUTE);
                 }
-            }
-            if to == MSNet_VehicleState::BUILT {
-                if veh.get_length() > self.myMaxTrainLength { self.myMaxTrainLength = veh.get_length(); }
             }
         }
     }
@@ -784,153 +605,83 @@ impl MSRailSignalControl {
         MY_MB_CLASSES.with(|c| c.set(mbSvc));
     }
 
-    /// C++: `void MSRailSignalControl::findDeadlockFoes(const MSDriveWay *, const Deadlock &, int, std::vector<const MSDriveWay *>)` [protected]
+    /// C++: `void MSRailSignalControl::findDeadlockFoes(const MSDriveWay *, const std::vector<const MSRailSignal *> &, std::vector<const MSDriveWay *>)` [protected]
     // void
-    // MSRailSignalControl::findDeadlockFoes(const MSDriveWay* dw, const Deadlock& dl, int signalIndex, std::vector<const MSDriveWay*> deadlockFoes) {
-    //     if (deadlockFoes.size() < dl.signals.size()) {
-    //         signalIndex = (signalIndex + 1) % dl.signals.size();
-    //         const MSRailSignal* other = dl.signals[signalIndex];
-    //         const MSJunction* otherJ = other->getJunction();
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //         std::cout << "      findDLfoes dw=" << dw->getID() << " foundFoes=" << toString(deadlockFoes) << " otherRS=" << other->getID() << "\n";
-    // #endif
+    // MSRailSignalControl::findDeadlockFoes(const MSDriveWay* dw, const std::vector<const MSRailSignal*>& others, std::vector<const MSDriveWay*> deadlockFoes) {
+    //     int circleIndex = (int)deadlockFoes.size();
+    //     if (circleIndex < (int)others.size()) {
+    //         const MSRailSignal* other = others[circleIndex];
     //         deadlockFoes.push_back(dw);
     //         for (const MSDriveWay* follower : myDriveWaySucc[dw]) {
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //             std::cout << "        follower=" << follower->getID() << " followerFoes=" << toString(follower->getFoes()) << "\n";
-    // #endif
     //             for (MSDriveWay* foe : follower->getFoes()) {
-    //                 if (foe->getForward().back()->getToJunction() == otherJ) {
-    //                     findDeadlockFoes(foe, dl, signalIndex, deadlockFoes);
-    //                 } else if (foe->isSubDriveWay() && foe->getParent()->getForward().back()->getToJunction() == otherJ && foe->getParentRemainingLength() < myMaxTrainLength) {
-    //                     // subdriveway-parents where the remaining part is short and thus a long train might reach back onto the subdriveway
-    //                     // @note: technically we do not need to check this in meso because train ends cannot reach into multiple segments
-    //                     // but it wouldn't help to make meso "better" by ignoring this foe relationship
-    //                     findDeadlockFoes(foe->getParent(), dl, signalIndex, deadlockFoes);
+    //                 if (foe->getForward().back()->getEdge().getToJunction()->getID() == other->getID()) {
+    //                     findDeadlockFoes(foe, others, deadlockFoes);
     //                 }
     //             }
     //         }
     //     } else {
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //         std::cout << "        add deadlock check dlFoes=" << toString(deadlockFoes) << "\n";;
-    // #endif
     //         for (const MSDriveWay* dldw : deadlockFoes) {
-    //             if (!dldw->isDepartDriveway()) {
-    //                 const MSRailSignal* rs = dynamic_cast<const MSRailSignal*>(dldw->getOrigin()->getTLLogic());
-    //                 if (std::find(dl.signals.begin(), dl.signals.end(), rs) != dl.signals.end()) {
-    //                     // moving into dldw frees up another part of the deadlock
-    //                     continue;
+    //             if (dldw->isDepartDriveway()) {
+    //                 const_cast<MSDriveWay*>(dldw)->addDWDeadlock(deadlockFoes);
+    //             } else {
+    //                 for (const MSDriveWay* pred : myDriveWayPred[dldw]) {
+    //                     if (!pred->isDepartDriveway()) {
+    //                         const MSRailSignal* predRS = dynamic_cast<const MSRailSignal*>(pred->getOrigin()->getTLLogic());
+    //                         if (std::find(others.begin(), others.end(), predRS) != others.end()) {
+    //                             // driveways that participate in the deadlock don't need to
+    //                             // do checking since they cannot prevent the deadlock
+    //                             // (unless they are departDriveways)
+    //                             continue;
+    //                         }
+    //                         const_cast<MSDriveWay*>(pred)->addDWDeadlock(deadlockFoes);
+    //                     }
     //                 }
     //             }
-    //             std::vector<const MSDriveWay*> df(deadlockFoes);
-    //             df.erase(std::find(df.begin(), df.end(), dldw));
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //             std::cout << "           dldw=" << dldw->getID() << " df=" << toString(df) << "\n";
-    // #endif
-    //             const_cast<MSDriveWay*>(dldw)->addDWDeadlock(df);
     //         }
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn find_deadlock_foes(&mut self, dw: Ptr<MSDriveWay>, dl: &MSRailSignalControl_Deadlock, signalIndex: i32, deadlockFoes: Vec<Ptr<MSDriveWay>>) {
+    pub fn find_deadlock_foes(&mut self, dw: Ptr<MSDriveWay>, others: &Vec<Ptr<MSRailSignal>>, deadlockFoes: Vec<Ptr<MSDriveWay>>) {
         let mut deadlock_foes = deadlockFoes;
-        if deadlock_foes.len() < dl.signals.len() {
-            let signal_index = (signalIndex + 1) % dl.signals.len() as i32;
-            let other = dl.signals[signal_index as usize];
-            let other_j = other.get_junction();
+        let circle_index = deadlock_foes.len();
+        if circle_index < others.len() {
+            let other = others[circle_index];
             deadlock_foes.push(dw);
             // determinism: C++ orders the successors by MSDriveWay numerical id, the Rust set orders by address
-            let followers: Vec<Ptr<MSDriveWay>> = {
-                let succ = self.myDriveWaySucc.entry(dw).or_default();
-                succ.iter().copied().collect()
-            };
-            let max_train_length = self.myMaxTrainLength;
+            let followers: Vec<Ptr<MSDriveWay>> = self.myDriveWaySucc.entry(dw).or_default().iter().copied().collect();
             for follower in followers {
                 for foe in follower.get_foes() {
-                    if foe.get_forward().last().unwrap().myEdge.get_to_junction() == other_j {
-                        self.find_deadlock_foes(*foe, dl, signal_index, deadlock_foes.clone());
-                    } else if foe.is_sub_drive_way()
-                        && foe.get_parent().get_forward().last().unwrap().myEdge.get_to_junction() == other_j
-                        && foe.get_parent_remaining_length() < max_train_length
-                    {
-                        // subdriveway-parents where the remaining part is short and thus a long train might reach back onto the subdriveway
-                        // @note: technically we do not need to check this in meso because train ends cannot reach into multiple segments
-                        // but it wouldn't help to make meso "better" by ignoring this foe relationship
-                        self.find_deadlock_foes(foe.get_parent(), dl, signal_index, deadlock_foes.clone());
+                    if foe.get_forward().last().unwrap().myEdge.get_to_junction().get_id() == other.get_id() {
+                        self.find_deadlock_foes(*foe, others, deadlock_foes.clone());
                     }
                 }
             }
         } else {
-            for dldw in &deadlock_foes {
-                if !dldw.is_depart_driveway() {
-                    let logic = dldw.get_origin().get_tl_logic();
-                    // the origin's logic is a rail signal only if it is one of the deadlock's signals
-                    let is_deadlock_signal = dl.signals.iter().any(|s| s.cast::<MSTrafficLightLogic>() == logic);
-                    if is_deadlock_signal {
-                        // moving into dldw frees up another part of the deadlock
-                        continue;
+            for dldw in deadlock_foes.clone() {
+                if dldw.is_depart_driveway() {
+                    dldw.m().add_dw_deadlock(&deadlock_foes);
+                } else {
+                    let preds: Vec<Ptr<MSDriveWay>> = self.myDriveWayPred.entry(dldw).or_default().iter().copied().collect();
+                    for pred in preds {
+                        if !pred.is_depart_driveway() {
+                            let pred_rs = pred.get_origin().get_tl_logic().cast::<MSRailSignal>();
+                            if others.contains(&pred_rs) {
+                                // driveways that participate in the deadlock don't need to
+                                // do checking since they cannot prevent the deadlock
+                                // (unless they are departDriveways)
+                                continue;
+                            }
+                            pred.m().add_dw_deadlock(&deadlock_foes);
+                        }
                     }
                 }
-                let mut df = deadlock_foes.clone();
-                if let Some(pos) = df.iter().position(|x| x == dldw) {
-                    df.remove(pos);
-                }
-                dldw.m().add_dw_deadlock(&df);
-            }
-        }
-    }
-
-    /// C++: `void MSRailSignalControl::findDeadlockFoesFromRoutes(const MSDriveWay *, const Deadlock &, int, std::vector<const MSDriveWay *>)` [protected]
-    // void
-    // MSRailSignalControl::findDeadlockFoesFromRoutes(const MSDriveWay* dw, const Deadlock& dl, int signalIndex, std::vector<const MSDriveWay*> deadlockFoes) {
-    //     // the loaded edges must match the end of the driveway route
-    //     const ConstMSEdgeVector& de = dl.edges[signalIndex];
-    //     const size_t n = de.size();
-    // #ifdef DEBUG_BUILD_DEADLOCK_CHECK
-    //     std::cout << "      findDLfoesFromRoutes dw=" << dw->getID() << " foundFoes=" << toString(deadlockFoes)
-    //         << "\n        dle=" << toString(de)
-    //         << "\n        dwe=" << toString(ConstMSEdgeVector(dw->getRoute().end() - MIN2(n, dw->getRoute().size()), dw->getRoute().end()))
-    //         << "\n";
-    // #endif
-    //     if (dw->getRoute().size() >= n && std::equal(de.begin(), de.end(),
-    //                 dw->getRoute().end() - n, dw->getRoute().end())) {
-    //         deadlockFoes.push_back(dw);
-    //         if (deadlockFoes.size() < dl.signals.size()) {
-    //             signalIndex = (signalIndex + 1) % dl.signals.size();
-    //             const MSEdge* forwardEnd = dl.forwardEnds[signalIndex];
-    //             for (MSDriveWay* cand : MSDriveWay::getEndingDriveWays(forwardEnd)) {
-    //                 findDeadlockFoesFromRoutes(cand, dl, signalIndex, deadlockFoes);
-    //             }
-    //         } else {
-    //             findDeadlockFoes(dw, dl, signalIndex, deadlockFoes);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn find_deadlock_foes_from_routes(&mut self, dw: Ptr<MSDriveWay>, dl: &MSRailSignalControl_Deadlock, signalIndex: i32, deadlockFoes: Vec<Ptr<MSDriveWay>>) {
-        let mut deadlock_foes = deadlockFoes;
-        // the loaded edges must match the end of the driveway route
-        let de = &dl.edges[signalIndex as usize];
-        let n = de.len();
-        let route = dw.get_route();
-        if route.len() >= n && route[route.len() - n..].iter().zip(de.iter()).all(|(a, b)| a == b) {
-            deadlock_foes.push(dw);
-            if deadlock_foes.len() < dl.signals.len() {
-                let signal_index = (signalIndex + 1) % dl.signals.len() as i32;
-                let forward_end = dl.forwardEnds[signal_index as usize];
-                for cand in MSDriveWay::get_ending_drive_ways(forward_end).clone() {
-                    self.find_deadlock_foes_from_routes(cand, dl, signal_index, deadlock_foes.clone());
-                }
-            } else {
-                self.find_deadlock_foes(dw, dl, signalIndex, deadlock_foes.clone());
             }
         }
     }
 
     /// C++: `void MSRailSignalControl::MSRailSignalControl()` [private]
     /// Constructor
-    // MSRailSignalControl::MSRailSignalControl():
-    //     myMaxTrainLength(OptionsCont::getOptions().getFloat("railway.max-train-length"))
+    // MSRailSignalControl::MSRailSignalControl()
     // {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
@@ -939,15 +690,13 @@ impl MSRailSignalControl {
             myUsedEdges: BTreeSet::new(),
             myWaitRelations: BTreeMap::new(),
             myWrittenDeadlocks: BTreeSet::new(),
-            myLoadedDeadlocks: Vec::new(),
-            mySignalDeadlocks: BTreeMap::new(),
+            myDeadlockChecks: BTreeMap::new(),
             myDriveWaySucc: BTreeMap::new(),
             myDriveWayPred: BTreeMap::new(),
             mySignals: Vec::new(),
             mySwitchedGreenFlanks: Vec::new(),
             myDriveWayCompatibility: BTreeMap::new(),
             myActiveSignals: BTreeSet::new(),
-            myMaxTrainLength: utils::options::options_cont::get_float("railway.max-train-length"),
         }
     }
 

@@ -141,8 +141,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_v_types(calibratorID: &str) -> Vec<String> {
-        // shortcut: MSCalibrator::getVehicleTypes is not mapped in ms_calibrator.rs, upgrade when it is
-        panic!("shortcut: Calibrator::getVTypes needs MSCalibrator::getVehicleTypes")
+        // C++ MSCalibrator inherits getVehicleTypes() from MSDetectorFileOutput (std::set, already sorted)
+        Self::get_calibrator(calibratorID).m().base3.get_vehicle_types().iter().cloned().collect()
     }
 
     /// C++: `int Calibrator::getPassed(const std::string &)` [static]
@@ -213,8 +213,8 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
-        panic!("shortcut: Calibrator::getParameter needs the Parameterised base of MSCalibrator")
+        // Parameterised is reached through MSDetectorFileOutput (MSCalibrator : MSDetectorFileOutput)
+        Self::get_calibrator(objectID).m().base3.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> Calibrator::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -232,8 +232,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        // shortcut: MSCalibrator has no Parameterised base in the generated skeleton yet, upgrade when ms_calibrator.rs maps it
-        panic!("shortcut: Calibrator::setParameter needs the Parameterised base of MSCalibrator")
+        Self::get_calibrator(objectID).m().base3.base2.set_parameter(key, value);
     }
 
     /// C++: `void Calibrator::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -296,8 +295,9 @@ impl Calibrator {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Calibrator, CALIBRATOR)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: Calibrator::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_CALIBRATOR_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Calibrator::domainID()` [static]
@@ -337,13 +337,13 @@ impl Calibrator {
         vehicleParams.vtypeid = typeID.to_string();
         vehicleParams.routeid = routeID.to_string();
         if MSNet::get_instance().m().get_vehicle_control().get_v_type(typeID, Ptr::null(), false).is_null() {
-            panic!("shortcut: Vehicle type '{typeID}' is not known (C++ TraCIException)");
+            panic!("Vehicle type '{typeID}' is not known");
         }
         if !SUMOVehicleParameter::parse_depart_lane(departLane, "calibrator", calibratorID, &mut vehicleParams.departLane, &mut vehicleParams.departLaneProcedure, &mut error) {
-            panic!("shortcut: {error} (C++ TraCIException)");
+            panic!("{error}");
         }
         if !SUMOVehicleParameter::parse_depart_speed(departSpeed, "calibrator", calibratorID, &mut vehicleParams.departSpeed, &mut vehicleParams.departSpeedProcedure, &mut error) {
-            panic!("shortcut: {error} (C++ TraCIException)");
+            panic!("{error}");
         }
         Self::get_calibrator(calibratorID).set_flow(time2steps(begin), time2steps(end), vehsPerHour, speed, vehicleParams);
     }
@@ -355,8 +355,7 @@ impl Calibrator {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Calibrator::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Calibrator::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -452,7 +451,7 @@ impl Calibrator {
         // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
         match MSCalibrator::get_instances().get(id) {
             Some(c) => *c,
-            None => panic!("shortcut: Calibrator '{id}' is not known (C++ TraCIException)"),
+            None => panic!("Calibrator '{id}' is not known"),
         }
     }
 

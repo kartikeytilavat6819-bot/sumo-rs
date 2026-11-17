@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSInductLoop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 use std::cmp::Reverse;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::string_utils;
@@ -13,13 +14,6 @@ const HAS_NOT_LEFT_DETECTOR: f64 = -1.;
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
 
-// shortcut: MSGlobals flags are not ported (ms_globals.rs is empty); these return the C++ defaults, upgrade when MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
-fn g_num_sim_threads() -> i32 {
-    1
-}
 
 /// C++ `SIMSTEP` macro
 fn sim_step() -> SUMOTime {
@@ -46,21 +40,6 @@ pub type MSInductLoop_TimeQueue = BinaryHeap<Reverse<SUMOTime>>;
 
 /// C++ typedef `std::deque<VehicleData> MSInductLoop::VehicleDataCont`
 pub type MSInductLoop_VehicleDataCont = VecDeque<MSInductLoop_VehicleData>;
-
-fn ms_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_enter(veh, reason, enteredLane)
-}
-fn ms_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
-}
-fn ms_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
-}
-static MS_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
-    notify_enter: ms_induct_loop_notify_enter,
-    notify_move: ms_induct_loop_notify_move,
-    notify_leave: ms_induct_loop_notify_leave,
-};
 
 /// An unextended detector measuring at a fixed position on a fixed lane.
 /// C++ class `MSInductLoop` (microsim/output/MSInductLoop.h)
@@ -115,6 +94,47 @@ impl std::ops::DerefMut for MSInductLoop {
     }
 }
 
+fn ms_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_induct_loop_notify_enter,
+    notify_move: ms_induct_loop_notify_move,
+    notify_leave: ms_induct_loop_notify_leave,
+};
+
+// the MSDetectorFileOutput base is base2, not the first field: step back to the enclosing loop
+fn ms_induct_loop_of(d: *mut MSDetectorFileOutput) -> *mut MSInductLoop {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2)) as *mut MSInductLoop
+}
+fn ms_induct_loop_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*ms_induct_loop_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn ms_induct_loop_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*ms_induct_loop_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn ms_induct_loop_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*ms_induct_loop_of(d)).reset() }
+}
+
+fn ms_induct_loop_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*ms_induct_loop_of(d)).detector_update(step) }
+}
+
+static MS_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_induct_loop_write_xml_output,
+    write_xml_detector_prolog: ms_induct_loop_write_xml_detector_prolog,
+    reset: ms_induct_loop_reset,
+    detector_update: ms_induct_loop_detector_update,
+};
+
 impl MSInductLoop {
     /// C++: `void MSInductLoop::MSInductLoop(const std::string &, MSLane *const, double, double, std::string, const std::string &, const std::string &, int, const bool)`
     /// Constructor.
@@ -153,18 +173,15 @@ impl MSInductLoop {
     pub fn new(id: &str, lane: Ptr<MSLane>, positionInMeters: f64, length: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, needLocking: bool) -> Box<Self> {
         debug_assert!(length >= 0.);
         debug_assert!(positionInMeters >= 0. && positionInMeters + length <= lane.get_length());
-        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while g_use_meso_sim() is false
+        // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while MSGlobals::use_meso_sim() is false
         let mut s = Box::new(MSInductLoop {
-            base: MSMoveReminder {
-                vt: &MS_INDUCT_LOOP_MSMOVE_REMINDER_VT,
-                ..MSMoveReminder::new(id, lane, true)
-            },
+            base: MSMoveReminder::new(id, lane, true),
             // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,
             myPosition: positionInMeters,
             myEndPosition: positionInMeters + length,
-            myNeedLock: needLocking || g_num_sim_threads() > 1,
+            myNeedLock: needLocking || MSGlobals::num_sim_threads() > 1,
             // initialize in a way which doesn't impact actualted traffic lights at simulation start (yet doesn't look ugly in the outputs)
             myLastLeaveTime: -3600.,
             myNextMesoLeaveTimes: MSInductLoop_TimeQueue::default(),
@@ -180,6 +197,8 @@ impl MSInductLoop {
             mySegment: Ptr::null(),
             mySegmentPos: 0.,
         });
+        s.base.vt = &MS_INDUCT_LOOP_MSMOVE_REMINDER_VT;
+        s.base2.vt = &MS_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT;
         // C++ MSMoveReminder base constructor (doAdd = true): myLane->addMoveReminder(this)
         lane.m().add_move_reminder(Ptr::from_mut(&mut s.base), true);
         s.reset();
@@ -288,8 +307,8 @@ impl MSInductLoop {
         if !self.base2.vehicle_applies(veh) && (veh.is_person() || self.base2.myDetectPersons <= PersonMode::WALK as i32) {
             return false;
         }
-        if g_use_meso_sim() {
-            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, extrapolated segment leave times) not ported; unreachable while g_use_meso_sim() is false
+        if MSGlobals::use_meso_sim() {
+            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, extrapolated segment leave times) not ported; unreachable while MSGlobals::use_meso_sim() is false
             return true;
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION {
@@ -473,8 +492,8 @@ impl MSInductLoop {
             let p = MSNet::get_instance().m().get_person_control().get(veh.get_id());
             self.notify_move_person(p, lastDir, lastPos);
         }
-        if g_use_meso_sim() && reason <= MSMoveReminder_Notification::NOTIFICATION_SEGMENT && self.base2.vehicle_applies(veh) {
-            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, interpolated leave times) not ported; unreachable while g_use_meso_sim() is false
+        if MSGlobals::use_meso_sim() && reason <= MSMoveReminder_Notification::NOTIFICATION_SEGMENT && self.base2.vehicle_applies(veh) {
+            // shortcut: mesoscopic branch (dynamic_cast<MEVehicle*>, interpolated leave times) not ported; unreachable while MSGlobals::use_meso_sim() is false
             return false;
         }
         if reason != MSMoveReminder_Notification::NOTIFICATION_JUNCTION || (veh.is_person() && self.base2.myDetectPersons != PersonMode::NONE as i32) {
@@ -676,10 +695,20 @@ impl MSInductLoop {
             // detector is occupied
             return 0.;
         }
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             return sim_time() - steps2time(self.get_last_detection_time());
         }
         sim_time() - self.myLastLeaveTime
+    }
+
+    /// C++: `void MSInductLoop::loadTimeSinceLastDetection(double)`
+    // void
+    // MSInductLoop::loadTimeSinceLastDetection(double time) {
+    //     myLastLeaveTime = SIMTIME - time;
+    // }
+    #[allow(unused_variables)]
+    pub fn load_time_since_last_detection(&mut self, time: f64) {
+        self.myLastLeaveTime = sim_time() - time;
     }
 
     /// C++: `double MSInductLoop::getOccupancyTime() const` [const]
@@ -780,7 +809,7 @@ impl MSInductLoop {
             return MSNet::get_instance().get_current_time_step();
         }
         let now = sim_step();
-        if g_use_meso_sim() && !self.myNextMesoLeaveTimes.is_empty() && tq_top(&self.myNextMesoLeaveTimes) < now {
+        if MSGlobals::use_meso_sim() && !self.myNextMesoLeaveTimes.is_empty() && tq_top(&self.myNextMesoLeaveTimes) < now {
             // shortcut: C++ discards old times in its `mutable` queues; this method takes &self, so the cleanup runs on copies (meso is off)
             let mut next = self.myNextMesoLeaveTimes.clone();
             MSInductLoop::discard_old_times(&mut next, now);
@@ -833,66 +862,6 @@ impl MSInductLoop {
             } else {
                 self.myOverrideEntryTime = entryTime;
             }
-        }
-    }
-
-    /// C++: `void MSInductLoop::saveState(OutputDevice &) const` [const, virtual]
-    /// Saves the time of the last detection and the pending meso detections
-    // void
-    // MSInductLoop::saveState(OutputDevice& out) const {
-    //     out.openTag(SUMO_TAG_INDUCTION_LOOP);
-    //     out.writeAttr(SUMO_ATTR_ID, getID());
-    //     out.writeAttr(SUMO_ATTR_TIME, myLastLeaveTime);
-    //     if (mySegment != nullptr) {
-    //         out.writeAttr(SUMO_ATTR_NEXT, getTimes(myNextMesoLeaveTimes, SIMSTEP));
-    //         out.writeAttr(SUMO_ATTR_LAST, getTimes(myLastMesoLeaveTimes, SIMSTEP));
-    //         // used for the next detection when a vehicle leaves the segment
-    //         out.writeAttr(SUMO_ATTR_HEADWAY, toString<SUMOTime>(mySegment->getLastHeadway()));
-    //     }
-    //     out.closeTag();
-    // }
-    #[allow(unused_variables)]
-    pub fn save_state(&self, out: &mut OutputDevice) {
-        out.open_tag_id(SUMO_TAG_INDUCTION_LOOP);
-        out.write_attr(SUMO_ATTR_ID, self.base2.base.get_id());
-        out.write_attr(SUMO_ATTR_TIME, &self.myLastLeaveTime);
-        if !self.mySegment.is_null() {
-            out.write_attr(SUMO_ATTR_NEXT, &MSInductLoop::get_times(self.myNextMesoLeaveTimes.clone(), sim_step()));
-            out.write_attr(SUMO_ATTR_LAST, &MSInductLoop::get_times(self.myLastMesoLeaveTimes.clone(), sim_step()));
-            // used for the next detection when a vehicle leaves the segment
-            out.write_attr(SUMO_ATTR_HEADWAY, &self.mySegment.get_last_headway().to_string());
-        }
-        out.close_tag("");
-    }
-
-    /// C++: `void MSInductLoop::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
-    /// Loads the detection state, shifting all times by the given offset
-    // void
-    // MSInductLoop::loadState(const SUMOSAXAttributes& attrs, const SUMOTime offset) {
-    //     bool ok = true;
-    //     myLastLeaveTime = attrs.get<double>(SUMO_ATTR_TIME, getID().c_str(), ok) - STEPS2TIME(offset);
-    //     if (mySegment != nullptr) {
-    //         for (const std::string& t : StringTokenizer(attrs.getString(SUMO_ATTR_NEXT)).getVector()) {
-    //             myNextMesoLeaveTimes.push(StringUtils::toLong(t) - offset);
-    //         }
-    //         for (const std::string& t : StringTokenizer(attrs.getString(SUMO_ATTR_LAST)).getVector()) {
-    //             myLastMesoLeaveTimes.push(StringUtils::toLong(t) - offset);
-    //         }
-    //         mySegment->setLastHeadway(StringUtils::toLong(attrs.getString(SUMO_ATTR_HEADWAY)));
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
-        let mut ok = true;
-        self.myLastLeaveTime = attrs.get::<f64>(SUMO_ATTR_TIME, self.base2.base.get_id(), &mut ok, true) - steps2time(offset);
-        if !self.mySegment.is_null() {
-            for t in StringTokenizer::new(&attrs.get_string(SUMO_ATTR_NEXT)).get_vector() {
-                self.myNextMesoLeaveTimes.push(Reverse(string_utils::to_long(&t).unwrap() - offset));
-            }
-            for t in StringTokenizer::new(&attrs.get_string(SUMO_ATTR_LAST)).get_vector() {
-                self.myLastMesoLeaveTimes.push(Reverse(string_utils::to_long(&t).unwrap() - offset));
-            }
-            self.mySegment.m().set_last_headway(string_utils::to_long(&attrs.get_string(SUMO_ATTR_HEADWAY)).unwrap());
         }
     }
 
@@ -963,7 +932,7 @@ impl MSInductLoop {
                 contrib += 1;
             }
         }
-        if g_use_meso_sim() {
+        if MSGlobals::use_meso_sim() {
             contrib = self.myEnteredVehicleNumber;
         }
         let flow = contrib as f64 / t * 3600.;
@@ -1174,32 +1143,6 @@ impl MSInductLoop {
         }
     }
 
-    /// C++: `std::vector<SUMOTime> MSInductLoop::getTimes(TimeQueue, SUMOTime)` [static, protected]
-    // std::vector<SUMOTime>
-    // MSInductLoop::getTimes(TimeQueue tq, SUMOTime now) {
-    //     std::vector<SUMOTime> result;
-    //     if (!tq.empty()) {
-    //         // the next query discards them anyway
-    //         discardOldTimes(tq, now);
-    //     }
-    //     while (!tq.empty()) {
-    //         result.push_back(tq.top());
-    //         tq.pop();
-    //     }
-    //     return result;
-    // }
-    #[allow(unused_variables)]
-    pub fn get_times(mut tq: MSInductLoop_TimeQueue, now: SUMOTime) -> Vec<SUMOTime> {
-        let mut result = Vec::new();
-        if !tq.is_empty() {
-            // the next query discards them anyway
-            MSInductLoop::discard_old_times(&mut tq, now);
-        }
-        while let Some(Reverse(x)) = tq.pop() {
-            result.push(x);
-        }
-        result
-    }
 
     /// C++: `void MSInductLoop::MSInductLoop(const MSInductLoop &)` [private]
     /// Invalidated copy constructor.

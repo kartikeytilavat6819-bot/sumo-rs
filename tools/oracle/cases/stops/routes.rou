@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <!-- lane stop with a fixed duration -->
+  <vehicle id="vs1" route="r0" depart="0">
+    <stop lane="-103224#1_0" endPos="20" duration="5"/>
+  </vehicle>
+  <!-- lane stop with an until time -->
+  <vehicle id="vs2" route="r1" depart="2">
+    <stop lane="-103227#1_0" endPos="20" until="60"/>
+  </vehicle>
+  <!-- route-level stop -->
+  <route id="rs" edges="-103224#0 -103224#1 -103224#2">
+    <stop lane="-103224#1_0" endPos="15" duration="4"/>
+  </route>
+  <vehicle id="vs3" route="rs" depart="4"/>
+  <!-- two stops on one route -->
+  <vehicle id="vs4" route="r0" depart="6">
+    <stop lane="-103224#1_0" endPos="10" duration="3"/>
+    <stop lane="-103224#3_0" endPos="10" duration="3"/>
+  </vehicle>
+</routes>

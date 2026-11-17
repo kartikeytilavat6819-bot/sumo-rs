@@ -8,7 +8,8 @@ use utils::options::options_cont::{get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 thread_local! {
-    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
+    // C++ `myWrittenAttributes(getDefaultMask())`: all attributes written until emission-output.attributes is set
+    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask((1u128 << SumoXMLAttrMask::SIZE) - 1)) };
     static MY_AM_INITIALIZED: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -99,6 +100,29 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Emissions>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        fn mr_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Emissions>().m().notify_idle(veh)
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: mr_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
+        };
+        let mut this = Self::new_device(holder);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle) -> Self {
         let id = format!("emissions_{}", holder.get_id());
         MSDevice_Emissions {
             base: MSVehicleDevice::new(holder, &id),

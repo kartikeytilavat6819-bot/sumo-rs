@@ -35,13 +35,6 @@ const VTYPEPARS_BOARDING_DURATION: i64 = 1 << 16;
 const VTYPEPARS_MASS_SET: i64 = 1i64 << 32;
 const VTYPEPARS_PARKING_BADGES_SET: i64 = 1i64 << 37;
 
-// shortcut: MSGlobals static is now ported; call it directly
-fn g_action_step_length() -> SUMOTime {
-    crate::microsim::ms_globals::action_step_length()
-}
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 /// C++ implicit copy constructor of SUMOVTypeParameter (the ported struct has no Clone impl)
 fn copy_sumo_vtype_parameter(p: &SUMOVTypeParameter) -> SUMOVTypeParameter {
@@ -163,7 +156,7 @@ impl MSVehicleType {
         debug_assert!(v.get_max_speed() > 0.);
         // Check if actionStepLength was set by user, if not init to global default
         if !v.was_set(VTYPEPARS_ACTIONSTEPLENGTH_SET) {
-            v.myParameter.actionStepLength = g_action_step_length();
+            v.myParameter.actionStepLength = MSGlobals::action_step_length();
         }
         v.myCachedActionStepLengthSecs = steps2time(v.myParameter.actionStepLength);
         v
@@ -307,7 +300,15 @@ impl MSVehicleType {
     #[allow(unused_variables)]
     pub fn compute_chosen_speed_deviation(&self, speedFactorOverride: f64, rng: Ptr<SumoRNG>, minDev: f64) -> f64 {
         if speedFactorOverride < 0. {
-            round_decimal(max2(minDev, self.myParameter.speedFactor.sample(Some(rng.m())).unwrap_or_else(|e| panic!("{}", e))), g_precision_random())
+            // C++ passes a possibly-null SumoRNG* here (vehicle.add from TraCI did); sample() treats null as
+            // "use the default generator". Dereferencing the null Ptr instead panicked with
+            // "null Ptr dereference" and made vehicle.add unusable.
+            let sampled = if rng.is_null() {
+                self.myParameter.speedFactor.sample(None)
+            } else {
+                self.myParameter.speedFactor.sample(Some(rng.m()))
+            };
+            round_decimal(max2(minDev, sampled.unwrap_or_else(|e| panic!("{}", e))), g_precision_random())
         } else {
             speedFactorOverride
         }
@@ -1359,7 +1360,7 @@ impl MSVehicleType {
         // the unique_ptr ensures the type is deleted if an exception occurs
         let vtype: Ptr<MSVehicleType> = Ptr::from_mut(Box::leak(Box::new(MSVehicleType::new(from))));
         let decel = from.get_cf_param(SUMO_ATTR_DECEL, SUMOVTypeParameter::get_default_decel(from.vehicleClass));
-        let emergencyDecel = from.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(from.vehicleClass, decel, crate::microsim::cfmodels::mscf_model::g_default_emergency_decel()));
+        let emergencyDecel = from.get_cf_param(SUMO_ATTR_EMERGENCYDECEL, SUMOVTypeParameter::get_default_emergency_decel(from.vehicleClass, decel, MSGlobals::default_emergency_decel()));
         // by default decel and apparentDecel are identical
         let apparentDecel = from.get_cf_param(SUMO_ATTR_APPARENTDECEL, decel);
 
@@ -1564,13 +1565,13 @@ impl MSVehicleType {
         }
         if !self.myWarnedActionStepLengthBallisticOnce
             && self.myParameter.actionStepLength != delta_t()
-            && crate::microsim::cfmodels::mscf_model::g_semi_implicit_euler_update()
+            && MSGlobals::semi_implicit_euler_update()
         {
             self.myWarnedActionStepLengthBallisticOnce = true;
             let warning2;
             if is_default("step-method.ballistic") {
                 warning2 = " Setting it now to avoid collisions.";
-                // shortcut: MSGlobals::gSemiImplicitEulerUpdate cannot be written (MSGlobals not ported), so the flag is not switched off here
+                MSGlobals::set_semi_implicit_euler_update(false);
             } else {
                 warning2 = " This may cause collisions.";
             }
@@ -1578,13 +1579,13 @@ impl MSVehicleType {
                 steps2time(self.myParameter.actionStepLength), self.get_id());
         }
         if !self.myWarnedStepLengthTauOnce && ts() > self.get_car_follow_model().get_headway_time()
-            && !g_use_meso_sim()
+            && !MSGlobals::use_meso_sim()
         {
             self.myWarnedStepLengthTauOnce = true;
             utils::write_warningf!("Value of tau=% in vehicle type '%' lower than simulation step size may cause collisions.",
                 self.get_car_follow_model().get_headway_time(), self.get_id());
         }
-        if g_use_meso_sim() && self.get_vehicle_class() != SVC_PEDESTRIAN && !get_bool("meso-lane-queue") {
+        if MSGlobals::use_meso_sim() && self.get_vehicle_class() != SVC_PEDESTRIAN && !get_bool("meso-lane-queue") {
             let ignoreVClasses = parse_vehicle_classes_vec(&get_string_vector("meso-ignore-lanes-by-vclass")).unwrap_or_else(|e| panic!("{}", e));
             if (ignoreVClasses & self.get_vehicle_class()) != 0 {
                 utils::write_warningf!("Vehicle class '%' of vType '%' is set as ignored by option --meso-ignore-lanes-by-vclass to ensure default vehicle capacity. Set option --meso-lane-queue for multi-modal meso simulation",

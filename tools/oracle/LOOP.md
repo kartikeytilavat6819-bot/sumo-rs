@@ -1,3 +1,5 @@
+references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation only
+
 # Self-improving verification loop
 
 One command measures everything:
@@ -9,13 +11,15 @@ bash tools/oracle/run_all.sh --build
 It runs every case in `tools/oracle/cases/` through the Rust binaries and prints a scoreboard:
 
 ```
-junction     net  PASS
-junction     sim  FAIL
-real         net  PASS
-real         sim  PASS
+junction/ref  sim  PASS
+real/ref      sim  PASS
 ...
-PASS=6 FAIL=4 SKIP=0
+PASS=11 FAIL=3 SKIP=6
 ```
+
+The example above is the shape of the output, not the current scoreboard — that lives in `SCOREBOARD.md`
+and is the only file whose numbers you should trust. The sim stage now runs one row **per committed
+reference variant** (`ref` uses `sim.args`, `ref_<v>` uses `sim_<v>.args`).
 
 `net` = `compare_net.py` against the C++-generated `ref_simple.net.xml`.
 `sim` = `compare_sim --tripinfo`, `compare_sim --fcd`, `compare_stat` against the committed references.
@@ -42,7 +46,44 @@ A panic is reported as `sim-PANIC` with the first message line.
   reference. Use `make_sim_refs.sh` / `make_net_ref.sh`.
 - **Never trust a pass you cannot reproduce from a clean checkout.**
 
-## Known failing rows and their owners (2026-11-15)
+## Known failing rows and their owners
+
+Current state, 2026-11-16 late — **four** rows fail. Everything else in the old table is fixed and must not
+be re-investigated:
+
+| Row | Symptom | Owner |
+|---|---|---|
+| sublanes/ref sim | **PANIC** `ms_leader_info.rs:503` index out of bounds — any `--lateral-resolution` run crashes | sl01 |
+| reroute_alt/ref sim | `v0` stays on the closed edge `11` at t=8; C++ detours to `12` — rerouting never runs | rr01 |
+| real_dense/ref sim | `v15.arrivalSpeed` 5.29 vs 7.60 | op02 |
+| vtypes/ref sim | `EIDM_1` timeLoss 4.05 vs 4.02 (0.10 m at t=62) | rt03 |
+
+Newly PASSING and now covered by a case (these were unverifiable this morning):
+
+- `lanechange` — `MSEdgeControl::change_lanes` / `gComputeLC` fix
+- `lefthand` net + sim — LHT net generation is element-identical to C++ given `net.args` = `--lefthand`
+
+Fixed since the table below was written, do **not** reopen:
+
+- junction `v0` 18 s vs 20 s — stale local `g_ignore_junction_blocker()` stub returning 0
+- roundabout `v1` release 15 s early — same mechanism
+- `--additional-files` panic `XMLSubSys::runParser not wired` — loads and runs
+- release-build segfault — `Ptr::new(self).m()` UB writes converted to `Cell`
+- malformed OSM panic — errors and exits 1 like C++
+- traffic lights never switching — `schedule_initial_switch` never called; also was missing for
+  actuated / delay_based / NEMA / SOTL / swarm / deterministic / wave / off
+- signal t=34 divergence — was `semi_implicit_euler_update()` hardcoded `false`; the RNG-stream
+  hypothesis was investigated and eliminated, do not repeat it
+- `reroute/ref_device` — the routing device was never created because `init_devices` in
+  `ms_base_vehicle.rs` built only tripinfo and FCD. Fixed; the device is now present but its
+  *behaviour* is still inert, which `reroute_alt` now measures
+- `stress` "107 vs 93 arrivals", `depart` "15 variants failing", `reroute` both variants panicking —
+  all three were stale reports; each now measures exact or 15/15 PASS
+- the "556 `todo!()`" figure — all of it is prose in `GENERATED SKELETON` file headers. Real `todo!()`
+  calls: **0**. Use the counter the merge script prints, not a raw grep.
+
+<details>
+<summary>Original table (2026-11-15, historical)</summary>
 
 | Row | Symptom | Owner |
 |---|---|---|
@@ -53,3 +94,5 @@ A panic is reported as `sim-PANIC` with the first message line.
 | (any `--additional-files`) | panic `XMLSubSys::runParser not wired` | afp01 |
 | (release build) | segfault on net load | rel01 |
 | malformed OSM | panic instead of error | fx03 |
+
+</details>

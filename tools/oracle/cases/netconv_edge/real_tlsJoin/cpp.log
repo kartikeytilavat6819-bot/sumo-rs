@@ -1,0 +1,9 @@
+Warning: Discarding unknown compound 'cycleway.lane' in type 'cycleway.lane|highway.residential' (first occurrence for edge '226041026').
+Warning: Discarding unknown compound 'cycleway.track' in type 'cycleway.track|highway.secondary' (first occurrence for edge '397795463').
+Warning: Discarding unknown compound 'cycleway.lane' in type 'cycleway.lane|highway.secondary' (first occurrence for edge '483360105').
+Warning: Unreachable edge '1117867038#0' within tlLogic 'joinedS_42430344_8373393481'
+Warning: Unreachable edge '846142553#0' within tlLogic 'joinedS_42435675_6598535175'
+Warning: Unreachable edge '483360105#0' within tlLogic 'joinedS_42439994_6598535157'
+Warning: The traffic light '42435671' does not control any links; it will not be build.
+Warning: Could not build program '0' for traffic light '42435671'
+Success.

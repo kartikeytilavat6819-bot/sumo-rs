@@ -64,7 +64,18 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
     utils::common::msg_handler::with_instance(if warning { MsgType::Warning } else { MsgType::Error }, |h| Ptr::from_mut(h))
 }
 
+/// The `RailwayRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn railway_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
+    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(railway_compute::<E, V>);
+        self
+    }
+
     /// C++: `void RailwayRouter::RailwayRouter<E, V>(const std::vector<E *> &, bool, typename SUMOAbstractRouter<E, V>::Operation, typename SUMOAbstractRouter<E, V>::Operation, bool, bool, const bool, double, double)`
     /// Constructor
     // RailwayRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation effortOperation,
@@ -82,7 +93,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self
     where
         E: RouterEdge<V>,
     {
@@ -288,7 +299,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         if self.myInternalRouter.is_null() {
             let warning = self.base.myErrorMsgHandler == msg_instance(true);
             let edges = self.get_rail_edges().clone();
-            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, (), (), self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
+            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, Some(Self::get_travel_time_static), None, self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
             self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
         }
     }

@@ -18,7 +18,15 @@ REL_TOL = 1e-9
 TRIPINFO_FIELDS = (
     "depart", "departLane", "departSpeed", "arrival", "arrivalLane",
     "arrivalSpeed", "duration", "routeLength", "waitingTime", "timeLoss",
+    # `devices` catches a whole defect class the numeric fields cannot see: a device that was
+    # configured but never created leaves every number identical (silent no-op). The rerouting
+    # device goes missing this way in reroute/ref_device.
+    "devices",
 )
+# attributes of the <emissions> child of tripinfo (MSDevice_Emissions::generateOutput); compared as "emissions.<attr>"
+TRIPINFO_EMISSION_FIELDS = tuple("emissions." + a for a in (
+    "CO_abs", "CO2_abs", "HC_abs", "PMx_abs", "NOx_abs", "fuel_abs", "electricity_abs",
+))
 FCD_FIELDS = ("x", "y", "angle", "speed", "lane", "pos")
 
 
@@ -48,7 +56,11 @@ def _tripinfos(path):
     and silently keeping only the last one would hide a real divergence."""
     out = {}
     for e in ET.parse(path).getroot().iter("tripinfo"):
-        out.setdefault(e.get("id"), []).append(dict(e.attrib))
+        attrs = dict(e.attrib)
+        for child in e.findall("emissions"):
+            for k, v in child.attrib.items():
+                attrs["emissions." + k] = v
+        out.setdefault(e.get("id"), []).append(attrs)
     return out
 
 
@@ -64,7 +76,7 @@ def compare_tripinfo(ref_path, cand_path):
             return (f"vehicle {vid} occurs {len(ref_list)}x in ref but "
                     f"{len(cand_list)}x in candidate")
         for ref_attrs, cand_attrs in zip(ref_list, cand_list):
-            for f, a, b in _field_diffs(ref_attrs, cand_attrs, TRIPINFO_FIELDS):
+            for f, a, b in _field_diffs(ref_attrs, cand_attrs, TRIPINFO_FIELDS + TRIPINFO_EMISSION_FIELDS):
                 return f"vehicle {vid} field {f}: ref={a!r} cand={b!r}"
     for vid in cand:
         if vid not in ref:

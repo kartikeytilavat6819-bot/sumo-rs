@@ -1,7 +1,7 @@
 //! Port of utils/router/IntermodalEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
 /// C++ class `IntermodalEdge` (utils/router/IntermodalEdge.h)
@@ -35,6 +35,19 @@ impl<E, L, N, V> std::ops::Deref for IntermodalEdge<E, L, N, V> {
 impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
     fn deref_mut(&mut self) -> &mut Named {
         &mut self.base
+    }
+}
+
+impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V> {
+    fn edge_numerical_id(&self) -> i32 {
+        <IntermodalEdge<E, L, N, V> as RouterEdge<IntermodalTrip<E, N, V>>>::numerical_id(self)
+    }
+    fn edge_id(&self) -> String {
+        <IntermodalEdge<E, L, N, V> as RouterEdge<IntermodalTrip<E, N, V>>>::id(self).to_string()
+    }
+    // shortcut: IntermodalEdge has no getPermissions in C++ (its lanes carry them), so SPTree never reads it on an intermodal edge, upgrade when an intermodal edge becomes a CH node
+    fn edge_permissions(&self) -> SVCPermissions {
+        panic!("shortcut: IntermodalEdge has no getPermissions in C++")
     }
 }
 

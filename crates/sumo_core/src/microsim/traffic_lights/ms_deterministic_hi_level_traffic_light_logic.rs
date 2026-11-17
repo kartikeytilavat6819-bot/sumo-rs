@@ -1,6 +1,24 @@
 //! Port of microsim/traffic_lights/MSDeterministicHiLevelTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn det_hi_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSDeterministicHiLevelTrafficLightLogic>().m().init(nb)
+}
+fn det_hi_decide_next_phase(l: &mut MSTrafficLightLogic) -> i32 {
+    Ptr::from_mut(l).cast::<MSDeterministicHiLevelTrafficLightLogic>().m().decide_next_phase()
+}
+fn det_hi_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSDeterministicHiLevelTrafficLightLogic>().m().can_release()
+}
+
+static MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    init: det_hi_init,
+    decide_next_phase: det_hi_decide_next_phase,
+    can_release: det_hi_can_release,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// Leaks a heap object for the whole simulation, like the C++ `new` the constructor uses.
 fn leak<T>(value: T) -> &'static mut T {
@@ -33,16 +51,6 @@ fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
         myState: p.myState.clone(),
     }
 }
-
-fn deterministic_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
-    Ptr::from_mut(l).cast::<MSDeterministicHiLevelTrafficLightLogic>().m().init(nb)
-}
-
-/// Virtual table of MSDeterministicHiLevelTrafficLightLogic (overrides init; trySwitch is inherited from SOTL)
-static MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
-    init: deterministic_init,
-    ..MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT
-};
 
 /// C++ class `MSDeterministicHiLevelTrafficLightLogic` (microsim/traffic_lights/MSDeterministicHiLevelTrafficLightLogic.h)
 #[repr(C)]
@@ -85,12 +93,10 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
+        let mut hi = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters);
+        hi.base.base.base.vt = &MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT;
         let mut this = Self {
-            base: {
-                let mut b = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters);
-                b.base.base.base.vt = &MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT;
-                b
-            },
+            base: hi,
             inputLanes: BTreeSet::new(),
             outputLanes: BTreeSet::new(),
         };

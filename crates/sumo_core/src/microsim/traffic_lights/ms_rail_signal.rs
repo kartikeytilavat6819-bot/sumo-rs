@@ -76,7 +76,7 @@ impl MSRailSignal_LinkInfo {
     //         // because first is short or the step-length is high)
     //         // lets look backward along the route
     //         // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
-    //         double lookBack = SPEED2DIST(veh->getSpeed() + 10) + veh->getLength();
+    //         double lookBack = SPEED2DIST(veh->getSpeed() + 10);
     //         int routeIndex = veh->getRoutePosition() - 1;
     //         while (lookBack > 0 && routeIndex > 0) {
     //             const MSEdge* prevEdge = veh->getRoute().getEdges()[routeIndex];
@@ -123,7 +123,7 @@ impl MSRailSignal_LinkInfo {
             // because first is short or the step-length is high)
             // lets look backward along the route
             // give some slack because the vehicle might have been braking from a higher speed and using ballistic integration
-            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10.0) + veh.get_length();
+            let mut look_back = utils::common::time::speed2dist(veh.cast::<MSVehicle>().get_speed() + 10.0);
             let mut route_index = veh.get_route_position() - 1;
             while look_back > 0.0 && route_index > 0 {
                 let prev_edge = edges[route_index as usize];
@@ -481,6 +481,9 @@ static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficL
     save_state: MSTrafficLightLogic::save_state_base,
     load_state: MSTrafficLightLogic::load_state_base,
     map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
 };
 
 impl MSRailSignal {
@@ -1521,7 +1524,7 @@ impl MSRailSignal {
                 veh_ref.add_reminder(prev.cast::<MSMoveReminder>(), 1.);
             }
         }
-        for i in depart_index..end_index - 1 {
+        for i in depart_index..=end_index - 1 {
             let e = edges[i as usize];
             if e.is_normal() && e.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
                 let e2 = edges[(i + 1) as usize];

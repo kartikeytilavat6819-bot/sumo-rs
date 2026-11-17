@@ -31,21 +31,6 @@ fn special_dest_terminate_route() -> Ptr<MSEdge> {
     MY_SPECIAL_DEST_TERMINATE_ROUTE.with(|p| *p)
 }
 
-fn ms_triggered_rerouter_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_enter(veh, reason, enteredLane)
-}
-fn ms_triggered_rerouter_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_move(veh, oldPos, newPos, newSpeed)
-}
-fn ms_triggered_rerouter_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_leave(veh, lastPos, reason, enteredLane)
-}
-static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
-    notify_enter: ms_triggered_rerouter_notify_enter,
-    notify_move: ms_triggered_rerouter_notify_move,
-    notify_leave: ms_triggered_rerouter_notify_leave,
-};
-
 /// Reroutes traffic objects passing an edge
 /// C++ class `MSTriggeredRerouter` (microsim/trigger/MSTriggeredRerouter.h)
 #[repr(C)]
@@ -148,10 +133,7 @@ impl MSTriggeredRerouter {
     pub fn new(id: &str, edges: &MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Self {
         let mut this = MSTriggeredRerouter {
             base: Named::new(id),
-            base2: MSMoveReminder {
-                vt: &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT,
-                ..MSMoveReminder::new(id, Ptr::default(), true)
-            },
+            base2: MSMoveReminder::new(id, Ptr::default(), true),
             base3: utils::xml::sumo_sax_handler::new("", ""), // C++ default-constructs SUMOSAXHandler
             base4: MSStoppingPlaceRerouter::new("parking".to_string(), false, Default::default(), Default::default()),
             myEdges: edges.clone(),
@@ -193,6 +175,20 @@ impl MSTriggeredRerouter {
             this.myPosition = edges[0].get_lanes()[0].get_shape_2()[0];
         }
         this
+    }
+
+    /// The `this`-registering half of the C++ constructor (myInstances[id] = this; lane->addMoveReminder(this)),
+    /// run once the rerouter has its final address. Also installs the MSMoveReminder overrides.
+    pub fn register_at(&mut self, this_ptr: Ptr<MSTriggeredRerouter>) {
+        self.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        MY_INSTANCES.with(|m| m.borrow_mut().insert(self.base.get_id().to_string(), this_ptr));
+        // shortcut: the meso segment registration (gUseMesoSim) is skipped, meso is not ported
+        let rem = Ptr::from_mut(&mut self.base2);
+        for e in self.myEdges.iter() {
+            for lane in e.get_lanes().iter() {
+                lane.m().add_move_reminder(rem, true);
+            }
+        }
     }
 
     /// C++: `void MSTriggeredRerouter::~MSTriggeredRerouter() noexcept` [virtual]
@@ -642,7 +638,16 @@ impl MSTriggeredRerouter {
         }
         // if we have a closingLaneReroute it may still affect the network topology (i.e. by closing a turning lane).
         // shortcut: C++ tObject.getDevice(typeid(MSDevice_Routing)); get_device takes an Unmapped type_info, so this is only a presence check on `&()`; upgrade when type-keyed device lookup is ported
-        let hasReroutingDevice = !tObject.get_device(&()).is_null();
+        // C++ uses tObject.getDevice(typeid(MSDevice_Routing)) != nullptr. Our get_device takes an
+        // Unmapped type_info and always yields null, so check the device by name instead (the name
+        // MSBaseVehicle::createDevice compares against is "rerouting"). Without this the rerouter
+        // believed no vehicle had a routing device and rerouted vehicles where C++ would not.
+        let hasReroutingDevice = if tObject.is_vehicle() {
+            let bv = Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>();
+            bv.get().map(|x| x.has_rerouting_device()).unwrap_or(false)
+        } else {
+            false
+        };
         let lastEdge = tObject.get_reroute_destination();
 
         if rerouteDef.parkProbs.get_overall_prob() > 0.0 {
@@ -832,10 +837,11 @@ impl MSTriggeredRerouter {
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
+                let routerProhibited: SUMOAbstractRouter_Prohibitions = prohibited.iter().map(|(e, p)| (e.cast(), p.clone())).collect();
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &Default::default())
+                    net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 let mut ok = false;
                 // C++ try { ... } catch (ProcessError&) {}: reroute() reports failure through its return value here
@@ -1776,6 +1782,23 @@ impl MSTriggeredRerouter {
         Ptr::default()
     }
 
+    /// Apply interval-begin/end closures for every rerouter instance.
+    ///
+    /// C++ schedules `WrappingCommand<MSTriggeredRerouter>(this, &setPermissions)` on the
+    /// begin-of-timestep event control for each interval that closes edges or lanes, and
+    /// `setPermissions` re-schedules itself at the interval end. `WrappingCommand` is not ported, so
+    /// `MSNet` calls this once per step instead: `setPermissions` only acts when `currentTime` equals an
+    /// interval begin or end, so the observable behaviour is identical.
+    ///
+    /// Without this the closures never reach the lanes: the rerouter is registered as a move reminder and
+    /// fires `trigger_routing`, but `nProh` stays empty because the permissions are never changed.
+    pub fn apply_scheduled_permissions(currentTime: SUMOTime) {
+        let instances = Self::get_instances();
+        for (_, r) in instances.iter() {
+            r.m().set_permissions(currentTime);
+        }
+    }
+
     /// C++: `const std::map<std::string, MSTriggeredRerouter *> & MSTriggeredRerouter::getInstances()` [static]
     /// return all rerouter instances
     // static const std::map<std::string, MSTriggeredRerouter*>& getInstances() {
@@ -2576,3 +2599,24 @@ impl MSTriggeredRerouter_RerouteInterval {
 
 }
 
+
+fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
+    // base2 is not the first field: step back from the embedded MSMoveReminder to the enclosing rerouter
+    let p = (mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter;
+    unsafe { &mut *p }
+}
+fn ms_triggered_rerouter_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    rerouter_of(mr).notify_enter(veh, reason, enteredLane)
+}
+fn ms_triggered_rerouter_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    rerouter_of(mr).notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_triggered_rerouter_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    rerouter_of(mr).notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_triggered_rerouter_notify_enter,
+    notify_move: ms_triggered_rerouter_notify_move,
+    notify_leave: ms_triggered_rerouter_notify_leave,
+};
