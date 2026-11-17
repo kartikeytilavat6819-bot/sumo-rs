@@ -1,0 +1,15 @@
+<routes>
+    <!-- until with extension; the last vehicle stops at a busStop shorter than half its length (too-short warning) -->
+    <vehicle id="e0" depart="0.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E1_0" endPos="200.00" until="20.00" extension="15.00"/>
+    </vehicle>
+    <vehicle id="e1" depart="2.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E2_0" endPos="150.00" until="40.00" extension="10.00" duration="3.00"/>
+    </vehicle>
+    <vehicle id="s0" depart="4.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop busStop="short" duration="3.00"/>
+    </vehicle>
+</routes>

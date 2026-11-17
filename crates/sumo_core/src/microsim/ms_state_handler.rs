@@ -253,8 +253,11 @@ impl MSStateHandler {
         MSVehicleTransfer::get_instance().m().save_state(&mut out);
         for edge in MSEdge::get_all_edges().iter() {
             if use_meso_sim() {
-                // shortcut: meso segment save needs MELoop::getSegmentForEdge with a position and the segment chain, meso save-state is not ported
-                panic!("shortcut: meso save-state is not ported");
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(&**edge, 0.);
+                while !s.is_null() {
+                    s.m().save_state(&mut out);
+                    s = s.m().get_next_segment();
+                }
             } else {
                 for lane in edge.get_lanes().iter() {
                     lane.m().save_state(&mut out);
@@ -656,8 +659,13 @@ impl MSStateHandler {
                     MSRoutingEngine::init_edge_weights(SVC_BICYCLE, -1, -1);
                 }
                 if use_meso_sim() {
-                    // shortcut: meso segment cached-speed reset (MESegment::resetCachedSpeeds) is not ported, meso is ported separately
-                    panic!("shortcut: meso cached speeds are not ported");
+                    for e in MSEdge::get_all_edges().iter() {
+                        let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(&**e, 0.);
+                        while !s.is_null() {
+                            s.m().reset_cached_speeds();
+                            s = s.m().get_next_segment();
+                        }
+                    }
                 }
             }
             SUMO_TAG_EDGE => {
@@ -696,8 +704,19 @@ impl MSStateHandler {
                 MSVehicleTransfer::get_instance().m().load_state(attrs, self.myOffset, vc).unwrap_or_else(|e| panic!("{e}"));
             }
             SUMO_TAG_SEGMENT => {
-                // shortcut: meso segment lookup needs MSEdge::dictionary by id and MESegment chain walking, meso state is not ported
-                panic!("shortcut: meso segment state is not ported");
+                let segmentID: String = attrs.get_string(SUMO_ATTR_ID);
+                let colon = segmentID.rfind(':').unwrap_or(segmentID.len());
+                let edge = MSEdge::dictionary_2(&segmentID[..colon]);
+                let mut idx: i32 = utils::common::string_utils::to_int(&segmentID[(colon + 1).min(segmentID.len())..]).unwrap_or_else(|e| panic!("{e}"));
+                self.mySegment = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(&*edge, 0.);
+                while idx > 0 && !self.mySegment.is_null() {
+                    idx -= 1;
+                    self.mySegment = self.mySegment.m().get_next_segment();
+                }
+                if self.mySegment.is_null() {
+                    panic!("{}", ProcessError::new(utils::tlf!("Unknown segment '%' in loaded state.", segmentID)));
+                }
+                self.myQueIndex = 0;
             }
             SUMO_TAG_LANE => {
                 let laneID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
@@ -720,8 +739,13 @@ impl MSStateHandler {
                     }
                 }
                 if use_meso_sim() {
-                    // shortcut: meso segment loadState and queue state need the MESegment chain, not ported
-                    panic!("shortcut: meso view-settings state is not ported");
+                    if self.myQueIndex >= self.mySegment.num_queues() {
+                        panic!("{}", ProcessError::new(utils::tlf!("Invalid queue index '%' on segment '%'. Check for consistency of lane numbers and queue options.", self.myQueIndex, self.mySegment.get_id())));
+                    }
+                    let blockTime: SUMOTime = utils::common::string_utils::to_long(&attrs.get_string(SUMO_ATTR_TIME)).unwrap_or_else(|e| panic!("{e}"));
+                    let entryBlockTime: SUMOTime = utils::common::string_utils::to_long(&attrs.get_string(SUMO_ATTR_BLOCKTIME)).unwrap_or_else(|e| panic!("{e}"));
+                    self.mySegment.m().load_state(&vehs, blockTime - self.myOffset, entryBlockTime - self.myOffset, self.myQueIndex);
+                    self.myQueIndex += 1;
                 } else {
                     self.myCurrentLane.m().load_state(&vehs);
                 }
@@ -1055,7 +1079,6 @@ impl MSStateHandler {
         // make a copy because myVehicleParameter is reset in closeVehicle()
         let vehID = self.myVehicleParameter.m().id.clone();
         if !self.myVehiclesToRemove.contains(&vehID) {
-            // shortcut: the embedded route "!<id>" checkRemoval is not ported under a verified name
             let deviceNames: Vec<String> = self.myDeviceAttrs.iter().map(|a| MSDevice::get_device_name(&a.get_string(SUMO_ATTR_ID))).collect();
             self.myVehicleParameter.m().set_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES, &deviceNames.join(" "));
             self.base.close_vehicle();
@@ -1115,13 +1138,20 @@ impl MSStateHandler {
                 }
             }
             if !self.myCFMAttrs.is_null() {
-                let vars = v.cast::<MSVehicle>().m().get_car_follow_variables();
+                let veh = v.cast::<MSVehicle>();
+                let vars = veh.m().get_car_follow_variables();
                 if !vars.is_null() {
-                    vars.m().load_state(&*self.myCFMAttrs);
+                    let cfm = veh.m().get_car_follow_model();
+                    cfm.load_vehicle_variables(vars.m(), &*self.myCFMAttrs);
                 }
                 self.myCFMAttrs = Ptr::null();
             }
         } else {
+            let embeddedRouteID = format!("!{}", vehID);
+            if MSRoute::has_route(&embeddedRouteID) {
+                let embedded: ConstMSRoutePtr = MSRoute::dictionary_3(&embeddedRouteID, Ptr::null());
+                embedded.check_removal(false);
+            }
             self.myVehicleParameter = Ptr::null();
             self.myRemoved += 1;
             self.myDeviceAttrs.clear();

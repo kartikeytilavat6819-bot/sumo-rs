@@ -49,11 +49,15 @@ fn ms_route_probe_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut Outpu
 fn ms_route_probe_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
     Ptr::new(d).cast::<MSRouteProbe>().m().write_xml_detector_prolog(dev)
 }
+fn ms_route_probe_clear_state(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSRouteProbe>().m().clear_state(step)
+}
 
-/// Virtual table of MSRouteProbe as MSDetectorFileOutput (overrides writeXMLOutput and writeXMLDetectorProlog)
+/// Virtual table of MSRouteProbe as MSDetectorFileOutput (overrides writeXMLOutput, writeXMLDetectorProlog and clearState)
 static MS_ROUTE_PROBE_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
     write_xml_output: ms_route_probe_write_xml_output,
     write_xml_detector_prolog: ms_route_probe_write_xml_detector_prolog,
+    clear_state: ms_route_probe_clear_state,
     ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
 };
 

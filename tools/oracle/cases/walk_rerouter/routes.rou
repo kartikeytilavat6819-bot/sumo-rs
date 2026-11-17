@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" length="5" maxSpeed="13.89"/>
+  <route id="r_we" edges="WC CE"/>
+  <vehicle id="v0" type="car" route="r_we" depart="0"/>
+  <person id="p0" depart="0">
+    <param key="rerouter" value="true"/>
+    <walk edges="WC CS"/>
+  </person>
+  <person id="p1" depart="1">
+    <param key="rerouter" value="true"/>
+    <walk edges="WC CE"/>
+  </person>
+  <person id="p2" depart="2">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="p3" depart="3">
+    <param key="rerouter" value="true"/>
+    <walk edges="EC CW"/>
+  </person>
+  <person id="p4" depart="4">
+    <param key="rerouter" value="true"/>
+    <walk edges="SC CN"/>
+  </person>
+  <person id="p5" depart="6">
+    <param key="rerouter" value="true"/>
+    <walk edges="CE EC"/>
+  </person>
+</routes>

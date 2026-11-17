@@ -201,12 +201,16 @@ fn mse2_reset(d: &mut MSDetectorFileOutput) {
 fn mse2_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
     unsafe { (*mse2_of(d)).detector_update(step) }
 }
+fn mse2_clear_state(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*mse2_of(d)).clear_state(step) }
+}
 
 static MSE2_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
     write_xml_output: mse2_write_xml_output,
     write_xml_detector_prolog: mse2_write_xml_detector_prolog,
     reset: mse2_reset,
     detector_update: mse2_detector_update,
+    clear_state: mse2_clear_state,
 };
 
 impl MSE2Collector {
