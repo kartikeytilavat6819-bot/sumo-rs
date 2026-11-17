@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:41.189480-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="tools/oracle/cases/city_karlsruhe_tram/input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/net.net.xml"/>
+        <ptstop-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/ptstop.xml"/>
+        <ptline-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/ptline.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <trainStop id="12529534369" name="Marktplatz (Pyramide U)" lane="1011457787#0_0" startPos="47.79" endPos="72.79" friendlyPos="true" lines="S1 S11">
+        <access lane="1025923764#6_0" pos="21.57" length="18.98" friendlyPos="1"/>
+        <access lane="1025923764#7_0" pos="7.31" length="3.48" friendlyPos="1"/>
+        <access lane="1112558721_0" pos="0.00" length="16.80" friendlyPos="1"/>
+        <access lane="311579786#1_0" pos="9.16" length="7.20" friendlyPos="1"/>
+        <access lane="610022525_0" pos="29.33" length="20.49" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="12529534370" name="Marktplatz (Pyramide U)" lane="1011457785#0_0" startPos="0.00" endPos="79.63" friendlyPos="true" lines="S4 S7 S8 S51">
+        <access lane="1377279774_0" pos="0.00" length="15.06" friendlyPos="1"/>
+        <access lane="1377279775#0_0" pos="0.00" length="15.03" friendlyPos="1"/>
+        <access lane="1377279775#4_0" pos="1.54" length="15.59" friendlyPos="1"/>
+        <access lane="1377279776_0" pos="0.00" length="17.27" friendlyPos="1"/>
+        <access lane="3533955#2_0" pos="6.01" length="13.22" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="12529534373" name="Kronenplatz (U)" lane="1011837439#1_0" startPos="217.10" endPos="417.10" friendlyPos="true" lines="S51 S5 S7 S8 S4"/>
+    <trainStop id="12529534374" name="Kronenplatz (U)" lane="317190010#2_0" startPos="111.98" endPos="136.98" friendlyPos="true" lines="S2 1"/>
+    <trainStop id="2640942878" name="Marktplatz (Pyramide U)" lane="1011457785#0_0" startPos="48.48" endPos="73.48" friendlyPos="true" lines="S1 S11 S5">
+        <access lane="1136489636_0" pos="0.20" length="11.60" friendlyPos="1"/>
+        <access lane="1377279773_0" pos="0.00" length="14.57" friendlyPos="1"/>
+        <access lane="1377279775#3_0" pos="0.16" length="12.90" friendlyPos="1"/>
+        <access lane="1377279776_0" pos="0.00" length="11.70" friendlyPos="1"/>
+        <access lane="610022526#0_0" pos="0.00" length="14.84" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="3234308913" name="Marktplatz (Kaiserstraße U)" lane="1011837440_0" startPos="75.90" endPos="100.90" friendlyPos="true" lines="S5 S51">
+        <access lane="-1165346561#0_0" pos="41.13" length="0.65" friendlyPos="1"/>
+        <access lane="1112558729_0" pos="0.00" length="13.51" friendlyPos="1"/>
+        <access lane="1165346561#0_0" pos="58.34" length="3.65" friendlyPos="1"/>
+        <access lane="1184513080_0" pos="14.69" length="11.53" friendlyPos="1"/>
+        <access lane="1244558691_0" pos="0.00" length="13.85" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="9332104958" name="Marktplatz (Pyramide U)" lane="1011457787#0_0" startPos="0.00" endPos="80.10" friendlyPos="true" lines="S7 S8 S4 S5 S51">
+        <access lane="1025923764#6_0" pos="15.20" length="2.62" friendlyPos="1"/>
+        <access lane="1025923764#7_0" pos="0.00" length="17.42" friendlyPos="1"/>
+        <access lane="1112558721_0" pos="0.00" length="14.46" friendlyPos="1"/>
+        <access lane="366564225_0" pos="4.79" length="14.70" friendlyPos="1"/>
+        <access lane="610022552_0" pos="1.70" length="14.39" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="9332104960" name="Marktplatz (Kaiserstraße U)" lane="1374086602_0" startPos="73.65" endPos="98.65" friendlyPos="true" lines="S51 S5">
+        <access lane="-1165346561#2_0" pos="38.50" length="5.52" friendlyPos="1"/>
+        <access lane="1025923756#2_0" pos="7.92" length="8.88" friendlyPos="1"/>
+        <access lane="1025923769_0" pos="0.00" length="7.72" friendlyPos="1"/>
+        <access lane="1025923771_0" pos="0.30" length="8.88" friendlyPos="1"/>
+        <access lane="1165346561#2_0" pos="13.05" length="2.52" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="9332240334" name="Kronenplatz (U)" lane="1011837439#1_0" startPos="373.28" endPos="398.28" friendlyPos="true" lines="S2 NL1 1"/>
+    <trainStop id="9332240335" name="Kronenplatz (U)" lane="317190010#2_0" startPos="0.00" endPos="151.08" friendlyPos="true" lines="S5 S4 S7 S8 S51"/>
+    <trainStop id="9458813662" name="Marktplatz (Kaiserstraße U)" lane="1011837440_0" startPos="67.00" endPos="92.00" friendlyPos="true" lines="S1 S11 S2 1 NL1">
+        <access lane="-1165346561#0_0" pos="28.48" length="0.66" friendlyPos="1"/>
+        <access lane="1112558728_0" pos="16.21" length="30.12" friendlyPos="1"/>
+        <access lane="1165346561#0_0" pos="70.99" length="3.66" friendlyPos="1"/>
+        <access lane="1184513080_0" pos="14.69" length="29.33" friendlyPos="1"/>
+        <access lane="1244558691_0" pos="0.00" length="29.28" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="9458813716" name="Marktplatz (Kaiserstraße U)" lane="1374086602_0" startPos="60.75" endPos="85.75" friendlyPos="true" lines="S1 S11 S2 NL1 1">
+        <access lane="-1165346561#1_0" pos="0.00" length="6.35" friendlyPos="1"/>
+        <access lane="-1165346561#2_0" pos="51.55" length="7.16" friendlyPos="1"/>
+        <access lane="1165346561#1_0" pos="13.39" length="3.98" friendlyPos="1"/>
+        <access lane="1165346561#2_0" pos="0.00" length="5.18" friendlyPos="1"/>
+        <access lane="620692206_0" pos="6.85" length="9.49" friendlyPos="1"/>
+    </trainStop>
+</additional>

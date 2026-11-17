@@ -286,7 +286,8 @@ impl MSDetectorControl {
         }
         for (_, item) in self.myMeanData.iter() {
             for md in item.iter() {
-                md.m().detector_update(step);
+                // virtual md->detectorUpdate(step): dispatch through the detector table (subclass overrides)
+                md.m().base.detector_update(step);
             }
         }
     }
