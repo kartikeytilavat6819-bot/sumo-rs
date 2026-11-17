@@ -7,6 +7,9 @@ param(
     [string]$Vm = ""
 )
 $ErrorActionPreference = "Continue"
+# user's order: only the personal account, never the work account
+$env:CLOUDSDK_CORE_ACCOUNT = "kartikeytilavat6819@gmail.com"
+$env:CLOUDSDK_CORE_PROJECT = "project-b17b0335-3081-4c61-89b"
 # two VMs; a branch always goes to the same one so its incremental build stays warm (wave2 = lead -> sumo-gate)
 $vms = @(@{ n = "sumo-gate"; z = "us-central1-a" }, @{ n = "sumo-gate2"; z = "us-central1-b" })
 if (-not $Vm) { $Vm = if ($Branch -eq "wave2") { "sumo-gate" } else { $vms[([int[]][char[]]$Branch | Measure-Object -Sum).Sum % 2].n } }

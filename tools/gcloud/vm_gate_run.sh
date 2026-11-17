@@ -2,10 +2,10 @@
 # Runs on the gate VM as user gate: gate one snapshot (same steps as tools/kaggle/batch_kernel.py) into stdout.
 # Usage: vm_gate_run.sh <snapshot.tgz> "<branch> <sha>"
 set -u
-# 6 slots per VM (run_all is single-threaded, so one gate leaves 15 cores idle; 62 GB RAM); each slot has its own tree + target
+# 8 slots per VM (run_all is single-threaded, so one gate leaves 15 cores idle; 62 GB RAM); each slot has its own tree + target
 slot=""
 while [ -z "$slot" ]; do
-  for s in 0 1 2 3 4 5; do exec 9>/home/gate/slot$s.lock; if flock -n 9; then slot=$s; break; fi; exec 9>&-; done
+  for s in 0 1 2 3 4 5 6 7; do exec 9>/home/gate/slot$s.lock; if flock -n 9; then slot=$s; break; fi; exec 9>&-; done
   [ -z "$slot" ] && sleep 5
 done
 SRC=/home/gate/s$slot/src NEW=/home/gate/s$slot/new
