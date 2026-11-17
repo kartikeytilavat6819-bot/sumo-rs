@@ -1,6 +1,7 @@
 //! Port of mesosim/MESegment.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
 
 
 // C++ `#define MESO_MIN_SPEED (0.05)` (MESegment.cpp)
@@ -93,10 +94,10 @@ pub struct MESegment {
     pub myFollowerMap: BTreeMap<Ptr<MSEdge>, i32>,
     /// the last headway
     pub myLastHeadway: SUMOTime,
-    /// the mean speed on this segment. Updated at event time or on demand
-    pub myMeanSpeed: f64,
-    /// the time at which myMeanSpeed was last updated
-    pub myLastMeanSpeedUpdate: SUMOTime,
+    /// the mean speed on this segment. Updated at event time or on demand (C++ `mutable`)
+    pub myMeanSpeed: Cell<f64>,
+    /// the time at which myMeanSpeed was last updated (C++ `mutable`)
+    pub myLastMeanSpeedUpdate: Cell<SUMOTime>,
 }
 
 impl std::ops::Deref for MESegment {
@@ -208,8 +209,8 @@ impl MESegment {
             myNumVehicles: 0,
             myFollowerMap: BTreeMap::new(),
             myLastHeadway: time2steps(-1.0),
-            myMeanSpeed: speed,
-            myLastMeanSpeedUpdate: SUMOTIME_MIN,
+            myMeanSpeed: Cell::new(speed),
+            myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
         };
 
         let lanes = parent.get_lanes();
@@ -312,7 +313,7 @@ impl MESegment {
         if self.myQueues.len() == 1 {
             let laneScale = capacity / self.myLength;
             self.myQueueCapacity = capacity;
-            self.myTau_length = (time2steps(1.0) as f64) / max2(MESO_MIN_SPEED, self.myMeanSpeed) / laneScale;
+            self.myTau_length = (time2steps(1.0) as f64) / max2(MESO_MIN_SPEED, self.myMeanSpeed.get()) / laneScale;
             // Eissfeldt p. 90 and 151 ff.
             self.myTau_ff = ((edgeType.tauff as f64) / laneScale) as SUMOTime;
             self.myTau_fj = ((edgeType.taufj as f64) / laneScale) as SUMOTime;
@@ -743,30 +744,27 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self, useCache: bool) -> f64 {
-        // C++ const method that updates the cache (mutable members): mutate through the Ptr
-        let this_ptr = Ptr::new(self);
-        let this = this_ptr.m();
         let currentTime = MSNet::get_instance().get_current_time_step();
-        if currentTime != this.myLastMeanSpeedUpdate || !useCache {
-            this.myLastMeanSpeedUpdate = currentTime;
+        if currentTime != self.myLastMeanSpeedUpdate.get() || !useCache {
+            self.myLastMeanSpeedUpdate.set(currentTime);
             let mut v: f64 = 0.;
             let mut count: i32 = 0;
-            for q in this.myQueues.iter() {
-                let tau = if q.get_occupancy() < this.myJamThreshold { this.myTau_ff } else { this.myTau_jf };
+            for q in self.myQueues.iter() {
+                let tau = if q.get_occupancy() < self.myJamThreshold { self.myTau_ff } else { self.myTau_jf };
                 let mut earliestExitTime = currentTime;
                 count += q.size();
                 for veh in q.get_vehicles().iter().rev() {
                     v += veh.get_conservative_speed(&mut earliestExitTime); // earliestExitTime is updated!
-                    earliestExitTime += this.tau_with_veh_length(tau, veh.get_vehicle_type().get_length_with_gap(), veh.get_vehicle_type().get_car_follow_model().get_headway_time());
+                    earliestExitTime += self.tau_with_veh_length(tau, veh.get_vehicle_type().get_length_with_gap(), veh.get_vehicle_type().get_car_follow_model().get_headway_time());
                 }
             }
             if count == 0 {
-                this.myMeanSpeed = this.myEdge.get_speed_limit();
+                self.myMeanSpeed.set(self.myEdge.get_speed_limit());
             } else {
-                this.myMeanSpeed = v / (count as f64);
+                self.myMeanSpeed.set(v / (count as f64));
             }
         }
-        this.myMeanSpeed
+        self.myMeanSpeed.get()
     }
 
     /// C++: `void MESegment::resetCachedSpeeds()`
@@ -777,7 +775,7 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn reset_cached_speeds(&mut self) {
-        self.myLastMeanSpeedUpdate = SUMOTIME_MIN;
+        self.myLastMeanSpeedUpdate.set(SUMOTIME_MIN);
     }
 
     /// C++: `double MESegment::getMeanSpeed() const` [const]
@@ -2097,8 +2095,8 @@ impl MESegment {
             myNumVehicles: 0,
             myFollowerMap: BTreeMap::new(),
             myLastHeadway: 0,
-            myMeanSpeed: 0.,
-            myLastMeanSpeedUpdate: SUMOTIME_MIN,
+            myMeanSpeed: Cell::new(0.),
+            myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
         }
     }
 

@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
+use std::cell::RefCell;
 use std::cmp::Reverse;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::string_utils;
@@ -71,8 +72,8 @@ pub struct MSInductLoop {
     /// Leave-time of the last vehicle detected [s]
     pub myLastLeaveTime: f64,
     /// extrapolated leave times for meso vehicle
-    pub myNextMesoLeaveTimes: MSInductLoop_TimeQueue,
-    pub myLastMesoLeaveTimes: MSInductLoop_TimeQueue,
+    pub myNextMesoLeaveTimes: RefCell<MSInductLoop_TimeQueue>,
+    pub myLastMesoLeaveTimes: RefCell<MSInductLoop_TimeQueue>,
     /// overrides the time since last detection
     pub myOverrideTime: f64,
     /// records the time at which overrideTimeSinceDetection was activated
@@ -198,8 +199,8 @@ impl MSInductLoop {
             myNeedLock: needLocking || MSGlobals::num_sim_threads() > 1,
             // initialize in a way which doesn't impact actualted traffic lights at simulation start (yet doesn't look ugly in the outputs)
             myLastLeaveTime: -3600.,
-            myNextMesoLeaveTimes: MSInductLoop_TimeQueue::default(),
-            myLastMesoLeaveTimes: MSInductLoop_TimeQueue::default(),
+            myNextMesoLeaveTimes: RefCell::new(MSInductLoop_TimeQueue::default()),
+            myLastMesoLeaveTimes: RefCell::new(MSInductLoop_TimeQueue::default()),
             myOverrideTime: -1.,
             myOverrideEntryTime: -1.,
             myEnteredVehicleNumber: 0,
@@ -335,7 +336,7 @@ impl MSInductLoop {
                 let onSegTime = mesoveh.m().get_event_time() - mesoveh.m().get_last_entry_time();
                 // extrapolate movement
                 let exLeaveTime = mesoveh.m().get_last_entry_time() + ((onSegTime as f64) * self.mySegmentPos / seg.m().get_length()) as SUMOTime;
-                self.myNextMesoLeaveTimes.push(Reverse(exLeaveTime));
+                self.myNextMesoLeaveTimes.borrow_mut().push(Reverse(exLeaveTime));
             }
             return true;
         }
@@ -528,9 +529,9 @@ impl MSInductLoop {
                 let inLeaveTime = mesoveh.m().get_event_time() - time2steps((seg.m().get_length() - self.mySegmentPos - mesoveh.m().get_length()) / self.myLane.get_speed_limit());
                 let q = seg.m().get_queue(mesoveh.m().get_que_index()).clone();
                 if q.len() > 1 && self.base2.vehicle_applies(&q[q.len() - 2].m().base.base.base) {
-                    self.myLastMesoLeaveTimes.push(Reverse(inLeaveTime + time2steps(seg.m().get_last_headway_seconds())));
+                    self.myLastMesoLeaveTimes.borrow_mut().push(Reverse(inLeaveTime + time2steps(seg.m().get_last_headway_seconds())));
                 }
-                self.myLastMesoLeaveTimes.push(Reverse(inLeaveTime));
+                self.myLastMesoLeaveTimes.borrow_mut().push(Reverse(inLeaveTime));
                 self.myEnteredVehicleNumber += 1;
             }
             return false;
@@ -848,14 +849,13 @@ impl MSInductLoop {
             return MSNet::get_instance().get_current_time_step();
         }
         let now = sim_step();
-        if MSGlobals::use_meso_sim() && !self.myNextMesoLeaveTimes.is_empty() && tq_top(&self.myNextMesoLeaveTimes) < now {
-            // the queues are `mutable` in C++, so the discard must reach the stored queues
-            let me = Ptr::new(self);
-            MSInductLoop::discard_old_times(&mut me.m().myNextMesoLeaveTimes, now);
-            let mut last = tq_top(&self.myNextMesoLeaveTimes);
-            if !self.myLastMesoLeaveTimes.is_empty() && tq_top(&self.myLastMesoLeaveTimes) < now {
-                MSInductLoop::discard_old_times(&mut me.m().myLastMesoLeaveTimes, now);
-                last = last.max(tq_top(&self.myLastMesoLeaveTimes));
+        // the queues are `mutable` in C++, so the discard must reach the stored queues
+        if MSGlobals::use_meso_sim() && !self.myNextMesoLeaveTimes.borrow().is_empty() && tq_top(&self.myNextMesoLeaveTimes.borrow()) < now {
+            MSInductLoop::discard_old_times(&mut self.myNextMesoLeaveTimes.borrow_mut(), now);
+            let mut last = tq_top(&self.myNextMesoLeaveTimes.borrow());
+            if !self.myLastMesoLeaveTimes.borrow().is_empty() && tq_top(&self.myLastMesoLeaveTimes.borrow()) < now {
+                MSInductLoop::discard_old_times(&mut self.myLastMesoLeaveTimes.borrow_mut(), now);
+                last = last.max(tq_top(&self.myLastMesoLeaveTimes.borrow()));
             }
             return last;
         }
@@ -1101,8 +1101,8 @@ impl MSInductLoop {
         self.myLastVehicleDataCont.clear();
         self.myVehicleDataCont.clear();
         self.myVehiclesOnDet.clear();
-        self.myNextMesoLeaveTimes = MSInductLoop_TimeQueue::default();
-        self.myLastMesoLeaveTimes = MSInductLoop_TimeQueue::default();
+        *self.myNextMesoLeaveTimes.borrow_mut() = MSInductLoop_TimeQueue::default();
+        *self.myLastMesoLeaveTimes.borrow_mut() = MSInductLoop_TimeQueue::default();
     }
 
     /// C++: `double MSInductLoop::speedSum(double, const MSInductLoop::VehicleData &)` [static, protected]

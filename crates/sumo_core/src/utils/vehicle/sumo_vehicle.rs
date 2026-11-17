@@ -68,6 +68,7 @@ pub struct SUMOVehicleVt {
     pub get_stops: fn(&SUMOVehicle) -> &VecDeque<MSStop>,
     pub get_next_stop: fn(&SUMOVehicle) -> &MSStop,
     pub get_next_stop_mutable: fn(&mut SUMOVehicle) -> &mut MSStop,
+    pub get_parameter_mutable: fn(&mut SUMOVehicle) -> &mut SUMOVehicleParameter,
     pub unregister_waiting: fn(&mut SUMOVehicle),
     pub get_next_stop_parameter: fn(&SUMOVehicle) -> Ptr<SUMOVehicleParameter_Stop>,
     pub get_stop_duration: fn(&SUMOVehicle) -> SUMOTime,
@@ -336,6 +337,10 @@ fn default_get_next_stop_mutable(_: &mut SUMOVehicle) -> &mut MSStop {
     panic!("SUMOVehicle::getNextStopMutable is pure virtual")
 }
 
+fn default_get_parameter_mutable(_: &mut SUMOVehicle) -> &mut SUMOVehicleParameter {
+    panic!("SUMOVehicle::getParameter is pure virtual")
+}
+
 fn default_unregister_waiting(_: &mut SUMOVehicle) {
     panic!("SUMOVehicle::unregisterWaiting is pure virtual")
 }
@@ -501,6 +506,7 @@ pub(crate) static DEFAULT_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_stops: default_get_stops,
     get_next_stop: default_get_next_stop,
     get_next_stop_mutable: default_get_next_stop_mutable,
+    get_parameter_mutable: default_get_parameter_mutable,
     unregister_waiting: default_unregister_waiting,
     get_next_stop_parameter: default_get_next_stop_parameter,
     get_stop_duration: default_get_stop_duration,
@@ -1067,6 +1073,11 @@ impl SUMOVehicle {
     #[allow(unused_variables)]
     pub fn get_next_stop_mutable(&mut self) -> &mut MSStop {
         (self.vt.get_next_stop_mutable)(self)
+    }
+
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        (self.vt.get_parameter_mutable)(self)
     }
 
     /// C++: `void SUMOVehicle::unregisterWaiting()` [virtual, pure virtual]

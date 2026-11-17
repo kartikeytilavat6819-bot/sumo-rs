@@ -434,6 +434,11 @@ impl MSBaseVehicle {
         self.myParameter.get().unwrap()
     }
 
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this owner-based `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
+    }
+
     /// C++: `std::string MSBaseVehicle::getPrefixedParameter(const std::string &, std::string &) const` [const]
     /// retrieve parameters of devices, models and the vehicle itself
     // std::string
@@ -536,7 +541,7 @@ impl MSBaseVehicle {
                 return String::new();
             };
             let attrName = &key[16..];
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.m().get_lane_change_model().get_parameter(attrName)));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.get_lane_change_model_2().get_parameter(attrName)));
             match result {
                 Ok(v) => return v,
                 Err(payload) => {
