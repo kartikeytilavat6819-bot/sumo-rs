@@ -49,6 +49,10 @@ PY
 (cd "$D/build" && make -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; tail -3 "$OUT/make.log")
 echo "RC02 patched: $(grep -c RRTRACE "$D/src/microsim/trigger/MSTriggeredRerouter.cpp") trig, $(grep -c RRTRACE "$D/src/microsim/trigger/MSStoppingPlaceRerouter.cpp") spr"
 ls -l "$D/bin/sumo" | head -2
+echo "RC02 binary strings: $(strings "$D/bin/sumo" | grep -c RRTRACE)"
+find "$D/build" -name 'MSTriggeredRerouter*' -newer "$OUT/none.patch" | head -5
+echo "RC02 objs with RRTRACE: $(grep -rl RRTRACE "$D/build" --include='*.o' 2>/dev/null | head -3)"
+grep -c RRTRACE "$D/src/microsim/trigger/MSTriggeredRerouter.cpp"; grep -n 'RRTRACE trig' "$D/src/microsim/trigger/MSTriggeredRerouter.cpp" | head -2
 CPP="$D/bin/sumo"
 ARGS="-n $C/ref_simple.net.xml -r $C/routes.rou --no-step-log true --end 400 --additional-files $C/parking.add.xml"
 RR_TRACE=1 timeout 300 "$BIN/sumo" $ARGS --tripinfo-output "$OUT/ours.ti.xml" > "$OUT/ours.log" 2>&1
