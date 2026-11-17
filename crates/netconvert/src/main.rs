@@ -50,7 +50,7 @@ fn fill_options() {
         NIFrame::fill_options(oc, false);
         NBFrame::fill_options(oc, false);
         NWFrame::fill_options(oc, false);
-        // shortcut: RandHelper::insertRandOptions(oc) is not ported, so the random and seed options are missing, upgrade when rand_helper registers them
+        utils::common::rand_helper::insert_rand_options(oc);
     });
 }
 

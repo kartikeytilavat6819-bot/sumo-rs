@@ -2474,12 +2474,14 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn extract_roundabouts(&mut self) -> i32 {
-        let mut candidateEdges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        // determinism: C++ std::set<NBEdge*> orders candidates by heap address, which cannot be reproduced;
+        // we keep the myEdges (edge id) order that C++ feeds into that set, so no reordering happens
+        let mut candidateEdges: Vec<Ptr<NBEdge>> = Vec::new();
         let roundabout = NBEdge_JunctionPriority::ROUNDABOUT as i32;
         for edge in self.myEdges.values() {
             let e = *edge;
             if e.m().get_junction_priority(e.m().get_to_node()) == roundabout || e.m().get_junction_priority(e.m().get_from_node()) == roundabout {
-                candidateEdges.insert(e);
+                candidateEdges.push(e);
             }
         }
         let mut visited: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
