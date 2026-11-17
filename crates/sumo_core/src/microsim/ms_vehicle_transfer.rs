@@ -28,7 +28,8 @@ impl MSVehicleTransfer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // destructor: the myVehicles Vec drops with the struct
+        // myInstance = nullptr; the myVehicles Vec drops with the struct
+        MSVehicleTransfer_MY_INSTANCE.with(|cell| cell.set(Ptr::null()));
     }
 
     /// C++: `void MSVehicleTransfer::add(const SUMOTime, MSVehicle *)`
@@ -212,7 +213,7 @@ impl MSVehicleTransfer {
     //                             desc.myProceedTime = time + TIME2STEPS(e->getCurrentTravelTime(TeleportMinSpeed));
     //                         } else {
     //                             WRITE_WARNINGF(TL("Vehicle '%' teleports beyond arrival edge '%', time=%."), desc.myVeh->getID(), e->getID(), time2string(time));
-    //                             desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED);
+    //                             desc.myVeh->leaveLane(MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED);
     //                             MSNet::getInstance()->getVehicleControl().scheduleVehicleRemoval(desc.myVeh);
     //                             i = vehInfos.erase(i);
     //                         }
@@ -289,8 +290,7 @@ impl MSVehicleTransfer {
                     MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::ENDING_PARKING, "");
                     lane.m().remove_parking(Ptr::from_mut(&mut desc.myVeh.m().base));
                     // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre
-                    // shortcut: MSGlobals::gModelParkingManoeuver not ported, treated as false, upgrade when ms_globals statics are ported
-                    let gModelParkingManoeuver = false;
+                    let gModelParkingManoeuver = crate::microsim::ms_globals::model_parking_manoeuver();
                     if gModelParkingManoeuver && desc.myVeh.m().set_exit_manoeuvre() {
                         MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::MANEUVERING, "");
                     }
@@ -301,8 +301,7 @@ impl MSVehicleTransfer {
                     desc.myVeh.m().work_on_idle_reminders();
                     if !desc.myVeh.signal_set(MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 | MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32) {
                         // signal wish to re-enter the road
-                        // shortcut: MSGlobals::gLefthand not ported, treated as false, upgrade when ms_globals statics are ported
-                        let gLefthand = false;
+                        let gLefthand = crate::microsim::ms_globals::lefthand();
                         desc.myVeh.m().switch_on_signal(if gLefthand { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_RIGHT as i32 } else { MSVehicle_Signalling::VEH_SIGNAL_BLINKER_LEFT as i32 });
                         if !pa.is_null() {
                             // update freePosition so other vehicles can help with insertion
@@ -346,14 +345,13 @@ impl MSVehicleTransfer {
                         desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
                     } else if desc.myProceedTime < time {
                         if desc.myVeh.succ_edge(1).is_null() {
-                            // shortcut: typeid(MSDevice_Taxi) cannot be expressed (get_device takes an unmapped type_info), taxis are not special-cased, upgrade when std::type_info is ported
-                            let isTaxi = false;
+                            let isTaxi = !desc.myVeh.get_device("taxi").is_null();
                             if isTaxi {
                                 // never teleport a taxi beyond the end of it's route
                                 desc.myProceedTime = time + time2steps(e.get_current_travel_time(MSVehicleTransfer_TeleportMinSpeed));
                             } else {
                                 write_warning(&format!("Vehicle '{}' teleports beyond arrival edge '{}', time={}.", desc.myVeh.get_id(), e.get_id(), time2string(time)));
-                                desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED, Ptr::null());
+                                desc.myVeh.m().leave_lane(MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED, Ptr::null());
                                 MSNet::get_instance().m().get_vehicle_control().schedule_vehicle_removal(Ptr::from_mut(&mut desc.myVeh.m().base.base), false);
                                 self.myVehicles.remove(i);
                             }

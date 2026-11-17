@@ -21,6 +21,85 @@ thread_local! {
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
 }
 
+/// C++ `dynamic_cast<MSRailSignal*>(logic)`: the logic type is the runtime tag (MSRailSignal has no subclass)
+fn as_rail_signal(tl: Ptr<MSTrafficLightLogic>) -> Ptr<MSRailSignal> {
+    if !tl.is_null() && tl.get_logic_type() == TrafficLightType::RAIL_SIGNAL {
+        tl.cast::<MSRailSignal>()
+    } else {
+        Ptr::null()
+    }
+}
+
+/// C++ `dynamic_cast<MSRailSignalConstraint_Predecessor*>(c)`: `myIsPredecessor` is set only by that constructor
+fn as_predecessor(c: Ptr<MSRailSignalConstraint>) -> Ptr<MSRailSignalConstraint_Predecessor> {
+    if !c.is_null() && c.myIsPredecessor {
+        c.cast::<MSRailSignalConstraint_Predecessor>()
+    } else {
+        Ptr::null()
+    }
+}
+
+/// C++ `new MSRailSignalConstraint_Predecessor(...)` held as a base pointer; the signal deletes it on removal
+fn new_predecessor(type_: MSRailSignalConstraint_ConstraintType, signal: Ptr<MSRailSignal>, tripId: &str, limit: i32, active: bool) -> Ptr<MSRailSignalConstraint> {
+    let raw = Box::into_raw(Box::new(MSRailSignalConstraint_Predecessor::new(type_, signal, tripId, limit, active)));
+    Ptr::from_mut(unsafe { &mut *raw }).cast::<MSRailSignalConstraint>()
+}
+
+/// C++ `(MSRailSignalConstraint::ConstraintType)type`
+fn constraint_type_from_int(type_: i32) -> MSRailSignalConstraint_ConstraintType {
+    match type_ {
+        0 => MSRailSignalConstraint_ConstraintType::PREDECESSOR,
+        1 => MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR,
+        2 => MSRailSignalConstraint_ConstraintType::FOE_INSERTION,
+        3 => MSRailSignalConstraint_ConstraintType::INSERTION_ORDER,
+        4 => MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR,
+        // shortcut: C++ casts any int to the enum (undefined for values outside the enum), here an unknown type panics, upgrade if the C++ enum grows
+        _ => panic!("shortcut: unknown rail signal constraint type {}", type_),
+    }
+}
+
+/// C++ `TraCISignalConstraint` default-initialised by `std::map::operator[]`
+fn empty_signal_constraint() -> TraCISignalConstraint {
+    TraCISignalConstraint {
+        signalId: String::new(),
+        tripId: String::new(),
+        foeId: String::new(),
+        foeSignal: String::new(),
+        limit: 0,
+        type_: 0,
+        mustWait: false,
+        active: false,
+        param: std::collections::BTreeMap::new(),
+    }
+}
+
+/// C++ `std::map<std::string, TraCISignalConstraint>::operator[]` read
+fn signal_constraint_at(m: &std::collections::BTreeMap<String, TraCISignalConstraint>, key: &str) -> TraCISignalConstraint {
+    m.get(key).cloned().unwrap_or_else(empty_signal_constraint)
+}
+
+/// C++ `std::map<const MSRailSignal*, std::set<std::string>>::count` lookup keyed by the pointer address
+fn on_route_contains(onRoute: &std::collections::HashMap<usize, std::collections::BTreeSet<String>>, key: usize, tripId: &str) -> bool {
+    onRoute.get(&key).map_or(false, |set| set.contains(tripId))
+}
+
+/// C++ `TraCISignalConstraint nc` built from `c` in findConstraintsDeadLocks (the swapped constraint)
+fn swapped_signal_constraint(c: &TraCISignalConstraint) -> TraCISignalConstraint {
+    let mut nc = TraCISignalConstraint {
+        signalId: c.foeSignal.clone(),
+        tripId: c.foeId.clone(),
+        foeId: c.tripId.clone(),
+        foeSignal: c.signalId.clone(),
+        limit: c.limit,
+        type_: c.type_,
+        mustWait: true,
+        active: true,
+        param: c.param.clone(),
+    };
+    TrafficLight::swap_parameters_3(&mut nc);
+    nc
+}
+
 impl TrafficLight {
     /// C++: `std::string TrafficLight::getRedYellowGreenState(const std::string &)` [static]
     // std::string
@@ -358,16 +437,41 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_constraints(tlsID: &str, tripId: &str) -> Vec<TraCISignalConstraint> {
-        // shortcut: needs dynamic_cast to MSRailSignal and MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on those structs in microsim/traffic_lights, upgrade when they are added
-        panic!("shortcut: TrafficLight::getConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        let mut result: Vec<TraCISignalConstraint> = Vec::new();
+        let s = as_rail_signal(Helper::get_tls(tlsID).get_default());
+        if s.is_null() {
+            panic!("{}", format!("'{}' is not a rail signal", tlsID));
+        }
+        for (item_first, item_second) in s.get_constraints().iter() {
+            if tripId != "" && tripId != item_first.as_str() {
+                continue;
+            }
+            for c in item_second.iter() {
+                result.push(Self::build_constraint(tlsID, item_first, *c));
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::getConstraintsByFoe(const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_constraints_by_foe(foeSignal: &str, foeId: &str) -> Vec<TraCISignalConstraint> {
-        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on those structs in microsim/traffic_lights, upgrade when they are added
-        panic!("shortcut: TrafficLight::getConstraintsByFoe needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        let mut result: Vec<TraCISignalConstraint> = Vec::new();
+        for tlsID in Self::get_id_list() {
+            let s = as_rail_signal(Helper::get_tls(&tlsID).get_default());
+            if !s.is_null() {
+                for (item_first, item_second) in s.get_constraints().iter() {
+                    for cand in item_second.iter() {
+                        let pc = as_predecessor(*cand);
+                        if !pc.is_null() && pc.myFoeSignal.get_id() == foeSignal && (foeId == "" || pc.myTripId == foeId) {
+                            result.push(Self::build_constraint(&s.get_id(), item_first, *cand));
+                        }
+                    }
+                }
+            }
+        }
+        result
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getIDList()` [static]
@@ -405,7 +509,7 @@ impl TrafficLight {
         if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
             panic!("{}", format!("'{}' is not a NEMA controller", objectID));
         }
-        tll.base2.get_parameter(key, "")
+        tll.m().get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> TrafficLight::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -430,7 +534,7 @@ impl TrafficLight {
         if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
             panic!("{}", format!("'{}' is not a NEMA controller", objectID));
         }
-        tll.m().base2.set_parameter(key, value);
+        tll.m().set_parameter(key, value);
     }
 
     /// C++: `void TrafficLight::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -493,8 +597,9 @@ impl TrafficLight {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(TrafficLight, TL)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: TrafficLight::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_TL_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int TrafficLight::domainID()` [static]
@@ -584,12 +689,59 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn set_program_logic(tlsID: &str, logic: &TraCILogic) {
+        let vars = Helper::get_tls(tlsID);
         // make sure index and phaseNo are consistent
         if logic.currentPhaseIndex >= logic.phases.len() as i32 {
             panic!("{}", "set program: parameter index must be less than parameter phase number.");
         }
-        // shortcut: creating the MSActuatedTrafficLightLogic / NEMALogic / MSDelayBasedTrafficLightLogic / MSSimpleTrafficLightLogic instances needs the Parameterised::Map argument (Unmapped in ms_traffic_light_logic.rs) and the else branch needs a static_cast to MSSimpleTrafficLightLogic, upgrade when both are typed
-        panic!("shortcut: TrafficLight::setProgramLogic needs typed Parameterised::Map logic constructors and MSSimpleTrafficLightLogic cast")
+        let mut phases: MSTrafficLightLogic_Phases = Vec::new();
+        for phase in logic.phases.iter() {
+            let sumoPhase = Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(phase.duration), &phase.state, &phase.name))));
+            sumoPhase.m().minDuration = time2steps(phase.minDur);
+            sumoPhase.m().maxDuration = time2steps(phase.maxDur);
+            sumoPhase.m().nextPhases = phase.next.clone();
+            phases.push(sumoPhase);
+        }
+        if vars.get_logic(&logic.programID).is_null() {
+            let net = MSNet::get_instance();
+            let tlc = net.m().get_tls_control();
+            let step = logic.currentPhaseIndex;
+            let basePath = "";
+            let nextSwitch = net.get_current_time_step() + phases[0].m().duration;
+            // TraCILogic.type is a raw int: 0 STATIC, 3 ACTUATED, 4 NEMA, 5 DELAYBASED (TrafficLightType values)
+            let tlLogic: Ptr<MSTrafficLightLogic> = match logic.type_ {
+                3 => {
+                    let actuated = Ptr::from_raw(Box::into_raw(Box::new(MSActuatedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath, &Default::default(), &Default::default(), &Default::default()))));
+                    actuated.cast::<MSTrafficLightLogic>()
+                }
+                4 => {
+                    let nema = Ptr::from_raw(Box::into_raw(Box::new(NEMALogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
+                    nema.cast::<MSTrafficLightLogic>()
+                }
+                5 => {
+                    let delayBased = Ptr::from_raw(Box::into_raw(Box::new(MSDelayBasedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
+                    delayBased.cast::<MSTrafficLightLogic>()
+                }
+                0 => {
+                    let simple = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, TrafficLightType::STATIC, &phases, step, nextSwitch, &logic.subParameter))));
+                    simple.cast::<MSTrafficLightLogic>()
+                }
+                _ => panic!("Unsupported traffic light type '{}'", logic.type_),
+            };
+            // a ProcessError from addLogic already carries the message the C++ catch rethrows as TraCIException
+            if !vars.add_logic(&logic.programID, tlLogic, true, true) {
+                panic!("Could not add traffic light logic '{}'", logic.programID);
+            }
+            // XXX pass GUIDetectorBuilder when running with gui
+            let mut db = NLDetectorBuilder::new(net.m());
+            tlLogic.m().init(&mut db);
+            net.m().create_tl_wrapper(tlLogic);
+        } else {
+            let tlLogic = vars.get_logic(&logic.programID).cast::<MSSimpleTrafficLightLogic>();
+            tlLogic.m().set_phases(&phases, logic.currentPhaseIndex);
+            tlLogic.m().base.set_traffic_light_signals(MSNet::get_instance().get_current_time_step());
+            vars.execute_on_switch_actions();
+        }
     }
 
     /// C++: `void TrafficLight::addConstraint(const std::string &, const std::string &, const std::string &, const std::string &, const int, const int)` [static]
@@ -610,16 +762,56 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn add_constraint(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str, type_: i32, limit: i32) {
-        // shortcut: needs dynamic_cast of the default logic to MSRailSignal and of the foe logic, which needs #[repr(C)] on MSRailSignal, upgrade when added
-        panic!("shortcut: TrafficLight::addConstraint needs dynamic_cast to MSRailSignal")
+        let s = as_rail_signal(Helper::get_tls(tlsID).get_default());
+        let s2 = as_rail_signal(Helper::get_tls(foeSignal).get_default());
+        if s.is_null() {
+            panic!("{}", format!("'{}' is not a rail signal", tlsID));
+        }
+        if s2.is_null() {
+            panic!("{}", format!("'{}' is not a rail signal", foeSignal));
+        }
+        let c = new_predecessor(constraint_type_from_int(type_), s2, foeId, limit, true);
+        s.m().add_constraint(tripId, c);
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::swapConstraints(const std::string &, const std::string &, const std::string &, const std::string &)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn swap_constraints(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str) -> Vec<TraCISignalConstraint> {
-        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor and findConstraintsDeadLocks, upgrade when the rail signal structs are repr(C)
-        panic!("shortcut: TrafficLight::swapConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        let s = as_rail_signal(Helper::get_tls(tlsID).get_default());
+        let s2 = as_rail_signal(Helper::get_tls(foeSignal).get_default());
+        if s.is_null() {
+            panic!("{}", format!("'{}' is not a rail signal", tlsID));
+        }
+        if s2.is_null() {
+            panic!("{}", format!("'{}' is not a rail signal", foeSignal));
+        }
+        let mut c: Ptr<MSRailSignalConstraint_Predecessor> = Ptr::null();
+        for (item_first, item_second) in s.get_constraints().iter() {
+            if tripId == item_first.as_str() {
+                for cand in item_second.iter() {
+                    let pc = as_predecessor(*cand);
+                    if !pc.is_null() && pc.myFoeSignal.get_id() == foeSignal && pc.myTripId == foeId {
+                        c = pc;
+                        break;
+                    }
+                }
+                break;
+            }
+        }
+        if !c.is_null() {
+            let limit = c.myLimit;
+            // the two constraints are complementary so we actually remove rather than deactivate to avoid redundant conflict information
+            let type_ = c.get_swapped_type();
+            let swapped = new_predecessor(type_, s, tripId, limit, true);
+            swapped.m().update_parameters(c.get_parameters_map());
+            Self::swap_parameters(swapped);
+            s.m().remove_constraint(tripId, c.cast::<MSRailSignalConstraint>());
+            s2.m().add_constraint(foeId, swapped);
+            Self::find_constraints_dead_locks(foeId, tripId, foeSignal, tlsID)
+        } else {
+            panic!("{}", format!("Rail signal '{}' does not have a constraint for tripId '{}' with foeSignal '{}' and foeId '{}'", tlsID, tripId, foeSignal, foeId));
+        }
     }
 
     /// C++: `void TrafficLight::removeConstraints(const std::string &, const std::string &, const std::string &, const std::string &)` [static]
@@ -650,8 +842,23 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn remove_constraints(tlsID: &str, tripId: &str, foeSignal: &str, foeId: &str) {
-        // shortcut: needs dynamic_cast to MSRailSignal and MSRailSignalConstraint_Predecessor, upgrade when the rail signal structs are repr(C)
-        panic!("shortcut: TrafficLight::removeConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        for tlsCand in Self::get_id_list() {
+            if tlsID == "" || tlsCand == tlsID {
+                let s = as_rail_signal(Helper::get_tls(&tlsCand).get_default());
+                if !s.is_null() {
+                    for (item_first, item_second) in s.get_constraints().iter() {
+                        if tripId == "" || item_first.as_str() == tripId {
+                            for cand in item_second.iter() {
+                                let pc = as_predecessor(*cand);
+                                if !pc.is_null() && (foeId == "" || pc.myTripId == foeId) && (foeSignal == "" || pc.myFoeSignal.get_id() == foeSignal) {
+                                    (*cand).m().set_active(false);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void TrafficLight::updateConstraints(const std::string &, std::string)` [static]
@@ -740,8 +947,79 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn update_constraints(vehID: &str, tripId: String) {
-        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor and the vehicle route/stop iteration, upgrade when those are repr(C)
-        panic!("shortcut: TrafficLight::updateConstraints needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        let veh = Helper::get_vehicle(vehID);
+        let mut curTripId: String = veh.get_parameter().base.get_parameter("tripId", &veh.get_id().to_string());
+        let mut tripId = if tripId == "" { curTripId.clone() } else { tripId };
+
+        // find signals and tripId along the route of veh
+        let mut onRoute: std::collections::HashMap<usize, std::collections::BTreeSet<String>> = std::collections::HashMap::new();
+        let route = veh.get_route().get_edges().clone();
+        let mut routeIt: usize = *veh.get_current_route_edge();
+        for stop in veh.get_stops().iter() {
+            for it in routeIt..stop.edge {
+                let edge = route[it];
+                if edge.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                    if it + 1 != route.len() {
+                        let next = route[it + 1];
+                        let link = edge.get_lanes()[0].get_link_to(next.get_lanes()[0]);
+                        if !link.is_null() && !link.get_tl_logic().is_null() {
+                            let s = as_rail_signal(link.get_tl_logic());
+                            onRoute.entry(s.as_raw() as usize).or_default().insert(curTripId.clone());
+                        }
+                    }
+                }
+            }
+            if stop.pars.tripId != "" {
+                curTripId = stop.pars.tripId.clone();
+            }
+            routeIt = stop.edge;
+        }
+        for it in routeIt..route.len() {
+            let edge = route[it];
+            if edge.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
+                if it + 1 != route.len() {
+                    let next = route[it + 1];
+                    let link = edge.get_lanes()[0].get_link_to(next.get_lanes()[0]);
+                    if !link.is_null() && !link.get_tl_logic().is_null() {
+                        let s = as_rail_signal(link.get_tl_logic());
+                        onRoute.entry(s.as_raw() as usize).or_default().insert(curTripId.clone());
+                    }
+                }
+            }
+        }
+
+        // check relevance for all active contraints
+        let signals: Vec<Ptr<MSRailSignal>> = MSRailSignalControl::get_instance().get_signals().clone();
+        for s in signals.iter() {
+            let s = *s;
+            // record outdated constraints on and by the vehicle
+            let mut onVeh: Vec<Ptr<MSRailSignalConstraint>> = Vec::new();
+            let mut byVeh: Vec<(String, Ptr<MSRailSignalConstraint>)> = Vec::new();
+            for (item_first, item_second) in s.get_constraints().iter() {
+                for cand in item_second.iter() {
+                    let pc = as_predecessor(*cand);
+                    if !pc.is_null() && !pc.cleared() && pc.is_active() {
+                        if item_first.as_str() == tripId.as_str() {
+                            if !on_route_contains(&onRoute, s.as_raw() as usize, &tripId) {
+                                // constraint on our veh no longer relevant
+                                onVeh.push(*cand);
+                            }
+                        } else if pc.myTripId == tripId {
+                            if !on_route_contains(&onRoute, pc.myFoeSignal.as_raw() as usize, &tripId) {
+                                // constraint by our veh no longer relevant
+                                byVeh.push((item_first.clone(), *cand));
+                            }
+                        }
+                    }
+                }
+            }
+            for c in onVeh.iter() {
+                s.m().remove_constraint(&tripId, *c);
+            }
+            for (key, c) in byVeh.iter() {
+                s.m().remove_constraint(key, *c);
+            }
+        }
     }
 
     /// C++: `std::vector<libsumo::TraCILogic> TrafficLight::getCompleteRedYellowGreenDefinition(const std::string &)` [static]
@@ -809,8 +1087,7 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: TrafficLight::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool TrafficLight::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -938,8 +1215,23 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn build_constraint(tlsID: &str, tripId: &str, constraint: Ptr<MSRailSignalConstraint>) -> TraCISignalConstraint {
-        // shortcut: needs dynamic_cast to MSRailSignalConstraint_Predecessor, which needs #[repr(C)] on it in microsim/traffic_lights, upgrade when added
-        panic!("shortcut: TrafficLight::buildConstraint needs dynamic_cast to MSRailSignalConstraint_Predecessor")
+        let mut c = empty_signal_constraint();
+        c.tripId = tripId.to_string();
+        let pc = as_predecessor(constraint);
+        if pc.is_null() {
+            // unsupported constraint
+            c.type_ = -1;
+        } else {
+            c.signalId = tlsID.to_string();
+            c.foeId = pc.myTripId.clone();
+            c.foeSignal = pc.myFoeSignal.get_id().to_string();
+            c.limit = pc.myLimit;
+            c.type_ = pc.get_type() as i32;
+            c.mustWait = !pc.cleared() && pc.is_active();
+            c.active = pc.is_active();
+            c.param = constraint.get_parameters_map().clone();
+        }
+        c
     }
 
     /// C++: `std::vector<libsumo::TraCISignalConstraint> TrafficLight::findConstraintsDeadLocks(const std::string &, const std::string &, const std::string &, const std::string &)` [static, private]
@@ -947,8 +1239,167 @@ impl TrafficLight {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_constraints_dead_locks(foeId: &str, tripId: &str, foeSignal: &str, tlsID: &str) -> Vec<TraCISignalConstraint> {
-        // shortcut: needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor (see buildConstraint), upgrade when the rail signal structs are repr(C)
-        panic!("shortcut: TrafficLight::findConstraintsDeadLocks needs dynamic_cast to MSRailSignal / MSRailSignalConstraint_Predecessor")
+        let mut result: Vec<TraCISignalConstraint> = Vec::new();
+        // find circular constraints (deadlock)
+        // foeId is now constrainted by tripId and assumed to follow tripId on the
+        // same track without possibility of overtaking
+        // we look for a third vehicle foeId2 where
+        // tripId waits for foeId2 and foeId2 waits on foeId
+        let mut constraintsOnTripId: std::collections::BTreeMap<String, TraCISignalConstraint> = std::collections::BTreeMap::new();
+        let mut constrainedByFoeId: std::collections::BTreeMap<String, TraCISignalConstraint> = std::collections::BTreeMap::new();
+        let mut foeId2Cands1: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let mut foeId2Cands2: std::collections::BTreeSet<String> = std::collections::BTreeSet::new();
+        let signals: Vec<Ptr<MSRailSignal>> = MSRailSignalControl::get_instance().get_signals().clone();
+        for s in signals.iter() {
+            let s = *s;
+            for (item_first, item_second) in s.get_constraints().iter() {
+                for cand in item_second.iter() {
+                    let pc = as_predecessor(*cand);
+                    if !pc.is_null() && !pc.cleared() && pc.is_active() {
+                        if item_first.as_str() == tripId {
+                            // tripId waits for foe2
+                            // @could there by more than one constraint on tripId by this foe2?
+                            let tsc = Self::build_constraint(&s.get_id(), item_first, *cand);
+                            constraintsOnTripId.insert(pc.myTripId.clone(), tsc.clone());
+                            foeId2Cands1.insert(pc.myTripId.clone());
+                            for futureFoe2Id in Self::get_future_trip_ids(pc.myTripId.clone()) {
+                                foeId2Cands1.insert(futureFoe2Id.clone());
+                                constraintsOnTripId.insert(futureFoe2Id, tsc.clone());
+                            }
+                        } else if pc.myTripId == foeId {
+                            // foeId2 waits for foe
+                            let tsc = Self::build_constraint(&s.get_id(), item_first, *cand);
+                            constrainedByFoeId.insert(item_first.clone(), tsc.clone());
+                            foeId2Cands2.insert(item_first.clone());
+                            for futureTripId in Self::get_future_trip_ids(item_first.clone()) {
+                                foeId2Cands2.insert(futureTripId.clone());
+                                constrainedByFoeId.insert(futureTripId, tsc.clone());
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if foeId2Cands1.len() > 0 {
+            // foe2 might be constrained implicitly by foe due to following on the same track
+            // in this case foe must be on the route of foe2 between its current position and foeSignal
+
+            // we have to check this first because it also affects foeInsertion
+            // constraints if the foe is already inserted but hasn't yet passed the
+            // signal (cleared == false).
+            let foe = Self::get_vehicle_by_trip_id(foeId.to_string());
+            if !foe.is_null() {
+                let foeEdge = foe.get_edge();
+                let foePos = foe.get_position_on_lane();
+                for foeId2 in foeId2Cands1.iter() {
+                    // tripId waits for foeId2
+                    let foe2 = Self::get_vehicle_by_trip_id(foeId2.clone());
+                    if !foe2.is_null() {
+                        let foe2Route = foe2.get_route().get_edges().clone();
+                        let c = signal_constraint_at(&constraintsOnTripId, foeId2);
+                        let mut foeAhead = false;
+                        let mut i: i32 = foe2.get_route_position();
+                        while i < foe2Route.len() as i32 {
+                            let e = foe2Route[i as usize];
+                            if e == foeEdge
+                                && ((e != foe2.get_edge() || foe2.get_position_on_lane() < foePos)
+                                    || (foe.has_departed() && !foe2.has_departed())
+                                    || (!foe.has_departed() && !foe2.has_departed()
+                                        && (foe.get_parameter().depart < foe2.get_parameter().depart
+                                            || (foe.get_parameter().depart == foe2.get_parameter().depart && foe.get_numerical_id() < foe2.get_numerical_id()))))
+                            {
+                                foeAhead = true;
+                                break;
+                            }
+                            if e.get_to_junction().get_id() == foeSignal || e.get_to_junction().get_id() == c.foeSignal {
+                                break;
+                            }
+                            i += 1;
+                        }
+                        if foeAhead {
+                            // foe cannot wait for foe2 (since it's behind). Instead foe2 must wait for tripId
+                            let nc = swapped_signal_constraint(&c);
+                            result.push(nc);
+                            // let foe wait for foe2
+                            let result2 = Self::swap_constraints(&c.signalId, &c.tripId, &c.foeSignal, &c.foeId);
+                            result.extend(result2);
+
+                            // Other deadlocks might not be valid anymore so we need a fresh recheck for remaining implicit or explicit deadlocks
+                            let result4 = Self::find_constraints_dead_locks(foeId, tripId, foeSignal, tlsID);
+                            result.extend(result4);
+                            return result;
+                        }
+                    }
+                }
+            }
+        }
+
+        if foeId2Cands2.len() > 0 {
+            // tripId might be constrained implicitly by foe2 due to following on the same track
+            // in this case foe2 must be on the route of tripId between its current position and tlsID
+            // if foe2 then waits for foe, deadlock occurs
+
+            let ego = Self::get_vehicle_by_trip_id(tripId.to_string());
+            if !ego.is_null() && (ego.has_departed() || !ego.get_parameter().was_set(VEHPARS_FORCE_REROUTE)) {
+                let mut egoToSignal: std::collections::HashSet<usize> = std::collections::HashSet::new();
+                let egoPos = ego.get_position_on_lane();
+                let egoRoute = ego.get_route().get_edges().clone();
+                let mut i: i32 = ego.get_route_position();
+                while i < egoRoute.len() as i32 {
+                    let e = egoRoute[i as usize];
+                    egoToSignal.insert(e.as_raw() as usize);
+                    if e.get_to_junction().get_id() == tlsID {
+                        break;
+                    }
+                    i += 1;
+                }
+
+                for foeId2 in foeId2Cands2.iter() {
+                    // foeId2 waits for foe
+                    let foe2 = Self::get_vehicle_by_trip_id(foeId2.clone());
+                    if !foe2.is_null() {
+                        if egoToSignal.contains(&(foe2.get_edge().as_raw() as usize)) && (foe2.get_edge() != ego.get_edge() || foe2.get_position_on_lane() > egoPos) {
+                            let c = signal_constraint_at(&constrainedByFoeId, foeId2);
+                            // foe is already waiting for tripId (ego) and should also wait for foeId2
+                            let nc = swapped_signal_constraint(&c);
+                            result.push(nc);
+                            // let foe wait for foe2
+                            let result2 = Self::swap_constraints(&c.signalId, &c.tripId, &c.foeSignal, &c.foeId);
+                            result.extend(result2);
+
+                            // Other deadlocks might not be valid anymore so we need a fresh recheck for remaining implicit or explicit deadlocks
+                            let result4 = Self::find_constraints_dead_locks(foeId, tripId, foeSignal, tlsID);
+                            result.extend(result4);
+                            return result;
+                        }
+                    }
+                }
+            } else if !ego.is_null() {
+                utils::common::msg_handler::write_warning(&format!("Cannot check for all deadlocks on swapConstraints because the route for vehicle '{}' is not computed yet", ego.get_id()));
+            }
+        }
+
+        // find deadlock in explicit constraints
+        let foeIds2: Vec<String> = foeId2Cands1.intersection(&foeId2Cands2).cloned().collect();
+        if foeIds2.len() > 0 {
+            let mut c = signal_constraint_at(&constrainedByFoeId, &foeIds2[0]);
+            if c.type_ == MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR as i32 {
+                // avoid swapping insertion constraint
+                c = signal_constraint_at(&constraintsOnTripId, &foeIds2[0]);
+            }
+            let nc = swapped_signal_constraint(&c);
+            result.push(nc);
+            // let foe wait for foe2
+            let result2 = Self::swap_constraints(&c.signalId, &c.tripId, &c.foeSignal, &c.foeId);
+            result.extend(result2);
+            if foeIds2.len() > 1 {
+                // calling swapConstraints once may result in further swaps so we have to recheck for remaining deadlocks anew
+                let result3 = Self::find_constraints_dead_locks(foeId, tripId, foeSignal, tlsID);
+                result.extend(result3);
+            }
+        }
+        result
     }
 
     /// C++: `SUMOVehicle * TrafficLight::getVehicleByTripId(const std::string)` [static, private]
@@ -965,8 +1416,14 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_vehicle_by_trip_id(tripOrVehID: String) -> Ptr<SUMOVehicle> {
-        // shortcut: needs iteration over MSVehicleControl loaded vehicles, whose loadedVehBegin/loadedVehEnd are still unported in ms_vehicle_control.rs, upgrade when those are ported
-        panic!("shortcut: TrafficLight::getVehicleByTripId needs MSVehicleControl::loadedVehBegin/End")
+        let net = MSNet::get_instance();
+        let c = net.m().get_vehicle_control();
+        for (_, veh) in c.myVehicleDict.iter() {
+            if veh.get_parameter().base.get_parameter("tripId", &veh.get_id().to_string()) == tripOrVehID {
+                return *veh;
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `std::vector<std::string> TrafficLight::getFutureTripIds(const std::string)` [static, private]
@@ -989,8 +1446,22 @@ impl TrafficLight {
     // }
     #[allow(unused_variables)]
     pub fn get_future_trip_ids(vehID: String) -> Vec<String> {
-        // shortcut: needs dynamic_cast SUMOVehicle -> MSBaseVehicle, which needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
-        panic!("shortcut: TrafficLight::getFutureTripIds needs dynamic_cast to MSBaseVehicle")
+        let mut result: Vec<String> = Vec::new();
+        // shortcut: dynamic_cast<MSBaseVehicle*> is not checked at runtime, the vehicle is assumed to be a base vehicle, upgrade with a typed vehicle check
+        let sumoVeh = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&vehID);
+        if !sumoVeh.is_null() {
+            let veh = sumoVeh.cast::<MSBaseVehicle>();
+            let tripId = veh.get_parameter().base.get_parameter("tripId", "");
+            if tripId != "" {
+                result.push(tripId);
+            }
+            for stop in veh.get_stops().iter() {
+                if stop.pars.tripId != "" {
+                    result.push(stop.pars.tripId.clone());
+                }
+            }
+        }
+        result
     }
 
     /// C++: `void TrafficLight::swapParameters(MSRailSignalConstraint *)` [static, private]

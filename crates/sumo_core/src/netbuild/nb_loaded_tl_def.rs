@@ -6,6 +6,49 @@ use utils::common::msg_handler::write_warning;
 /// C++ typedef `std::map<std::string, SignalGroup *> NBLoadedTLDef::SignalGroupCont`
 pub type NBLoadedTLDef_SignalGroupCont = BTreeMap<String, Ptr<NBLoadedTLDef_SignalGroup>>;
 
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn loaded_tl_def_of(d: &NBTrafficLightDefinition) -> &NBLoadedTLDef {
+    Ptr::new(d).cast::<NBLoadedTLDef>().get().unwrap()
+}
+fn loaded_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBLoadedTLDef {
+    Ptr::from_mut(d).cast::<NBLoadedTLDef>().get_mut().unwrap()
+}
+fn loaded_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    loaded_tl_def_of_mut(d).collect_links()
+}
+fn loaded_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    loaded_tl_def_of(d).set_tl_controlling_information()
+}
+fn loaded_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    loaded_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn loaded_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    loaded_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn loaded_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    loaded_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn loaded_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    loaded_tl_def_of_mut(d).get_max_index()
+}
+fn loaded_tl_def_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    loaded_tl_def_of(d).init_needs_cont_relation()
+}
+fn loaded_tl_def_set_participants_information(d: &mut NBTrafficLightDefinition) {
+    loaded_tl_def_of_mut(d).set_participants_information()
+}
+static NB_LOADED_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: loaded_tl_def_collect_links,
+    set_tl_controlling_information: loaded_tl_def_set_tl_controlling_information,
+    remap_removed: loaded_tl_def_remap_removed,
+    replace_removed: loaded_tl_def_replace_removed,
+    my_compute: loaded_tl_def_my_compute,
+    get_max_index: loaded_tl_def_get_max_index,
+    init_needs_cont_relation: loaded_tl_def_init_needs_cont_relation,
+    set_participants_information: loaded_tl_def_set_participants_information,
+    ..DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT
+};
+
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedTLDef` (netbuild/NBLoadedTLDef.h)
 #[repr(C)]
@@ -40,13 +83,16 @@ impl NBLoadedTLDef {
     //     myEdgeCont(&ec) {
     // }
     #[allow(unused_variables)]
-    pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+    pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(NBLoadedTLDef {
             base: NBTrafficLightDefinition::new(id, junctions, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        });
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d.base.register_junctions(junctions);
+        d
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -56,13 +102,16 @@ impl NBLoadedTLDef {
     //     myEdgeCont(&ec) {
     // }
     #[allow(unused_variables)]
-    pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+    pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(NBLoadedTLDef {
             base: NBTrafficLightDefinition::new_2(id, junction, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        });
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d.base.add_node(junction);
+        d
     }
 
     /// C++: `void NBLoadedTLDef::NBLoadedTLDef(const NBEdgeCont &, const std::string &, SUMOTime, TrafficLightType)`
@@ -73,12 +122,14 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(ec: &NBEdgeCont, id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        NBLoadedTLDef {
+        let mut d = NBLoadedTLDef {
             base: NBTrafficLightDefinition::new_3(id, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        }
+        };
+        d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d
     }
 
     /// C++: `void NBLoadedTLDef::~NBLoadedTLDef() noexcept` [virtual]
@@ -271,7 +322,7 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        if !self.myNeedsContRelationReady {
+        if !self.myNeedsContRelationReady.get() {
             panic!("{}", ProcessError::new("myNeedsContRelation was not properly initialized\n"));
         }
     }
@@ -416,7 +467,7 @@ impl NBLoadedTLDef {
         logic.m().close_building(true);
 
         // initialize myNeedsContRelation
-        self.myNeedsContRelation.clear();
+        self.myNeedsContRelation.borrow_mut().clear();
         let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
         let states: Vec<String> = logic.get_phases().iter().map(|p| p.state.clone()).collect();
         let links = Ptr::new(&self.myControlledLinks);
@@ -444,7 +495,7 @@ impl NBLoadedTLDef {
                             c2.get_from_lane(),
                         );
                         if self.forbids(c2.get_from(), c2.get_to(), c1.get_from(), c1.get_to(), true, controlledWithin) || rightTurnConflict {
-                            self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                            self.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(
                                 c1.get_from(),
                                 c1.get_to(),
                                 c2.get_from(),
@@ -455,7 +506,7 @@ impl NBLoadedTLDef {
                 }
             }
         }
-        self.myNeedsContRelationReady = true;
+        self.myNeedsContRelationReady.set(true);
         logic
     }
 
@@ -567,7 +618,53 @@ impl NBLoadedTLDef {
     // }
     #[allow(unused_variables)]
     pub fn collect_links(&mut self) {
-        todo!("port NBLoadedTLDef::collectLinks")
+        self.myControlledLinks.clear();
+        // build the list of links which are controlled by the traffic light
+        // local buffer: pushing into self while iterating myIncomingEdges through self is a borrow conflict
+        let mut controlled: NBConnectionVector = Vec::new();
+        for &incoming in self.myIncomingEdges.iter() {
+            let noLanes = incoming.get_num_lanes();
+            for j in 0..noLanes {
+                let elv = incoming.get_connections_from_lane(j, Ptr::null(), -1);
+                for el in elv {
+                    if !el.toEdge.is_null() {
+                        controlled.push(NBConnection::new_2(incoming, j, el.toEdge, el.toLane, NBCONNECTION_INVALID_TL_INDEX, NBCONNECTION_INVALID_TL_INDEX));
+                    }
+                }
+            }
+        }
+        self.myControlledLinks.extend(controlled);
+
+        // assign tl-indices to myControlledLinks
+        let mut pos: i32 = 0;
+        // local copy of the group pointers: the loop mutates myControlledLinks through self
+        let groups: Vec<Ptr<NBLoadedTLDef_SignalGroup>> = self.mySignalGroups.values().copied().collect();
+        for group in groups {
+            let linkNo = group.get_link_no();
+            for j in 0..linkNo {
+                let conn = group.get_connection(j);
+                debug_assert!(conn.get_from_lane() < 0 || conn.get_from().get_num_lanes() > conn.get_from_lane());
+                let mut tst = NBConnection::new_4(conn);
+                tst.set_tl_index(pos);
+                if tst.check(&*self.myEdgeCont) {
+                    if tst.get_from().may_be_tls_controlled(tst.get_from_lane(), tst.get_to(), tst.get_to_lane()) {
+                        for c in self.myControlledLinks.iter_mut() {
+                            if c.get_tl_index() == NBCONNECTION_INVALID_TL_INDEX
+                                && tst.get_from() == c.get_from()
+                                && tst.get_to() == c.get_to()
+                                && (tst.get_from_lane() < 0 || tst.get_from_lane() == c.get_from_lane())
+                                && (tst.get_to_lane() < 0 || tst.get_to_lane() == c.get_to_lane())
+                            {
+                                c.set_tl_index(pos);
+                            }
+                        }
+                        pos += 1;
+                    }
+                } else {
+                    write_warningf!("Could not set signal on connection (signal: %, group: %)", self.base.base.get_id(), group.get_id());
+                }
+            }
+        }
     }
 
     /// C++: `bool NBLoadedTLDef::mustBrake(const NBConnection &, const std::string &, int) const` [const, protected]
@@ -928,8 +1025,14 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn sort_phases(&mut self) {
-        // determinism: stable sort; C++ std::sort is unstable on equal begin times
-        self.myPhases.sort_by(|p1, p2| p1.myTime.cmp(&p2.myTime));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        let mut order: Vec<usize> = (0..self.myPhases.len()).collect();
+        {
+            let phases = &self.myPhases;
+            utils::common::std_sort::std_sort(&mut order, |i, j| phases[i].myTime < phases[j].myTime);
+        }
+        let mut slots: Vec<Option<SignalGroup_PhaseDef>> = std::mem::take(&mut self.myPhases).into_iter().map(Some).collect();
+        self.myPhases = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
     }
 
     /// C++: `int SignalGroup::getLinkNo() const` [const]

@@ -1,0 +1,15 @@
+<routes>
+    <!-- person trips by car across the net; this net has no sidewalks, so only car legs are routable -->
+    <vType id="car" accel="2.6" decel="4.5" maxSpeed="13.89"/>
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <vehicle id="v0" type="car" route="A" depart="0.00"/>
+    <person id="p0" depart="1.00">
+        <personTrip from="1117867028" to="1117867029#3" modes="car"/>
+    </person>
+    <person id="p1" depart="2.00">
+        <personTrip from="682360554#0" to="1117867029#3" modes="car"/>
+    </person>
+    <person id="p2" depart="4.00">
+        <personTrip from="1117867028" to="1117867029#2" modes="car"/>
+    </person>
+</routes>

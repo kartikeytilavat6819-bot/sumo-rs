@@ -30,7 +30,7 @@ pub struct MSRoute {
     /// The assigned or calculated costs
     pub myCosts: f64,
     /// The estimated savings when rerouting
-    pub mySavings: f64,
+    pub mySavings: std::cell::Cell<f64>,
     /// Whether this route is incomplete and requires rerouting
     pub myReroute: bool,
     /// List of the stops on the parsed route
@@ -59,6 +59,33 @@ impl std::ops::DerefMut for MSRoute {
 thread_local! {
     static MY_DICT: std::cell::RefCell<MSRoute_RouteDict> = std::cell::RefCell::new(BTreeMap::new());
     static MY_DIST_DICT: std::cell::RefCell<MSRoute_RouteDistDict> = std::cell::RefCell::new(BTreeMap::new());
+    static NULL_ROUTE: std::cell::RefCell<Option<ConstMSRoutePtr>> = const { std::cell::RefCell::new(None) };
+}
+
+/// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) };
+    }
+}
+
+/// C++ `route != nullptr` on a `ConstMSRoutePtr` returned by `MSRoute::dictionary`
+pub fn is_null_route(route: &ConstMSRoutePtr) -> bool {
+    NULL_ROUTE.with(|nr| nr.borrow().as_ref().is_some_and(|n| Rc::ptr_eq(n, route)))
+}
+
+/// Stand-in for the nullptr MSRoute::dictionary returns when the id is unknown: `ConstMSRoutePtr`
+/// is a plain `Rc<MSRoute>` and cannot be null, so a leaked empty route is handed out instead.
+// shortcut: C++ nullptr return value cannot be represented through Rc<MSRoute>, callers that must
+// distinguish should check MSRoute::has_route first, upgrade when ConstMSRoutePtr becomes Option
+fn get_null_route() -> ConstMSRoutePtr {
+    NULL_ROUTE.with(|nr| {
+        let mut nr = nr.borrow_mut();
+        if nr.is_none() {
+            *nr = Some(Rc::new(MSRoute::new("", &Vec::new(), true, Ptr::null(), &Vec::new(), -1, -1)));
+        }
+        nr.clone().unwrap()
+    })
 }
 
 impl MSRoute {
@@ -82,8 +109,20 @@ impl MSRoute {
     // {}
     #[allow(unused_variables)]
     pub fn new(id: &str, edges: &ConstMSEdgeVector, isPermanent: bool, c: Ptr<RGBColor>, stops: &StopParVector, replacedTime: SUMOTime, replacedIndex: i32) -> Self {
-        // blocked: StopParVector copy needs SUMOVehicleParameter_Stop: Clone (not derived yet in utils/vehicle/sumo_vehicle_parameter.rs)
-        todo!("port MSRoute::MSRoute")
+        MSRoute {
+            base: Named::new(id),
+            base2: Parameterised::new(),
+            myEdges: edges.clone(),
+            myAmPermanent: isPermanent,
+            myColor: c,
+            myPeriod: 0,
+            myCosts: -1.0,
+            mySavings: std::cell::Cell::new(0.0),
+            myReroute: false,
+            myStops: stops.clone(),
+            myReplacedTime: replacedTime,
+            myReplacedIndex: replacedIndex,
+        }
     }
 
     /// C++: `void MSRoute::~MSRoute() noexcept` [virtual]
@@ -107,7 +146,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn begin(&self) -> MSRouteIterator {
-        todo!("port MSRoute::begin")
+        0
     }
 
     /// C++: `MSRouteIterator MSRoute::end() const` [const]
@@ -118,7 +157,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn end(&self) -> MSRouteIterator {
-        todo!("port MSRoute::end")
+        self.myEdges.len()
     }
 
     /// C++: `int MSRoute::size() const` [const]
@@ -208,7 +247,32 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn write_edge_i_ds(&self, os: &mut OutputDevice, firstIndex: i32, lastIndex: i32, withInternal: bool, svc: SUMOVehicleClass) -> i32 {
-        todo!("port MSRoute::writeEdgeIDs")
+        let mut lastIndex = lastIndex;
+        if lastIndex < 0 {
+            lastIndex = self.myEdges.len() as i32;
+        }
+        let mut internal = 0;
+        // collect the ids first, writing them to the stream one by one is slow
+        let mut ids = String::new();
+        let mut i = firstIndex;
+        while i < lastIndex {
+            ids.push_str(self.myEdges[i as usize].get_id());
+            ids.push(' ');
+            if withInternal && i + 1 < lastIndex {
+                let next = self.myEdges[(i + 1) as usize];
+                let mut edge = self.myEdges[i as usize].get_internal_following_edge(next, svc);
+                // Take into account non-internal lengths until next non-internal edge
+                while !edge.is_null() && edge.is_internal() {
+                    ids.push_str(edge.get_id());
+                    ids.push(' ');
+                    internal += 1;
+                    edge = edge.get_internal_following_edge(next, svc);
+                }
+            }
+            i += 1;
+        }
+        os.write(&ids);
+        internal + lastIndex - firstIndex
     }
 
     /// C++: `bool MSRoute::contains(const MSEdge *const) const` [const]
@@ -288,7 +352,37 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dict_save_state(out: &mut OutputDevice) {
-        todo!("port MSRoute::dict_saveState")
+        MY_DICT.with(|d| {
+            let d = d.borrow();
+            for (_id, r) in d.iter() {
+                out.open_tag_id(SUMO_TAG_ROUTE);
+                out.write_attr(SUMO_ATTR_ID, r.get_id());
+                out.write_attr(SUMO_ATTR_STATE, &r.myAmPermanent);
+                let edges: Vec<&str> = r.myEdges.iter().map(|e| e.get_id()).collect();
+                out.write_attr(SUMO_ATTR_EDGES, &edges.join(" "));
+                if !r.myColor.is_null() {
+                    out.write_attr(SUMO_ATTR_COLOR, &(*r.myColor).to_string());
+                }
+                for stop in r.get_stops().iter() {
+                    stop.write(out, true, true);
+                }
+                out.close_tag("");
+            }
+        });
+        MY_DIST_DICT.with(|d| {
+            let d = d.borrow();
+            for (id, item) in d.iter() {
+                let (dist, permanent) = item;
+                if !dist.get_vals().is_empty() {
+                    out.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION).write_attr(SUMO_ATTR_ID, id);
+                    out.write_attr(SUMO_ATTR_STATE, permanent);
+                    let routesStr = dist.get_vals().iter().map(|route| route.get_id()).collect::<Vec<_>>().join(" ");
+                    out.write_attr(SUMO_ATTR_ROUTES, &routesStr);
+                    out.write_attr(SUMO_ATTR_PROBS, &utils::common::to_string::to_string(dist.get_probs()));
+                    out.close_tag("");
+                }
+            }
+        });
     }
 
     /// C++: `void MSRoute::dict_clearState()` [static]
@@ -368,7 +462,50 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_between(&self, fromPos: f64, toPos: f64, fromLane: Ptr<MSLane>, toLane: Ptr<MSLane>, routePosition: i32) -> f64 {
-        todo!("port MSRoute::getDistanceBetween")
+        debug_assert!(fromPos >= 0. && fromPos <= fromLane.get_length());
+        debug_assert!(toPos >= 0. && toPos <= toLane.get_length());
+        debug_assert!(routePosition >= 0 && routePosition < self.myEdges.len() as i32);
+        debug_assert!(routePosition == 0 || !self.myEdges.first().unwrap().is_internal());
+        let fromEdge = Ptr::new(fromLane.get_edge());
+        let toEdge = Ptr::new(toLane.get_edge());
+        if fromEdge == toEdge && fromPos <= toPos {
+            return toPos - fromPos;
+        }
+        // TODO If fromEdge and toEdge are identical or both are internal and directly connected,
+        // the code does not check whether they are in any relation to the route.
+        if fromEdge.is_internal() {
+            let mut minDist = f64::MAX;
+            for via in fromEdge.get_via_successors(SVC_IGNORING, false) {
+                let succ = if via.1.is_null() { via.0 } else { via.1 };
+                debug_assert!(!succ.is_null());
+                // std::cout << "  recurse fromSucc=" << succ->getID() << "\n";
+                let d = self.get_distance_between(0., toPos, succ.get_lanes()[0], toLane, routePosition);
+                if d != f64::MAX && fromLane.get_length() - fromPos + d < minDist {
+                    minDist = fromLane.get_length() - fromPos + d;
+                }
+            }
+            return minDist;
+        }
+        if toEdge.is_internal() {
+            let pred = toEdge.get_predecessors()[0];
+            debug_assert!(!pred.is_null());
+            // std::cout << "  recurse toPred=" << pred->getID() << "\n";
+            let d = self.get_distance_between(fromPos, pred.get_length(), fromLane, pred.get_lanes()[0], routePosition);
+            return if d == f64::MAX { d } else { toPos + d };
+        }
+        let fromIt = self.myEdges.iter().skip(routePosition as usize).position(|e| *e == fromEdge);
+        let Some(fromIt) = fromIt else {
+            // start not contained in route
+            return f64::MAX;
+        };
+        let fromIt = fromIt + routePosition as usize;
+        let toIt = self.myEdges.iter().skip(fromIt + 1).position(|e| *e == toEdge);
+        let Some(toIt) = toIt else {
+            // destination not contained in route
+            return f64::MAX;
+        };
+        let toIt = toIt + fromIt + 1;
+        self.get_distance_between_2(fromPos, toPos, &fromIt, &toIt, true)
     }
 
     /// C++: `double MSRoute::getDistanceBetween(double, double, const MSRouteIterator &, const MSRouteIterator &, bool) const` [const]
@@ -408,7 +545,36 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn get_distance_between_2(&self, fromPos: f64, toPos: f64, fromEdge: &MSRouteIterator, toEdge: &MSRouteIterator, includeInternal: bool) -> f64 {
-        todo!("port MSRoute::getDistanceBetween")
+        let mut isFirstIteration = true;
+        let mut distance = -fromPos;
+        let mut it = *fromEdge;
+        if fromEdge == toEdge {
+            // destination position is on start edge
+            if fromPos <= toPos {
+                return toPos - fromPos;
+            } else {
+                // we cannot go backwards. Something is wrong here
+                return f64::MAX;
+            }
+        } else if *fromEdge > *toEdge {
+            // we don't visit the edge again
+            return f64::MAX;
+        }
+        while it != self.end() {
+            if it == *toEdge && !isFirstIteration {
+                distance += toPos;
+                break;
+            } else {
+                distance += self.myEdges[it].get_length();
+                if includeInternal && it + 1 != self.end() {
+                    // XXX the length may be wrong if there are parallel internal edges for different vClasses
+                    distance += self.myEdges[it].get_internal_following_length_to(self.myEdges[it + 1], SVC_IGNORING);
+                }
+            }
+            isFirstIteration = false;
+            it += 1;
+        }
+        distance
     }
 
     /// C++: `const RGBColor & MSRoute::getColor() const` [const]
@@ -455,7 +621,7 @@ impl MSRoute {
     //     }
     #[allow(unused_variables)]
     pub fn get_savings(&self) -> f64 {
-        self.mySavings
+        self.mySavings.get()
     }
 
     /// C++: `SUMOTime MSRoute::getReplacedTime() const` [const]
@@ -504,8 +670,8 @@ impl MSRoute {
     //         mySavings = savings;
     //     }
     #[allow(unused_variables)]
-    pub fn set_savings(&mut self, savings: f64) {
-        self.mySavings = savings;
+    pub fn set_savings(&self, savings: f64) {
+        self.mySavings.set(savings);
     }
 
     /// C++: `bool MSRoute::mustReroute() const` [const]
@@ -552,7 +718,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: &str, route: ConstMSRoutePtr) -> bool {
-        todo!("port MSRoute::dictionary")
+        if !MY_DICT.with(|d| d.borrow().contains_key(id)) && !MY_DIST_DICT.with(|d| d.borrow().contains_key(id)) {
+            MY_DICT.with(|d| d.borrow_mut().insert(id.to_string(), route));
+            return true;
+        }
+        false
     }
 
     /// C++: `bool MSRoute::dictionary(const std::string &, RandomDistributor<ConstMSRoutePtr> *const, const bool)` [static]
@@ -570,7 +740,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: &str, routeDist: Ptr<RandomDistributor<ConstMSRoutePtr>>, permanent: bool) -> bool {
-        todo!("port MSRoute::dictionary")
+        if !MY_DICT.with(|d| d.borrow().contains_key(id)) && !MY_DIST_DICT.with(|d| d.borrow().contains_key(id)) {
+            MY_DIST_DICT.with(|d| d.borrow_mut().insert(id.to_string(), (routeDist, permanent)));
+            return true;
+        }
+        false
     }
 
     /// C++: `ConstMSRoutePtr MSRoute::dictionary(const std::string &, SumoRNG *)` [static]
@@ -592,7 +766,28 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: &str, rng: Ptr<SumoRNG>) -> ConstMSRoutePtr {
-        todo!("port MSRoute::dictionary")
+        let route = MY_DICT.with(|d| d.borrow().get(id).cloned());
+        if let Some(r) = route {
+            return r;
+        }
+        let result = MY_DIST_DICT.with(|d| {
+            d.borrow().get(id).and_then(|(dist, _)| {
+                if (*dist).get_overall_prob() == 0.0 {
+                    None
+                } else {
+                    let which = if rng.is_null() { None } else { Some(unsafe { &mut *rng.as_raw() }) };
+                    match (**dist).get(which) {
+                        Ok(r) => Some(r),
+                        // C++ rethrows the ProcessError raised by RandomDistributor::get
+                        Err(e) => std::panic::panic_any(e),
+                    }
+                }
+            })
+        });
+        match result {
+            Some(r) => r,
+            None => get_null_route(),
+        }
     }
 
     /// C++: `bool MSRoute::hasRoute(const std::string &)` [static]
@@ -606,7 +801,7 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn has_route(id: &str) -> bool {
-        todo!("port MSRoute::hasRoute")
+        MY_DICT.with(|d| d.borrow().contains_key(id))
     }
 
     /// C++: `RandomDistributor<ConstMSRoutePtr> * MSRoute::distDictionary(const std::string &)` [static]
@@ -624,7 +819,11 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn dist_dictionary(id: &str) -> Ptr<RandomDistributor<ConstMSRoutePtr>> {
-        todo!("port MSRoute::distDictionary")
+        let dist = MY_DIST_DICT.with(|d| d.borrow().get(id).map(|(p, _)| *p));
+        match dist {
+            Some(d) => d,
+            None => Ptr::null(),
+        }
     }
 
     /// C++: `void MSRoute::clear()` [static]
@@ -642,7 +841,16 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn clear() {
-        todo!("port MSRoute::clear")
+        let dists: Vec<Ptr<RandomDistributor<ConstMSRoutePtr>>> = MY_DIST_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            let v: Vec<Ptr<RandomDistributor<ConstMSRoutePtr>>> = d.values().map(|(p, _)| *p).collect();
+            d.clear();
+            v
+        });
+        for dist in dists {
+            delete_ptr(dist);
+        }
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `void MSRoute::checkDist(const std::string &)` [static]
@@ -664,7 +872,25 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn check_dist(id: &str) {
-        todo!("port MSRoute::checkDist")
+        let found = MY_DIST_DICT.with(|d| {
+            let d = d.borrow();
+            match d.get(id) {
+                Some((dist, permanent)) if !*permanent => {
+                    let rps: Vec<ConstMSRoutePtr> = dist.get_vals().to_vec();
+                    // `it` stays alive until the end of the block, so erase after the loop below
+                    Some((*dist, rps))
+                }
+                _ => None,
+            }
+        });
+        if let Some((dist, rps)) = found {
+            for rp in rps {
+                let r: &MSRoute = &rp;
+                r.check_removal(false);
+            }
+            delete_ptr(dist);
+            MY_DIST_DICT.with(|d| d.borrow_mut().remove(id));
+        }
     }
 
     /// C++: `void MSRoute::insertIDs(std::vector<std::string> &)` [static]
@@ -683,7 +909,17 @@ impl MSRoute {
     // }
     #[allow(unused_variables)]
     pub fn insert_i_ds(into: &mut Vec<String>) {
-        todo!("port MSRoute::insertIDs")
+        into.reserve(MY_DICT.with(|d| d.borrow().len()) + MY_DIST_DICT.with(|d| d.borrow().len()) + into.len());
+        MY_DICT.with(|d| {
+            for i in d.borrow().keys() {
+                into.push(i.clone());
+            }
+        });
+        MY_DIST_DICT.with(|d| {
+            for i in d.borrow().keys() {
+                into.push(i.clone());
+            }
+        });
     }
 
     /// C++: `MSRoute & MSRoute::operator=(const MSRoute &)` [private]
@@ -702,5 +938,45 @@ impl MSRoute {
 impl PartialEq for MSRoute {
     fn eq(&self, other: &Self) -> bool {
         std::ptr::eq(self, other)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn edge(id: &str) -> Ptr<MSEdge> {
+        Ptr::from_raw(Box::into_raw(Box::new(MSEdge::new(id, 0, SumoXMLEdgeFunc::NORMAL, "", "", "", 0, 0.0))))
+    }
+
+    #[test]
+    fn dictionary_roundtrip() {
+        let r: ConstMSRoutePtr = Rc::new(MSRoute::new("t_dict_r", &vec![edge("x")], true, Ptr::null(), &Vec::new(), -1, -1));
+        assert!(!MSRoute::has_route("t_dict_r"));
+        assert!(MSRoute::dictionary("t_dict_r", r.clone()));
+        assert!(!MSRoute::dictionary("t_dict_r", r.clone()));
+        assert!(MSRoute::has_route("t_dict_r"));
+        assert_eq!(MSRoute::dictionary_3("t_dict_r", Ptr::null()).size(), 1);
+        // unknown id: C++ returns nullptr; the Rust stand-in is a leaked empty route
+        assert_eq!(MSRoute::dictionary_3("t_dict_none", Ptr::null()).size(), 0);
+        MSRoute::clear();
+        assert!(!MSRoute::has_route("t_dict_r"));
+        assert!(MSRoute::dist_dictionary("t_dict_r").is_null());
+    }
+
+    #[test]
+    fn write_edge_ids_and_distance() {
+        let r = Box::new(MSRoute::new("t_wrt", &vec![edge("a"), edge("b"), edge("c")], true, Ptr::null(), &Vec::new(), -1, -1));
+        let mut os = OutputDevice::new_string(0);
+        assert_eq!(r.write_edge_i_ds(&mut os, 0, -1, false, SVC_IGNORING), 3);
+        assert_eq!(os.get_string(), "a b c ");
+        // zero-length edges: distance from pos 5 on the first edge to pos 7 on the last = -5 + 7
+        assert_eq!(r.get_distance_between_2(5.0, 7.0, &r.begin(), &2, false), 2.0);
+        // destination position is on the start edge, backwards: cannot go backwards
+        assert_eq!(r.get_distance_between_2(7.0, 5.0, &r.begin(), &0, false), f64::MAX);
+        // we don't visit the edge again
+        assert_eq!(r.get_distance_between_2(0.0, 1.0, &2, &0, false), f64::MAX);
+        // first to last, including the destination position
+        assert_eq!(r.get_distance_between_2(0.0, 1.0, &r.begin(), &2, false), 1.0);
     }
 }

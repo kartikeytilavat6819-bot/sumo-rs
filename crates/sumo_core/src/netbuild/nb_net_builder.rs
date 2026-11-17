@@ -1321,7 +1321,7 @@ impl NBNetBuilder {
             let mut usedStops = self.myPTLineCont.get_served_pt_stops();
             self.myPTStopCont.postprocess(&mut usedStops);
         } else {
-            let numDeletedStops = self.myPTStopCont.cleanup_deleted(&mut self.myEdgeCont, false);
+            let numDeletedStops = self.myPTStopCont.cleanup_deleted(&mut self.myEdgeCont);
             if numDeletedStops > 0 {
                 write_warningf!("Removed % pt stops because they could not be assigned to the network", numDeletedStops);
             }
@@ -1670,7 +1670,7 @@ impl NBNetBuilder {
             district.m().reshift_position(x, y);
         }
         for stop in self.myPTStopCont.get_stops().values() {
-            stop_m(stop).reshift_position(x, y);
+            stop.m().reshift_position(x, y);
         }
         geoConvHelper.move_converted_by(x, y);
     }
@@ -1739,7 +1739,7 @@ impl NBNetBuilder {
             district.m().mirror_x();
         }
         for stop in self.myPTStopCont.get_stops().values() {
-            stop_m(stop).mirror_x();
+            stop.m().mirror_x();
         }
     }
 
@@ -1787,9 +1787,4 @@ impl NBNetBuilder_by_id_sorter {
 
 }
 
-/// shortcut: C++ shared_ptr<NBPTStop> is mutated freely; Rc only gives &T, so the stops are mutated
-/// through the raw pointer the way nbpt_stop_cont.rs does. Replace with RefCell once the owners are ported.
-#[allow(clippy::mut_from_ref)]
-fn stop_m(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
+

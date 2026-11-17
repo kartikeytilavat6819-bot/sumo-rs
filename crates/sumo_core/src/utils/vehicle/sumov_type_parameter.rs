@@ -222,6 +222,30 @@ impl std::ops::DerefMut for SUMOVTypeParameter {
 // C++ static members of SUMOVTypeParameter (port as module-level statics, see AGENTS.md):
 //   static std::set<SumoXMLAttr> SUMOVTypeParameter::AllowedJMAttrs;
 
+/// C++ static `SUMOVTypeParameter::AllowedJMAttrs` (SUMOVTypeParameter.cpp)
+pub fn allowed_jm_attrs() -> BTreeSet<SumoXMLAttr> {
+    [
+        SUMO_ATTR_JM_CROSSING_GAP,
+        SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME,
+        SUMO_ATTR_JM_DRIVE_AFTER_RED_TIME,
+        SUMO_ATTR_JM_DRIVE_RED_SPEED,
+        SUMO_ATTR_JM_IGNORE_KEEPCLEAR_TIME,
+        SUMO_ATTR_JM_IGNORE_FOE_SPEED,
+        SUMO_ATTR_JM_IGNORE_FOE_PROB,
+        SUMO_ATTR_JM_IGNORE_JUNCTION_FOE_PROB,
+        SUMO_ATTR_JM_SIGMA_MINOR,
+        SUMO_ATTR_JM_STOPLINE_GAP,
+        SUMO_ATTR_JM_STOPLINE_GAP_MINOR,
+        SUMO_ATTR_JM_TIMEGAP_MINOR,
+        SUMO_ATTR_JM_EXTRA_GAP,
+        SUMO_ATTR_JM_ADVANCE,
+        SUMO_ATTR_JM_STOPSIGN_WAIT,
+        SUMO_ATTR_JM_ALLWAYSTOP_WAIT,
+    ]
+    .into_iter()
+    .collect()
+}
+
 impl SUMOVTypeParameter {
     /// C++: `void SUMOVTypeParameter::SUMOVTypeParameter(const std::string &, const SUMOVehicleClass)`
     /// Constructor

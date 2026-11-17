@@ -1,6 +1,11 @@
 //! Port of utils/router/CarEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::intermodal_edge::{IntermodalEdge, IntermodalEdgeKind};
+use crate::utils::router::intermodal_trip::IntermodalTrip;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use utils::common::stable_cache::StableCache;
+use utils::common::to_string::to_string;
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> CarEdge::_IntermodalEdge`
 pub type CarEdge__IntermodalEdge<E, L, N, V> = IntermodalEdge<E, L, N, V>;
@@ -14,10 +19,10 @@ pub struct CarEdge<E, L, N, V> {
     /// the starting position for split edges
     pub myStartPos: f64,
     /// The successors available for a given vClass
-    pub myClassesSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
+    pub myClassesSuccessorMap: StableCache<SUMOVehicleClass, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
-    pub myOrigClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
+    pub myOrigClassesViaSuccessorMap: StableCache<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
 
@@ -33,21 +38,26 @@ impl<E, L, N, V> std::ops::DerefMut for CarEdge<E, L, N, V> {
     }
 }
 
-impl<E, L, N, V> CarEdge<E, L, N, V> {
+impl<E, L, N, V> CarEdge<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     /// C++: `void CarEdge::CarEdge<E, L, N, V>(int, const E *, const double)`
     // CarEdge(int numericalID, const E* edge, const double pos = -1.) :
     //         _IntermodalEdge(edge->getID() + "_car" + toString(pos), numericalID, edge, "!car"),
     //         myStartPos(pos >= 0 ? pos : 0.) { }
     #[allow(unused_variables)]
     pub fn new(numericalID: i32, edge: Ptr<E>, pos: f64) -> Self {
-        // shortcut: needs router trait bounds (lead), E::getID is not callable on generic E (and toString(pos) id suffix is not built)
-        let id: String = panic!("shortcut: needs router trait bounds (lead), E::getID");
+        let id = format!("{}_car{}", edge.id(), to_string(&pos));
         Self {
-            base: IntermodalEdge::new(id, numericalID, edge, "!car", -1.),
+            base: IntermodalEdge::new(id, numericalID, edge, "!car", -1.).with_kind(IntermodalEdgeKind::Car),
             myStartPos: if pos >= 0. { pos } else { 0. },
-            myClassesSuccessorMap: BTreeMap::new(),
-            myClassesViaSuccessorMap: BTreeMap::new(),
-            myOrigClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesSuccessorMap: StableCache::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myOrigClassesViaSuccessorMap: StableCache::new(),
             _p: std::marker::PhantomData,
         }
     }
@@ -89,12 +99,18 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
         if vClass == SVC_IGNORING {
             return &self.myFollowingEdges;
         }
-        if let Some(cached) = self.myClassesSuccessorMap.get(&vClass) {
-            // can use cached value
-            return cached;
-        }
-        // shortcut: needs router trait bounds (lead), E::getSuccessors is not callable on generic E; the rebuild also writes the mutable cache (needs Ptr::new(self).m())
-        panic!("shortcut: needs router trait bounds (lead), E::getSuccessors")
+        // C++ `mutable` cache: this vClass is requested for the first time, so rebuild all successors
+        self.myClassesSuccessorMap.get_or_insert_with(vClass, || {
+            // determinism: BTreeSet is only queried for membership, never iterated
+            let classedCarFollowers: BTreeSet<Ptr<E>> = self.get_edge().successors(vClass).iter().copied().collect();
+            let mut list = Vec::new();
+            for &e in self.myFollowingEdges.iter() {
+                if !e.include_in_route(false) || e.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.get_edge()) {
+                    list.push(e);
+                }
+            }
+            list
+        })
     }
 
     /// C++: `const std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>> & CarEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -130,12 +146,21 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
             return &self.myFollowingViaEdges;
         }
         let viaMap = if ignoreTransientPermissions { &self.myOrigClassesViaSuccessorMap } else { &self.myClassesViaSuccessorMap };
-        if let Some(cached) = viaMap.get(&vClass) {
-            // can use cached value
-            return cached;
-        }
-        // shortcut: needs router trait bounds (lead), E::getViaSuccessors is not callable on generic E; the rebuild also writes the mutable cache (needs Ptr::new(self).m())
-        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+        // C++ `mutable` cache: this vClass is requested for the first time, so rebuild all successors
+        viaMap.get_or_insert_with(vClass, || {
+            // determinism: BTreeSet is only queried for membership, never iterated
+            let mut classedCarFollowers: BTreeSet<Ptr<E>> = BTreeSet::new();
+            for pair in self.get_edge().via_successors(vClass, false) {
+                classedCarFollowers.insert(pair.0);
+            }
+            let mut list = Vec::new();
+            for &e in self.myFollowingViaEdges.iter() {
+                if !e.0.include_in_route(false) || e.0.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.0.get_edge()) {
+                    list.push(e);
+                }
+            }
+            list
+        })
     }
 
     /// C++: `bool CarEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -147,8 +172,7 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
         if trip.vehicle.is_null() {
             return true;
         }
-        // shortcut: needs router trait bounds (lead), E::prohibits is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::prohibits")
+        self.get_edge().prohibits(trip.vehicle, true)
     }
 
     /// C++: `double CarEdge::getPartialLength(const IntermodalTrip<E, N, V> *const) const` [const]
@@ -183,8 +207,9 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTravelTimeStatic is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTravelTimeStatic")
+        let full = E::travel_time_static(self.get_edge(), trip.vehicle, time);
+        assert!(full >= 0.);
+        self.get_partial_travel_time(full, trip)
     }
 
     /// C++: `double CarEdge::getTravelTimeAggregated(const IntermodalTrip<E, N, V> *const, double) const` [const]
@@ -194,8 +219,9 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_aggregated(&self, trip: Ptr<IntermodalTrip<E, N, V>>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTravelTimeAggregated is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTravelTimeAggregated")
+        let full = E::travel_time_aggregated(self.get_edge(), trip.vehicle, time);
+        assert!(full >= 0.);
+        self.get_partial_travel_time(full, trip)
     }
 
     /// C++: `double CarEdge::getStartPos() const` [const]
@@ -225,8 +251,8 @@ impl<E, L, N, V> CarEdge<E, L, N, V> {
     #[allow(unused_variables)]
     pub fn get_partial_travel_time(&self, fullTravelTime: f64, trip: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
         let distTravelled = self.get_partial_length(trip);
-        // shortcut: needs router trait bounds (lead), E::getLength is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getLength")
+        assert!(fullTravelTime * distTravelled / self.get_edge().length() >= 0.);
+        fullTravelTime * distTravelled / self.get_edge().length()
     }
 
 }

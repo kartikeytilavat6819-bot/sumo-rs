@@ -48,10 +48,9 @@ fn lane_edge(sp: Ptr<MSStoppingPlace>) -> Ptr<MSEdge> {
     Ptr::from_mut(sp.get_lane().get_edge())
 }
 
-/// shortcut: SUMOVehicle::getRerouteOrigin and getCurrentRouteEdge are Unmapped (not ported), so the
-/// route position is taken as index 0; upgrade when they return route indices.
-fn route_cursor_index(_veh: &SUMOVehicle) -> usize {
-    0
+/// C++ `veh.getCurrentRouteEdge()` as a route index
+fn route_cursor_index(veh: &SUMOVehicle) -> usize {
+    *veh.get_current_route_edge()
 }
 
 /// C++ `MSRoute::getDistanceBetween(double, double, MSRouteIterator, MSRouteIterator, bool)`.
@@ -84,6 +83,61 @@ fn route_distance_between(route: &MSRoute, fromPos: f64, toPos: f64, fromIdx: us
     distance
 }
 
+/// Virtual dispatch table for the pure virtual methods of MSStoppingPlaceRerouter.
+/// Each subclass installs its own table in `vt`; the base methods forward through it.
+pub struct MSStoppingPlaceRerouterVt {
+    pub get_stopping_place_occupancy: fn(&mut MSStoppingPlaceRerouter, Ptr<MSStoppingPlace>, Ptr<SUMOVehicle>) -> f64,
+    pub get_last_step_stopping_place_occupancy: fn(&mut MSStoppingPlaceRerouter, Ptr<MSStoppingPlace>, Ptr<SUMOVehicle>) -> f64,
+    pub get_stopping_place_capacity: fn(&mut MSStoppingPlaceRerouter, Ptr<MSStoppingPlace>) -> f64,
+    pub remember_blocked_stopping_place: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, Ptr<MSStoppingPlace>, bool),
+    pub remember_stopping_place_score: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, Ptr<MSStoppingPlace>, &str),
+    pub reset_stopping_place_scores: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle),
+    pub saw_blocked_stopping_place: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, Ptr<MSStoppingPlace>, bool) -> SUMOTime,
+    pub get_number_stopping_place_reroutes: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle) -> i32,
+    pub set_number_stopping_place_reroutes: fn(&mut MSStoppingPlaceRerouter, &mut SUMOVehicle, i32),
+}
+
+fn base_get_stopping_place_occupancy(_this: &mut MSStoppingPlaceRerouter, _stoppingPlace: Ptr<MSStoppingPlace>, _veh: Ptr<SUMOVehicle>) -> f64 {
+    panic!("MSStoppingPlaceRerouter::getStoppingPlaceOccupancy is pure virtual; subclasses must override it")
+}
+fn base_get_last_step_stopping_place_occupancy(_this: &mut MSStoppingPlaceRerouter, _stoppingPlace: Ptr<MSStoppingPlace>, _veh: Ptr<SUMOVehicle>) -> f64 {
+    panic!("MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy is pure virtual; subclasses must override it")
+}
+fn base_get_stopping_place_capacity(_this: &mut MSStoppingPlaceRerouter, _stoppingPlace: Ptr<MSStoppingPlace>) -> f64 {
+    panic!("MSStoppingPlaceRerouter::getStoppingPlaceCapacity is pure virtual; subclasses must override it")
+}
+fn base_remember_blocked_stopping_place(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle, _stoppingPlace: Ptr<MSStoppingPlace>, _blocked: bool) {
+    panic!("MSStoppingPlaceRerouter::rememberBlockedStoppingPlace is pure virtual; subclasses must override it")
+}
+fn base_remember_stopping_place_score(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle, _place: Ptr<MSStoppingPlace>, _score: &str) {
+    panic!("MSStoppingPlaceRerouter::rememberStoppingPlaceScore is pure virtual; subclasses must override it")
+}
+fn base_reset_stopping_place_scores(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle) {
+    panic!("MSStoppingPlaceRerouter::resetStoppingPlaceScores is pure virtual; subclasses must override it")
+}
+fn base_saw_blocked_stopping_place(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle, _place: Ptr<MSStoppingPlace>, _local: bool) -> SUMOTime {
+    panic!("MSStoppingPlaceRerouter::sawBlockedStoppingPlace is pure virtual; subclasses must override it")
+}
+fn base_get_number_stopping_place_reroutes(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle) -> i32 {
+    panic!("MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
+}
+fn base_set_number_stopping_place_reroutes(_this: &mut MSStoppingPlaceRerouter, _veh: &mut SUMOVehicle, _value: i32) {
+    panic!("MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
+}
+
+/// Table used until a subclass constructor installs its own (C++ base-class vtable).
+static MS_STOPPING_PLACE_REROUTER_BASE_VT: MSStoppingPlaceRerouterVt = MSStoppingPlaceRerouterVt {
+    get_stopping_place_occupancy: base_get_stopping_place_occupancy,
+    get_last_step_stopping_place_occupancy: base_get_last_step_stopping_place_occupancy,
+    get_stopping_place_capacity: base_get_stopping_place_capacity,
+    remember_blocked_stopping_place: base_remember_blocked_stopping_place,
+    remember_stopping_place_score: base_remember_stopping_place_score,
+    reset_stopping_place_scores: base_reset_stopping_place_scores,
+    saw_blocked_stopping_place: base_saw_blocked_stopping_place,
+    get_number_stopping_place_reroutes: base_get_number_stopping_place_reroutes,
+    set_number_stopping_place_reroutes: base_set_number_stopping_place_reroutes,
+};
+
 /// C++ class `MSStoppingPlaceRerouter` (microsim/trigger/MSStoppingPlaceRerouter.h)
 pub struct MSStoppingPlaceRerouter {
     pub myParamPrefix: String,
@@ -91,6 +145,8 @@ pub struct MSStoppingPlaceRerouter {
     pub myEvalParams: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t,
     pub myNormParams: MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t,
     pub myInvertParams: MSStoppingPlaceRerouter_StoppingPlaceParamSwitchMap_t,
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSStoppingPlaceRerouterVt,
 }
 
 impl MSStoppingPlaceRerouter {
@@ -116,6 +172,7 @@ impl MSStoppingPlaceRerouter {
             myEvalParams: BTreeMap::new(),
             myNormParams: BTreeMap::new(),
             myInvertParams: BTreeMap::new(),
+            vt: &MS_STOPPING_PLACE_REROUTER_BASE_VT,
         };
         this.myEvalParams = [
             ("probability".to_string(), 0.),
@@ -591,8 +648,7 @@ impl MSStoppingPlaceRerouter {
                 self.remember_stopping_place_score(vp.m(), destStoppingPlace, "occupied");
                 self.remember_blocked_stopping_place(vp.m(), destStoppingPlace, lane_edge(destStoppingPlace) == vp.get_edge());
             }
-            // shortcut: TIME2STEPS(x) is taken as x * 1000 (1 s step); upgrade when the step length is read from the net
-            let stoppingPlaceMemory = (self.get_weight(vp.m(), "memory".to_string(), 600., false) * 1000.) as SUMOTime;
+            let stoppingPlaceMemory = utils::common::time::time2steps(self.get_weight(vp.m(), "memory".to_string(), 600., false));
             let stoppingPlaceFrustration = self.get_weight(vp.m(), "frustration".to_string(), 100., false);
             let stoppingPlaceKnowledge = self.get_weight(vp.m(), "knowledge".to_string(), 0., false);
 
@@ -654,8 +710,7 @@ impl MSStoppingPlaceRerouter {
                     let mut dummy = self.saw_blocked_stopping_place(vp.m(), stoppingPlaceCandidate.0, true);
                     if dummy < 0 {
                         // randomize among the unvisited
-                        // shortcut: C++ RandHelper::rand(int) draws an integer in [0, 1000000); here a real is drawn and truncated, so the random sequence differs from SUMO
-                        dummy = -((utils::common::rand_helper::rand() * 1000000.) as SUMOTime);
+                        dummy = -(utils::common::rand_helper::with_default(|r| r.rand_int(1000000)) as SUMOTime);
                     }
                     candidates.push((dummy, stoppingPlaceCandidate.0));
                 }
@@ -1057,7 +1112,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited)
+        MSNet::get_instance().get().unwrap().get_router_tt(veh.get_rng_index(), prohibited)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
@@ -1065,7 +1120,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        panic!("MSStoppingPlaceRerouter::getStoppingPlaceOccupancy is pure virtual; subclasses must override it")
+        (self.vt.get_stopping_place_occupancy)(self, stoppingPlace, veh)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
@@ -1073,7 +1128,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_last_step_stopping_place_occupancy(&mut self, stoppingPlace: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
-        panic!("MSStoppingPlaceRerouter::getLastStepStoppingPlaceOccupancy is pure virtual; subclasses must override it")
+        (self.vt.get_last_step_stopping_place_occupancy)(self, stoppingPlace, veh)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceCapacity(MSStoppingPlace *)` [virtual, pure virtual]
@@ -1081,7 +1136,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stopping_place_capacity(&mut self, stoppingPlace: Ptr<MSStoppingPlace>) -> f64 {
-        panic!("MSStoppingPlaceRerouter::getStoppingPlaceCapacity is pure virtual; subclasses must override it")
+        (self.vt.get_stopping_place_capacity)(self, stoppingPlace)
     }
 
     /// C++: `void MSStoppingPlaceRerouter::rememberBlockedStoppingPlace(SUMOVehicle &, const MSStoppingPlace *, bool)` [virtual, pure virtual]
@@ -1089,7 +1144,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, stoppingPlace: Ptr<MSStoppingPlace>, blocked: bool) {
-        panic!("MSStoppingPlaceRerouter::rememberBlockedStoppingPlace is pure virtual; subclasses must override it")
+        (self.vt.remember_blocked_stopping_place)(self, veh, stoppingPlace, blocked)
     }
 
     /// C++: `void MSStoppingPlaceRerouter::rememberStoppingPlaceScore(SUMOVehicle &, MSStoppingPlace *, const std::string &)` [virtual, pure virtual]
@@ -1097,7 +1152,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remember_stopping_place_score(&mut self, veh: &mut SUMOVehicle, place: Ptr<MSStoppingPlace>, score: &str) {
-        panic!("MSStoppingPlaceRerouter::rememberStoppingPlaceScore is pure virtual; subclasses must override it")
+        (self.vt.remember_stopping_place_score)(self, veh, place, score)
     }
 
     /// C++: `void MSStoppingPlaceRerouter::resetStoppingPlaceScores(SUMOVehicle &)` [virtual, pure virtual]
@@ -1105,7 +1160,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_stopping_place_scores(&mut self, veh: &mut SUMOVehicle) {
-        panic!("MSStoppingPlaceRerouter::resetStoppingPlaceScores is pure virtual; subclasses must override it")
+        (self.vt.reset_stopping_place_scores)(self, veh)
     }
 
     /// C++: `SUMOTime MSStoppingPlaceRerouter::sawBlockedStoppingPlace(SUMOVehicle &, MSStoppingPlace *, bool)` [virtual, pure virtual]
@@ -1113,7 +1168,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn saw_blocked_stopping_place(&mut self, veh: &mut SUMOVehicle, place: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
-        panic!("MSStoppingPlaceRerouter::sawBlockedStoppingPlace is pure virtual; subclasses must override it")
+        (self.vt.saw_blocked_stopping_place)(self, veh, place, local)
     }
 
     /// C++: `int MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes(SUMOVehicle &)` [virtual, pure virtual]
@@ -1121,7 +1176,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle) -> i32 {
-        panic!("MSStoppingPlaceRerouter::getNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
+        (self.vt.get_number_stopping_place_reroutes)(self, veh)
     }
 
     /// C++: `void MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes(SUMOVehicle &, int)` [virtual, pure virtual]
@@ -1129,7 +1184,7 @@ impl MSStoppingPlaceRerouter {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_number_stopping_place_reroutes(&mut self, veh: &mut SUMOVehicle, value: i32) {
-        panic!("MSStoppingPlaceRerouter::setNumberStoppingPlaceReroutes is pure virtual; subclasses must override it")
+        (self.vt.set_number_stopping_place_reroutes)(self, veh, value)
     }
 
     /// C++: `StoppingPlaceParamMap_t MSStoppingPlaceRerouter::collectWeights(SUMOVehicle &)` [virtual]
@@ -1293,13 +1348,11 @@ impl MSStoppingPlaceRerouter {
     pub fn determine_reroute_origin(&mut self, veh: &mut SUMOVehicle, insertStopIndex: i32) -> usize {
         let stopCount = veh.get_stops().len() as i32;
         if insertStopIndex == 0 || stopCount == 0 {
-            return route_cursor_index(veh);
+            return veh.get_reroute_origin();
         }
         // if the stop index is too high cap to route end
         let stopIndex = insertStopIndex.min(stopCount - 1) as usize;
-        let _relevantStop = &veh.get_stops()[stopIndex];
-        // shortcut: MSStop::edge is Unmapped, so the stop's route index is unknown and the origin falls back to the route cursor
-        route_cursor_index(veh)
+        veh.get_stops()[stopIndex].edge
     }
 
     /// C++: `void MSStoppingPlaceRerouter::MSStoppingPlaceRerouter()` [private]

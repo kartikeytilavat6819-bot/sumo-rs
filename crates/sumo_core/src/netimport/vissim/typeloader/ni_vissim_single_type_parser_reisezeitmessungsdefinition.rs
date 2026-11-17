@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Reisezeitmessungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Reisezeitmessungsdefinition::NIVissimSingleTypeParser_Reisezeitmessungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Reisezeitmessungsdefinition::~NIVissimSingleTypeParser_Reisezeitmessungsdefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Reisezeitmessungsdefinition {
     // NIVissimSingleTypeParser_Reisezeitmessungsdefinition::~NIVissimSingleTypeParser_Reisezeitmessungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Reisezeitmessungsdefinition::~NIVissimSingleTypeParser_Reisezeitmessungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Reisezeitmessungsdefinition::parse(std::istream &)` [virtual]
@@ -64,8 +64,26 @@ impl NIVissimSingleTypeParser_Reisezeitmessungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Reisezeitmessungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = self.my_read(from);
+        if tag == "aggregationsintervall" {
+            while tag != "DATAEND" {
+                tag = self.read_end_secure(from, "");
+            }
+            return true;
+        }
+
+        while tag != "strecke" {
+            tag = self.my_read(from);
+        }
+        tag = self.my_read(from);
+        while tag != "strecke" {
+            tag = self.my_read(from);
+        }
+        while tag != "DATAEND" {
+            tag = self.read_end_secure(from, "");
+        }
+        true
     }
 
 }

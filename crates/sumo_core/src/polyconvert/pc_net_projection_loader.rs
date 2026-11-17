@@ -55,7 +55,25 @@ impl PCNetProjectionLoader {
     // }
     #[allow(unused_variables)]
     pub fn load(file: &str, scale: f64) {
-        todo!("port PCNetProjectionLoader::load")
+        if !utils::common::file_helpers::is_readable(file) {
+            panic!("{}", utils::tlf!("Could not open net-file '%'.", file));
+        }
+        // build handler and parser
+        let mut handler = PCNetProjectionLoader::new(scale);
+        handler.set_file_name(file);
+        let mut parser = utils::xml::xml_sub_sys::get_sax_reader(true, false);
+        let before = current_millis();
+        utils::common::msg_handler::progress_begin_message(&format!("Parsing network projection from '{}'", file));
+        if !or_panic(parser.parse_first(&mut handler, file)) {
+            panic!("{}", utils::tlf!("Can not read XML-file '%'.", handler.get_file_name()));
+        }
+        // parse
+        while or_panic(parser.parse_next(&mut handler)) && !handler.has_read_all() {}
+        // clean up
+        utils::common::msg_handler::progress_time_message(current_millis() - before);
+        if !handler.has_read_all() {
+            panic!("{}", "Could not find projection parameter in net.");
+        }
     }
 
     /// C++: `void PCNetProjectionLoader::PCNetProjectionLoader(double)` [protected]
@@ -67,7 +85,11 @@ impl PCNetProjectionLoader {
     // }
     #[allow(unused_variables)]
     pub fn new(scale: f64) -> Self {
-        todo!("port PCNetProjectionLoader::PCNetProjectionLoader")
+        PCNetProjectionLoader {
+            base: utils::xml::sumo_sax_handler::new("sumo-network", ""),
+            myFoundLocation: false,
+            myScale: scale,
+        }
     }
 
     /// C++: `void PCNetProjectionLoader::~PCNetProjectionLoader() noexcept` [virtual, protected]
@@ -75,7 +97,7 @@ impl PCNetProjectionLoader {
     // PCNetProjectionLoader::~PCNetProjectionLoader() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PCNetProjectionLoader::~PCNetProjectionLoader")
+        // C++ destructor body is empty; the Rust fields are dropped automatically
     }
 
     /// C++: `bool PCNetProjectionLoader::hasReadAll() const` [const, protected]
@@ -86,7 +108,7 @@ impl PCNetProjectionLoader {
     // }
     #[allow(unused_variables)]
     pub fn has_read_all(&self) -> bool {
-        todo!("port PCNetProjectionLoader::hasReadAll")
+        self.myFoundLocation
     }
 
     /// C++: `void PCNetProjectionLoader::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -111,8 +133,39 @@ impl PCNetProjectionLoader {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port PCNetProjectionLoader::myStartElement")
+        if element != SUMO_TAG_LOCATION {
+            return;
+        }
+        // @todo refactor parsing of location since its duplicated in NLHandler and PCNetProjectionLoader
+        self.myFoundLocation = true;
+        let s: PositionVector = attrs.get::<PositionVector>(SUMO_ATTR_NET_OFFSET, "", &mut self.myFoundLocation, true);
+        let convBoundary: Boundary = attrs.get::<Boundary>(SUMO_ATTR_CONV_BOUNDARY, "", &mut self.myFoundLocation, true);
+        let origBoundary: Boundary = attrs.get::<Boundary>(SUMO_ATTR_ORIG_BOUNDARY, "", &mut self.myFoundLocation, true);
+        let proj: String = attrs.get::<String>(SUMO_ATTR_ORIG_PROJ, "", &mut self.myFoundLocation, true);
+        if self.myFoundLocation {
+            let networkOffset = s[0] + Position::new(utils::options::options_cont::get_float("offset.x"), utils::options::options_cont::get_float("offset.y"));
+            GeoConvHelper::init(&proj, networkOffset, origBoundary, convBoundary, self.myScale);
+        }
     }
 
+}
+
+impl SaxHandler for PCNetProjectionLoader {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        PCNetProjectionLoader::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}
+
+/// SysUtils::getCurrentMillis()
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
 }
 

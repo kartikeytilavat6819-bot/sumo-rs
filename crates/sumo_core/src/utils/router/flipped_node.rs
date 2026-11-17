@@ -1,9 +1,10 @@
 //! Port of utils/router/FlippedNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterNode};
 
 /// C++ typedef `std::vector<const FlippedEdge<E, N, V> *> FlippedNode::ConstFlippedEdgeVector`
-pub type FlippedNode_ConstFlippedEdgeVector = Unmapped /* std::vector<const FlippedEdge<E, N, V> *> */;
+pub type FlippedNode_ConstFlippedEdgeVector<E, N, V> = Vec<Ptr<FlippedEdge<E, N, V>>>;
 
 /// the node type representing nodes used for backward search
 /// C++ class `FlippedNode` (utils/router/FlippedNode.h)
@@ -11,9 +12,9 @@ pub struct FlippedNode<E, N, V> {
     /// The original node
     pub myOriginalNode: Ptr<N>,
     /// The incoming edges
-    pub myIncoming: FlippedNode_ConstFlippedEdgeVector,
+    pub myIncoming: std::cell::OnceCell<FlippedNode_ConstFlippedEdgeVector<E, N, V>>,
     /// The outgoing edges
-    pub myOutgoing: FlippedNode_ConstFlippedEdgeVector,
+    pub myOutgoing: std::cell::OnceCell<FlippedNode_ConstFlippedEdgeVector<E, N, V>>,
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
 
@@ -24,7 +25,12 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         myOriginalNode(originalNode) {}
     #[allow(unused_variables)]
     pub fn new(originalNode: Ptr<N>) -> Self {
-        todo!("port FlippedNode::FlippedNode<E, N, V>")
+        Self {
+            myOriginalNode: originalNode,
+            myIncoming: std::cell::OnceCell::new(),
+            myOutgoing: std::cell::OnceCell::new(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FlippedNode::~FlippedNode<E, N, V>()`
@@ -32,7 +38,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     // ~FlippedNode() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FlippedNode::~FlippedNode<E, N, V>")
+
     }
 
     /// C++: `const Position & FlippedNode::getPosition() const` [const]
@@ -41,8 +47,11 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOriginalNode->getPosition();
     //     }
     #[allow(unused_variables)]
-    pub fn get_position(&self) -> &Position {
-        todo!("port FlippedNode::getPosition")
+    pub fn get_position(&self) -> &Position
+    where
+        N: RouterNode,
+    {
+        self.myOriginalNode.position()
     }
 
     /// C++: `const std::string & FlippedNode::getID() const` [const]
@@ -51,8 +60,11 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOriginalNode->getID();
     //     }
     #[allow(unused_variables)]
-    pub fn get_id(&self) -> &str {
-        todo!("port FlippedNode::getID")
+    pub fn get_id(&self) -> &str
+    where
+        N: RouterNode,
+    {
+        self.myOriginalNode.id()
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getIncoming() const` [const]
@@ -67,8 +79,20 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myIncoming;
     //     }
     #[allow(unused_variables)]
-    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector {
-        todo!("port FlippedNode::getIncoming")
+    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V>
+    where
+        N: RouterNode<Edge = E>,
+        E: RouterEdge<V, Node = N>,
+    {
+        // C++ mutable cache: filled on first use. Routing starts after the network is built, so
+        // caching an empty result matches C++ re-filling an empty vector.
+        self.myIncoming.get_or_init(|| {
+            let mut incoming = Vec::new();
+            for edge in self.myOriginalNode.outgoing().iter() {
+                incoming.push(edge.flipped_routing_edge());
+            }
+            incoming
+        })
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getOutgoing() const` [const]
@@ -83,8 +107,19 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOutgoing;
     //     }
     #[allow(unused_variables)]
-    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector {
-        todo!("port FlippedNode::getOutgoing")
+    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V>
+    where
+        N: RouterNode<Edge = E>,
+        E: RouterEdge<V, Node = N>,
+    {
+        // C++ mutable cache: filled on first use (see get_incoming)
+        self.myOutgoing.get_or_init(|| {
+            let mut outgoing = Vec::new();
+            for edge in self.myOriginalNode.incoming().iter() {
+                outgoing.push(edge.flipped_routing_edge());
+            }
+            outgoing
+        })
     }
 
     /// C++: `const N * FlippedNode::getOriginalNode() const` [const]
@@ -94,7 +129,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_node(&self) -> Ptr<N> {
-        todo!("port FlippedNode::getOriginalNode")
+        self.myOriginalNode
     }
 
 }

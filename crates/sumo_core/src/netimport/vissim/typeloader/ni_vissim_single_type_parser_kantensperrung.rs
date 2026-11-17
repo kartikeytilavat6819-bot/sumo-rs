@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Kantensperrung {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Kantensperrung::NIVissimSingleTypeParser_Kantensperrung")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Kantensperrung::~NIVissimSingleTypeParser_Kantensperrung() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Kantensperrung {
     // NIVissimSingleTypeParser_Kantensperrung::~NIVissimSingleTypeParser_Kantensperrung() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Kantensperrung::~NIVissimSingleTypeParser_Kantensperrung")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Kantensperrung::parse(std::istream &)` [virtual]
@@ -72,9 +72,47 @@ impl NIVissimSingleTypeParser_Kantensperrung {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Kantensperrung::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag: String = vissim_raw_token(from);
+        //
+        let id: String = vissim_raw_token(from);
+        //
+        tag = vissim_raw_token(from);
+        tag = vissim_raw_token(from);
+        let from_node: i32 = crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, false).parse::<i32>().unwrap_or(0);
+        //
+        tag = vissim_raw_token(from);
+        tag = vissim_raw_token(from);
+        let to_node: i32 = crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, false).parse::<i32>().unwrap_or(0);
+        //
+        tag = vissim_raw_token(from);
+        tag = vissim_raw_token(from);
+        let mut edges: Vec<i32> = Vec::new();
+        while tag != "DATAEND" {
+            tag = self.read_end_secure(from, "");
+            if tag != "DATAEND" {
+                edges.push(utils::common::string_utils::to_int(&tag).unwrap_or_else(|e| panic!("{e}")));
+            }
+        }
+        crate::netimport::vissim::tempstructs::ni_vissim_closures::NIVissimClosures::dictionary(&id, from_node, to_node, &mut edges);
+        true
     }
 
+}
+
+/// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token ("" at end of stream)
+fn vissim_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
 }
 

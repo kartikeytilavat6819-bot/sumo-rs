@@ -28,7 +28,7 @@ pub struct MSTransportable {
     pub myAmPerson: bool,
     pub myNumericalID: SUMOTrafficObject_NumericalID,
     pub myRandomSeed: i64,
-    pub myAbortCommand: Ptr<Unmapped /* WrappingCommand<MSTransportable> */>,
+    pub myAbortCommand: Ptr<crate::utils::wrapping_command::WrappingCommand<MSTransportable>>,
 }
 
 impl std::ops::Deref for MSTransportable {
@@ -50,6 +50,173 @@ static MY_CURRENT_NUMERICAL_INDEX: std::sync::atomic::AtomicI64 = std::sync::ato
 const VEHPARS_SPEEDFACTOR_SET: i64 = 2 << 24;
 const VEHPARS_JUNCTIONMODEL_PARAMS_SET: i64 = 2 << 28;
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
+
+// C++ overrides of SUMOTrafficObject in MSTransportable, used by containers (myAmPerson == false); persons use MS_PERSON_VT
+fn ms_container_of(o: &SUMOTrafficObject) -> &MSTransportable {
+    Ptr::new(o).cast::<MSTransportable>().get().unwrap()
+}
+fn ms_container_of_mut(o: &mut SUMOTrafficObject) -> &mut MSTransportable {
+    Ptr::from_mut(o).cast::<MSTransportable>().get_mut().unwrap()
+}
+fn ms_container_is_vehicle(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn ms_container_is_person(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn ms_container_is_container(_: &SUMOTrafficObject) -> bool {
+    true
+}
+fn ms_container_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    ms_container_of(o).get_parameter()
+}
+fn ms_container_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_container_of(o).get_edge()
+}
+fn ms_container_get_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    ms_container_of(o).get_lane()
+}
+fn ms_container_get_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_speed()
+}
+fn ms_container_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
+    ms_container_of(o).get_position(offset)
+}
+fn ms_container_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    ms_container_of(o).get_numerical_id()
+}
+fn ms_container_get_random_seed(o: &SUMOTrafficObject) -> i64 {
+    ms_container_of(o).get_random_seed()
+}
+fn ms_container_get_vehicle_type(o: &SUMOTrafficObject) -> &MSVehicleType {
+    ms_container_of(o).get_vehicle_type()
+}
+fn ms_container_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    ms_container_of(o).get_v_type_parameter()
+}
+fn ms_container_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    ms_container_of_mut(o).replace_vehicle_type(type_)
+}
+fn ms_container_get_rng(o: &SUMOTrafficObject) -> Ptr<SumoRNG> {
+    ms_container_of(o).get_rng()
+}
+fn ms_container_get_rng_index(o: &SUMOTrafficObject) -> i32 {
+    ms_container_of(o).get_rng_index()
+}
+fn ms_container_is_stopped(o: &SUMOTrafficObject) -> bool {
+    ms_container_of(o).is_stopped()
+}
+fn ms_container_get_current_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_container_of(o).get_current_edge()
+}
+fn ms_container_get_next_edge_ptr(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_container_of(o).get_next_edge_ptr()
+}
+fn ms_container_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    ms_container_of(o).get_upcoming_edge_i_ds()
+}
+fn ms_container_get_back_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
+    ms_container_of(o).get_back_lane()
+}
+fn ms_container_get_route_position(o: &SUMOTrafficObject) -> i32 {
+    ms_container_of(o).get_route_position()
+}
+fn ms_container_get_reroute_destination(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
+    ms_container_of(o).get_reroute_destination()
+}
+fn ms_container_get_slope(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_slope()
+}
+fn ms_container_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_chosen_speed_factor()
+}
+fn ms_container_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    ms_container_of(o).get_v_class()
+}
+fn ms_container_get_max_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_max_speed()
+}
+fn ms_container_get_waiting_time(o: &SUMOTrafficObject, accumulated: bool) -> SUMOTime {
+    ms_container_of(o).get_waiting_time(accumulated)
+}
+fn ms_container_get_acceleration(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_acceleration()
+}
+fn ms_container_get_position_on_lane(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_position_on_lane()
+}
+fn ms_container_get_back_position_on_lane(o: &SUMOTrafficObject, lane: Ptr<MSLane>) -> f64 {
+    ms_container_of(o).get_back_position_on_lane(lane)
+}
+fn ms_container_get_angle(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_angle()
+}
+fn ms_container_has_arrived(o: &SUMOTrafficObject) -> bool {
+    ms_container_of(o).has_arrived()
+}
+fn ms_container_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    ms_container_of(o).get_device(kind)
+}
+fn ms_container_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    ms_container_of_mut(o).replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn ms_container_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
+    ms_container_of(o).get_routing_mode()
+}
+fn ms_container_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    ms_container_of_mut(o).set_routing_mode(value)
+}
+fn ms_container_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
+    ms_container_of(o).get_previous_speed()
+}
+fn ms_container_has_influencer(o: &SUMOTrafficObject) -> bool {
+    ms_container_of(o).has_influencer()
+}
+fn ms_container_is_selected(o: &SUMOTrafficObject) -> bool {
+    ms_container_of(o).is_selected()
+}
+
+static MS_CONTAINER_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: ms_container_is_vehicle,
+    is_person: ms_container_is_person,
+    is_container: ms_container_is_container,
+    get_parameter: ms_container_get_parameter,
+    get_edge: ms_container_get_edge,
+    get_lane: ms_container_get_lane,
+    get_speed: ms_container_get_speed,
+    get_position: ms_container_get_position,
+    get_numerical_id: ms_container_get_numerical_id,
+    get_random_seed: ms_container_get_random_seed,
+    get_vehicle_type: ms_container_get_vehicle_type,
+    get_v_type_parameter: ms_container_get_v_type_parameter,
+    replace_vehicle_type: ms_container_replace_vehicle_type,
+    get_rng: ms_container_get_rng,
+    get_rng_index: ms_container_get_rng_index,
+    is_stopped: ms_container_is_stopped,
+    get_current_edge: ms_container_get_current_edge,
+    get_next_edge_ptr: ms_container_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: ms_container_get_upcoming_edge_i_ds,
+    get_back_lane: ms_container_get_back_lane,
+    get_route_position: ms_container_get_route_position,
+    get_reroute_destination: ms_container_get_reroute_destination,
+    replace_route: ms_container_replace_route,
+    get_slope: ms_container_get_slope,
+    get_chosen_speed_factor: ms_container_get_chosen_speed_factor,
+    get_v_class: ms_container_get_v_class,
+    get_routing_mode: ms_container_get_routing_mode,
+    set_routing_mode: ms_container_set_routing_mode,
+    get_max_speed: ms_container_get_max_speed,
+    get_waiting_time: ms_container_get_waiting_time,
+    get_previous_speed: ms_container_get_previous_speed,
+    get_acceleration: ms_container_get_acceleration,
+    get_position_on_lane: ms_container_get_position_on_lane,
+    get_back_position_on_lane: ms_container_get_back_position_on_lane,
+    get_angle: ms_container_get_angle,
+    has_arrived: ms_container_has_arrived,
+    has_influencer: ms_container_has_influencer,
+    is_selected: ms_container_is_selected,
+    get_device: ms_container_get_device,
+};
 
 impl MSTransportable {
     /// C++: `bool MSTransportable::isPerson() const` [const, virtual]
@@ -237,7 +404,7 @@ impl MSTransportable {
         let numerical_id = MY_CURRENT_NUMERICAL_INDEX.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         // shortcut: C++ stage->init(this) and MSDevice::buildTransportableDevices need the final address of the object, which a
         // constructor returning Self does not have; the caller must run them after boxing, upgrade when constructors return Box/Ptr
-        MSTransportable {
+        let mut t = MSTransportable {
             base: SUMOTrafficObject::new(&pars.id),
             myParameter: pars,
             myVType: vtype,
@@ -249,7 +416,11 @@ impl MSTransportable {
             myNumericalID: numerical_id,
             myRandomSeed: utils::common::rand_helper::murmur3_32(&pars.id, utils::common::rand_helper::with_default(|r| r.orig_seed)) as i64,
             myAbortCommand: Ptr::null(),
+        };
+        if !isPerson {
+            t.base.vt = &MS_CONTAINER_VT;
         }
+        t
     }
 
     /// C++: `void MSTransportable::~MSTransportable() noexcept` [virtual]
@@ -371,7 +542,6 @@ impl MSTransportable {
             accessToStop = self.check_access(prior, true);
         } else if prior.get_stage_type() == MSStageType::WAITING_FOR_DEPART {
             for dev in self.myDevices.clone() {
-                // shortcut: calls the MSMoveReminder base notifyEnter (no virtual dispatch); MSTransportableDevice_FCD override returns false but the result is discarded, upgrade when devices are trait objects
                 dev.m().base2.notify_enter(&mut self.base, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
             }
         }
@@ -438,6 +608,11 @@ impl MSTransportable {
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVehicleParameter {
         &*self.myParameter
+    }
+
+    /// C++ `mutable` parameter members are written through the owner's `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
     }
 
     /// C++: `const MSVehicleType & MSTransportable::getVehicleType() const` [const, virtual]
@@ -680,7 +855,8 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        1.
+        // MSPerson overrides getChosenSpeedFactor(); containers keep the base value 1
+        if self.is_person() { self.base.get_chosen_speed_factor() } else { 1. }
     }
 
     /// C++: `MSStageType MSTransportable::getCurrentStageType() const` [const]
@@ -972,7 +1148,7 @@ impl MSTransportable {
             stage.route_output(self.myAmPerson, os, withRouteLength, previous, withTiming, false);
             previous = *stage;
         }
-        // shortcut: SUMOVehicleParameter::writeParams is not ported yet, so the extra parameters are not written
+        myParameter.write_params(os);
         os.close_tag("");
         os.lf();
     }
@@ -1011,11 +1187,13 @@ impl MSTransportable {
     #[allow(unused_variables)]
     pub fn set_abort_waiting(&mut self, timeout: SUMOTime) {
         if timeout < 0 && !self.myAbortCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the scheduled abort command cannot be descheduled, upgrade when WrappingCommand lands
+            self.myAbortCommand.m().deschedule();
             self.myAbortCommand = Ptr::null();
             return;
         }
-        // shortcut: WrappingCommand<MSTransportable> is not ported, so the abort timeout is not scheduled, upgrade when WrappingCommand lands
+        let cmd = Box::into_raw(Box::new(crate::utils::wrapping_command::WrappingCommand::new(Ptr::from_mut(self), MSTransportable::abort_stage)));
+        self.myAbortCommand = Ptr::from_raw(cmd);
+        MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd as *mut dyn crate::microsim::ms_event_control::Command), MSNet::get_instance().get_current_time_step() + timeout);
     }
 
     /// C++: `SUMOTime MSTransportable::abortStage(SUMOTime)`
@@ -1283,8 +1461,19 @@ impl MSTransportable {
                 stages.pop();
                 tripEndOffset -= 1;
             }
-            // shortcut: the identical-future-route check for walks needs MSStageMoving's route index, which is Unmapped; it is skipped here
-            let abortCurrent = true;
+            let mut abortCurrent = true;
+            // check whether the future route of the current stage is identical to the route
+            if !stages.is_empty() && stages.first().unwrap().is_walk() && self.get_current_stage().is_walk() {
+                let s: Ptr<MSStageMoving> = self.get_current_stage().cast::<MSStageMoving>();
+                let routeIndex = s.get_route_step();
+                let mut oldEdges = s.get_edges();
+                oldEdges.drain(0..routeIndex);
+                let newEdges = stages.first().unwrap().get_edges();
+                if newEdges == oldEdges {
+                    stages.remove(0);
+                    abortCurrent = false;
+                }
+            }
             if stages.is_empty() {
                 return false;
             }
@@ -1588,8 +1777,13 @@ impl MSTransportable {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        // shortcut: typeid(*dev) == type cannot be checked (std::type_info is Unmapped), returns no device until device type ids are ported
+    pub fn get_device(&self, kind: &str) -> Ptr<MSDevice> {
+        for dev in self.myDevices.iter() {
+            if dev.base.device_name() == kind {
+                // MSDevice is the first base of MSTransportableDevice, so the upcast keeps the address
+                return dev.cast::<MSDevice>();
+            }
+        }
         Ptr::null()
     }
 
@@ -1609,7 +1803,7 @@ impl MSTransportable {
     pub fn set_junction_model_parameter(&mut self, key: &str, value: &str) {
         if key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_IDS) || key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_TYPES) {
             self.myParameter.m().parametersSet |= VEHPARS_JUNCTIONMODEL_PARAMS_SET;
-            // shortcut: SUMOVehicleParameter::setParameter is not ported yet, so the value is not stored; upgrade when it lands
+            self.myParameter.m().base.set_parameter(key, value);
         } else {
             panic!("{}", InvalidArgument(format!("{} '{}' does not support junctionModel parameter '{}'", self.get_object_type(), self.get_id(), key)).0);
         }

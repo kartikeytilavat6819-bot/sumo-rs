@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:55:26.102131-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/calibrator_multi/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/calibrator_multi/routes.rou"/>
+        <additional-files value="tools/oracle/cases/calibrator_multi/calibrator_multi.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ca03/tools/oracle/cases/calibrator_multi/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ca03/tools/oracle/cases/calibrator_multi/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ca03/tools/oracle/cases/calibrator_multi/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794891326.11" clockEnd="1794891326.26" clockDuration="0.15" traciDuration="0.00" realTimeFactor="1342.28" vehicleUpdatesPerSecond="11295.30" personUpdatesPerSecond="0.00" begin="0.00" end="200.00" duration="200.00"/>
+    <vehicles loaded="50" inserted="42" running="11" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="0" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="31" routeLength="446.53" speed="9.60" duration="47.61" waitingTime="0.00" timeLoss="4.89" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="1476.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="0" routeLength="0.00" duration="0.00" timeLoss="0.00"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

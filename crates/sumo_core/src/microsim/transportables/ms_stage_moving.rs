@@ -8,38 +8,9 @@ use utils::options::options_cont;
 // C++ constant MSPModel::UNDEFINED_DIRECTION (MSPModel.h)
 const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
-/// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h), specialised here
-/// because the generic intermodal_edge.rs version is still a stub.
-fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    let lanes = edge.get_lanes();
-    // prefer lanes that are exclusive to pedestrians
-    for lane in lanes.iter() {
-        if lane.get_permissions() == svc as SVCPermissions {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(svc) {
-            return *lane;
-        }
-    }
-    if svc != SVC_PEDESTRIAN {
-        // persons should always be able to use the sidewalk
-        for lane in lanes.iter() {
-            if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
-                return *lane;
-            }
-        }
-        for lane in lanes.iter() {
-            if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-                return *lane;
-            }
-        }
-    }
-    Ptr::null()
+/// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h)
+pub(crate) fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, svc)
 }
 
 /// An abstract stage providing additional interface for the movement models
@@ -126,7 +97,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        panic!("MSStageMoving::getNextRouteEdge is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::new(self).cast::<MSStageWalking>().get().unwrap().get_next_route_edge(),
+            MSStageType::TRANSHIP => Ptr::new(self).cast::<MSStageTranship>().get().unwrap().get_next_route_edge(),
+            _ => panic!("MSStageMoving::getNextRouteEdge is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `MSTransportableStateAdapter * MSStageMoving::getPState() const` [const]
@@ -335,7 +310,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_max_speed(&self, transportable: Ptr<MSTransportable>) -> f64 {
-        panic!("MSStageMoving::getMaxSpeed is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::new(self).cast::<MSStageWalking>().get().unwrap().get_max_speed(transportable),
+            MSStageType::TRANSHIP => Ptr::new(self).cast::<MSStageTranship>().get().unwrap().get_max_speed(transportable),
+            _ => panic!("MSStageMoving::getMaxSpeed is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `bool MSStageMoving::moveToNextEdge(MSTransportable *, SUMOTime, int, MSEdge *, const bool)` [virtual, pure virtual]
@@ -343,7 +322,11 @@ impl MSStageMoving {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, transportable: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
-        panic!("MSStageMoving::moveToNextEdge is pure virtual; subclasses must provide it")
+        match self.myType {
+            MSStageType::WALKING => Ptr::from_mut(self).cast::<MSStageWalking>().m().move_to_next_edge(transportable, currentTime, prevDir, nextInternal, isReplay),
+            MSStageType::TRANSHIP => Ptr::from_mut(self).cast::<MSStageTranship>().m().move_to_next_edge(transportable, currentTime, prevDir, nextInternal, isReplay),
+            _ => panic!("MSStageMoving::moveToNextEdge is pure virtual; subclasses must provide it"),
+        }
     }
 
     /// C++: `void MSStageMoving::activateEntryReminders(MSTransportable *, const bool)` [virtual]
@@ -508,7 +491,7 @@ impl MSStageMoving {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
-        if !self.base.equals(s) {
+        if !self.base.equals_base(s) {
             return false;
         }
         // this is safe because MSStage already checked that the type fits

@@ -36,7 +36,24 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
-    todo!("port computeAllPairs")
+    OutputDevice::create_device_by_option("all-pairs-output", "", "", -1).unwrap_or_else(|e| panic!("{e}"));
+    let outFile = OutputDevice::get_device_by_option("all-pairs-output").unwrap_or_else(|e| panic!("{e}"));
+    // build the router
+    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), Some(get_travel_time), None, false, Ptr::null(), false, false).with_compute();
+    let mut into: Vec<Ptr<ROEdge>> = Vec::new();
+    let numInternalEdges: i32 = net.get_internal_edge_number();
+    let numTotalEdges: i32 = net.get_edge_number();
+    for i in numInternalEdges..numTotalEdges {
+        let ei_edge: Ptr<ROEdge> = router.get_edge_info(i).edge.cast::<ROEdge>();
+        if !ei_edge.is_internal() {
+            router.compute(ei_edge, Ptr::null(), Ptr::null(), 0, &mut into, false);
+            let fromEffort: f64 = router.get_effort(ei_edge, Ptr::null(), 0.0);
+            for j in numInternalEdges..numTotalEdges {
+                let heuTT: f64 = router.get_edge_info(j).effort - fromEffort;
+                outFile.borrow_mut().write(&heuTT);
+            }
+        }
+    }
 }
 
 /// C++: `void (RONet &, OptionsCont &, ODMatrix &) computeRoutes`
@@ -247,7 +264,178 @@ pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
 // }
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatrix) {
-    todo!("port computeRoutes")
+    // build the router
+    let measure = oc.get_string("weight-attribute").unwrap_or_else(|e| panic!("{e}"));
+    let routingAlgorithm = oc.get_string("routing-algorithm").unwrap_or_else(|e| panic!("{e}"));
+    let priorityFactor = oc.get_float("weights.priority-factor").unwrap_or_else(|e| panic!("{e}"));
+    let mut begin = utils::common::time::string2time(&oc.get_string("begin").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
+    let mut end = utils::common::time::string2time(&oc.get_string("end").unwrap_or_else(|e| panic!("{e}"))).unwrap_or_else(|e| panic!("{e}"));
+    if oc.is_default("begin") && matrix.get_begin() >= 0 {
+        begin = matrix.get_begin();
+    }
+    if oc.is_default("end") {
+        end = if matrix.get_end() >= 0 { matrix.get_end() } else { utils::common::time::SUMOTIME_MAX };
+    }
+    let ignoreErrors = oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}"));
+    let mut dijkstra: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle>;
+    if measure == "traveltime" && priorityFactor == 0.0 {
+        match routingAlgorithm.as_str() {
+            "dijkstra" => {
+                // shortcut: C++ selects the effort operation from the paths option (penalised TT or ROEdge::getTravelTimeStatic) and that selection is not ported, so no effort operation is set yet; upgrade with the option port
+                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
+            }
+            "astar" | "CH" | "CHWrapper" | "CCH" => {
+                // shortcut: astar, CH, CHWrapper and CCH routers need the SUMOAbstractRouter trait object, not ported
+                panic!("shortcut: routing algorithm '{}' is not ported", routingAlgorithm);
+            }
+            _ => {
+                panic!("{}", ProcessError::new(format!("Unknown routing Algorithm '{}'!", routingAlgorithm)));
+            }
+        }
+    } else {
+        if measure != "traveltime" && !net.has_loaded_effort() {
+            utils::common::msg_handler::write_warning(&format!("No weight data was loaded for attribute '{}'.", measure));
+        }
+        // shortcut: C++ selects the effort operation from the measure and the priority-factor option, which is not ported, so the weighted router has no effort operation and cannot route yet
+        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
+    }
+    let router: &mut crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle> = &mut dijkstra.base;
+    // shortcut: RORouterProvider and the HAVE_FOX worker threads are not ported, routing runs on this thread only
+    // prepare the output
+    net.open_output(oc);
+    // process route definitions
+    if oc.is_set("timeline", true).unwrap_or_else(|e| panic!("{e}")) {
+        let timeline = oc.get_string_vector("timeline").unwrap_or_else(|e| panic!("{e}")).clone();
+        let dayInHours = oc.get_bool("timeline.day-in-hours").unwrap_or_else(|e| panic!("{e}"));
+        let points = matrix.parse_time_line(&timeline, dayInHours);
+        matrix.apply_curve(&points);
+    }
+    matrix.sort_by_begin_time();
+    let mut haveOutput = OutputDevice::create_device_by_option("netload-output", "meandata", "", -1).unwrap_or_else(|e| panic!("{e}"));
+    let defaultVType = net.get_vehicle_type_secure(utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID);
+    let mut defaultVehicle = ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), defaultVType, Ptr::from_mut(&mut *net), Ptr::null());
+    let netloadOutput: Ptr<OutputDevice> = if haveOutput {
+        Ptr::from_raw(OutputDevice::get_device_by_option("netload-output").unwrap_or_else(|e| panic!("{e}")).as_ptr())
+    } else {
+        Ptr::null()
+    };
+    let mut a = ROMAAssignments::new(
+        begin,
+        end,
+        oc.get_bool("additive-traffic").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_float("weight-adaption").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_int("max-alternatives").unwrap_or_else(|e| panic!("{e}")),
+        oc.get_bool("capacities.default").unwrap_or_else(|e| panic!("{e}")),
+        net,
+        matrix,
+        router,
+        netloadOutput,
+    );
+    a.reset_flows();
+    // shortcut: router->reset(&defaultVehicle) (CH router initialisation) and the worker thread pool are not ported
+    let _ = &defaultVehicle;
+    let mut assignMethod = oc.get_string("assignment-method").unwrap_or_else(|e| panic!("{e}"));
+    if assignMethod == "UE" {
+        utils::common::msg_handler::write_warning("Deterministic user equilibrium ('UE') is not implemented yet, using stochastic method ('SUE').");
+        assignMethod = "SUE".to_string();
+    }
+    if assignMethod == "incremental" {
+        a.incremental(oc.get_int("max-iterations").unwrap_or_else(|e| panic!("{e}")), oc.get_bool("verbose").unwrap_or_else(|e| panic!("{e}")));
+    } else if assignMethod == "SUE" {
+        a.sue(
+            oc.get_int("max-iterations").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_int("max-inner-iterations").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_int("paths").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_float("paths.penalty").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_float("tolerance").unwrap_or_else(|e| panic!("{e}")),
+            oc.get_string("route-choice-method").unwrap_or_else(|e| panic!("{e}")),
+        );
+    }
+    // update path costs and output
+    let dev = net.get_route_output(false);
+    if !dev.is_null() {
+        let tazParamKeys: Vec<String> = if oc.is_set("taz-param", true).unwrap_or_else(|e| panic!("{e}")) {
+            oc.get_string_vector("taz-param").unwrap_or_else(|e| panic!("{e}")).clone()
+        } else {
+            Vec::new()
+        };
+        let mut sortedOut: BTreeMap<SUMOTime, String> = BTreeMap::new();
+        let mut lastEnd: SUMOTime = -1;
+        let mut num: i32 = 0;
+        let cells: Vec<Ptr<ODCell>> = matrix.get_cells().clone();
+        let prefix = oc.get_string("prefix").unwrap_or_else(|e| panic!("{e}"));
+        let ignoreType = oc.get_bool("ignore-vehicle-type").unwrap_or_else(|e| panic!("{e}"));
+        for c in cells.iter().copied() {
+            if c.begin >= end || c.end <= begin || c.pathsVector.is_empty() || c.pathsVector[0].get_edge_vector().is_empty() {
+                continue;
+            }
+            if lastEnd >= 0 && lastEnd <= c.begin {
+                for desc in sortedOut.values() {
+                    dev.m().write_preformatted_tag(desc);
+                }
+                sortedOut.clear();
+            }
+            if c.departures.is_empty() {
+                let b = std::cmp::max(begin, c.begin);
+                let e = std::cmp::min(end, c.end);
+                let numVehs: i32 = (c.vehicleNumber * (e - b) as f64 / (c.end - c.begin) as f64) as i32;
+                let mut od = OutputDevice::new_string(1);
+                let id = format!("{}{}", prefix, num);
+                num += 1;
+                od.open_tag_id(SUMO_TAG_FLOW).write_attr(SUMO_ATTR_ID, &id);
+                od.write_attr(SUMO_ATTR_BEGIN, &time2string(b)).write_attr(SUMO_ATTR_END, &time2string(e));
+                od.write_attr(SUMO_ATTR_NUMBER, &numVehs);
+                matrix.write_default_attrs(&mut od, ignoreType, c);
+                od.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION);
+                for r in c.pathsVector.iter() {
+                    let costs = router.recompute_costs(r.get_edge_vector(), Ptr::from_mut(&mut defaultVehicle), begin, Ptr::null());
+                    Ptr::from_raw(Rc::as_ptr(r) as *mut RORoute).m().set_costs(costs);
+                    r.write_xml_definition(&mut od, Ptr::null(), true, true, false, false, "");
+                }
+                od.close_tag("");
+                od.close_tag("");
+                sortedOut.entry(c.begin).or_default().push_str(&od.get_string());
+            } else {
+                for (depTime, vehs) in c.departures.iter() {
+                    if *depTime >= end || *depTime < begin {
+                        continue;
+                    }
+                    for veh in vehs.iter() {
+                        let mut od = OutputDevice::new_string(1);
+                        let vtype: &str = if ignoreType || veh.vtypeid == utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID { "" } else { veh.vtypeid.as_str() };
+                        veh.write(&mut od, oc, SUMO_TAG_VEHICLE, vtype);
+                        od.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION);
+                        for r in c.pathsVector.iter() {
+                            let costs = router.recompute_costs(r.get_edge_vector(), Ptr::from_mut(&mut defaultVehicle), begin, Ptr::null());
+                            Ptr::from_raw(Rc::as_ptr(r) as *mut RORoute).m().set_costs(costs);
+                            r.write_xml_definition(&mut od, Ptr::null(), true, true, false, false, "");
+                        }
+                        od.close_tag("");
+                        if !tazParamKeys.is_empty() {
+                            od.open_tag_id(SUMO_TAG_PARAM).write_attr(SUMO_ATTR_KEY, &tazParamKeys[0]).write_attr(SUMO_ATTR_VALUE, &c.origin).close_tag("");
+                            if tazParamKeys.len() > 1 {
+                                od.open_tag_id(SUMO_TAG_PARAM).write_attr(SUMO_ATTR_KEY, &tazParamKeys[1]).write_attr(SUMO_ATTR_VALUE, &c.destination).close_tag("");
+                            }
+                        }
+                        od.close_tag("");
+                        sortedOut.entry(*depTime).or_default().push_str(&od.get_string());
+                    }
+                }
+            }
+            if c.end > lastEnd {
+                lastEnd = c.end;
+            }
+        }
+        for desc in sortedOut.values() {
+            dev.m().write_preformatted_tag(desc);
+        }
+        haveOutput = true;
+    }
+    if !haveOutput {
+        panic!("{}", ProcessError::new("No output file given."));
+    }
+    // end the processing
+    net.cleanup();
 }
 
 /// C++: `double (const ROEdge *const, const ROVehicle *const, double) getTravelTime`
@@ -257,6 +445,6 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
 // }
 #[allow(unused_variables)]
 pub fn get_travel_time(edge: Ptr<ROEdge>, arg1: Ptr<ROVehicle>, arg2: f64) -> f64 {
-    todo!("port getTravelTime")
+    edge.get_length() / edge.get_speed_limit()
 }
 

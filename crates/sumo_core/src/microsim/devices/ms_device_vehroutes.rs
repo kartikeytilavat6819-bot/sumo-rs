@@ -102,6 +102,16 @@ thread_local! {
     static MY_ROUTE_INFOS: std::cell::Cell<Ptr<MSDevice_Vehroutes_SortedRouteInfo>> = std::cell::Cell::new(Ptr::default());
 }
 
+/// MSNet dispatches vehicle-state notifications by address (the base has no vtable): true for this listener
+pub fn is_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+    MY_STATE_LISTENER.with(|c| !c.get().is_null() && c.get().as_raw() as *mut MSNet_VehicleStateListener == listener)
+}
+
+/// the StateListener's vehicleStateChanged, reached from MSNet::informVehicleStateListener
+pub fn state_listener_vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+    my_state_listener().m().vehicle_state_changed(vehicle, to, info);
+}
+
 /// C++ static `myStateListener`
 fn my_state_listener() -> Ptr<MSDevice_Vehroutes_StateListener> {
     MY_STATE_LISTENER.with(|c| {
@@ -226,8 +236,18 @@ impl MSDevice_Vehroutes {
             return Ptr::null();
         }
         let hasOption = is_set("vehroute-output");
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is still todo!() with no arguments in ms_device.rs, upgrade when it is ported
-        let equipped: bool = panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions is not ported yet");
+        let vp2 = vp;
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "vehroute",
+                &vp2.get_id(),
+                &vp2.get_parameter().base,
+                &vp2.get_v_type_parameter().base,
+                hasOption,
+                false,
+            )
+        });
         if equipped {
             let mut maxRoutes = maxRoutes;
             if MY_LAST_ROUTE_ONLY.load(Relaxed) {
@@ -335,8 +355,14 @@ impl MSDevice_Vehroutes {
         }
         // unfinished persons
         if net.has_persons() {
-            // shortcut: MSTransportableControl::loadedBegin/loadedEnd are Unmapped iterators, so the
-            // loop that erases still-loaded persons is skipped; port it once the iterator is mapped
+            let pc = net.m().get_person_control();
+            loop {
+                let first = pc.loaded_begin().next().map(|(_, t)| *t);
+                match first {
+                    Some(t) => pc.erase(t),
+                    None => break,
+                }
+            }
         }
         // Flush any remaining sorted outputs that may still be buffered
         if MY_SORTED.load(Relaxed) {
@@ -690,9 +716,8 @@ impl MSDevice_Vehroutes {
             // C++ `bis >> myCurrentValid` reads a 0/1 integer
             self.myCurrentValid = next_as::<i32>(&mut bis) != 0;
 
-            // shortcut: MSRoute::dictionary(id) lookup (returns the route) is not ported yet, only the insert form
-            let foundRoute: Option<ConstMSRoutePtr> = panic!("shortcut: MSRoute::dictionary(id) getter is not ported yet, only the insert form exists");
-            if let Some(route) = foundRoute {
+            let route: ConstMSRoutePtr = MSRoute::dictionary_3(&routeID, Ptr::null());
+            if !crate::microsim::ms_route::is_null_route(&route) {
                 let edge = MSEdge::dictionary_2(&edgeID);
                 self.myReplacedRoutes.push(MSDevice_Vehroutes_RouteReplaceInfo::new(edge, time, route, &info, lastIndex, newIndex, self.myCurrentValid));
             }
@@ -768,6 +793,32 @@ impl MSDevice_Vehroutes {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        fn mr_notify_stop_ended(mr: &mut MSMoveReminder) {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_stop_ended()
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: mr_notify_stop_ended,
+        };
+        let mut this = Self::new_device(holder, id, maxRoutes);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, maxRoutes: i32) -> Self {
         let currentRoute = holder.get_route_ptr();
         let mut this = MSDevice_Vehroutes {
             base: MSVehicleDevice::new(holder, id),
@@ -1224,8 +1275,7 @@ impl MSDevice_Vehroutes {
         if routeOut.is_xml() {
             od.m().write(&self.myStopOut.get_string());
         }
-        // shortcut: Parameterised::writeParams is not ported yet, upgrade with utils/common/Parameterised
-        panic!("shortcut: writeParams(dev) not ported");
+        self.myHolder.get_parameter().write_params(od.m());
         od.m().close_tag("");
         od.m().lf();
         if MY_SORTED.load(Relaxed) && routeOut.is_xml() {

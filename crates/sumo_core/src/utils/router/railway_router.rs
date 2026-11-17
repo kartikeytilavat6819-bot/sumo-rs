@@ -1,15 +1,16 @@
 //! Port of utils/router/RailwayRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `std::map<const E *, RouterProhibition> RailwayRouter::Prohibitions`
 pub type RailwayRouter_Prohibitions = Unmapped /* std::map<const E *, RouterProhibition> */;
 
 /// C++ typedef `DijkstraRouter<_RailEdge, V> RailwayRouter::_InternalDijkstra`
-pub type RailwayRouter__InternalDijkstra = Unmapped /* DijkstraRouter<_RailEdge, V> */;
+pub type RailwayRouter__InternalDijkstra<E, V> = DijkstraRouter<RailEdge__RailEdge<E, V>, V>;
 
 /// C++ typedef `SUMOAbstractRouter<_RailEdge, V> RailwayRouter::_InternalRouter`
-pub type RailwayRouter__InternalRouter = Unmapped /* SUMOAbstractRouter<_RailEdge, V> */;
+pub type RailwayRouter__InternalRouter<E, V> = SUMOAbstractRouter<RailEdge__RailEdge<E, V>, V>;
 
 /// C++ typedef `RailEdge<E, V> RailwayRouter::_RailEdge`
 pub type RailwayRouter__RailEdge = Unmapped /* RailEdge<E, V> */;
@@ -20,12 +21,12 @@ pub type RailwayRouter__RailEdge = Unmapped /* RailEdge<E, V> */;
 pub struct RailwayRouter<E, V> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,
-    pub myInternalRouter: Ptr<PedestrianRouter__InternalRouter>,
+    pub myInternalRouter: Ptr<RailwayRouter__InternalRouter<E, V>>,
     pub myOriginal: Ptr<RailwayRouter<E, V>>,
     /// a RailEdge for every existing edge, filled on construction (but not in clones)
-    pub myInitialEdges: Vec<Ptr<RailEdge__RailEdge>>,
+    pub myInitialEdges: Vec<Ptr<RailEdge__RailEdge<E, V>>>,
     /// complete rail network filled on demand (but not in clones)
-    pub myRailEdges: Vec<Ptr<RailEdge__RailEdge>>,
+    pub myRailEdges: Vec<Ptr<RailEdge__RailEdge<E, V>>>,
     /// whether to suppress warning/error if no route was found
     pub mySilent: bool,
     pub myMaxTrainLength: f64,
@@ -46,12 +47,81 @@ impl<E, V> std::ops::DerefMut for RailwayRouter<E, V> {
     }
 }
 
-// C++ static members of RailwayRouter (port as module-level statics, see AGENTS.md):
-//   static typename SUMOAbstractRouter<E, V>::Operation RailwayRouter::myStaticOperation;
-//   static double RailwayRouter::myReversalPenalty;
-//   static double RailwayRouter::myReversalPenaltyFactor;
+/// C++ statics of `RailwayRouter<E, V>`: `myStaticOperation`, `myReversalPenalty` and `myReversalPenaltyFactor`.
+/// C++ keeps one set per template instantiation, so they are stored per `type_name::<(E, V)>()`.
+#[derive(Clone, Copy)]
+struct RailwayStatics {
+    /// the address of the `SUMOAbstractRouter_TypedOperation<E, V>` (0 = nullptr)
+    operation: usize,
+    reversal_penalty: f64,
+    reversal_penalty_factor: f64,
+}
 
-impl<E, V> RailwayRouter<E, V> {
+const RAILWAY_STATICS_INIT: RailwayStatics = RailwayStatics { operation: 0, reversal_penalty: 60., reversal_penalty_factor: 0.2 };
+
+thread_local! {
+    static RAILWAY_STATICS: std::cell::RefCell<std::collections::HashMap<&'static str, RailwayStatics>> = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+fn railway_statics<E, V>() -> RailwayStatics {
+    let key = std::any::type_name::<(E, V)>();
+    RAILWAY_STATICS.with(|m| m.borrow().get(key).copied().unwrap_or(RAILWAY_STATICS_INIT))
+}
+
+fn set_railway_statics<E, V>(set: impl FnOnce(&mut RailwayStatics)) {
+    let key = std::any::type_name::<(E, V)>();
+    RAILWAY_STATICS.with(|m| set(m.borrow_mut().entry(key).or_insert(RAILWAY_STATICS_INIT)));
+}
+
+/// C++ `myStaticOperation`
+fn railway_static_operation<E, V>() -> Option<SUMOAbstractRouter_TypedOperation<E, V>> {
+    let addr = railway_statics::<E, V>().operation;
+    // SAFETY: a non-zero address was stored from a SUMOAbstractRouter_TypedOperation<E, V> of this same instantiation
+    if addr == 0 { None } else { Some(unsafe { std::mem::transmute::<usize, SUMOAbstractRouter_TypedOperation<E, V>>(addr) }) }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+#[cfg(test)]
+mod railway_statics_tests {
+    use super::*;
+
+    #[test]
+    fn statics_are_per_instantiation() {
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty, 60.);
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty_factor, 0.2);
+        set_railway_statics::<u8, u16>(|s| s.reversal_penalty = 7.);
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty, 7.);
+        assert_eq!(railway_statics::<u16, u8>().reversal_penalty, 60.);
+        assert!(railway_static_operation::<u8, u16>().is_none());
+    }
+}
+
+/// MsgHandler::getWarningInstance() / getErrorInstance()
+fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
+    utils::common::msg_handler::with_instance(if warning { MsgType::Warning } else { MsgType::Error }, |h| Ptr::from_mut(h))
+}
+
+/// The `RailwayRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn railway_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
+/// The `RailwayRouter::setBulkMode` reached from the base router's setBulkMode slot (C++ virtual dispatch)
+pub fn railway_set_bulk_mode<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, mode: bool) {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().set_bulk_mode(mode)
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
+    /// Installs this router's compute and setBulkMode into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(railway_compute::<E, V>);
+        self.base.mySetBulkMode = Some(railway_set_bulk_mode::<E, V>);
+        self
+    }
+
     /// C++: `void RailwayRouter::RailwayRouter<E, V>(const std::vector<E *> &, bool, typename SUMOAbstractRouter<E, V>::Operation, typename SUMOAbstractRouter<E, V>::Operation, bool, bool, const bool, double, double)`
     /// Constructor
     // RailwayRouter(const std::vector<E*>& edges, bool unbuildIsWarning, typename SUMOAbstractRouter<E, V>::Operation effortOperation,
@@ -69,8 +139,26 @@ impl<E, V> RailwayRouter<E, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: SUMOAbstractRouter_Operation, ttOperation: SUMOAbstractRouter_Operation, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self {
-        todo!("port RailwayRouter::RailwayRouter<E, V>")
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, effortOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, silent: bool, havePermissions: bool, haveRestrictions: bool, maxTrainLength: f64, reversalPenalty: f64) -> Self
+    where
+        E: RouterEdge<V>,
+    {
+        set_railway_statics::<E, V>(|s| {
+            s.reversal_penalty = reversalPenalty;
+            s.operation = effortOperation.map_or(0, |f| f as usize);
+        });
+        let myInitialEdges = edges.iter().map(|e| e.railway_routing_edge()).collect();
+        Self {
+            base: SUMOAbstractRouter::new("RailwayRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions),
+            myInternalRouter: Ptr::null(),
+            myOriginal: Ptr::null(),
+            myInitialEdges,
+            myRailEdges: Vec::new(),
+            mySilent: silent,
+            myMaxTrainLength: maxTrainLength,
+            myLastFrom: Ptr::null(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void RailwayRouter::~RailwayRouter<E, V>()` [virtual]
@@ -80,7 +168,10 @@ impl<E, V> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RailwayRouter::~RailwayRouter<E, V>")
+        if !self.myInternalRouter.is_null() {
+            let internal: Ptr<DijkstraRouter<RailEdge<E, V>, V>> = self.myInternalRouter.cast();
+            drop(unsafe { Box::from_raw(internal.as_raw()) });
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * RailwayRouter::clone()`
@@ -89,7 +180,7 @@ impl<E, V> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port RailwayRouter::clone")
+        Ptr::from_raw(Box::into_raw(Box::new(Self::new_2(Ptr::from_mut(self))))).cast()
     }
 
     /// C++: `bool RailwayRouter::compute(const E *, const E *, const V *const, SUMOTime, std::vector<const E *> &, bool)`
@@ -103,8 +194,21 @@ impl<E, V> RailwayRouter<E, V> {
     //         return _compute(from, to, vehicle, msTime, into, silent, false);
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
-        todo!("port RailwayRouter::compute")
+    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool
+    where
+        E: RouterEdge<V>,
+        V: RouterVehicle,
+    {
+        self.ensure_internal_router();
+        if vehicle.length() > self.myMaxTrainLength {
+            utils::common::msg_handler::write_warning(&format!(
+                "Vehicle '{}' with length {} exceeds configured value of --railway.max-train-length {}",
+                vehicle.id(),
+                utils::common::to_string::to_string(&vehicle.length()),
+                utils::common::to_string::to_string(&self.myMaxTrainLength)
+            ));
+        }
+        self.compute_2(from, to, vehicle, msTime, into, silent, false)
     }
 
     /// C++: `void RailwayRouter::prohibit(const Prohibitions &)`
@@ -121,8 +225,19 @@ impl<E, V> RailwayRouter<E, V> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
-        todo!("port RailwayRouter::prohibit")
+    pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions)
+    where
+        E: RouterEdge<V>,
+    {
+        self.ensure_internal_router();
+        let mut toProhibitRE: SUMOAbstractRouter_Prohibitions = Default::default();
+        for (edge, prohibition) in toProhibit {
+            let edge: Ptr<E> = (*edge).cast();
+            // shortcut: SUMOAbstractRouter_Prohibitions is keyed by Ptr<Unmapped>, cast the address until that typedef is generic
+            toProhibitRE.insert(edge.railway_routing_edge().cast(), *prohibition);
+        }
+        self.myInternalRouter.m().prohibit(&toProhibitRE);
+        self.base.myProhibited = toProhibit.clone();
     }
 
     /// C++: `double RailwayRouter::recomputeCosts(const std::vector<const E *> &, const V *const, SUMOTime, double *) const` [const]
@@ -153,8 +268,35 @@ impl<E, V> RailwayRouter<E, V> {
     //         return effort;
     //     }
     #[allow(unused_variables)]
-    pub fn recompute_costs(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
-        todo!("port RailwayRouter::recomputeCosts")
+    pub fn recompute_costs(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64
+    where
+        E: RouterEdge<V>,
+        V: RouterVehicle,
+    {
+        let mut effort = self.base.recompute_costs(edges, v, msTime, lengthp);
+        let mut prev: Ptr<E> = Ptr::null();
+        // reversal corrections
+        let mut timeCorrection = utils::common::time::steps2time(msTime);
+        for e in edges.iter() {
+            if !prev.is_null() && e.bidi_edge() == prev {
+                if e.length() > v.length() {
+                    // vehicle doesn't need to drive to the end of the edge
+                    // @note exact timing correction for time-dependent effort is not done
+                    let savingsFactor = 1. - v.length() / e.length();
+                    let mut effortCorrection = 0.;
+                    let mut lengthCorrection = 0.;
+                    effortCorrection += self.get_effort(prev, v, timeCorrection);
+                    self.update_via_cost(prev, *e, v, &mut timeCorrection, &mut effortCorrection, &mut lengthCorrection);
+                    effort -= savingsFactor * effortCorrection;
+                    if !lengthp.is_null() {
+                        *lengthp.m() -= savingsFactor * lengthCorrection;
+                    }
+                }
+                effort += railway_statics::<E, V>().reversal_penalty;
+            }
+            prev = *e;
+        }
+        effort
     }
 
     /// C++: `void RailwayRouter::setBulkMode(const bool)`
@@ -165,7 +307,9 @@ impl<E, V> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port RailwayRouter::setBulkMode")
+        if !self.myInternalRouter.is_null() {
+            self.myInternalRouter.m().set_bulk_mode(mode);
+        }
     }
 
     /// C++: `void RailwayRouter::RailwayRouter<E, V>(RailwayRouter<E, V> *)` [private]
@@ -178,7 +322,17 @@ impl<E, V> RailwayRouter<E, V> {
     //     {}
     #[allow(unused_variables)]
     pub fn new_2(other: Ptr<RailwayRouter<E, V>>) -> Self {
-        todo!("port RailwayRouter::RailwayRouter<E, V>")
+        Self {
+            base: SUMOAbstractRouter::new_2(Ptr::from_mut(&mut other.m().base)),
+            myInternalRouter: Ptr::null(),
+            myOriginal: other,
+            myInitialEdges: Vec::new(),
+            myRailEdges: Vec::new(),
+            mySilent: other.mySilent,
+            myMaxTrainLength: other.myMaxTrainLength,
+            myLastFrom: Ptr::null(),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void RailwayRouter::ensureInternalRouter()` [private]
@@ -190,7 +344,12 @@ impl<E, V> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn ensure_internal_router(&mut self) {
-        todo!("port RailwayRouter::ensureInternalRouter")
+        if self.myInternalRouter.is_null() {
+            let warning = self.base.myErrorMsgHandler == msg_instance(true);
+            let edges = self.get_rail_edges().clone();
+            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, Some(Self::get_travel_time_static), None, self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
+            self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
+        }
     }
 
     /// C++: `bool RailwayRouter::_compute(const E *, const E *, const V *const, SUMOTime, std::vector<const E *> &, bool, bool)` [private]
@@ -292,8 +451,88 @@ impl<E, V> RailwayRouter<E, V> {
     //
     //     }
     #[allow(unused_variables)]
-    pub fn compute_2(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool, avoidUnsafeBackTracking: bool) -> bool {
-        todo!("port RailwayRouter::_compute")
+    pub fn compute_2(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool, avoidUnsafeBackTracking: bool) -> bool
+    where
+        E: RouterEdge<V>,
+        V: RouterVehicle,
+    {
+        // make sure that the vehicle can turn-around when starting on a short edge (the virtual turn-around for this lies backwards along the route / track)
+        // if reversals are forbidden (negative penalty), we don't need to check this
+        let mut backLengths: Vec<f64> = Vec::new();
+        let mut backDist = if railway_statics::<E, V>().reversal_penalty >= 0. { vehicle.length() - from.length() } else { 0. };
+        let mut start = from;
+        while backDist > 0. {
+            let prev = Self::get_straight_predecessor(start, into, backLengths.len() as i32);
+            if prev.is_null() || prev == to {
+                break;
+            }
+            backDist -= prev.length();
+            if avoidUnsafeBackTracking && prev.successors(SVC_IGNORING).len() > 1 {
+                let mut foundSwitch = false;
+                for succ in prev.successors(SVC_IGNORING) {
+                    if *succ != start && *succ != prev.bidi_edge() {
+                        foundSwitch = true;
+                        break;
+                    }
+                }
+                if foundSwitch {
+                    break;
+                }
+            }
+            let back = if backLengths.is_empty() { vehicle.length().min(from.length()) } else { *backLengths.last().unwrap() };
+            backLengths.push(prev.length() + back);
+            start = prev;
+        }
+
+        let mut intoTmp: Vec<Ptr<RailEdge<E, V>>> = Vec::new();
+        if self.myLastFrom != start {
+            self.myInternalRouter.m().set_bulk_mode(false);
+        }
+        let mut success = self.myInternalRouter.m().compute(start.railway_routing_edge(), to.railway_routing_edge(), vehicle, msTime, &mut intoTmp, silent);
+        self.myLastFrom = start;
+        if success {
+            let intoSize = into.len();
+            let mut backIndex = backLengths.len() as i32;
+            for railEdge in intoTmp.iter() {
+                if !railEdge.get_original().is_null() {
+                    backIndex -= 1;
+                }
+                // prevent premature reversal on back edge (extend train length)
+                let length = if backIndex >= 0 { backLengths[backIndex as usize] } else { vehicle.length() };
+                railEdge.insert_original_edges(length, into);
+            }
+            if backLengths.len() > 0 {
+                let mut validBackTracking = intoSize + backLengths.len() <= into.len();
+                // skip the virtual back-edges
+                if validBackTracking {
+                    into.drain(intoSize..intoSize + backLengths.len());
+                    // C++ dereferences into[intoSize] without a bounds check
+                    validBackTracking = into.get(intoSize) == Some(&from);
+                }
+                if !validBackTracking {
+                    if !avoidUnsafeBackTracking {
+                        // try again, this time with more safety (but unable to make use of turn-arounds on short edge)
+                        into.truncate(intoSize);
+                        return self.compute_2(from, to, vehicle, msTime, into, silent, true);
+                    } else {
+                        utils::common::msg_handler::write_warning(&format!(
+                            "Railway routing failure due to turn-around on short edge '{}' for vehicle '{}' time={}.",
+                            from.id(),
+                            vehicle.id(),
+                            utils::common::time::time2string(msTime)
+                        ));
+                        into.truncate(intoSize);
+                        return false;
+                    }
+                }
+            }
+            // make sure that turnarounds don't use prohibited edges
+            if into.iter().any(|e| self.base.myProhibited.contains_key(&e.cast::<Unmapped>())) {
+                into.clear();
+                success = false;
+            }
+        }
+        success
     }
 
     /// C++: `const std::vector<_RailEdge *> & RailwayRouter::getRailEdges()` [private]
@@ -314,8 +553,19 @@ impl<E, V> RailwayRouter<E, V> {
     //         return myRailEdges;
     //     }
     #[allow(unused_variables)]
-    pub fn get_rail_edges(&mut self) -> &Vec<Ptr<RailEdge__RailEdge>> {
-        todo!("port RailwayRouter::getRailEdges")
+    pub fn get_rail_edges(&mut self) -> &Vec<Ptr<RailEdge__RailEdge<E, V>>> {
+        if !self.myOriginal.is_null() {
+            return self.myOriginal.m().get_rail_edges();
+        }
+        if self.myRailEdges.is_empty() {
+            self.myRailEdges = self.myInitialEdges.clone();
+            let mut numericalID = self.myInitialEdges.last().unwrap().get_numerical_id() + 1;
+            let permitReversal = railway_statics::<E, V>().reversal_penalty >= 0.;
+            for railEdge in self.myInitialEdges.clone() {
+                railEdge.m().init(&mut self.myRailEdges, &mut numericalID, self.myMaxTrainLength, permitReversal);
+            }
+        }
+        &self.myRailEdges
     }
 
     /// C++: `double RailwayRouter::getTravelTimeStatic(const RailEdge<E, V> *const, const V *const, double)` [static, private]
@@ -350,7 +600,30 @@ impl<E, V> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<RailEdge<E, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port RailwayRouter::getTravelTimeStatic")
+        let op = || railway_static_operation::<E, V>().expect("RailwayRouter::myStaticOperation is not set");
+        if !edge.get_original().is_null() {
+            return op()(edge.get_original(), veh, time);
+        }
+        // turnaround edge
+        if edge.is_virtual() {
+            // add up time for replacement edges
+            let mut repl: Vec<Ptr<E>> = Vec::new();
+            edge.insert_original_edges(veh.length(), &mut repl);
+            assert!(repl.len() > 0);
+            let mut seenDist: f64 = 0.;
+            let mut result: f64 = 0.;
+            repl.pop(); // last edge must not be used fully
+            for e in repl.iter() {
+                result += op()(*e, veh, time + result);
+                seenDist += e.length();
+            }
+            let lengthOnLastEdge = max2(0.0, veh.length() - seenDist);
+            let s = railway_statics::<E, V>();
+            return result + s.reversal_penalty + lengthOnLastEdge * s.reversal_penalty_factor;
+        }
+        // if the edge from which this turnaround starts is longer than the vehicle then we are overstimating the cost
+        // (because the turnaround may happen before driving to the end)
+        railway_statics::<E, V>().reversal_penalty
     }
 
     /// C++: `const E * RailwayRouter::getStraightPredecessor(const E *, std::vector<const E *> &, int)` [static, private]
@@ -376,8 +649,25 @@ impl<E, V> RailwayRouter<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_straight_predecessor(edge: Ptr<E>, prevRoute: &mut Vec<Ptr<E>>, backIndex: i32) -> Ptr<E> {
-        todo!("port RailwayRouter::getStraightPredecessor")
+    pub fn get_straight_predecessor(edge: Ptr<E>, prevRoute: &mut Vec<Ptr<E>>, backIndex: i32) -> Ptr<E>
+    where
+        E: RouterEdge<V>,
+    {
+        if prevRoute.len() as i32 > backIndex {
+            return prevRoute[(prevRoute.len() as i32 - 1 - backIndex) as usize];
+        }
+        let mut result: Ptr<E> = Ptr::null();
+        for cand in edge.predecessors() {
+            if !cand.is_internal() && cand.bidi_edge() != edge {
+                // predecessor not unique. Better abort with a warning
+                if result.is_null() {
+                    result = *cand;
+                } else {
+                    return Ptr::null();
+                }
+            }
+        }
+        result
     }
 
     /// C++: `RailwayRouter<E, V> & RailwayRouter::operator=(const RailwayRouter<E, V> &)` [private]
@@ -385,7 +675,7 @@ impl<E, V> RailwayRouter<E, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &RailwayRouter<E, V>) -> &mut RailwayRouter<E, V> {
-        todo!("port RailwayRouter::operator=")
+        panic!("RailwayRouter::operator= is declared but not defined")
     }
 
 }

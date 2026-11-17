@@ -3,7 +3,37 @@
 use crate::prelude::*;
 use super::mscf_model::*;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
+
+fn wiedemann_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).finalize_speed(veh, vPos) }
+fn wiedemann_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
+fn wiedemann_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).stop_speed(veh, speed, gap, decel, usage) }
+fn wiedemann_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).interaction_gap(veh, vL) }
+fn wiedemann_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel) }
+fn wiedemann_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_Wiedemann>(m).get_model_id() }
+fn wiedemann_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_Wiedemann>(m).duplicate(vtype) }
+fn wiedemann_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Wiedemann_VehicleVariables) }.save_state(out, m)
+}
+fn wiedemann_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Wiedemann_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
+fn wiedemann_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_Wiedemann>(m).create_vehicle_variables() }
+
+/// Virtual table of MSCFModel_Wiedemann: its overrides on top of the MSCFModel default table
+pub const WIEDEMANN_VT: MSCFModelVt = MSCFModelVt {
+    finalize_speed: wiedemann_finalize_speed,
+    follow_speed: wiedemann_follow_speed,
+    stop_speed_2: wiedemann_stop_speed_2,
+    interaction_gap: wiedemann_interaction_gap,
+    get_secure_gap: wiedemann_get_secure_gap,
+    get_model_id: wiedemann_get_model_id,
+    duplicate: wiedemann_duplicate,
+    create_vehicle_variables: wiedemann_create_vehicle_variables,
+    save_vehicle_variables: wiedemann_save_vehicle_variables,
+    load_vehicle_variables: wiedemann_load_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 
 /// C++ `MSCFModel_Wiedemann::D_MAX` static (MSCFModel_Wiedemann.cpp)
@@ -34,6 +64,7 @@ pub struct MSCFModel_Wiedemann {
     pub myMaxApproachingDecel: f64,
 }
 
+/// Virtual table of MSCFModel_Wiedemann: its overrides on top of the MSCFModel table
 impl std::ops::Deref for MSCFModel_Wiedemann {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -72,12 +103,13 @@ impl MSCFModel_Wiedemann {
         let vtypeLength = vtype.get_length();
         // Wiedemann does not drive very precise and may violate minGap on occasion
         let mut base = MSCFModel::new(vtype);
+        base.vt = &WIEDEMANN_VT;
         base.myCollisionMinGapFactor = collisionMinGapFactor;
         let myAX = vtypeLength + 1. + 2. * mySecurity;
         let myCX = 25. * (1. + mySecurity + myEstimation);
         let myMinAccel = 0.2 * base.myAccel;
         let myMaxApproachingDecel = (base.myDecel + base.myEmergencyDecel) / 2.;
-        MSCFModel_Wiedemann {
+        let mut this = MSCFModel_Wiedemann {
             base,
             mySecurity,
             myEstimation,
@@ -85,7 +117,9 @@ impl MSCFModel_Wiedemann {
             myCX,
             myMinAccel,
             myMaxApproachingDecel,
-        }
+        };
+        this.base.vt = &WIEDEMANN_VT;
+        this
     }
 
     /// C++: `void MSCFModel_Wiedemann::~MSCFModel_Wiedemann() noexcept` [virtual]
@@ -107,7 +141,7 @@ impl MSCFModel_Wiedemann {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Wiedemann_VehicleVariables);
         vars.m().accelSign = if vNext > veh.get_speed() { 1. } else { -1. };
         vNext
@@ -166,7 +200,7 @@ impl MSCFModel_Wiedemann {
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
         let bx = (1. + 7. * self.mySecurity) * speed.sqrt();
         let abx = self.myAX + bx - self.myType.get_length(); // abx is the brutto gap
-        max2(abx, self.base.get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel))
+        max2(abx, self.base.get_secure_gap_base(veh, pred, speed, leaderSpeed, leaderMaxDecel))
     }
 
     /// C++: `int MSCFModel_Wiedemann::getModelID() const` [const, virtual]
@@ -469,7 +503,7 @@ impl MSCFModel_Wiedemann_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "Wiedemann");
-        let internals = f64_to_string_prec(self.accelSign, 6);
+        let internals = f64_to_string_default(self.accelSign);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;

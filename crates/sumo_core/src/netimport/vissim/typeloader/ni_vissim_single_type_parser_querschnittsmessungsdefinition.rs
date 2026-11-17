@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Querschnittsmessungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Querschnittsmessungsdefinition::NIVissimSingleTypeParser_Querschnittsmessungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Querschnittsmessungsdefinition::~NIVissimSingleTypeParser_Querschnittsmessungsdefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Querschnittsmessungsdefinition {
     // NIVissimSingleTypeParser_Querschnittsmessungsdefinition::~NIVissimSingleTypeParser_Querschnittsmessungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Querschnittsmessungsdefinition::~NIVissimSingleTypeParser_Querschnittsmessungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Querschnittsmessungsdefinition::parse(std::istream &)` [virtual]
@@ -62,8 +62,24 @@ impl NIVissimSingleTypeParser_Querschnittsmessungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Querschnittsmessungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = self.my_read(from);
+        if tag == "von" {
+            while tag != "fahrzeugklassen" && tag != "konfdatei" {
+                tag = self.my_read(from);
+            }
+            tag = self.my_read(from);
+            while tag != "DATAEND" {
+                tag = self.read_end_secure(from, "");
+            }
+            return true;
+        }
+        tag = self.my_read(from);
+        tag = self.my_read(from);
+        while tag != "DATAEND" {
+            tag = self.read_end_secure(from, "");
+        }
+        true
     }
 
 }

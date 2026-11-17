@@ -37,6 +37,32 @@ fn opt_is_set(oc: &utils::options::options_cont::OptionsCont, name: &str) -> boo
     or_panic(oc.is_set(name, true))
 }
 
+/// C++ `gTaxiClasses` is an `int`, so each `|=` keeps only the low 32 bits of the 64-bit SVCPermissions
+fn g_taxi_classes_mask(names: &[String]) -> i32 {
+    let mut taxiClasses: i32 = 0;
+    for vClassName in names {
+        taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(vClassName) as i32;
+    }
+    taxiClasses
+}
+
+#[cfg(test)]
+mod tests {
+    use super::g_taxi_classes_mask;
+
+    #[test]
+    fn taxi_mask_is_int_wide() {
+        let names = |v: &[&str]| v.iter().map(|s| s.to_string()).collect::<Vec<String>>();
+        // SVC_TAXI = 1 << 8 is kept
+        assert_eq!(g_taxi_classes_mask(&names(&["taxi"])), 1 << 8);
+        // SVC_CUSTOM1 = 1 << 31 becomes INT_MIN in C++ int
+        assert_eq!(g_taxi_classes_mask(&names(&["custom1"])), i32::MIN);
+        // SVC_CUSTOM2 = 1 << 32 is dropped entirely
+        assert_eq!(g_taxi_classes_mask(&names(&["custom2"])), 0);
+        assert_eq!(g_taxi_classes_mask(&names(&["taxi", "custom2"])), 1 << 8);
+    }
+}
+
 fn opt_is_default(oc: &utils::options::options_cont::OptionsCont, name: &str) -> bool {
     oc.is_default(name)
 }
@@ -46,29 +72,7 @@ fn st(s: &str) -> utils::common::time::SUMOTime {
     or_panic(utils::common::time::string2time(s))
 }
 
-/// C++ checkStepLengthMultiple (utils/common/SUMOTime.cpp); only emits warnings, its C++ return value is always false
-// shortcut: this function lives in utils/common/SUMOTime.cpp and is not ported there yet, so it is local to MSFrame
-fn check_step_length_multiple(t: utils::common::time::SUMOTime, error: &str, delta_t: utils::common::time::SUMOTime, begin: utils::common::time::SUMOTime) {
-    use utils::common::time::time2string;
-    if begin % delta_t == 0 {
-        if t % delta_t != 0 {
-            utils::common::msg_handler::write_warning(&format!(
-                "The given time value {} is not a multiple of the step length {}{}.",
-                time2string(t),
-                time2string(delta_t),
-                error
-            ));
-        }
-    } else if (t - begin) % delta_t != 0 {
-        utils::common::msg_handler::write_warning(&format!(
-            "The given time value {} is not reached with step length {} and begin time {}{}.",
-            time2string(t),
-            time2string(delta_t),
-            time2string(begin),
-            error
-        ));
-    }
-}
+use utils::common::time::check_step_length_multiple;
 
 impl MSFrame {
     /// C++: `void MSFrame::fillOptions()` [static]
@@ -100,15 +104,9 @@ impl MSFrame {
     //     oc.addSynonyme("route-files", "routes");
     //     oc.addDescription("route-files", "Input", TL("Load routes descriptions from FILE(s)"));
     //
-    //     oc.doRegister("ignore.routeelements", new Option_Bool(false));
-    //     oc.addDescription("ignore.routeelements", "Input", TL("Ignore route elements during loading of sumo-configs"));
-    //
     //     oc.doRegister("additional-files", 'a', new Option_FileName());
     //     oc.addSynonyme("additional-files", "additional");
     //     oc.addDescription("additional-files", "Input", TL("Load further descriptions from FILE(s)"));
-    //
-    //     oc.doRegister("ignore.additionalelements", new Option_Bool(false));
-    //     oc.addDescription("ignore.additionalelements", "Input", TL("Ignore additional elements during loading of sumo-configs"));
     //
     //     oc.doRegister("weight-files", 'w', new Option_FileName());
     //     oc.addSynonyme("weight-files", "weights");
@@ -811,8 +809,6 @@ impl MSFrame {
     //     oc.addDescription("meso-multi-queue", "Mesoscopic", TL("Enable multiple queues at edge ends"));
     //     oc.doRegister("meso-lane-queue", new Option_Bool(false));
     //     oc.addDescription("meso-lane-queue", "Mesoscopic", TL("Enable separate queues for every lane"));
-    //     oc.doRegister("meso-lookahead", new Option_Float(0));
-    //     oc.addDescription("meso-lookahead", "Mesoscopic", TL("Choose lane queues by the route of the vehicle at all turns up to FLOAT m ahead"));
     //     oc.doRegister("meso-ignore-lanes-by-vclass", new Option_StringVector(StringVector({ "pedestrian", "bicycle" })));
     //     oc.addDescription("meso-ignore-lanes-by-vclass", "Mesoscopic", TL("Do not build queues (or reduce capacity) for lanes allowing only the given vclasses"));
     //     oc.addSynonyme("meso-ignore-lanes-by-vclass", "meso.ignore-lanes.by-vclass");
@@ -918,13 +914,12 @@ impl MSFrame {
             oc.add_call_example("-b 0 -e 1000 -n net.xml -r routes.xml", "start a simulation from time 0 to 1000 with given net and routes");
             oc.add_call_example("-c munich_config.cfg", "start with a configuration file");
             oc.add_call_example("--help", "print help");
-            // shortcut: C++ SystemFrame::addConfigurationOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Time");
             oc.add_option_sub_topic("Processing");
             oc.add_option_sub_topic("Routing");
-            oc.add_option_sub_topic("Persons");
             oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
             oc.add_synonyme("net-file", "net", false);
             oc.add_description("net-file", "Input", "Load road network description from FILE");
@@ -932,13 +927,9 @@ impl MSFrame {
             oc.do_register_abbr("route-files", 'r', SumoOption::file_name());
             oc.add_synonyme("route-files", "routes", false);
             oc.add_description("route-files", "Input", "Load routes descriptions from FILE(s)");
-            oc.do_register("ignore.routeelements", SumoOption::bool(false));
-            oc.add_description("ignore.routeelements", "Input", "Ignore route elements during loading of sumo-configs");
             oc.do_register_abbr("additional-files", 'a', SumoOption::file_name());
             oc.add_synonyme("additional-files", "additional", false);
             oc.add_description("additional-files", "Input", "Load further descriptions from FILE(s)");
-            oc.do_register("ignore.additionalelements", SumoOption::bool(false));
-            oc.add_description("ignore.additionalelements", "Input", "Ignore additional elements during loading of sumo-configs");
             oc.do_register_abbr("weight-files", 'w', SumoOption::file_name());
             oc.add_synonyme("weight-files", "weights", false);
             oc.add_description("weight-files", "Input", "Load edge/lane weights for online rerouting from FILE");
@@ -953,7 +944,7 @@ impl MSFrame {
             oc.add_description("load-state.remove-vehicles", "Input", "Removes vehicles with the given IDs from the loaded state");
             oc.do_register("junction-taz", SumoOption::bool(false));
             oc.add_description("junction-taz", "Input", "Initialize a TAZ for every junction to use attributes toJunction and fromJunction");
-            // shortcut: C++ SystemFrame::addReportOptions is not ported (SystemFrame), so its options are not registered here; upgrade when system_frame is ported
+            utils::common::system_frame::add_report_options(oc);
             oc.do_register("netstate-dump", SumoOption::file_name());
             oc.add_synonyme("netstate-dump", "ndump", false);
             oc.add_synonyme("netstate-dump", "netstate", false);
@@ -1199,7 +1190,7 @@ impl MSFrame {
             oc.do_register("max-num-vehicles", SumoOption::integer(-1));
             oc.add_description("max-num-vehicles", "Processing", "Delay vehicle insertion to stay within the given maximum number");
             oc.do_register("max-num-persons", SumoOption::integer(-1));
-            oc.add_description("max-num-persons", "Persons", "Delay person insertion to stay within the given maximum number");
+            oc.add_description("max-num-persons", "Processing", "Delay person insertion to stay within the given maximum number");
             oc.do_register("max-num-teleports", SumoOption::integer(-1));
             oc.add_description("max-num-teleports", "Processing", "Abort the simulation if the given maximum number of teleports is exceeded");
             oc.do_register("scale", SumoOption::float(1.0));
@@ -1219,7 +1210,7 @@ impl MSFrame {
             oc.do_register("time-to-teleport.remove-constraint", SumoOption::bool(false));
             oc.add_description("time-to-teleport.remove-constraint", "Processing", "Whether rail-signal-constraint based deadlocks shall be cleared by removing a constraint");
             oc.do_register("time-to-teleport.ride", SumoOption::string_typed("-1", "TIME"));
-            oc.add_description("time-to-teleport.ride", "Persons", "The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting");
+            oc.add_description("time-to-teleport.ride", "Processing", "The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting");
             oc.do_register("time-to-teleport.bidi", SumoOption::string_typed("-1", "TIME"));
             oc.add_description("time-to-teleport.bidi", "Processing", "The waiting time after which vehicles on bidirectional edges are teleported");
             oc.do_register("time-to-teleport.railsignal-deadlock", SumoOption::string_typed("-1", "TIME"));
@@ -1299,35 +1290,55 @@ impl MSFrame {
             oc.do_register("use-stop-started", SumoOption::bool(false));
             oc.add_description("use-stop-started", "Processing", "Override stop arrival times with stop started times when given");
             oc.do_register("pedestrian.model", SumoOption::string_with("striping"));
-            oc.add_description("pedestrian.model", "Persons", "Select among pedestrian models ['nonInteracting', 'striping', 'jupedsim']");
+            oc.add_description("pedestrian.model", "Processing", "Select among pedestrian models ['nonInteracting', 'striping', 'jupedsim', 'remote']");
             oc.do_register("pedestrian.timegap-crossing", SumoOption::float(2.0));
-            oc.add_description("pedestrian.timegap-crossing", "Persons", "Minimal acceptable gap (in seconds) between two vehicles before starting to cross");
+            oc.add_description("pedestrian.timegap-crossing", "Processing", "Minimal acceptable gap (in seconds) between two vehicles before starting to cross");
             oc.do_register("pedestrian.striping.stripe-width", SumoOption::float(0.64));
-            oc.add_description("pedestrian.striping.stripe-width", "Persons", "Width of parallel stripes for segmenting a sidewalk (meters) for use with model 'striping'");
+            oc.add_description("pedestrian.striping.stripe-width", "Processing", "Width of parallel stripes for segmenting a sidewalk (meters) for use with model 'striping'");
             oc.do_register("pedestrian.striping.dawdling", SumoOption::float(0.2));
-            oc.add_description("pedestrian.striping.dawdling", "Persons", "Factor for random slow-downs [0,1] for use with model 'striping'");
+            oc.add_description("pedestrian.striping.dawdling", "Processing", "Factor for random slow-downs [0,1] for use with model 'striping'");
             oc.do_register("pedestrian.striping.mingap-to-vehicle", SumoOption::float(0.25));
-            oc.add_description("pedestrian.striping.mingap-to-vehicle", "Persons", "Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model 'striping'");
+            oc.add_description("pedestrian.striping.mingap-to-vehicle", "Processing", "Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model 'striping'");
             oc.do_register("pedestrian.striping.jamtime", SumoOption::string_typed("300", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime", "Persons", "Time in seconds after which pedestrians start squeezing through a jam when using model 'striping' (non-positive values disable squeezing)");
+            oc.add_description("pedestrian.striping.jamtime", "Processing", "Time in seconds after which pedestrians start squeezing through a jam when using model 'striping' (non-positive values disable squeezing)");
             oc.do_register("pedestrian.striping.jamtime.crossing", SumoOption::string_typed("10", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime.crossing", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model 'striping' (non-positive values disable squeezing)");
+            oc.add_description("pedestrian.striping.jamtime.crossing", "Processing", "Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model 'striping' (non-positive values disable squeezing)");
             oc.do_register("pedestrian.striping.jamtime.narrow", SumoOption::string_typed("1", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime.narrow", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model 'striping'");
+            oc.add_description("pedestrian.striping.jamtime.narrow", "Processing", "Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model 'striping'");
             oc.do_register("pedestrian.striping.jamfactor", SumoOption::float(0.25));
-            oc.add_description("pedestrian.striping.jamfactor", "Persons", "Factor for reducing speed of pedestrian in jammed state");
+            oc.add_description("pedestrian.striping.jamfactor", "Processing", "Factor for reducing speed of pedestrian in jammed state");
             oc.do_register("pedestrian.striping.reserve-oncoming", SumoOption::float(0.0));
-            oc.add_description("pedestrian.striping.reserve-oncoming", "Persons", "Fraction of stripes to reserve for oncoming pedestrians");
+            oc.add_description("pedestrian.striping.reserve-oncoming", "Processing", "Fraction of stripes to reserve for oncoming pedestrians");
             oc.do_register("pedestrian.striping.reserve-oncoming.junctions", SumoOption::float(0.34));
-            oc.add_description("pedestrian.striping.reserve-oncoming.junctions", "Persons", "Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas");
+            oc.add_description("pedestrian.striping.reserve-oncoming.junctions", "Processing", "Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas");
             oc.do_register("pedestrian.striping.reserve-oncoming.max", SumoOption::float(1.28));
-            oc.add_description("pedestrian.striping.reserve-oncoming.max", "Persons", "Maximum width in m to reserve for oncoming pedestrians");
+            oc.add_description("pedestrian.striping.reserve-oncoming.max", "Processing", "Maximum width in m to reserve for oncoming pedestrians");
             oc.do_register("pedestrian.striping.legacy-departposlat", SumoOption::bool(false));
-            oc.add_description("pedestrian.striping.legacy-departposlat", "Persons", "Interpret departPosLat for walks in legacy style");
+            oc.add_description("pedestrian.striping.legacy-departposlat", "Processing", "Interpret departPosLat for walks in legacy style");
             oc.do_register("pedestrian.striping.walkingarea-detail", SumoOption::integer(4));
-            oc.add_description("pedestrian.striping.walkingarea-detail", "Persons", "Generate INT intermediate points to smooth out lanes within the walkingarea");
+            oc.add_description("pedestrian.striping.walkingarea-detail", "Processing", "Generate INT intermediate points to smooth out lanes within the walkingarea");
+            oc.do_register("pedestrian.jupedsim.step-length", SumoOption::string_typed("0.01", "TIME"));
+            oc.add_description("pedestrian.jupedsim.step-length", "Processing", "The update interval of the JuPedSim simulation (in seconds)");
+            oc.do_register("pedestrian.jupedsim.exit-tolerance", SumoOption::float(1.0));
+            oc.add_description("pedestrian.jupedsim.exit-tolerance", "Processing", "The distance to accept the JuPedSim arrival point (in meters)");
+            oc.do_register("pedestrian.jupedsim.model", SumoOption::string_with("CollisionFreeSpeed"));
+            oc.add_description("pedestrian.jupedsim.model", "Processing", "The submodel to use in JuPedSim ('CollisionFreeSpeed', 'CollisionFreeSpeedV2', 'GeneralizedCentrifugalForce', 'SocialForce')");
+            oc.do_register("pedestrian.jupedsim.strength-neighbor-repulsion", SumoOption::float(8.0));
+            oc.add_description("pedestrian.jupedsim.strength-neighbor-repulsion", "Processing", "The neighbor repulsion strength of the JuPedSim model");
+            oc.do_register("pedestrian.jupedsim.range-neighbor-repulsion", SumoOption::float(0.1));
+            oc.add_description("pedestrian.jupedsim.range-neighbor-repulsion", "Processing", "The neighbor repulsion range of the JuPedSim model (in meters)");
+            oc.do_register("pedestrian.jupedsim.strength-geometry-repulsion", SumoOption::float(5.0));
+            oc.add_description("pedestrian.jupedsim.strength-geometry-repulsion", "Processing", "The geometry repulsion strength of the JuPedSim model");
+            oc.do_register("pedestrian.jupedsim.range-geometry-repulsion", SumoOption::float(0.02));
+            oc.add_description("pedestrian.jupedsim.range-geometry-repulsion", "Processing", "The geometry repulsion range of the JuPedSim model (in meters)");
+            oc.do_register("pedestrian.jupedsim.wkt", SumoOption::file_name());
+            oc.add_description("pedestrian.jupedsim.wkt", "Output", "The filename to output the JuPedSim network as WKT");
+            oc.do_register("pedestrian.jupedsim.wkt.geo", SumoOption::bool(false));
+            oc.add_description("pedestrian.jupedsim.wkt.geo", "Output", "Whether to output JuPedSim network as WKT using geo-coordinates (lon/lat)");
+            oc.do_register("pedestrian.jupedsim.py", SumoOption::file_name());
+            oc.add_description("pedestrian.jupedsim.py", "Output", "The filename to output the JuPedSim setup as Python script");
             oc.do_register("ride.stop-tolerance", SumoOption::float(10.0));
-            oc.add_description("ride.stop-tolerance", "Persons", "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops");
+            oc.add_description("ride.stop-tolerance", "Processing", "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops");
             oc.do_register("mapmatch.distance", SumoOption::float(100.0));
             oc.add_description("mapmatch.distance", "Processing", "Maximum distance when mapping input coordinates (fromXY etc.) to the road network");
             oc.do_register("mapmatch.junctions", SumoOption::bool(false));
@@ -1357,21 +1368,21 @@ impl MSFrame {
             oc.do_register("astar.landmark-distances", SumoOption::file_name());
             oc.add_description("astar.landmark-distances", "Routing", "Initialize lookup table for astar ALT-variant from the given file");
             oc.do_register("persontrip.walkfactor", SumoOption::float(0.75));
-            oc.add_description("persontrip.walkfactor", "Persons", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
+            oc.add_description("persontrip.walkfactor", "Routing", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
             oc.do_register("persontrip.walk-opposite-factor", SumoOption::float(1.0));
-            oc.add_description("persontrip.walk-opposite-factor", "Persons", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
+            oc.add_description("persontrip.walk-opposite-factor", "Processing", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
             oc.do_register("persontrip.transfer.car-walk", SumoOption::string_vector_with(vec!["parkingAreas".to_string()]));
-            oc.add_description("persontrip.transfer.car-walk", "Persons", "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
+            oc.add_description("persontrip.transfer.car-walk", "Routing", "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
             oc.do_register("persontrip.transfer.taxi-walk", SumoOption::string_vector());
-            oc.add_description("persontrip.transfer.taxi-walk", "Persons", "Where taxis can drop off customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.add_description("persontrip.transfer.taxi-walk", "Routing", "Where taxis can drop off customers ('allJunctions, 'ptStops', 'parkingAreas')");
             oc.do_register("persontrip.transfer.walk-taxi", SumoOption::string_vector());
-            oc.add_description("persontrip.transfer.walk-taxi", "Persons", "Where taxis can pick up customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.add_description("persontrip.transfer.walk-taxi", "Routing", "Where taxis can pick up customers ('allJunctions, 'ptStops', 'parkingAreas')");
             oc.do_register("persontrip.default.group", SumoOption::string());
-            oc.add_description("persontrip.default.group", "Persons", "When set, trips between the same origin and destination will share a taxi by default");
+            oc.add_description("persontrip.default.group", "Routing", "When set, trips between the same origin and destination will share a taxi by default");
             oc.do_register("persontrip.taxi.waiting-time", SumoOption::string_typed("300", "TIME"));
-            oc.add_description("persontrip.taxi.waiting-time", "Persons", "Estimated time for taxi pickup");
+            oc.add_description("persontrip.taxi.waiting-time", "Routing", "Estimated time for taxi pickup");
             oc.do_register("persontrip.ride-public-line", SumoOption::bool(false));
-            oc.add_description("persontrip.ride-public-line", "Persons", "Only use the intended public transport line rather than any alternative line that stops at the destination");
+            oc.add_description("persontrip.ride-public-line", "Routing", "Only use the intended public transport line rather than any alternative line that stops at the destination");
             oc.do_register("railway.max-train-length", SumoOption::float(1000.0));
             oc.add_description("railway.max-train-length", "Routing", "Use FLOAT as a maximum train length when initializing the railway router");
             oc.do_register("replay-rerouting", SumoOption::bool(false));
@@ -1382,7 +1393,7 @@ impl MSFrame {
             oc.do_register("phemlight-path", SumoOption::file_name_with(vec!["./PHEMlight/".to_string()]));
             oc.add_description("phemlight-path", "Emissions", "Determines where to load PHEMlight definitions from");
             oc.do_register("phemlight-year", SumoOption::integer(0));
-            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modeling with the given reference year in PHEMlight5");
+            oc.add_description("phemlight-year", "Emissions", "Enable fleet age modelling with the given reference year in PHEMlight5");
             oc.do_register("phemlight-temperature", SumoOption::float(f64::MAX));
             oc.add_description("phemlight-temperature", "Emissions", "Set ambient temperature to correct NOx emissions in PHEMlight5");
             oc.add_option_sub_topic("Communication");
@@ -1423,8 +1434,6 @@ impl MSFrame {
             oc.add_description("meso-multi-queue", "Mesoscopic", "Enable multiple queues at edge ends");
             oc.do_register("meso-lane-queue", SumoOption::bool(false));
             oc.add_description("meso-lane-queue", "Mesoscopic", "Enable separate queues for every lane");
-            oc.do_register("meso-lookahead", SumoOption::float(0.0));
-            oc.add_description("meso-lookahead", "Mesoscopic", "Choose lane queues by the route of the vehicle at all turns up to FLOAT m ahead");
             oc.do_register("meso-ignore-lanes-by-vclass", SumoOption::string_vector_with(vec!["pedestrian".to_string(), "bicycle".to_string()]));
             oc.add_description("meso-ignore-lanes-by-vclass", "Mesoscopic", "Do not build queues (or reduce capacity) for lanes allowing only the given vclasses");
             oc.add_synonyme("meso-ignore-lanes-by-vclass", "meso.ignore-lanes.by-vclass", false);
@@ -1444,12 +1453,12 @@ impl MSFrame {
             oc.add_description("meso-recheck", "Mesoscopic", "Time interval for rechecking insertion into the next segment after failure");
             oc.do_register("meso-interpolate-pos", SumoOption::bool(false));
             oc.add_description("meso-interpolate-pos", "Mesoscopic", "Enable mesoscopic position interpolation");
-            // shortcut: C++ RandHelper::insertRandOptions is not ported, so the rand options are not registered here; upgrade when rand_helper registers them
+            utils::common::rand_helper::insert_rand_options(oc);
             oc.do_register("thread-rngs", SumoOption::integer(64));
             oc.add_description("thread-rngs", "Random Number", "Number of pre-allocated random number generators to ensure repeatable multi-threaded simulations (should be at least the number of threads for repeatable simulations).");
             oc.add_option_sub_topic("GUI Only");
             oc.do_register_abbr("gui-settings-file", 'g', SumoOption::file_name());
-            oc.add_description("gui-settings-file", "GUI Only", "Load visualization settings from FILE");
+            oc.add_description("gui-settings-file", "GUI Only", "Load visualisation settings from FILE");
             oc.do_register_abbr("quit-on-end", 'Q', SumoOption::bool(false));
             oc.add_description("quit-on-end", "GUI Only", "Quits the GUI when the simulation stops");
             oc.do_register_abbr("game", 'G', SumoOption::bool(false));
@@ -1603,10 +1612,6 @@ impl MSFrame {
     //     if (oc.getBool("ignore.routeelements")) {
     //         oc.resetWritable("route-files");
     //         oc.resetDefault("route-files");
-    //     }
-    //     if (oc.getBool("ignore.additionalelements")) {
-    //         oc.resetWritable("additional-files");
-    //         oc.resetDefault("additional-files");
     //     }
     //     if (!oc.isSet("net-file") && oc.isDefault("remote-port")) {
     //         WRITE_ERROR(TL("No network file (-n) specified."));
@@ -1831,14 +1836,6 @@ impl MSFrame {
     pub fn check_options() -> bool {
         utils::options::options_cont::with_options(|oc| {
             let mut ok = true;
-            if opt_bool(oc, "ignore.routeelements") {
-                or_panic(oc.reset_writable_name("route-files"));
-                or_panic(oc.reset_default_name("route-files"));
-            }
-            if opt_bool(oc, "ignore.additionalelements") {
-                or_panic(oc.reset_writable_name("additional-files"));
-                or_panic(oc.reset_default_name("additional-files"));
-            }
             if !opt_is_set(oc, "net-file") && opt_is_default(oc, "remote-port") {
                 utils::common::msg_handler::write_error("No network file (-n) specified.");
                 ok = false;
@@ -2046,7 +2043,7 @@ impl MSFrame {
                 or_panic(oc.set_default("junction-taz", "true"));
             }
             ok &= crate::microsim::devices::ms_device::MSDevice::check_options(oc);
-            // shortcut: C++ SystemFrame::checkOptions(oc) is not ported, so its checks are skipped here
+            ok &= utils::common::system_frame::check_options(oc);
             ok
         })
     }
@@ -2247,12 +2244,7 @@ impl MSFrame {
             mBdefaultClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
         }
         crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::init_signalized(defaultClasses, mBdefaultClasses);
-        // shortcut: gTaxiClasses is SVCPermissions (i64) in C++, but the utils global is i32, so the high bits are dropped
-        let mut taxiClasses: utils::common::sumo_vehicle_class::SVCPermissions = 0;
-        for vClassName in opt_strs(oc, "device.taxi.vclasses") {
-            taxiClasses |= utils::common::sumo_vehicle_class::parse_vehicle_classes(&vClassName);
-        }
-        utils::common::std_defs::set_g_taxi_classes(taxiClasses as i32);
+        utils::common::std_defs::set_g_taxi_classes(g_taxi_classes_mask(&opt_strs(oc, "device.taxi.vclasses")));
         let mut error = String::new();
         if !crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter::parse_depart_lane(
             &opt_str(oc, "default.departlane"),

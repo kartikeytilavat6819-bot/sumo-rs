@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:39:15.244764-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lcparams/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lcparams/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft03/tools/oracle/cases/lcparams/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft03/tools/oracle/cases/lcparams/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft03/tools/oracle/cases/lcparams/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="kl0" depart="4.00" departLane="A_0" departPos="5.10" departSpeed="7.39" departDelay="0.00" arrival="113.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="13.28" duration="109.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.32" rerouteNo="0" devices="tripinfo_kl0 fcd_kl0" vType="keepleft" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="kr0" depart="2.00" departLane="A_0" departPos="5.10" departSpeed="2.19" departDelay="0.00" arrival="118.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="12.90" duration="116.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.60" rerouteNo="0" devices="tripinfo_kr0 fcd_kr0" vType="keepright" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="co0" depart="8.00" departLane="A_0" departPos="5.10" departSpeed="4.32" departDelay="0.00" arrival="120.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="12.72" duration="112.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="11.00" rerouteNo="0" devices="tripinfo_co0 fcd_co0" vType="coop" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="kr1" depart="12.00" departLane="A_1" departPos="5.10" departSpeed="11.80" departDelay="0.00" arrival="122.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="13.62" duration="110.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.71" rerouteNo="0" devices="tripinfo_kr1 fcd_kr1" vType="keepright" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="sg1" depart="16.00" departLane="A_2" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="129.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="11.92" duration="113.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.42" rerouteNo="0" devices="tripinfo_sg1 fcd_sg1" vType="speedgain" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="sg0" depart="6.00" departLane="A_0" departPos="5.10" departSpeed="5.43" departDelay="0.00" arrival="131.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="12.66" duration="125.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="23.73" rerouteNo="0" devices="tripinfo_sg0 fcd_sg0" vType="speedgain" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="kl1" depart="14.00" departLane="A_1" departPos="5.10" departSpeed="12.31" departDelay="0.00" arrival="135.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="11.73" duration="121.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="7.05" rerouteNo="0" devices="tripinfo_kl1 fcd_kl1" vType="keepleft" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="ns0" depart="10.00" departLane="A_0" departPos="5.10" departSpeed="11.54" departDelay="0.00" arrival="140.00" arrivalLane="B_0" arrivalPos="396.00" arrivalSpeed="11.41" duration="130.00" routeLength="1394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="8.49" rerouteNo="0" devices="tripinfo_ns0 fcd_ns0" vType="nostrat" speedFactor="0.83" vaporized=""/>
+</tripinfos>

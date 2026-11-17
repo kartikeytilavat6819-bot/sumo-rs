@@ -1,0 +1,10 @@
+<routes>
+    <vType id="DEFAULT_VEHTYPE">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="1"/>
+        <param key="device.rerouting.pre-period" value="0"/>
+    </vType>
+    <vehicle id="v0" depart="0.00" departSpeed="max">
+        <route edges="LEAD IN AB OUT"/>
+    </vehicle>
+</routes>

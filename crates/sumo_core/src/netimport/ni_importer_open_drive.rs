@@ -31,6 +31,8 @@ const OPEN_DRIVE_TAGS: &[(&str, i32)] = &[
     ("line", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LINE as i32),
     ("spiral", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_SPIRAL as i32),
     ("arc", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_ARC as i32),
+    ("poly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_POLY3 as i32),
+    ("paramPoly3", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_PARAMPOLY3 as i32),
     ("laneSection", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANESECTION as i32),
     ("laneOffset", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LANEOFFSET as i32),
     ("left", NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT as i32),
@@ -117,14 +119,12 @@ const OPEN_DRIVE_ATTRS: &[(&str, i32)] = &[
     ("unit", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_UNIT as i32),
     ("", NIImporter_OpenDrive_OpenDriveXMLAttr::OPENDRIVE_ATTR_NOTHING as i32),
 ];
-// shortcut: NBEdge::UNSPECIFIED_* constants are not ported as Rust items; values copied from NBEdge.cpp
-const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
-const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
-const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.0;
-const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
-const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.0;
-const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.0;
-const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.0;
+use crate::netbuild::nb_edge::{
+    UNSPECIFIED_CONTPOS as NBEDGE_UNSPECIFIED_CONTPOS, UNSPECIFIED_FRICTION as NBEDGE_UNSPECIFIED_FRICTION,
+    UNSPECIFIED_LOADED_LENGTH as NBEDGE_UNSPECIFIED_LOADED_LENGTH, UNSPECIFIED_OFFSET as NBEDGE_UNSPECIFIED_OFFSET,
+    UNSPECIFIED_SPEED as NBEDGE_UNSPECIFIED_SPEED, UNSPECIFIED_VISIBILITY_DISTANCE as NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
+    UNSPECIFIED_WIDTH as NBEDGE_UNSPECIFIED_WIDTH,
+};
 
 /// C++ enum `NIImporter_OpenDrive::ContactPoint`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -364,17 +364,6 @@ impl NIImporter_OpenDrive_LaneSorter {
         (a.id.abs() < b.id.abs()) as i32
     }
 
-}
-
-/// Ordering induced by C++ `LaneSorter::operator()` (used with `std::sort`)
-fn lane_sorter_ordering(sorter: &NIImporter_OpenDrive_LaneSorter, a: &NIImporter_OpenDrive_OpenDriveLane, b: &NIImporter_OpenDrive_OpenDriveLane) -> std::cmp::Ordering {
-    if sorter.call_op(a, b) != 0 {
-        std::cmp::Ordering::Less
-    } else if sorter.call_op(b, a) != 0 {
-        std::cmp::Ordering::Greater
-    } else {
-        std::cmp::Ordering::Equal
-    }
 }
 
 /// Maps a raw SAX tag number back to its `OpenDriveXMLTag` (unknown numbers map to OPENDRIVE_TAG_NOTHING)
@@ -1577,10 +1566,10 @@ impl NIImporter_OpenDrive {
                         rightGeom.clone(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
                     currRight = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
-                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|
+                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|, so equal |id| lanes tie
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT).or_default());
                     let sorter = NIImporter_OpenDrive_LaneSorter::new();
-                    lanes.sort_by(|a, b| lane_sorter_ordering(&sorter, a, b));
+                    utils::common::std_sort::std_sort_vec(&mut lanes, |a, b| sorter.call_op(a, b) != 0);
                     for odl in &lanes {
                         if let Some(&sumoLaneIndex) = e.laneSections[j].laneMap.get(&odl.id) {
                             NIImporter_OpenDrive::set_lane_attributes(oe.clone(), currRight.m().get_lane_struct(sumoLaneIndex), odl, saveOrigIDs, tc.m());
@@ -1632,10 +1621,10 @@ impl NIImporter_OpenDrive {
                         leftGeom.reverse(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
                     currLeft = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
-                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|
+                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|, so equal |id| lanes tie
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT).or_default());
                     let sorter = NIImporter_OpenDrive_LaneSorter::new();
-                    lanes.sort_by(|a, b| lane_sorter_ordering(&sorter, a, b));
+                    utils::common::std_sort::std_sort_vec(&mut lanes, |a, b| sorter.call_op(a, b) != 0);
                     for odl in &lanes {
                         if let Some(&sumoLaneIndex) = e.laneSections[j].laneMap.get(&odl.id) {
                             NIImporter_OpenDrive::set_lane_attributes(oe.clone(), currLeft.m().get_lane_struct(sumoLaneIndex), odl, saveOrigIDs, tc.m());
@@ -1786,8 +1775,12 @@ impl NIImporter_OpenDrive {
                 &i.shape, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
 
             if i.origID != "" && saveOrigIDs {
-                // shortcut: C++ sets the ORIGID parameter on the matching NBEdge::Connection; the Rust
-                // NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so it cannot be set yet
+                for k in from.m().get_connections_2().iter_mut() {
+                    if k.fromLane == fromLane && k.toEdge == to && k.toLane == toLane {
+                        k.base.set_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &format!("{}_{}", i.origID, i.origLane));
+                        break;
+                    }
+                }
             }
         }
 
@@ -1904,9 +1897,31 @@ impl NIImporter_OpenDrive {
                                 }
                             }
                         }
-                        // shortcut: C++ loops over from->getConnections() to set tlLinkIndex, signalID and controllerID;
-                        // the Rust NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so this is skipped until it is ported
-                        let _ = to;
+                        for c in from.m().get_connections_2().iter_mut() {
+                            if c.toEdge == to {
+                                let odLane = laneIndexMap.get(&(from, c.fromLane)).copied().unwrap_or(0);
+                                if signal.minLane == 0 || (signal.minLane <= odLane && signal.maxLane >= odLane) {
+                                    if c.base.has_parameter("signalID") {
+                                        let joined = format!("{} {}", c.base.get_parameter("signalID", ""), signal.id);
+                                        c.base.set_parameter("signalID", &joined);
+                                    } else {
+                                        c.base.set_parameter("signalID", &signal.id);
+                                    }
+                                }
+                                // set tlIndex to allow signal groups (defined in OpenDRIVE controller elements)
+                                if importSignalGroups {
+                                    let controllerID = handler.get_controller(signal.id.clone()).id.clone();
+                                    if controllerID != "" {
+                                        if c.base.get_parameter("controllerID", "") != "" {
+                                            write_warningf!("The signaling of the connection from '%' to '%' (controller '%') is ambiguous because it is overwritten signal '%' and with controller '%'.", from.m().get_id(), c.toEdge.m().get_id(), c.base.get_parameter("controllerID", ""), signal.id, controllerID);
+                                        }
+                                        let tlIndex = handler.get_tl_index_for_controller(controllerID.clone());
+                                        c.tlLinkIndex = tlIndex;
+                                        c.base.set_parameter("controllerID", &controllerID);
+                                    }
+                                }
+                            }
+                        }
                         NIImporter_OpenDrive::get_tls_secure(from, nb)?;
                     } else {
                         write_warningf!("Found a traffic light signal on an unknown edge (original edge id='%').", e.id);
@@ -1923,8 +1938,29 @@ impl NIImporter_OpenDrive {
                         write_warningf!("Could not find edge '%' for signal '%'.", id, signal.id);
                         continue;
                     }
-                    // shortcut: connection-level signalID/controllerID/tlLinkIndex assignment is skipped, see above
-                    let _ = importSignalGroups;
+                    for c in edge.m().get_connections_2().iter_mut() {
+                        let odLane = laneIndexMap.get(&(edge, c.fromLane)).copied().unwrap_or(0);
+                        if signal.minLane == 0 || (signal.minLane <= odLane && signal.maxLane >= odLane) {
+                            if c.base.has_parameter("signalID") {
+                                let joined = format!("{} {}", c.base.get_parameter("signalID", ""), signal.id);
+                                c.base.set_parameter("signalID", &joined);
+                            } else {
+                                c.base.set_parameter("signalID", &signal.id);
+                            }
+                        }
+                        // set tlIndex to allow signal groups (defined in OpenDRIVE controller elements)
+                        if importSignalGroups {
+                            let controllerID = handler.get_controller(signal.id.clone()).id.clone();
+                            if controllerID != "" {
+                                if c.base.get_parameter("controllerID", "") != "" {
+                                    write_warningf!("The signaling of the connection from '%' to '%' (controller '%') is ambiguous because it is overwritten with signal '%' and controller '%'.", edge.m().get_id(), c.toEdge.m().get_id(), c.base.get_parameter("controllerID", ""), signal.id, controllerID);
+                                }
+                                let tlIndex = handler.get_tl_index_for_controller(controllerID.clone());
+                                c.tlLinkIndex = tlIndex;
+                                c.base.set_parameter("controllerID", &controllerID);
+                            }
+                        }
+                    }
                     NIImporter_OpenDrive::get_tls_secure(edge, nb)?;
                 }
                 // @note: tls 'signalID' parameters are set via NBTrafficLightLogicCont::setOpenDriveSignalParameters
@@ -1935,7 +1971,10 @@ impl NIImporter_OpenDrive {
         // -------------------------
         // clean up
         // -------------------------
-        // shortcut: C++ deletes every OpenDriveEdge here; their ownership is not defined by the port yet, so they are not freed
+        // C++ `delete (*i).second` for every OpenDriveEdge; each was allocated with Box::into_raw on insert
+        for (_, edge) in std::mem::take(&mut edges) {
+            drop(unsafe { Box::from_raw(edge.as_raw()) });
+        }
         Ok(())
     }
 
@@ -3765,7 +3804,7 @@ impl NIImporter_OpenDrive {
                             ));
                             cn.shape.clear();
                         }
-                        if cn.toCP == CP::OPENDRIVE_CP_END {
+                        if c.toCP == CP::OPENDRIVE_CP_END {
                             cn.shape = cn.shape.reverse();
                         }
                     }
@@ -4694,17 +4733,8 @@ impl NIImporter_OpenDrive {
             }
             if !sorted {
                 write_warningf!("The sections of edge '%' are not sorted properly.", e.id.clone());
-                // determinism: C++ std::sort is unstable; ties on s may be ordered differently
-                let mut sorter = NIImporter_OpenDrive_sections_by_s_sorter::new();
-                e.laneSections.sort_by(|a, b| {
-                    if sorter.call_op(a, b) != 0 {
-                        std::cmp::Ordering::Less
-                    } else if sorter.call_op(b, a) != 0 {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                // determinism: libstdc++ std::sort order (ties on s)
+                utils::common::std_sort::std_sort_vec(&mut e.laneSections, |a, b| NIImporter_OpenDrive_sections_by_s_sorter::new().call_op(a, b) != 0);
             }
             // check whether duplicate s-values occur
             // but keep all lane sections for connecting roads because they are
@@ -4851,8 +4881,9 @@ impl NIImporter_OpenDrive {
             let type_ = TrafficLightTypes
                 .get(&utils::options::options_cont::get_string("tls.default-type"))
                 .unwrap_or_else(|e| std::panic::panic_any(e));
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(toNode.m().get_id(), toNode, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(toNode.m().get_id(), toNode, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            toNode.m().add_traffic_light(tlDef);
             if !nb.get_tl_logic_cont().insert(tlDef, false) {
                 // actually, nothing should fail here
                 drop(unsafe { Box::from_raw(raw) });

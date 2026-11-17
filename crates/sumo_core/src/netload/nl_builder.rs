@@ -1,6 +1,22 @@
 //! Port of netload/NLBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{with_instance, write_error, write_message, write_warning};
+
+/// PROGRESS_BEGIN_TIME_MESSAGE(msg): prints the message and returns the start time
+fn progress_begin_time_message(msg: &str) -> i64 {
+    utils::common::msg_handler::progress_begin_message(msg);
+    current_millis()
+}
+
+/// PROGRESS_TIME_MESSAGE(before)
+fn progress_time_since(before: i64) {
+    utils::common::msg_handler::progress_time_message(current_millis() - before);
+}
+
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
 
 /// Obtains edge efforts from a weights handler and stores them within the edges
 /// C++ class `NLBuilder::EdgeFloatTimeLineRetriever_EdgeEffort` (netload/NLBuilder.h)
@@ -30,7 +46,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // EdgeFloatTimeLineRetriever_EdgeEffort(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::EdgeFloatTimeLineRetriever_EdgeEffort")
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort { base: (), myNet: Ptr::from_mut(net) }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeEffort::~EdgeFloatTimeLineRetriever_EdgeEffort() noexcept` [virtual]
@@ -38,7 +54,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // ~EdgeFloatTimeLineRetriever_EdgeEffort() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::~EdgeFloatTimeLineRetriever_EdgeEffort")
+        // C++ destructor body is empty; members are released by Rust drop glue
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeEffort::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -55,7 +71,12 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeEffort {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeEffort::addEdgeWeight")
+        let edge = MSEdge::dictionary_2(id);
+        if !edge.is_null() {
+            self.myNet.m().get_weights_storage().add_effort(edge, beg, end, val);
+        } else {
+            write_errorf!("Trying to set the effort for the unknown edge '%'.", id);
+        }
     }
 
 }
@@ -88,7 +109,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // EdgeFloatTimeLineRetriever_EdgeTravelTime(MSNet& net) : myNet(net) {}
     #[allow(unused_variables)]
     pub fn new(net: &mut MSNet) -> Self {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime { base: (), myNet: Ptr::from_mut(net) }
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime() noexcept` [virtual]
@@ -96,7 +117,7 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // ~EdgeFloatTimeLineRetriever_EdgeTravelTime() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::~EdgeFloatTimeLineRetriever_EdgeTravelTime")
+        // C++ destructor body is empty; members are released by Rust drop glue
     }
 
     /// C++: `void EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight(const std::string &, double, double, double) const` [const, virtual]
@@ -113,7 +134,12 @@ impl NLBuilder_EdgeFloatTimeLineRetriever_EdgeTravelTime {
     // }
     #[allow(unused_variables)]
     pub fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
-        todo!("port EdgeFloatTimeLineRetriever_EdgeTravelTime::addEdgeWeight")
+        let edge = MSEdge::dictionary_2(id);
+        if !edge.is_null() {
+            self.myNet.m().get_weights_storage().add_travel_time(edge, beg, end, val);
+        } else {
+            write_errorf!("Trying to set the travel time for the unknown edge '%'.", id);
+        }
     }
 
 }
@@ -149,7 +175,14 @@ impl NLBuilder {
     //       myNet(net), myXMLHandler(xmlHandler) {}
     #[allow(unused_variables)]
     pub fn new(oc: &mut OptionsCont, net: &mut MSNet, eb: &mut NLEdgeControlBuilder, jb: &mut NLJunctionControlBuilder, db: &mut NLDetectorBuilder, xmlHandler: &mut NLHandler) -> Self {
-        todo!("port NLBuilder::NLBuilder")
+        NLBuilder {
+            myOptions: Ptr::from_mut(oc),
+            myEdgeBuilder: Ptr::from_mut(eb),
+            myJunctionBuilder: Ptr::from_mut(jb),
+            myDetectorBuilder: Ptr::from_mut(db),
+            myNet: Ptr::from_mut(net),
+            myXMLHandler: Ptr::from_mut(xmlHandler),
+        }
     }
 
     /// C++: `void NLBuilder::~NLBuilder()` [virtual]
@@ -157,7 +190,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLBuilder::~NLBuilder")
+        // implicit C++ destructor: nothing to release, the Ptr members are non-owning
     }
 
     /// C++: `bool NLBuilder::build()` [virtual]
@@ -369,7 +402,188 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build(&mut self) -> bool {
-        todo!("port NLBuilder::build")
+        // try to build the net
+        if !self.load("net-file", true) {
+            return false;
+        }
+        if self.myXMLHandler.network_version() == (0, 0.) {
+            std::panic::panic_any(ProcessError::new("Invalid network, no network version declared."));
+        }
+        // check whether the loaded net agrees with the simulation options
+        if self.myOptions.get_bool("no-internal-links").unwrap() && self.myXMLHandler.have_seen_internal_edge() && self.myXMLHandler.have_seen_default_length() {
+            write_warning("Network contains internal links which are ignored. Vehicles will 'jump' across junctions and thus underestimate route lengths and travel times.");
+        }
+        if !self.myXMLHandler.have_seen_internal_edge() && self.myOptions.get_bool("mesosim").unwrap() {
+            // @todo: setting this option has some side effect in microsim that manifest even in networks without internal lanes this should be checked
+            crate::microsim::ms_globals::set_using_internal_lanes(false);
+        }
+
+        self.build_net();
+        if self.myOptions.is_set("alternative-net-file", true).unwrap() {
+            for fname in self.myOptions.get_string_vector("alternative-net-file").unwrap().clone() {
+                let before = progress_begin_time_message(&format!("Loading alternative net from '{fname}'"));
+                let mut nsh = NLNetShapeHandler::new(&fname, self.myNet.m());
+                if !utils::xml::xml_sub_sys::run_parser(&mut nsh, &fname, true, false, false, true).unwrap_or(false) {
+                    write_message("Loading of alternative net failed.");
+                    return false;
+                }
+                nsh.sort_internal_shapes();
+                progress_time_since(before);
+            }
+        }
+
+        // @note on loading order constraints:
+        // - additional-files before route-files and state-files due to referencing
+        // - additional-files before weight-files since the latter might contain intermodal edge data and the intermodal net depends on the stops and public transport from the additionals
+
+        let mut stateBeginMismatch = false;
+        let stateOffset = string2time(&self.myOptions.get_string("load-state.offset").unwrap()).unwrap();
+        if self.myOptions.is_set("load-state", true).unwrap() {
+            // first, load only the time
+            let stateTime = MSStateHandler_MSStateTimeHandler::get_time(&self.myOptions.get_string("load-state").unwrap());
+            let mut defaultBegin = self.myOptions.is_default("begin");
+            if stateTime != string2time(&self.myOptions.get_string("begin").unwrap()).unwrap() {
+                if self.myOptions.is_default("load-state.offset") {
+                    if !defaultBegin {
+                        write_warningf!("State was written at a different time=% than the begin time % (set option load-state.offset to force a different begin)!",
+                            time2string(stateTime), self.myOptions.get_string("begin").unwrap());
+                    }
+                    self.myOptions.m().reset_writable_name("begin").unwrap();
+                    defaultBegin = true;
+                } else {
+                    stateBeginMismatch = true;
+                }
+            }
+            if defaultBegin {
+                self.myOptions.m().set("begin", &time2string(stateTime), false).unwrap();
+                // if vehicles are deliberately removed from the state, we must allow them to be reloaded from a route file at state time
+                let allowReloadOffset: SUMOTime = if self.myOptions.is_default("load-state.remove-vehicles") { 0 } else { 1 };
+                self.myNet.m().set_loader_time(stateTime - allowReloadOffset);
+                if !TraCIServer::get_instance().is_null() {
+                    TraCIServer::get_instance().m().state_loaded(stateTime);
+                }
+            }
+            self.myNet.m().set_current_time_step(string2time(&self.myOptions.get_string("begin").unwrap()).unwrap());
+        }
+
+        if self.myOptions.get_bool("junction-taz").unwrap() {
+            // create a TAZ for every junction
+            let junctions: Vec<(String, Ptr<MSJunction>)> = self.myNet.m().get_junction_control().iter().map(|(k, v)| (k.clone(), *v)).collect();
+            for (id, junction) in junctions {
+                let sinkID = format!("{id}-sink");
+                let sourceID = format!("{id}-source");
+                if MSEdge::dictionary_2(&sinkID).is_null() && MSEdge::dictionary_2(&sourceID).is_null() {
+                    // sink must be built and added before source
+                    let sink = self.myEdgeBuilder.m().build_edge(&sinkID, SumoXMLEdgeFunc::CONNECTOR, "", "", "", -1, 0.);
+                    let source = self.myEdgeBuilder.m().build_edge(&sourceID, SumoXMLEdgeFunc::CONNECTOR, "", "", "", -1, 0.);
+                    sink.m().set_other_taz_connector(source);
+                    source.m().set_other_taz_connector(sink);
+                    MSEdge::dictionary(&sinkID, sink);
+                    MSEdge::dictionary(&sourceID, source);
+                    sink.m().initialize(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+                    source.m().initialize(Ptr::from_raw(Box::into_raw(Box::new(Vec::new()))));
+                    for edge in junction.get_incoming().iter().copied() {
+                        if !edge.is_internal() {
+                            edge.m().add_successor(sink, Ptr::default());
+                        }
+                    }
+                    for edge in junction.get_outgoing().iter().copied() {
+                        if !edge.is_internal() {
+                            source.m().add_successor(edge, Ptr::default());
+                        }
+                    }
+                } else {
+                    write_warningf!("A TAZ with id '%' already exists. Not building junction TAZ.", id);
+                }
+            }
+        }
+        // load meso edge types
+        let mut haveSeenMesoEdgeType = false;
+        if crate::microsim::ms_globals::use_meso_sim() {
+            if self.myOptions.is_set("additional-files", true).unwrap() {
+                haveSeenMesoEdgeType = self.load_meso_edge_types("additional-files");
+            }
+            // meso segment building must be delayed until meso edge types have been read from additional files
+            self.myNet.m().get_edge_control().build_meso_segments();
+        }
+        // load additional net elements (sources, detectors, ...)
+        if self.myOptions.is_set("additional-files", true).unwrap() {
+            if !self.load("additional-files", false) {
+                return false;
+            }
+            // load shapes with separate handler
+            let mut sh = NLShapeHandler::new("", self.myNet.m().get_shape_container());
+            if !ShapeHandler::load_files(&self.myOptions.get_string_vector("additional-files").unwrap().clone(), &mut sh.base) {
+                return false;
+            }
+            if self.myXMLHandler.have_seen_additional_speed_restrictions() {
+                self.myNet.m().get_edge_control().set_additional_restrictions();
+            }
+            MSTriggeredRerouter::check_parking_reroute_consistency();
+        }
+        if crate::microsim::ms_globals::use_meso_sim() {
+            if haveSeenMesoEdgeType || self.myXMLHandler.have_seen_tls_params() {
+                for tll in self.myNet.m().get_tls_control().get_all_logics() {
+                    tll.m().init_meso_tls_penalties();
+                }
+            }
+        }
+        // init after preferences have been loaded from additional-files
+        MSRoutingEngine::init_weight_constants(&self.myOptions);
+        // init tls after all detectors have been loaded
+        self.myJunctionBuilder.m().post_load_initialization();
+        // declare meandata set by options
+        self.build_default_mean_data("edgedata-output", "DEFAULT_EDGEDATA", false);
+        self.build_default_mean_data("lanedata-output", "DEFAULT_LANEDATA", true);
+
+        if stateBeginMismatch && self.myNet.m().get_vehicle_control().get_loaded_vehicle_no() > 0 {
+            std::panic::panic_any(ProcessError::new("Loading vehicles ahead of a state file is not supported. Correct --begin option or load vehicles with option --route-files"));
+        }
+
+        // load weights if wished
+        if self.myOptions.is_set("weight-files", true).unwrap() {
+            if !self.myOptions.is_usable_file_list("weight-files").unwrap() {
+                return false;
+            }
+            // shortcut: SAXWeightsHandler / ToRetrieveDefinition and the EdgeFloatTimeLineRetriever base are not ported, so weight files are not parsed yet; upgrade when SAXWeightsHandler lands
+        }
+
+        // load the previous state if wished
+        if self.myOptions.is_set("load-state", true).unwrap() {
+            let f = self.myOptions.get_string("load-state").unwrap();
+            let before = progress_begin_time_message(&format!("Loading state from '{f}'"));
+            let mut h = MSStateHandler::new(&f, stateOffset);
+            let _ = utils::xml::xml_sub_sys::run_parser(&mut h, &f, false, false, false, true);
+            if with_instance(MsgType::Error, |m| m.was_informed()) {
+                return false;
+            }
+            progress_time_since(before);
+        }
+
+        // routes from FCD files
+        MSDevice_FCDReplay::init();
+
+        // load routes
+        if self.myOptions.is_set("route-files", true).unwrap() {
+            if string2time(&self.myOptions.get_string("route-steps").unwrap()).unwrap() <= 0 {
+                // incremental loading is disabled. Load route files fully
+                if !self.load("route-files", false) {
+                    return false;
+                }
+            } else {
+                // message must come after additional-files have been loaded (but buildRouteLoaderControl was called earlier)
+                for file in self.myOptions.get_string_vector("route-files").unwrap().clone() {
+                    write_message(&format!("Loading route-files incrementally from '{file}'"));
+                }
+            }
+        }
+
+        // optionally switch off traffic lights
+        if self.myOptions.get_bool("tls.all-off").unwrap() {
+            self.myNet.m().get_tls_control().switch_off_all();
+        }
+        write_message("Loading done.");
+        true
     }
 
     /// C++: `MSNet * NLBuilder::init(const bool)` [static]
@@ -441,7 +655,70 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn init(isLibsumo: bool) -> Ptr<MSNet> {
-        todo!("port NLBuilder::init")
+        // the C++ singleton OptionsCont::getOptions() is only reachable through with_options (reentrant on this thread)
+        utils::options::options_cont::with_options(|oc| {
+            oc.clear();
+            MSFrame::fill_options();
+            utils::options::options_io::get_options(false).unwrap();
+            if oc.process_meta_options(utils::options::options_io::get_arg_c() < 2).unwrap() {
+                utils::common::system_frame::close();
+                return Ptr::default();
+            }
+            utils::common::system_frame::check_options(oc);
+            let mut validation = oc.get_string("xml-validation").unwrap();
+            let mut routeValidation = oc.get_string("xml-validation.routes").unwrap();
+            if isLibsumo {
+                if oc.is_default("xml-validation") {
+                    validation = "never".to_string();
+                }
+                if oc.is_default("xml-validation.routes") {
+                    routeValidation = "never".to_string();
+                }
+            }
+            utils::xml::xml_sub_sys::set_validation(&validation, &oc.get_string("xml-validation.net").unwrap(), &routeValidation).unwrap();
+            if !MSFrame::check_options() {
+                std::panic::panic_any(ProcessError::default_msg());
+            }
+            // C++ HAVE_FOX branch (MsgHandlerSynchronized for threads > 1) is not part of this port
+            MsgHandler::init_output_options().unwrap();
+            Self::init_randomness();
+            MSFrame::set_ms_globals(oc);
+            let vc: Ptr<MSVehicleControl> = if crate::microsim::ms_globals::use_meso_sim() {
+                Ptr::from_raw(Box::into_raw(Box::new(MEVehicleControl::new()))).cast::<MSVehicleControl>()
+            } else {
+                Ptr::from_raw(Box::into_raw(Box::new(MSVehicleControl::new())))
+            };
+            let net: Ptr<MSNet> = Ptr::from_raw(Box::into_raw(MSNet::new(
+                vc,
+                Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new()))),
+                Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new()))),
+                Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new()))),
+                Ptr::default(),
+            )));
+            // need to init TraCI-Server before loading routes to catch VehicleState::BUILT
+            TraCIServer::open_socket(&std::collections::BTreeMap::new());
+            if isLibsumo {
+                crate::libsumo::helper::Helper::register_state_listener();
+            }
+
+            let mut eb = NLEdgeControlBuilder::new();
+            let mut db = NLDetectorBuilder::new(net.m());
+            let mut jb = NLJunctionControlBuilder::new(net.m(), &mut db);
+            let mut tb = NLTriggerBuilder::new();
+            let mut handler = NLHandler::new("", net.m(), &mut db, &mut tb, &mut eb, &mut jb);
+            tb.set_handler(Ptr::from_mut(&mut handler));
+            let mut builder = NLBuilder::new(oc, net.m(), &mut eb, &mut jb, &mut db, &mut handler);
+            with_instance(MsgType::Error, |m| m.clear(true));
+            with_instance(MsgType::Warning, |m| m.clear(true));
+            with_instance(MsgType::Message, |m| m.clear(true));
+            if builder.build() {
+                // preload the routes especially for TraCI
+                net.m().load_routes();
+                return net;
+            }
+            drop(unsafe { Box::from_raw(net.as_raw()) });
+            std::panic::panic_any(ProcessError::default_msg());
+        })
     }
 
     /// C++: `void NLBuilder::initRandomness()` [static]
@@ -458,7 +735,13 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn init_randomness() {
-        todo!("port NLBuilder::initRandomness")
+        utils::common::rand_helper::init_rand(None, utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *SUMORouteHandler::get_parsing_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice::get_equipment_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *OUProcess::get_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_ToC::get_response_time_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_BTreceiver::get_recognition_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
+        utils::options::options_cont::with_options(|oc| MSLane::init_rn_gs(oc));
     }
 
     /// C++: `SUMORouteLoaderControl * NLBuilder::buildRouteLoaderControl(const OptionsCont &)` [static]
@@ -484,7 +767,23 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_route_loader_control(oc: &OptionsCont) -> Ptr<SUMORouteLoaderControl> {
-        todo!("port NLBuilder::buildRouteLoaderControl")
+        // build the loaders
+        let loaders: Ptr<SUMORouteLoaderControl> = Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoaderControl::new(string2time(&oc.get_string("route-steps").unwrap()).unwrap()))));
+        // check whether a list is existing
+        if oc.is_set("route-files", true).unwrap() && string2time(&oc.get_string("route-steps").unwrap()).unwrap() > 0 {
+            let files = oc.get_string_vector("route-files").unwrap().clone();
+            for file in files.iter() {
+                if !utils::common::file_helpers::is_readable(file) {
+                    std::panic::panic_any(ProcessError::new(format!("The route file '{file}' is not accessible.")));
+                }
+            }
+            // open files for reading
+            for file in files.iter() {
+                let handler: Ptr<MSRouteHandler> = Ptr::from_raw(Box::into_raw(Box::new(MSRouteHandler::new(file, false))));
+                loaders.m().add(Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoader::new(handler.cast::<SUMORouteHandler>())))));
+            }
+        }
+        loaders
     }
 
     /// C++: `bool NLBuilder::load(const std::string &, const bool)` [protected]
@@ -507,7 +806,19 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn load(&mut self, mmlWhat: &str, isNet: bool) -> bool {
-        todo!("port NLBuilder::load")
+        if !self.myOptions.is_usable_file_list(mmlWhat).unwrap() {
+            return false;
+        }
+        let files = self.myOptions.get_string_vector(mmlWhat).unwrap().clone();
+        for fileIt in files.iter() {
+            let before = progress_begin_time_message(&format!("Loading {mmlWhat} from '{fileIt}'"));
+            if !utils::xml::xml_sub_sys::run_parser(self.myXMLHandler.m(), fileIt, isNet, false, false, true).unwrap_or(false) {
+                write_message(&format!("Loading of {mmlWhat} failed."));
+                return false;
+            }
+            progress_time_since(before);
+        }
+        true
     }
 
     /// C++: `bool NLBuilder::loadMesoEdgeTypes(const std::string &)` [protected]
@@ -527,7 +838,16 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn load_meso_edge_types(&mut self, mmlWhat: &str) -> bool {
-        todo!("port NLBuilder::loadMesoEdgeTypes")
+        if !self.myOptions.is_usable_file_list(mmlWhat).unwrap() {
+            return false;
+        }
+        let mut meTypeHandler = METypeHandler::new("", self.myNet.m());
+        for file in self.myOptions.get_string_vector(mmlWhat).unwrap().clone() {
+            if !utils::xml::xml_sub_sys::run_parser(&mut meTypeHandler, &file, false, false, false, true).unwrap_or(false) {
+                continue;
+            }
+        }
+        meTypeHandler.have_seen_meso_edge_type()
     }
 
     /// C++: `void NLBuilder::buildNet()` [protected]
@@ -584,7 +904,51 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_net(&mut self) {
-        todo!("port NLBuilder::buildNet")
+        // shortcut: the C++ try/catch (cleanup of edges/junctions/loaders/tlc, then rethrow) is not replicated; a ProcessError here unwinds the run instead
+        // ensure streams are ready for output during building
+        MSFrame::build_streams();
+        let networkVersion = self.myXMLHandler.network_version();
+        let edges = self.myEdgeBuilder.m().build(&networkVersion);
+        let junctions = self.myJunctionBuilder.m().build();
+        junctions.m().postload_init_container();
+        for e in edges.m().get_edges().iter().copied() {
+            e.m().post_load_init_lane_changer();
+        }
+        let routeLoaders = Self::build_route_loader_control(&self.myOptions);
+        let tlc = self.myJunctionBuilder.m().build_tl_logics();
+        let mut stateDumpTimes: Vec<SUMOTime> = Vec::new();
+        let mut stateDumpFiles: Vec<String> = Vec::new();
+        for timeStr in self.myOptions.get_string_vector("save-state.times").unwrap().clone() {
+            stateDumpTimes.push(string2time(&timeStr).unwrap());
+        }
+        if self.myOptions.is_set("save-state.files", true).unwrap() {
+            stateDumpFiles = self.myOptions.get_string_vector("save-state.files").unwrap().clone();
+            if stateDumpFiles.len() != stateDumpTimes.len() {
+                std::panic::panic_any(ProcessError::new("Wrong number of state file names!"));
+            }
+        } else {
+            let prefix = self.myOptions.get_string("save-state.prefix").unwrap();
+            let suffix = self.myOptions.get_string("save-state.suffix").unwrap();
+            for i in stateDumpTimes.iter() {
+                let timeStamp = time2string(*i).replace(':', "-");
+                stateDumpFiles.push(format!("{prefix}_{timeStamp}{suffix}"));
+            }
+        }
+
+        // if anthing goes wrong after this point, the net is responsible for cleaning up
+        // shortcut: MSNet::closeBuilding takes the Unmapped MMVersion, so the network version is passed as unit until that type is ported
+        self.myNet.m().close_building(
+            &self.myOptions,
+            edges,
+            junctions,
+            routeLoaders,
+            tlc,
+            stateDumpTimes,
+            stateDumpFiles,
+            self.myXMLHandler.have_seen_internal_edge(),
+            self.myXMLHandler.has_junction_higher_speeds(),
+            &self.myXMLHandler.network_version(),
+        );
     }
 
     /// C++: `void NLBuilder::buildDefaultMeanData(const std::string &, const std::string &, bool)` [protected]
@@ -610,7 +974,26 @@ impl NLBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_default_mean_data(&mut self, optionName: &str, id: &str, useLanes: bool) {
-        todo!("port NLBuilder::buildDefaultMeanData")
+        if self.myOptions.is_set(optionName, true).unwrap() {
+            let mut useLanes = useLanes;
+            if useLanes && crate::microsim::ms_globals::use_meso_sim() && !self.myOptions.get_bool("meso-lane-queue").unwrap() {
+                write_warning("LaneData requested for mesoscopic simulation but --meso-lane-queue is not active. Falling back to edgeData.");
+                useLanes = false;
+            }
+            let begin = string2time(&self.myOptions.get_string("begin").unwrap()).unwrap();
+            let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                self.myDetectorBuilder.m().create_edge_lane_mean_data(id, -1, begin, -1, "traffic", useLanes, "true",
+                    false, false, 0, 100000., 0., utils::common::std_defs::SUMO_CONST_HALTING_SPEED, 0., "", "", Vec::new(), AggregateType::NO,
+                    &self.myOptions.get_string(optionName).unwrap());
+            }));
+            // C++ catches InvalidArgument and IOError and reports them as errors
+            if let Err(payload) = res {
+                match payload.downcast::<ProcessError>() {
+                    Ok(e) => write_error(&e.to_string()),
+                    Err(other) => std::panic::resume_unwind(other),
+                }
+            }
+        }
     }
 
     /// C++: `void NLBuilder::NLBuilder(const NLBuilder &)` [private]
@@ -618,7 +1001,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLBuilder) -> Self {
-        todo!("port NLBuilder::NLBuilder")
+        panic!("NLBuilder copy constructor is private and undefined in C++, it must not be used")
     }
 
     /// C++: `NLBuilder & NLBuilder::operator=(const NLBuilder &)` [private]
@@ -626,7 +1009,7 @@ impl NLBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLBuilder) -> &mut NLBuilder {
-        todo!("port NLBuilder::operator=")
+        panic!("NLBuilder assignment is private and undefined in C++, it must not be used")
     }
 
 }

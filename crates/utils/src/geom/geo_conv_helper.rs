@@ -1,15 +1,24 @@
 //! Port of utils/geom/GeoConvHelper.{h,cpp}
 //!
-//! shortcut: no PROJ library binding. Proj-based conversions (UTM, DHDN, DHDN_UTM and explicit
-//! proj strings) keep the projection string / zone logic but convert coordinates as if the projection
-//! were the identity; bind PROJ (e.g. the `proj` crate) when geo-input/output tests need it.
-//! The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
+//! UTM and DHDN use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ to
+//! well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
+//! shortcut: DHDN_UTM needs the potsdam datum shift to WGS84 (7-parameter Helmert), not ported; other
+//! explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
 use std::cell::RefCell;
 use std::collections::BTreeMap;
+use std::f64::consts::PI;
 
-use super::geom_helper::deg2rad;
-use super::{write_warning, Boundary, Position};
+use super::geom_helper::{deg2rad, rad2deg};
+use super::{Boundary, Position};
+use crate::common::msg_handler::{write_error, write_warning};
+use crate::common::std_defs::{g_precision, g_precision_geo};
+use crate::common::string_utils::escape_xml;
 use crate::common::to_string::f64_to_string;
+use crate::common::util_exceptions::ProcessError;
+use crate::iodevices::output_device::OutputDevice;
+use crate::options::option::SumoOption;
+use crate::options::options_cont::OptionsCont;
+use crate::xml::sumo_xml_definitions::{SUMO_ATTR_CONV_BOUNDARY, SUMO_ATTR_NET_OFFSET, SUMO_ATTR_ORIG_BOUNDARY, SUMO_ATTR_ORIG_PROJ, SUMO_TAG_LOCATION};
 
 /// projection method
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -27,8 +36,6 @@ enum ProjectionMethod {
 pub struct GeoConvHelper {
     /// A proj options string describing the proj.4-projection to use
     proj_string: String,
-    /// stands in for `myProjection != nullptr`
-    has_projection: bool,
     offset: Position,
     geo_scale: f64,
     sin: f64,
@@ -38,6 +45,8 @@ pub struct GeoConvHelper {
     flatten: bool,
     orig_boundary: Boundary,
     conv_boundary: Boundary,
+    /// C++ `myProjection`: set once the projection is known (`None` until initialised)
+    projection: Option<Etmerc>,
 }
 
 impl PartialEq for GeoConvHelper {
@@ -105,10 +114,10 @@ impl GeoConvHelper {
             "DHDN_UTM" => ProjectionMethod::DhdnUtm,
             _ => ProjectionMethod::Proj,
         };
+        let projection = if projection_method == ProjectionMethod::Proj { Etmerc::from_proj(&proj_string) } else { None };
         GeoConvHelper {
             proj_string,
-            // shortcut: initProj always "succeeds" (identity) for explicit proj strings
-            has_projection: projection_method == ProjectionMethod::Proj,
+            projection,
             offset,
             geo_scale: scale,
             sin: deg2rad(-rot).sin(), // rotate clockwise
@@ -121,19 +130,51 @@ impl GeoConvHelper {
         }
     }
 
-    /// GeoConvHelper::init(OptionsCont&) for a build without PROJ.
-    // shortcut: takes the option values directly until OptionsCont is ported; the PROJ-only options
-    // (proj, proj.utm, proj.dhdn, proj.dhdnutm) and addProjectionOptions are not handled
-    #[allow(clippy::too_many_arguments)]
-    pub fn init_from_options(simple_projection: bool, scale: f64, rot: f64, offset: Position, inverse: bool, flatten: bool) -> bool {
-        let proj = if simple_projection { "-" } else { "!" };
-        let h = GeoConvHelper::new(proj, offset, Boundary::new(), Boundary::new(), scale, rot, inverse, flatten);
+    /// GeoConvHelper::init(OptionsCont&)
+    // shortcut: PROJ data search path (SUMO_HOME/data/proj) is not set, no PROJ binding yet
+    pub fn init_from_options(oc: &OptionsCont) -> Result<bool, ProcessError> {
+        let mut proj: String = "!".into(); // the default
+        let scale = oc.get_float("proj.scale")?;
+        let rot = oc.get_float("proj.rotate")?;
+        let offset = Position::new3(oc.get_float("offset.x")?, oc.get_float("offset.y")?, oc.get_float("offset.z")?);
+        let inverse = oc.exists("proj.inverse") && oc.get_bool("proj.inverse")?;
+        let flatten = oc.exists("flatten") && oc.get_bool("flatten")?;
+
+        if oc.get_bool("simple-projection")? {
+            proj = "-".into();
+        }
+
+        if oc.get_bool("proj.inverse")? && oc.get_string("proj")? == "!" {
+            write_error("Inverse projection works only with explicit proj parameters.");
+            return Ok(false);
+        }
+        let num_projections = u32::from(oc.get_bool("simple-projection")?)
+            + u32::from(oc.get_bool("proj.utm")?)
+            + u32::from(oc.get_bool("proj.dhdn")?)
+            + u32::from(oc.get_bool("proj.dhdnutm")?)
+            + u32::from(oc.get_string("proj")?.len() > 1);
+        if num_projections > 1 {
+            write_error("The projection method needs to be uniquely defined.");
+            return Ok(false);
+        }
+
+        if oc.get_bool("proj.utm")? {
+            proj = "UTM".into();
+        } else if oc.get_bool("proj.dhdn")? {
+            proj = "DHDN".into();
+        } else if oc.get_bool("proj.dhdnutm")? {
+            proj = "DHDN_UTM".into();
+        } else if !oc.is_default("proj") {
+            proj = oc.get_string("proj")?;
+        }
+
+        let h = GeoConvHelper::new(&proj, offset, Boundary::new(), Boundary::new(), scale, rot, inverse, flatten);
         STATICS.with(|s| {
             let mut s = s.borrow_mut();
             s.final_ = h.clone();
             s.processing = h;
         });
-        true
+        Ok(true)
     }
 
     /// Initialises the processing and the final instance using the given proj.4-definition and complete network parameter
@@ -145,6 +186,36 @@ impl GeoConvHelper {
             s.final_ = h.clone();
             s.processing = h;
         });
+    }
+
+    /// GeoConvHelper::addProjectionOptions(OptionsCont&)
+    pub fn add_projection_options(oc: &mut OptionsCont) {
+        oc.add_option_sub_topic("Projection");
+
+        oc.do_register("simple-projection", SumoOption::bool(false));
+        oc.add_synonyme("simple-projection", "proj.simple", true);
+        oc.add_description("simple-projection", "Projection", "Uses a simple method for projection");
+
+        oc.do_register("proj.scale", SumoOption::float(1.0));
+        oc.add_description("proj.scale", "Projection", "Scaling factor for input coordinates");
+
+        oc.do_register("proj.rotate", SumoOption::float(0.0));
+        oc.add_description("proj.rotate", "Projection", "Rotation (clockwise degrees) for input coordinates");
+
+        oc.do_register("proj.utm", SumoOption::bool(false));
+        oc.add_description("proj.utm", "Projection", "Determine the UTM zone (for a universal transversal mercator projection based on the WGS84 ellipsoid)");
+
+        oc.do_register("proj.dhdn", SumoOption::bool(false));
+        oc.add_description("proj.dhdn", "Projection", "Determine the DHDN zone (for a transversal mercator projection based on the bessel ellipsoid, \"Gauss-Krueger\")");
+
+        oc.do_register("proj", SumoOption::string_with("!"));
+        oc.add_description("proj", "Projection", "Uses STR as proj.4 definition for projection");
+
+        oc.do_register("proj.inverse", SumoOption::bool(false));
+        oc.add_description("proj.inverse", "Projection", "Inverses projection");
+
+        oc.do_register("proj.dhdnutm", SumoOption::bool(false));
+        oc.add_description("proj.dhdnutm", "Projection", "Convert from Gauss-Krueger to UTM");
     }
 
     /// the coordinate transformation to use for input conversion and processing
@@ -249,7 +320,10 @@ impl GeoConvHelper {
             let x = cartesian.x() / 111320. / deg2rad(y).cos();
             cartesian.set(x, y);
         }
-        // shortcut: inverse PROJ projection is the identity here
+        if let Some(p) = self.projection {
+            let (lon, lat) = p.inv(cartesian.x(), cartesian.y());
+            cartesian.set(rad2deg(lon), rad2deg(lat));
+        }
     }
 
     /// Converts the given coordinate into a cartesian and optionally update the conv boundary
@@ -259,9 +333,8 @@ impl GeoConvHelper {
             self.orig_boundary.add_pos(from);
         }
         // init projection parameter on first use
-        if !self.has_projection {
-            let mut x = from.x() * self.geo_scale;
-            let mut utm = false;
+        if self.projection.is_none() {
+            let x = from.x() * self.geo_scale;
             match self.projection_method {
                 ProjectionMethod::DhdnUtm => {
                     let zone = ((x - 500000.) / 1000000.) as i32;
@@ -269,12 +342,14 @@ impl GeoConvHelper {
                         write_warning(&format!("Attempt to initialize DHDN_UTM-projection on invalid longitude {}", f64_to_string(x)));
                         return false;
                     }
-                    self.proj_string = dhdn_proj_string(zone);
-                    // shortcut: inverse DHDN projection to WGS84 is not applied
-                    x = ((x - 500000.) / 1000000.) * 3.; // continues with UTM
-                    utm = true;
+                    write_error("Projection DHDN_UTM is not supported by this build (needs the potsdam datum shift)");
+                    return false;
                 }
-                ProjectionMethod::Utm => utm = true,
+                ProjectionMethod::Utm => {
+                    let zone = (x + 180.) as i32 / 6 + 1;
+                    self.proj_string = format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+                    self.projection = Etmerc::from_proj(&self.proj_string);
+                }
                 ProjectionMethod::Dhdn => {
                     let zone = (x / 3.) as i32;
                     if !(1..=5).contains(&zone) {
@@ -282,14 +357,13 @@ impl GeoConvHelper {
                         return false;
                     }
                     self.proj_string = dhdn_proj_string(zone);
-                    self.has_projection = true;
+                    self.projection = Etmerc::from_proj(&self.proj_string);
                 }
                 _ => {}
             }
-            if utm {
-                let zone = (x + 180.) as i32 / 6 + 1;
-                self.proj_string = format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-                self.has_projection = true;
+            if matches!(self.projection_method, ProjectionMethod::Utm | ProjectionMethod::Dhdn) && self.projection.is_none() {
+                write_error(&format!("Could not build projection '{}'", self.proj_string));
+                return false;
             }
         }
         // perform conversion
@@ -319,7 +393,12 @@ impl GeoConvHelper {
                 write_warning(&format!("Invalid latitude {}", f64_to_string(y)));
                 return false;
             }
-            // shortcut: forward PROJ projection is the identity here
+            if let Some(p) = self.projection {
+                (x, y) = p.fwd(deg2rad(x), deg2rad(y));
+            } else if self.projection_method == ProjectionMethod::Proj {
+                write_error(&format!("Projection '{}' is not supported by this build (only +proj=utm and +proj=tmerc with lat_0=0)", self.proj_string));
+                return false;
+            }
             if self.projection_method == ProjectionMethod::Simple {
                 // Sinusoidal projection
                 x *= 111320. * deg2rad(y).cos();
@@ -339,7 +418,7 @@ impl GeoConvHelper {
 
     /// init projString such as 'UTM' in loaded projection
     pub fn resolve_abstract_projection(&mut self) {
-        if !self.has_projection
+        if self.projection.is_none()
             && self.projection_method != ProjectionMethod::None
             && self.projection_method != ProjectionMethod::Simple
         {
@@ -347,7 +426,7 @@ impl GeoConvHelper {
             // try to initialized projection based on origBoundary
             let mut tmp = self.orig_boundary.get_center();
             self.x2cartesian(&mut tmp, false);
-            if !self.has_projection {
+            if self.projection.is_none() {
                 write_warning(&format!(
                     "Failed to intialized projection '{}' based on origBoundary centered on '{}'",
                     orig_proj,
@@ -388,8 +467,161 @@ impl GeoConvHelper {
     pub fn get_proj_string(&self) -> &str {
         &self.proj_string
     }
-    // shortcut: writeLocation needs OutputDevice; write netOffset/convBoundary/origBoundary
-    // (gPrecisionGeo when using_geo_projection)/projParameter from with_final once iodevices is ported
+    /// writeLocation: the <location> element of the net and additional files
+    pub fn write_location(&self, into: &mut OutputDevice) {
+        into.open_tag_id(SUMO_TAG_LOCATION);
+        into.write_attr(SUMO_ATTR_NET_OFFSET, &self.get_offset_base());
+        into.write_attr(SUMO_ATTR_CONV_BOUNDARY, self.get_conv_boundary());
+        if self.using_geo_projection() {
+            into.set_precision(g_precision_geo());
+        }
+        into.write_attr(SUMO_ATTR_ORIG_BOUNDARY, self.get_orig_boundary());
+        if self.using_geo_projection() {
+            into.set_precision(g_precision());
+        }
+        into.write_attr(SUMO_ATTR_ORIG_PROJ, escape_xml(self.get_proj_string(), false).as_str());
+        into.close_tag("");
+        into.lf();
+    }
+}
+
+/// Transverse Mercator as PROJ's default `etmerc` (Poder/Engsager; here the Kruger series of order 6)
+#[derive(Clone, Copy, Debug)]
+struct Etmerc {
+    lon0: f64,
+    x0: f64,
+    y0: f64,
+    /// k0 times the rectifying radius
+    qn: f64,
+    e: f64,
+    alpha: [f64; 6],
+    beta: [f64; 6],
+}
+
+/// PROJ `adjlon`: wraps a longitude difference into [-pi, pi]
+fn adjlon(lon: f64) -> f64 {
+    if lon.abs() <= PI { lon } else { (lon + PI).rem_euclid(2. * PI) - PI }
+}
+
+impl Etmerc {
+    fn new(a: f64, rf: f64, k0: f64, lon0: f64, x0: f64, y0: f64) -> Etmerc {
+        let f = 1. / rf;
+        let n = f / (2. - f);
+        let e = (f * (2. - f)).sqrt();
+        let n2 = n * n;
+        let n3 = n2 * n;
+        let n4 = n3 * n;
+        let n5 = n4 * n;
+        let n6 = n5 * n;
+        let big_a = a / (1. + n) * (1. + n2 / 4. + n4 / 64. + n6 / 256.);
+        let alpha = [
+            n / 2. - 2. * n2 / 3. + 5. * n3 / 16. + 41. * n4 / 180. - 127. * n5 / 288. + 7891. * n6 / 37800.,
+            13. * n2 / 48. - 3. * n3 / 5. + 557. * n4 / 1440. + 281. * n5 / 630. - 1983433. * n6 / 1935360.,
+            61. * n3 / 240. - 103. * n4 / 140. + 15061. * n5 / 26880. + 167603. * n6 / 181440.,
+            49561. * n4 / 161280. - 179. * n5 / 168. + 6601661. * n6 / 7257600.,
+            34729. * n5 / 80640. - 3418889. * n6 / 1995840.,
+            212378941. * n6 / 319334400.,
+        ];
+        let beta = [
+            n / 2. - 2. * n2 / 3. + 37. * n3 / 96. - n4 / 360. - 81. * n5 / 512. + 96199. * n6 / 604800.,
+            n2 / 48. + n3 / 15. - 437. * n4 / 1440. + 46. * n5 / 105. - 1118711. * n6 / 3870720.,
+            17. * n3 / 480. - 37. * n4 / 840. - 209. * n5 / 4480. + 5569. * n6 / 9676800.,
+            4397. * n4 / 161280. - 11. * n5 / 504. - 830251. * n6 / 7257600.,
+            4583. * n5 / 161280. - 108847. * n6 / 3991680.,
+            20648693. * n6 / 638668800.,
+        ];
+        Etmerc { lon0: deg2rad(lon0), x0, y0, qn: k0 * big_a, e, alpha, beta }
+    }
+
+    /// Parses the `+proj=utm` and `+proj=tmerc` (lat_0=0) strings this port projects; None for anything else
+    fn from_proj(proj: &str) -> Option<Etmerc> {
+        let mut kind = None;
+        let mut zone = None;
+        let mut south = false;
+        let mut ellps = None;
+        let mut datum = None;
+        let mut lon0 = 0.;
+        let mut lat0 = 0.;
+        let mut k0 = 1.;
+        let mut x0 = 0.;
+        let mut y0 = 0.;
+        for tok in proj.split_whitespace() {
+            let body = tok.strip_prefix('+')?;
+            let (key, val) = body.split_once('=').unwrap_or((body, ""));
+            match key {
+                "proj" => kind = Some(val),
+                "zone" => zone = Some(val.parse::<i32>().ok()?),
+                "south" => south = true,
+                "ellps" => ellps = Some(val),
+                "datum" => datum = Some(val),
+                "lon_0" => lon0 = val.parse::<f64>().ok()?,
+                "lat_0" => lat0 = val.parse::<f64>().ok()?,
+                "k" | "k_0" => k0 = val.parse::<f64>().ok()?,
+                "x_0" => x0 = val.parse::<f64>().ok()?,
+                "y_0" => y0 = val.parse::<f64>().ok()?,
+                _ => {}
+            }
+        }
+        let (a, rf) = match (ellps, datum) {
+            (Some("WGS84"), _) | (None, Some("WGS84")) => (6378137., 298.257223563),
+            (Some("GRS80"), _) => (6378137., 298.257222101),
+            (Some("bessel"), _) | (None, Some("potsdam")) => (6377397.155, 299.1528128),
+            _ => return None,
+        };
+        match kind? {
+            "utm" => {
+                let zone: i32 = zone?;
+                if !(1..=60).contains(&zone) {
+                    return None;
+                }
+                Some(Etmerc::new(a, rf, 0.9996, (zone * 6 - 183) as f64, 500000., if south { 10000000. } else { 0. }))
+            }
+            "tmerc" if lat0 == 0. => Some(Etmerc::new(a, rf, k0, lon0, x0, y0)),
+            _ => None,
+        }
+    }
+
+    /// forward: lon/lat in radians to easting/northing
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        let lam = adjlon(lon - self.lon0);
+        let s = lat.sin();
+        let psi = s.atanh() - self.e * (self.e * s).atanh();
+        let t = psi.sinh();
+        let xi0 = t.atan2(lam.cos());
+        let eta0 = (lam.sin() / (1. + t * t).sqrt()).atanh();
+        let (mut xi, mut eta) = (xi0, eta0);
+        for (j, a) in self.alpha.iter().enumerate() {
+            let k = 2. * (j + 1) as f64;
+            xi += a * (k * xi0).sin() * (k * eta0).cosh();
+            eta += a * (k * xi0).cos() * (k * eta0).sinh();
+        }
+        (self.x0 + self.qn * eta, self.y0 + self.qn * xi)
+    }
+
+    /// inverse: easting/northing to lon/lat in radians
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        let xi = (y - self.y0) / self.qn;
+        let eta = (x - self.x0) / self.qn;
+        let (mut xi0, mut eta0) = (xi, eta);
+        for (j, b) in self.beta.iter().enumerate() {
+            let k = 2. * (j + 1) as f64;
+            xi0 -= b * (k * xi).sin() * (k * eta).cosh();
+            eta0 -= b * (k * xi).cos() * (k * eta).sinh();
+        }
+        let tau = xi0.sin() / (eta0.sinh().powi(2) + xi0.cos().powi(2)).sqrt();
+        let lam = eta0.sinh().atan2(xi0.cos());
+        let psi = tau.asinh();
+        let mut phi = tau.atan();
+        for _ in 0..50 {
+            let next = (psi + self.e * (self.e * phi.sin()).atanh()).tanh().asin();
+            let done = (next - phi).abs() < 1e-15;
+            phi = next;
+            if done {
+                break;
+            }
+        }
+        (adjlon(self.lon0 + lam), phi)
+    }
 }
 
 fn dhdn_proj_string(zone: i32) -> String {
@@ -424,5 +656,95 @@ mod tests {
         GeoConvHelper::init("!", Position::new(5., 5.), Boundary::new(), Boundary::new(), 1.0);
         GeoConvHelper::compute_final(false);
         assert_eq!(GeoConvHelper::with_final(|f| f.get_offset()), Position::new(5., 5.));
+    }
+
+    #[test]
+    fn simple_projection_round_trip() {
+        let s = GeoConvHelper::new("-", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(8.5, 49.5);
+        assert!(s.x2cartesian_const(&mut p));
+        s.cartesian2geo(&mut p);
+        assert!((p.x() - 8.5).abs() < 1e-6);
+        assert!((p.y() - 49.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn init_from_options_projection_choice() {
+        let mut oc = OptionsCont::new();
+        GeoConvHelper::add_projection_options(&mut oc);
+        for name in ["offset.x", "offset.y", "offset.z"] {
+            oc.do_register(name, SumoOption::float(0.0));
+        }
+        assert!(GeoConvHelper::init_from_options(&oc).unwrap());
+        assert!(!GeoConvHelper::with_final(|f| f.using_geo_projection()));
+
+        oc.set("simple-projection", "true", false).unwrap();
+        assert!(GeoConvHelper::init_from_options(&oc).unwrap());
+        assert!(GeoConvHelper::with_final(|f| f.using_geo_projection()));
+
+        oc.set("proj.utm", "true", false).unwrap();
+        assert!(!GeoConvHelper::init_from_options(&oc).unwrap());
+    }
+
+    fn utm_proj(zone: i32) -> String {
+        format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs")
+    }
+
+    /// PROJ 9.4 reference: `echo "lon lat" | cs2cs +proj=longlat +datum=WGS84 +to +proj=utm +zone=Z +ellps=WGS84 +datum=WGS84 +units=m +no_defs -f %.9f`
+    #[test]
+    fn utm_matches_proj() {
+        let cases: [(f64, f64, i32, f64, f64); 19] = [
+            (-75.5, 40.2, 18, 457444.837151998, 4450075.498325491),
+            (9.1, 48.7, 32, 507358.079288402, 5394111.900843232),
+            (15.5, -33.9, 33, 546228.176321921, -3751180.769750892),
+            (-177.3, 64.8, 1, 485747.357523810, 7186199.042602601),
+            (177.4, -17.2, 60, 542532.163212333, -1901724.154100325),
+            (2.35, 48.85, 31, 452314.891233666, 5410984.887604439),
+            (-3.7, 40.4, 30, 440598.078851791, 4472390.031128573),
+            (116.4, 39.9, 50, 448709.380192469, 4416830.562171828),
+            (151.2, -33.9, 56, 333568.941011552, -3752526.663155980),
+            (-123.1, 49.3, 10, 492729.777625124, 5460811.038490374),
+            (-46.6, -23.5, 23, 336625.131857350, -2599781.139823964),
+            (39.3, -6.8, 37, 533149.363859589, -751649.927888654),
+            (-99.1, 19.4, 14, 489500.410979988, 2145090.574145707),
+            (0.5, 0.1, 31, 221724.104715127, 11063.605805439),
+            (10.0, 80.0, 32, 519384.803295973, 8881752.414807441),
+            (10.0, -80.0, 32, 519384.803295973, -8881752.414807441),
+            (-0.5, -0.001, 31, 110293.549385932, -110.737988137),
+            (179.9, -45.0, 1, 255672.433467196, -4987626.456524279),
+            (-179.9, 45.0, 60, 744327.566532804, 4987626.456524279),
+        ];
+        for (lon, lat, zone, e, n) in cases {
+            let mut h = GeoConvHelper::new(&utm_proj(zone), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+            let mut p = Position::new(lon, lat);
+            assert!(h.x2cartesian(&mut p, false));
+            assert!((p.x() - e).abs() < 1e-6, "{lon} {lat} zone {zone}: x {} vs {e}", p.x());
+            assert!((p.y() - n).abs() < 1e-6, "{lon} {lat} zone {zone}: y {} vs {n}", p.y());
+            h.cartesian2geo(&mut p);
+            assert!((p.x() - lon).abs() < 1e-9 && (p.y() - lat).abs() < 1e-9, "inverse {lon} {lat}: {p:?}");
+        }
+    }
+
+    #[test]
+    fn utm_zone_from_first_point() {
+        let mut h = GeoConvHelper::new("UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(9.1, 48.7);
+        assert!(h.x2cartesian(&mut p, false));
+        assert_eq!(h.get_proj_string(), utm_proj(32));
+        assert!((p.x() - 507358.079288402).abs() < 1e-6 && (p.y() - 5394111.900843232).abs() < 1e-6);
+    }
+
+    #[test]
+    fn utm_south_and_dhdn_match_proj() {
+        let s = GeoConvHelper::new("+proj=utm +zone=33 +south +ellps=WGS84 +datum=WGS84 +units=m +no_defs", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(15.5, -33.9);
+        assert!(s.x2cartesian_const(&mut p));
+        assert!((p.y() - 6248819.230249108).abs() < 1e-6);
+
+        // PROJ 9.4: cs2cs +proj=longlat +ellps=bessel +to +proj=tmerc +lat_0=0 +lon_0=12 +k=1 +x_0=4500000 +y_0=0 +ellps=bessel +units=m +no_defs
+        let d = GeoConvHelper::new(&dhdn_proj_string(4), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut q = Position::new(12.5, 52.3);
+        assert!(d.x2cartesian_const(&mut q));
+        assert!((q.x() - 4534104.708578545).abs() < 1e-6 && (q.y() - 5796245.650255103).abs() < 1e-6);
     }
 }

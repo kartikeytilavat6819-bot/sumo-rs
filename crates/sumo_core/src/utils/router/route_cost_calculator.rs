@@ -35,7 +35,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     // }
     #[allow(unused_variables)]
     pub fn get_calculator() -> &'static mut RouteCostCalculator<R, E, V> {
-        todo!("port RouteCostCalculator::getCalculator")
+        panic!("shortcut: needs virtual dispatch for LogitCalculator/GawronCalculator (a trait-object singleton), upgrade when the RouteCostCalculator subclasses can be stored behind one static")
     }
 
     /// C++: `void RouteCostCalculator::cleanup()` [static]
@@ -45,14 +45,14 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port RouteCostCalculator::cleanup")
+        // shortcut: get_calculator() never stores an instance (see above), so there is nothing to delete
     }
 
     /// C++: `void RouteCostCalculator::setCosts(std::shared_ptr<R>, const double, const bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_costs(&self, route: Rc<R>, costs: f64, isActive: bool) {
-        todo!("port RouteCostCalculator::setCosts")
+        panic!("pure virtual RouteCostCalculator::setCosts called")
     }
 
     /// C++: `void RouteCostCalculator::calculateProbabilities(const std::vector<std::shared_ptr<R>> &, const V *const, const SUMOTime)` [virtual, pure virtual]
@@ -60,7 +60,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn calculate_probabilities(&mut self, alternatives: &Vec<Rc<R>>, veh: Ptr<V>, time: SUMOTime) {
-        todo!("port RouteCostCalculator::calculateProbabilities")
+        panic!("pure virtual RouteCostCalculator::calculateProbabilities called")
     }
 
     /// C++: `int RouteCostCalculator::getMaxRouteNumber() const` [const]
@@ -69,7 +69,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_route_number(&self) -> i32 {
-        todo!("port RouteCostCalculator::getMaxRouteNumber")
+        self.myMaxRouteNumber
     }
 
     /// C++: `bool RouteCostCalculator::keepAllRoutes() const` [const]
@@ -78,7 +78,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn keep_all_routes(&self) -> bool {
-        todo!("port RouteCostCalculator::keepAllRoutes")
+        self.myKeepRoutes
     }
 
     /// C++: `bool RouteCostCalculator::skipRouteCalculation() const` [const]
@@ -87,7 +87,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn skip_route_calculation(&self) -> bool {
-        todo!("port RouteCostCalculator::skipRouteCalculation")
+        self.mySkipNewRoutes
     }
 
     /// C++: `bool RouteCostCalculator::keepRoute() const` [const]
@@ -102,7 +102,13 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn keep_route(&self) -> bool {
-        todo!("port RouteCostCalculator::keepRoute")
+        if self.myKeepRouteProb == 1.0 {
+            true
+        } else if self.myKeepRouteProb == 0.0 {
+            false
+        } else {
+            utils::common::rand_helper::rand() < self.myKeepRouteProb
+        }
     }
 
     /// C++: `void RouteCostCalculator::RouteCostCalculator<R, E, V>()` [protected]
@@ -116,7 +122,14 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port RouteCostCalculator::RouteCostCalculator<R, E, V>")
+        use utils::options::options_cont::{exists, get_bool, get_float, get_int};
+        RouteCostCalculator {
+            myMaxRouteNumber: get_int("max-alternatives"),
+            myKeepRoutes: get_bool("keep-all-routes"),
+            mySkipNewRoutes: get_bool("skip-new-routes"),
+            myKeepRouteProb: if exists("keep-route-probability") { get_float("keep-route-probability") } else { 0.0 },
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void RouteCostCalculator::~RouteCostCalculator<R, E, V>()` [virtual, protected]
@@ -124,7 +137,7 @@ impl<R, E, V> RouteCostCalculator<R, E, V> {
     // virtual ~RouteCostCalculator() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RouteCostCalculator::~RouteCostCalculator<R, E, V>")
+        // empty destructor (C++ `{}`)
     }
 
 }

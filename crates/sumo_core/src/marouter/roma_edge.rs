@@ -9,8 +9,8 @@ pub struct ROMAEdge {
     /// C++ base class `ROEdge`
     pub base: ROEdge,
     pub myLeftTurns: BTreeSet<Ptr<ROMAEdge>>,
-    pub myFlow: Unmapped /* ValueTimeLine<double> */,
-    pub myHelpFlow: Unmapped /* ValueTimeLine<double> */,
+    pub myFlow: ValueTimeLine,
+    pub myHelpFlow: ValueTimeLine,
 }
 
 impl std::ops::Deref for ROMAEdge {
@@ -33,7 +33,12 @@ impl ROMAEdge {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
-        todo!("port ROMAEdge::ROMAEdge")
+        Self {
+            base: ROEdge::new(id, from, to, index, priority, type_, routingType),
+            myLeftTurns: BTreeSet::new(),
+            myFlow: ValueTimeLine::default(),
+            myHelpFlow: ValueTimeLine::default(),
+        }
     }
 
     /// C++: `void ROMAEdge::~ROMAEdge() noexcept` [virtual]
@@ -42,7 +47,6 @@ impl ROMAEdge {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROMAEdge::~ROMAEdge")
     }
 
     /// C++: `void ROMAEdge::addSuccessor(ROEdge *, ROEdge *, std::string)` [virtual]
@@ -56,7 +60,12 @@ impl ROMAEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
-        todo!("port ROMAEdge::addSuccessor")
+        let is_left = dir == "l" || dir == "L";
+        self.base.add_successor(s, via, dir);
+        if is_left {
+            // determinism: std::set<ROMAEdge*> is pointer-ordered in C++; BTreeSet<Ptr> orders by address too
+            self.myLeftTurns.insert(s.cast::<ROMAEdge>());
+        }
     }
 
     /// C++: `void ROMAEdge::setFlow(const double, const double, const double)`
@@ -65,7 +74,7 @@ impl ROMAEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_flow(&mut self, begin: f64, end: f64, flow: f64) {
-        todo!("port ROMAEdge::setFlow")
+        self.myFlow.add(begin, end, flow);
     }
 
     /// C++: `double ROMAEdge::getFlow(const double) const` [const]
@@ -74,7 +83,7 @@ impl ROMAEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_flow(&self, time: f64) -> f64 {
-        todo!("port ROMAEdge::getFlow")
+        self.myFlow.get_value(time)
     }
 
     /// C++: `void ROMAEdge::setHelpFlow(const double, const double, const double)`
@@ -83,7 +92,7 @@ impl ROMAEdge {
     //     }
     #[allow(unused_variables)]
     pub fn set_help_flow(&mut self, begin: f64, end: f64, flow: f64) {
-        todo!("port ROMAEdge::setHelpFlow")
+        self.myHelpFlow.add(begin, end, flow);
     }
 
     /// C++: `double ROMAEdge::getHelpFlow(const double) const` [const]
@@ -92,7 +101,7 @@ impl ROMAEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_help_flow(&self, time: f64) -> f64 {
-        todo!("port ROMAEdge::getHelpFlow")
+        self.myHelpFlow.get_value(time)
     }
 
     /// C++: `void ROMAEdge::ROMAEdge(const ROMAEdge &)` [private]
@@ -100,7 +109,7 @@ impl ROMAEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &ROMAEdge) -> Self {
-        todo!("port ROMAEdge::ROMAEdge")
+        panic!("ROMAEdge copy constructor is private and undefined in C++")
     }
 
     /// C++: `ROMAEdge & ROMAEdge::operator=(const ROMAEdge &)` [private]
@@ -108,7 +117,7 @@ impl ROMAEdge {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &ROMAEdge) -> &mut ROMAEdge {
-        todo!("port ROMAEdge::operator=")
+        panic!("ROMAEdge assignment operator is private and undefined in C++")
     }
 
 }

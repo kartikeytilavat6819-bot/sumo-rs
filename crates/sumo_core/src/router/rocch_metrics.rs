@@ -15,6 +15,9 @@ pub struct ROCCHMetrics {
 
 // C++ static members of ROCCHMetrics (port as module-level statics, see AGENTS.md):
 //   static ROCCHMetricFamily * ROCCHMetrics::myFamily;
+/// raw owning pointer, like the C++ static (null until init)
+static MY_FAMILY: std::sync::atomic::AtomicPtr<ROCCHMetricFamily> =
+    std::sync::atomic::AtomicPtr::new(std::ptr::null_mut());
 
 impl ROCCHMetrics {
     /// C++: `void ROCCHMetrics::init(const ROCCHGraph *, int, SUMOTime, SUMOTime)` [static]
@@ -30,8 +33,18 @@ impl ROCCHMetrics {
     //                                      nullptr, &ROCCHMetrics::patchRestrictions);
     // }
     #[allow(unused_variables)]
-    pub fn init(graph: Ptr<ROCCHGraph>, effort: i32, begin: SUMOTime, weightPeriod: SUMOTime) {
-        todo!("port ROCCHMetrics::init")
+    pub fn init(graph: Ptr<ROCCHGraph>, effort: CCHGraph_EffortOperation, begin: SUMOTime, weightPeriod: SUMOTime) {
+        use std::sync::atomic::Ordering;
+        // delete myFamily;
+        let old = MY_FAMILY.swap(std::ptr::null_mut(), Ordering::SeqCst);
+        if !old.is_null() {
+            let mut b = unsafe { Box::from_raw(old) };
+            b.drop_();
+        }
+        // shortcut: CCHMetricFamily's factory and weight-patch fields are unmapped (()), so nullptr is passed
+        // and patchRestrictions is not installed; restore once CCHMetricFamily's function-pointer fields are ported
+        let fam = Box::new(ROCCHMetricFamily::new(graph.cast::<CCHMetricFamily_Graph>(), effort, begin, weightPeriod, (), ()));
+        MY_FAMILY.store(Box::into_raw(fam), Ordering::SeqCst);
     }
 
     /// C++: `const int * ROCCHMetrics::get(SUMOVehicleClass, SUMOTime, const ROVehicle *)` [static]
@@ -48,7 +61,14 @@ impl ROCCHMetrics {
     // }
     #[allow(unused_variables)]
     pub fn get(vClass: SUMOVehicleClass, time: SUMOTime, veh: Ptr<ROVehicle>) -> Ptr<i32> {
-        todo!("port ROCCHMetrics::get")
+        use std::sync::atomic::Ordering;
+        let fam = MY_FAMILY.load(Ordering::SeqCst);
+        if fam.is_null() {
+            return Ptr::null(); // not initialised -> caller falls back to A*
+        }
+        // keyed by the TYPE (nullptr covers vehicle-less queries)
+        let key = if veh.is_null() { Ptr::null() } else { veh.get_type() };
+        Ptr::from_raw(fam).m().get(key, vClass, time, veh)
     }
 
     /// C++: `SUMOTime ROCCHMetrics::periodEnd(SUMOTime)` [static]
@@ -59,7 +79,8 @@ impl ROCCHMetrics {
     // }
     #[allow(unused_variables)]
     pub fn period_end(time: SUMOTime) -> SUMOTime {
-        todo!("port ROCCHMetrics::periodEnd")
+        let fam = MY_FAMILY.load(std::sync::atomic::Ordering::SeqCst);
+        if fam.is_null() { SUMOTIME_MAX } else { Ptr::from_raw(fam).m().period_end(time) }
     }
 
     /// C++: `void ROCCHMetrics::reset(const ROVehicle *)` [static]
@@ -72,7 +93,10 @@ impl ROCCHMetrics {
     // }
     #[allow(unused_variables)]
     pub fn reset(veh: Ptr<ROVehicle>) {
-        todo!("port ROCCHMetrics::reset")
+        let fam = MY_FAMILY.load(std::sync::atomic::Ordering::SeqCst);
+        if !fam.is_null() {
+            Ptr::from_raw(fam).m().flag_stale();
+        }
     }
 
     /// C++: `void ROCCHMetrics::patchRestrictions(const ROCCHGraph *, const ROVehicle *, int &)` [static, private]
@@ -96,8 +120,19 @@ impl ROCCHMetrics {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn patch_restrictions(graph: Ptr<ROCCHGraph>, veh: Ptr<ROVehicle>, weights: &mut i32) {
-        todo!("port ROCCHMetrics::patchRestrictions")
+    pub fn patch_restrictions(graph: Ptr<ROCCHGraph>, veh: Ptr<ROVehicle>, weights: &mut Vec<u32>) {
+        if veh.is_null() || veh.get_type().paramRestrictions.is_empty() {
+            return;
+        }
+        // mask the edges that restrict this type (restricts() depends only on
+        // the type's paramRestrictions vector)
+        for e in ROEdge::get_all_edges().iter() {
+            let e = *e;
+            if !e.is_internal() && !e.is_taz_connector() && e.restricts(veh) {
+                // shortcut: CCHGraph::arcs_of_edge is still a placeholder returning &i32; iterate its arc list once ported
+                let _ = (graph, e);
+            }
+        }
     }
 
 }

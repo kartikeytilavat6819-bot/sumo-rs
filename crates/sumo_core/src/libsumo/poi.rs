@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 // shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::POI` (libsumo/POI.h)
 pub struct POI {
@@ -17,6 +18,8 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `POI::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `POI::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
 
@@ -199,8 +202,9 @@ impl POI {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(POI, POI)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: POI::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_POI_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int POI::domainID()` [static]
@@ -285,7 +289,11 @@ impl POI {
     #[allow(unused_variables)]
     pub fn add(poiID: &str, x: f64, y: f64, color: &TraCIColor, poiType: &str, layer: i32, imgFile: &str, width: f64, height: f64, angle: f64, icon: &str) -> bool {
         let ok = MSNet::get_instance().m().get_shape_container().add_poi(poiID, poiType, &Helper::make_rgb_color(color), &Position::new(x, y), false, "", 0.0, false, 0.0, icon, layer as f64, angle, imgFile, width, height, false);
-        // shortcut: POI tree insert skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
+        if ok && !MY_TREE.with(|t| t.get()).is_null() {
+            let p = MSNet::get_instance().m().get_shape_container().get_po_is().get(poiID).copied().unwrap_or(Ptr::null());
+            let c = [p.base2.x() as f32, p.base2.y() as f32];
+            MY_TREE.with(|t| t.get()).m().insert(&c, &c, &p.cast::<Named>());
+        }
         ok
     }
 
@@ -303,7 +311,12 @@ impl POI {
     // }
     #[allow(unused_variables)]
     pub fn remove(poiID: &str, layer: i32) -> bool {
-        // shortcut: POI tree removal skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
+        let tree = MY_TREE.with(|t| t.get());
+        let p = MSNet::get_instance().m().get_shape_container().get_po_is().get(poiID).copied().unwrap_or(Ptr::null());
+        if !p.is_null() && !tree.is_null() {
+            let c = [p.base2.x() as f32, p.base2.y() as f32];
+            tree.m().remove(&c, &c, &p.cast::<Named>());
+        }
         MSNet::get_instance().m().get_shape_container().remove_poi(poiID)
     }
 
@@ -371,10 +384,17 @@ impl POI {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        // shortcut: NamedRTree is unmapped (Unmapped), so the POI R-tree cannot be built yet, upgrade when NamedRTree is ported
-        panic!("shortcut: POI::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_shape_container().get_po_is().iter() {
+                let c = [i.base2.x() as f32, i.base2.y() as f32];
+                tree.m().insert(&c, &c, &i.cast::<Named>());
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void POI::cleanup()` [static]
@@ -385,7 +405,7 @@ impl POI {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree is never set while getTree is a shortcut, so there is nothing to delete yet, upgrade with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void POI::storeShape(const std::string &, PositionVector &)` [static]
@@ -406,8 +426,7 @@ impl POI {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: POI::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool POI::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

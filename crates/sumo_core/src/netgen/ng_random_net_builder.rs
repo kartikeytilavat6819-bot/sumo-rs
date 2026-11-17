@@ -1,6 +1,8 @@
 //! Port of netgen/NGRandomNetBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::rand_helper;
+use utils::geom::geom_helper;
 
 /// A class that builds random network using an algorithm by Markus Hartinger.
 /// C++ class `NGRandomNetBuilder` (netgen/NGRandomNetBuilder.h)
@@ -40,7 +42,19 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new(net: &mut NGNet, minAngle: f64, minDistance: f64, maxDistance: f64, connectivity: f64, numTries: i32, neighborDist: &RandomDistributor<i32>) -> Self {
-        todo!("port NGRandomNetBuilder::NGRandomNetBuilder")
+        NGRandomNetBuilder {
+            myNet: Ptr::from_mut(net),
+            myOuterNodes: NGNodeList::new(),
+            myOuterLinks: NGEdgeList::new(),
+            myConNodes: NGNodeList::new(),
+            myMinLinkAngle: minAngle,
+            myMinDistance: minDistance,
+            myMaxDistance: maxDistance,
+            myConnectivity: connectivity,
+            myNumTries: numTries,
+            myNumNodes: 0,
+            myNeighbourDistribution: neighborDist.clone(),
+        }
     }
 
     /// C++: `void NGRandomNetBuilder::createNet(int, bool)`
@@ -100,7 +114,63 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn create_net(&mut self, numNodes: i32, gridMode: bool) {
-        todo!("port NGRandomNetBuilder::createNet")
+        self.myNumNodes = numNodes;
+
+        let mut outerNode: Ptr<NGNode> = Ptr::from_raw(Box::into_raw(Box::new(NGNode::new(&self.myNet.m().get_next_free_id()))));
+        outerNode.m().set_x(0.);
+        outerNode.m().set_y(0.);
+        outerNode.m().set_max_neighbours(4);
+
+        self.myNet.m().add(outerNode);
+        self.myOuterNodes.push_back(outerNode);
+
+        let mut created = true;
+        while (self.myNet.node_no() < numNodes) && (self.myOuterNodes.len() > 0) {
+            // brings last element to front
+            if !created {
+                let back = *self.myOuterNodes.back().unwrap();
+                self.myOuterNodes.push_front(back);
+                self.myOuterNodes.pop_back();
+            }
+            outerNode = *self.myOuterNodes.back().unwrap();
+            self.find_possible_outer_nodes(outerNode);
+            created = false;
+            if (self.myConNodes.len() > 0) && (rand_helper::rand() < self.myConnectivity) {
+                // create link
+                let conBack = *self.myConNodes.back().unwrap();
+                let newLink: Ptr<NGEdge> = Ptr::from_raw(Box::into_raw(NGEdge::new(&self.myNet.m().get_next_free_id(), outerNode, conBack, "")));
+                if self.can_connect(outerNode, conBack) {
+                    // add link
+                    self.myNet.m().add_2(newLink);
+                    self.myOuterLinks.push_back(newLink);
+                    // check nodes for being outer node
+                    if (outerNode.get_links().len() as i32) >= outerNode.m().get_max_neighbours() {
+                        self.remove_outer_node(outerNode);
+                    }
+                    if (conBack.get_links().len() as i32) >= conBack.m().get_max_neighbours() {
+                        self.remove_outer_node(conBack);
+                    }
+                    created = true;
+                } else {
+                    // delete newLink
+                    newLink.m().drop_();
+                    drop(unsafe { Box::from_raw(newLink.as_raw()) });
+                }
+            } else {
+                let mut count = 0;
+                loop {
+                    created = self.create_new_node(outerNode, gridMode);
+                    count += 1;
+                    if !((count <= self.myNumTries) && !created) {
+                        break;
+                    }
+                }
+                if !created {
+                    outerNode.m().set_max_neighbours(outerNode.get_links().len() as i32);
+                    self.myOuterNodes.retain(|n| *n != outerNode);
+                }
+            }
+        }
     }
 
     /// C++: `void NGRandomNetBuilder::removeOuterNode(NGNode *)` [private]
@@ -116,7 +186,9 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn remove_outer_node(&mut self, node: Ptr<NGNode>) {
-        todo!("port NGRandomNetBuilder::removeOuterNode")
+        if let Some(pos) = self.myOuterNodes.iter().position(|ni| *ni == node) {
+            self.myOuterNodes.remove(pos);
+        }
     }
 
     /// C++: `bool NGRandomNetBuilder::checkAngles(const NGNode *const)` [private]
@@ -160,7 +232,31 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn check_angles(&mut self, node: Ptr<NGNode>) -> bool {
-        todo!("port NGRandomNetBuilder::checkAngles")
+        let mut check = true;
+
+        if node.get_links().len() > 1 {
+            // loop over all links
+            for li in node.get_links().iter().copied() {
+                // calc vector of currentnode
+                let mut ni: Ptr<NGNode> = if li.get_start_node() == node { li.get_end_node() } else { li.get_start_node() };
+                let v1 = Position::new(
+                    ni.get_position().x() - node.get_position().x(),
+                    ni.get_position().y() - node.get_position().y());
+                // loop over all links
+                for lj in node.get_links().iter().copied() {
+                    if li != lj {
+                        ni = if lj.get_start_node() == node { lj.get_end_node() } else { lj.get_start_node() };
+                        let v2 = Position::new(
+                            ni.get_position().x() - node.get_position().x(),
+                            ni.get_position().y() - node.get_position().y());
+                        if geom_helper::angle2d(&v1, &v2).abs() < self.myMinLinkAngle {
+                            check = false;
+                        }
+                    }
+                }
+            }
+        }
+        check
     }
 
     /// C++: `bool NGRandomNetBuilder::canConnect(NGNode *, NGNode *)` [private]
@@ -217,7 +313,53 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn can_connect(&mut self, baseNode: Ptr<NGNode>, newNode: Ptr<NGNode>) -> bool {
-        todo!("port NGRandomNetBuilder::canConnect")
+        let mut connectable = true;
+        let n = PositionVector::from(vec![*baseNode.get_position(), *newNode.get_position()]);
+
+        // check for range between Basenode and Newnode
+        if connectable {
+            let dist = n.length();
+            if (dist < self.myMinDistance) || (dist > self.myMaxDistance) {
+                connectable = false;
+            }
+        }
+
+        // check for angle restrictions
+        if connectable {
+            connectable = self.check_angles(baseNode);
+        }
+        if connectable {
+            connectable = self.check_angles(newNode);
+        }
+
+        // check for intersections and range restrictions with outer links
+        if connectable {
+            for li in self.myOuterLinks.iter().copied() {
+                if !connectable {
+                    break;
+                }
+                // check intersection only if links don't share a node
+                let start = li.get_start_node();
+                let end = li.get_end_node();
+                let p1 = *start.get_position();
+                let p2 = *end.get_position();
+                if (baseNode != start) && (baseNode != end) && (newNode != start) && (newNode != end) {
+                    connectable = !n.intersects(&p1, &p2);
+                }
+                // check NewNode-To-Links distance only, if NewNode isn't part of link
+                if connectable && (newNode != start) && (newNode != end) {
+                    let offset = geom_helper::nearest_offset_on_line_to_point2d(&p1, &p2, &n[1], true);
+                    if offset != geom_helper::INVALID_OFFSET {
+                        let p = PositionVector::from(vec![p1, p2]).position_at_offset2d(offset, 0., false);
+                        let dist = p.distance_to2d(&n[1]);
+                        if dist < self.myMinDistance {
+                            connectable = false;
+                        }
+                    }
+                }
+            }
+        }
+        connectable
     }
 
     /// C++: `bool NGRandomNetBuilder::createNewNode(NGNode *, bool)` [private]
@@ -260,7 +402,43 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn create_new_node(&mut self, baseNode: Ptr<NGNode>, gridMode: bool) -> bool {
-        todo!("port NGRandomNetBuilder::createNewNode")
+        // calculate position of new node based on BaseNode
+        let mut dist = rand_helper::with_default(|r| r.rand_range(self.myMinDistance, self.myMaxDistance));
+        let mut angle = rand_helper::with_default(|r| r.rand_max(2. * std::f64::consts::PI));
+        if gridMode {
+            // dist must be a multiple of minDist
+            dist = std::cmp::max(1, (dist / self.myMinDistance) as i32) as f64 * self.myMinDistance;
+            // angle must be a multiple of 90 degrees
+            angle = rand_helper::with_default(|r| r.rand_int(4)) as f64 * 0.5 * std::f64::consts::PI;
+        }
+        let x = baseNode.get_position().x() + dist * angle.cos();
+        let y = baseNode.get_position().y() + dist * angle.sin();
+        let newNode: Ptr<NGNode> = Ptr::from_raw(Box::into_raw(Box::new(NGNode::new(&self.myNet.m().get_next_free_id()))));
+        newNode.m().set_x(x);
+        newNode.m().set_y(y);
+        newNode.m().set_max_neighbours(self.myNeighbourDistribution.get(None).unwrap());
+        let newLink: Ptr<NGEdge> = Ptr::from_raw(Box::into_raw(NGEdge::new(&self.myNet.m().get_next_free_id(), baseNode, newNode, "")));
+        if self.can_connect(baseNode, newNode) {
+            // add node
+            self.myNet.m().add(newNode);
+            self.myOuterNodes.push_front(newNode);
+            // add link
+            self.myNet.m().add_2(newLink);
+            self.myOuterLinks.push_back(newLink);
+            // check basenode for being outer node
+            if (baseNode.get_links().len() as i32) >= baseNode.m().get_max_neighbours() {
+                self.remove_outer_node(baseNode);
+            }
+            true
+        } else {
+            // delete newLink
+            newLink.m().drop_();
+            drop(unsafe { Box::from_raw(newLink.as_raw()) });
+            // delete newNode
+            newNode.m().drop_();
+            drop(unsafe { Box::from_raw(newNode.as_raw()) });
+            false
+        }
     }
 
     /// C++: `void NGRandomNetBuilder::findPossibleOuterNodes(NGNode *)` [private]
@@ -283,7 +461,18 @@ impl NGRandomNetBuilder {
     // }
     #[allow(unused_variables)]
     pub fn find_possible_outer_nodes(&mut self, node: Ptr<NGNode>) {
-        todo!("port NGRandomNetBuilder::findPossibleOuterNodes")
+        self.myConNodes.clear();
+        // can_connect does not change myOuterNodes, so iterating a copy is equivalent
+        let outer: Vec<Ptr<NGNode>> = self.myOuterNodes.iter().copied().collect();
+        for on in outer {
+            if !node.connected(on, false) {
+                if (node.m().get_max_neighbours() > node.get_links().len() as i32) && (on.m().get_max_neighbours() > on.get_links().len() as i32) {
+                    if self.can_connect(node, on) {
+                        self.myConNodes.push_back(on);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void NGRandomNetBuilder::NGRandomNetBuilder(const NGRandomNetBuilder &)` [private]
@@ -291,7 +480,7 @@ impl NGRandomNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NGRandomNetBuilder) -> Self {
-        todo!("port NGRandomNetBuilder::NGRandomNetBuilder")
+        panic!("NGRandomNetBuilder copy constructor is invalidated in SUMO")
     }
 
     /// C++: `NGRandomNetBuilder & NGRandomNetBuilder::operator=(const NGRandomNetBuilder &)` [private]
@@ -299,7 +488,7 @@ impl NGRandomNetBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NGRandomNetBuilder) -> &mut NGRandomNetBuilder {
-        todo!("port NGRandomNetBuilder::operator=")
+        panic!("NGRandomNetBuilder assignment operator is invalidated in SUMO")
     }
 
 }

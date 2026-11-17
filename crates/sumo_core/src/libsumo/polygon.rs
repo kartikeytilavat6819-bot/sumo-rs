@@ -2,6 +2,9 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 // shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::microsim::ms_event_control::Command;
+use crate::utils::parametrised_wrapping_command::ParametrisedWrappingCommand;
 
 /// C++ class `libsumo::Polygon` (libsumo/Polygon.h)
 pub struct Polygon {
@@ -17,6 +20,8 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `Polygon::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `Polygon::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
 
@@ -189,8 +194,9 @@ impl Polygon {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Polygon, POLYGON)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: Polygon::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_POLYGON_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Polygon::domainID()` [static]
@@ -235,7 +241,13 @@ impl Polygon {
         if !MSNet::get_instance().m().get_shape_container().add_polygon(polygonID, polygonType, &col, layer as f64, crate::utils::shapes::shape::DEFAULT_ANGLE, crate::utils::shapes::shape::DEFAULT_IMG_FILE, &p_shape, false, fill, lineWidth, false, "") {
             panic!("{}", format!("Could not add polygon '{}'", polygonID));
         }
-        // shortcut: polygon tree insert skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
+        if !MY_TREE.with(|t| t.get()).is_null() {
+            let p = MSNet::get_instance().m().get_shape_container().get_polygons().get(polygonID).copied().unwrap_or(Ptr::null());
+            let b = p.get_shape().get_box_boundary();
+            let cmin = [b.xmin() as f32, b.ymin() as f32];
+            let cmax = [b.xmax() as f32, b.ymax() as f32];
+            MY_TREE.with(|t| t.get()).m().insert(&cmin, &cmax, &p.cast::<Named>());
+        }
     }
 
     /// C++: `void Polygon::addDynamics(const std::string &, const std::string &, const std::vector<double> &, const std::vector<double> &, bool, bool)` [static]
@@ -319,8 +331,11 @@ impl Polygon {
             let listener = MSNet::get_instance().m().make_dynamic_shape_updater().cast::<MSNet_VehicleStateListener>();
             MSNet::get_instance().m().add_vehicle_state_listener(listener);
         }
-        // shortcut: the regular polygon update command (ParametrisedWrappingCommand) is unmapped, so it cannot be scheduled yet, upgrade with the command port
-        panic!("shortcut: Polygon::addDynamics cannot schedule the polygon update command (ParametrisedWrappingCommand unmapped)")
+        // Schedule the regular polygon update
+        let shapeCont = Ptr::from_mut(MSNet::get_instance().m().get_shape_container());
+        let cmd: *mut ParametrisedWrappingCommand<ShapeContainer, Ptr<PolygonDynamics>> = Box::into_raw(Box::new(ParametrisedWrappingCommand::new(shapeCont, &pd, ShapeContainer::polygon_dynamics_update)));
+        MSNet::get_instance().m().get_shape_container().add_polygon_update_command(pd.get_polygon_id().to_string(), Ptr::from_raw(cmd));
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd as *mut dyn Command), MSNet::get_instance().m().get_current_time_step());
     }
 
     /// C++: `void Polygon::remove(const std::string &, int)` [static]
@@ -343,7 +358,16 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn remove(polygonID: &str, layer: i32) {
-        // shortcut: polygon tree removal skipped, NamedRTree is unmapped and myTree is never set, upgrade when NamedRTree is ported
+        let tree = MY_TREE.with(|t| t.get());
+        if !tree.is_null() {
+            let p = MSNet::get_instance().m().get_shape_container().get_polygons().get(polygonID).copied().unwrap_or(Ptr::null());
+            if !p.is_null() {
+                let b = p.get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().remove(&cmin, &cmax, &p.cast::<Named>());
+            }
+        }
         if !MSNet::get_instance().m().get_shape_container().remove_polygon(polygonID, true) {
             panic!("{}", format!("Could not remove polygon '{}'", polygonID));
         }
@@ -403,10 +427,19 @@ impl Polygon {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        // shortcut: NamedRTree is unmapped (Unmapped), so the polygon R-tree cannot be built yet, upgrade when NamedRTree is ported
-        panic!("shortcut: Polygon::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            let net = MSNet::get_instance();
+            for (_, i) in net.m().get_shape_container().get_polygons().iter() {
+                let b = i.get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &i.cast::<Named>());
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void Polygon::cleanup()` [static]
@@ -417,7 +450,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree is never set while getTree is a shortcut, so there is nothing to delete yet, upgrade with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void Polygon::storeShape(const std::string &, PositionVector &)` [static]
@@ -438,8 +471,7 @@ impl Polygon {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Polygon::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Polygon::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -558,7 +590,6 @@ impl Polygon {
         // First try to find a vehicle with the given id
         let sumo_vehicle = net.m().get_vehicle_control().get_vehicle(id);
         if !sumo_vehicle.is_null() {
-            // shortcut: static_cast to the SUMOTrafficObject base; SUMOVehicle is not repr(C) yet, upgrade when sumo_vehicle.rs adds it
             return sumo_vehicle.cast::<SUMOTrafficObject>();
         }
         let transportable = net.m().get_person_control().get(id);

@@ -34,7 +34,17 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port NLEdgeControlBuilder::NLEdgeControlBuilder")
+        NLEdgeControlBuilder {
+            myCurrentNumericalLaneID: 0,
+            myCurrentNumericalEdgeID: 0,
+            myEdges: Vec::new(),
+            myActiveEdge: Ptr::null(),
+            myCurrentDefaultStopOffset: StopOffset::default(),
+            myCurrentLaneIndex: -1,
+            myLaneStorage: Ptr::from_mut(Box::leak(Box::new(Vec::new()))),
+            myBidiEdges: BTreeMap::new(),
+            myOppositeLanes: Vec::new(),
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::~NLEdgeControlBuilder() noexcept` [virtual]
@@ -47,7 +57,10 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NLEdgeControlBuilder::~NLEdgeControlBuilder")
+        unsafe { drop(Box::from_raw(self.myLaneStorage.as_raw())) };
+        if !self.myActiveEdge.is_null() && MSEdge::dictionary_2(self.myActiveEdge.get_id()) != self.myActiveEdge {
+            unsafe { drop(Box::from_raw(self.myActiveEdge.as_raw())) };
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::beginEdgeParsing(const std::string &, const SumoXMLEdgeFunc, const std::string &, const std::string &, const std::string &, int, const std::string &, double)`
@@ -80,7 +93,20 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn begin_edge_parsing(&mut self, id: &str, function: SumoXMLEdgeFunc, streetName: &str, edgeType: &str, routingType: &str, priority: i32, bidi: &str, distance: f64) {
-        todo!("port NLEdgeControlBuilder::beginEdgeParsing")
+        self.myLaneStorage.m().clear();
+        if !self.myActiveEdge.is_null() && MSEdge::dictionary_2(self.myActiveEdge.get_id()) != self.myActiveEdge {
+            self.myEdges.pop();
+            unsafe { drop(Box::from_raw(self.myActiveEdge.as_raw())) };
+            self.myActiveEdge = Ptr::null();
+        }
+        if !MSEdge::dictionary_2(id).is_null() {
+            std::panic::panic_any(ProcessError::InvalidArgument(format!("Another edge with the id '{}' exists.", id)));
+        }
+        self.myActiveEdge = self.build_edge(id, function, streetName, edgeType, routingType, priority, distance);
+        self.myEdges.push(self.myActiveEdge);
+        if bidi != "" {
+            self.myBidiEdges.insert(self.myActiveEdge, bidi.to_string());
+        }
     }
 
     /// C++: `MSLane * NLEdgeControlBuilder::addLane(const std::string &, double, double, double, const PositionVector &, double, SVCPermissions, SVCPermissions, SVCPermissions, int, bool, const std::string &, const PositionVector &)` [virtual]
@@ -101,7 +127,12 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_lane(&mut self, id: &str, maxSpeed: f64, friction: f64, length: f64, shape: &PositionVector, width: f64, permissions: SVCPermissions, changeLeft: SVCPermissions, changeRight: SVCPermissions, index: i32, isRampAccel: bool, type_: &str, outlineShape: &PositionVector) -> Ptr<MSLane> {
-        todo!("port NLEdgeControlBuilder::addLane")
+        let numericalID = self.myCurrentNumericalLaneID;
+        self.myCurrentNumericalLaneID += 1;
+        let lane = Ptr::from_mut(Box::leak(Box::new(MSLane::new(id, maxSpeed, friction, length, self.myActiveEdge, numericalID, shape, width, permissions, changeLeft, changeRight, index, isRampAccel, type_, outlineShape))));
+        self.myLaneStorage.m().push(lane);
+        self.myCurrentLaneIndex = index;
+        lane
     }
 
     /// C++: `void NLEdgeControlBuilder::addStopOffsets(const StopOffset &)`
@@ -116,7 +147,11 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_stop_offsets(&mut self, stopOffsets: &StopOffset) {
-        todo!("port NLEdgeControlBuilder::addStopOffsets")
+        if self.myCurrentLaneIndex == -1 {
+            self.set_default_stop_offset(stopOffsets);
+        } else {
+            self.update_current_lane_stop_offset(stopOffsets);
+        }
     }
 
     /// C++: `std::string NLEdgeControlBuilder::reportCurrentEdgeOrLane() const` [const]
@@ -132,7 +167,12 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn report_current_edge_or_lane(&self) -> String {
-        todo!("port NLEdgeControlBuilder::reportCurrentEdgeOrLane")
+        let mut ss = String::new();
+        if self.myCurrentLaneIndex != -1 {
+            ss += &format!("lane {} of ", self.myCurrentLaneIndex);
+        }
+        ss += &format!("edge '{}'", self.myActiveEdge.get_id());
+        ss
     }
 
     /// C++: `void NLEdgeControlBuilder::addNeigh(const std::string)` [virtual]
@@ -143,7 +183,8 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_neigh(&mut self, id: String) {
-        todo!("port NLEdgeControlBuilder::addNeigh")
+        let lane = *self.myLaneStorage.m().last().unwrap();
+        self.myOppositeLanes.push((lane, id));
     }
 
     /// C++: `MSEdge * NLEdgeControlBuilder::closeEdge()` [virtual]
@@ -163,7 +204,14 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn close_edge(&mut self) -> Ptr<MSEdge> {
-        todo!("port NLEdgeControlBuilder::closeEdge")
+        self.apply_default_stop_offsets_to_lanes();
+        let lanes: Vec<Ptr<MSLane>> = self.myLaneStorage.m().clone();
+        self.myLaneStorage.m().clear();
+        self.myActiveEdge.m().initialize(Ptr::from_mut(Box::leak(Box::new(lanes))));
+        self.myCurrentDefaultStopOffset.reset();
+        let result = self.myActiveEdge;
+        self.myActiveEdge = Ptr::null();
+        result
     }
 
     /// C++: `void NLEdgeControlBuilder::closeLane()`
@@ -174,7 +222,7 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn close_lane(&mut self) {
-        todo!("port NLEdgeControlBuilder::closeLane")
+        self.myCurrentLaneIndex = -1;
     }
 
     /// C++: `MSEdgeControl * NLEdgeControlBuilder::build(const MMVersion &)`
@@ -252,8 +300,82 @@ impl NLEdgeControlBuilder {
     //     return new MSEdgeControl(myEdges);
     // }
     #[allow(unused_variables)]
-    pub fn build(&mut self, networkVersion: &Unmapped /* MMVersion */) -> Ptr<MSEdgeControl> {
-        todo!("port NLEdgeControlBuilder::build")
+    pub fn build(&mut self, networkVersion: &(i32, f64) /* MMVersion */) -> Ptr<MSEdgeControl> {
+        if use_meso_sim() && !utils::options::options_cont::get_bool("meso-lane-queue") {
+            MSEdge::set_meso_ignored_v_classes(parse_vehicle_classes_vec(&utils::options::options_cont::get_string_vector("meso-ignore-lanes-by-vclass")).unwrap_or_else(|e| std::panic::panic_any(e)));
+        }
+        // connecting opposite lanes must happen before MSEdge::closeBuilding
+        for item in self.myOppositeLanes.iter() {
+            let oppo = MSLane::dictionary_2(&item.1);
+            if oppo.is_null() {
+                write_errorf!("Unknown neigh lane '%' for lane '%'", item.1, item.0.get_id());
+            } else {
+                item.0.m().set_opposite(oppo);
+            }
+        }
+        // consistency check
+        let mut checked: BTreeSet<Ptr<MSLane>> = BTreeSet::new();
+        for item in self.myOppositeLanes.iter() {
+            if !item.0.get_opposite().is_null() {
+                if item.0.get_opposite().get_opposite() != item.0 {
+                    if !checked.contains(&item.0.get_opposite()) {
+                        write_warningf!("Asymmetrical neigh lane '%' for lane '%'", item.1, item.0.get_id());
+                        item.0.get_opposite().m().set_opposite(item.0);
+                    } else {
+                        std::panic::panic_any(ProcessError::new(format!(
+                            "Mutually inconsistent neigh lane definitions for lanes '{}', '{}' and '{}'",
+                            item.0.get_id(),
+                            item.0.get_opposite().get_id(),
+                            item.0.get_opposite().get_opposite().get().map(|l| l.get_id().to_string()).unwrap_or_default()
+                        )));
+                    }
+                }
+                checked.insert(item.0);
+                checked.insert(item.0.get_opposite());
+            }
+        }
+        for edge in self.myEdges.iter() {
+            edge.m().close_building();
+        }
+        for edge in self.myEdges.iter() {
+            edge.m().rebuild_allowed_targets(false);
+        }
+        // mark internal edges belonging to a roundabout (after all edges are build)
+        if using_internal_lanes() {
+            for edge in self.myEdges.iter() {
+                if edge.is_internal() {
+                    if edge.get_num_successors() != 1 || edge.get_num_predecessors() != 1 {
+                        std::panic::panic_any(ProcessError::new(format!("Internal edge '{}' is not properly connected (probably a manually modified net.xml).", edge.get_id())));
+                    }
+                    if edge.get_successors(SVC_IGNORING)[0].is_roundabout() || edge.get_predecessors()[0].is_roundabout() {
+                        edge.m().mark_as_roundabout();
+                    }
+                }
+            }
+        }
+        {
+            let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap();
+            if !seen.is_empty() {
+                utils::common::msg_handler::write_warning(&format!("Deprecated vehicle classes '{}' in input network.", utils::common::to_string::join_to_string(seen.iter(), " ")));
+                seen.clear();
+            }
+        }
+        // check for bi-directional edges (this are edges in opposing direction and superposable/congruent shapes)
+        if !self.myBidiEdges.is_empty() || *networkVersion > (1, 0.0) {
+            for (edge, bidi) in self.myBidiEdges.iter() {
+                edge.m().check_and_register_bi_dir_edge(bidi);
+            }
+        } else {
+            // legacy network
+            for e in self.myEdges.iter() {
+                e.m().check_and_register_bi_dir_edge("");
+            }
+        }
+        // take into account bidi lanes when deciding on whether an edge allows changing
+        for edge in self.myEdges.iter() {
+            edge.m().build_lane_changer();
+        }
+        Ptr::from_mut(Box::leak(Box::new(MSEdgeControl::new(&self.myEdges))))
     }
 
     /// C++: `MSEdge * NLEdgeControlBuilder::buildEdge(const std::string &, const SumoXMLEdgeFunc, const std::string &, const std::string &, const std::string &, const int, const double)` [virtual]
@@ -266,7 +388,9 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, id: &str, function: SumoXMLEdgeFunc, streetName: &str, edgeType: &str, routingType: &str, priority: i32, distance: f64) -> Ptr<MSEdge> {
-        todo!("port NLEdgeControlBuilder::buildEdge")
+        let numericalID = self.myCurrentNumericalEdgeID;
+        self.myCurrentNumericalEdgeID += 1;
+        Ptr::from_mut(Box::leak(Box::new(MSEdge::new(id, numericalID, function, streetName, edgeType, routingType, priority, distance))))
     }
 
     /// C++: `void NLEdgeControlBuilder::addCrossingEdges(const std::vector<std::string> &)` [virtual]
@@ -276,7 +400,7 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn add_crossing_edges(&mut self, arg0: &Vec<String>) {
-        todo!("port NLEdgeControlBuilder::addCrossingEdges")
+        self.myActiveEdge.m().set_crossing_edges(arg0);
     }
 
     /// C++: `SumoXMLEdgeFunc NLEdgeControlBuilder::getCurrentEdgeFunction() const` [const]
@@ -290,7 +414,11 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn get_current_edge_function(&self) -> SumoXMLEdgeFunc {
-        todo!("port NLEdgeControlBuilder::getCurrentEdgeFunction")
+        if self.myActiveEdge.is_null() {
+            SumoXMLEdgeFunc::UNKNOWN
+        } else {
+            self.myActiveEdge.get_function()
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::updateCurrentLaneStopOffset(const StopOffset &)` [protected]
@@ -311,7 +439,17 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn update_current_lane_stop_offset(&mut self, stopOffset: &StopOffset) {
-        todo!("port NLEdgeControlBuilder::updateCurrentLaneStopOffset")
+        if self.myLaneStorage.m().len() == 0 {
+            std::panic::panic_any(ProcessError::new("myLaneStorage cannot be empty"));
+        }
+        if stopOffset.is_defined() {
+            let back = *self.myLaneStorage.m().last().unwrap();
+            if back.get_lane_stop_offsets().is_defined() {
+                utils::common::msg_handler::write_warning(&format!("Duplicate stopOffset definition for lane {} on edge {}!", back.get_index(), self.myActiveEdge.get_id()));
+            } else {
+                back.m().set_lane_stop_offset(stopOffset);
+            }
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::setDefaultStopOffset(const StopOffset &)` [protected]
@@ -326,7 +464,11 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn set_default_stop_offset(&mut self, stopOffset: &StopOffset) {
-        todo!("port NLEdgeControlBuilder::setDefaultStopOffset")
+        if self.myCurrentDefaultStopOffset.is_defined() {
+            utils::common::msg_handler::write_warning(&format!("Duplicate stopOffset definition for edge {}. Ignoring duplicate specification.", self.myActiveEdge.get_id()));
+        } else {
+            self.myCurrentDefaultStopOffset = *stopOffset;
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::applyDefaultStopOffsetsToLanes()` [protected]
@@ -345,7 +487,16 @@ impl NLEdgeControlBuilder {
     // }
     #[allow(unused_variables)]
     pub fn apply_default_stop_offsets_to_lanes(&mut self) {
-        todo!("port NLEdgeControlBuilder::applyDefaultStopOffsetsToLanes")
+        if self.myActiveEdge.is_null() {
+            std::panic::panic_any(ProcessError::new("myActiveEdge cannot be nullptr"));
+        }
+        if self.myCurrentDefaultStopOffset.is_defined() {
+            for l in self.myLaneStorage.m().iter() {
+                if !l.get_lane_stop_offsets().is_defined() {
+                    l.m().set_lane_stop_offset(&self.myCurrentDefaultStopOffset);
+                }
+            }
+        }
     }
 
     /// C++: `void NLEdgeControlBuilder::NLEdgeControlBuilder(const NLEdgeControlBuilder &)` [private]
@@ -353,7 +504,7 @@ impl NLEdgeControlBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &NLEdgeControlBuilder) -> Self {
-        todo!("port NLEdgeControlBuilder::NLEdgeControlBuilder")
+        panic!("NLEdgeControlBuilder copy constructor is private and undefined in C++, it must not be used")
     }
 
     /// C++: `NLEdgeControlBuilder & NLEdgeControlBuilder::operator=(const NLEdgeControlBuilder &)` [private]
@@ -361,7 +512,7 @@ impl NLEdgeControlBuilder {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &NLEdgeControlBuilder) -> &mut NLEdgeControlBuilder {
-        todo!("port NLEdgeControlBuilder::operator=")
+        panic!("NLEdgeControlBuilder assignment is private and undefined in C++, it must not be used")
     }
 
 }

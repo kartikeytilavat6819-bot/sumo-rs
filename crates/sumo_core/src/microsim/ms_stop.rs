@@ -1,9 +1,11 @@
 //! Port of microsim/MSStop.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
 
 // shortcut: STOP_*_SET belong to SUMOVehicleParameter.h, not ported yet, move them there
-const STOP_STARTED_SET: i32 = 1;
+// C++ MSVehicle.h: static const int STOP_STARTED_SET = 2 << 17;
+const STOP_STARTED_SET: i32 = 2 << 17;
 const STOP_END_SET: i32 = 2;
 
 /// Definition of vehicle stop (position and duration)
@@ -53,8 +55,8 @@ pub struct MSStop {
     pub skipOnDemand: bool,
     /// whether the 'started' value was loaded from simulaton state
     pub startedFromState: bool,
-    /// whehther the vehicle stopped despite having a waypoing
-    pub waypointWithStop: bool,
+    /// whehther the vehicle stopped despite having a waypoing (C++ const_cast-written from a const planMoveInternal)
+    pub waypointWithStop: Cell<bool>,
     /// route indices on looped route that were skipped before this stop (after pior stop or depart edge)
     pub skips: Vec<i32>,
     /// the exact position when entering the stop (for state saving)
@@ -89,7 +91,7 @@ impl MSStop {
             isOpposite: false,
             skipOnDemand: false,
             startedFromState: false,
-            waypointWithStop: false,
+            waypointWithStop: Cell::new(false),
             skips: Vec::new(),
             entryPos: -1.0,
         }
@@ -331,8 +333,7 @@ impl MSStop {
         let net = MSNet::get_instance();
         self.busstop = net.m().get_stopping_place(&stopPar.busstop, SUMO_TAG_BUS_STOP);
         self.containerstop = net.m().get_stopping_place(&stopPar.containerstop, SUMO_TAG_CONTAINER_STOP);
-        // shortcut: static_cast<MSParkingArea*> of a stopping place is a pointer cast until a checked downcast exists
-        self.parkingarea = Ptr::from_raw(net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).as_raw() as *mut MSParkingArea);
+        self.parkingarea = net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).cast();
         self.chargingStation = net.m().get_stopping_place(&stopPar.chargingStation, SUMO_TAG_CHARGING_STATION);
         self.overheadWireSegment = net.m().get_stopping_place(&stopPar.overheadWireSegment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
         // shortcut: stopPar.durationDist (Distribution_Parameterized) is not ported, the fixed duration is always used
@@ -597,8 +598,7 @@ impl MSStop {
                 self.pars.containerstop = sp.get_id().to_string();
             }
             SUMO_TAG_PARKING_AREA => {
-                // shortcut: dynamic_cast<MSParkingArea*> is a pointer cast until a checked downcast exists
-                self.parkingarea = Ptr::from_raw(sp.as_raw() as *mut MSParkingArea);
+                self.parkingarea = sp.cast();
                 self.pars.parkingarea = sp.get_id().to_string();
             }
             SUMO_TAG_CHARGING_STATION => {

@@ -28,6 +28,98 @@ impl std::ops::DerefMut for MSSimpleTrafficLightLogic {
     }
 }
 
+pub(crate) fn simple_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().try_switch()
+}
+pub(crate) fn simple_get_phase_number(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase_number()
+}
+pub(crate) fn simple_get_phases(l: &MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phases()
+}
+pub(crate) fn simple_get_phase(l: &MSTrafficLightLogic, givenstep: i32) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase(givenstep)
+}
+pub(crate) fn simple_get_current_phase_index(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_current_phase_index()
+}
+pub(crate) fn simple_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_current_phase_def()
+}
+pub(crate) fn simple_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().reset_last_switch(t)
+}
+pub(crate) fn simple_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_phase_index_at_time(simStep)
+}
+pub(crate) fn simple_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_offset_from_index(index)
+}
+pub(crate) fn simple_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().get_index_from_offset(offset)
+}
+pub(crate) fn simple_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+
+pub(crate) fn simple_save_state(l: &MSTrafficLightLogic, out: &mut OutputDevice) {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().save_state(out)
+}
+pub(crate) fn simple_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
+}
+pub(crate) fn simple_map_time_in_cycle(l: &MSTrafficLightLogic, t: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().map_time_in_cycle(t)
+}
+
+pub(crate) fn simple_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().get_parameter(key, defaultValue.to_string())
+}
+pub(crate) fn simple_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().set_parameter(key, value)
+}
+
+pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
+    get_priority_vehicles: super::ms_traffic_light_logic::default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
+    get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: super::ms_traffic_light_logic::default_ext_load_extra_state,
+    get_parameter: simple_ext_get_parameter,
+    set_parameter: simple_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
+};
+
+pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: simple_try_switch,
+    get_phase_number: simple_get_phase_number,
+    get_phases: simple_get_phases,
+    get_phase: simple_get_phase,
+    get_current_phase_index: simple_get_current_phase_index,
+    get_current_phase_def: simple_get_current_phase_def,
+    reset_last_switch: simple_reset_last_switch,
+    get_phase_index_at_time: simple_get_phase_index_at_time,
+    get_offset_from_index: simple_get_offset_from_index,
+    get_index_from_offset: simple_get_index_from_offset,
+    change_step_and_duration: simple_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: MSTrafficLightLogic::init_base,
+    adapt_link_information_from: MSTrafficLightLogic::adapt_link_information_from_base,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: MSTrafficLightLogic::get_detector_states_base,
+    get_conditions: MSTrafficLightLogic::get_conditions_base,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: simple_save_state,
+    load_state: simple_load_state,
+    map_time_in_cycle: simple_map_time_in_cycle,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+};
+
 impl MSSimpleTrafficLightLogic {
     /// C++: `void MSSimpleTrafficLightLogic::MSSimpleTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const TrafficLightType, const Phases &, int, SUMOTime, const Parameterised::Map &)`
     /// Constructor
@@ -59,6 +151,13 @@ impl MSSimpleTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, logicType: TrafficLightType, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, offset, logicType, delay, parameters);
+        // only the static logic has this table; derived logics (delay_based, actuated, ...) install their own,
+        // and the others keep the panicking default instead of silently running the static overrides
+        if matches!(logicType, TrafficLightType::STATIC) {
+            base.vt = &MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
+        }
+        // C++ MSSimpleTrafficLightLogic::getParameter/setParameter are inherited by every derived logic
+        base.ext_vt = &MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let myPhases: MSTrafficLightLogic_Phases = phases.clone();
         base.myDefaultCycleTime = base.compute_cycle_time(&myPhases);
         let mut this = MSSimpleTrafficLightLogic {
@@ -718,5 +817,65 @@ impl MSSimpleTrafficLightLogic {
         }
     }
 
+}
+
+#[cfg(test)]
+mod initial_switch_tests {
+    use super::*;
+
+    // a static logic must queue its first switch, otherwise its phases never advance (dense case: all 14 signals stuck in phase 0)
+    #[test]
+    fn static_logic_queues_first_switch_on_begin_of_timestep_events() {
+        // MSNet::new reads these; defaults as in MSFrame::fill_options (the full fill panics on the 'Report' sub-topic)
+        utils::options::options_cont::with_options(|oc| {
+            use utils::options::option::SumoOption;
+            oc.do_register("scale", SumoOption::float(1.0));
+            oc.do_register("keep-after-arrival", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("max-num-vehicles", SumoOption::integer(-1));
+            oc.do_register("max-num-teleports", SumoOption::integer(-1));
+            oc.do_register("max-depart-delay", SumoOption::string_typed("-1", "TIME"));
+            oc.do_register("eager-insert", SumoOption::bool(false));
+            oc.do_register("random-depart-offset", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("mesosim", SumoOption::bool(false));
+            oc.do_register("ignore-accidents", SumoOption::bool(false));
+            oc.do_register("no-internal-links", SumoOption::bool(false));
+            oc.do_register("weights.separate-turns", SumoOption::float(0.0));
+            oc.do_register("no-duration-log", SumoOption::bool(false));
+            oc.do_register("no-step-log", SumoOption::bool(false));
+            oc.do_register("step-log.period", SumoOption::integer(100));
+            oc.do_register("duration-log.statistics", SumoOption::bool(false));
+            oc.do_register("meso-edgelength", SumoOption::float(98.0));
+            oc.do_register("meso-jam-threshold", SumoOption::float(-1.0));
+            oc.do_register("meso-junction-control", SumoOption::bool(false));
+            oc.do_register("meso-tls-penalty", SumoOption::float(0.0));
+            oc.do_register("meso-tls-flow-penalty", SumoOption::float(0.0));
+            oc.do_register("meso-overtaking", SumoOption::bool(false));
+            oc.do_register("thread-rngs", SumoOption::integer(64));
+            oc.do_register("save-state.period.keep", SumoOption::integer(0));
+            oc.do_register("begin", SumoOption::string_typed("0", "TIME"));
+            oc.do_register("end", SumoOption::string_typed("-1", "TIME"));
+            oc.do_register("step-length", SumoOption::string_typed("1", "TIME"));
+            oc.do_register("random", SumoOption::bool(false));
+            oc.do_register("seed", SumoOption::integer(23423));
+            oc.do_register("railsignal-moving-block", SumoOption::bool(false));
+            oc.do_register("railsignal.moving-block.default-classes", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
+            oc.do_register("railsignal.moving-block.max-dist", SumoOption::float(200.0));
+            oc.do_register("railsignal.max-block-length", SumoOption::float(2e4));
+            oc.do_register("railsignal.default-classes", SumoOption::string_vector_with(vec!["rail".to_string(), "rail_fast".to_string(), "rail_electric".to_string(), "rail_urban".to_string(), "subway".to_string()]));
+            for name in ["tripinfo-output", "statistic-output", "summary-output", "person-summary-output", "queue-output", "fcd-output", "person-fcd-output", "link-output", "collision-output", "chargingstations-output", "overheadwiresegments-output", "substations-output", "railsignal-block-output", "railsignal-vehicle-output"] {
+                oc.do_register(name, SumoOption::file_name());
+            }
+        });
+        let ec = || Ptr::from_raw(Box::into_raw(Box::new(MSEventControl::new())));
+        let _net = MSNet::new(Ptr::from_raw(Box::into_raw(Box::new(MSVehicleControl::new()))), ec(), ec(), ec(), Ptr::default());
+        let mut tlcontrol = MSTLLogicControl::new();
+        let phases: MSTrafficLightLogic_Phases = vec![Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(10.), "GGr", ""))))];
+        let delay = time2steps(5.);
+        let logic = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(&mut tlcontrol, "tl", "0", 0, TrafficLightType::STATIC, &phases, 0, delay, &ParameterisedMap::new()))));
+        logic.m().schedule_initial_switch(&mut tlcontrol, delay);
+        let events = MSNet::get_instance().m().get_begin_of_timestep_events();
+        assert_eq!(events.m().myEvents.len(), 1);
+        assert_eq!(events.m().myEvents[0].1, delay);
+    }
 }
 

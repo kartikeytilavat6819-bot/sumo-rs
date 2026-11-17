@@ -461,7 +461,7 @@ impl NIFrame {
         oc.add_description("heightmap.geotiff", "Input", "Read heightmap from GeoTIFF");
 
         // need to do this here to be able to check for network and route input options
-        // shortcut: SystemFrame is not ported yet, so SystemFrame::addReportOptions(oc) (verbose, log, ...) is not called here, add it once system_frame.rs exists
+        utils::common::system_frame::add_report_options(oc);
         // register basic processing options
         oc.do_register("ignore-errors", SumoOption::bool(false));
         oc.add_synonyme("ignore-errors", "dismiss-loading-errors", true);
@@ -560,9 +560,6 @@ impl NIFrame {
 
         oc.do_register("osm.annotate-defaults", SumoOption::bool(false));
         oc.add_description("osm.annotate-defaults", "Formats", "Whether edges shoulds carry information on the usage of typemap defaults");
-
-        oc.do_register("osm.etcs-moving-block", SumoOption::bool(false));
-        oc.add_description("osm.etcs-moving-block", "Formats", "Whether ETCS2 track sections should default to moving-block mode");
 
         // register matsim options
         oc.do_register("matsim.keep-length", SumoOption::bool(false));
@@ -804,13 +801,18 @@ impl NIFrame {
     // }
     #[allow(unused_variables)]
     pub fn check_options(oc: &mut OptionsCont) -> bool {
-        // shortcut: no PROJ binding in this port (C++ PROJ_API_FILE branch is not built), so the #else branch of checkOptions is used
         let mut ok = must(oc.check_depending_suboptions("shapefile", "shapefile."));
         ok &= must(oc.check_depending_suboptions("visum-file", "visum."));
         ok &= must(oc.check_depending_suboptions("vissim-file", "vissim."));
-        if (must(oc.is_set("osm-files", true)) || must(oc.is_set("dlr-navteq-prefix", true)) || must(oc.is_set("shapefile-prefix", true))) && !must(oc.get_bool("simple-projection")) {
-            write_error(&tlf!("Cannot import network data without PROJ-Library. Please install package proj before building sumo"));
-            ok = false;
+        let num_projections = u32::from(must(oc.get_bool("simple-projection")))
+            + u32::from(must(oc.get_bool("proj.utm")))
+            + u32::from(must(oc.get_bool("proj.dhdn")))
+            + u32::from(must(oc.get_string("proj")).len() > 1);
+        if (must(oc.is_set("osm-files", true)) || must(oc.is_set("dlr-navteq-prefix", true)) || must(oc.is_set("shapefile-prefix", true))) && num_projections == 0 && oc.is_default("proj") {
+            must(oc.set("proj.utm", "true", false));
+        }
+        if must(oc.is_set("dlr-navteq-prefix", true)) && oc.is_default("proj.scale") {
+            must(oc.set_default("proj.scale", "1e-5"));
         }
         if must(oc.is_set("sumo-net-file", true)) {
             if must(oc.is_writeable("no-turnarounds")) {

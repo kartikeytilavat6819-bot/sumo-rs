@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use super::mscf_model::*;
+use super::mscf_model_krauss::KRAUSS_VT;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
 use utils::common::to_string::f64_to_string_prec;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
@@ -27,6 +28,24 @@ impl std::ops::DerefMut for MSCFModel_KraussPS {
     }
 }
 
+fn krauss_ps_max_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_KraussPS>(m).max_next_speed(speed, veh)
+}
+fn krauss_ps_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_KraussPS>(m).get_model_id()
+}
+fn krauss_ps_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_KraussPS>(m).duplicate(vtype)
+}
+
+/// Virtual table of MSCFModel_KraussPS: its overrides on top of the MSCFModel_Krauss table
+pub const KRAUSS_PS_VT: MSCFModelVt = MSCFModelVt {
+    max_next_speed: krauss_ps_max_next_speed,
+    get_model_id: krauss_ps_get_model_id,
+    duplicate: krauss_ps_duplicate,
+    ..KRAUSS_VT
+};
+
 impl MSCFModel_KraussPS {
     /// C++: `void MSCFModel_KraussPS::MSCFModel_KraussPS(const MSVehicleType *)`
     /// Constructor
@@ -35,7 +54,9 @@ impl MSCFModel_KraussPS {
     // }
     #[allow(unused_variables)]
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
-        MSCFModel_KraussPS { base: MSCFModel_Krauss::new(vtype) }
+        let mut this = MSCFModel_KraussPS { base: MSCFModel_Krauss::new(vtype) };
+        this.base.base.base.vt = &KRAUSS_PS_VT;
+        this
     }
 
     /// C++: `void MSCFModel_KraussPS::~MSCFModel_KraussPS() noexcept` [virtual]

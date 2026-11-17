@@ -30,6 +30,11 @@ pub struct NIVissimDistrictConnection {
 //   static DictType NIVissimDistrictConnection::myDict;
 //   static std::map<int, std::vector<int>> NIVissimDistrictConnection::myDistrictsConnections;
 
+thread_local! {
+    static MY_DICT: std::cell::RefCell<NIVissimDistrictConnection_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_DISTRICTS_CONNECTIONS: std::cell::RefCell<BTreeMap<i32, Vec<i32>>> = std::cell::RefCell::new(BTreeMap::new());
+}
+
 impl NIVissimDistrictConnection {
     /// C++: `void NIVissimDistrictConnection::NIVissimDistrictConnection(int, const std::string &, const std::vector<int> &, const std::vector<double> &, int, double, const std::vector<std::pair<int, int>> &)`
     /// Contructor
@@ -51,14 +56,26 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, districts: &Vec<i32>, percentages: &Vec<f64>, edgeid: i32, position: f64, assignedVehicles: &Vec<(i32, i32)>) -> Self {
-        todo!("port NIVissimDistrictConnection::NIVissimDistrictConnection")
+        let mut myPercentages = NIVissimDistrictConnection_DistrictPercentages::new();
+        for (i, j) in districts.iter().zip(percentages.iter()) {
+            myPercentages.insert(*i, *j);
+        }
+        Self {
+            myID: id,
+            myName: name.to_string(),
+            myDistricts: districts.clone(),
+            myPercentages,
+            myEdgeID: edgeid,
+            myPosition: position,
+            myAssignedVehicles: assignedVehicles.clone(),
+        }
     }
 
     /// C++: `void NIVissimDistrictConnection::~NIVissimDistrictConnection()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimDistrictConnection::~NIVissimDistrictConnection")
+        // C++ implicit destructor: the vector and map members are released automatically
     }
 
     /// C++: `Position NIVissimDistrictConnection::geomPosition() const` [const]
@@ -70,7 +87,8 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn geom_position(&self) -> Position {
-        todo!("port NIVissimDistrictConnection::geomPosition")
+        let e = NIVissimEdge::dictionary_3(self.myEdgeID);
+        e.get_geom_position(self.myPosition)
     }
 
     /// C++: `int NIVissimDistrictConnection::getID() const` [const]
@@ -80,7 +98,7 @@ impl NIVissimDistrictConnection {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> i32 {
-        todo!("port NIVissimDistrictConnection::getID")
+        self.myID
     }
 
     /// C++: `double NIVissimDistrictConnection::getPosition() const` [const]
@@ -90,7 +108,7 @@ impl NIVissimDistrictConnection {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> f64 {
-        todo!("port NIVissimDistrictConnection::getPosition")
+        self.myPosition
     }
 
     /// C++: `double NIVissimDistrictConnection::getMeanSpeed() const` [const]
@@ -110,7 +128,16 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self) -> f64 {
-        todo!("port NIVissimDistrictConnection::getMeanSpeed")
+        //assert(myAssignedVehicles.size()!=0);
+        if self.myAssignedVehicles.len() == 0 {
+            write_warningf!("No streams assigned at district'%'.\n Using default speed 200km/h", self.myID);
+            return 200.0 / 3.6;
+        }
+        let mut speed: f64 = 0.0;
+        for i in self.myAssignedVehicles.iter() {
+            speed += self.get_real_speed(i.1);
+        }
+        speed / self.myAssignedVehicles.len() as f64
     }
 
     /// C++: `bool NIVissimDistrictConnection::dictionary(int, const std::string &, const std::vector<int> &, const std::vector<double> &, int, double, const std::vector<std::pair<int, int>> &)` [static]
@@ -131,7 +158,13 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dictionary(id: i32, name: &str, districts: &Vec<i32>, percentages: &Vec<f64>, edgeid: i32, position: f64, assignedVehicles: &Vec<(i32, i32)>) -> bool {
-        todo!("port NIVissimDistrictConnection::dictionary")
+        let mut o = Box::new(NIVissimDistrictConnection::new(id, name, districts, percentages, edgeid, position, assignedVehicles));
+        if !Self::dictionary_2(id, Ptr::from_mut(&mut *o)) {
+            return false; // o is dropped here, like C++ `delete o`
+        }
+        // shortcut: the dictionary owns the connection for the rest of the run (C++ deletes it in clearDict), so leak the Box
+        Box::leak(o);
+        true
     }
 
     /// C++: `bool NIVissimDistrictConnection::dictionary(int, NIVissimDistrictConnection *)` [static]
@@ -147,7 +180,15 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_2(id: i32, o: Ptr<NIVissimDistrictConnection>) -> bool {
-        todo!("port NIVissimDistrictConnection::dictionary")
+        MY_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            if let std::collections::btree_map::Entry::Vacant(e) = d.entry(id) {
+                e.insert(o);
+                true
+            } else {
+                false
+            }
+        })
     }
 
     /// C++: `NIVissimDistrictConnection * NIVissimDistrictConnection::dictionary(int)` [static]
@@ -162,7 +203,7 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dictionary_3(id: i32) -> Ptr<NIVissimDistrictConnection> {
-        todo!("port NIVissimDistrictConnection::dictionary")
+        MY_DICT.with(|d| d.borrow().get(&id).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimDistrictConnection::dict_BuildDistrictNodes(NBDistrictCont &, NBNodeCont &)` [static]
@@ -199,7 +240,30 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dict_build_district_nodes(dc: &mut NBDistrictCont, nc: &mut NBNodeCont) {
-        todo!("port NIVissimDistrictConnection::dict_BuildDistrictNodes")
+        let districtsConnections = MY_DISTRICTS_CONNECTIONS.with(|m| m.borrow().clone());
+        for (k, connections) in districtsConnections.iter() {
+            // retrieve the current district
+            let dsid = k.to_string();
+            let district = Ptr::from_mut(Box::leak(Box::new(NBDistrict::new_2(&dsid))));
+            dc.insert(district);
+            // compute the middle of the district
+            let mut pos = PositionVector::default();
+            for j in connections.iter() {
+                let c = Self::dictionary_3(*j);
+                pos.0.push(c.geom_position());
+            }
+            let mut distCenter = pos.get_polygon_center();
+            if connections.len() == 1 { // !!! ok, ok, maybe not the best way just to add an offset
+                distCenter.add_xy(10.0, 10.0);
+            }
+            district.m().set_center(&distCenter);
+            // build the node
+            let id = format!("District{}", district.get_id());
+            let districtNode = Ptr::from_mut(Box::leak(Box::new(NBNode::new_2(&id, district.get_position(), district))));
+            if !nc.insert_2(districtNode) {
+                panic!("1");
+            }
+        }
     }
 
     /// C++: `void NIVissimDistrictConnection::dict_BuildDistricts(NBDistrictCont &, NBEdgeCont &, NBNodeCont &)` [static]
@@ -352,7 +416,70 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dict_build_districts(dc: &mut NBDistrictCont, ec: &mut NBEdgeCont, nc: &mut NBNodeCont) {
-        todo!("port NIVissimDistrictConnection::dict_BuildDistricts")
+        let districtsConnections = MY_DISTRICTS_CONNECTIONS.with(|m| m.borrow().clone());
+        for (k, connections) in districtsConnections.iter() {
+            // retrieve the current district
+            let district = dc.retrieve(&k.to_string());
+            let districtNode = nc.retrieve(&format!("District{}", district.get_id()));
+            assert!(!district.is_null() && !districtNode.is_null());
+
+            for l in connections.iter() {
+                let c = Self::dictionary_3(*l);
+                // get the edge to connect the parking place to
+                let mut e = ec.retrieve(&c.myEdgeID.to_string(), false);
+                if e.is_null() {
+                    e = ec.retrieve_possibly_split_3(&c.myEdgeID.to_string(), c.myPosition);
+                }
+                if e.is_null() {
+                    write_warningf!("Could not build district '%' - edge '%' is missing.", *k, c.myEdgeID);
+                    continue;
+                }
+                let id = format!("ParkingPlace{}", l);
+                let mut parkingPlace = nc.retrieve(&id);
+                if parkingPlace.is_null() {
+                    let pos = c.myPosition;
+                    if pos < e.get_length() - pos {
+                        parkingPlace = e.get_from_node();
+                        parkingPlace.m().invalidate_incoming_connections(false);
+                    } else {
+                        parkingPlace = e.get_to_node();
+                        parkingPlace.m().invalidate_outgoing_connections(false);
+                    }
+                }
+                assert!(
+                    e.get_to_node() == parkingPlace
+                    ||
+                    e.get_from_node() == parkingPlace);
+
+                // build the connection to the source
+                if e.get_from_node() == parkingPlace {
+                    let id = format!("VissimFromParkingplace{}-{}", k, c.myID);
+                    let source = Ptr::from_mut(Box::leak(NBEdge::new(&id, districtNode, parkingPlace, "Connection".to_string(), c.get_mean_speed() / 3.6, crate::netbuild::nb_edge::UNSPECIFIED_FRICTION, 3, -1,
+                        crate::netbuild::nb_edge::UNSPECIFIED_WIDTH, crate::netbuild::nb_edge::UNSPECIFIED_OFFSET, LaneSpreadFunction::RIGHT, "")));
+                    if !ec.insert(source, false) { // !!! in den Konstruktor
+                        panic!("1");
+                    }
+                    let percNormed = *c.m().myPercentages.entry(*k).or_insert(0.0);
+                    if !district.m().add_source(source, percNormed) {
+                        panic!("1");
+                    }
+                }
+
+                // build the connection to the destination
+                if e.get_to_node() == parkingPlace {
+                    let id = format!("VissimToParkingplace{}-{}", k, c.myID);
+                    let destination = Ptr::from_mut(Box::leak(NBEdge::new(&id, parkingPlace, districtNode, "Connection".to_string(), 100.0 / 3.6, crate::netbuild::nb_edge::UNSPECIFIED_FRICTION, 2, -1,
+                        crate::netbuild::nb_edge::UNSPECIFIED_WIDTH, crate::netbuild::nb_edge::UNSPECIFIED_OFFSET, LaneSpreadFunction::RIGHT, "")));
+                    if !ec.insert(destination, false) { // !!! (in den Konstruktor)
+                        panic!("1");
+                    }
+                    let percNormed2 = *c.m().myPercentages.entry(*k).or_insert(0.0);
+                    if !district.m().add_sink(destination, percNormed2) {
+                        panic!("1");
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `NIVissimDistrictConnection * NIVissimDistrictConnection::dict_findForEdge(int)` [static]
@@ -368,7 +495,7 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dict_find_for_edge(edgeid: i32) -> Ptr<NIVissimDistrictConnection> {
-        todo!("port NIVissimDistrictConnection::dict_findForEdge")
+        MY_DICT.with(|d| d.borrow().values().find(|c| c.myEdgeID == edgeid).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimDistrictConnection::clearDict()` [static]
@@ -382,7 +509,8 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimDistrictConnection::clearDict")
+        // shortcut: the connections are leaked by dictionary(), so clearing only drops the map entries, upgrade to Box::from_raw when ownership is settled
+        MY_DICT.with(|d| d.borrow_mut().clear());
     }
 
     /// C++: `void NIVissimDistrictConnection::dict_BuildDistrictConnections()` [static]
@@ -400,7 +528,15 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dict_build_district_connections() {
-        todo!("port NIVissimDistrictConnection::dict_BuildDistrictConnections")
+        //  pre-assign connections to districts
+        MY_DICT.with(|d| {
+            for (i, c) in d.borrow().iter() {
+                for j in c.myDistricts.iter() {
+                    // assign connection to district
+                    MY_DISTRICTS_CONNECTIONS.with(|m| m.borrow_mut().entry(*j).or_default().push(*i));
+                }
+            }
+        });
     }
 
     /// C++: `void NIVissimDistrictConnection::dict_CheckEdgeEnds()` [static]
@@ -416,7 +552,13 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn dict_check_edge_ends() {
-        todo!("port NIVissimDistrictConnection::dict_CheckEdgeEnds")
+        let districtsConnections = MY_DISTRICTS_CONNECTIONS.with(|m| m.borrow().clone());
+        for (_, connections) in districtsConnections.iter() {
+            for j in connections.iter() {
+                let c = Self::dictionary_3(*j);
+                c.m().check_edge_end();
+            }
+        }
     }
 
     /// C++: `void NIVissimDistrictConnection::checkEdgeEnd()` [private]
@@ -428,7 +570,9 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn check_edge_end(&mut self) {
-        todo!("port NIVissimDistrictConnection::checkEdgeEnd")
+        let edge = NIVissimEdge::dictionary_3(self.myEdgeID);
+        assert!(!edge.is_null());
+        edge.m().check_district_connection_existance_at(self.myPosition);
     }
 
     /// C++: `double NIVissimDistrictConnection::getRealSpeed(int) const` [const, private]
@@ -452,7 +596,22 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn get_real_speed(&self, distNo: i32) -> f64 {
-        todo!("port NIVissimDistrictConnection::getRealSpeed")
+        let id = distNo.to_string();
+        let dist = match utils::distribution::distribution_cont::dictionary_get("speed", &id) {
+            Some(d) => d,
+            None => {
+                write_warningf!("The referenced speed distribution '%' is not known.", id);
+                utils::common::msg_handler::write_warning(". Using default.");
+                return utils::options::options_cont::get_float("vissim.default-speed");
+            }
+        };
+        let mut speed = dist.get_max();
+        if speed < 0.0 || speed > 1000.0 {
+            utils::common::msg_handler::write_warning(&format!(" False speed at district '{}", id));
+            utils::common::msg_handler::write_warning(". Using default.");
+            speed = utils::options::options_cont::get_float("vissim.default-speed");
+        }
+        speed
     }
 
 }

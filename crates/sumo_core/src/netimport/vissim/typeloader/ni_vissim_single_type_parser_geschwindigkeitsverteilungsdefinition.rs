@@ -21,6 +21,22 @@ impl std::ops::DerefMut for NIVissimSingleTypeParser_Geschwindigkeitsverteilungs
     }
 }
 
+/// C++ `from >> tag` for a std::string (same as NIImporter_Vissim's private vissim_read_token)
+fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 impl NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition {
     /// C++: `void NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition(NIImporter_Vissim &)`
     /// Constructor
@@ -28,7 +44,7 @@ impl NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::~NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition() noexcept` [virtual]
@@ -36,7 +52,7 @@ impl NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition {
     // NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::~NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::~NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition")
+        // destructor: nothing to release explicitly, the base parser drops with the struct
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::parse(std::istream &)` [virtual]
@@ -66,8 +82,30 @@ impl NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        // id
+        let id = vissim_read_token(from);
+        // list of points
+        let mut points = DistributionPoints::new(&id);
+        let mut tag;
+        loop {
+            tag = self.read_end_secure(from, "");
+            if tag == "name" {
+                let _ = self.read_name(from);
+                tag = self.read_end_secure(from, "");
+            }
+            if tag != "DATAEND" {
+                let p1 = utils::common::string_utils::to_double(&tag).unwrap_or_else(|e| panic!("{e}"));
+                tag = vissim_read_token(from);
+                let p2 = utils::common::string_utils::to_double(&tag).unwrap_or_else(|e| panic!("{e}"));
+                points.add(p1, p2, true);
+            }
+            if tag == "DATAEND" {
+                break;
+            }
+        }
+        utils::distribution::distribution_cont::dictionary_add("speed", &id, std::sync::Arc::new(points));
+        true
     }
 
 }

@@ -1074,7 +1074,15 @@ impl ODMatrix {
             if !is_readable(&file) {
                 throw_process_error(utils::tlf!("Could not access matrix file '%' to load.", file.clone()));
             }
-            // shortcut: SAXWeightsHandler and ToRetrieveDefinition are not ported yet, so tazRelation matrices are checked but not loaded; port them to load these files
+            progress_begin_message(&format!("Loading matrix in tazRelation format from '{}'", file));
+            let attr = or_throw(oc.get_string("tazrelation-attribute"));
+            let retrieverDefs = vec![utils::xml::saxweights_handler::ToRetrieveDefinition::new(&attr, true, &mut *self)];
+            let mut handler = utils::xml::saxweights_handler::SAXWeightsHandler::new(retrieverDefs, "");
+            if !run_parser(&mut handler, &file, false, false, false, true).unwrap_or(false) {
+                progress_failed_message();
+            } else {
+                progress_done_message();
+            }
         }
     }
 
@@ -1177,17 +1185,9 @@ impl ODMatrix {
     // }
     #[allow(unused_variables)]
     pub fn sort_by_begin_time(&mut self) {
-        // determinism: C++ std::sort is unstable; cells equal in (begin, origin, destination) may end up in a different order
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let cmp = ODMatrix_cell_by_begin_comparator::new();
-        self.myContainer.sort_by(|a, b| {
-            if cmp.call_op(*a, *b) != 0 {
-                Ordering::Less
-            } else if cmp.call_op(*b, *a) != 0 {
-                Ordering::Greater
-            } else {
-                Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(self.myContainer.as_mut_slice(), |a, b| cmp.call_op(a, b) != 0);
     }
 
     /// C++: `SUMOTime ODMatrix::getBegin() const` [const]
@@ -1219,6 +1219,15 @@ impl ODMatrix {
         let vtype = if self.myVType == "" { intervalID } else { self.myVType.clone() };
         self.add(val, &(time2steps(beg), time2steps(end)), from, to, &vtype, false, false, false);
     }
+}
+
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for ODMatrix {
+    fn add_taz_rel_weight(&mut self, intervalID: &str, from: &str, to: &str, val: f64, beg: f64, end: f64) {
+        ODMatrix::add_taz_rel_weight(self, intervalID.to_string(), from, to, val, beg, end);
+    }
+}
+
+impl ODMatrix {
 
     /// C++: `double ODMatrix::computeDeparts(ODCell *, int &, std::vector<ODVehicle> &, const bool, const bool, const std::string &)` [protected]
     /// Computes the vehicle departs stored in the given cell and saves them in "into"

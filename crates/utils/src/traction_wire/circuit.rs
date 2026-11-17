@@ -49,7 +49,8 @@ pub enum AlphaFlag {
 #[derive(Debug, Clone)]
 pub struct Circuit {
     node_arena: Vec<Node>,
-    element_arena: Vec<Element>,
+    // boxed so that an element keeps its address while the arena grows (C++ Element* stays valid)
+    element_arena: Vec<Box<Element>>,
     // nodes, elements and voltage sources that are part of the circuit, in insertion order
     nodes: Vec<NodeIdx>,
     elements: Vec<ElemIdx>,
@@ -123,6 +124,16 @@ impl Circuit {
 
     pub fn element_mut(&mut self, idx: ElemIdx) -> &mut Element {
         &mut self.element_arena[idx]
+    }
+
+    /// C++ `Element::getVoltage()` for the element at `idx`
+    pub fn element_voltage(&self, idx: ElemIdx) -> f64 {
+        self.element(idx).get_voltage(&self.node_arena)
+    }
+
+    /// C++ `Element::getCurrent()` for the element at `idx`
+    pub fn element_current(&self, idx: ElemIdx) -> f64 {
+        self.element(idx).get_current(&self.node_arena)
     }
 
     pub fn get_node(&self, name: &str) -> Option<NodeIdx> {
@@ -322,7 +333,7 @@ impl Circuit {
         }
         e.set_pos_node(p_node);
         e.set_neg_node(n_node);
-        self.element_arena.push(e);
+        self.element_arena.push(Box::new(e));
 
         self.node_mut(p_node).add_element(idx);
         self.node_mut(n_node).add_element(idx);

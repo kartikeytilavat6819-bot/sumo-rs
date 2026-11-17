@@ -3,6 +3,9 @@
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_BUS, SVC_TAXI};
 use utils::common::msg_handler::write_warning;
+use crate::utils::named_rtree::NamedRTree;
+use crate::utils::map_matcher::{MapMatcher, MapMatcherHost, JUNCTION_TAZ_MISSING_HELP};
+use crate::router::ro_net::ROMapMatcher;
 // shortcut: LINE_ANY belongs to SUMOVehicleParameter.h, not ported yet, move it there
 const LINE_ANY: &str = "ANY";
 /// C++ `SUMOXMLDefinitions::getEdgeIDFromLane`: the lane id without its "_<index>" suffix
@@ -14,10 +17,9 @@ fn edge_id_from_lane(lane: &str) -> String {
 }
 use utils::common::sumo_vehicle_class::{DEFAULT_VTYPE_ID, SVC_IGNORING, SVC_PEDESTRIAN, SVC_PASSENGER};
 
-// shortcut: VEHPARS_* and JUNCTION_TAZ_MISSING_HELP belong to SUMOVehicleParameter.h / MapMatcher.h, not ported yet, move them there
+// shortcut: VEHPARS_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
 const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
-const JUNCTION_TAZ_MISSING_HELP: &str = "\nSet option '--junction-taz' or load a TAZ-file";
 
 /// C++ `delete p` for a pointer created with Box::into_raw; deleting nullptr is a no-op
 fn delete_ptr<T>(p: Ptr<T>) {
@@ -39,16 +41,8 @@ fn msg_instance(warning: bool) -> Ptr<MsgHandler> {
 }
 
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
-// shortcut: scans the TAGS table instead of the SumoXMLTags bijection, upgrade when sumo_xml_definitions exposes toString
 fn tag_to_string(tag: SumoXMLTag) -> String {
-    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
-}
-
-/// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
-// shortcut: parseGeoEdges belongs to the unported MapMatcher base class, geo-coordinate route parsing panics until it is ported
-#[allow(unused_variables)]
-fn parse_geo_edges(pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstROEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
-    panic!("parseGeoEdges needs the unported MapMatcher base class");
+    utils::xml::sumo_xml_definitions::Tags.get_string(tag).to_string()
 }
 
 /// Parser and container for routes during their loading
@@ -58,7 +52,7 @@ pub struct RORouteHandler {
     /// C++ base class `SUMORouteHandler`
     pub base: SUMORouteHandler,
     /// C++ base class `MapMatcher<ROEdge, ROLane, RONode>`
-    pub base2: Unmapped /* MapMatcher<ROEdge, ROLane, RONode> */,
+    pub base2: ROMapMatcher,
     /// The current route
     pub myNet: Ptr<RONet>,
     /// The current route
@@ -111,6 +105,136 @@ impl std::ops::DerefMut for RORouteHandler {
     }
 }
 
+impl MapMatcherHost<ROEdge> for RORouteHandler {
+    fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        RORouteHandler::init_lane_tree(self, tree)
+    }
+    fn retrieve_edge(&self, id: &str) -> Ptr<ROEdge> {
+        RORouteHandler::retrieve_edge(self, id)
+    }
+}
+
+impl utils::xml::generic_sax_handler::SaxHandler for RORouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+        &mut self.base.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        RORouteHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        SUMORouteHandler::my_end_element(&mut self.base, element);
+        Ok(())
+    }
+}
+
+// C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+/// C++ virtual `RORouteHandler::myStartElement`, reached from SUMORouteLoader through the base handler
+fn ro_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().my_start_element(element, attrs)
+}
+fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)
+}
+fn ro_close_vehicle_type_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_vehicle_type_distribution()
+}
+fn ro_open_route(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route(attrs)
+}
+fn ro_open_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_flow(attrs)
+}
+fn ro_open_route_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route_flow(attrs)
+}
+fn ro_open_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_trip(attrs)
+}
+fn ro_close_route(d: &mut SUMORouteHandler, mayBeDisconnected: bool) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_route(mayBeDisconnected)
+}
+fn ro_open_route_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().open_route_distribution(attrs)
+}
+fn ro_close_route_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_route_distribution()
+}
+fn ro_close_vehicle(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_vehicle()
+}
+fn ro_close_v_type(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_v_type()
+}
+fn ro_close_person(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_person()
+}
+fn ro_close_person_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_person_flow()
+}
+fn ro_close_container(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_container()
+}
+fn ro_close_container_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_container_flow()
+}
+fn ro_close_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_flow()
+}
+fn ro_close_trip(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().close_trip()
+}
+fn ro_add_stop(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) -> Ptr<Parameterised> {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_stop(attrs)
+}
+fn ro_add_person_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_person_trip(attrs)
+}
+fn ro_add_walk(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_walk(attrs)
+}
+fn ro_add_ride(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_ride(attrs)
+}
+fn ro_add_transport(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_transport(attrs)
+}
+fn ro_add_tranship(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().add_tranship(attrs)
+}
+fn ro_get_v_type_parameter(d: &mut SUMORouteHandler, refid: &str) -> Ptr<SUMOVTypeParameter> {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().get_v_type_parameter(refid)
+}
+
+/// C++ RORouteHandler overrides, installed in SUMORouteHandler::vt by RORouteHandler::new
+static RO_ROUTE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
+    open_vehicle_type_distribution: ro_open_vehicle_type_distribution,
+    close_vehicle_type_distribution: ro_close_vehicle_type_distribution,
+    open_route: ro_open_route,
+    open_flow: ro_open_flow,
+    open_route_flow: ro_open_route_flow,
+    open_trip: ro_open_trip,
+    close_route: ro_close_route,
+    open_route_distribution: ro_open_route_distribution,
+    close_route_distribution: ro_close_route_distribution,
+    close_vehicle: ro_close_vehicle,
+    close_v_type: ro_close_v_type,
+    close_person: ro_close_person,
+    close_person_flow: ro_close_person_flow,
+    close_container: ro_close_container,
+    close_container_flow: ro_close_container_flow,
+    close_flow: ro_close_flow,
+    close_trip: ro_close_trip,
+    add_transportable: crate::utils::vehicle::sumo_route_handler::default_add_transportable,
+    add_stop: ro_add_stop,
+    add_person_trip: ro_add_person_trip,
+    add_walk: ro_add_walk,
+    add_ride: ro_add_ride,
+    add_transport: ro_add_transport,
+    add_tranship: ro_add_tranship,
+    get_v_type_parameter: ro_get_v_type_parameter,
+};
+
 impl RORouteHandler {
     /// C++: `void RORouteHandler::RORouteHandler(RONet &, const std::string &, const bool, const bool, const bool, const bool)`
     /// standard constructor
@@ -150,8 +274,13 @@ impl RORouteHandler {
         let mut myActiveRoute: ConstROEdgeVector = Vec::new();
         myActiveRoute.reserve(100);
         RORouteHandler {
-            base: SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true),
-            base2: (),
+            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, start_element_override: Some(ro_my_start_element), ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
+            base2: MapMatcher::new(
+                utils::options::options_cont::get_bool("mapmatch.junctions"),
+                utils::options::options_cont::get_bool("mapmatch.taz"),
+                utils::options::options_cont::get_float("mapmatch.distance"),
+                msg_instance(ignoreErrors),
+            ),
             myNet: Ptr::from_mut(net),
             myActiveRoute,
             myActiveRouteRepeat: 0,
@@ -175,7 +304,6 @@ impl RORouteHandler {
                 && utils::options::options_cont::get_bool("write-trips.junctions"),
         mySkippedVehicleIDs: BTreeSet::new(),
         }
-        // shortcut: MapMatcher base (base2) is Unmapped, so its mapmatch.* option reads are not stored; parseFromViaTo reads mapmatch.taz when needed
     }
 
     /// C++: `void RORouteHandler::~RORouteHandler() noexcept` [virtual]
@@ -474,6 +602,18 @@ impl RORouteHandler {
     //         myVehicleParameter->routeid = myActiveRouteID;
     //     }
     // }
+    /// C++ `MapMatcher::parseGeoEdges(positions, geo, vClass, into, rid, isFrom, ok)` (forceEdge false), called on the route handler
+    pub fn parse_geo_edges(&self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstROEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
+        self.base2.parse_geo_edges(self, &pv, geo, vClass, into, rid, isFrom, ok, false);
+    }
+
+    /// `parseGeoEdges` into myActiveRoute: the route is taken out while the host is borrowed
+    fn parse_geo_edges_active(&mut self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, rid: &str, isFrom: bool, ok: &mut bool) {
+        let mut route = std::mem::take(&mut self.myActiveRoute);
+        self.parse_geo_edges(pv, geo, vClass, &mut route, rid, isFrom, ok);
+        self.myActiveRoute = route;
+    }
+
     #[allow(unused_variables)]
     pub fn parse_from_via_to(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes, ok: &mut bool) {
         let element = tag_to_string(tag);
@@ -526,14 +666,14 @@ impl RORouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMXY, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, true, ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, true, ok);
             if myMapMatchTAZ && *ok {
                 self.myVehicleParameter.m().fromTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMLONLAT, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, true, ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, true, ok);
             if myMapMatchTAZ && *ok {
                 self.myVehicleParameter.m().fromTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().parametersSet |= VEHPARS_FROM_TAZ_SET;
@@ -552,10 +692,10 @@ impl RORouteHandler {
         let mut viaEdges: ConstROEdgeVector = Vec::new();
         if attrs.has_attribute(SUMO_ATTR_VIAXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIAXY, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, ok);
+            self.parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIALONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIALONLAT, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, ok);
+            self.parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIAJUNCTIONS) {
             let junctionIDs: Vec<String> = attrs.get(SUMO_ATTR_VIAJUNCTIONS, &self.myVehicleParameter.id, ok, true);
             for junctionID in junctionIDs {
@@ -609,14 +749,14 @@ impl RORouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOXY, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, false, ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, false, ok);
             if myMapMatchTAZ && *ok {
                 self.myVehicleParameter.m().toTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().parametersSet |= VEHPARS_TO_TAZ_SET;
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOLONLAT, &self.myVehicleParameter.id, ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, false, ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, false, ok);
             if myMapMatchTAZ && *ok {
                 self.myVehicleParameter.m().toTaz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().parametersSet |= VEHPARS_TO_TAZ_SET;
@@ -2614,7 +2754,7 @@ impl RORouteHandler {
             if attrs.has_attribute(SUMO_ATTR_ROUTE) {
                 let routeID: String = attrs.get(SUMO_ATTR_ROUTE, &self.myVehicleParameter.id, &mut ok, true);
                 let routeDef = self.myNet.get_route_def(&routeID);
-                let route: Option<Rc<RORoute>> = if !routeDef.is_null() { Some(routeDef.get_first_route()) } else { None };
+                let route: Option<Rc<RORoute>> = if !routeDef.is_null() { routeDef.get_first_route() } else { None };
                 match route {
                     None => throw_process_error(format!(
                         "The route '{}' for walk of person '{}' is not known.",
@@ -2745,10 +2885,15 @@ impl RORouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        // shortcut: NamedRTree is not ported, lanes cannot be inserted into the tree yet, upgrade when the R-tree type is mapped
-        let _ = tree;
-        panic!("RORouteHandler::initLaneTree needs the unported NamedRTree");
+    pub fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        for (_, edge) in self.myNet.get_edge_map().iter() {
+            for lane in edge.m().get_lanes().iter() {
+                let b = lane.m().get_shape().get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &Ptr::new(&lane.base));
+            }
+        }
     }
 
     /// C++: `ROEdge * RORouteHandler::retrieveEdge(const std::string &)` [virtual, protected]
@@ -2757,7 +2902,7 @@ impl RORouteHandler {
     //     return myNet.getEdge(id);
     // }
     #[allow(unused_variables)]
-    pub fn retrieve_edge(&mut self, id: &str) -> Ptr<ROEdge> {
+    pub fn retrieve_edge(&self, id: &str) -> Ptr<ROEdge> {
         self.myNet.get_edge(id)
     }
 

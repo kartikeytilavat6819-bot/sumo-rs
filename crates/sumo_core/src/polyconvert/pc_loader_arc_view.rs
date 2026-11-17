@@ -9,6 +9,13 @@ pub struct PCLoaderArcView {
 
 // C++ static members of PCLoaderArcView (port as module-level statics, see AGENTS.md):
 //   static bool PCLoaderArcView::myWarnMissingProjection;
+thread_local! {
+    static MY_WARN_MISSING_PROJECTION: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+}
+
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
 
 impl PCLoaderArcView {
     /// C++: `void PCLoaderArcView::loadIfSet(OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static]
@@ -33,7 +40,24 @@ impl PCLoaderArcView {
     // }
     #[allow(unused_variables)]
     pub fn load_if_set(oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderArcView::loadIfSet")
+        use utils::common::msg_handler::{progress_begin_message, progress_done_message};
+        if !or_panic(oc.is_set("shapefile-prefixes", true)) && !or_panic(oc.is_set("geojson-files", true)) {
+            return;
+        }
+        // parse file(s)
+        let prefixes: Vec<String> = or_panic(oc.get_string_vector("shapefile-prefixes")).clone();
+        for mut file in prefixes {
+            file += ".shp";
+            progress_begin_message(&format!("Parsing from shape-file '{}'", file));
+            Self::load(&file, oc, toFill, tm);
+            progress_done_message();
+        }
+        let geojson: Vec<String> = or_panic(oc.get_string_vector("geojson-files")).clone();
+        for file in geojson {
+            progress_begin_message(&format!("Parsing from geojson-file '{}'", file));
+            Self::load(&file, oc, toFill, tm);
+            progress_done_message();
+        }
     }
 
     /// C++: `void PCLoaderArcView::load(const std::string &, OptionsCont &, PCPolyContainer &, PCTypeMap &)` [static, private]
@@ -263,7 +287,8 @@ impl PCLoaderArcView {
     // }
     #[allow(unused_variables)]
     pub fn load(file: &str, oc: &mut OptionsCont, toFill: &mut PCPolyContainer, tm: &mut PCTypeMap) {
-        todo!("port PCLoaderArcView::load")
+        // shortcut: the HAVE_GDAL branch (OGR/GDAL shapefile and geojson reading, coordinate transforms, feature-to-shape conversion) is not ported because no GDAL binding exists in Rust; only the #else branch (build without GDAL) is ported, upgrade when a GDAL binding is added
+        utils::common::msg_handler::write_error("SUMO was compiled without GDAL support.");
     }
 
     /// C++: `void PCLoaderArcView::PCLoaderArcView(const PCLoaderArcView &)` [private]
@@ -271,7 +296,7 @@ impl PCLoaderArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(arg0: &PCLoaderArcView) -> Self {
-        todo!("port PCLoaderArcView::PCLoaderArcView")
+        panic!("PCLoaderArcView copy constructor is invalidated in SUMO")
     }
 
     /// C++: `PCLoaderArcView & PCLoaderArcView::operator=(const PCLoaderArcView &)` [private]
@@ -279,7 +304,7 @@ impl PCLoaderArcView {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &PCLoaderArcView) -> &mut PCLoaderArcView {
-        todo!("port PCLoaderArcView::operator=")
+        panic!("PCLoaderArcView assignment operator is invalidated in SUMO")
     }
 
 }

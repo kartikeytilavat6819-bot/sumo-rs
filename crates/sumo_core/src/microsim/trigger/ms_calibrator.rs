@@ -4,6 +4,29 @@ use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
 use utils::common::time::{delta_t, steps2time, time2string, SUMOTIME_MAX};
 use utils::common::to_string::f64_to_string_prec;
+use crate::microsim::output::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
+
+// the MSDetectorFileOutput base is base3, not the first field: step back to the enclosing calibrator
+fn ms_calibrator_of(d: *mut MSDetectorFileOutput) -> *mut MSCalibrator {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSCalibrator, base3)) as *mut MSCalibrator
+}
+fn ms_calibrator_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*ms_calibrator_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn ms_calibrator_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*ms_calibrator_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn ms_calibrator_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*ms_calibrator_of(d)).reset() }
+}
+
+/// Virtual table of MSCalibrator as MSDetectorFileOutput (overrides writeXMLOutput, writeXMLDetectorProlog and reset)
+static MS_CALIBRATOR_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_calibrator_write_xml_output,
+    write_xml_detector_prolog: ms_calibrator_write_xml_detector_prolog,
+    reset: ms_calibrator_reset,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 /// C++ class `MSCalibrator::AspiredState` (microsim/trigger/MSCalibrator.h)
 pub struct MSCalibrator_AspiredState {
@@ -33,21 +56,8 @@ impl MSCalibrator_AspiredState {
 /// C++ class `MSCalibrator::CalibratorCommand` (microsim/trigger/MSCalibrator.h)
 #[repr(C)]
 pub struct MSCalibrator_CalibratorCommand {
-    /// C++ base class `Command`
-    pub base: Unmapped /* Command */,
+    /// C++ base class `Command` (stateless: its trait impl is below)
     pub myCalibrator: Ptr<MSCalibrator>,
-}
-
-impl std::ops::Deref for MSCalibrator_CalibratorCommand {
-    type Target = Unmapped /* Command */;
-    fn deref(&self) -> &Unmapped /* Command */ {
-        &self.base
-    }
-}
-impl std::ops::DerefMut for MSCalibrator_CalibratorCommand {
-    fn deref_mut(&mut self) -> &mut Unmapped /* Command */ {
-        &mut self.base
-    }
 }
 
 impl MSCalibrator_CalibratorCommand {
@@ -56,9 +66,7 @@ impl MSCalibrator_CalibratorCommand {
     //             myCalibrator(cali) {}
     #[allow(unused_variables)]
     pub fn new(cali: Ptr<MSCalibrator>) -> Self {
-        // shortcut: C++ base class Command is not ported (Unmapped), its default state is left as (), upgrade when Command is ported
         MSCalibrator_CalibratorCommand {
-            base: (),
             myCalibrator: cali,
         }
     }
@@ -107,8 +115,6 @@ impl Command for MSCalibrator_CalibratorCommand {
 pub struct MSCalibrator {
     /// C++ base class `MSRouteHandler`
     pub base: MSRouteHandler,
-    /// C++ base class `Command`
-    pub base2: Unmapped /* Command */,
     /// C++ base class `MSDetectorFileOutput`
     pub base3: MSDetectorFileOutput,
     /// the edge on which this calibrator lies
@@ -177,6 +183,26 @@ impl std::ops::DerefMut for MSCalibrator {
     }
 }
 
+impl utils::xml::generic_sax_handler::SaxHandler for MSCalibrator {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+        utils::xml::generic_sax_handler::SaxHandler::handler(&mut self.base)
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        MSCalibrator::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        MSCalibrator::my_end_element(self, element);
+        Ok(())
+    }
+}
+
+impl Command for MSCalibrator {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSCalibrator::execute(self, currentTime)
+    }
+}
+
 // C++ static members of MSCalibrator (port as module-level statics, see AGENTS.md):
 //   static std::vector<MSMoveReminder *> MSCalibrator::myLeftoverReminders;
 //   static std::vector<SUMOVehicleParameter *> MSCalibrator::myLeftoverVehicleParameters;
@@ -209,9 +235,10 @@ fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
     if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, Ptr::null())) } else { None }
 }
 
-/// C++ `new VehicleRemover(lane, parent, undo)` kept alive in myLeftoverReminders
+/// C++ `new VehicleRemover(lane, parent, undo)` kept alive in myLeftoverReminders; its MSMoveReminder ctor adds it to the lane
 fn new_vehicle_remover(lane: Ptr<MSLane>, parent: Ptr<MSCalibrator>, undo: bool) -> Ptr<MSCalibrator_VehicleRemover> {
     let remover: Ptr<MSCalibrator_VehicleRemover> = Ptr::from_raw(Box::into_raw(Box::new(MSCalibrator_VehicleRemover::new(lane, parent, undo))));
+    lane.m().add_move_reminder(remover.cast::<MSMoveReminder>(), false);
     my_leftover_reminders().push(remover.cast::<MSMoveReminder>());
     remover
 }
@@ -316,7 +343,6 @@ impl MSCalibrator {
         let myDefaultSpeed = if lane.is_null() { if edge.is_null() { 0. } else { edge.get_speed_limit() } } else { lane.get_speed_limit() };
         let mut b = Box::new(MSCalibrator {
             base: MSRouteHandler::new(aXMLFilename, true),
-            base2: (),
             base3: match MSDetectorFileOutput::new(id, vTypes, "", PersonMode::NONE as i32) {
                 Ok(v) => v,
                 Err(e) => std::panic::panic_any(e),
@@ -350,6 +376,7 @@ impl MSCalibrator {
         });
         // myEdgeMeanData's parent is myMeanDataParent inside the box, so its address is only final now
         b.myEdgeMeanData = MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::null(), length, false, Ptr::from_mut(&mut b.myMeanDataParent));
+        b.base3.vt = &MS_CALIBRATOR_DETECTOR_FILE_OUTPUT_VT;
         let this: Ptr<MSCalibrator> = Ptr::from_box(&b);
         let parent: Ptr<MSMeanData_Net> = Ptr::from_mut(&mut b.myMeanDataParent);
         if !outputFilename.is_empty() {
@@ -361,7 +388,10 @@ impl MSCalibrator {
             b.write_xml_detector_prolog(b.myOutput.m());
         }
         if !aXMLFilename.is_empty() {
-            // shortcut: XMLSubSys::runParser(*this, file) is not wired (MSCalibrator is no SaxHandler and SUMORouteHandler has no GenericSAXHandler base yet), so the <flow> intervals of the file are not read and init() is not run here, upgrade when SUMORouteHandler is ported
+            utils::xml::xml_sub_sys::run_parser(&mut *b, aXMLFilename, false, false, false, true).unwrap_or(false);
+            if !b.myDidInit {
+                b.init();
+            }
         }
         my_instances().insert(id.to_string(), this);
         if addLaneMeanData && !edge.is_null() {
@@ -370,6 +400,7 @@ impl MSCalibrator {
                 if lane.is_null() || lane == eLane {
                     let laneData: Ptr<MSMeanData_Net_MSLaneMeanDataValues> = Ptr::from_raw(Box::into_raw(Box::new(MSMeanData_Net_MSLaneMeanDataValues::new(eLane, eLane.get_length(), true, parent))));
                     laneData.m().base.base.set_description(&format!("meandata_calibrator_{}", eLane.get_id()));
+                    eLane.m().add_move_reminder(Ptr::from_mut(&mut laneData.m().base.base), false);
                     my_leftover_reminders().push(laneData.cast::<MSMoveReminder>());
                     b.myLaneMeanData.push(laneData);
                     let remover = new_vehicle_remover(eLane, this, false);
@@ -827,6 +858,9 @@ impl MSCalibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_current_state_interval(&self) -> MSCalibrator_AspiredState {
+        if self.myCurrentStateInterval == self.myIntervals.len() {
+            panic!("Calibrator '{}' has no active or upcoming interval", self.base3.get_id());
+        }
         // C++ returns the aspired state by value
         let s = &self.myIntervals[self.myCurrentStateInterval];
         MSCalibrator_AspiredState {
@@ -1140,9 +1174,9 @@ impl MSCalibrator {
             if !self.myDidInit {
                 self.init();
             }
-            // shortcut: callParentEnd(element) is not ported (SUMORouteHandler has no GenericSAXHandler base), so the SUMORouteHandler element stack is not kept in sync, upgrade when SUMORouteHandler is ported
+            // callParentEnd forwards to myParentHandler, which is unset: the calibrator is the top-level parser of its own file
         } else if element != SUMO_TAG_FLOW {
-            // shortcut: MSRouteHandler::myEndElement(element) is not ported, the element is not forwarded to the route handler, upgrade when MSRouteHandler has myEndElement
+            utils::xml::generic_sax_handler::SaxHandler::my_end_element(&mut self.base, element).unwrap_or_else(|e| std::panic::panic_any(e));
         }
     }
 
@@ -1536,6 +1570,18 @@ impl MSCalibrator {
 
 }
 
+fn ms_calibrator_vehicle_remover_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSCalibrator_VehicleRemover>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_calibrator_vehicle_remover_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSCalibrator_VehicleRemover>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_CALIBRATOR_VEHICLE_REMOVER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_calibrator_vehicle_remover_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: ms_calibrator_vehicle_remover_notify_leave,
+};
+
 /// C++ class `MSCalibrator::VehicleRemover` (microsim/trigger/MSCalibrator.h)
 #[repr(C)] // base must stay at offset 0: VehicleRemover is cast to MSMoveReminder for myLeftoverReminders
 pub struct MSCalibrator_VehicleRemover {
@@ -1564,7 +1610,10 @@ impl MSCalibrator_VehicleRemover {
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, parent: Ptr<MSCalibrator>, undo: bool) -> Self {
         MSCalibrator_VehicleRemover {
-            base: MSMoveReminder::new(parent.base3.get_id(), lane, true),
+            base: MSMoveReminder {
+                vt: &MS_CALIBRATOR_VEHICLE_REMOVER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(parent.base3.get_id(), lane, true)
+            },
             myParent: parent,
             myUndoCalibration: undo,
         }

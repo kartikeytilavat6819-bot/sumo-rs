@@ -36,6 +36,16 @@ impl std::ops::DerefMut for AGActivityGenHandler {
     }
 }
 
+impl SaxHandler for AGActivityGenHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        AGActivityGenHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}
+
 impl AGActivityGenHandler {
     /// C++: `void AGActivityGenHandler::AGActivityGenHandler(AGCity &, RONet *)`
     /// Constructor
@@ -699,7 +709,7 @@ impl AGActivityGenHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &AGActivityGenHandler) -> Self {
-        todo!("port AGActivityGenHandler::AGActivityGenHandler")
+        panic!("AGActivityGenHandler(const AGActivityGenHandler&) is private and never defined in C++")
     }
 
     /// C++: `AGActivityGenHandler & AGActivityGenHandler::operator=(const AGActivityGenHandler &)` [private]
@@ -707,7 +717,7 @@ impl AGActivityGenHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &AGActivityGenHandler) -> &mut AGActivityGenHandler {
-        todo!("port AGActivityGenHandler::operator=")
+        panic!("AGActivityGenHandler::operator= is private and never defined in C++")
     }
 
 }

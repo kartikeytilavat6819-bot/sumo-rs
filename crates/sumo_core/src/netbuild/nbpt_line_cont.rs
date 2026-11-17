@@ -5,12 +5,6 @@ use utils::common::msg_handler::write_warning;
 use utils::options::options_cont::{get_bool, get_float};
 
 
-/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
-#[allow(clippy::mut_from_ref)]
-fn stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 pub const FWD: i32 = 1;
 pub const BWD: i32 = -1;
 
@@ -33,7 +27,9 @@ impl NBPTLineCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: NBPTLine objects are shared as Ptr and their owner is not ported yet, so they are not freed here; upgrade when NBPTLine ownership is decided
+        for line in self.myPTLines.values() {
+            drop(unsafe { Box::from_raw(line.as_raw()) });
+        }
         self.myPTLines.clear();
     }
 
@@ -130,9 +126,9 @@ impl NBPTLineCont {
                 }
             }
             // fix circular line if necessary
-            let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+            let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
             if stops.len() > 1
-                    && Rc::ptr_eq(&stops[0], &stops[stops.len() - 1])
+                    && stops[0] == stops[stops.len() - 1]
                     && line.get_route().len() > 1
                     && line.get_route()[0] != line.get_route()[line.get_route().len() - 1] {
                 // we need to duplicate either the first or the last edge depending on the stop locations
@@ -303,8 +299,97 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_bidi_stops(&mut self, ec: &NBEdgeCont) {
-        // shortcut: NBPTStop::myBidiStop is Unmapped (std::weak_ptr) and SUMOAbstractRouter::Operation is Unmapped, so bidi stop direction fixing cannot run yet; upgrade when both are mapped
-        panic!("NBPTLineCont::fixBidiStops: shortcut, needs NBPTStop bidi links and router operations");
+        let mut router: DijkstraRouter<NBRouterEdge, NBVehicle> = {
+            let op: SUMOAbstractRouter_TypedOperation<NBRouterEdge, NBVehicle> = NBRouterEdge::get_travel_time_static;
+            DijkstraRouter::new(&ec.get_all_router_edges(), true, Some(op), None, true, Ptr::null(), false, false).with_compute()
+        };
+        for item in self.myPTLines.values() {
+            let line = *item;
+            let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
+            if stops.len() < 2 {
+                continue;
+            }
+            let svc: SUMOVehicleClass = match line.get_type() {
+                "bus" | "minibus" | "trolleybus" => SVC_BUS,
+                "tram" => SVC_TRAM,
+                "train" => SVC_RAIL,
+                "subway" | "light_rail" | "monorail" | "aerialway" => SVC_RAIL_URBAN,
+                "ferry" => SVC_SHIP,
+                _ => {
+                    write_warning(&format!("Could not determine vehicle class for public transport line of type '{}'.", line.get_type()));
+                    continue;
+                }
+            };
+            let mut veh = NBVehicle::new(line.get_ref(), svc);
+            let vehPtr: Ptr<NBVehicle> = Ptr::from_mut(&mut veh);
+            let mut newStops: Vec<Ptr<NBPTStop>> = Vec::new();
+            let mut from: Option<Ptr<NBPTStop>> = None;
+            let stopInfos: Vec<NBPTLine_PTStopInfo> = line.get_stop_edges(ec);
+            for (it, stop) in stops.iter().enumerate() {
+                let mut to: Ptr<NBPTStop> = stop.clone();
+                let mut used: Ptr<NBPTStop> = stop.clone();
+                // C++ asserts stopInfos.size() == stops.size(); get_stop_edges skips stops without an edge, so a short list counts as not revised
+                let isRevised = stopInfos.get(it).map_or(false, |info| info.revised);
+                if let Some(mut to2) = to.get_bidi_stop() {
+                    if !isRevised {
+                        let mut best = f64::MAX;
+                        match from.clone() {
+                            None => {
+                                if it + 1 != stops.len() {
+                                    let fromS: Ptr<NBPTStop> = to.clone();
+                                    let from2: Ptr<NBPTStop> = to2.clone();
+                                    to = stops[it + 1].clone();
+                                    let c1 = Self::get_cost(ec, &mut router, fromS.clone(), to.clone(), vehPtr);
+                                    let c2 = Self::get_cost(ec, &mut router, from2.clone(), to.clone(), vehPtr);
+                                    best = c1;
+                                    if let Some(to2b) = to.get_bidi_stop() {
+                                        to2 = to2b;
+                                        let c3 = Self::get_cost(ec, &mut router, fromS.clone(), to2.clone(), vehPtr);
+                                        let c4 = Self::get_cost(ec, &mut router, from2.clone(), to2.clone(), vehPtr);
+                                        if c2 < best {
+                                            used = from2.clone();
+                                            best = c2;
+                                        }
+                                        if c3 < best {
+                                            used = fromS.clone();
+                                            best = c3;
+                                        }
+                                        if c4 < best {
+                                            used = from2.clone();
+                                            best = c4;
+                                        }
+                                    } else if c2 < c1 {
+                                        used = from2.clone();
+                                        best = c2;
+                                    } else {
+                                        best = c1;
+                                    }
+                                }
+                            }
+                            Some(fromS) => {
+                                let c1 = Self::get_cost(ec, &mut router, fromS.clone(), to.clone(), vehPtr);
+                                let c2 = Self::get_cost(ec, &mut router, fromS.clone(), to2.clone(), vehPtr);
+                                if c2 < c1 {
+                                    used = to2.clone();
+                                    best = c2;
+                                } else {
+                                    best = c1;
+                                }
+                            }
+                        }
+                        if best < f64::MAX {
+                            from = Some(used.clone());
+                        } else {
+                            write_warning(&format!("Could not determine direction for line '{}' at stop '{}'.", line.get_line_id(), used.get_id()));
+                        }
+                    }
+                }
+                from = Some(used.clone());
+                newStops.push(used);
+            }
+            assert!(stops.len() == newStops.len());
+            line.m().replace_stops(newStops);
+        }
     }
 
     /// C++: `void NBPTLineCont::removeInvalidEdges(const NBEdgeCont &)`
@@ -354,8 +439,32 @@ impl NBPTLineCont {
     // }
     #[allow(unused_variables)]
     pub fn fix_permissions(&mut self) {
-        // shortcut: NBEdge connections are mapped to CHBuilder_Connection, which has no fromLane, so fixPermissions cannot read lanes; upgrade when NBEdge::Connection is mapped
-        panic!("NBPTLineCont::fixPermissions: shortcut, NBEdge::Connection has no fromLane yet");
+        for item in self.myPTLines.values() {
+            let line = item.m();
+            let route: Vec<Ptr<NBEdge>> = line.get_route().clone();
+            let svc = line.get_v_class();
+            for i in 1..route.len() {
+                let e1 = route[i - 1];
+                let e2 = route[i];
+                let cons = e1.get_connections_from_lane(-1, e2, -1);
+                if cons.len() == 0 {
+                    //WRITE_WARNINGF(TL("Disconnected ptline '%' between edge '%' and edge '%'"), line->getLineID(), e1->getID(), e2->getID());
+                } else {
+                    let mut ok = false;
+                    for c in &cons {
+                        if (e1.get_permissions(c.fromLane) & svc) == svc {
+                            ok = true;
+                            break;
+                        }
+                    }
+                    if !ok {
+                        let lane = cons[0].fromLane;
+                        let perms = e1.get_permissions(lane) | svc;
+                        e1.m().set_permissions(perms, lane);
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `std::set<std::string> NBPTLineCont::getServedPTStops()`
@@ -493,7 +602,7 @@ impl NBPTLineCont {
             write_warning(&format!("Cannot revise pt stop localization for pt line '{}', which has no route edges. Ignoring!", line.get_line_id()));
             return;
         }
-        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
         let mut stopsRevised: Vec<bool> = Vec::new();
         for stop0 in stops {
             stopsRevised.push(false);
@@ -564,9 +673,9 @@ impl NBPTLineCont {
                 } else {
                     write_warning(&format!("PT stop '{}' has been moved to edge '{}'.", stop.get_id(), reverse.get_id()));
                 }
-                stop_mut(&stop).set_edge_id(reverse.get_id().to_string(), ec);
+                stop.m().set_edge_id(reverse.get_id().to_string(), ec);
             }
-            stop_mut(&stop).add_line(line.get_ref());
+            stop.m().add_line(line.get_ref());
             let lastIdx = stopsRevised.len() - 1;
             stopsRevised[lastIdx] = true;
         }
@@ -594,7 +703,7 @@ impl NBPTLineCont {
     #[allow(unused_variables)]
     pub fn revise_single_way_stops(&mut self, line: Ptr<NBPTLine>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) {
         let waysIds: Vec<String> = line.get_ways().clone();
-        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
         for stop0 in stops {
             //get the corresponding and one of the two adjacent ways
             let stop = match self.find_way(line, stop0, ec, sc) {
@@ -604,7 +713,7 @@ impl NBPTLineCont {
             if !waysIds.iter().any(|w| *w == stop.get_orig_edge_id()) {
                 continue; // warning already given
             }
-            stop_mut(&stop).add_line(line.get_ref());
+            stop.m().add_line(line.get_ref());
         }
     }
 
@@ -692,7 +801,7 @@ impl NBPTLineCont {
     //     return stop;
     // }
     #[allow(unused_variables)]
-    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Rc<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Option<Rc<NBPTStop>> {
+    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Ptr<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Option<Ptr<NBPTStop>> {
         let waysIds: Vec<String> = line.get_ways().clone();
         if stop.is_loose() {
             // find closest edge in route
@@ -708,27 +817,27 @@ impl NBPTLineCont {
             if minDist < get_float("ptline.match-dist") {
                 let wayID = Self::get_way_id(best.get_id());
                 if stop.get_edge_id().is_empty() {
-                    stop_mut(&stop).set_edge_id(best.get_id().to_string(), ec);
-                    stop_mut(&stop).set_orig_edge_id(&wayID);
+                    stop.m().set_edge_id(best.get_id().to_string(), ec);
+                    stop.m().set_orig_edge_id(&wayID);
                 } else if stop.get_edge_id() != best.get_id() {
                     // stop is used by multiple lines and mapped to different edges.
                     // check if an alternative stop already exists
                     // same lookup as NBPTStopCont::findStop(wayID, pos) with threshold 1
-                    let mut existing: Option<Rc<NBPTStop>> = None;
+                    let mut existing: Option<Ptr<NBPTStop>> = None;
                     for item in sc.myPTStops.values() {
                         if item.get_orig_edge_id() == wayID && item.get_position().distance_to2d(stop.get_position()) < 1.0 {
                             existing = Some(item.clone());
                             break;
                         }
                     }
-                    let newStop: Rc<NBPTStop> = match existing {
+                    let newStop: Ptr<NBPTStop> = match existing {
                         Some(ns) => ns,
                         None => {
                             let mut ns = NBPTStop::new(stop.get_element(), format!("{}@{}", stop.get_id(), line.get_line_id()), stop.get_position().clone(),
                                 best.get_id().to_string(), wayID.clone(), stop.get_length(), stop.get_name(), stop.get_permissions(),
                                 0.0, RGBColor::default(), -1.0);
                             ns.set_edge_id(best.get_id().to_string(), ec); // trigger lane assignment
-                            let ns = Rc::new(ns);
+                            let ns = Ptr::from_raw(Box::into_raw(Box::new(ns)));
                             sc.insert(ns.clone(), false);
                             ns
                         }
@@ -751,8 +860,8 @@ impl NBPTLineCont {
                 for (edgeCandFirst, edgeCandSecond) in stop.get_additional_edge_candidates().iter() {
                     for w in waysIds.iter() {
                         if w == edgeCandFirst {
-                            if stop_mut(&stop).set_edge_id(edgeCandSecond.clone(), ec) {
-                                stop_mut(&stop).set_orig_edge_id(edgeCandFirst);
+                            if stop.m().set_edge_id(edgeCandSecond.clone(), ec) {
+                                stop.m().set_orig_edge_id(edgeCandFirst);
                                 found = true;
                                 break;
                             }
@@ -1075,10 +1184,27 @@ impl NBPTLineCont {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Rc<NBPTStop>, to: Rc<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
-        // shortcut: SUMOAbstractRouter::Operation is Unmapped and NBRouterEdge is not linked to NBEdge yet, so routing costs cannot be computed; upgrade when the router is ported
-        let _ = (ec, router, from, to, veh);
-        panic!("NBPTLineCont::getCost: shortcut, router operations are not mapped yet");
+    pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Ptr<NBPTStop>, to: Ptr<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
+        let fromEdge: Ptr<NBEdge> = ec.get_by_id(from.get_edge_id());
+        let toEdge: Ptr<NBEdge> = ec.get_by_id(to.get_edge_id());
+        if fromEdge.is_null() || toEdge.is_null() {
+            return f64::MAX;
+        } else if fromEdge == toEdge {
+            if from.get_end_pos() <= to.get_end_pos() {
+                return to.get_end_pos() - from.get_end_pos();
+            } else {
+                return f64::MAX;
+            }
+        } else if fromEdge.get_bidi_edge() == toEdge {
+            return f64::MAX;
+        }
+        let mut route: Vec<Ptr<NBRouterEdge>> = Vec::new();
+        router.compute(Ptr::new(&fromEdge.base3), Ptr::new(&toEdge.base3), veh, 0, &mut route, false);
+        if route.is_empty() {
+            f64::MAX
+        } else {
+            router.recompute_costs(&route, veh, 0, Ptr::null())
+        }
     }
 
     /// C++: `std::string NBPTLineCont::getWayID(const std::string &)` [static, private]

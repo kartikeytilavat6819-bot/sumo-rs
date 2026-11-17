@@ -5,10 +5,18 @@ use crate::prelude::*;
 /// C++ typedef `std::map<int, NIVissimNodeDef *> NIVissimNodeDef::DictType`
 pub type NIVissimNodeDef_DictType = BTreeMap<i32, Ptr<NIVissimNodeDef>>;
 
+/// The concrete class a node definition was built as; selects the subclass override of the virtual `getEdgePosition`
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NIVissimNodeDefKind {
+    Plain,
+    Edges,
+}
+
 /// C++ class `NIVissimNodeDef` (netimport/vissim/tempstructs/NIVissimNodeDef.h)
 pub struct NIVissimNodeDef {
     pub myID: i32,
     pub myName: String,
+    pub myKind: NIVissimNodeDefKind,
 }
 
 // C++ static members of NIVissimNodeDef (port as module-level statics, see AGENTS.md):
@@ -25,7 +33,7 @@ impl NIVissimNodeDef {
     //     : myID(id), myName(name) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str) -> Self {
-        Self { myID: id, myName: name.to_string() }
+        Self { myID: id, myName: name.to_string(), myKind: NIVissimNodeDefKind::Plain }
     }
 
     /// C++: `void NIVissimNodeDef::~NIVissimNodeDef()` [virtual]
@@ -39,7 +47,7 @@ impl NIVissimNodeDef {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_node_cluster(&mut self) -> i32 {
-        // shortcut: C++ declares buildNodeCluster() but never defines it (no body in NIVissimNodeDef.cpp), so SUMO cannot call it either; upgrade only if SUMO adds a definition.
+        // C++ declares buildNodeCluster() without a definition (no body in NIVissimNodeDef.cpp), so there is no body to port
         panic!("NIVissimNodeDef::buildNodeCluster is declared but not defined in SUMO")
     }
 
@@ -47,8 +55,11 @@ impl NIVissimNodeDef {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_edge_position(&self, edgeid: i32) -> f64 {
-        // shortcut: pure virtual; Rust has no virtual dispatch through NIVissimNodeDef pointers, so overrides in NIVissimNodeDef_Edges are only reached when called on the concrete type. Upgrade with an enum or trait-object owner.
-        panic!("NIVissimNodeDef::getEdgePosition is pure virtual; call it on a concrete subclass")
+        match self.myKind {
+            // SAFETY: Edges kind is only set by NIVissimNodeDef_Edges::new, which embeds this base first (repr(C))
+            NIVissimNodeDefKind::Edges => unsafe { (*(self as *const Self as *const NIVissimNodeDef_Edges)).get_edge_position(edgeid) },
+            NIVissimNodeDefKind::Plain => panic!("NIVissimNodeDef::getEdgePosition is pure virtual; subclasses implement it"),
+        }
     }
 
     /// C++: `bool NIVissimNodeDef::dictionary(int, NIVissimNodeDef *)` [static]

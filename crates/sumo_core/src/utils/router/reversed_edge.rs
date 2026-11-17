@@ -1,17 +1,20 @@
 //! Port of utils/router/ReversedEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::common::stable_cache::StableCache;
 
 /// C++ typedef `std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> ReversedEdge::ConstEdgePairVector`
-pub type ReversedEdge_ConstEdgePairVector = Unmapped /* std::vector<std::pair<const ReversedEdge<E, V> *, const ReversedEdge<E, V> *>> */;
+pub type ReversedEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<ReversedEdge<E, V>>, Ptr<ReversedEdge<E, V>>)>;
 
 /// the edge type representing backward edges
 /// C++ class `ReversedEdge` (utils/router/ReversedEdge.h)
 pub struct ReversedEdge<E, V> {
     pub myOriginal: Ptr<E>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector>,
-    pub myViaSuccessors: ReversedEdge_ConstEdgePairVector,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, ReversedEdge_ConstEdgePairVector<E, V>>,
+    pub myViaSuccessors: ReversedEdge_ConstEdgePairVector<E, V>,
     _p: std::marker::PhantomData<(E, V,)>,
 }
 
@@ -21,9 +24,19 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(orig: Ptr<E>) -> Self {
-        todo!("port ReversedEdge::ReversedEdge<E, V>")
+        Self {
+            myOriginal: orig,
+            myClassesViaSuccessorMap: StableCache::new(),
+            myViaSuccessors: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
+}
 
+impl<E, V> ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
     /// C++: `void ReversedEdge::init()`
     // void init() {
     //         if (!myOriginal->isInternal()) {
@@ -42,7 +55,21 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port ReversedEdge::init")
+        if !self.myOriginal.is_internal() {
+            let this: Ptr<ReversedEdge<E, V>> = Ptr::from_mut(self);
+            let original = self.myOriginal;
+            for viaPair in original.via_successors(SVC_IGNORING, false).to_vec() {
+                let revSource = viaPair.0.reversed_routing_edge();
+                let mut via = viaPair.1;
+                let mut preVia: Ptr<ReversedEdge<E, V>> = Ptr::null();
+                while !via.is_null() && via.is_internal() {
+                    via.reversed_routing_edge().m().myViaSuccessors.push((this, preVia));
+                    preVia = via.reversed_routing_edge();
+                    via = via.via_successors(SVC_IGNORING, false)[0].1;
+                }
+                revSource.m().myViaSuccessors.push((this, preVia));
+            }
+        }
     }
 
     /// C++: `const E * ReversedEdge::getOriginalEdge() const` [const]
@@ -52,7 +79,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_edge(&self) -> Ptr<E> {
-        todo!("port ReversedEdge::getOriginalEdge")
+        self.myOriginal
     }
 
     /// C++: `int ReversedEdge::getNumericalID() const` [const]
@@ -62,7 +89,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        todo!("port ReversedEdge::getNumericalID")
+        self.myOriginal.numerical_id()
     }
 
     /// C++: `const std::string & ReversedEdge::getID() const` [const]
@@ -72,7 +99,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        todo!("port ReversedEdge::getID")
+        self.myOriginal.id()
     }
 
     /// C++: `double ReversedEdge::getLength() const` [const]
@@ -82,7 +109,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        todo!("port ReversedEdge::getLength")
+        self.myOriginal.length()
     }
 
     /// C++: `const ReversedEdge<E, V> * ReversedEdge::getBidiEdge() const` [const]
@@ -91,7 +118,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<ReversedEdge<E, V>> {
-        todo!("port ReversedEdge::getBidiEdge")
+        self.myOriginal.bidi_edge().reversed_routing_edge()
     }
 
     /// C++: `bool ReversedEdge::isInternal() const` [const]
@@ -100,7 +127,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        todo!("port ReversedEdge::isInternal")
+        self.myOriginal.is_internal()
     }
 
     /// C++: `bool ReversedEdge::prohibits(const V *const) const` [const]
@@ -109,7 +136,8 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibits(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port ReversedEdge::prohibits")
+        // C++ ROEdge::prohibits(vehicle) defaults checkRestrictions to false
+        self.myOriginal.prohibits(vehicle, false)
     }
 
     /// C++: `bool ReversedEdge::restricts(const V *const) const` [const]
@@ -118,7 +146,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn restricts(&self, vehicle: Ptr<V>) -> bool {
-        todo!("port ReversedEdge::restricts")
+        self.myOriginal.restricts(vehicle)
     }
 
     /// C++: `double ReversedEdge::getTravelTimeStatic(const ReversedEdge<E, V> *const, const V *const, double)` [static]
@@ -127,7 +155,7 @@ impl<E, V> ReversedEdge<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<ReversedEdge<E, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        todo!("port ReversedEdge::getTravelTimeStatic")
+        edge.myOriginal.travel_time(veh, time)
     }
 
     /// C++: `const ConstEdgePairVector & ReversedEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -155,9 +183,91 @@ impl<E, V> ReversedEdge<E, V> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector {
-        todo!("port ReversedEdge::getViaSuccessors")
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ReversedEdge_ConstEdgePairVector<E, V> {
+        if vClass == SVC_IGNORING || self.myOriginal.is_taz_connector() {
+            return &self.myViaSuccessors;
+        }
+        // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
+        self.myClassesViaSuccessorMap.get_or_insert_with(vClass, || {
+            let mut result: ReversedEdge_ConstEdgePairVector<E, V> = Vec::new();
+            for viaPair in self.myViaSuccessors.iter() {
+                if viaPair.0.myOriginal.is_taz_connector() || viaPair.0.myOriginal.is_connected_to(&self.myOriginal, vClass, false) {
+                    result.push(*viaPair);
+                }
+            }
+            result
+        })
     }
 
+}
+
+// C++ ReversedEdge<E, V> is a valid routing edge type for the generic routers (e.g. the backward DijkstraRouter of the
+// landmark table); accessors C++ ReversedEdge does not have stay shortcuts, as in the IntermodalEdge case of RouterEdge.
+impl<E, V> RouterEdgeInfo for ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
+    fn edge_numerical_id(&self) -> i32 {
+        self.myOriginal.numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.myOriginal.id().to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.myOriginal.edge_permissions()
+    }
+}
+
+impl<E, V> RouterEdge<V> for ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
+    type Node = <E as RouterEdge<V>>::Node;
+    type Lane = <E as RouterEdge<V>>::Lane;
+    fn id(&self) -> &str {
+        self.myOriginal.id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.myOriginal.numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.myOriginal.length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getLengthGeometryFactor()")
+    }
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getDistanceTo()")
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("shortcut: C++ ReversedEdge has no getSuccessors()")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        &self.get_via_successors(vclass, ignore_transient)[..]
+    }
+    fn speed_limit(&self) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getSpeedLimit()")
+    }
+    fn minimum_travel_time(&self, veh: Ptr<V>) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getMinimumTravelTime()")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        self.get_bidi_edge()
+    }
+    fn is_internal(&self) -> bool {
+        self.myOriginal.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool {
+        self.myOriginal.prohibits(veh, check_restrictions)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.myOriginal.restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        Self::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getTravelTimeAggregated()")
+    }
 }
 

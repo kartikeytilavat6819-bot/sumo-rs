@@ -1,10 +1,15 @@
 //! Port of microsim/traffic_lights/NEMAController.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
-// shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so E2 detectors cannot be looked up by id yet; upgrade when detector control is ported
+/// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`.
+// shortcut: no runtime type check; the lane-area detector map holds only MSE2Collector, upgrade with a type flag check
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
-    panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
+    match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
+        Some(d) if !d.is_null() => crate::microsim::output::mse2_collector::mse2_collector_of(*d),
+        _ => Ptr::null(),
+    }
 }
 
 /// C++ enum `LightState`
@@ -150,6 +155,52 @@ impl std::ops::DerefMut for NEMALogic {
     }
 }
 
+fn nema_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().init(nb)
+}
+fn nema_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().try_switch()
+}
+fn nema_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_current_phase_def()
+}
+fn nema_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().reset_last_switch(t)
+}
+fn nema_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_detector_states()
+}
+
+fn nema_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().get_parameter(key, defaultValue.to_string())
+}
+fn nema_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().set_parameter(key, value)
+}
+fn nema_ext_activate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().activate_program()
+}
+fn nema_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().deactivate_program()
+}
+
+static NEMA_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_parameter: nema_ext_get_parameter,
+    set_parameter: nema_ext_set_parameter,
+    activate_program: nema_ext_activate_program,
+    deactivate_program: nema_ext_deactivate_program,
+    ..super::ms_traffic_light_logic::DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT
+};
+
+static NEMA_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: nema_try_switch,
+    init: nema_init,
+    get_current_phase_def: nema_get_current_phase_def,
+    reset_last_switch: nema_reset_last_switch,
+    get_detector_states: nema_get_detector_states,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 impl NEMALogic {
     /// C++: `void NEMALogic::NEMALogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const MSSimpleTrafficLightLogic::Phases &, int, SUMOTime, const std::map<std::string, std::string> &, const std::string &)`
     /// Constructor
@@ -192,6 +243,8 @@ impl NEMALogic {
             myControllerType: NEMALogic_controllerType::Type170,
             myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
         };
+        this.base.base.vt = &NEMA_LOGIC_VT;
+        this.base.base.ext_vt = &NEMA_LOGIC_EXT_VT;
         this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
         this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
         let cycle_default = this.get_parameter("cycleTime", "60".to_string());
@@ -507,7 +560,7 @@ impl NEMALogic {
         self.construct_timing_and_phase_defs(&mut barriers, &mut coordinates, &mut ring1, &mut ring2);
 
         //init the traffic light
-        MSTrafficLightLogic::init(&mut self.base.base, nb);
+        MSTrafficLightLogic::init_base(&mut self.base.base, nb);
         assert!(!self.myLanes.is_empty());
         //iterate through the lanes and build one E2 detector for each lane associated with the traffic light control junction
         let lanes_all = self.myLanes.clone();
@@ -539,13 +592,16 @@ impl NEMALogic {
                         }
                         let mut index = lane.get_index();
                         let mut id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
-                        // shortcut: the while-loop that bumps `index` until the detector id is unused needs the typed detector lookup (Unmapped getTypedDetectors); skipped until detector control is ported
+                        while MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).contains_key(&id) {
+                            index += 1;
+                            id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
+                        }
                         //createE2Detector() method will lead to bad detector showing in sumo-gui
                         //so it is better to use build2Detector() rather than createE2Detector()
                         let _built = nb.build_e2_detector(
                             &id,                                  // detectorID
                             lane,                                 // lane to build this detector
-                            -1000000., // INVALID_POSITION: set the detector location by end point and length
+                            f64::MAX, // INVALID_POSITION (std::numeric_limits<double>::max() in NEMAController.cpp): set the detector location by end point and length
                             lane.get_length(),                    // set the end position of the detector at the end of the lane
                             detector_length,                      // detector length
                             &self.myFile,                         // detector information output file
@@ -857,17 +913,9 @@ impl NEMALogic {
             self.get_next_phases(&mut transitions);
 
             // Sort the next phases by distance and select the closest.
-            // determinism: std::sort is not stable; Rust sort_by is stable, so ties may order differently
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
             if transitions.len() > 1 {
-                transitions.sort_by(|i, j| {
-                    if i.distance < j.distance {
-                        std::cmp::Ordering::Less
-                    } else if j.distance < i.distance {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                utils::common::std_sort::std_sort_vec(&mut transitions, |i, j| i.distance < j.distance);
             }
 
             // Set the Next Phases = to the transition with least combined distance
@@ -936,7 +984,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        MSTrafficLightLogic::activate_program(&mut self.base.base);
+        MSTrafficLightLogic::activate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(true);
         }
@@ -952,7 +1000,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        MSTrafficLightLogic::deactivate_program(&mut self.base.base);
+        MSTrafficLightLogic::deactivate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(false);
         }
@@ -2163,7 +2211,6 @@ impl NEMALogic {
     #[allow(unused_variables)]
     pub fn string2int(&mut self, s: String) -> i32 {
         // emulates `std::stringstream ss(s) >> ret` with ret = 0 on failure
-        // shortcut: no clamp to the i32 range on overflow (C++11 stream extraction saturates), upgrade if an overflowing phase name ever matters
         let bytes = s.trim_start().as_bytes().to_vec();
         let mut i = 0usize;
         let mut neg = false;
@@ -2174,15 +2221,15 @@ impl NEMALogic {
         let start = i;
         let mut v: i64 = 0;
         while i < bytes.len() && bytes[i].is_ascii_digit() {
-            v = v * 10 + (bytes[i] - b'0') as i64;
+            v = (v * 10 + (bytes[i] - b'0') as i64).min(i32::MAX as i64 + 1);
             i += 1;
         }
         if i == start {
             0
         } else if neg {
-            (-v) as i32
+            (-v).max(i32::MIN as i64) as i32
         } else {
-            v as i32
+            v.min(i32::MAX as i64) as i32
         }
     }
 
@@ -2560,8 +2607,8 @@ impl NEMALogic {
         for i in 0..2usize {
             let mut ringCopy = self.get_phases_by_ring(i as i32);
             // sort by the minimum start time in the cycle.
-            // determinism: C++ std::sort with the non-strict `<=` comparator is unspecified on ties; a stable sort on greatestStartTime is used
-            ringCopy.sort_by(|a, b| a.greatestStartTime.cmp(&b.greatestStartTime));
+            // determinism: C++ std::sort with the non-strict `<=` comparator; std_sort reproduces its tie order
+            utils::common::std_sort::std_sort_vec(&mut ringCopy, |a, b| a.greatestStartTime <= b.greatestStartTime);
             let mut found = false;
             // loop through the sorted phases by time and try to find the phase that should be active given the time in the cycle
             for p in ringCopy.iter() {
@@ -2860,8 +2907,8 @@ impl NEMAPhase {
         }
 
         // sort the transitions by distance for speed later. Using plain distance here
-        // determinism: std::sort is unstable; Rust sort_by is stable, so equal distances may order differently
-        self.myTransitions.sort_by(|i, j| i.distance.cmp(&j.distance));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        utils::common::std_sort::std_sort_vec(&mut self.myTransitions, |i, j| i.distance < j.distance);
 
         // create the phase detector info
         let cpdSource = if crossPhaseSource > 0 { controller.m().get_phase_obj(crossPhaseSource, -1) } else { Ptr::null() };

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T22:57:33.435379-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/routeprobe/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/routeprobe/routes.rou"/>
+        <additional-files value="tools/oracle/cases/routeprobe/routeprobe.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/routeprobe/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/routeprobe/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/routeprobe/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <routeDistribution id="rp0_0.00">
+        <route id="!v0_0.00" edges="E0 E1 E3" probability="1.00"/>
+        <route id="!v1_0.00" edges="E0 E1 E3" probability="1.00"/>
+        <route id="!v2_0.00" edges="E0 E1 E3" probability="1.00"/>
+        <route id="!v3_0.00" edges="E0 E1 E3" probability="1.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp0_30.00">
+        <route id="!v4_30.00" edges="E0 E1 E3" probability="1.00"/>
+        <route id="!v5_30.00" edges="E0 E1 E3" probability="1.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp0_60.00">
+        <route id="!v6_60.00" edges="E0 E1 E3" probability="1.00"/>
+        <route id="!v7_60.00" edges="E0 E1 E3" probability="1.00"/>
+    </routeDistribution>
+</routes>

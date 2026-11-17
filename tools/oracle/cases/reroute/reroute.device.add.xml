@@ -1,0 +1,20 @@
+<additional>
+    <!-- Enables the rerouting device through the <param> form. The attribute form used in
+         reroute.add.xml (`device.rerouting.probability="1"` on the vType) is IGNORED by SUMO 1.28, so
+         that case never created a routing device at all: rerouteNo=0 for every vehicle on both sides.
+
+         Closing the LAST edge of v1's route forces the device to try a detour. In this extract there is
+         no alternative connection, so C++ logs `Cannot keep destination edge ... due to closed edges` and
+         `No route for vehicle 'v1' found` — the attempt is what is under test here, visible in the
+         `devices="tripinfo_v1 routing_v1"` attribute. A successful detour needs a network with a real
+         alternative path, which this extract does not have. -->
+    <vType id="DEFAULT_VEHTYPE">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="5"/>
+    </vType>
+    <rerouter id="closeRR" edges="1117867028">
+        <interval begin="0" end="200">
+            <closingReroute id="1117867029#3"/>
+        </interval>
+    </rerouter>
+</additional>

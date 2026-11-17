@@ -24,6 +24,73 @@ impl std::ops::DerefMut for MSOffTrafficLightLogic {
     }
 }
 
+fn off_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSOffTrafficLightLogic>().m().try_switch()
+}
+fn off_get_phase_number(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_phase_number()
+}
+fn off_get_phases(l: &MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_phases()
+}
+fn off_get_phase(l: &MSTrafficLightLogic, givenstep: i32) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_phase(givenstep)
+}
+fn off_get_current_phase_index(l: &MSTrafficLightLogic) -> i32 {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_current_phase_index()
+}
+fn off_get_current_phase_def(l: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_current_phase_def()
+}
+fn off_reset_last_switch(l: &mut MSTrafficLightLogic, t: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSOffTrafficLightLogic>().m().reset_last_switch(t)
+}
+fn off_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_phase_index_at_time(simStep)
+}
+fn off_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_offset_from_index(index)
+}
+fn off_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSOffTrafficLightLogic>().get().unwrap().get_index_from_offset(offset)
+}
+fn off_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSOffTrafficLightLogic>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+fn off_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSOffTrafficLightLogic>().m().init(nb)
+}
+fn off_adapt_link_information_from(l: &mut MSTrafficLightLogic, logic: &MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSOffTrafficLightLogic>().m().adapt_link_information_from(logic)
+}
+
+static MS_OFF_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: off_try_switch,
+    get_phase_number: off_get_phase_number,
+    get_phases: off_get_phases,
+    get_phase: off_get_phase,
+    get_current_phase_index: off_get_current_phase_index,
+    get_current_phase_def: off_get_current_phase_def,
+    reset_last_switch: off_reset_last_switch,
+    get_phase_index_at_time: off_get_phase_index_at_time,
+    get_offset_from_index: off_get_offset_from_index,
+    get_index_from_offset: off_get_index_from_offset,
+    change_step_and_duration: off_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: off_init,
+    adapt_link_information_from: off_adapt_link_information_from,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: MSTrafficLightLogic::get_detector_states_base,
+    get_conditions: MSTrafficLightLogic::get_conditions_base,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: MSTrafficLightLogic::save_state_base,
+    load_state: MSTrafficLightLogic::load_state_base,
+    map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+};
+
 impl MSOffTrafficLightLogic {
     /// C++: `void MSOffTrafficLightLogic::MSOffTrafficLightLogic(MSTLLogicControl &, const std::string &)`
     /// Constructor
@@ -35,6 +102,7 @@ impl MSOffTrafficLightLogic {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, "off", 0, TrafficLightType::OFF, 0, &ParameterisedMap::new());
         base.myDefaultCycleTime = time2steps(120.);
+        base.vt = &MS_OFF_TRAFFIC_LIGHT_LOGIC_VT;
         Self { base, myPhaseDefinition: Vec::new() }
     }
 
@@ -73,7 +141,7 @@ impl MSOffTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn adapt_link_information_from(&mut self, logic: &MSTrafficLightLogic) {
-        self.base.adapt_link_information_from(logic);
+        self.base.adapt_link_information_from_base(logic);
         self.rebuild_phase();
     }
 
@@ -275,5 +343,25 @@ impl MSOffTrafficLightLogic {
         self.myPhaseDefinition.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(120.), &state, "")))));
     }
 
+}
+
+#[cfg(test)]
+mod dispatch_tests {
+    use super::*;
+
+    // a call through the base type must reach the Off overrides, not the pure-virtual defaults
+    #[test]
+    fn base_reference_reaches_off_logic() {
+        let mut tlcontrol = MSTLLogicControl::new();
+        let mut off = MSOffTrafficLightLogic::new(&mut tlcontrol, "off_test");
+        off.myPhaseDefinition.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(time2steps(120.), "G", "")))));
+        let base: &MSTrafficLightLogic = &off.base;
+        assert_eq!(base.get_phase_number(), 0);
+        assert_eq!(base.get_current_phase_index(), 0);
+        assert_eq!(base.get_offset_from_index(3), 0);
+        assert_eq!(base.get_current_phase_def().get_state(), "G");
+        let base_mut: &mut MSTrafficLightLogic = &mut off.base;
+        assert_eq!(base_mut.try_switch(), 120 * delta_t());
+    }
 }
 

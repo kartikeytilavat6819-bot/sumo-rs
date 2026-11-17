@@ -1,0 +1,2 @@
+Error: Invalid departLane definition for vehicle 'v3'.
+Quitting (on error).

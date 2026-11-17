@@ -50,7 +50,15 @@ impl ROJTRRouter {
     // { }
     #[allow(unused_variables)]
     pub fn new(unbuildIsWarningOnly: bool, acceptAllDestinations: bool, maxEdges: i32, ignoreClasses: bool, allowLoops: bool, discountSources: bool) -> Self {
-        todo!("port ROJTRRouter::ROJTRRouter")
+        Self {
+            base: SUMOAbstractRouter::new("JTRRouter", unbuildIsWarningOnly, Some(<crate::router::ro_edge::ROEdge as crate::utils::router::router_edge::RouterEdge<crate::router::ro_vehicle::ROVehicle>>::travel_time_static), None, false, false),
+            myUnbuildIsWarningOnly: unbuildIsWarningOnly,
+            myAcceptAllDestination: acceptAllDestinations,
+            myMaxEdges: maxEdges,
+            myIgnoreClasses: ignoreClasses,
+            myAllowLoops: allowLoops,
+            myDiscountSources: discountSources,
+        }
     }
 
     /// C++: `void ROJTRRouter::~ROJTRRouter() noexcept` [virtual]
@@ -58,7 +66,7 @@ impl ROJTRRouter {
     // ROJTRRouter::~ROJTRRouter() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ROJTRRouter::~ROJTRRouter")
+        // C++ destructor body is empty
     }
 
     /// C++: `SUMOAbstractRouter<ROEdge, ROVehicle> * ROJTRRouter::clone()` [virtual]
@@ -67,7 +75,8 @@ impl ROJTRRouter {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
-        todo!("port ROJTRRouter::clone")
+        let router = ROJTRRouter::new(self.myUnbuildIsWarningOnly, self.myAcceptAllDestination, self.myMaxEdges, self.myIgnoreClasses, self.myAllowLoops, self.myDiscountSources);
+        Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<SUMOAbstractRouter<ROEdge, ROVehicle>>()
     }
 
     /// C++: `bool ROJTRRouter::compute(const ROEdge *, const ROEdge *, const ROVehicle *const, SUMOTime, ConstROEdgeVector &, bool)` [virtual]
@@ -115,7 +124,48 @@ impl ROJTRRouter {
     // }
     #[allow(unused_variables)]
     pub fn compute(&mut self, from: Ptr<ROEdge>, to: Ptr<ROEdge>, vehicle: Ptr<ROVehicle>, time: SUMOTime, into: &mut ConstROEdgeVector, silent: bool) -> bool {
-        todo!("port ROJTRRouter::compute")
+        let mut current: Ptr<ROJTREdge> = from.cast::<ROJTREdge>();
+        if self.myDiscountSources && current.get_source_flow() <= 0 {
+            return true;
+        }
+        let mut timeS: f64 = steps2time(time);
+        let mut avoidEdges: BTreeSet<Ptr<ROEdge>> = BTreeSet::new();
+        // route until a sinks has been found
+        while !current.is_null()
+            && current.cast::<ROEdge>() != to
+            && (!current.is_sink() || current.cast::<ROEdge>() == from || current.get_source_flow() > 0)
+            && (into.len() as i32) < self.myMaxEdges
+        {
+            into.push(current.cast::<ROEdge>());
+            current.m().change_source_flow(-1);
+            if !self.myAllowLoops {
+                avoidEdges.insert(current.cast::<ROEdge>());
+            }
+            timeS += current.get_travel_time(vehicle, timeS);
+            current = current.choose_next(if self.myIgnoreClasses { Ptr::null() } else { vehicle }, timeS, &avoidEdges);
+            debug_assert!(self.myIgnoreClasses || current.is_null() || !current.prohibits(vehicle, false));
+        }
+        // check whether no valid ending edge was found
+        if current.is_null() || (into.len() as i32) >= self.myMaxEdges {
+            if self.myAcceptAllDestination {
+                return true;
+            } else {
+                if !silent {
+                    let msg = format!("The route starting at edge '{}' could not be closed.", from.get_id());
+                    if self.myUnbuildIsWarningOnly {
+                        utils::common::msg_handler::write_warning(&msg);
+                    } else {
+                        utils::common::msg_handler::write_error(&msg);
+                    }
+                }
+                return false;
+            }
+        }
+        // append the sink
+        if !current.is_null() {
+            into.push(current.cast::<ROEdge>());
+        }
+        return true;
     }
 
 }

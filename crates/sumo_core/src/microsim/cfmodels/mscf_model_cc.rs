@@ -47,6 +47,69 @@ pub struct MSCFModel_CC {
     pub myFlatbedD: f64,
 }
 
+fn cc_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).finalize_speed(veh, vPos)
+}
+fn cc_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+}
+fn cc_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn cc_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred)
+}
+fn cc_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).interaction_gap(veh, vL)
+}
+fn cc_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel)
+}
+fn cc_max_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).max_next_speed(speed, veh)
+}
+fn cc_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).min_next_speed(speed, veh)
+}
+fn cc_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String {
+    cf_cast::<MSCFModel_CC>(m).get_parameter(veh, key)
+}
+fn cc_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+    cf_cast::<MSCFModel_CC>(m).set_parameter(veh, key, value)
+}
+fn cc_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_CC>(m).get_model_id()
+}
+fn cc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_CC>(m).duplicate(vtype)
+}
+fn cc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_CC>(m).create_vehicle_variables()
+}
+
+fn cc_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_CC>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_CC: its overrides on top of the MSCFModel table
+pub const CC_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: cc_stop_speed_2,
+    finalize_speed: cc_finalize_speed,
+    free_speed: cc_free_speed,
+    follow_speed: cc_follow_speed,
+    insertion_follow_speed: cc_insertion_follow_speed,
+    interaction_gap: cc_interaction_gap,
+    get_secure_gap: cc_get_secure_gap,
+    max_next_speed: cc_max_next_speed,
+    min_next_speed: cc_min_next_speed,
+    get_model_id: cc_get_model_id,
+    duplicate: cc_duplicate,
+    create_vehicle_variables: cc_create_vehicle_variables,
+    get_parameter: cc_get_parameter,
+    set_parameter: cc_set_parameter,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_CC {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -120,7 +183,7 @@ impl MSCFModel_CC {
 
         //instantiate the driver model. For now, use Krauss as default, then needs to be parameterized
         let myHumanDriver = Ptr::from_raw(Box::into_raw(Box::new(MSCFModel_Krauss::new(vtype))) as *mut MSCFModel);
-        MSCFModel_CC {
+        let mut this = MSCFModel_CC {
             base,
             myHumanDriver,
             myCcDecel,
@@ -141,7 +204,9 @@ impl MSCFModel_CC {
             myFlatbedKp,
             myFlatbedH,
             myFlatbedD,
-        }
+        };
+        this.base.vt = &CC_VT;
+        this
     }
 
     /// C++: `void MSCFModel_CC::~MSCFModel_CC() noexcept` [virtual]
@@ -380,7 +445,7 @@ impl MSCFModel_CC {
             }
             self.v(veh, gap2pred, speed, speed + relSpeed)
         } else {
-            self.base.free_speed(veh, speed, seen, maxSpeed, onInsertion, usage)
+            self.base.free_speed_base(veh, speed, seen, maxSpeed, onInsertion, usage)
         }
     }
 
@@ -418,7 +483,7 @@ impl MSCFModel_CC {
     pub fn min_next_speed(&self, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut CC_VehicleVariables);
         if vars.engineModel == 0 /* CC_ENGINE_MODEL_FOLM */ {
-            self.base.min_next_speed(speed, veh)
+            self.base.min_next_speed_base(speed, veh)
         } else {
             max2(0., speed - accel2speed(20.))
         }
@@ -703,7 +768,7 @@ impl MSCFModel_CC {
             return buf.str();
         }
         if key == PAR_ENGINE_DATA {
-            // shortcut: C++ dynamic_cast<RealisticEngineModel*>; the engine is created together with engineModel, so the model id stands in for the type check
+            // C++ dynamic_cast<RealisticEngineModel*>: engine and engineModel are always set together, so the flag decides the type
             let (gear, rpm) = if vars.engineModel == CC_ENGINE_MODEL_REALISTIC {
                 let mut gear = 0;
                 let mut rpm = 0.;
@@ -1110,7 +1175,9 @@ impl MSCFModel_CC {
             if vehicle.is_null() {
                 return Err(InvalidArgument(format!("Adding {} as member but {} does not exists", id, id)));
             }
-            // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, MSCFModel has no runtime type id in this port
+            if vehicle.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CC as i32 {
+                return Err(InvalidArgument(format!("Adding {} as member but {} is not using MSCFModel_CC", id, id)));
+            }
             self.set_leader(vehicle, veh, veh.get_id().to_string());
             vars.m().isLeader = true;
             return Ok(());
@@ -1122,7 +1189,9 @@ impl MSCFModel_CC {
                 if vehicle.is_null() {
                     return Err(InvalidArgument(format!("Removing {} from members but {} does not exist", value, value)));
                 }
-                // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, see PAR_ADD_MEMBER
+                if vehicle.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CC as i32 {
+                    return Err(InvalidArgument(format!("Removing {} from members but {} is not using MSCFModel_CC", value, value)));
+                }
                 self.set_leader(vehicle, Ptr::null(), String::new());
                 vars.m().members.remove(&k);
             }
@@ -1207,8 +1276,15 @@ impl MSCFModel_CC {
             return Ok(());
         }
         if key == CC_PAR_VEHICLE_ENGINE_MODEL {
-            // shortcut: C++ deletes the previous engine; it is leaked here because Ptr<GenericEngineModel> does not know its concrete type
             let engineModel = to_i(value)?;
+            // C++ `delete vars->engine`: the concrete type is the one engineModel names, the flag is set together with engine
+            if !vars.engine.is_null() {
+                if vars.engineModel == CC_ENGINE_MODEL_REALISTIC {
+                    drop(unsafe { Box::from_raw(vars.engine.cast::<RealisticEngineModel>().as_raw()) });
+                } else {
+                    drop(unsafe { Box::from_raw(vars.engine.cast::<FirstOrderLagModel>().as_raw()) });
+                }
+            }
             if engineModel == CC_ENGINE_MODEL_REALISTIC {
                 let mut engine = RealisticEngineModel::new();
                 engine.set_parameter_2(ENGINE_PAR_DT.to_string(), ts());
@@ -1629,7 +1705,10 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn find_vehicle(&self, id: String) -> Ptr<MSVehicle> {
-        // shortcut: C++ dynamic_cast is a plain cast here, the vehicle control only holds MSVehicle objects
+        // C++ dynamic_cast<MSVehicle*>: a meso run holds only MEVehicle, which is not an MSVehicle, so the run mode decides the result
+        if crate::microsim::ms_globals::use_meso_sim() {
+            return Ptr::null();
+        }
         MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id).cast::<MSVehicle>()
     }
 

@@ -21,12 +21,28 @@ pub enum Reservation_ReservationState {
     FULFILLED = 16,
 }
 
+/// C++ virtual methods of MSDispatch overridden by the dispatch algorithms.
+/// Installed by each algorithm's constructor, so base-class calls reach the derived body.
+pub struct MSDispatchVt {
+    pub compute_dispatch: fn(&mut MSDispatch, SUMOTime, &Vec<Ptr<MSDevice_Taxi>>),
+}
+
+fn default_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    panic!("MSDispatch::computeDispatch is pure virtual; the dispatch algorithm must override it")
+}
+
+pub(crate) const DEFAULT_MSDISPATCH_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: default_compute_dispatch,
+};
+
 /// An algorithm that performs distpach for a taxi fleet
 /// C++ class `MSDispatch` (microsim/devices/MSDispatch.h)
 #[repr(C)]
 pub struct MSDispatch {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
+    /// virtual method table of the dynamic type (see MSDispatchVt)
+    pub vt: &'static MSDispatchVt,
     /// whether the last call to computeDispatch has left servable reservations
     pub myHasServableReservations: bool,
     // C++: std::map<std::string, std::map<const Reservation *, MSDevice_Taxi *, ComparatorIdLess>>
@@ -77,6 +93,7 @@ impl MSDispatch {
         let myRoutingMode = to_int(&base.get_parameter("routingMode", "1")).unwrap();
         let mut this = MSDispatch {
             base,
+            vt: &DEFAULT_MSDISPATCH_VT,
             myHasServableReservations: false,
             myRunningReservations: BTreeMap::new(),
             myOutput: Ptr::default(),
@@ -523,8 +540,8 @@ impl MSDispatch {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute_dispatch(&mut self, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
-        // pure virtual in C++: concrete dispatch algorithms (e.g. MSDispatch_Greedy) implement it
-        panic!("MSDispatch::computeDispatch is pure virtual; the dispatch algorithm must override it")
+        let vt = self.vt;
+        (vt.compute_dispatch)(self, now, fleet);
     }
 
     /// C++: `std::vector<Reservation *> MSDispatch::getReservations()`
@@ -618,8 +635,7 @@ impl MSDispatch {
         let mut edges: Vec<Ptr<MSEdge>> = Vec::new();
         let holder = Ptr::from_mut(taxi.get_holder());
         let fromPos = holder.get_position_on_lane() - NUMERICAL_EPS;
-        // shortcut: getRerouteOrigin() yields an Unmapped iterator, so the origin is taken as the current edge
-        let from = holder.get_edge();
+        let from = holder.get_route().index_op(holder.get_reroute_origin() as i32);
         let originDiffers = from != holder.get_edge();
         router.compute_2(from, if originDiffers { 0.0 } else { fromPos }, res.from, res.fromPos, holder, t, &mut edges, true);
         if edges.is_empty() {

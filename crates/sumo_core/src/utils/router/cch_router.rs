@@ -1,9 +1,10 @@
 //! Port of utils/router/CCHRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// C++ typedef `MetricPtr (*)(SUMOVehicleClass, SUMOTime, const V *) CCHRouter::MetricProvider`
-pub type CCHRouter_MetricProvider = Unmapped /* MetricPtr (*)(SUMOVehicleClass, SUMOTime, const V *) */;
+pub type CCHRouter_MetricProvider<V> = fn(SUMOVehicleClass, SUMOTime, Ptr<V>) -> CCHRouter_MetricPtr;
 
 /// C++ typedef `const int * CCHRouter::MetricPtr`
 pub type CCHRouter_MetricPtr = Ptr<i32>;
@@ -12,13 +13,13 @@ pub type CCHRouter_MetricPtr = Ptr<i32>;
 pub type CCHRouter_Operation = SUMOAbstractRouter_Operation;
 
 /// C++ typedef `SUMOTime (*)(SUMOTime) CCHRouter::PeriodEnd`
-pub type CCHRouter_PeriodEnd = Unmapped /* SUMOTime (*)(SUMOTime) */;
+pub type CCHRouter_PeriodEnd = Option<fn(SUMOTime) -> SUMOTime>;
 
 /// C++ typedef `typename SUMOAbstractRouter<E, V>::Prohibitions CCHRouter::Prohibitions`
 pub type CCHRouter_Prohibitions = SUMOAbstractRouter_Prohibitions;
 
 /// C++ typedef `void (*)(const V *) CCHRouter::ResetHook`
-pub type CCHRouter_ResetHook = Unmapped /* void (*)(const V *) */;
+pub type CCHRouter_ResetHook<V> = Option<fn(Ptr<V>)>;
 
 /// Contraction-hierarchy router over the edge graph mapped by GRAPH.
 /// C++ class `CCHRouter` (utils/router/CCHRouter.h)
@@ -26,13 +27,14 @@ pub type CCHRouter_ResetHook = Unmapped /* void (*)(const V *) */;
 pub struct CCHRouter<E, V, GRAPH> {
     /// C++ base class `SUMOAbstractRouter<E, V>`
     pub base: SUMOAbstractRouter<E, V>,
-    pub myGraph: Ptr<GRAPH>,
-    pub myMetricProvider: CCHRouter_MetricProvider,
+    /// C++ `const GRAPH *`; GRAPH is always CCHGraph<E, V> in SUMO (ROCCHGraph / MSCCHGraph)
+    pub myGraph: Ptr<CCHGraph<E, V>>,
+    pub myMetricProvider: CCHRouter_MetricProvider<V>,
     pub myQuery: i32,
     pub myBoundMetric: CCHRouter_MetricPtr,
     pub myFallback: Ptr<SUMOAbstractRouter<E, V>>,
     pub myPeriodEnd: CCHRouter_PeriodEnd,
-    pub myOnReset: CCHRouter_ResetHook,
+    pub myOnReset: CCHRouter_ResetHook<V>,
     pub myProhibitionActive: bool,
     pub myProhibited: SUMOAbstractRouter_Prohibitions,
     _p: std::marker::PhantomData<(E, V, GRAPH,)>,
@@ -50,7 +52,7 @@ impl<E, V, GRAPH> std::ops::DerefMut for CCHRouter<E, V, GRAPH> {
     }
 }
 
-impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
+impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     /// C++: `void CCHRouter::CCHRouter<E, V, GRAPH>(const GRAPH *, MetricProvider, Operation, const bool, SUMOAbstractRouter<E, V> *, PeriodEnd, ResetHook)`
     /// Constructor.
     // CCHRouter(const GRAPH* graph, MetricProvider provider,
@@ -62,8 +64,9 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //         myPeriodEnd(periodEnd), myOnReset(onReset), myProhibitionActive(false) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(graph: Ptr<GRAPH>, provider: CCHRouter_MetricProvider, operation: SUMOAbstractRouter_Operation, unbuildIsWarning: bool, fallback: Ptr<SUMOAbstractRouter<E, V>>, periodEnd: CCHRouter_PeriodEnd, onReset: CCHRouter_ResetHook) -> Self {
-        todo!("port CCHRouter::CCHRouter<E, V, GRAPH>")
+    pub fn new(graph: Ptr<CCHGraph<E, V>>, provider: CCHRouter_MetricProvider<V>, operation: SUMOAbstractRouter_Operation, unbuildIsWarning: bool, fallback: Ptr<SUMOAbstractRouter<E, V>>, periodEnd: CCHRouter_PeriodEnd, onReset: CCHRouter_ResetHook<V>) -> Self {
+        // shortcut: myQuery is a placeholder i32 (CustomizableContractionHierarchyQuery borrows the metric, lifetime not yet modelled), so the struct cannot be built; upgrade with the typed query
+        panic!("shortcut: CCHRouter::CCHRouter needs the typed CustomizableContractionHierarchyQuery for myQuery")
     }
 
     /// C++: `void CCHRouter::CCHRouter<E, V, GRAPH>(CCHRouter<E, V, GRAPH> *)`
@@ -77,7 +80,8 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn new_2(other: Ptr<CCHRouter<E, V, GRAPH>>) -> Self {
-        todo!("port CCHRouter::CCHRouter<E, V, GRAPH>")
+        // shortcut: needs the typed myQuery (see CCHRouter::new) and the base SUMOAbstractRouter copy constructor, which is not ported
+        panic!("shortcut: CCHRouter clone ctor needs typed myQuery and the SUMOAbstractRouter copy ctor")
     }
 
     /// C++: `void CCHRouter::~CCHRouter<E, V, GRAPH>()` [virtual]
@@ -86,7 +90,10 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port CCHRouter::~CCHRouter<E, V, GRAPH>")
+        // shortcut: assumes myFallback was allocated with Box (the C++ router owns it); callers that use Box::leak must not drop the router
+        if !self.myFallback.is_null() {
+            unsafe { drop(Box::from_raw(self.myFallback.as_raw())) };
+        }
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * CCHRouter::clone()` [virtual]
@@ -95,7 +102,8 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port CCHRouter::clone")
+        // shortcut: depends on the clone constructor (CCHRouter::new_2), which is not ported yet
+        panic!("shortcut: CCHRouter::clone needs CCHRouter::new_2")
     }
 
     /// C++: `void CCHRouter::reset(const V *const)` [virtual]
@@ -108,7 +116,10 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn reset(&mut self, vehicle: Ptr<V>) {
-        todo!("port CCHRouter::reset")
+        if let Some(hook) = self.myOnReset {
+            hook(vehicle);
+        }
+        self.myFallback.m().reset(vehicle);
     }
 
     /// C++: `bool CCHRouter::compute(const E *, const E *, const V *const, SUMOTime, int &, bool)`
@@ -243,8 +254,9 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //         return true;
     //     }
     #[allow(unused_variables)]
-    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        todo!("port CCHRouter::compute")
+    pub fn compute(&mut self, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+        // shortcut: runQuery needs the typed CustomizableContractionHierarchyQuery (myQuery); the trait bounds for isTazConnector/prohibits/id are in place
+        panic!("shortcut: CCHRouter::compute needs the typed myQuery for runQuery")
     }
 
     /// C++: `void CCHRouter::prohibit(const Prohibitions &)`
@@ -256,7 +268,9 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibit(&mut self, toProhibit: &SUMOAbstractRouter_Prohibitions) {
-        todo!("port CCHRouter::prohibit")
+        self.myProhibited = toProhibit.clone();
+        self.myProhibitionActive = !toProhibit.is_empty();
+        self.myFallback.m().prohibit(toProhibit);
     }
 
     /// C++: `bool CCHRouter::supportsProhibitions() const` [const]
@@ -265,7 +279,7 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn supports_prohibitions(&self) -> bool {
-        todo!("port CCHRouter::supportsProhibitions")
+        true
     }
 
     /// C++: `void CCHRouter::setBulkMode(const bool)`
@@ -275,7 +289,8 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port CCHRouter::setBulkMode")
+        self.base.set_bulk_mode_base(mode);
+        self.myFallback.m().set_bulk_mode(mode);
     }
 
     /// C++: `void CCHRouter::setMsgHandler(MsgHandler *const)`
@@ -286,7 +301,8 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn set_msg_handler(&mut self, errorMsgHandler: Ptr<MsgHandler>) {
-        todo!("port CCHRouter::setMsgHandler")
+        self.base.set_msg_handler(errorMsgHandler);
+        self.myFallback.m().set_msg_handler(errorMsgHandler);
     }
 
     /// C++: `bool CCHRouter::runQuery(MetricPtr, const int &, const int &, const V *const, double)` [private]
@@ -312,8 +328,9 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //         return myQuery.get_distance() < RoutingKit::inf_weight;
     //     }
     #[allow(unused_variables)]
-    pub fn run_query(&mut self, metric: CCHRouter_MetricPtr, sources: &i32, targets: &i32, vehicle: Ptr<V>, t: f64) -> bool {
-        todo!("port CCHRouter::runQuery")
+    pub fn run_query(&mut self, metric: CCHRouter_MetricPtr, sources: &Vec<u32>, targets: &Vec<u32>, vehicle: Ptr<V>, t: f64) -> bool {
+        // shortcut: myQuery is a placeholder i32 (CustomizableContractionHierarchyQuery borrows the metric), so reset/add_source/add_target/run cannot be called yet
+        panic!("shortcut: CCHRouter::runQuery needs the typed CustomizableContractionHierarchyQuery")
     }
 
     /// C++: `void CCHRouter::buildPath(const E *, const E *, bool, bool, int &)` [private]
@@ -330,8 +347,16 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn build_path(&mut self, from: Ptr<E>, to: Ptr<E>, fromTaz: bool, toTaz: bool, path: &mut i32) {
-        todo!("port CCHRouter::buildPath")
+    pub fn build_path(&mut self, from: Ptr<E>, to: Ptr<E>, fromTaz: bool, toTaz: bool, path: &mut Vec<Ptr<E>>) {
+        // shortcut: myQuery is a placeholder i32, so get_node_path() cannot be called yet; the rest of the expansion is ported
+        let nodePath: Vec<u32> = panic!("shortcut: CCHRouter::buildPath needs the typed CustomizableContractionHierarchyQuery");
+        if fromTaz {
+            path.push(from);
+        }
+        self.myGraph.expand_node_path(&nodePath, path);
+        if toTaz {
+            path.push(to);
+        }
     }
 
     /// C++: `bool CCHRouter::prohibitionsCoveredByMetric(SUMOVehicleClass) const` [const, private]
@@ -347,14 +372,25 @@ impl<E, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn prohibitions_covered_by_metric(&self, vClass: SUMOVehicleClass) -> bool {
-        todo!("port CCHRouter::prohibitionsCoveredByMetric")
+        for item in self.myProhibited.iter() {
+            if (item.1.permissions & vClass) != vClass
+                && ({
+                    let perm: SVCPermissions = item.0.cast::<E>().edge_permissions();
+                    (perm & vClass) != 0
+                })
+            {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `CCHRouter<E, V, GRAPH> & CCHRouter::operator=(const CCHRouter<E, V, GRAPH> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &CCHRouter<E, V, GRAPH>) -> &mut CCHRouter<E, V, GRAPH> {
-        todo!("port CCHRouter::operator=")
+        // shortcut: needs the typed myQuery and the SUMOAbstractRouter copy assignment, neither ported yet
+        panic!("shortcut: CCHRouter::operator= needs typed myQuery and SUMOAbstractRouter assignment")
     }
 
 }

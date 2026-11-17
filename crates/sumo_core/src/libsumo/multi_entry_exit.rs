@@ -285,8 +285,9 @@ impl MultiEntryExit {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MultiEntryExit, MULTIENTRYEXIT)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: MultiEntryExit::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_MULTIENTRYEXIT_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int MultiEntryExit::domainID()` [static]
@@ -303,8 +304,7 @@ impl MultiEntryExit {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: MultiEntryExit::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool MultiEntryExit::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -393,7 +393,6 @@ impl MultiEntryExit {
     // }
     #[allow(unused_variables)]
     pub fn get_detector(detID: &str) -> Ptr<MSE3Collector> {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because only ENTRY_EXIT-typed detectors are looked up; MSE3Collector needs #[repr(C)] (base first), upgrade when mse3_collector.rs adds it
         let e3 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ENTRY_EXIT_DETECTOR).get(detID).copied().unwrap_or(Ptr::null()).cast::<MSE3Collector>();
         if e3.is_null() {
             panic!("{}", format!("Multi entry exit detector '{}' is not known", detID));

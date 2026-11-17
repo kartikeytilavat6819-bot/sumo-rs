@@ -23,12 +23,188 @@ pub type MSTrafficLightLogic_VehicleVector = Vec<Ptr<SUMOVehicle>>;
 // C++ static member MSTrafficLightLogic::myEmptyLaneVector
 const MY_EMPTY_LANE_VECTOR: &MSTrafficLightLogic_LaneVector = &Vec::new();
 
+/// Virtual dispatch table for the polymorphic methods of MSTrafficLightLogic.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct MSTrafficLightLogicVt {
+    pub try_switch: fn(&mut MSTrafficLightLogic) -> SUMOTime,
+    pub get_phase_number: fn(&MSTrafficLightLogic) -> i32,
+    pub get_phases: fn(&MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases,
+    pub get_phase: fn(&MSTrafficLightLogic, i32) -> &MSPhaseDefinition,
+    pub get_current_phase_index: fn(&MSTrafficLightLogic) -> i32,
+    pub get_current_phase_def: fn(&MSTrafficLightLogic) -> &MSPhaseDefinition,
+    pub reset_last_switch: fn(&mut MSTrafficLightLogic, SUMOTime),
+    pub get_phase_index_at_time: fn(&MSTrafficLightLogic, SUMOTime) -> SUMOTime,
+    pub get_offset_from_index: fn(&MSTrafficLightLogic, i32) -> SUMOTime,
+    pub get_index_from_offset: fn(&MSTrafficLightLogic, SUMOTime) -> i32,
+    pub change_step_and_duration: fn(&mut MSTrafficLightLogic, &mut MSTLLogicControl, SUMOTime, i32, SUMOTime),
+    pub add_link: fn(&mut MSTrafficLightLogic, Ptr<MSLink>, Ptr<MSLane>, i32),
+    pub init: fn(&mut MSTrafficLightLogic, &mut NLDetectorBuilder),
+    pub adapt_link_information_from: fn(&mut MSTrafficLightLogic, &MSTrafficLightLogic),
+    pub gets_major_green: fn(&MSTrafficLightLogic, i32) -> bool,
+    pub get_detector_states: fn(&MSTrafficLightLogic) -> BTreeMap<String, f64>,
+    pub get_conditions: fn(&MSTrafficLightLogic) -> BTreeMap<String, f64>,
+    pub get_blocking_vehicles: fn(&mut MSTrafficLightLogic, i32) -> MSVehicleContainer_VehicleVector,
+    pub save_state: fn(&MSTrafficLightLogic, &mut OutputDevice),
+    pub load_state: fn(&mut MSTrafficLightLogic, &mut MSTLLogicControl, SUMOTime, i32, SUMOTime, SUMOTime, SUMOTime, bool),
+    pub map_time_in_cycle: fn(&MSTrafficLightLogic, SUMOTime) -> SUMOTime,
+    pub decide_next_phase: fn(&mut MSTrafficLightLogic) -> i32,
+    pub can_release: fn(&mut MSTrafficLightLogic) -> bool,
+    pub compute_return_time: fn(&mut MSTrafficLightLogic) -> SUMOTime,
+}
+
+/// Virtual dispatch table for the rival/priority/driveway queries and detector queries; kept apart from
+/// `MSTrafficLightLogicVt` so the existing per-subclass tables stay valid.
+pub struct MSTrafficLightLogicExtVt {
+    pub get_rival_vehicles: fn(&mut MSTrafficLightLogic, i32) -> MSVehicleContainer_VehicleVector,
+    pub get_priority_vehicles: fn(&mut MSTrafficLightLogic, i32) -> MSVehicleContainer_VehicleVector,
+    pub get_blocking_drive_ways: fn(&mut MSTrafficLightLogic, i32) -> Vec<Ptr<MSDriveWay>>,
+    pub get_requested_drive_way: fn(&mut MSTrafficLightLogic, i32) -> String,
+    pub get_detector_state: fn(&MSTrafficLightLogic, String) -> f64,
+    pub get_tl_queue_length: fn(&MSTrafficLightLogic, String) -> f64,
+    pub load_extra_state: fn(&mut MSTrafficLightLogic, &str),
+    pub get_parameter: fn(&mut MSTrafficLightLogic, &str, &str) -> String,
+    pub set_parameter: fn(&mut MSTrafficLightLogic, &str, &str),
+    pub activate_program: fn(&mut MSTrafficLightLogic),
+    pub deactivate_program: fn(&mut MSTrafficLightLogic),
+}
+
+pub(crate) fn default_decide_next_phase(_: &mut MSTrafficLightLogic) -> i32 {
+    panic!("MSSOTLTrafficLightLogic::decideNextPhase is pure virtual; call it on a concrete traffic light logic")
+}
+pub(crate) fn default_can_release(_: &mut MSTrafficLightLogic) -> bool {
+    panic!("MSSOTLTrafficLightLogic::canRelease is pure virtual; call it on a concrete traffic light logic")
+}
+pub(crate) fn default_compute_return_time(_: &mut MSTrafficLightLogic) -> SUMOTime {
+    panic!("MSSOTLTrafficLightLogic::computeReturnTime is not available on this traffic light logic")
+}
+
+fn default_try_switch(_: &mut MSTrafficLightLogic) -> SUMOTime {
+    panic!("MSTrafficLightLogic::trySwitch is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_phase_number(_: &MSTrafficLightLogic) -> i32 {
+    panic!("MSTrafficLightLogic::getPhaseNumber is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_phases(_: &MSTrafficLightLogic) -> &MSTrafficLightLogic_Phases {
+    panic!("MSTrafficLightLogic::getPhases is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_phase(_: &MSTrafficLightLogic, _: i32) -> &MSPhaseDefinition {
+    panic!("MSTrafficLightLogic::getPhase is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_current_phase_index(_: &MSTrafficLightLogic) -> i32 {
+    panic!("MSTrafficLightLogic::getCurrentPhaseIndex is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_current_phase_def(_: &MSTrafficLightLogic) -> &MSPhaseDefinition {
+    panic!("MSTrafficLightLogic::getCurrentPhaseDef is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_reset_last_switch(_: &mut MSTrafficLightLogic, _: SUMOTime) {
+    panic!("MSTrafficLightLogic::resetLastSwitch is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_phase_index_at_time(_: &MSTrafficLightLogic, _: SUMOTime) -> SUMOTime {
+    panic!("MSTrafficLightLogic::getPhaseIndexAtTime is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_offset_from_index(_: &MSTrafficLightLogic, _: i32) -> SUMOTime {
+    panic!("MSTrafficLightLogic::getOffsetFromIndex is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_get_index_from_offset(_: &MSTrafficLightLogic, _: SUMOTime) -> i32 {
+    panic!("MSTrafficLightLogic::getIndexFromOffset is pure virtual; call it on a concrete traffic light logic")
+}
+fn default_change_step_and_duration(_: &mut MSTrafficLightLogic, _: &mut MSTLLogicControl, _: SUMOTime, _: i32, _: SUMOTime) {
+    panic!("MSTrafficLightLogic::changeStepAndDuration is pure virtual; call it on a concrete traffic light logic")
+}
+
+static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: default_try_switch,
+    get_phase_number: default_get_phase_number,
+    get_phases: default_get_phases,
+    get_phase: default_get_phase,
+    get_current_phase_index: default_get_current_phase_index,
+    get_current_phase_def: default_get_current_phase_def,
+    reset_last_switch: default_reset_last_switch,
+    get_phase_index_at_time: default_get_phase_index_at_time,
+    get_offset_from_index: default_get_offset_from_index,
+    get_index_from_offset: default_get_index_from_offset,
+    change_step_and_duration: default_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: MSTrafficLightLogic::init_base,
+    adapt_link_information_from: MSTrafficLightLogic::adapt_link_information_from_base,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: MSTrafficLightLogic::get_detector_states_base,
+    get_conditions: MSTrafficLightLogic::get_conditions_base,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: MSTrafficLightLogic::save_state_base,
+    load_state: MSTrafficLightLogic::load_state_base,
+    map_time_in_cycle: MSTrafficLightLogic::map_time_in_cycle_base,
+    decide_next_phase: default_decide_next_phase,
+    can_release: default_can_release,
+    compute_return_time: default_compute_return_time,
+};
+
+pub(crate) fn default_ext_get_rival_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    logic.get_rival_vehicles_base(linkIndex)
+}
+
+pub(crate) fn default_ext_get_priority_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    logic.get_priority_vehicles_base(linkIndex)
+}
+
+pub(crate) fn default_ext_get_blocking_drive_ways(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+    logic.get_blocking_drive_ways_base(linkIndex)
+}
+
+pub(crate) fn default_ext_get_requested_drive_way(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
+    logic.get_requested_drive_way_base(linkIndex)
+}
+
+pub(crate) fn default_ext_get_detector_state(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    logic.get_detector_state_base(laneID)
+}
+
+pub(crate) fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    logic.get_tl_queue_length_base(laneID)
+}
+
+pub(crate) fn default_ext_load_extra_state(_: &mut MSTrafficLightLogic, _: &str) {}
+
+pub(crate) fn default_ext_get_parameter(logic: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    logic.base2.get_parameter(key, defaultValue)
+}
+
+pub(crate) fn default_ext_set_parameter(logic: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    logic.base2.set_parameter(key, value);
+}
+
+pub(crate) fn default_ext_activate_program(logic: &mut MSTrafficLightLogic) {
+    logic.activate_program_base();
+}
+
+pub(crate) fn default_ext_deactivate_program(logic: &mut MSTrafficLightLogic) {
+    logic.deactivate_program_base();
+}
+
+pub(crate) static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTrafficLightLogicExtVt {
+    get_rival_vehicles: default_ext_get_rival_vehicles,
+    get_priority_vehicles: default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: default_ext_get_requested_drive_way,
+    get_detector_state: default_ext_get_detector_state,
+    get_tl_queue_length: default_ext_get_tl_queue_length,
+    load_extra_state: default_ext_load_extra_state,
+    get_parameter: default_ext_get_parameter,
+    set_parameter: default_ext_set_parameter,
+    activate_program: default_ext_activate_program,
+    deactivate_program: default_ext_deactivate_program,
+};
+
 /// The parent class for traffic light logics
 /// C++ class `MSTrafficLightLogic` (microsim/traffic_lights/MSTrafficLightLogic.h)
 #[repr(C)]
 pub struct MSTrafficLightLogic {
     /// C++ base class `Named`
     pub base: Named,
+    /// Virtual dispatch table; must stay after `base`
+    pub vt: &'static MSTrafficLightLogicVt,
+    /// Virtual dispatch table for the queries and detector states; installed by the subclasses that override them
+    pub ext_vt: &'static MSTrafficLightLogicExtVt,
     /// C++ base class `Parameterised`
     pub base2: Parameterised,
     /// The id of the logic
@@ -94,6 +270,8 @@ impl MSTrafficLightLogic {
         let _ = (tlcontrol, delay);
         MSTrafficLightLogic {
             base: Named::new(id),
+            vt: &DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT,
+            ext_vt: &DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT,
             base2: Parameterised::from_map(parameters.clone()),
             myProgramID: programID.to_string(),
             myOffset: offset,
@@ -342,6 +520,11 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
+        let vt = self.vt;
+        (vt.init)(self, nb)
+    }
+
+    pub fn init_base(&mut self, nb: &mut NLDetectorBuilder) {
         let phases: MSTrafficLightLogic_Phases = self.get_phases().clone();
         if !phases.is_empty() && (utils::options::options_cont::get_bool("mesosim") || utils::options::options_cont::get_float("meso-tls-penalty") > 0.0) {
             // MSGlobals::gUseMesoSim, MSGlobals::gTLSPenalty
@@ -475,7 +658,74 @@ impl MSTrafficLightLogic {
             };
             utils::write_warningf!("Unsafe green phase % in tlLogic '%', program '%'. Lane '%' is targeted by % 'G'-links. (use 'g' instead)%", firstUnsafePhase, self.get_id(), self.get_program_id(), firstUnsafeLane.get_id(), firstUnsafeOrigins, furtherAffected);
         }
-        // shortcut: the incompatible-junction-logic check (symmetric response between junction links) is skipped because MSLogicJunction::LinkBits is still Unmapped; upgrade when the response bitset is mapped
+        // check incompatible junction logic
+        let mustCheck = MSNet::get_instance().m().has_internal_links();
+        if mustCheck && phases.len() > 0 {
+            // see NBNode::tlsConflict
+            // determinism: C++ std::set<const MSJunction*> is ordered by address; first-seen order is used here
+            let mut controlledJunctions: Vec<Ptr<MSJunction>> = Vec::new();
+            for j in 0..numLinks {
+                for k in 0..self.myLinks[j].len() {
+                    let junction = self.myLinks[j][k].get_junction();
+                    if !controlledJunctions.contains(&junction) {
+                        controlledJunctions.push(junction);
+                    }
+                }
+            }
+            let minor = "gos";
+            for junction in controlledJunctions.iter().copied() {
+                let logic = junction.get_logic();
+                if !logic.is_null() {
+                    let logicSize = logic.get_logic_size();
+                    let mut foundProblem = false;
+                    let mut tlIndex: Vec<i32> = Vec::new();
+                    for u in 0..logicSize {
+                        if foundProblem {
+                            break;
+                        }
+                        let response = logic.get_response_for(u);
+                        for v in 0..logicSize {
+                            if foundProblem {
+                                break;
+                            }
+                            if response.test(v) && logic.get_response_for(v).test(u) {
+                                if tlIndex.len() == 0 {
+                                    tlIndex.resize(logicSize as usize, -1);
+                                    for j in 0..numLinks {
+                                        for k in 0..self.myLinks[j].len() {
+                                            let link = self.myLinks[j][k];
+                                            if link.get_junction() == junction {
+                                                if link.from_internal_lane() {
+                                                    continue;
+                                                }
+                                                if link.is_cont() && !link.get_via_lane().is_null() && link.get_via_lane().get_link_cont()[0].get_tl_index() >= 0 {
+                                                    continue;
+                                                }
+                                                tlIndex[link.get_index() as usize] = link.get_tl_index();
+                                            }
+                                        }
+                                    }
+                                }
+                                let tlu = tlIndex[u as usize];
+                                let tlv = tlIndex[v as usize];
+                                if tlu >= 0 && tlv >= 0 {
+                                    let mut phaseIndex = 0;
+                                    for p in phases.iter() {
+                                        let state = p.get_state().as_bytes();
+                                        if minor.as_bytes().contains(&state[tlu as usize]) && minor.as_bytes().contains(&state[tlv as usize]) {
+                                            utils::write_warningf!("Program '%' at tlLogic '%' is incompatible with logic at junction '%' (mutual conflict between link indices %,% tl indices %,% phase %).\n  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit\n  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.", self.get_program_id(), self.get_id(), junction.get_id(), u, v, tlu, tlv, phaseIndex);
+                                            foundProblem = true;
+                                            break;
+                                        }
+                                        phaseIndex += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         self.myNumLinks = self.myLinks.len() as i32;
     }
 
@@ -622,7 +872,6 @@ impl MSTrafficLightLogic {
         let mut shortEdges: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
         // SHORT_EDGE = (default SUMOVTypeParameter length 5 + minGap 2.5) * 2
         let shortEdgeLength: f64 = (5.0 + 2.5) * 2.0;
-        // shortcut: MESegment::OVERRIDE_TLS_PENALTIES ("meso.tls.control") is read from the logic parameters, which are not stored yet, so it is always off
         let overridePenalty = utils::common::string_utils::to_bool(&self.base2.get_parameter("meso.tls.control", "0")).unwrap_or_else(|e| panic!("{}", e));
         for j in 0..numLinks {
             for k in 0..self.myLinks[j].len() {
@@ -649,7 +898,9 @@ impl MSTrafficLightLogic {
                         utils::write_warningf!("Edge '%' is shorter than %m (%m) and will cause incorrect flow reduction with option --meso-tls-penalty", edge.get_id(), shortEdgeLength, edge.get_length());
                     }
                     if overridePenalty {
-                        // shortcut: MESegment::overrideTLSPenalty needs MSGlobals::gMesoNet, which is not reachable from this port yet; upgrade when MSGlobals statics are ported
+                        let mut last = crate::microsim::ms_globals::meso_net();
+                        let lastSeg = last.m().get_segment_for_edge(edge.m(), f64::MAX);
+                        lastSeg.m().override_tls_penalty();
                     }
                 }
                 link.m().set_meso_tls_penalty(time2steps(tlsPenalty * penalty[j] / durationSeconds));
@@ -697,6 +948,12 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
+        let vt = self.vt;
+        (vt.add_link)(self, link, lane, pos)
+    }
+
+    /// C++ `MSTrafficLightLogic::addLink` body, reached without virtual dispatch (explicit base-class calls)
+    pub fn add_link_base(&mut self, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
         while (self.myLinks.len() as i32) <= pos {
             self.myLinks.push(Vec::new());
         }
@@ -731,6 +988,11 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn adapt_link_information_from(&mut self, logic: &MSTrafficLightLogic) {
+        let vt = self.vt;
+        (vt.adapt_link_information_from)(self, logic)
+    }
+
+    pub fn adapt_link_information_from_base(&mut self, logic: &MSTrafficLightLogic) {
         self.myLinks = logic.myLinks.clone();
         self.myLanes = logic.myLanes.clone();
         self.myIgnoredIndices = logic.myIgnoredIndices.clone();
@@ -788,7 +1050,8 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn try_switch(&mut self) -> SUMOTime {
-        panic!("MSTrafficLightLogic::trySwitch is pure virtual; call it on a concrete traffic light logic")
+        let vt = self.vt;
+        (vt.try_switch)(self)
     }
 
     /// C++: `void MSTrafficLightLogic::activateProgram()` [virtual]
@@ -805,6 +1068,11 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
+        (self.ext_vt.activate_program)(self)
+    }
+
+    /// C++: `void MSTrafficLightLogic::activateProgram()` [virtual, base body]
+    pub fn activate_program_base(&mut self) {
         self.myAmActive = true;
         // updated the traffic light logic stored in the link
         let this = Ptr::from_mut(self);
@@ -822,7 +1090,22 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
+        (self.ext_vt.deactivate_program)(self)
+    }
+
+    /// C++: `void MSTrafficLightLogic::deactivateProgram()` [virtual, base body]
+    pub fn deactivate_program_base(&mut self) {
         self.myAmActive = false;
+    }
+
+    /// C++: `std::string Parameterised::getParameter(...)` as seen through the virtual `MSTrafficLightLogic::getParameter`
+    pub fn get_parameter(&mut self, key: &str, defaultValue: &str) -> String {
+        (self.ext_vt.get_parameter)(self, key, defaultValue)
+    }
+
+    /// C++: `void MSTrafficLightLogic::setParameter(...)` as seen through the virtual dispatch
+    pub fn set_parameter(&mut self, key: &str, value: &str) {
+        (self.ext_vt.set_parameter)(self, key, value)
     }
 
     /// C++: `bool MSTrafficLightLogic::setTrafficLightSignals(SUMOTime) const` [const]
@@ -948,7 +1231,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_phase_number(&self) -> i32 {
-        panic!("MSTrafficLightLogic::getPhaseNumber is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_phase_number)(self)
     }
 
     /// C++: `const Phases & MSTrafficLightLogic::getPhases() const` [const, virtual, pure virtual]
@@ -956,7 +1239,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_phases(&self) -> &MSTrafficLightLogic_Phases {
-        panic!("MSTrafficLightLogic::getPhases is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_phases)(self)
     }
 
     /// C++: `const MSPhaseDefinition & MSTrafficLightLogic::getPhase(int) const` [const, virtual, pure virtual]
@@ -964,7 +1247,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_phase(&self, givenstep: i32) -> &MSPhaseDefinition {
-        panic!("MSTrafficLightLogic::getPhase is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_phase)(self, givenstep)
     }
 
     /// C++: `TrafficLightType MSTrafficLightLogic::getLogicType() const` [const]
@@ -982,7 +1265,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_current_phase_index(&self) -> i32 {
-        panic!("MSTrafficLightLogic::getCurrentPhaseIndex is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_current_phase_index)(self)
     }
 
     /// C++: `const MSPhaseDefinition & MSTrafficLightLogic::getCurrentPhaseDef() const` [const, virtual, pure virtual]
@@ -990,14 +1273,15 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_current_phase_def(&self) -> &MSPhaseDefinition {
-        panic!("MSTrafficLightLogic::getCurrentPhaseDef is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_current_phase_def)(self)
     }
 
     /// C++: `void MSTrafficLightLogic::resetLastSwitch(SUMOTime)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn reset_last_switch(&mut self, t: SUMOTime) {
-        panic!("MSTrafficLightLogic::resetLastSwitch is pure virtual; call it on a concrete traffic light logic")
+        let vt = self.vt;
+        (vt.reset_last_switch)(self, t)
     }
 
     /// C++: `SUMOTime MSTrafficLightLogic::getMinDur(int) const` [const, virtual]
@@ -1077,6 +1361,10 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn map_time_in_cycle(&self, t: SUMOTime) -> SUMOTime {
+        (self.vt.map_time_in_cycle)(self, t)
+    }
+
+    pub fn map_time_in_cycle_base(&self, t: SUMOTime) -> SUMOTime {
         (t - self.myOffset) % self.myDefaultCycleTime
     }
 
@@ -1125,7 +1413,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_phase_index_at_time(&self, simStep: SUMOTime) -> SUMOTime {
-        panic!("MSTrafficLightLogic::getPhaseIndexAtTime is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_phase_index_at_time)(self, simStep)
     }
 
     /// C++: `SUMOTime MSTrafficLightLogic::getOffsetFromIndex(int) const` [const, virtual, pure virtual]
@@ -1133,7 +1421,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_offset_from_index(&self, index: i32) -> SUMOTime {
-        panic!("MSTrafficLightLogic::getOffsetFromIndex is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_offset_from_index)(self, index)
     }
 
     /// C++: `int MSTrafficLightLogic::getIndexFromOffset(SUMOTime) const` [const, virtual, pure virtual]
@@ -1141,7 +1429,7 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_index_from_offset(&self, offset: SUMOTime) -> i32 {
-        panic!("MSTrafficLightLogic::getIndexFromOffset is pure virtual; call it on a concrete traffic light logic")
+        (self.vt.get_index_from_offset)(self, offset)
     }
 
     /// C++: `SUMOTime MSTrafficLightLogic::getOffset() const` [const]
@@ -1181,7 +1469,8 @@ impl MSTrafficLightLogic {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn change_step_and_duration(&mut self, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
-        panic!("MSTrafficLightLogic::changeStepAndDuration is pure virtual; call it on a concrete traffic light logic")
+        let vt = self.vt;
+        (vt.change_step_and_duration)(self, tlcontrol, simStep, step, stepDuration)
     }
 
     /// C++: `bool MSTrafficLightLogic::isSelected() const` [const]
@@ -1223,6 +1512,10 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn gets_major_green(&self, linkIndex: i32) -> bool {
+        (self.vt.gets_major_green)(self, linkIndex)
+    }
+
+    pub fn gets_major_green_base(&self, linkIndex: i32) -> bool {
         if linkIndex >= 0 && linkIndex < self.get_num_links() {
             for p in self.get_phases() {
                 let s = p.get_state();
@@ -1241,6 +1534,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_detector_states(&self) -> BTreeMap<String, f64> {
+        (self.vt.get_detector_states)(self)
+    }
+
+    pub fn get_detector_states_base(&self) -> BTreeMap<String, f64> {
         // C++ default: no detectors
         BTreeMap::new()
     }
@@ -1252,6 +1549,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_detector_state(&self, arg0: String) -> f64 {
+        (self.ext_vt.get_detector_state)(self, arg0)
+    }
+
+    pub fn get_detector_state_base(&self, arg0: String) -> f64 {
         // C++ default: no detectors
         0.0
     }
@@ -1263,6 +1564,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_queue_length(&self, arg0: String) -> f64 {
+        (self.ext_vt.get_tl_queue_length)(self, arg0)
+    }
+
+    pub fn get_tl_queue_length_base(&self, arg0: String) -> f64 {
         // C++ default: no detectors
         0.0
     }
@@ -1274,6 +1579,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_conditions(&self) -> BTreeMap<String, f64> {
+        (self.vt.get_conditions)(self)
+    }
+
+    pub fn get_conditions_base(&self) -> BTreeMap<String, f64> {
         // C++ default: no conditions
         BTreeMap::new()
     }
@@ -1286,6 +1595,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_blocking_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+        (self.vt.get_blocking_vehicles)(self, linkIndex)
+    }
+
+    pub fn get_blocking_vehicles_base(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
         // C++ default: no blocking vehicles
         Vec::new()
     }
@@ -1298,6 +1611,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_rival_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+        (self.ext_vt.get_rival_vehicles)(self, linkIndex)
+    }
+
+    pub fn get_rival_vehicles_base(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
         // C++ default: no rival vehicles
         Vec::new()
     }
@@ -1310,6 +1627,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_priority_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+        (self.ext_vt.get_priority_vehicles)(self, linkIndex)
+    }
+
+    pub fn get_priority_vehicles_base(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
         // C++ default: no priority vehicles
         Vec::new()
     }
@@ -1322,6 +1643,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_blocking_drive_ways(&mut self, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+        (self.ext_vt.get_blocking_drive_ways)(self, linkIndex)
+    }
+
+    pub fn get_blocking_drive_ways_base(&mut self, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
         // C++ default: no blocking driveways
         Vec::new()
     }
@@ -1334,6 +1659,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_requested_drive_way(&mut self, linkIndex: i32) -> String {
+        (self.ext_vt.get_requested_drive_way)(self, linkIndex)
+    }
+
+    pub fn get_requested_drive_way_base(&mut self, linkIndex: i32) -> String {
         // C++ default: no requested driveway
         String::new()
     }
@@ -1343,7 +1672,16 @@ impl MSTrafficLightLogic {
     // virtual void saveState(OutputDevice& /*out*/) const {}
     #[allow(unused_variables)]
     pub fn save_state(&self, arg0: &mut OutputDevice) {
+        (self.vt.save_state)(self, arg0)
+    }
+
+    pub fn save_state_base(&self, arg0: &mut OutputDevice) {
         // C++ default body is empty; subclasses write their state
+    }
+
+    /// C++: `virtual void MSTrafficLightLogic::loadExtraState(const std::string &) {}` [virtual]
+    pub fn load_extra_state(&mut self, state: &str) {
+        (self.ext_vt.load_extra_state)(self, state)
     }
 
     /// C++: `void MSTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
@@ -1360,6 +1698,11 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
+        let vt = self.vt;
+        (vt.load_state)(self, tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
+    }
+
+    pub fn load_state_base(&mut self, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
         self.myAmActive = active;
         let remaining = nextSwitch - t;
         self.change_step_and_duration(tlcontrol, t, step, remaining);
@@ -1438,6 +1781,9 @@ impl crate::microsim::ms_event_control::Command for MSTrafficLightLogic_SwitchCo
     fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
         MSTrafficLightLogic_SwitchCommand::execute(self, currentTime)
     }
+    fn priority(&self) -> i32 {
+        i32::MAX
+    }
 }
 
 impl MSTrafficLightLogic_SwitchCommand {
@@ -1452,7 +1798,6 @@ impl MSTrafficLightLogic_SwitchCommand {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, tlLogic: Ptr<MSTrafficLightLogic>, nextSwitch: SUMOTime) -> Self {
-        // shortcut: C++ sets `priority = max` on the Command base, which is still Unmapped; the event queue therefore orders switch commands by time only, upgrade when Command is ported
         MSTrafficLightLogic_SwitchCommand {
             base: (),
             myTLControl: Ptr::from_mut(tlcontrol),

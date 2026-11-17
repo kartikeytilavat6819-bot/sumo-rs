@@ -34,6 +34,49 @@ fn add_step_6(logic: Ptr<NBTrafficLightLogic>, duration: SUMOTime, state: &str, 
     logic.m().add_step_2(duration, state, minDur, maxDur, earliestEnd, latestEnd, u, u, u, "", &Vec::new(), -1);
 }
 
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn own_tl_def_of(d: &NBTrafficLightDefinition) -> &NBOwnTLDef {
+    Ptr::new(d).cast::<NBOwnTLDef>().get().unwrap()
+}
+fn own_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBOwnTLDef {
+    Ptr::from_mut(d).cast::<NBOwnTLDef>().get_mut().unwrap()
+}
+fn own_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    own_tl_def_of_mut(d).collect_links()
+}
+fn own_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    own_tl_def_of(d).set_tl_controlling_information()
+}
+fn own_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    own_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn own_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    own_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn own_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    own_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn own_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    own_tl_def_of_mut(d).get_max_index()
+}
+fn own_tl_def_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    own_tl_def_of(d).init_needs_cont_relation()
+}
+fn own_tl_def_get_layout(d: &NBTrafficLightDefinition) -> TrafficLightLayout {
+    own_tl_def_of(d).get_layout()
+}
+static NB_OWN_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: own_tl_def_collect_links,
+    set_tl_controlling_information: own_tl_def_set_tl_controlling_information,
+    remap_removed: own_tl_def_remap_removed,
+    replace_removed: own_tl_def_replace_removed,
+    my_compute: own_tl_def_my_compute,
+    get_max_index: own_tl_def_get_max_index,
+    init_needs_cont_relation: own_tl_def_init_needs_cont_relation,
+    get_layout: own_tl_def_get_layout,
+    ..DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT
+};
+
 /// A traffic light logics which must be computed (only nodes/edges are given)
 /// C++ class `NBOwnTLDef` (netbuild/NBOwnTLDef.h)
 #[repr(C)]
@@ -72,12 +115,16 @@ impl NBOwnTLDef {
     //     myLayout(TrafficLightLayout::DEFAULT) {
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+    pub fn new(id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(Self {
             base: NBTrafficLightDefinition::new(id, junctions, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        });
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
+        d.base.register_junctions(junctions);
+        d
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, NBNode *, SUMOTime, TrafficLightType)`
@@ -89,12 +136,16 @@ impl NBOwnTLDef {
     //     myLayout(TrafficLightLayout::DEFAULT) {
     // }
     #[allow(unused_variables)]
-    pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+    pub fn new_2(id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(Self {
             base: NBTrafficLightDefinition::new_2(id, junction, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        });
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
+        d.base.add_node(junction);
+        d
     }
 
     /// C++: `void NBOwnTLDef::NBOwnTLDef(const std::string &, SUMOTime, TrafficLightType)`
@@ -107,11 +158,14 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        Self {
+        let mut d = Self {
             base: NBTrafficLightDefinition::new_3(id, NBTrafficLightDefinition_DefaultProgramID, offset, type_),
             myHaveSinglePhase: false,
             myLayout: TrafficLightLayout::DEFAULT,
-        }
+        };
+        d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
+        d
     }
 
     /// C++: `void NBOwnTLDef::~NBOwnTLDef() noexcept` [virtual]
@@ -1289,9 +1343,9 @@ impl NBOwnTLDef {
     pub fn compute_logic_and_conts(&mut self, brakingTimeSeconds: i32, onlyConts: bool) -> Ptr<NBTrafficLightLogic> {
         if self.myControlledNodes.len() == 1 {
             // otherwise, use values from previous call to initNeedsContRelation
-            self.myNeedsContRelation.clear();
+            self.myNeedsContRelation.borrow_mut().clear();
         }
-        self.myExtraConflicts.clear();
+        self.myExtraConflicts.borrow_mut().clear();
         let isNEMA = self.myType == TrafficLightType::NEMA;
         let brakingTime: SUMOTime = time2steps(brakingTimeSeconds as f64);
         let leftTurnTime: SUMOTime = time2steps(utils::options::options_cont::get_int("tls.left-green.time") as f64);
@@ -1358,9 +1412,8 @@ impl NBOwnTLDef {
                     {
                         crossingTime.push(0);
                     } else {
-                        // shortcut: NBEdge::Connection::length is read through base2 (NBRouterEdge::getLength), which is still a todo in nb_edge.rs, upgrade: fill NBRouterEdge::get_length for connections
                         crossingTime.push(time2steps(
-                            (approached.base2.get_length() + approached.viaLength) / approached.vmax.max(NBOwnTLDef_MIN_SPEED_CROSSING_TIME),
+                            (approached.length + approached.viaLength) / approached.vmax.max(NBOwnTLDef_MIN_SPEED_CROSSING_TIME),
                         ));
                     }
                     if !approached.toEdge.is_null() {
@@ -1826,9 +1879,9 @@ impl NBOwnTLDef {
                 }
             }
         }
-        self.myExtraConflictsReady = true;
+        self.myExtraConflictsReady.set(true);
         if self.myControlledNodes.len() == 1 {
-            self.myNeedsContRelationReady = true;
+            self.myNeedsContRelationReady.set(true);
         }
         if totalDuration > 0 {
             if totalDuration > 3 * (greenTime + 2 * brakingTime + leftTurnTime) && !isNEMA && self.get_id() != NBTrafficLightDefinition_DummyID {
@@ -1875,22 +1928,21 @@ impl NBOwnTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        if !self.myNeedsContRelationReady {
+        if !self.myNeedsContRelationReady.get() {
             if self.myControlledNodes.len() > 0 {
                 // we use a dummy node just to maintain const-correctness
-                Ptr::new(self).m().myNeedsContRelation.clear();
+                self.myNeedsContRelation.borrow_mut().clear();
                 for n in self.myControlledNodes.clone() {
-                    // shortcut: C++ registers the dummy with node n via its constructor; the port's constructor does not, upgrade: construct the definition boxed/in place
                     let mut dummy = NBOwnTLDef::new_2(NBTrafficLightDefinition_DummyID, n, 0, TrafficLightType::STATIC);
                     dummy.set_participants_information();
                     let tllDummy = dummy.compute_logic_and_conts(0, true);
                     let _ = tllDummy; // C++: delete tllDummy
-                    let rel = dummy.myNeedsContRelation.clone();
-                    Ptr::new(self).m().myNeedsContRelation.extend(rel);
+                    let rel = dummy.myNeedsContRelation.borrow().clone();
+                    self.myNeedsContRelation.borrow_mut().extend(rel);
                     n.m().remove_traffic_light(Ptr::from_mut(&mut dummy.base));
                 }
             }
-            Ptr::new(self).m().myNeedsContRelationReady = true;
+            self.myNeedsContRelationReady.set(true);
         }
     }
 
@@ -2673,6 +2725,7 @@ impl NBOwnTLDef {
         //  by priority, first
         let mut used: EdgeVector = Vec::new();
         let sorter = NBOwnTLDef_edge_by_incoming_priority_sorter {};
+        // strict order: ties are broken by edge id
         incoming.sort_by(|a, b| {
             if sorter.call_op(*a, *b) != 0 {
                 std::cmp::Ordering::Less
@@ -3165,7 +3218,7 @@ impl NBOwnTLDef {
                         if self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, controlledWithin) || rightTurnConflicts[i1] {
                             st[i1] = b'g';
                             if self.myControlledNodes.len() == 1 {
-                                self.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2]));
+                                self.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2]));
                             }
                             if !isTurnaround[i1] && !hadGreenMajor[i1] && !rightTurnConflicts[i1] {
                                 *haveForbiddenLeftMover = true;
@@ -3209,7 +3262,7 @@ impl NBOwnTLDef {
                                 && (self.forbids(fromEdges[i2], toEdges[i2], fromEdges[i1], toEdges[i1], true, false)
                                     || self.forbids(fromEdges[i1], toEdges[i1], fromEdges[i2], toEdges[i2], true, false))
                             {
-                                self.myExtraConflicts.insert((i1 as i32, i2 as i32));
+                                self.myExtraConflicts.borrow_mut().insert((i1 as i32, i2 as i32));
                             }
                         }
                     }

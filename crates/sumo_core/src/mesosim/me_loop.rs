@@ -57,7 +57,7 @@ impl MELoop_LeaderEvent {
     pub fn new(v: Ptr<MEVehicle>) -> Self {
         MELoop_LeaderEvent {
             time: v.get_event_time(),
-            eventIndex: v.get_event_index(),
+            eventIndex: LEADER_EVENT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             nid: v.get_numerical_id(),
             veh: v,
         }
@@ -184,9 +184,6 @@ impl MELoop {
     // }
     #[allow(unused_variables)]
     pub fn add_leader_car(&mut self, veh: Ptr<MEVehicle>, link: Ptr<MSLink>, fromState: bool) {
-        if !fromState {
-            veh.m().set_event_index(LEADER_EVENT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
-        }
         self.myLeaderCars.push(MELoop_LeaderEvent::new(veh));
         veh.m().set_approaching(link);
     }
@@ -306,7 +303,7 @@ impl MELoop {
             let id = format!("{}:{}", e.get_id(), s);
             let speed = e.get_lanes()[0].get_speed_limit();
             // segments live for the whole run (C++ owns them with raw new); leaked here so the Ptr stays valid
-            // shortcut: segments are never freed, matching C++ (no delete in the MELoop destructor)
+            // C++ never deletes segments (no delete in the MELoop destructor), so they are not freed here either
             newSegment = if lift {
                 let seg: &mut MELSegment = Box::leak(Box::new(MELSegment::new(&id, e, nextSegment, slength, speed, s, multiQueue, edgeType)));
                 Ptr::from_mut(&mut seg.base)
@@ -388,10 +385,9 @@ impl MELoop {
     //         }
     //         // all queues on the next segment are forbidden. We don't want to check
     //         // too often whether the forbiden edge has become permitted again
-    //         const SUMOTime ttt = veh->getVehicleType().getParameter().getTimeToTeleport(MSGlobals::gTimeToGridlock);
-    //         if (ttt > 0) {
+    //         if (MSGlobals::gTimeToGridlock > 0) {
     //             // if teleporting is enabled, make sure we look at the vehicle when the gridlock-time is up
-    //             const SUMOTime recheck = MSGlobals::gTimeToTeleportDisconnected >= 0 ? MIN2(ttt, MSGlobals::gTimeToTeleportDisconnected) : ttt;
+    //             const SUMOTime recheck = MSGlobals::gTimeToTeleportDisconnected >= 0 ? MIN2(MSGlobals::gTimeToGridlock, MSGlobals::gTimeToTeleportDisconnected) : MSGlobals::gTimeToGridlock;
     //             return MAX2(MIN2(leaveTime + myLinkRecheckInterval, MIN2(veh->getBlockTime(), leaveTime) + recheck + 1), leaveTime + 1);
     //         }
     //         return leaveTime + myLinkRecheckInterval;
@@ -458,10 +454,9 @@ impl MELoop {
             }
             // all queues on the next segment are forbidden. We don't want to check
             // too often whether the forbiden edge has become permitted again
-            let ttt = veh.get_vehicle_type().get_parameter().get_time_to_teleport(MSGlobals::time_to_gridlock());
-            if ttt > 0 {
+            if MSGlobals::time_to_gridlock() > 0 {
                 // if teleporting is enabled, make sure we look at the vehicle when the gridlock-time is up
-                let recheck = if MSGlobals::time_to_teleport_disconnected() >= 0 { std::cmp::min(ttt, MSGlobals::time_to_teleport_disconnected()) } else { ttt };
+                let recheck = if MSGlobals::time_to_teleport_disconnected() >= 0 { std::cmp::min(MSGlobals::time_to_gridlock(), MSGlobals::time_to_teleport_disconnected()) } else { MSGlobals::time_to_gridlock() };
                 return std::cmp::max(std::cmp::min(leaveTime + self.myLinkRecheckInterval, std::cmp::min(veh.get_block_time(), leaveTime) + recheck + 1), leaveTime + 1);
             }
             return leaveTime + self.myLinkRecheckInterval;
@@ -549,8 +544,7 @@ impl MELoop {
     //     if (nextEntry == leaveTime) {
     //         return;
     //     }
-    //     const SUMOTime ttt = veh->getVehicleType().getParameter().getTimeToTeleport(MSGlobals::gTimeToGridlock);
-    //     const bool r1 = ttt > 0 && veh->getWaitingTime() > ttt;
+    //     const bool r1 = MSGlobals::gTimeToGridlock > 0 && veh->getWaitingTime() > MSGlobals::gTimeToGridlock;
     //     const bool r3 = MSGlobals::gTimeToTeleportDisconnected >= 0 && veh->getWaitingTime() > MSGlobals::gTimeToTeleportDisconnected;
     //     if (!veh->isStopped() && (r1 || r3)) {
     //         const bool disconnected = (MSGlobals::gTimeToTeleportDisconnected >= 0
@@ -568,18 +562,10 @@ impl MELoop {
     //     if (nextEntry == SUMOTime_MAX) {
     //         // all usable queues on the next segment are full
     //         SUMOTime newEventTime = MAX3(toSegment->getEventTime() + 1, leaveTime + 1, leaveTime + myFullRecheckInterval);
-    //         if (ttt) {
+    //         if (MSGlobals::gTimeToGridlock > 0) {
     //             // if teleporting is enabled, make sure we look at the vehicle when the gridlock-time is up
-    //             const SUMOTime recheck = veh->getBlockTime() + 1 + ttt;
-    //             if (recheck > leaveTime) {
-    //                 newEventTime = MIN2(newEventTime, recheck);
-    //             }
-    //         }
-    //         if (MSGlobals::gTimeToTeleportDisconnected >= 0) {
-    //             const SUMOTime recheck = veh->getBlockTime() + 1 + MSGlobals::gTimeToTeleportDisconnected;
-    //             if (recheck > leaveTime && veh->getEdge()->allowedLanes(*veh->succEdge(1), veh->getVClass()) == nullptr) {
-    //                 newEventTime = MIN2(newEventTime, recheck);
-    //             }
+    //             const SUMOTime recheck = MSGlobals::gTimeToTeleportDisconnected >= 0 ? MIN2(MSGlobals::gTimeToGridlock, MSGlobals::gTimeToTeleportDisconnected) : MSGlobals::gTimeToGridlock;
+    //             newEventTime = MAX2(MIN2(newEventTime, veh->getBlockTime() + recheck + 1), leaveTime + 1);
     //         }
     //         veh->setEventTime(newEventTime);
     //     } else {
@@ -599,8 +585,7 @@ impl MELoop {
         if nextEntry == leaveTime {
             return;
         }
-        let ttt = veh.get_vehicle_type().get_parameter().get_time_to_teleport(MSGlobals::time_to_gridlock());
-        let r1 = ttt > 0 && veh.get_waiting_time(false) > ttt;
+        let r1 = MSGlobals::time_to_gridlock() > 0 && veh.get_waiting_time(false) > MSGlobals::time_to_gridlock();
         let r3 = MSGlobals::time_to_teleport_disconnected() >= 0 && veh.get_waiting_time(false) > MSGlobals::time_to_teleport_disconnected();
         if !veh.is_stopped() && (r1 || r3) {
             let disconnected = MSGlobals::time_to_teleport_disconnected() >= 0
@@ -617,18 +602,10 @@ impl MELoop {
         if nextEntry == SUMOTIME_MAX {
             // all usable queues on the next segment are full
             let mut newEventTime = std::cmp::max(std::cmp::max(toSegment.get_event_time() + 1, leaveTime + 1), leaveTime + self.myFullRecheckInterval);
-            if ttt != 0 {
+            if MSGlobals::time_to_gridlock() > 0 {
                 // if teleporting is enabled, make sure we look at the vehicle when the gridlock-time is up
-                let recheck = veh.get_block_time() + 1 + ttt;
-                if recheck > leaveTime {
-                    newEventTime = std::cmp::min(newEventTime, recheck);
-                }
-            }
-            if MSGlobals::time_to_teleport_disconnected() >= 0 {
-                let recheck = veh.get_block_time() + 1 + MSGlobals::time_to_teleport_disconnected();
-                if recheck > leaveTime && veh.get_edge().allowed_lanes(&veh.succ_edge(1), veh.get_v_class(), false).is_null() {
-                    newEventTime = std::cmp::min(newEventTime, recheck);
-                }
+                let recheck = if MSGlobals::time_to_teleport_disconnected() >= 0 { std::cmp::min(MSGlobals::time_to_gridlock(), MSGlobals::time_to_teleport_disconnected()) } else { MSGlobals::time_to_gridlock() };
+                newEventTime = std::cmp::max(std::cmp::min(newEventTime, veh.get_block_time() + recheck + 1), leaveTime + 1);
             }
             veh.m().set_event_time(newEventTime, true);
         } else {

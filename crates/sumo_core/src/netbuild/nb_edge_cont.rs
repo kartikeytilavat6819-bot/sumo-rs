@@ -6,6 +6,8 @@ use utils::geom::POSITION_EPS;
 use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
 use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_PASSENGER, SVC_PEDESTRIAN, SVC_PUBLIC_CLASSES, SVC_TRAM, SVC_UNSPECIFIED, SVC_VULNERABLE, is_railway, is_tram};
 use super::nb_cont::KeepClear;
+use crate::utils::named_rtree::NamedRTree;
+use utils::common::named::{Named, NamedStoringVisitor};
 
 /// `std::istringstream(id) >> long long`: optional leading whitespace, optional sign, then digits;
 /// None when no number can be read
@@ -56,29 +58,22 @@ impl EdgeIDSupplier {
     }
 }
 
-/// Mutable access to a shared stop (same pattern as nbpt_line_cont; C++ shared_ptr<NBPTStop> is mutated through copies)
-fn stop_mut_local(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 // C++ NBEdge::UNSPECIFIED_* defaults (NBEdge.cpp)
 const UNSPECIFIED_SPEED: f64 = -1.;
 const UNSPECIFIED_FRICTION: f64 = 1.;
 const UNSPECIFIED_CONTPOS: f64 = -1.;
 const UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-// shortcut: C++ uses NBEdge::myDefaultConnectionLength (static, settable); the static is not ported yet, so the unspecified default -1 is used
-const UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 const UNSPECIFIED_WIDTH: f64 = -1.;
 const UNSPECIFIED_OFFSET: f64 = 0.;
 
 /// C++ `addLane2LaneConnection(from, dest, toLane, type, mayUseSameDestination)` with the header defaults filled in
 fn add_lane2_lane_connection_validated(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayUseSameDestination: bool) -> bool {
-    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, mayUseSameDestination, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, mayUseSameDestination, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
 /// C++ `addLane2LaneConnection(from, dest, toLane, COMPUTED)` with the header defaults filled in
 fn add_lane2_lane_connection_computed(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32) -> bool {
-    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::COMPUTED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
 /// C++ typedef `std::map<std::string, NBEdge *> NBEdgeCont::EdgeCont`
@@ -886,8 +881,8 @@ impl NBEdgeCont {
             return;
         }
         let origID = e.get_id().to_string();
-        // determinism: C++ std::sort is unstable (introsort); Rust sort_by is stable, equal pos values may be ordered differently
-        splits.sort_by(|a, b| a.pos.partial_cmp(&b.pos).unwrap_or(std::cmp::Ordering::Equal));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal pos values tie)
+        utils::common::std_sort::std_sort_vec(&mut splits, |a, b| a.pos < b.pos);
         let mut maxNumLanes = e.get_num_lanes();
         // compute the node positions and sort the lanes
         for split in splits.iter_mut() {
@@ -1661,7 +1656,7 @@ impl NBEdgeCont {
             if edge.is_bidi_rail(false) && (stopEdgeIDs.contains(itemName) || stopEdgeIDs.contains(edge.get_turn_destination(true).get_id())) {
                 let to = edge.get_turn_destination(true);
                 assert!(!to.is_null());
-                edge.m().set_connection(edge.get_num_lanes() - 1, to, to.get_num_lanes() - 1, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+                edge.m().set_connection(edge.get_num_lanes() - 1, to, to.get_num_lanes() - 1, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, utils::common::std_defs::SUMO_CONST_HALTING_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
                 // finalize connections to prevent removal during recheck
                 edge.m().declare_connections_as_loaded(NBEdge_EdgeBuildingStep::LANES2LANES_USER);
             }
@@ -1857,17 +1852,9 @@ impl NBEdgeCont {
         let mut priority: i32 = -1;
         let mut joinEdges = true;
         let mut id = String::new();
-        // determinism: C++ std::sort is unstable; sort_by with the same strict-weak comparator gives the same order for distinct keys
+        // determinism: libstdc++ std::sort order
         let sorter = NBContHelper_same_connection_edge_sorter::new();
-        edges.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(&mut edges, |a, b| sorter.call_op(a, b) != 0);
         // retrieve the connected nodes
         let tpledge = edges[0];
         let from = tpledge.m().get_from_node();
@@ -2476,12 +2463,14 @@ impl NBEdgeCont {
     // }
     #[allow(unused_variables)]
     pub fn extract_roundabouts(&mut self) -> i32 {
-        let mut candidateEdges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
+        // determinism: C++ std::set<NBEdge*> orders candidates by heap address, which cannot be reproduced;
+        // we keep the myEdges (edge id) order that C++ feeds into that set, so no reordering happens
+        let mut candidateEdges: Vec<Ptr<NBEdge>> = Vec::new();
         let roundabout = NBEdge_JunctionPriority::ROUNDABOUT as i32;
         for edge in self.myEdges.values() {
             let e = *edge;
             if e.m().get_junction_priority(e.m().get_to_node()) == roundabout || e.m().get_junction_priority(e.m().get_from_node()) == roundabout {
-                candidateEdges.insert(e);
+                candidateEdges.push(e);
             }
         }
         let mut visited: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
@@ -3413,7 +3402,7 @@ impl NBEdgeCont {
             toChange.retain(|k, _| !keep.contains(k));
         }
 
-        let mut stopsOnEdge: BTreeMap<String, Vec<Rc<NBPTStop>>> = BTreeMap::new();
+        let mut stopsOnEdge: BTreeMap<String, Vec<Ptr<NBPTStop>>> = BTreeMap::new();
         for (_, item) in sc.get_stops().iter() {
             stopsOnEdge.entry(item.get_edge_id().to_string()).or_default().push(item.clone());
         }
@@ -3433,7 +3422,7 @@ impl NBEdgeCont {
             self.myEdges.insert(edge.m().get_id().to_string(), edge);
             if let Some(stops) = stopsOnEdge.get(&origID) {
                 for stop in stops.iter() {
-                    stop_mut_local(stop).set_edge_id(format!("{}{}", prefix, edge.m().get_id()), &*self);
+                    stop.m().set_edge_id(format!("{}{}", prefix, edge.m().get_id()), &*self);
                 }
             }
         }
@@ -3928,13 +3917,12 @@ impl NBEdgeCont {
             return 0;
         }
         let mut numJoined: i32 = 0;
-        // bounding boxes of the tram edges (C++ NamedRTree, emulated by a linear scan with the same float boxes)
-        let mut tramBoxes: Vec<([f32; 2], [f32; 2], Ptr<NBEdge>)> = Vec::new();
+        let mut tramTree = NamedRTree::new();
         for edge in tramEdges.iter().copied() {
             let bound = edge.m().get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            tramBoxes.push((min, max, edge));
+            tramTree.insert(&min, &max, &edge.cast::<Named>());
         }
         // {targetEdge, laneIndex : tramEdge}; C++ MinLaneComparatorIdLess orders by id then lane
         let mut matches: BTreeMap<(String, i32), (Ptr<NBEdge>, i32, Ptr<NBEdge>)> = BTreeMap::new();
@@ -3945,12 +3933,13 @@ impl NBEdgeCont {
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
             // the nearby set is actually just re-sorting according to the id to make the tests comparable
+            let mut near: BTreeSet<Ptr<Named>> = BTreeSet::new();
+            let visitor = NamedStoringVisitor::new(&mut near);
+            tramTree.search(&min, &max, &visitor, |d, c| d.add_to(c));
             let mut nearby: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
-            for (tmin, tmax, namedEdge) in tramBoxes.iter() {
-                let overlaps = (0..2).all(|d| !(min[d] > tmax[d] || tmin[d] > max[d]));
-                if overlaps {
-                    nearby.entry(namedEdge.m().get_id().to_string()).or_insert(*namedEdge);
-                }
+            for namedEdge in &near {
+                let e = namedEdge.cast::<NBEdge>();
+                nearby.entry(e.m().get_id().to_string()).or_insert(e);
             }
             for tramEdge in nearby.values().copied() {
                 // find a continous stretch of tramEdge that runs along one of the lanes of the road edge

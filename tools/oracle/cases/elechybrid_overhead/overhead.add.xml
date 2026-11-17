@@ -1,0 +1,18 @@
+<additionals>
+    <tractionSubstation id="trSub1" voltage="600" currentLimit="1600"/>
+    <tractionSubstation id="trSub2" voltage="700" currentLimit="1600"/>
+
+    <overheadWireSegment id="ovh_w2m_0" lane="w2m_0" voltageSource="true"/>
+    <overheadWireSegment id="ovh_w2m_1" lane="w2m_1" startPos="0" endPos="250"/>
+    <overheadWireSegment id="ovh_m2e_0" lane="m2e_0"/>
+    <overheadWireSegment id="ovh_m2e_1" lane="m2e_1"/>
+    <overheadWireSegment id="ovh_e2m_0" lane="e2m_0" voltageSource="true"/>
+    <overheadWireSegment id="ovh_e2m_1" lane="e2m_1"/>
+    <overheadWireSegment id="ovh_m2w_0" lane="m2w_0" startPos="20"/>
+    <overheadWireSegment id="ovh_m2w_1" lane="m2w_1"/>
+
+    <overheadWireClamp id="clampA" substationId="trSub1" idSegmentStartClamp="ovh_m2e_1" idSegmentEndClamp="ovh_w2m_0"/>
+
+    <overheadWire segments="ovh_w2m_0 ovh_w2m_1 ovh_m2e_0 ovh_m2e_1" substationId="trSub1" clamps="clampA"/>
+    <overheadWire segments="ovh_e2m_0 ovh_e2m_1 ovh_m2w_0 ovh_m2w_1" substationId="trSub2"/>
+</additionals>

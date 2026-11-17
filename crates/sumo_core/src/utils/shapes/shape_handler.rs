@@ -84,8 +84,7 @@ impl ShapeHandler {
     #[allow(unused_variables)]
     pub fn load_files(files: &Vec<String>, sh: &mut ShapeHandler) -> bool {
         for fileIt in files.iter() {
-            // shortcut: XMLSubSys::runParser needs ShapeHandler as a SaxHandler (SUMOSAXHandler base is unported), upgrade when wired
-            let parsed: bool = panic!("ShapeHandler::loadFiles: XMLSubSys::runParser not wired");
+            let parsed: bool = utils::xml::xml_sub_sys::run_parser(&mut *sh, fileIt, false, false, false, true).unwrap_or(false);
             if !parsed {
                 write_messagef!("Loading of shapes from % failed.", fileIt);
                 return false;
@@ -360,7 +359,7 @@ impl ShapeHandler {
         };
         // If the image file is set, change the default POI color to white.
         if imgFile != "" && !utils::common::file_helpers::is_absolute(&imgFile) {
-            imgFile = utils::common::file_helpers::get_configuration_relative({ panic!("shortcut: ShapeHandler base SUMOSAXHandler is unported, file name unavailable; upgrade when SAX base is wired") }, &imgFile);
+            imgFile = utils::common::file_helpers::get_configuration_relative(self.get_file_name(), &imgFile);
         }
         let width: f64 = attrs.get_opt::<f64>(SUMO_ATTR_WIDTH, id.as_str(), &mut ok, DEFAULT_IMG_WIDTH, true);
         let height: f64 = attrs.get_opt::<f64>(SUMO_ATTR_HEIGHT, id.as_str(), &mut ok, DEFAULT_IMG_HEIGHT, true);
@@ -530,7 +529,7 @@ impl ShapeHandler {
             let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, id.as_str(), &mut ok, DEFAULT_ANGLE, true);
             let mut imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, id.as_str(), &mut ok, DEFAULT_IMG_FILE.to_string(), true);
             if imgFile != "" && !utils::common::file_helpers::is_absolute(&imgFile) {
-                imgFile = utils::common::file_helpers::get_configuration_relative({ panic!("shortcut: ShapeHandler base SUMOSAXHandler is unported, file name unavailable; upgrade when SAX base is wired") }, &imgFile);
+                imgFile = utils::common::file_helpers::get_configuration_relative(self.get_file_name(), &imgFile);
             }
             // check that shape's size is valid
             if shape.len() == 0 {
@@ -583,5 +582,19 @@ impl ShapeHandler {
         panic!("ShapeHandler::operator= is deleted in C++")
     }
 
+}
+
+impl utils::xml::generic_sax_handler::SaxHandler for ShapeHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        ShapeHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        ShapeHandler::my_end_element(self, element);
+        Ok(())
+    }
 }
 

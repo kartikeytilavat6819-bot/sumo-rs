@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="rA" edges="5197062#0 5197062#1"/>
+  <route id="rB" edges="5197062#0 -5197062#0"/>
+  <route id="rC" edges="-5197062#1 -5197062#0"/>
+  <route id="rD" edges="-5197062#1 5197062#1"/>
+  <vehicle id="l0" route="rA" depart="0"/>
+  <vehicle id="l1" route="rB" depart="3"/>
+  <vehicle id="l2" route="rC" depart="6"/>
+  <vehicle id="l3" route="rD" depart="9"/>
+  <vehicle id="l4" route="rA" depart="12"/>
+  <vehicle id="l5" route="rB" depart="15"/>
+  <vehicle id="l6" route="rC" depart="18"/>
+  <vehicle id="l7" route="rD" depart="21"/>
+  <vehicle id="l8" route="rA" depart="24"/>
+  <vehicle id="l9" route="rB" depart="27"/>
+  <vehicle id="l10" route="rC" depart="30"/>
+  <vehicle id="l11" route="rD" depart="33"/>
+  <vehicle id="l12" route="rA" depart="36"/>
+  <vehicle id="l13" route="rB" depart="39"/>
+  <vehicle id="l14" route="rC" depart="42"/>
+  <vehicle id="l15" route="rD" depart="45"/>
+  <vehicle id="l16" route="rA" depart="48"/>
+  <vehicle id="l17" route="rB" depart="51"/>
+  <vehicle id="l18" route="rC" depart="54"/>
+  <vehicle id="l19" route="rD" depart="57"/>
+  <vehicle id="l20" route="rA" depart="60"/>
+  <vehicle id="l21" route="rB" depart="63"/>
+  <vehicle id="l22" route="rC" depart="66"/>
+  <vehicle id="l23" route="rD" depart="69"/>
+  <vehicle id="l24" route="rA" depart="72"/>
+  <vehicle id="l25" route="rB" depart="75"/>
+  <vehicle id="l26" route="rC" depart="78"/>
+  <vehicle id="l27" route="rD" depart="81"/>
+  <vehicle id="l28" route="rA" depart="84"/>
+  <vehicle id="l29" route="rB" depart="87"/>
+</routes>

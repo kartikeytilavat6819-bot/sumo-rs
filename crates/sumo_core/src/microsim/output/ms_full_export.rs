@@ -1,12 +1,9 @@
 //! Port of microsim/output/MSFullExport.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::geom::geom_helper::navi_degree;
 use utils::geom::NUMERICAL_EPS;
 
-// shortcut: MSGlobals::gUsingInternalLanes is not ported (ms_globals.rs is empty); C++ default is false, upgrade when MSGlobals is filled
-fn g_using_internal_lanes() -> bool {
-    false
-}
 
 /// C++ `MSLane::getEmissions<ET>()` template body (MSLane.h): sums the per-vehicle emissions of the lane.
 /// The ms_lane.rs stub has no template parameter, so the sum is computed here from the same pieces.
@@ -120,8 +117,48 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_vehicles(of: &mut OutputDevice) {
-        // shortcut: vehicle rows need MSVehicle acceleration, slope, waiting time and lane, which a loaded SUMOVehicle does not expose without a repr(C) downcast; only the enclosing element is written until then
         of.open_tag("vehicles");
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        let has_ele = net.has_elevation();
+        for (_, v) in vc.myVehicleDict.iter() {
+            if v.is_on_road() {
+                // dynamic_cast<const MSVehicle*>: only microsim vehicles have a waiting time and a lane
+                let micro_veh: Ptr<MSVehicle> = if MSGlobals::use_meso_sim() { Ptr::null() } else { v.cast::<MSVehicle>() };
+                let vtype_id = v.get_vehicle_type().get_id();
+                let fclass = &vtype_id[..vtype_id.find('@').unwrap_or(vtype_id.len())];
+                let eclass = v.get_vehicle_type().get_emission_class();
+                let emiss = PollutantsInterface::compute_all(eclass, v.get_speed(), v.get_acceleration(), v.get_slope(), v.get_emission_parameters());
+                of.open_tag("vehicle");
+                of.write_attr("id", v.get_id());
+                of.write_attr("eclass", &PollutantsInterface::get_name(eclass));
+                of.write_attr("CO2", &emiss.CO2);
+                of.write_attr("CO", &emiss.CO);
+                of.write_attr("HC", &emiss.HC);
+                of.write_attr("NOx", &emiss.NOx);
+                of.write_attr("PMx", &emiss.PMx);
+                of.write_attr("fuel", &emiss.fuel);
+                of.write_attr("electricity", &emiss.electricity);
+                of.write_attr("noise", &HelpersHarmonoise::compute_noise(eclass, v.get_speed(), v.get_acceleration()));
+                of.write_attr("route", v.get_route().get_id());
+                of.write_attr("type", fclass);
+                if !micro_veh.is_null() {
+                    of.write_attr("waiting", &micro_veh.get_waiting_seconds());
+                    of.write_attr("lane", micro_veh.get_lane().get_id());
+                }
+                of.write_attr("pos", &v.get_position_on_lane());
+                of.write_attr("speed", &v.get_speed());
+                of.write_attr("angle", &navi_degree(v.get_angle()));
+                let pos = v.get_position(0.);
+                of.write_attr("x", &pos.x());
+                of.write_attr("y", &pos.y());
+                if has_ele {
+                    of.write_attr("z", &pos.z());
+                    of.write_attr("slope", &v.get_slope());
+                }
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 
@@ -160,8 +197,37 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_persons(of: &mut OutputDevice) {
-        // shortcut: MSTransportableControl has no ported loaded-person map (myTransportables is not a map in the Rust struct), person rows are not written until it is ported
+        let net = MSNet::get_instance();
+        let has_ele = net.has_elevation();
+        let tc = net.m().get_person_control();
         of.open_tag("persons");
+        for (id, p) in tc.myTransportables.iter() {
+            if p.get_current_stage_type() != MSStageType::WAITING_FOR_DEPART {
+                let e = p.get_edge();
+                let v = p.get_vehicle();
+                let pos = p.get_position_2();
+                of.open_tag("person");
+                of.write_attr("id", id.as_str());
+                of.write_attr("x", &pos.x());
+                of.write_attr("y", &pos.y());
+                if has_ele {
+                    of.write_attr("z", &pos.z());
+                }
+                of.write_attr("angle", &navi_degree(p.get_angle()));
+                of.write_attr("speed", &p.get_speed());
+                of.write_attr("pos", &p.get_edge_pos());
+                of.write_attr("edge", e.get_id());
+                of.write_attr("slope", &e.get_lanes()[0].get_shape_2().slope_degree_at_offset(p.get_edge_pos()));
+                if v.is_null() {
+                    of.write_attr("vehicle", "");
+                } else {
+                    of.write_attr("vehicle", &v.get_id());
+                }
+                of.write_attr("type", p.get_vehicle_type().get_id());
+                of.write_attr("stage", &(p.get_current_stage_type() as i64));
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 
@@ -193,7 +259,7 @@ impl MSFullExport {
         let ec = net.m().get_edge_control();
         let edges = ec.get_edges();
         for edge in edges.iter() {
-            if !g_using_internal_lanes() && !edge.is_normal() {
+            if !MSGlobals::using_internal_lanes() && !edge.is_normal() {
                 continue;
             }
             of.open_tag("edge").write_attr("id", edge.get_id()).write_attr("traveltime", &edge.get_current_travel_time(NUMERICAL_EPS));

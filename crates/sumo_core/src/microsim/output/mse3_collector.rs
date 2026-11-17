@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSE3Collector.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::MSDetectorFileOutputVt;
 
 /// C++ `MSPModel::FORWARD`
 const MSP_FORWARD: i32 = 1;
@@ -119,6 +120,64 @@ impl std::ops::DerefMut for MSE3Collector {
     }
 }
 
+fn mse3_entry_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse3_entry_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse3_entry_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MSE3_ENTRY_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse3_entry_notify_enter,
+    notify_move: mse3_entry_notify_move,
+    notify_leave: mse3_entry_notify_leave,
+};
+
+fn mse3_leave_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse3_leave_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse3_leave_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MSE3_LEAVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse3_leave_notify_enter,
+    notify_move: mse3_leave_notify_move,
+    notify_leave: mse3_leave_notify_leave,
+};
+
+// the MSDetectorFileOutput base is the first field here, so the collector pointer is the base pointer
+fn mse3_of(d: *mut MSDetectorFileOutput) -> *mut MSE3Collector {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSE3Collector, base)) as *mut MSE3Collector
+}
+fn mse3_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*mse3_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn mse3_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*mse3_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn mse3_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*mse3_of(d)).reset() }
+}
+fn mse3_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*mse3_of(d)).detector_update(step) }
+}
+fn mse3_clear_state(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*mse3_of(d)).clear_state(step) }
+}
+
+static MSE3_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: mse3_write_xml_output,
+    write_xml_detector_prolog: mse3_write_xml_detector_prolog,
+    reset: mse3_reset,
+    detector_update: mse3_detector_update,
+    clear_state: mse3_clear_state,
+};
+
 impl MSE3Collector {
     /// C++: `void MSE3Collector::MSE3Collector(const std::string &, const CrossSectionVector &, const CrossSectionVector &, double, SUMOTime, const std::string, const std::string &, const std::string &, int, bool, bool)`
     /// Constructor
@@ -171,6 +230,7 @@ impl MSE3Collector {
             myOpenEntry: openEntry,
             myExpectArrival: expectArrival,
         };
+        s.base.vt = &MSE3_DETECTOR_FILE_OUTPUT_VT;
         s.reset();
         s
     }
@@ -202,11 +262,13 @@ impl MSE3Collector {
     pub fn build_reminders(&mut self, this: Ptr<MSE3Collector>) {
         for cs in self.myEntries.iter() {
             let rem = Ptr::from_raw(Box::into_raw(Box::new(MSE3Collector_MSE3EntryReminder::new(cs, this.m()))));
+            rem.m().base.vt = &MSE3_ENTRY_REMINDER_VT;
             cs.myLane.m().add_move_reminder(rem.cast::<MSMoveReminder>(), true);
             self.myEntryReminders.push(rem);
         }
         for cs in self.myExits.iter() {
             let rem = Ptr::from_raw(Box::into_raw(Box::new(MSE3Collector_MSE3LeaveReminder::new(cs, this.m()))));
+            rem.m().base.vt = &MSE3_LEAVE_REMINDER_VT;
             cs.myLane.m().add_move_reminder(rem.cast::<MSMoveReminder>(), true);
             self.myLeaveReminders.push(rem);
         }
@@ -308,7 +370,10 @@ impl MSE3Collector {
             v.haltings += 1;
             v.intervalHaltings += 1;
         }
-        // shortcut: C++ sets timeLoss from MSVehicle::getTimeLoss() for vehicles (dynamic_cast), MSVehicle is not #[repr(C)] so time loss stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
+        if !MSGlobals::use_meso_sim() && veh.is_vehicle() {
+            v.timeLoss = Ptr::new(veh).cast::<MSVehicle>().get_time_loss();
+            v.intervalTimeLoss = v.timeLoss;
+        }
         self.myEnteredContainer.insert(key, v);
     }
 
@@ -430,8 +495,7 @@ impl MSE3Collector {
                     values.frontLeaveTime = leaveTimestep;
                 }
             } else {
-                // shortcut: C++ sets timeLoss = MSVehicle::getTimeLoss() - entry timeLoss, MSVehicle is not #[repr(C)] so it stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
-                values.timeLoss = 0;
+                values.timeLoss = Ptr::new(veh).cast::<MSVehicle>().get_time_loss() - values.timeLoss;
             }
             self.myEnteredContainer.remove(&key);
             self.myLeftContainer.push(values);
@@ -673,9 +737,8 @@ impl MSE3Collector {
         let mut mean_interval_speed_within = 0.;
         let mut mean_interval_halts_within = 0.;
         let mut mean_interval_duration_within = 0.;
-        // shortcut: time loss within the area (C++ MSVehicle::getTimeLoss differences) is not tracked, stays 0, upgrade when ms_vehicle.rs is #[repr(C)]
-        let mean_time_loss_within = 0.;
-        for values in self.myEnteredContainer.values_mut() {
+        let mut mean_time_loss_within = 0.;
+        for (key, values) in self.myEnteredContainer.iter_mut() {
             mean_halts_within += values.haltings as f64;
             mean_interval_halts_within += values.intervalHaltings as f64;
             let end = if values.backLeaveTime == 0. { steps2time(stopTime) } else { values.backLeaveTime };
@@ -692,6 +755,11 @@ impl MSE3Collector {
             // reset interval values
             values.intervalHaltings = 0;
             values.intervalSpeedSum = 0.;
+            if !MSGlobals::use_meso_sim() && key.is_vehicle() {
+                let current_time_loss = key.cast::<MSVehicle>().get_time_loss();
+                mean_time_loss_within += steps2time(current_time_loss - values.intervalTimeLoss);
+                values.intervalTimeLoss = current_time_loss;
+            }
         }
         self.myLastResetTime = stopTime;
         let norm = |x: f64| if vehicle_sum_within != 0 { x / vehicle_sum_within as f64 } else { -1. };

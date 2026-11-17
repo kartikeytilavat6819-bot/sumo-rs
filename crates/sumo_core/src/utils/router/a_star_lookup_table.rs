@@ -1,6 +1,11 @@
 //! Port of utils/router/AStarLookupTable.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterVehicle;
+use utils::common::msg_handler::{write_message, write_warning};
+use utils::common::to_string::format_g;
+use utils::common::util_exceptions::ProcessError;
+use crate::utils::router::router_edge::RouterEdge;
 
 /// Computes the shortest path through a network using the A* algorithm.
 /// C++ class `AbstractLookupTable` (utils/router/AStarLookupTable.h)
@@ -13,7 +18,7 @@ impl<E, V> AbstractLookupTable<E, V> {
     // virtual ~AbstractLookupTable() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AbstractLookupTable::~AbstractLookupTable<E, V>")
+        // C++ destructor body is empty
     }
 
     /// C++: `double AbstractLookupTable::lowerBound(const E *, const E *, double, double, double, double) const` [const, virtual, pure virtual]
@@ -21,7 +26,7 @@ impl<E, V> AbstractLookupTable<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
-        todo!("port AbstractLookupTable::lowerBound")
+        panic!("pure virtual AbstractLookupTable::lowerBound called: only FullLookupTable and LandmarkLookupTable are instantiated")
     }
 
     /// C++: `bool AbstractLookupTable::consistent() const` [const, virtual, pure virtual]
@@ -29,7 +34,7 @@ impl<E, V> AbstractLookupTable<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn consistent(&self) -> bool {
-        todo!("port AbstractLookupTable::consistent")
+        panic!("pure virtual AbstractLookupTable::consistent called: only FullLookupTable and LandmarkLookupTable are instantiated")
     }
 
 }
@@ -70,7 +75,28 @@ impl<E, V> FullLookupTable<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn new(filename: &str, size: i32) -> Self {
-        todo!("port FullLookupTable::FullLookupTable<E, V>")
+        let mut myTable: Vec<Vec<f64>> = vec![Vec::new(); size as usize];
+        let text = std::fs::read_to_string(filename).unwrap_or_default();
+        let mut tokens = text.split_whitespace();
+        // C++ `strm >> val`: the first failed extraction sets failbit, and every later extraction is a no-op
+        let mut failed = false;
+        for i in 0..(size as usize) {
+            for _j in 0..(size as usize) {
+                let mut val: f64 = 0.0;
+                if !failed {
+                    match tokens.next().and_then(|t| t.parse::<f64>().ok()) {
+                        Some(v) => val = v,
+                        None => failed = true,
+                    }
+                }
+                myTable[i].push(val);
+            }
+        }
+        Self {
+            base: AbstractLookupTable { _p: std::marker::PhantomData },
+            myTable,
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void FullLookupTable::~FullLookupTable<E, V>()` [virtual]
@@ -78,7 +104,7 @@ impl<E, V> FullLookupTable<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FullLookupTable::~FullLookupTable<E, V>")
+        // C++ destructor body is empty
     }
 
     /// C++: `double FullLookupTable::lowerBound(const E *, const E *, double, double, double, double) const` [const]
@@ -86,8 +112,8 @@ impl<E, V> FullLookupTable<E, V> {
     //         return myTable[from->getNumericalID()][to->getNumericalID()] / speedFactor;
     //     }
     #[allow(unused_variables)]
-    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, arg2: f64, speedFactor: f64, arg4: f64, arg5: f64) -> f64 {
-        todo!("port FullLookupTable::lowerBound")
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, arg2: f64, speedFactor: f64, arg4: f64, arg5: f64) -> f64 where E: RouterEdge<V> {
+        self.myTable[e_numerical_id::<E, V>(from) as usize][e_numerical_id::<E, V>(to) as usize] / speedFactor
     }
 
     /// C++: `bool FullLookupTable::consistent() const` [const]
@@ -96,7 +122,7 @@ impl<E, V> FullLookupTable<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn consistent(&self) -> bool {
-        todo!("port FullLookupTable::consistent")
+        true
     }
 
 }
@@ -125,7 +151,7 @@ impl<E, V, M> std::ops::DerefMut for LandmarkLookupTable<E, V, M> {
     }
 }
 
-impl<E, V, M> LandmarkLookupTable<E, V, M> {
+impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
     /// C++: `void LandmarkLookupTable::LandmarkLookupTable<E, V, M>(const std::string &, const std::vector<E *> &, SUMOAbstractRouter<E, V> *, SUMOAbstractRouter<ReversedEdge<E, V>, V> *, const V *, const std::string &, const int, M *)`
     // LandmarkLookupTable(const std::string& filename, const std::vector<E*>& edges, SUMOAbstractRouter<E, V>* router,
     //                         SUMOAbstractRouter<ReversedEdge<E, V>, V>* reverseRouter,
@@ -377,8 +403,212 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self {
-        todo!("port LandmarkLookupTable::LandmarkLookupTable<E, V, M>")
+    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V> {
+        let mut s = Self {
+            base: AbstractLookupTable { _p: std::marker::PhantomData },
+            myLandmarks: BTreeMap::new(),
+            myFromLandmarkDists: Vec::new(),
+            myToLandmarkDists: Vec::new(),
+            myFirstNonInternal: -1,
+            _p: std::marker::PhantomData,
+        };
+        let mut numericID: BTreeMap<String, i32> = BTreeMap::new();
+        let mut haveTaz = false;
+        for e in edges.iter() {
+            if !e_is_internal::<E, V>(*e) {
+                if s.myFirstNonInternal == -1 {
+                    s.myFirstNonInternal = e_numerical_id::<E, V>(*e);
+                }
+                if e_is_taz_connector::<E, V>(*e) {
+                    haveTaz = true;
+                }
+                numericID.insert(e_id::<E, V>(*e), e_numerical_id::<E, V>(*e) - s.myFirstNonInternal);
+            }
+        }
+        let text = match utils::iodevices::zstr::open_read(filename).and_then(|mut r| {
+            let mut t = String::new();
+            std::io::Read::read_to_string(&mut r, &mut t).map(|_| t)
+        }) {
+            Ok(t) => t,
+            Err(_) => panic!("{}", ProcessError::new(format!("Could not load landmark-lookup-table from '{}'.", filename))),
+        };
+        let mut landmarks: Vec<Ptr<E>> = Vec::new();
+        let mut numLandMarks: i32 = 0;
+        let mut haveData = false;
+        for line in text.split('\n') {
+            if line == "" {
+                break;
+            }
+            let st = utils::common::string_tokenizer::StringTokenizer::new(line);
+            if st.size() == 1 {
+                let lm = tok(&st, 0);
+                if s.myLandmarks.contains_key(&lm) {
+                    panic!("{}", ProcessError::new(format!("Duplicate edge '{}' in landmark file.", lm)));
+                }
+                // retrieve landmark edge
+                let it = match numericID.get(&lm) {
+                    Some(v) => *v,
+                    None => panic!("{}", ProcessError::new(format!("Landmark edge '{}' does not exist in the network.", lm))),
+                };
+                s.myLandmarks.insert(lm.clone(), numLandMarks);
+                numLandMarks += 1;
+                s.myFromLandmarkDists.push(Vec::new());
+                s.myToLandmarkDists.push(Vec::new());
+                landmarks.push(edges[(it + s.myFirstNonInternal) as usize]);
+            } else if st.size() == 2 {
+                // geo landmark
+                let mut lonStr = tok(&st, 0);
+                if lonStr.ends_with(',') {
+                    // remove trailing comma
+                    lonStr.pop();
+                }
+                let lon = match utils::common::string_utils::to_double(&lonStr) {
+                    Ok(v) => v,
+                    Err(_) => panic!("{}", ProcessError::new(format!("Broken landmark file, could not parse '{}' as coordinates.", line))),
+                };
+                let lat = match utils::common::string_utils::to_double(&tok(&st, 1)) {
+                    Ok(v) => v,
+                    Err(_) => panic!("{}", ProcessError::new(format!("Broken landmark file, could not parse '{}' as coordinates.", line))),
+                };
+                let mapped: Vec<Ptr<E>> = e_geo_landmark_edges(mapMatcher, lon, lat);
+                if mapped.len() != 1 {
+                    panic!("{}", ProcessError::new(format!("Invalid coordinate in landmark file, could not find edge at '{}'", line)));
+                }
+                let lm = e_id::<E, V>(mapped[0]);
+                let it = match numericID.get(&lm) {
+                    Some(v) => *v,
+                    None => panic!("{}", ProcessError::new(format!("Landmark edge '{}' does not exist in the network.", lm))),
+                };
+                s.myLandmarks.insert(lm.clone(), numLandMarks);
+                numLandMarks += 1;
+                s.myFromLandmarkDists.push(Vec::new());
+                s.myToLandmarkDists.push(Vec::new());
+                landmarks.push(edges[(it + s.myFirstNonInternal) as usize]);
+            } else if st.size() == 4 {
+                // legacy style landmark table
+                let lm = tok(&st, 0);
+                let edge = tok(&st, 1);
+                let numEdge = *numericID.entry(edge.clone()).or_insert(0);
+                let lmIdx = *s.myLandmarks.entry(lm.clone()).or_insert(0) as usize;
+                if numEdge != s.myFromLandmarkDists[lmIdx].len() as i32 {
+                    panic!("{}", ProcessError::new(format!("Unknown or unordered edge '{}' in landmark file.", edge)));
+                }
+                let distFrom = to_double_or_throw(&tok(&st, 2));
+                let distTo = to_double_or_throw(&tok(&st, 3));
+                s.myFromLandmarkDists[lmIdx].push(distFrom);
+                s.myToLandmarkDists[lmIdx].push(distTo);
+                haveData = true;
+            } else {
+                let edge = tok(&st, 0);
+                if st.size() as i32 != 2 * numLandMarks + 1 {
+                    panic!("{}", ProcessError::new(format!("Broken landmark file, unexpected number of entries ({}) for edge '{}'.", st.size() - 1, edge)));
+                }
+                let numEdge = *numericID.entry(edge.clone()).or_insert(0);
+                if numEdge != s.myFromLandmarkDists[0].len() as i32 {
+                    panic!("{}", ProcessError::new(format!("Unknown or unordered edge '{}' in landmark file.", edge)));
+                }
+                for i in 0..(numLandMarks as usize) {
+                    let distFrom = to_double_or_throw(&tok(&st, 2 * i + 1));
+                    let distTo = to_double_or_throw(&tok(&st, 2 * i + 2));
+                    s.myFromLandmarkDists[i].push(distFrom);
+                    s.myToLandmarkDists[i].push(distTo);
+                }
+                haveData = true;
+            }
+        }
+        if s.myLandmarks.is_empty() {
+            write_warning(&format!("No landmarks in '{}', falling back to standard A*.", filename));
+            return s;
+        }
+        if !haveData {
+            write_message("Calculating new lookup table.");
+        }
+        // shortcut: HAVE_FOX worker-thread pool is not ported; all tables are computed by the serial path below (same values)
+        for i in 0..(numLandMarks as usize) {
+            if s.myFromLandmarkDists[i].len() as i32 != edges.len() as i32 - s.myFirstNonInternal {
+                let landmark = landmarks[i];
+                if haveData {
+                    if s.myFromLandmarkDists[i].is_empty() {
+                        write_warning(&format!("No lookup table for landmark edge '{}', recalculating.", e_id::<E, V>(landmark)));
+                    } else {
+                        let tazWarning = if haveTaz { " Make sure that any used taz or junction-taz definitions are loaded when generating the table" } else { "" };
+                        panic!("{}", ProcessError::new(format!("Not all network edges were found in the lookup table '{}' for landmark edge '{}'.{}", filename, e_id::<E, V>(landmark), tazWarning)));
+                    }
+                }
+            }
+        }
+        for i in 0..(numLandMarks as usize) {
+            if s.myFromLandmarkDists[i].len() as i32 != edges.len() as i32 - s.myFirstNonInternal {
+                let landmark = landmarks[i];
+                let lmCost = router.m().recompute_costs(&vec![landmark], defaultVehicle, 0, Ptr::null());
+                let mut unreachableFrom = 0;
+                let mut unreachableTo = 0;
+                let start = s.myFromLandmarkDists[i].len() as i32 + s.myFirstNonInternal;
+                for j in start..(edges.len() as i32) {
+                    let edge = edges[j as usize];
+                    let mut distFrom: f64 = -1.0;
+                    let mut distTo: f64 = -1.0;
+                    if landmark.as_raw() == edge.as_raw() {
+                        distFrom = 0.0;
+                        distTo = 0.0;
+                    } else {
+                        let sourceDestCost = lmCost + router.m().recompute_costs(&vec![edge], defaultVehicle, 0, Ptr::null());
+                        let mut route: Vec<Ptr<E>> = Vec::new();
+                        // compute from-distance (skip taz-sources and other unreachable edges)
+                        if e_predecessor_count::<E, V>(edge) > 0 && e_successor_count::<E, V>(landmark) > 0 {
+                            if router.m().compute(landmark, edge, defaultVehicle, 0, &mut route, true) {
+                                let d = router.m().recompute_costs(&route, defaultVehicle, 0, Ptr::null()) - sourceDestCost;
+                                distFrom = max2(0.0, d);
+                                route.clear();
+                            }
+                        }
+                        // compute to-distance (skip unreachable landmarks)
+                        if e_predecessor_count::<E, V>(landmark) > 0 && e_successor_count::<E, V>(edge) > 0 {
+                            if router.m().compute(edge, landmark, defaultVehicle, 0, &mut route, true) {
+                                let d = router.m().recompute_costs(&route, defaultVehicle, 0, Ptr::null()) - sourceDestCost;
+                                distTo = max2(0.0, d);
+                                route.clear();
+                            }
+                        }
+                    }
+                    s.myFromLandmarkDists[i].push(distFrom);
+                    s.myToLandmarkDists[i].push(distTo);
+                    if !e_is_taz_connector::<E, V>(edge) {
+                        if distFrom == -1.0 {
+                            unreachableFrom += 1;
+                        }
+                        if distTo == -1.0 {
+                            unreachableTo += 1;
+                        }
+                    }
+                }
+                if unreachableFrom > 0 || unreachableTo > 0 {
+                    write_warning(&format!("Landmark {} is not reachable from {} edges and is unable to reach {} out of {} total edges.", e_id::<E, V>(landmark), unreachableFrom, unreachableTo, numericID.len()));
+                }
+            }
+        }
+        if !outfile.is_empty() {
+            let mut ostrm = match utils::iodevices::zstr::create_write(outfile) {
+                Ok(f) => f,
+                Err(_) => panic!("{}", ProcessError::new(format!("Could not open file '{}' for writing.", outfile))),
+            };
+            write_message(&format!("Saving new matrix to '{}'.", outfile));
+            let mut out = String::new();
+            for i in 0..(numLandMarks as usize) {
+                out += &s.get_landmark(i as i32);
+                out += "\n";
+            }
+            for j in 0..s.myFromLandmarkDists[0].len() {
+                out += &e_id::<E, V>(edges[(j as i32 + s.myFirstNonInternal) as usize]);
+                for i in 0..(numLandMarks as usize) {
+                    // ostream default formatting of doubles (precision 6)
+                    out += &format!(" {} {}", format_g(s.myFromLandmarkDists[i][j], 6), format_g(s.myToLandmarkDists[i][j], 6));
+                }
+                out += "\n";
+            }
+            let _ = std::io::Write::write_all(&mut ostrm, out.as_bytes());
+        }
+        s
     }
 
     /// C++: `void LandmarkLookupTable::~LandmarkLookupTable<E, V, M>()` [virtual]
@@ -386,7 +616,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port LandmarkLookupTable::~LandmarkLookupTable<E, V, M>")
+        // C++ destructor body is empty
     }
 
     /// C++: `double LandmarkLookupTable::lowerBound(const E *, const E *, double, double, double, double) const` [const]
@@ -438,8 +668,28 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //         return result;
     //     }
     #[allow(unused_variables)]
-    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
-        todo!("port LandmarkLookupTable::lowerBound")
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 where E: RouterEdge<V> {
+        let mut result = e_distance_to::<E, V>(from, to) / speed;
+        for i in 0..(self.myLandmarks.len() as usize) {
+            // a cost of -1 is used to encode unreachability.
+            let fl = self.myToLandmarkDists[i][(e_numerical_id::<E, V>(from) - self.myFirstNonInternal) as usize];
+            let tl = self.myToLandmarkDists[i][(e_numerical_id::<E, V>(to) - self.myFirstNonInternal) as usize];
+            if fl >= 0.0 && tl >= 0.0 {
+                let bound = (fl - tl - toEffort) / speedFactor;
+                result = max2(result, bound);
+            }
+            let lt = self.myFromLandmarkDists[i][(e_numerical_id::<E, V>(to) - self.myFirstNonInternal) as usize];
+            let lf = self.myFromLandmarkDists[i][(e_numerical_id::<E, V>(from) - self.myFirstNonInternal) as usize];
+            if lt >= 0.0 && lf >= 0.0 {
+                let bound = (lt - lf - fromEffort) / speedFactor;
+                result = max2(result, bound);
+            }
+            if (tl >= 0.0 && fl < 0.0) || (lf >= 0.0 && lt < 0.0) {
+                // target unreachable.
+                return UNREACHABLE;
+            }
+        }
+        result
     }
 
     /// C++: `bool LandmarkLookupTable::consistent() const` [const]
@@ -448,7 +698,7 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn consistent(&self) -> bool {
-        todo!("port LandmarkLookupTable::consistent")
+        false
     }
 
     /// C++: `std::string LandmarkLookupTable::getLandmark(int) const` [const, private]
@@ -462,8 +712,84 @@ impl<E, V, M> LandmarkLookupTable<E, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn get_landmark(&self, i: i32) -> String {
-        todo!("port LandmarkLookupTable::getLandmark")
+        for (k, v) in self.myLandmarks.iter() {
+            if *v == i {
+                return k.clone();
+            }
+        }
+        String::new()
     }
 
 }
 
+/// C++ `AStarRouter::lookupTable` as a value: the router dispatches virtual lowerBound()/consistent() to the table kind
+pub enum AStarLookupTableKind<E, V, M> {
+    Full(FullLookupTable<E, V>),
+    Landmark(LandmarkLookupTable<E, V, M>),
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarLookupTableKind<E, V, M> {
+    pub fn lower_bound(&self, from: Ptr<E>, to: Ptr<E>, speed: f64, speedFactor: f64, fromEffort: f64, toEffort: f64) -> f64 {
+        match self {
+            AStarLookupTableKind::Full(t) => t.lower_bound(from, to, speed, speedFactor, fromEffort, toEffort),
+            AStarLookupTableKind::Landmark(t) => t.lower_bound(from, to, speed, speedFactor, fromEffort, toEffort),
+        }
+    }
+
+    pub fn consistent(&self) -> bool {
+        match self {
+            AStarLookupTableKind::Full(t) => t.consistent(),
+            AStarLookupTableKind::Landmark(t) => t.consistent(),
+        }
+    }
+}
+
+pub const UNREACHABLE: f64 = f64::MAX / 1000.0;
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+fn tok(st: &utils::common::string_tokenizer::StringTokenizer, i: usize) -> String {
+    st.get(i).unwrap_or_else(|e| panic!("{}", e))
+}
+
+fn to_double_or_throw(s: &str) -> f64 {
+    match utils::common::string_utils::to_double(s) {
+        Ok(v) => v,
+        Err(e) => panic!("{}", e),
+    }
+}
+
+fn e_numerical_id<E, V>(e: Ptr<E>) -> i32 where E: RouterEdge<V> {
+    e.numerical_id()
+}
+
+fn e_id<E, V>(e: Ptr<E>) -> String where E: RouterEdge<V> {
+    e.id().to_string()
+}
+
+fn e_is_internal<E, V>(e: Ptr<E>) -> bool where E: RouterEdge<V> {
+    e.is_internal()
+}
+
+fn e_is_taz_connector<E, V>(e: Ptr<E>) -> bool where E: RouterEdge<V> {
+    e.is_taz_connector()
+}
+
+fn e_predecessor_count<E, V>(e: Ptr<E>) -> usize where E: RouterEdge<V> {
+    e.predecessors().len()
+}
+
+fn e_successor_count<E, V>(e: Ptr<E>) -> usize where E: RouterEdge<V> {
+    e.successors(SVC_IGNORING).len()
+}
+
+fn e_distance_to<E, V>(from: Ptr<E>, to: Ptr<E>) -> f64 where E: RouterEdge<V> {
+    from.distance_to(to, false)
+}
+
+// shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges is not callable on generic M
+fn e_geo_landmark_edges<E, M>(_mapMatcher: Ptr<M>, _lon: f64, _lat: f64) -> Vec<Ptr<E>> {
+    panic!("shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges")
+}

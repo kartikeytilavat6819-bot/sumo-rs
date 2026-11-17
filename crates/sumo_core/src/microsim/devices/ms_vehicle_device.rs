@@ -44,6 +44,11 @@ impl std::ops::DerefMut for MSVehicleDevice {
 }
 
 impl MSVehicleDevice {
+    /// C++ virtual `MSDevice::generateOutput(OutputDevice *) const`, reached through a vehicle device
+    pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
+        MSDevice::generate_output_of(Ptr::new(self), tripinfoOut);
+    }
+
     /// C++: `void MSVehicleDevice::MSVehicleDevice(SUMOVehicle &, const std::string &)`
     /// Constructor
     // MSVehicleDevice(SUMOVehicle& holder, const std::string& id) :

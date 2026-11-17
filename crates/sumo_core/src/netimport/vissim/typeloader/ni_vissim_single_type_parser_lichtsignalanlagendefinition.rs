@@ -2,6 +2,27 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `from >> tmp` for a std::string: skips whitespace and reads one token without lower-casing it
+fn read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
+/// C++ `from >> double`: a failed conversion yields 0 (C++11 semantics)
+fn read_double(from: &mut std::io::Cursor<Vec<u8>>) -> f64 {
+    read_raw_token(from).parse::<f64>().unwrap_or(0.)
+}
+
 /// C++ class `NIVissimSingleTypeParser_Lichtsignalanlagendefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Lichtsignalanlagendefinition.h)
 #[repr(C)]
 pub struct NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
@@ -28,7 +49,7 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::NIVissimSingleTypeParser_Lichtsignalanlagendefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Lichtsignalanlagendefinition::~NIVissimSingleTypeParser_Lichtsignalanlagendefinition() noexcept` [virtual]
@@ -36,7 +57,7 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     // NIVissimSingleTypeParser_Lichtsignalanlagendefinition::~NIVissimSingleTypeParser_Lichtsignalanlagendefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::~NIVissimSingleTypeParser_Lichtsignalanlagendefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parse(std::istream &)` [virtual]
@@ -87,8 +108,47 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        //
+        let id = read_raw_token(from).parse::<i32>().unwrap_or(0); // type-checking is missing!
+        //
+        let mut tag = self.my_read(from);
+        let mut name = String::new();
+        if tag == "name" {
+            name = self.read_name(from);
+            tag = self.my_read(from);
+        }
+        // type
+        let type_ = self.my_read(from);
+        if type_ == "festzeit" {
+            return self.parse_fixed_time(id, name, from);
+        }
+        if type_ == "vas" {
+            return self.parse_vas(id, name, from);
+        }
+        if type_ == "vsplus" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "trends" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "vap" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "tl" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "pos" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "nema" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        if type_ == "extern" {
+            return self.parse_rest_actuated(id, name, from, &type_);
+        }
+        write_errorf!("Unsupported LSA-Type '%' occurred.", type_);
+        false
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseFixedTime(int, std::string, std::istream &)` [private]
@@ -117,8 +177,24 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     //     return NIVissimTL::dictionary(id, type, name, TIME2STEPS(absdur), TIME2STEPS(offset));
     // }
     #[allow(unused_variables)]
-    pub fn parse_fixed_time(&mut self, id: i32, name: String, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseFixedTime")
+    pub fn parse_fixed_time(&mut self, id: i32, name: String, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut type_ = "festzeit".to_string();
+        read_raw_token(from);
+        //
+        let absdur = read_double(from); // type-checking is missing!
+        //
+        let mut tag = self.read_end_secure(from, "");
+        let mut offset = 0.;
+        if tag == "versatz" {
+            offset = read_double(from); // type-checking is missing!
+        }
+        if tag != "szpkonfdatei" && tag != "DATAEND" && tag != "progdatei" {
+            tag = self.read_end_secure(from, "");
+            if tag == "szpkonfdatei" || tag == "progdatei" {
+                type_ = "festzeit_fake".to_string();
+            }
+        }
+        NIVissimTL::dictionary(id, &type_, &name, utils::common::time::time2steps(absdur), utils::common::time::time2steps(offset))
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseVAS(int, std::string, std::istream &)` [private]
@@ -140,8 +216,17 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     //     return NIVissimTL::dictionary(id, "vas", name, TIME2STEPS(absdur), TIME2STEPS(offset));
     // }
     #[allow(unused_variables)]
-    pub fn parse_vas(&mut self, id: i32, name: String, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseVAS")
+    pub fn parse_vas(&mut self, id: i32, name: String, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        read_raw_token(from);
+        //
+        let absdur = read_double(from); // type-checking is missing!
+        //
+        let tag = self.read_end_secure(from, "");
+        let mut offset = 0.;
+        if tag == "versatz" {
+            offset = read_double(from); // type-checking is missing!
+        }
+        NIVissimTL::dictionary(id, "vas", &name, utils::common::time::time2steps(absdur), utils::common::time::time2steps(offset))
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseRestActuated(int, std::string, std::istream &, const std::string &)` [private]
@@ -166,8 +251,20 @@ impl NIVissimSingleTypeParser_Lichtsignalanlagendefinition {
     //     return NIVissimTL::dictionary(id, type, name, TIME2STEPS(absdur), TIME2STEPS(offset));
     // }
     #[allow(unused_variables)]
-    pub fn parse_rest_actuated(&mut self, id: i32, name: String, from: &mut Unmapped /* std::istream */, type_: &str) -> bool {
-        todo!("port NIVissimSingleTypeParser_Lichtsignalanlagendefinition::parseRestActuated")
+    pub fn parse_rest_actuated(&mut self, id: i32, name: String, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */, type_: &str) -> bool {
+        read_raw_token(from);
+        //
+        let absdur = read_double(from); // type-checking is missing!
+        //
+        let mut tag = self.read_end_secure(from, "");
+        let mut offset = 0.;
+        if tag == "versatz" {
+            offset = read_double(from); // type-checking is missing!
+        }
+        while tag != "datei" {
+            tag = self.my_read(from);
+        }
+        NIVissimTL::dictionary(id, type_, &name, utils::common::time::time2steps(absdur), utils::common::time::time2steps(offset))
     }
 
 }

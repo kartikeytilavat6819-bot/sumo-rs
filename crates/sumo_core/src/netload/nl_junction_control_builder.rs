@@ -21,11 +21,11 @@ pub struct NLJunctionControlBuilder {
     /// The current logic type
     pub myLogicType: TrafficLightType,
     /// The right-of-way-logic of the currently chosen bitset-logic
-    pub myActiveLogic: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
+    pub myActiveLogic: Vec<LinkBits>,
     /// The description about which lanes disallow other passing the junction simultaneously
-    pub myActiveFoes: Vec<[bool; SUMO_MAX_CONNECTIONS]>,
+    pub myActiveFoes: Vec<LinkBits>,
     /// The description about which lanes have an internal follower
-    pub myActiveConts: [bool; SUMO_MAX_CONNECTIONS],
+    pub myActiveConts: LinkBits,
     /// The current phase definitions for a simple traffic light
     pub myActivePhases: MSTrafficLightLogic_Phases,
     /// The current switching conditions for an actuated traffic light
@@ -92,12 +92,12 @@ fn leak_box<T>(v: T) -> Ptr<T> {
 }
 
 /// C++ `std::bitset<SUMO_MAX_CONNECTIONS>(str)`: the rightmost character is bit 0, missing bits are 0.
-fn bitset_from_str(s: &str) -> [bool; SUMO_MAX_CONNECTIONS] {
-    let mut bits = [false; SUMO_MAX_CONNECTIONS];
+fn bitset_from_str(s: &str) -> LinkBits {
+    let mut bits = LinkBits::new();
     for (i, c) in s.chars().rev().take(SUMO_MAX_CONNECTIONS).enumerate() {
         match c {
             '0' => {}
-            '1' => bits[i] = true,
+            '1' => bits.set(i as i32, true),
             // std::invalid_argument in C++
             _ => panic!("bitset_from_str: invalid character in a junction logic string"),
         }
@@ -106,7 +106,7 @@ fn bitset_from_str(s: &str) -> [bool; SUMO_MAX_CONNECTIONS] {
 }
 
 /// C++ `new MSBitsetLogic(nLinks, logic, foes, conts)` as an MSJunctionLogic pointer.
-fn new_bitset_logic(nLinks: i32, logic: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, foes: &Vec<[bool; SUMO_MAX_CONNECTIONS]>, conts: [bool; SUMO_MAX_CONNECTIONS]) -> Ptr<MSJunctionLogic> {
+fn new_bitset_logic(nLinks: i32, logic: &Vec<LinkBits>, foes: &Vec<LinkBits>, conts: LinkBits) -> Ptr<MSJunctionLogic> {
     leak_box(MSBitSetLogic::<SUMO_MAX_CONNECTIONS>::new(nLinks, logic, foes, conts)).cast::<MSJunctionLogic>()
 }
 
@@ -131,7 +131,7 @@ impl NLJunctionControlBuilder {
             myLogicType: TrafficLightType::INVALID,
             myActiveLogic: Vec::new(),
             myActiveFoes: Vec::new(),
-            myActiveConts: [false; SUMO_MAX_CONNECTIONS],
+            myActiveConts: LinkBits::new(),
             myActivePhases: Vec::new(),
             myActiveConditions: ParameterisedMap::new(),
             myActiveAssignments: Vec::new(),
@@ -386,7 +386,7 @@ impl NLJunctionControlBuilder {
         self.myActiveProgram = String::new();
         self.myActiveLogic.clear();
         self.myActiveFoes.clear();
-        self.myActiveConts = [false; SUMO_MAX_CONNECTIONS];
+        self.myActiveConts = LinkBits::new();
         self.myRequestSize = NO_REQUEST_SIZE; // seems not to be used
         self.myRequestItemNumber = 0;
         self.myCurrentHasError = false;
@@ -465,7 +465,7 @@ impl NLJunctionControlBuilder {
         // add the read junction-internal foes for the given request index
         self.myActiveFoes.push(bitset_from_str(foes));
         // add whether the vehicle may drive a little bit further
-        self.myActiveConts[request as usize] = cont;
+        self.myActiveConts.set(request, cont);
         // increse number of set information
         self.myRequestItemNumber += 1;
     }
@@ -786,8 +786,10 @@ impl NLJunctionControlBuilder {
             if self.myAbsDuration > 0 {
                 throw_invalid_argument(format!("The off program for TLS '{}' has phases.", self.myActiveKey));
             }
-            let off = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey)).cast::<MSTrafficLightLogic>();
-            if !self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, off, false) {
+            let offLogic = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey));
+            offLogic.m().base.schedule_switch_command(self.get_tl_logic_control_to_use(), 0);
+            let off = offLogic.cast::<MSTrafficLightLogic>();
+            if !self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, off, true) {
                 throw_invalid_argument(format!("Another logic with id '{}' and programID '{}' exists.", self.myActiveKey, self.myActiveProgram));
             }
             return;
@@ -857,34 +859,48 @@ impl NLJunctionControlBuilder {
         match self.myLogicType {
             TrafficLightType::SWARM_BASED => {
                 firstEventOffset = utils::common::time::delta_t(); // this is needed because swarm needs to update the pheromone on the lanes at every step
-                tlLogic = leak_box(MSSwarmTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+                let swarm = leak_box(MSSwarmTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter));
+                swarm.m().base.base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = swarm.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::HILVL_DETERMINISTIC => {
-                tlLogic = leak_box(MSDeterministicHiLevelTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+                let deterministic = leak_box(MSDeterministicHiLevelTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter));
+                deterministic.m().base.base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = deterministic.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::SOTL_REQUEST => {
                 let policy = leak_box(MSSOTLRequestPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
-                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+                let policyLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy));
+                policyLogic.m().base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = policyLogic.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::SOTL_PLATOON => {
                 let policy = leak_box(MSSOTLPlatoonPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
-                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+                let policyLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy));
+                policyLogic.m().base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = policyLogic.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::SOTL_WAVE => {
-                tlLogic = leak_box(MSSOTLWaveTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+                let wave = leak_box(MSSOTLWaveTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter));
+                wave.m().base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = wave.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::SOTL_PHASE => {
                 let policy = leak_box(MSSOTLPhasePolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
-                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+                let policyLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy));
+                policyLogic.m().base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = policyLogic.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::SOTL_MARCHING => {
                 let policy = leak_box(MSSOTLMarchingPolicy::new(&self.myAdditionalParameter)).cast::<MSSOTLPolicy>();
-                tlLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy)).cast::<MSTrafficLightLogic>();
+                let policyLogic = leak_box(MSSOTLPolicyBasedTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, self.myLogicType, &self.myActivePhases, step, firstEventOffset, &self.myAdditionalParameter, policy));
+                policyLogic.m().base.base.schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = policyLogic.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::ACTUATED => {
                 // @note it is unclear how to apply the given offset in the context
                 // of variable-length phases
-                tlLogic = leak_box(MSActuatedTrafficLightLogic::new(
+                let actuated = leak_box(MSActuatedTrafficLightLogic::new(
                     self.get_tl_logic_control_to_use(),
                     &self.myActiveKey,
                     &self.myActiveProgram,
@@ -897,11 +913,12 @@ impl NLJunctionControlBuilder {
                     &self.myActiveConditions,
                     &self.myActiveAssignments,
                     &self.myActiveFunctions,
-                ))
-                .cast::<MSTrafficLightLogic>();
+                ));
+                actuated.m().base.schedule_initial_switch(self.get_tl_logic_control_to_use(), phaseSrc.m()[i].minDuration + now);
+                tlLogic = actuated.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::NEMA => {
-                tlLogic = leak_box(NEMALogic::new(
+                let nema = leak_box(NEMALogic::new(
                     self.get_tl_logic_control_to_use(),
                     &self.myActiveKey,
                     &self.myActiveProgram,
@@ -911,11 +928,12 @@ impl NLJunctionControlBuilder {
                     phaseSrc.m()[i].minDuration + now,
                     &self.myAdditionalParameter,
                     basePath,
-                ))
-                .cast::<MSTrafficLightLogic>();
+                ));
+                nema.m().base.schedule_initial_switch(self.get_tl_logic_control_to_use(), phaseSrc.m()[i].minDuration + now);
+                tlLogic = nema.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::DELAYBASED => {
-                tlLogic = leak_box(MSDelayBasedTrafficLightLogic::new(
+                let delayBased = leak_box(MSDelayBasedTrafficLightLogic::new(
                     self.get_tl_logic_control_to_use(),
                     &self.myActiveKey,
                     &self.myActiveProgram,
@@ -925,11 +943,12 @@ impl NLJunctionControlBuilder {
                     phaseSrc.m()[i].minDuration + now,
                     &self.myAdditionalParameter,
                     basePath,
-                ))
-                .cast::<MSTrafficLightLogic>();
+                ));
+                delayBased.m().base.schedule_initial_switch(self.get_tl_logic_control_to_use(), phaseSrc.m()[i].minDuration + now);
+                tlLogic = delayBased.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::STATIC => {
-                tlLogic = leak_box(MSSimpleTrafficLightLogic::new(
+                let simple = leak_box(MSSimpleTrafficLightLogic::new(
                     self.get_tl_logic_control_to_use(),
                     &self.myActiveKey,
                     &self.myActiveProgram,
@@ -939,17 +958,24 @@ impl NLJunctionControlBuilder {
                     step,
                     firstEventOffset,
                     &self.myAdditionalParameter,
-                ))
-                .cast::<MSTrafficLightLogic>();
+                ));
+                simple.m().schedule_initial_switch(self.get_tl_logic_control_to_use(), firstEventOffset);
+                tlLogic = simple.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::RAIL_SIGNAL => {
+                // no initial switch: C++ MSRailSignal deschedules the base command it creates
                 tlLogic = leak_box(MSRailSignal::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::RAIL_CROSSING => {
-                tlLogic = leak_box(MSRailCrossing::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter)).cast::<MSTrafficLightLogic>();
+                let crossing = leak_box(MSRailCrossing::new(self.get_tl_logic_control_to_use(), &self.myActiveKey, &self.myActiveProgram, now, &self.myAdditionalParameter));
+                // base-level only: the C++ Simple constructor sees no phases yet, so no earliest-end adjustment
+                crossing.m().base.base.schedule_switch_command(self.get_tl_logic_control_to_use(), now);
+                tlLogic = crossing.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::OFF => {
-                tlLogic = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey)).cast::<MSTrafficLightLogic>();
+                let off = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey));
+                off.m().base.schedule_switch_command(self.get_tl_logic_control_to_use(), 0);
+                tlLogic = off.cast::<MSTrafficLightLogic>();
             }
             TrafficLightType::INVALID => {
                 std::panic::panic_any(ProcessError::new(format!("Invalid traffic light type '{}'", TrafficLightTypes.get_string(self.myLogicType))));
@@ -957,7 +983,7 @@ impl NLJunctionControlBuilder {
         }
         self.myActivePhases.clear();
         if !tlLogic.is_null() {
-            if self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, tlLogic, false) {
+            if self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, tlLogic, true) {
                 if self.myNetIsLoaded {
                     self.myAdditionalLogics.push(tlLogic);
                 } else if matches!(self.myLogicType, TrafficLightType::RAIL_SIGNAL) {

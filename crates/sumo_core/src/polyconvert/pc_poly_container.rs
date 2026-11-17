@@ -1,6 +1,9 @@
 //! Port of polyconvert/PCPolyContainer.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_warning;
+use utils::common::std_defs::g_precision_geo;
+use utils::options::options_cont::with_options;
 
 /// LanePos
 /// C++ class `PCPolyContainer::LanePos` (polyconvert/PCPolyContainer.h)
@@ -25,7 +28,12 @@ impl PCPolyContainer_LanePos {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port LanePos::LanePos")
+        PCPolyContainer_LanePos {
+            laneID: String::new(),
+            pos: 0.0,
+            friendlyPos: false,
+            posLat: 0.0,
+        }
     }
 
     /// C++: `void LanePos::LanePos(const std::string &, double, bool, double)`
@@ -38,7 +46,12 @@ impl PCPolyContainer_LanePos {
     // }
     #[allow(unused_variables)]
     pub fn new_2(laneID: &str, pos: f64, friendlyPos: bool, posLat: f64) -> Self {
-        todo!("port LanePos::LanePos")
+        PCPolyContainer_LanePos {
+            laneID: laneID.to_string(),
+            pos,
+            friendlyPos,
+            posLat,
+        }
     }
 
 }
@@ -83,7 +96,14 @@ impl PCPolyContainer {
     //       myRemoveByNames(removeByNames) {}
     #[allow(unused_variables)]
     pub fn new(prune: bool, pruningBoundary: &Boundary, removeByNames: &Vec<String>) -> Self {
-        todo!("port PCPolyContainer::PCPolyContainer")
+        PCPolyContainer {
+            base: ShapeContainer::new(),
+            myLanePosPois: BTreeMap::new(),
+            myIDEnums: BTreeMap::new(),
+            myPruningBoundary: *pruningBoundary,
+            myDoPrune: prune,
+            myRemoveByNames: removeByNames.clone(),
+        }
     }
 
     /// C++: `void PCPolyContainer::~PCPolyContainer() noexcept` [virtual]
@@ -94,7 +114,8 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PCPolyContainer::~PCPolyContainer")
+        self.base.myPolygons.clear();
+        self.base.myPOIs.clear();
     }
 
     /// C++: `bool PCPolyContainer::add(SUMOPolygon *, bool)` [virtual]
@@ -119,7 +140,23 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, poly: Ptr<SUMOPolygon>, ignorePruning: bool) -> bool {
-        todo!("port PCPolyContainer::add")
+        // check whether the polygon lies within the wished area
+        //  - if such an area was given
+        if self.myDoPrune && !ignorePruning {
+            let b = poly.get_shape().get_box_boundary();
+            if !b.partial_within(&self.myPruningBoundary, 0.0) {
+                // delete poly
+                drop(unsafe { Box::from_raw(poly.as_raw()) });
+                return false;
+            }
+        }
+        // check whether the polygon was named to be a removed one
+        if self.myRemoveByNames.iter().any(|n| n.as_str() == poly.get_id()) {
+            // delete poly
+            drop(unsafe { Box::from_raw(poly.as_raw()) });
+            return false;
+        }
+        self.base.add(poly, false)
     }
 
     /// C++: `bool PCPolyContainer::add(PointOfInterest *, bool)` [virtual]
@@ -143,7 +180,22 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_2(&mut self, poi: Ptr<PointOfInterest>, ignorePruning: bool) -> bool {
-        todo!("port PCPolyContainer::add")
+        // check whether the poi lies within the wished area
+        //  - if such an area was given
+        if self.myDoPrune && !ignorePruning {
+            if !self.myPruningBoundary.around(&poi.base2, 0.0) {
+                // delete poi
+                drop(unsafe { Box::from_raw(poi.as_raw()) });
+                return false;
+            }
+        }
+        // check whether the polygon was named to be a removed one
+        if self.myRemoveByNames.iter().any(|n| n.as_str() == poi.get_id()) {
+            // delete poi
+            drop(unsafe { Box::from_raw(poi.as_raw()) });
+            return false;
+        }
+        self.base.add_2(poi, false)
     }
 
     /// C++: `void PCPolyContainer::addLanePos(const std::string &, const std::string &, const double, const bool, const double)`
@@ -154,7 +206,7 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn add_lane_pos(&mut self, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) {
-        todo!("port PCPolyContainer::addLanePos")
+        self.myLanePosPois.insert(poiID.to_string(), PCPolyContainer_LanePos::new_2(laneID, lanePos, friendlyPos, lanePosLat));
     }
 
     /// C++: `void PCPolyContainer::save(const std::string &, bool)`
@@ -191,7 +243,32 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn save(&mut self, file: &str, useGeo: bool) {
-        todo!("port PCPolyContainer::save")
+        let gch = GeoConvHelper::with_final(|g| g.clone());
+        let mut useGeo = useGeo;
+        if useGeo && !gch.using_geo_projection() {
+            write_warning("Ignoring option \"proj.plain-geo\" because no geo-conversion has been defined");
+            useGeo = false;
+        }
+        let out: Ptr<OutputDevice> = Ptr::from_raw(OutputDevice::get_device(file, true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        out.m().write_xml_header("additional", "additional_file.xsd", BTreeMap::new(), true);
+        if useGeo {
+            out.m().set_precision(g_precision_geo());
+        } else if gch.using_geo_projection() {
+            crate::netwrite::nw_writer_xml::write_location(out.m());
+        }
+        // write polygons
+        for (_, i) in self.base.myPolygons.iter() {
+            i.write_xml(out.m(), useGeo);
+        }
+        // write pois
+        let zOffset: f64 = utils::options::options_cont::get_float("poi-layer-offset");
+        for (poiID, poi) in self.base.myPOIs.iter() {
+            match self.myLanePosPois.get(poiID) {
+                None => poi.write_xml(out.m(), useGeo, zOffset, String::new(), 0.0, false, 0.0),
+                Some(it) => poi.write_xml(out.m(), useGeo, zOffset, it.laneID.clone(), it.pos, it.friendlyPos, it.posLat),
+            }
+        }
+        out.m().close();
     }
 
     /// C++: `void PCPolyContainer::saveDlrTDP(const std::string &)`
@@ -247,7 +324,64 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn save_dlr_tdp(&mut self, prefix: &str) {
-        todo!("port PCPolyContainer::saveDlrTDP")
+        let gch = GeoConvHelper::with_final(|g| g.clone());
+        let haveGeo = gch.using_geo_projection();
+        let geoScale: f64 = 10.0f64.powf(if haveGeo { 5.0 } else { 2.0 }); // see NIImporter_DlrNavteq::GEO_SCALE
+        // write pois
+        let out: Ptr<OutputDevice> = Ptr::from_raw(OutputDevice::get_device(&format!("{}_points_of_interest.txt", prefix), true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        out.m().set_precision(0);
+        with_options(|oc| Self::write_dlr_tdp_header(out.m(), oc));
+        // write format specifier
+        out.m().write("# ID\tCITY\tTYPE\tNAME\tgeo_x\tgeo_y\n");
+        let mut id: i32 = 0;
+        for (name, poi) in self.base.myPOIs.iter() {
+            let mut pos: Position = poi.base2;
+            gch.cartesian2geo(&mut pos);
+            pos.mul(geoScale);
+            out.m().write(&id);
+            out.m().write("\t");
+            out.m().write("");
+            out.m().write("\t");
+            out.m().write(poi.get_shape_type());
+            out.m().write("\t");
+            out.m().write(name);
+            out.m().write("\t");
+            out.m().write(&pos.x());
+            out.m().write("\t");
+            out.m().write(&pos.y());
+            out.m().write("\t");
+            id += 1;
+        }
+        out.m().close();
+        // write polygons
+        let out2: Ptr<OutputDevice> = Ptr::from_raw(OutputDevice::get_device(&format!("{}_polygons.txt", prefix), true).unwrap_or_else(|e| panic!("{e}")).as_ptr());
+        out2.m().set_precision(0);
+        with_options(|oc| Self::write_dlr_tdp_header(out2.m(), oc));
+        // write format specifier
+        out2.m().write("# ID\tCITY\tTYPE\tNAME\tgeo_x1\tgeo_y1\t[geo_x2 geo_y2 ...]\n");
+        id = 0;
+        for (name, poly) in self.base.myPolygons.iter() {
+            out2.m().write(&id);
+            out2.m().write("\t");
+            out2.m().write("");
+            out2.m().write("\t");
+            out2.m().write(poly.get_shape_type());
+            out2.m().write("\t");
+            out2.m().write(name);
+            out2.m().write("\t");
+
+            for pos in poly.get_shape().iter() {
+                let mut pos: Position = *pos;
+                gch.cartesian2geo(&mut pos);
+                pos.mul(geoScale);
+                out2.m().write(&pos.x());
+                out2.m().write("\t");
+                out2.m().write(&pos.y());
+                out2.m().write("\t");
+            }
+            id += 1;
+        }
+        out2.m().close();
     }
 
     /// C++: `int PCPolyContainer::getEnumIDFor(const std::string &)`
@@ -258,7 +392,10 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn get_enum_id_for(&mut self, key: &str) -> i32 {
-        todo!("port PCPolyContainer::getEnumIDFor")
+        let e = self.myIDEnums.entry(key.to_string()).or_insert(0);
+        let old = *e;
+        *e += 1;
+        old
     }
 
     /// C++: `void PCPolyContainer::writeDlrTDPHeader(OutputDevice &, const OptionsCont &)` [static, private]
@@ -278,7 +415,36 @@ impl PCPolyContainer {
     // }
     #[allow(unused_variables)]
     pub fn write_dlr_tdp_header(device: &mut OutputDevice, oc: &OptionsCont) {
-        todo!("port PCPolyContainer::writeDlrTDPHeader")
+        // XXX duplicate of NWWriter_DlrNavteq::writeHeader()
+        device.write("# Format matches Extraction version: V6.5 \n");
+        let mut tmp = String::new();
+        let _ = oc.write_configuration(&mut tmp, true, false, false, "", false, false, "");
+        // emulates `while (!tmp.eof()) { std::getline(tmp, line); ... }` on a string cursor
+        let mut cur: usize = 0;
+        let mut eof = false;
+        while !eof {
+            let line: &str;
+            if cur >= tmp.len() {
+                eof = true;
+                line = "";
+            } else {
+                match tmp[cur..].find('\n') {
+                    Some(i) => {
+                        line = &tmp[cur..cur + i];
+                        cur += i + 1;
+                    }
+                    None => {
+                        line = &tmp[cur..];
+                        cur = tmp.len();
+                        eof = true;
+                    }
+                }
+            }
+            device.write("# ");
+            device.write(line);
+            device.write("\n");
+        }
+        device.write("#\n");
     }
 
     /// C++: `void PCPolyContainer::PCPolyContainer(const PCPolyContainer &)` [private]
@@ -286,7 +452,8 @@ impl PCPolyContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &PCPolyContainer) -> Self {
-        todo!("port PCPolyContainer::PCPolyContainer")
+        // shortcut: C++ declares this private copy constructor but never defines it (any call is a link error), so it can't be called; panic mirrors that
+        panic!("PCPolyContainer::PCPolyContainer(const PCPolyContainer&) is private and undefined")
     }
 
     /// C++: `PCPolyContainer & PCPolyContainer::operator=(const PCPolyContainer &)` [private]
@@ -294,7 +461,8 @@ impl PCPolyContainer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &PCPolyContainer) -> &mut PCPolyContainer {
-        todo!("port PCPolyContainer::operator=")
+        // shortcut: C++ declares operator= = delete, so it can't be called; panic mirrors that
+        panic!("PCPolyContainer::operator= is deleted")
     }
 
 }

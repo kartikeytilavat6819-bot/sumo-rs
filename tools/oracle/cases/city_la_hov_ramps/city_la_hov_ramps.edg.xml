@@ -1,0 +1,14 @@
+<edges>
+    <edge id="mb0" from="M0" to="M1" numLanes="3" speed="29.06" disallow="hov"/>
+    <edge id="hb0" from="H0" to="H1" numLanes="1" speed="29.06" allow="hov taxi bus"/>
+    <edge id="mb1" from="M1" to="M2" numLanes="3" speed="29.06" disallow="hov"/>
+    <edge id="hb1" from="H1" to="H2" numLanes="1" speed="29.06" allow="hov taxi bus"/>
+    <edge id="mb2" from="M2" to="M3" numLanes="3" speed="29.06" disallow="hov"/>
+    <edge id="hb2" from="H2" to="H3" numLanes="1" speed="29.06" allow="hov taxi bus"/>
+    <edge id="mb3" from="M3" to="M4" numLanes="3" speed="29.06" disallow="hov"/>
+    <edge id="hb3" from="H3" to="H4" numLanes="1" speed="29.06" allow="hov taxi bus"/>
+    <edge id="feed_in" from="M0" to="H0" numLanes="1" speed="13.89" allow="hov taxi bus"/>
+    <edge id="feed_out" from="H4" to="M4" numLanes="1" speed="13.89" allow="hov taxi bus"/>
+    <edge id="on1" from="R1" to="M1" numLanes="1" speed="13.89"/>
+    <edge id="off1" from="M3" to="X3" numLanes="1" speed="13.89"/>
+</edges>

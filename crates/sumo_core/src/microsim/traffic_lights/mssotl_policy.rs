@@ -1,6 +1,15 @@
 //! Port of microsim/traffic_lights/MSSOTLPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::write_message;
+use utils::common::string_utils::to_double;
+use utils::common::time::steps2time;
+use utils::common::to_string::f64_to_string_default;
+
+/// C++ `StringUtils::toDouble` throws ProcessError; constructors and init() here cannot return it
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
 
 /// Class for a low-level policy.
 /// C++ class `MSSOTLPolicy` (microsim/traffic_lights/MSSOTLPolicy.h)
@@ -14,7 +23,27 @@ pub struct MSSOTLPolicy {
     pub myName: String,
     /// A pointer to the policy desirability object.'s an optional component related to the computeDesirability() method and it's necessary only when the policy is used in combination with an high level policy.
     pub myDesirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>,
+    /// Virtual dispatch table for canRelease() and decideNextPhase(); each low-level policy installs its own
+    pub vt: &'static MSSOTLPolicyVt,
 }
+
+/// Virtual dispatch table for the low-level policy base class
+pub struct MSSOTLPolicyVt {
+    pub can_release: fn(&mut MSSOTLPolicy, SUMOTime, bool, bool, Ptr<MSPhaseDefinition>, i32) -> bool,
+    pub decide_next_phase: fn(&mut MSSOTLPolicy, SUMOTime, Ptr<MSPhaseDefinition>, i32, i32, bool, bool, i32) -> i32,
+}
+
+fn policy_base_can_release(_: &mut MSSOTLPolicy, _: SUMOTime, _: bool, _: bool, _: Ptr<MSPhaseDefinition>, _: i32) -> bool {
+    panic!("MSSOTLPolicy::canRelease is pure virtual; call it on a subclass")
+}
+fn policy_base_decide_next_phase(p: &mut MSSOTLPolicy, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
+    p.decide_next_phase_base(elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
+}
+
+pub(crate) static MSSOTL_POLICY_BASE_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: policy_base_can_release,
+    decide_next_phase: policy_base_decide_next_phase,
+};
 
 impl std::ops::Deref for MSSOTLPolicy {
     type Target = Parameterised;
@@ -33,7 +62,7 @@ impl MSSOTLPolicy {
     // virtual void init() {}
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSSOTLPolicy::init")
+        // C++ body is empty
     }
 
     /// C++: `void MSSOTLPolicy::MSSOTLPolicy(std::string, const Parameterised::Map &)`
@@ -45,7 +74,13 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(name: String, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPolicy::MSSOTLPolicy")
+        MSSOTLPolicy {
+            base: Parameterised::from_map(parameters.clone()),
+            theta_sensitivity: 0.0,
+            myName: name,
+            myDesirabilityAlgorithm: Ptr::null(),
+            vt: &MSSOTL_POLICY_BASE_VT,
+        }
     }
 
     /// C++: `void MSSOTLPolicy::MSSOTLPolicy(std::string, MSSOTLPolicyDesirability *)`
@@ -58,7 +93,13 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_2(name: String, desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
-        todo!("port MSSOTLPolicy::MSSOTLPolicy")
+        MSSOTLPolicy {
+            base: Parameterised::new(),
+            theta_sensitivity: 0.0,
+            myName: name,
+            myDesirabilityAlgorithm: desirabilityAlgorithm,
+            vt: &MSSOTL_POLICY_BASE_VT,
+        }
     }
 
     /// C++: `void MSSOTLPolicy::MSSOTLPolicy(std::string, MSSOTLPolicyDesirability *, const Parameterised::Map &)`
@@ -72,7 +113,15 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_3(name: String, desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPolicy::MSSOTLPolicy")
+        let mut s = MSSOTLPolicy {
+            base: Parameterised::from_map(parameters.clone()),
+            theta_sensitivity: 0.0,
+            myName: name,
+            myDesirabilityAlgorithm: desirabilityAlgorithm,
+            vt: &MSSOTL_POLICY_BASE_VT,
+        };
+        s.theta_sensitivity = or_panic(to_double(&s.get_parameter("THETA_INIT", "0.5")));
+        s
     }
 
     /// C++: `void MSSOTLPolicy::~MSSOTLPolicy() noexcept` [virtual]
@@ -80,14 +129,15 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSSOTLPolicy::~MSSOTLPolicy")
+        // C++ destructor body is empty; nothing to release.
     }
 
     /// C++: `bool MSSOTLPolicy::canRelease(SUMOTime, bool, bool, const MSPhaseDefinition *, int)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port MSSOTLPolicy::canRelease")
+        let vt = self.vt;
+        (vt.can_release)(self, elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
     }
 
     /// C++: `int MSSOTLPolicy::decideNextPhase(SUMOTime, const MSPhaseDefinition *, int, int, bool, bool, int)` [virtual]
@@ -123,7 +173,30 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn decide_next_phase(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
-        todo!("port MSSOTLPolicy::decideNextPhase")
+        let vt = self.vt;
+        (vt.decide_next_phase)(self, elapsed, stage, currentPhaseIndex, phaseMaxCTS, thresholdPassed, pushButtonPressed, vehicleCount)
+    }
+
+    /// C++ `MSSOTLPolicy::decideNextPhase` body (the base implementation of the virtual)
+    #[allow(unused_variables)]
+    pub fn decide_next_phase_base(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, currentPhaseIndex: i32, phaseMaxCTS: i32, thresholdPassed: bool, pushButtonPressed: bool, vehicleCount: i32) -> i32 {
+        //If the junction was in a commit step
+        if stage.is_commit() {
+            // decide which chain to activate. Gotta work on this
+            return phaseMaxCTS;
+        }
+        if stage.is_transient() {
+            //If the junction was in a transient step
+            return currentPhaseIndex + 1;
+        }
+
+        if stage.is_decisional() {
+            if self.can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount) {
+                return currentPhaseIndex + 1;
+            }
+        }
+
+        currentPhaseIndex
     }
 
     /// C++: `double MSSOTLPolicy::getThetaSensitivity()` [virtual]
@@ -132,7 +205,7 @@ impl MSSOTLPolicy {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_sensitivity(&mut self) -> f64 {
-        todo!("port MSSOTLPolicy::getThetaSensitivity")
+        self.theta_sensitivity
     }
 
     /// C++: `void MSSOTLPolicy::setThetaSensitivity(double)` [virtual]
@@ -141,7 +214,7 @@ impl MSSOTLPolicy {
     //     }
     #[allow(unused_variables)]
     pub fn set_theta_sensitivity(&mut self, val: f64) {
-        todo!("port MSSOTLPolicy::setThetaSensitivity")
+        self.theta_sensitivity = val;
     }
 
     /// C++: `std::string MSSOTLPolicy::getName()`
@@ -150,7 +223,7 @@ impl MSSOTLPolicy {
     //     }
     #[allow(unused_variables)]
     pub fn get_name(&mut self) -> String {
-        todo!("port MSSOTLPolicy::getName")
+        self.myName.clone()
     }
 
     /// C++: `MSSOTLPolicyDesirability * MSSOTLPolicy::getDesirabilityAlgorithm()`
@@ -159,7 +232,7 @@ impl MSSOTLPolicy {
     //     }
     #[allow(unused_variables)]
     pub fn get_desirability_algorithm(&mut self) -> Ptr<MSSOTLPolicyDesirability> {
-        todo!("port MSSOTLPolicy::getDesirabilityAlgorithm")
+        self.myDesirabilityAlgorithm
     }
 
     /// C++: `double MSSOTLPolicy::computeDesirability(double, double, double, double)`
@@ -174,7 +247,7 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability(&mut self, vehInMeasure: f64, vehOutMeasure: f64, vehInDispersionMeasure: f64, vehOutDispersionMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy::computeDesirability")
+        self.myDesirabilityAlgorithm.m().compute_desirability_2(vehInMeasure, vehOutMeasure, vehInDispersionMeasure, vehOutDispersionMeasure)
     }
 
     /// C++: `double MSSOTLPolicy::computeDesirability(double, double)`
@@ -188,7 +261,7 @@ impl MSSOTLPolicy {
     // }
     #[allow(unused_variables)]
     pub fn compute_desirability_2(&mut self, vehInMeasure: f64, vehOutMeasure: f64) -> f64 {
-        todo!("port MSSOTLPolicy::computeDesirability")
+        self.myDesirabilityAlgorithm.m().compute_desirability_2(vehInMeasure, vehOutMeasure, 0.0, 0.0)
     }
 
 }
@@ -208,7 +281,14 @@ impl PushButtonLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, prefix: String, parameterised: Ptr<Parameterised>) {
-        todo!("port PushButtonLogic::init")
+        self.m_prefix = prefix;
+        self.m_pushButtonScaleFactor = or_panic(to_double(&parameterised.get_parameter("PUSH_BUTTON_SCALE_FACTOR", "1")));
+        write_message(&format!(
+            "{}::PushButtonLogic::init use {} scale {}",
+            self.m_prefix,
+            parameterised.get_parameter("USE_PUSH_BUTTON", "0"),
+            parameterised.get_parameter("PUSH_BUTTON_SCALE_FACTOR", "1")
+        ));
     }
 
     /// C++: `bool PushButtonLogic::pushButtonLogic(SUMOTime, bool, const MSPhaseDefinition *)` [protected]
@@ -227,7 +307,12 @@ impl PushButtonLogic {
     // }
     #[allow(unused_variables)]
     pub fn push_button_logic(&mut self, elapsed: SUMOTime, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>) -> bool {
-        todo!("port PushButtonLogic::pushButtonLogic")
+        //pushbutton logic
+        if pushButtonPressed && (elapsed as f64) >= (stage.duration as f64) * self.m_pushButtonScaleFactor {
+            //If the stage duration has been passed
+            return true;
+        }
+        false
     }
 
 }
@@ -258,7 +343,15 @@ impl SigmoidLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, prefix: String, parameterised: Ptr<Parameterised>) {
-        todo!("port SigmoidLogic::init")
+        self.m_prefix = prefix;
+        self.m_useSigmoid = parameterised.get_parameter("PLATOON_USE_SIGMOID", "0") != "0";
+        self.m_k = or_panic(to_double(&parameterised.get_parameter("PLATOON_SIGMOID_K_VALUE", "1")));
+        write_message(&format!(
+            "{}::SigmoidLogic::init use {} k {}",
+            self.m_prefix,
+            parameterised.get_parameter("PLATOON_USE_SIGMOID", "0"),
+            parameterised.get_parameter("PLATOON_SIGMOID_K_VALUE", "1")
+        ));
     }
 
     /// C++: `bool SigmoidLogic::sigmoidLogic(SUMOTime, const MSPhaseDefinition *, int)` [protected]
@@ -280,7 +373,23 @@ impl SigmoidLogic {
     // }
     #[allow(unused_variables)]
     pub fn sigmoid_logic(&mut self, elapsed: SUMOTime, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port SigmoidLogic::sigmoidLogic")
+        //use the sigmoid logic
+        if self.m_useSigmoid && vehicleCount == 0 {
+            let sigmoidValue = 1.0 / (1.0 + (-self.m_k * steps2time(elapsed - stage.duration)).exp());
+            let rnd = utils::common::rand_helper::rand();
+            write_message(&format!(
+                "{}::sigmoidLogic [k={} elapsed {} stage->duration {} ] value {} rnd {} retval {}",
+                self.m_prefix,
+                f64_to_string_default(self.m_k),
+                elapsed,
+                stage.duration,
+                f64_to_string_default(sigmoidValue),
+                f64_to_string_default(rnd),
+                if rnd < sigmoidValue { "true" } else { "false" }
+            ));
+            return rnd < sigmoidValue;
+        }
+        false
     }
 
 }

@@ -134,8 +134,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO2>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getCO2Emission needs MSLane::getEmissions<CO2>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::CO2);
+        }
+        sum
     }
 
     /// C++: `double Edge::getCOEmission(const std::string &)` [static]
@@ -149,8 +152,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getCOEmission needs MSLane::getEmissions<CO>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::CO);
+        }
+        sum
     }
 
     /// C++: `double Edge::getHCEmission(const std::string &)` [static]
@@ -164,8 +170,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::HC>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getHCEmission needs MSLane::getEmissions<HC>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::HC);
+        }
+        sum
     }
 
     /// C++: `double Edge::getPMxEmission(const std::string &)` [static]
@@ -179,8 +188,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::PM_X>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getPMxEmission needs MSLane::getEmissions<PM_X>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::PM_X);
+        }
+        sum
     }
 
     /// C++: `double Edge::getNOxEmission(const std::string &)` [static]
@@ -194,8 +206,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::NO_X>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getNOxEmission needs MSLane::getEmissions<NO_X>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::NO_X);
+        }
+        sum
     }
 
     /// C++: `double Edge::getFuelConsumption(const std::string &)` [static]
@@ -209,8 +224,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::FUEL>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getFuelConsumption needs MSLane::getEmissions<FUEL>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::FUEL);
+        }
+        sum
     }
 
     /// C++: `double Edge::getNoiseEmission(const std::string &)` [static]
@@ -227,8 +245,14 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
-        panic!("shortcut: Edge::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
+        let mut sum: f64 = 0.0;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += 10f64.powf(lane.get_harmonoise_noise_emissions() / 10.);
+        }
+        if sum != 0.0 {
+            return crate::utils::emissions::helpers_harmonoise::HelpersHarmonoise::sum(sum);
+        }
+        sum
     }
 
     /// C++: `double Edge::getElectricityConsumption(const std::string &)` [static]
@@ -242,8 +266,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(edgeID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::ELEC>, a template that the Rust MSLane::get_emissions does not carry (and is still unported), upgrade with the typed emission port
-        panic!("shortcut: Edge::getElectricityConsumption needs MSLane::getEmissions<ELEC>")
+        let mut sum = 0.;
+        for lane in Self::get_edge(edgeID).get_lanes().iter() {
+            sum += lane.get_emissions(PollutantsInterface_EmissionType::ELEC);
+        }
+        sum
     }
 
     /// C++: `int Edge::getLastStepVehicleNumber(const std::string &)` [static]
@@ -334,8 +361,17 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_last_step_length(edgeID: &str) -> f64 {
-        // shortcut: C++ dynamic_cast<const MSBaseVehicle*> from SUMOVehicle needs #[repr(C)] on MSBaseVehicle in microsim/ms_base_vehicle.rs, upgrade when added
-        panic!("shortcut: Edge::getLastStepLength needs dynamic_cast to MSBaseVehicle")
+        // shortcut: dynamic_cast<const MSBaseVehicle*> is not checked at runtime, every vehicle on the edge is assumed to be an MSBaseVehicle, upgrade with a typed vehicle check
+        let mut lengthSum: f64 = 0.0;
+        let mut numVehicles: i32 = 0;
+        for veh in Self::get_edge(edgeID).get_vehicles().iter() {
+            numVehicles += 1;
+            lengthSum += veh.cast::<MSBaseVehicle>().get_vehicle_type().get_length();
+        }
+        if numVehicles == 0 {
+            return 0.0;
+        }
+        lengthSum / numVehicles as f64
     }
 
     /// C++: `int Edge::getLaneNumber(const std::string &)` [static]
@@ -540,8 +576,9 @@ impl Edge {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Edge, EDGE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: Edge::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_EDGE_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Edge::domainID()` [static]
@@ -665,8 +702,7 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Edge::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Edge::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -824,13 +860,11 @@ impl Edge {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(edgeID: &str) -> Ptr<MSEdge> {
-        // shortcut: MSEdge::dictionary_2 takes an Unmapped std::string_view, so the id is looked up by a linear scan over MSEdgeControl::get_edges (normal edges only), upgrade when dictionary_2 takes &str
-        for e in MSNet::get_instance().m().get_edge_control().get_edges().iter() {
-            if e.get_id() == edgeID {
-                return *e;
-            }
+        let e = MSEdge::dictionary_2(edgeID);
+        if e.is_null() {
+            panic!("{}", format!("Edge '{}' is not known", edgeID));
         }
-        panic!("{}", format!("Edge '{}' is not known", edgeID));
+        e
     }
 
     /// C++: `void Edge::Edge()` [private]

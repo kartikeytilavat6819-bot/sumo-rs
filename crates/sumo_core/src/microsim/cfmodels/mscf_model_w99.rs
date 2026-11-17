@@ -4,6 +4,22 @@ use crate::prelude::*;
 use super::mscf_model::*;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
 use utils::common::to_string::f64_to_string_prec;
+
+fn w99_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_W99>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
+fn w99_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_W99>(m).stop_speed(veh, speed, gap, decel, usage) }
+fn w99_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 { cf_cast::<MSCFModel_W99>(m).interaction_gap(veh, vL) }
+fn w99_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_W99>(m).get_model_id() }
+fn w99_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_W99>(m).duplicate(vtype) }
+
+/// Virtual table of MSCFModel_W99: its overrides on top of the MSCFModel default table
+pub const W99_VT: MSCFModelVt = MSCFModelVt {
+    follow_speed: w99_follow_speed,
+    stop_speed_2: w99_stop_speed_2,
+    interaction_gap: w99_interaction_gap,
+    get_model_id: w99_get_model_id,
+    duplicate: w99_duplicate,
+    ..DEFAULT_MSCF_MODEL_VT
+};
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 
 /// C++ `#define INTERACTION_GAP 150` (MSCFModel_W99.cpp)
@@ -27,6 +43,7 @@ pub struct MSCFModel_W99 {
     pub myCC9: f64,
 }
 
+/// Virtual table of MSCFModel_W99: its overrides on top of the MSCFModel table
 impl std::ops::Deref for MSCFModel_W99 {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -73,12 +90,13 @@ impl MSCFModel_W99 {
         let myCC9 = p.get_cf_param(SUMO_ATTR_CF_W99_CC9, 1.50);
         let collisionMinGapFactor = p.get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
         let mut base = MSCFModel::new(vtype);
+        base.vt = &W99_VT;
         // translate some values to make them show up correctly in the gui
         base.myHeadwayTime = myCC1;
         base.myAccel = myCC8;
         // W99 does not drive very precise and may violate minGap on occasion
         base.myCollisionMinGapFactor = collisionMinGapFactor;
-        MSCFModel_W99 {
+        let mut this = MSCFModel_W99 {
             base,
             myCC1,
             myCC2,
@@ -89,7 +107,9 @@ impl MSCFModel_W99 {
             myCC7,
             myCC8,
             myCC9,
-        }
+        };
+        this.base.vt = &W99_VT;
+        this
     }
 
     /// C++: `void MSCFModel_W99::~MSCFModel_W99() noexcept` [virtual]

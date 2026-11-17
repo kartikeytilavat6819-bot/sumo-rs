@@ -17,6 +17,8 @@ use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
 use utils::geom::POSITION_EPS;
 use super::nb_cont::KeepClear;
 use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+use utils::common::named::{Named, NamedStoringVisitor};
+use crate::utils::named_rtree::NamedRTree;
 
 // C++ NBEdge::UNSPECIFIED_SIGNAL_OFFSET (NBEdge.cpp)
 const UNSPECIFIED_SIGNAL_OFFSET: f64 = -1.;
@@ -47,8 +49,7 @@ fn pc_get_or_insert(map: &mut BTreeMap<(Ptr<NBEdge>, Ptr<NBEdge>), SVCPermission
 
 /// C++ `addLane2LaneConnection(fromLane, dest, toLane, USER, false, mayDefinitelyPass)` with the header defaults filled in
 fn add_lane2_lane_connection_user(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayDefinitelyPass: bool) -> bool {
-    // shortcut: C++ default length is NBEdge::myDefaultConnectionLength (static, not ported); the unspecified default -1 is used
-    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::USER, false, mayDefinitelyPass, KeepClear::KEEPCLEAR_UNSPECIFIED, -1., -1., -1., 1., -1., &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
+    from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::USER, false, mayDefinitelyPass, KeepClear::KEEPCLEAR_UNSPECIFIED, -1., -1., -1., 1., crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
 /// C++ `IDSupplier` (utils/common/IDSupplier.cpp) with an empty prefix, as used by NBNodeCont::remapIDs
@@ -128,7 +129,7 @@ pub struct NBNodeCont {
     /// nodes that are excluded from tls-guessing
     pub myUnsetTLS: BTreeSet<Ptr<NBNode>>,
     /// node positions for faster lookup
-    pub myRTree: Unmapped /* NamedRTree */,
+    pub myRTree: NamedRTree,
     /// network components that must be removed if not connected to the road network via stop access
     pub myRailComponents: Vec<Vec<String>>,
 }
@@ -139,7 +140,6 @@ impl NBNodeCont {
     // NBNodeCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        // shortcut: NamedRTree is not ported (myRTree is a placeholder), so position queries scan myNodes; upgrade when NamedRTree lands
         NBNodeCont {
             myNodes: BTreeMap::new(),
             myExtractedNodes: BTreeMap::new(),
@@ -150,7 +150,7 @@ impl NBNodeCont {
             mySplit: BTreeSet::new(),
             myGuessedTLS: BTreeSet::new(),
             myUnsetTLS: BTreeSet::new(),
-            myRTree: (),
+            myRTree: NamedRTree::new(),
             myRailComponents: Vec::new(),
         }
     }
@@ -186,7 +186,8 @@ impl NBNodeCont {
         }
         let node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new_2(id, position, district))));
         self.myNodes.insert(id.to_string(), node);
-        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        let pos = [position.x() as f32, position.y() as f32];
+        self.myRTree.insert(&pos, &pos, &node.cast::<Named>());
         true
     }
 
@@ -210,8 +211,10 @@ impl NBNodeCont {
         if self.myNodes.contains_key(&id) {
             return false;
         }
+        let p = node.get_position();
+        let pos = [p.x() as f32, p.y() as f32];
         self.myNodes.insert(id, node);
-        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        self.myRTree.insert(&pos, &pos, &node.cast::<Named>());
         true
     }
 
@@ -260,7 +263,9 @@ impl NBNodeCont {
             return false;
         }
         self.myNodes.remove(&id);
-        // shortcut: NamedRTree not ported, nothing to remove from the position index
+        let p = node.get_position();
+        let pos = [p.x() as f32, p.y() as f32];
+        self.myRTree.remove(&pos, &pos, &node.cast::<Named>());
         node.m().remove_traffic_lights(false);
         if remember {
             self.myExtractedNodes.insert(node.get_id().to_string(), node);
@@ -306,12 +311,19 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_by_pos(&self, position: &Position, offset: f64) -> Vec<Ptr<NBNode>> {
-        // shortcut: NamedRTree not ported, candidates come from a scan of myNodes (id order, C++ uses address order); upgrade when NamedRTree lands
+        let extOffset = offset + POSITION_EPS;
+        let cmin = [(position.x() - extOffset) as f32, (position.y() - extOffset) as f32];
+        let cmax = [(position.x() + extOffset) as f32, (position.y() + extOffset) as f32];
+        let mut into: BTreeSet<Ptr<Named>> = BTreeSet::new();
+        let sv = NamedStoringVisitor::new(&mut into);
+        self.myRTree.search(&cmin, &cmax, &sv, |d, c| d.add_to(c));
         let mut result = Vec::new();
-        for node in self.myNodes.values() {
+        for namedNode in &into {
+            // dynamic_cast<const NBNode*>: only NBNodes are inserted into myRTree
+            let node: Ptr<NBNode> = namedNode.cast::<NBNode>();
             let p = node.get_position();
             if (p.x() - position.x()).abs() <= offset && (p.y() - position.y()).abs() <= offset {
-                result.push(*node);
+                result.push(node);
             }
         }
         result
@@ -2358,9 +2370,10 @@ impl NBNodeCont {
                                 tlc.remove_fully(s.m().get_id().to_string());
                             }
                         }
-                        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_)));
+                        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_));
                         // @todo patch endOffset for all incoming lanes according to the signal positions
                         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                        node.m().add_traffic_light(tlDef);
                         if !tlc.insert(tlDef, false) {
                             // actually, nothing should fail here
                             write_warningf!("Could not build joined tls '%'.", node.m().get_id());
@@ -2402,8 +2415,11 @@ impl NBNodeCont {
                     self.myGuessedTLS.insert(node);
                 }
                 let id = self.create_cluster_id(nodeSet, "joinedG_");
-                let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+                let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
                 let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                for n in nodes.iter().copied() {
+                    n.m().add_traffic_light(tlDef);
+                }
                 if !tlc.insert(tlDef, false) {
                     write_warning("Could not build guessed, joined tls.");
                     drop(unsafe { Box::from_raw(raw) });
@@ -2478,9 +2494,7 @@ impl NBNodeCont {
                 tlc.remove_fully(def.m().get_id().to_string());
             } else {
                 def.m().set_participants_information();
-                // shortcut: C++ virtual setTLControllingInformation() is dispatched statically to NBOwnTLDef here, because every
-                // definition reachable from myGuessedTLS is created by guessTLs as an NBOwnTLDef; upgrade when virtual dispatch exists
-                def.cast::<NBOwnTLDef>().m().set_tl_controlling_information();
+                def.m().set_tl_controlling_information();
                 utils::options::options_cont::with_options(|oc| tlc.compute_single_logic(oc, def));
             }
         }
@@ -2608,16 +2622,19 @@ impl NBNodeCont {
             let mut type_ = TrafficLightType::STATIC;
             let mut nodeType = SumoXMLNodeType::UNKNOWN;
             self.analyze_cluster(c.clone(), &mut id, &mut dummyPos, &mut dummySetTL, &mut type_, &mut nodeType);
-            for j in c.iter().copied() {
+            for j in nodes_by_id(c) {
                 let tls = j.m().get_controlling_tls().clone();
                 j.m().remove_traffic_lights(false);
                 for k in tls.iter() {
                     tlc.remove_fully(k.m().get_id().to_string());
                 }
             }
-            let nodes: Vec<Ptr<NBNode>> = c.iter().copied().collect();
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+            let nodes: Vec<Ptr<NBNode>> = nodes_by_id(c);
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            for n in nodes.iter().copied() {
+                n.m().add_traffic_light(tlDef);
+            }
             if !tlc.insert(tlDef, false) {
                 // actually, nothing should fail here
                 write_warning("Could not build a joined tls.");
@@ -2646,8 +2663,9 @@ impl NBNodeCont {
     #[allow(unused_variables)]
     pub fn set_as_tl_controlled(&mut self, node: Ptr<NBNode>, tlc: &mut NBTrafficLightLogicCont, type_: TrafficLightType, id: String) {
         let id = if id == "" { node.get_id().to_string() } else { id };
-        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&id, node, 0, type_)));
+        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&id, node, 0, type_));
         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+        node.m().add_traffic_light(tlDef);
         if !tlc.insert(tlDef, false) {
             // actually, nothing should fail here
             write_warning(&format!("Building a tl-logic for junction '{}' twice is not possible.", id));
@@ -3084,7 +3102,7 @@ impl NBNodeCont {
         let prefix = id.clone();
         *id = self.create_cluster_id(&cluster, &prefix);
         let mut ambiguousType = false;
-        for j in cluster.iter().copied() {
+        for j in nodes_by_id(&cluster) {
             pos.add(j.m().get_position());
             // add a traffic light if any of the cluster members was controlled
             if j.m().is_tl_controlled() {
@@ -3930,7 +3948,7 @@ impl NBNodeCont {
         while pruneFringe {
             pruneFringe = false;
             // C++ iterates the live set and erases only the current element, so a snapshot visits the same nodes
-            for n in cluster.iter().copied().collect::<Vec<_>>() {
+            for n in nodes_by_id(cluster) {
                 // compute clusterDist for node (length of shortest edge which connects this node to the cluster)
                 let mut clusterDist = f64::MAX;
                 let mut touchingCluster = false;
@@ -4074,12 +4092,12 @@ impl NBNodeCont {
     pub fn prune_long_edges(cluster: &mut NodeSet, maxDist: f64, dryRun: bool) -> i32 {
         let mut toRemove: NodeSet = NodeSet::new();
         let mut maxPassengerLanes: i32 = 0;
-        for n in cluster.iter().copied().collect::<Vec<_>>() {
+        for n in nodes_by_id(cluster) {
             for edge in n.m().get_edges().clone() {
                 maxPassengerLanes = if maxPassengerLanes > edge.m().get_num_lanes_that_allow(SVC_PASSENGER, true) { maxPassengerLanes } else { edge.m().get_num_lanes_that_allow(SVC_PASSENGER, true) };
             }
         }
-        for n in cluster.iter().copied().collect::<Vec<_>>() {
+        for n in nodes_by_id(cluster) {
             for edge in n.m().get_outgoing_edges().clone() {
                 // we must track the edge length across geometry like nodes
                 // Also, intersections that are geometry-like
@@ -4415,7 +4433,7 @@ impl NBNodeCont {
             return;
         }
         let mut toRemove: NodeSet = NodeSet::new();
-        for n in cluster.iter().copied().collect::<Vec<_>>() {
+        for n in nodes_by_id(cluster) {
             let mut outgoing: EdgeVector = Vec::new();
             let mut inAngle: f64 = 0.;
             // find slip lanes where the start is part of the cluster
@@ -4786,7 +4804,7 @@ impl NBNodeCont {
         // (std::map<NBEdge*, double, ComparatorIdLess>: ordered by edge id)
         let mut finalIncomingAngles: BTreeMap<String, (Ptr<NBEdge>, f64)> = BTreeMap::new();
         let mut finalOutgoingAngles: BTreeMap<String, (Ptr<NBEdge>, f64)> = BTreeMap::new();
-        for n in cluster.iter().copied() {
+        for n in nodes_by_id(cluster) {
             for edge in n.m().get_incoming_edges().clone() {
                 if !cluster.contains(&edge.m().get_from_node()) && (edge.m().get_permissions(-1) & SVC_PASSENGER) != 0 {
                     // incoming edge, does not originate in the cluster
@@ -4864,7 +4882,7 @@ impl NBNodeCont {
         }
         // check for stop edges and tls within the cluster
         let mut hasTLS = false;
-        for n in cluster.iter().copied() {
+        for n in nodes_by_id(cluster) {
             if n.m().is_tl_controlled() || n.m().had_signal() {
                 hasTLS = true;
             }
@@ -4882,8 +4900,8 @@ impl NBNodeCont {
             // find the nodes with the biggests physical distance between them
             let mut maxLength: f64 = -1.;
             let mut maxEdge: Ptr<NBEdge> = Ptr::from_raw(std::ptr::null_mut());
-            for n1 in cluster.iter().copied() {
-                for n2 in cluster.iter().copied() {
+            for n1 in nodes_by_id(cluster) {
+                for n2 in nodes_by_id(cluster) {
                     let e1 = n1.m().get_connection_to(n2);
                     let e2 = n2.m().get_connection_to(n1);
                     if !e1.is_null() && e1.m().get_loaded_length() > maxLength {
@@ -4930,7 +4948,7 @@ impl NBNodeCont {
             let mut outsideIncoming: EdgeVector = Vec::new();
             let mut outsideOutgoing: EdgeVector = Vec::new();
             let mut edgesWithin: i32 = 0;
-            for n in cluster.iter().copied() {
+            for n in nodes_by_id(cluster) {
                 let mut foundOutsideIncoming = false;
                 for e in n.m().get_incoming_edges().clone() {
                     if !cluster.contains(&e.m().get_from_node()) {
@@ -5249,7 +5267,7 @@ impl NBNodeCont {
             .unwrap_or_else(|e| std::panic::panic_any(e));
         // collect edges (std::set<NBEdge*, ComparatorIdLess>: keyed by id, first insertion wins)
         let mut allEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
-        for n in cluster.iter().copied() {
+        for n in nodes_by_id(&cluster) {
             for e in n.m().get_edges().clone() {
                 allEdges.entry(e.m().get_id().to_string()).or_insert(e);
             }
@@ -5305,8 +5323,9 @@ impl NBNodeCont {
             newNode.m().base2.set_parameter(SUMO_PARAM_ORIGID, &clusterNames.join(" "));
         }
         if setTL && !newNode.m().is_tl_controlled() {
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&tlID, newNode, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&tlID, newNode, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            newNode.m().add_traffic_light(tlDef);
             if !tlc.insert(tlDef, false) {
                 // actually, nothing should fail here
                 drop(unsafe { Box::from_raw(raw) });
@@ -5411,7 +5430,7 @@ impl NBNodeCont {
                 }
             }
             if e.m().get_turn_sign_target() != "" {
-                for n in cluster.iter().copied() {
+                for n in nodes_by_id(&cluster) {
                     if e.m().get_turn_sign_target() == n.m().get_id() {
                         let toID = to.m().get_id().to_string();
                         e.m().set_turn_sign_target(&toID);
@@ -5462,7 +5481,7 @@ impl NBNodeCont {
 
         // remove original nodes
         self.register_joined_cluster(&cluster);
-        for n in cluster.iter().copied() {
+        for n in nodes_by_id(&cluster) {
             self.erase(n);
         }
     }
@@ -5500,7 +5519,7 @@ impl NBNodeCont {
     pub fn should_be_tls_controlled(&self, c: &NodeSet, laneSpeedThreshold: f64, recheck: bool) -> bool {
         let mut tooFast = false;
         let mut laneSpeedSum: f64 = 0.;
-        for j in c.iter().copied() {
+        for j in nodes_by_id(c) {
             for e in j.m().get_edges().clone() {
                 if c.contains(&e.m().get_from_node()) && c.contains(&e.m().get_to_node()) {
                     // edges fully within the cluster do not count
@@ -5556,7 +5575,7 @@ impl NBNodeCont {
     pub fn only_crossings(&self, c: &NodeSet) -> bool {
         // check whether all component nodes are solely pedestrian crossings
         // (these work fine without joining)
-        for node in c.iter().copied() {
+        for node in nodes_by_id(c) {
             let mut nonPedIncoming: EdgeVector = Vec::new();
             let mut nonPedOutgoing: EdgeVector = Vec::new();
             for e in node.m().get_incoming_edges().clone() {
@@ -5600,7 +5619,7 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn custom_tlid(&self, c: &NodeSet) -> bool {
-        for node in c.iter().copied() {
+        for node in nodes_by_id(c) {
             if node.m().is_tl_controlled() {
                 let tl = node.m().get_controlling_tls().iter().next().copied().unwrap();
                 if tl.m().get_nodes().len() > 1 {
@@ -5645,7 +5664,7 @@ impl NBNodeCont {
         let x = node.m().get_position().x() * xSign as f64;
         let y = node.m().get_position().y() * ySign as f64;
         let mut dominated: Vec<Ptr<NBNode>> = Vec::new();
-        for fnode in frontier.iter().copied().collect::<Vec<_>>() {
+        for fnode in nodes_by_id(frontier) {
             let x2 = fnode.m().get_position().x() * xSign as f64;
             let y2 = fnode.m().get_position().y() * ySign as f64;
             if x2 >= x && y2 >= y {

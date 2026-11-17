@@ -1,0 +1,25 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rE" edges="E0 E1"/>
+    <flow id="cars" type="car" route="rE" begin="0.00" end="100.00" period="20.00"/>
+    <person id="ps0" type="ped" depart="0.00">
+        <walk edges="E0"/>
+        <stop lane="E0_0" endPos="50.00" duration="20.00"/>
+        <walk edges="E0 E1" arrivalPos="60.00"/>
+    </person>
+    <person id="ps1" type="ped" depart="5.00" departPos="10.00" departPosLat="0.30">
+        <walk edges="E0 E1" speed="1.2" arrivalPosLat="0.20"/>
+    </person>
+    <person id="ps2" type="ped" depart="15.00" departPos="0.00" departPosLat="-0.20">
+        <walk edges="E0"/>
+        <stop lane="E0_0" endPos="80.00" until="60.00"/>
+        <walk edges="E0 E1" arrivalPos="90.00"/>
+    </person>
+    <person id="ps3" type="ped" depart="30.00" departPosLat="0.10">
+        <walk edges="E0 E1" speed="0.9" arrivalPos="90.00"/>
+    </person>
+    <person id="ps4" type="ped" depart="45.00" departPos="30.00">
+        <walk edges="E1" arrivalPos="90.00" arrivalPosLat="0.10"/>
+    </person>
+</routes>

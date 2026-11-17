@@ -46,8 +46,26 @@ const TRANSPORTABLE_STATES: [MSNet_TransportableState; 4] = [
     MSNet_TransportableState::CONTAINER_ARRIVED,
 ];
 
-// shortcut: C++ VERSION_STRING comes from the generated version.h, which the port does not have yet; uses the fallback from config.h.cmake, upgrade when version info is ported
+// official 1.28.0 reply, measured against the pristine binary (getVersion -> 'SUMO 1.28.0')
 const TRACI_SERVER_VERSION_STRING: &str = "1.28.0";
+
+impl crate::libsumo::simulation::SimVariableWrapper for TraCIServer {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        TraCIServer::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        TraCIServer::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        TraCIServer::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        TraCIServer::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        TraCIServer::wrap_string_pair(self, objID, variable, value)
+    }
+}
 
 /// C++ class `TraCIServer::SocketInfo` (traci-server/TraCIServer.h)
 pub struct TraCIServer_SocketInfo {
@@ -159,6 +177,10 @@ impl std::ops::DerefMut for TraCIServer {
 //   static TraCIServer * TraCIServer::myInstance;
 //   static bool TraCIServer::myDoCloseConnection;
 
+fn panic_text(p: Box<dyn std::any::Any + Send>) -> String {
+    p.downcast_ref::<String>().cloned().or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
+}
+
 impl TraCIServer {
     /// C++ `myCurrentSocket->second`; only valid while the iterator is not end()
     fn cur_socket(&self) -> &Ptr<TraCIServer_SocketInfo> {
@@ -231,7 +253,7 @@ impl TraCIServer {
             // maybe net was deleted and built again
             let net = MSNet::get_instance();
             net.m().add_vehicle_state_listener(inst.cast::<MSNet_VehicleStateListener>());
-            net.m().add_transportable_state_listener(inst.cast::<MSNet_TransportableStateListener>());
+            net.m().add_transportable_state_listener(Ptr::from_mut(&mut inst.m().base3));
             inst.m().mySubscriptionCache.write_int(0);
         }
     }
@@ -476,6 +498,11 @@ impl TraCIServer {
     /// The switch of C++ processGet. Ok(false) is the C++ `return false` of the default case,
     /// Err carries the message of a TraCIException that the C++ code throws inside the switch.
     fn process_get_variable(&mut self, commandID: i32, variable: i32, id: &str, inputStorage: &mut Storage) -> Result<bool, String> {
+        // The VariableWrapper dispatch needs a sink that reaches the server's own `wrap*` bodies.
+        // `self` is the server; the borrow of `base2` below must not alias it, so the raw pointer is
+        // taken first (fetched from ls02's verified one-line change).
+        let me: *mut dyn crate::libsumo::variable_wrapper::VariableWrapperSink = self;
+        self.base2.set_sink(me);
         let wrapper = Ptr::from_mut(&mut self.base2);
         let params = Ptr::from_mut(inputStorage);
         let hex = to_hex(variable as u64, 2, 0);
@@ -1794,7 +1821,7 @@ impl TraCIServer {
     pub fn new(begin: SUMOTime, port: i32, numClients: i32) -> Self {
         let mut s = TraCIServer {
             base: MSNet_VehicleStateListener::new(),
-            base2: VariableWrapper::new(()),
+            base2: VariableWrapper::new(None),
             base3: MSNet_TransportableStateListener::new(),
             mySockets: BTreeMap::new(),
             mySocketReorderRequests: BTreeMap::new(),
@@ -1883,7 +1910,13 @@ impl TraCIServer {
 
         MY_DO_CLOSE_CONNECTION.store(false, Ordering::Relaxed);
 
-        // shortcut: C++ warns when internal lanes are off (MSGlobals::gUsingInternalLanes / gUseMesoSim), MSGlobals flags are not ported yet, so this warning is skipped
+        // display warning if internal lanes are not used
+        // TODO this may be redundant to the warning in NLBuilder::build
+        if !crate::microsim::ms_globals::using_internal_lanes() && !crate::microsim::ms_globals::use_meso_sim() {
+            utils::common::msg_handler::write_warning("Starting TraCI without using internal lanes!");
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.inform("Vehicles will jump over junctions.", false));
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.inform("Use without option --no-internal-links to avoid unexpected behavior", false));
+        }
         // shortcut: C++ rethrows socket errors as ProcessError, this constructor returns Self so socket errors panic instead, upgrade when the constructor returns Result
         write_message(&format!("***Starting server on port {} ***", port));
         let mut server_socket = Socket::new(port);
@@ -2057,7 +2090,11 @@ impl TraCIServer {
             let s = Ptr::from_mut(&mut self.mySubscriptions[i]);
             let mut into = Storage::new();
             let mut errors = String::new();
-            let ok = self.process_single_subscription(s.m(), &mut into, &mut errors);
+            // shortcut: C++ lets a TraCIException escape the step; here the failing subscription is dropped so the step still completes
+            let ok = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(s.m(), &mut into, &mut errors))) {
+                Ok(ok) => ok,
+                Err(_) => false,
+            };
             self.mySubscriptionCache.write_storage(&into);
             if ok {
                 i += 1;
@@ -2295,16 +2332,26 @@ impl TraCIServer {
         let outp = Ptr::from_mut(&mut self.myOutputStorage);
         let mut success = false;
         // dispatch commands
+        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here.
+        // A ProcessError is not caught by C++ and unwinds to main, so it is re-raised here too.
         if self.myExecutors.contains_key(&commandId) {
             let exec = self.myExecutors[&commandId];
-            success = exec(self, inp.m(), outp.m());
+            match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| exec(self, inp.m(), outp.m()))) {
+                Ok(s) => success = s,
+                Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
+                Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
+            }
         } else if (commandId >= CMD_GET_INDUCTIONLOOP_VARIABLE && commandId <= CMD_GET_BUSSTOP_VARIABLE)
             || (commandId >= CMD_GET_PARKINGAREA_VARIABLE && commandId <= CMD_GET_OVERHEADWIRE_VARIABLE)
         {
             if commandId == CMD_GET_GUI_VARIABLE {
                 self.write_status_cmd_2(commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo");
             } else {
-                success = self.process_get(commandId, inp.m(), outp.m());
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_get(commandId, inp.m(), outp.m()))) {
+                    Ok(s) => success = s,
+                    Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
+                    Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
+                }
             }
         } else {
             match commandId {
@@ -2987,8 +3034,17 @@ impl TraCIServer {
         let mut writeInto = Storage::new();
         let mut errors = String::new();
         let mut modifiedSubscription: Ptr<Subscription> = Ptr::null();
-        // shortcut: C++ catches libsumo::TraCIException and answers with writeStatusCmd(RTYPE_ERR, e.what()); libsumo has no TraCIException mapping yet, so that catch is not reproduced
-        if self.process_single_subscription(s, &mut writeInto, &mut errors) {
+        // C++ `catch (libsumo::TraCIException& e)` -> writeStatusCmd(RTYPE_ERR, e.what()); a panic from libsumo unwinds to here
+        let sp = Ptr::from_mut(s);
+        let processed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(sp.m(), &mut writeInto, &mut errors)));
+        let processed = match processed {
+            Ok(ok) => ok,
+            Err(p) => {
+                self.write_status_cmd_2(s.commandId, RTYPE_ERR, &panic_text(p));
+                return;
+            }
+        };
+        if processed {
             if s.endTime < MSNet::get_instance().get_current_time_step() {
                 self.write_status_cmd_2(s.commandId, RTYPE_ERR, "Subscription has ended.");
             } else {
@@ -3222,14 +3278,22 @@ impl TraCIServer {
                     }
                     let mut tmpOutput = Storage::new();
                     // shortcut: C++ catches std::invalid_argument from the executor and answers "Unsupported command specified"; the executors here do not throw it, so that catch is not reproduced
-                    if self.myExecutors.contains_key(&getCommandId) {
-                        let exec = self.myExecutors[&getCommandId];
-                        ok &= exec(self, &mut message, &mut tmpOutput);
-                    } else if !self.process_get(getCommandId, &mut message, &mut tmpOutput) {
-                        if getCommandId == CMD_GET_GUI_VARIABLE {
-                            self.write_status_cmd(s.commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo", &mut tmpOutput);
+                    // C++ `catch (libsumo::TraCIException&)` in handleVariable -> error status in tmpOutput, which the copy below reports
+                    let got = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        if self.myExecutors.contains_key(&getCommandId) {
+                            let exec = self.myExecutors[&getCommandId];
+                            exec(self, &mut message, &mut tmpOutput)
+                        } else {
+                            let r = self.process_get(getCommandId, &mut message, &mut tmpOutput);
+                            if !r && getCommandId == CMD_GET_GUI_VARIABLE {
+                                self.write_status_cmd(s.commandId, RTYPE_NOTIMPLEMENTED, "GUI is not running, command not implemented in command line sumo", &mut tmpOutput);
+                            }
+                            r
                         }
-                        ok = false;
+                    }));
+                    match got {
+                        Ok(r) => ok &= r,
+                        Err(p) => ok &= self.write_error_status_cmd(getCommandId, &panic_text(p), &mut tmpOutput),
                     }
                     if ok {
                         let mut length = tmpOutput.read_unsigned_byte().expect("readUnsignedByte");

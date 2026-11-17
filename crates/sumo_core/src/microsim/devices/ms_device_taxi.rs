@@ -1,23 +1,17 @@
 //! Port of microsim/devices/MSDevice_Taxi.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::to_string::{f64_to_string_prec, join_to_string_sorting};
+use utils::options::options_cont::with_options;
+use utils::common::to_string::{f64_to_string_default, join_to_string_sorting};
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
-thread_local! {
-    /// C++ `static SVCPermissions gTaxiClasses` in MSDevice_Taxi.cpp
-    static G_TAXI_CLASSES: std::cell::Cell<i64> = std::cell::Cell::new(0);
-}
+/// C++ `gTaxiClasses` (StdDefs, int); MSFrame seeds it from taxi.vclasses and the intermodal router reads it
 fn g_taxi_classes() -> i64 {
-    G_TAXI_CLASSES.with(|c| c.get())
+    utils::common::std_defs::g_taxi_classes() as i64
 }
 fn set_g_taxi_classes(v: i64) {
-    G_TAXI_CLASSES.with(|c| c.set(v))
+    utils::common::std_defs::set_g_taxi_classes(v as i32)
 }
 
 /// C++ enum `MSDevice_Taxi::TaxiState`
@@ -83,10 +77,41 @@ impl std::ops::DerefMut for MSDevice_Taxi {
 //   static SUMOTime MSDevice_Taxi::myNextDispatchTime;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedCustomers;
 //   static std::map<std::string, MSDevice_Taxi *> MSDevice_Taxi::myStateLoadedReservations;
+/// C++ template `StaticCommand<T>` (utils/common/StaticCommand.h), instantiated for `MSDevice_Taxi`:
+/// a Command that calls a static function on execute(), unless it was descheduled.
+pub struct MSDevice_Taxi_StaticCommand {
+    myOperation: fn(SUMOTime) -> SUMOTime,
+    myAmDescheduledByParent: bool,
+}
+
+impl MSDevice_Taxi_StaticCommand {
+    /// C++: `StaticCommand(Operation operation)`
+    pub fn new(operation: fn(SUMOTime) -> SUMOTime) -> Self {
+        MSDevice_Taxi_StaticCommand { myOperation: operation, myAmDescheduledByParent: false }
+    }
+
+    /// C++: `void StaticCommand::deschedule()`
+    pub fn deschedule(&mut self) {
+        self.myAmDescheduledByParent = true;
+    }
+}
+
+impl Command for MSDevice_Taxi_StaticCommand {
+    /// C++: `SUMOTime StaticCommand::execute(SUMOTime currentTime)`
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        // do not execute if the command was descheduled
+        if self.myAmDescheduledByParent {
+            return 0;
+        }
+        // execute if stil valid
+        (self.myOperation)(currentTime)
+    }
+}
+
 thread_local! {
     static MY_DISPATCH_PERIOD: std::cell::RefCell<SUMOTime> = std::cell::RefCell::new(0);
     static MY_DISPATCHER: std::cell::RefCell<Ptr<MSDispatch>> = std::cell::RefCell::new(Ptr::null());
-    static MY_DISPATCH_COMMAND: std::cell::RefCell<Ptr<Unmapped>> = std::cell::RefCell::new(Ptr::null());
+    static MY_DISPATCH_COMMAND: std::cell::RefCell<Ptr<MSDevice_Taxi_StaticCommand>> = std::cell::RefCell::new(Ptr::null());
     static MY_FLEET: std::cell::RefCell<Vec<Ptr<MSDevice_Taxi>>> = std::cell::RefCell::new(Vec::new());
     static MY_MAX_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
     static MY_MAX_CONTAINER_CAPACITY: std::cell::RefCell<i32> = std::cell::RefCell::new(0);
@@ -226,8 +251,7 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
-        if panic!("shortcut: equipped_by_default_assignment_options not ported") {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "taxi", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             // build the device
             let device: Ptr<MSDevice_Taxi> = Ptr::from_mut(Box::leak(Box::new(MSDevice_Taxi::new(v, &format!("taxi_{}", v.get_id())))));
             into.push(device.cast::<MSVehicleDevice>());
@@ -235,14 +259,14 @@ impl MSDevice_Taxi {
             if v.get_parameter().line.is_empty() {
                 // automatically set the line so that persons are willing to enter
                 // (see MSStageDriving::isWaitingFor)
-                // const_cast on the vehicle parameter, as in C++
-                let p = v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-                unsafe { (*p).line = TAXI_SERVICE.to_string(); }
+                v.get_parameter_mutable().line = TAXI_SERVICE.to_string();
             }
             let personCapacity = v.get_vehicle_type().get_person_capacity();
             let containerCapacity = v.get_vehicle_type().get_container_capacity();
-            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), personCapacity));
-            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), containerCapacity));
+            let maxCap = std::cmp::max(MY_MAX_CAPACITY.with(|c| *c.borrow()), personCapacity);
+            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = maxCap);
+            let maxContainerCap = std::cmp::max(MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow()), containerCapacity);
+            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
             let vclass = v.get_v_class();
             let needType = MY_TAXI_TYPES.with(|t| t.borrow().get(&vclass).map_or(true, |s| s.is_empty()));
             if needType {
@@ -331,7 +355,7 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because origin edge '{}' does not permit taxi access", kind, pid, from.get_id())));
         }
         if MY_DISPATCH_COMMAND.with(|c| c.borrow().is_null()) {
-            Self::init_dispatch(0);
+            Self::init_dispatch(-1);
         }
         // pickup position should be at the stop-endPos
         let fromPos = if !fromStop.is_null() && Ptr::new(fromStop.get_lane().get_edge()) == from {
@@ -505,7 +529,7 @@ impl MSDevice_Taxi {
             MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
         });
         // delete myIdleAlgorithm
-        drop(unsafe { Box::from_raw(self.myIdleAlgorithm.as_raw()) });
+        delete_idle_algorithm(self.myIdleAlgorithm);
         // base class destructor runs after the derived one in C++
         self.base.drop_();
     }
@@ -818,8 +842,7 @@ impl MSDevice_Taxi {
         let holderPtr = self.myHolder;
         let holder = holderPtr.m();
         let mut lastPos: f64 = holder.get_position_on_lane();
-        // shortcut: C++ `*getRerouteOrigin()` is an iterator into the route; MSBaseVehicle::getRerouteOrigin is not ported yet and returns its current edge, upgrade when it returns Ptr<MSEdge>
-        let rerouteOrigin: Ptr<MSEdge> = holder.get_edge();
+        let rerouteOrigin: Ptr<MSEdge> = holder.get_route().index_op(holder.get_reroute_origin() as i32);
         if self.is_empty() {
             // start fresh from the current edge
             if holder.is_stopped_parking() {
@@ -1141,7 +1164,7 @@ impl MSDevice_Taxi {
         self.myLastDispatch.retain(|x| current_reservations.contains(x));
         // if there are reservations left, go on with the dispatch
         // in meso, wait for the next dispatch cycle to avoid updating stops in this stage
-        if !g_use_meso_sim() {
+        if !MSGlobals::use_meso_sim() {
             let last = self.myLastDispatch.clone();
             self.dispatch_shared(last);
         }
@@ -1309,7 +1332,7 @@ impl MSDevice_Taxi {
             self.myCurrentReservations.clear();
             self.check_task_swap();
             if self.is_empty() {
-                if g_use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
+                if MSGlobals::use_meso_sim() && MSNet::get_instance().get_current_time_step() < self.myServiceEnd {
                     { let idle = self.myIdleAlgorithm; idle.m().idle(Ptr::from_mut(self)); }
                 }
             }
@@ -1353,8 +1376,8 @@ impl MSDevice_Taxi {
         let internals = format!("{} {} {} {}",
             self.myState,
             self.myCustomersServed,
-            f64_to_string_prec(self.myOccupiedDistance, 6),
-            f64_to_string_prec(self.myOccupiedTime as f64, 6));
+            f64_to_string_default(self.myOccupiedDistance),
+            self.myOccupiedTime);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         if self.myCustomers.len() > 0 {
             out.write_attr(SUMO_ATTR_CUSTOMERS, sorted_join(self.myCustomers.iter().map(|c| c.get_id().to_string()).collect()).as_str());
@@ -1525,8 +1548,8 @@ impl MSDevice_Taxi {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == "customers" {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == "customers" {
             self.myCustomersServed.to_string()
         } else if key == "occupiedDistance" {
             utils::common::to_string::to_string(&self.myOccupiedDistance)
@@ -1541,8 +1564,8 @@ impl MSDevice_Taxi {
         } else if key == "dropOffDuration" {
             self.myHolder.get_string_param("device.taxi.dropOffDuration", false, "60")
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `void MSDevice_Taxi::setParameter(const std::string &, const std::string &)` [virtual]
@@ -1564,9 +1587,9 @@ impl MSDevice_Taxi {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         if value.parse::<f64>().is_err() {
-            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())));
         }
         if key == "pickUpDuration" || key == "dropOffDuration" {
             // store as generic vehicle parameters
@@ -1574,8 +1597,9 @@ impl MSDevice_Taxi {
             let par: &mut SUMOVehicleParameter = unsafe { &mut *Ptr::new(holderPtr.m().get_parameter()).as_raw() };
             par.set_parameter(&format!("device.taxi.{}", key), value);
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Taxi::generateOutput(OutputDevice *) const` [const, virtual]
@@ -1784,9 +1808,8 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Dispatch algorithm '{}' is not known", algo)));
         };
         MY_DISPATCHER.with(|d| *d.borrow_mut() = dispatcher);
-        // shortcut: C++ `new StaticCommand<MSDevice_Taxi>(&MSDevice_Taxi::triggerDispatch)` is not ported (no Command type); a non-null marker keeps the "already initialised" check working, upgrade when StaticCommand is ported and scheduled via addEvent
-        let command: Ptr<Unmapped> = Ptr::from_mut(Box::leak(Box::new(())));
-        MY_DISPATCH_COMMAND.with(|c| *c.borrow_mut() = command);
+        let command: &mut MSDevice_Taxi_StaticCommand = Box::leak(Box::new(MSDevice_Taxi_StaticCommand::new(MSDevice_Taxi::trigger_dispatch)));
+        MY_DISPATCH_COMMAND.with(|c| *c.borrow_mut() = Ptr::from_mut(command));
         // round to next multiple of myDispatchPeriod
         if next < 0 {
             let now = MSNet::get_instance().get_current_time_step();
@@ -1796,9 +1819,7 @@ impl MSDevice_Taxi {
             next = now + delay;
         }
         MY_NEXT_DISPATCH_TIME.with(|t| *t.borrow_mut() = next);
-        // shortcut: the dispatch StaticCommand is not ported (command is a placeholder), so it cannot be scheduled; upgrade with StaticCommand
-        let _ = (command, next);
-        panic!("shortcut: triggerDispatch scheduling not ported");
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(command as &mut dyn Command), next);
     }
 
     /// C++: `void MSDevice_Taxi::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -1852,13 +1873,37 @@ impl MSDevice_Taxi {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Taxi>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Taxi>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_Taxi>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
+        let mut this = Self::new_device(holder, id);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str) -> Self {
         let mut defaultServiceEnd = utils::common::to_string::to_string(&1e15_f64);
         let algo = holder.get_string_param("device.taxi.idle-algorithm", false, "");
         let idle: Ptr<MSIdling>;
         if algo == "stop" {
-            idle = { panic!("shortcut: MSIdling_Stop constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_Stop::new()))).cast::<MSIdling>();
         } else if algo == "randomCircling" {
-            idle = { panic!("shortcut: MSIdling_RandomCircling constructor not ported") };
+            idle = Ptr::from_mut(Box::leak(Box::new(MSIdling_RandomCircling::new()))).cast::<MSIdling>();
             // make sure simulation terminates
             let depart = if holder.get_parameter().departProcedure == DepartDefinition::GIVEN {
                 holder.get_parameter().depart
@@ -1880,7 +1925,7 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Idle algorithm '{}' is not known for vehicle '{}'", algo, holder.get_id())));
         }
         let serviceEnd = string2time_or_die(&holder.get_string_param("device.taxi.end", false, &defaultServiceEnd));
-        let routing = holder.get_device(&()).cast::<MSDevice_Routing>();
+        let routing = MSDevice::get_device_by_name(&Ptr::from_mut(holder).cast::<MSVehicle>().m().myDevices, "rerouting").cast::<MSDevice_Routing>();
         MSDevice_Taxi {
             base: MSVehicleDevice::new(holder, id),
             myState: MSDevice_Taxi_TaxiState::EMPTY as i32,
@@ -1952,7 +1997,7 @@ impl MSDevice_Taxi {
         } else if !self.myRoutingDevice.is_null() {
             self.myRoutingDevice.m().set_active(true);
         }
-        if holder.is_stopped() && (self.is_empty() || g_use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
+        if holder.is_stopped() && (self.is_empty() || MSGlobals::use_meso_sim()) && holder.get_next_stop().endBoarding > self.myServiceEnd {
             // limit duration of stop (but only for idling-related stops)
             holder.get_next_stop_mutable().endBoarding = self.myServiceEnd;
         }
@@ -2118,8 +2163,7 @@ impl MSDevice_Taxi {
             edges.push(stopEdge);
         }
         *lastPos = stopPos;
-        // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
-        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
+        let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
         stop.lane = self.get_stop_lane(stopEdge, action).get_id().to_string();
         if !stopPlace.is_null() && stopPlaceEdge == stopEdge {
             stop.startPos = stopPlace.get_begin_lane_position();
@@ -2263,16 +2307,32 @@ impl MSDevice_Taxi {
         let holder = holderPtr.m();
         let swapGroup = holder.get_string_param("device.taxi.swapGroup", false, "");
         if swapGroup != "" {
+            let dispatcher = MY_DISPATCHER.with(|d| *d.borrow());
+            let router = dispatcher.m().get_router();
+            let now: SUMOTime = MSNet::get_instance().get_current_time_step();
             let stopTime: f64 = if holder.is_stopped() { f64::max(0.0, steps2time(holder.get_next_stop().duration)) } else { 0.0 };
             let mut maxSaving: f64 = 0.0;
             let mut bestSwap: Ptr<MSDevice_Taxi> = Ptr::null();
             for taxi in MY_FLEET.with(|f| f.borrow().clone()) {
                 if taxi.get_holder().has_departed() && taxi.get_state() == MSDevice_Taxi_TaxiState::PICKUP as i32
                     && taxi.get_holder().get_string_param("device.taxi.swapGroup", false, "") == swapGroup {
-                    // shortcut: C++ builds toPickup from the route iterator range (getCurrentRouteEdge() .. stop.edge + 1) and costs it with the router; MSRouteIterator is not mapped yet (Unmapped), so the candidate evaluation is skipped and no swap happens, upgrade when MSRouteIterator is ported
+                    let veh = taxi.get_holder();
+                    let vehPtr = taxi.m().myHolder;
+                    let stop = veh.get_next_stop();
+                    let toPickup: ConstMSEdgeVector = veh.get_route().get_edges()[*veh.get_current_route_edge()..stop.edge + 1].to_vec();
+                    let cost = router.recompute_costs_pos(&toPickup, vehPtr, veh.get_position_on_lane(), stop.pars.endPos, now, Ptr::default());
+                    let mut toPickup2: ConstMSEdgeVector = Vec::new();
+                    router.compute_2(holder.get_edge(), holder.get_position_on_lane(), veh.get_route().index_op(stop.edge as i32), stop.pars.endPos, holderPtr, now, &mut toPickup2, true);
+                    if !toPickup2.is_empty() {
+                        let cost2 = router.recompute_costs_pos(&toPickup2, holderPtr, holder.get_position_on_lane(), stop.pars.endPos, now, Ptr::default());
+                        let saving = cost - cost2 - stopTime;
+                        if saving > maxSaving {
+                            maxSaving = saving;
+                            bestSwap = taxi;
+                        }
+                    }
                 }
             }
-            let _ = stopTime;
             if maxSaving > 5.0 {
                 self.dispatch_shared(bestSwap.m().myLastDispatch.clone());
                 bestSwap.m().myCurrentReservations.clear();

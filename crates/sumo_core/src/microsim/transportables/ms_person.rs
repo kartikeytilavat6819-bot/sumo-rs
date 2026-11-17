@@ -1,4 +1,4 @@
-//! Port of microsim/transportables/MSPerson.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+﻿//! Port of microsim/transportables/MSPerson.{h,cpp} â€” GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
@@ -138,6 +138,72 @@ impl MSPerson_Influencer {
 
 }
 
+// C++ virtual overrides of SUMOTrafficObject, dispatched through SUMOTrafficObject::vt
+fn ms_person_is_vehicle(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn ms_person_is_person(_: &SUMOTrafficObject) -> bool {
+    true
+}
+fn ms_person_is_container(_: &SUMOTrafficObject) -> bool {
+    false
+}
+// C++ overrides of SUMOTrafficObject in MSTransportable (inherited by MSPerson): dispatch to the MSTransportable methods
+fn ms_person_of_mut(o: &mut SUMOTrafficObject) -> &mut MSPerson {
+    Ptr::from_mut(o).cast::<MSPerson>().get_mut().unwrap()
+}
+fn ms_person_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    ms_person_of_mut(o).base.replace_vehicle_type(type_)
+}
+fn ms_person_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    ms_person_of_mut(o).base.replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn ms_person_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    ms_person_of_mut(o).base.set_routing_mode(value)
+}
+
+static MS_PERSON_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+    is_vehicle: ms_person_is_vehicle,
+    is_person: ms_person_is_person,
+    is_container: ms_person_is_container,
+    get_parameter: ms_person_get_parameter,
+    get_edge: ms_person_get_edge,
+    get_lane: ms_person_get_lane,
+    get_speed: ms_person_get_speed,
+    get_position: ms_person_get_position,
+    get_numerical_id: ms_person_get_numerical_id,
+    get_random_seed: ms_person_get_random_seed,
+    get_vehicle_type: ms_person_get_vehicle_type,
+    get_v_type_parameter: ms_person_get_v_type_parameter,
+    replace_vehicle_type: ms_person_replace_vehicle_type,
+    get_rng: ms_person_get_rng,
+    get_rng_index: ms_person_get_rng_index,
+    is_stopped: ms_person_is_stopped,
+    get_current_edge: ms_person_get_current_edge,
+    get_next_edge_ptr: ms_person_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: ms_person_get_upcoming_edge_i_ds,
+    get_back_lane: ms_person_get_back_lane,
+    get_route_position: ms_person_get_route_position,
+    get_reroute_destination: ms_person_get_reroute_destination,
+    replace_route: ms_person_replace_route,
+    get_slope: ms_person_get_slope,
+    get_chosen_speed_factor: ms_person_get_chosen_speed_factor,
+    get_v_class: ms_person_get_v_class,
+    get_routing_mode: ms_person_get_routing_mode,
+    set_routing_mode: ms_person_set_routing_mode,
+    get_max_speed: ms_person_get_max_speed,
+    get_waiting_time: ms_person_get_waiting_time,
+    get_previous_speed: ms_person_get_previous_speed,
+    get_acceleration: ms_person_get_acceleration,
+    get_position_on_lane: ms_person_get_position_on_lane,
+    get_back_position_on_lane: ms_person_get_back_position_on_lane,
+    get_angle: ms_person_get_angle,
+    has_arrived: ms_person_has_arrived,
+    has_influencer: ms_person_has_influencer,
+    is_selected: ms_person_is_selected,
+    get_device: ms_person_get_device,
+};
+
 /// The class holds a simulated person together with her movement stages
 /// C++ class `MSPerson` (microsim/transportables/MSPerson.h)
 #[repr(C)]
@@ -174,7 +240,8 @@ impl MSPerson {
     // { }
     #[allow(unused_variables)]
     pub fn new(pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, speedFactor: f64) -> Self {
-        let base = MSTransportable::new(pars, vtype, plan, true);
+        let mut base = MSTransportable::new(pars, vtype, plan, true);
+        base.base.vt = &MS_PERSON_VT;
         let timegap = base.get_float_param("pedestrian.timegap-crossing", false, utils::common::std_defs::INVALID_DOUBLE, true);
         MSPerson {
             base,
@@ -274,8 +341,7 @@ impl MSPerson {
                     let endP = prevStop.get_lane().geometry_position_at_offset(arrivalAtBs, 0.);
                     MSPerson_MSPersonStage_Access::new(stopEdge, prevStop, arrivalAtBs, 0.0, access.length, false, &startP, &endP)
                 } else {
-                    // shortcut: MSTransportableControl::getMovementModel is not ported, so usingDoors() is assumed false here
-                    let usingDoors = false;
+                    let usingDoors = MSNet::get_instance().m().get_person_control().get_movement_model().m().using_doors();
                     let useDoors = access.exit == MSStoppingPlace_AccessExit::DOORS || (!usingDoors && access.exit == MSStoppingPlace_AccessExit::CARRIAGE);
                     if access.exit == MSStoppingPlace_AccessExit::CARRIAGE {
                         let startPos = if prior.get_stage_type() == MSStageType::TRIP { prior.get_edge_pos(0) } else { prior.get_arrival_pos() };
@@ -637,7 +703,7 @@ impl MSPerson_MSPersonStage_Access {
         let cmd = MSPersonStage_Access_ProceedCmd::new(person, edge);
         let cmdPtr: Ptr<dyn Command> = Ptr::from_mut(Box::leak(Box::new(cmd)) as &mut dyn Command);
         net.myBeginOfTimestepEvents.m().add_event(cmdPtr, self.myEstimatedArrival);
-        // shortcut: MSTransportableControl::startedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().started_access();
         edge.add_transportable(person);
         true
     }
@@ -782,7 +848,7 @@ impl MSPerson_MSPersonStage_Access {
         let cmd = MSPersonStage_Access_ProceedCmd::new(person, edge);
         let cmdPtr: Ptr<dyn Command> = Ptr::from_mut(Box::leak(Box::new(cmd)) as &mut dyn Command);
         net.myBeginOfTimestepEvents.m().add_event(cmdPtr, self.myEstimatedArrival);
-        // shortcut: MSTransportableControl::startedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().started_access();
         edge.add_transportable(person);
     }
 
@@ -836,7 +902,7 @@ impl MSPersonStage_Access_ProceedCmd {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        // shortcut: MSTransportableControl::endedAccess is not ported yet, so the access counter is not updated
+        MSNet::get_instance().m().get_person_control().ended_access();
         self.myStopEdge.remove_transportable(self.myPerson);
         if !self.myPerson.m().proceed(MSNet::get_instance(), currentTime, false) {
             MSNet::get_instance().m().get_person_control().erase(self.myPerson);
@@ -859,3 +925,53 @@ impl Command for MSPersonStage_Access_ProceedCmd {
         MSPersonStage_Access_ProceedCmd::execute(self, currentTime)
     }
 }
+
+fn ms_person_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    let p: &MSPerson = Ptr::new(o).cast::<MSPerson>().get().unwrap();
+    p.get_parameter()
+}
+
+fn ms_person_of(o: &SUMOTrafficObject) -> &MSPerson {
+    Ptr::new(o).cast::<MSPerson>().get().unwrap()
+}
+
+// C++ MSTransportable overrides of SUMOTrafficObject, forwarded to the MSTransportable methods
+macro_rules! person_fwd {
+    ($name:ident, ($($a:ident : $t:ty),*), $ret:ty, $m:ident) => {
+        fn $name(o: &SUMOTrafficObject $(, $a: $t)*) -> $ret {
+            ms_person_of(o).$m($($a),*)
+        }
+    };
+}
+person_fwd!(ms_person_get_edge, (), Ptr<MSEdge>, get_edge);
+person_fwd!(ms_person_get_lane, (), Ptr<MSLane>, get_lane);
+person_fwd!(ms_person_get_speed, (), f64, get_speed);
+person_fwd!(ms_person_get_position, (arg: f64), Position, get_position);
+person_fwd!(ms_person_get_numerical_id, (), SUMOTrafficObject_NumericalID, get_numerical_id);
+person_fwd!(ms_person_get_random_seed, (), i64, get_random_seed);
+person_fwd!(ms_person_get_vehicle_type, (), &MSVehicleType, get_vehicle_type);
+person_fwd!(ms_person_get_v_type_parameter, (), &SUMOVTypeParameter, get_v_type_parameter);
+person_fwd!(ms_person_get_rng, (), Ptr<SumoRNG>, get_rng);
+person_fwd!(ms_person_get_rng_index, (), i32, get_rng_index);
+person_fwd!(ms_person_is_stopped, (), bool, is_stopped);
+person_fwd!(ms_person_get_current_edge, (), Ptr<MSEdge>, get_current_edge);
+person_fwd!(ms_person_get_next_edge_ptr, (), Ptr<MSEdge>, get_next_edge_ptr);
+person_fwd!(ms_person_get_upcoming_edge_i_ds, (), BTreeSet<SUMOTrafficObject_NumericalID>, get_upcoming_edge_i_ds);
+person_fwd!(ms_person_get_back_lane, (), Ptr<MSLane>, get_back_lane);
+person_fwd!(ms_person_get_route_position, (), i32, get_route_position);
+person_fwd!(ms_person_get_reroute_destination, (), Ptr<MSEdge>, get_reroute_destination);
+person_fwd!(ms_person_get_slope, (), f64, get_slope);
+person_fwd!(ms_person_get_chosen_speed_factor, (), f64, get_chosen_speed_factor);
+person_fwd!(ms_person_get_v_class, (), SUMOVehicleClass, get_v_class);
+person_fwd!(ms_person_get_routing_mode, (), i32, get_routing_mode);
+person_fwd!(ms_person_get_max_speed, (), f64, get_max_speed);
+person_fwd!(ms_person_get_waiting_time, (accumulated: bool), SUMOTime, get_waiting_time);
+person_fwd!(ms_person_get_previous_speed, (), f64, get_previous_speed);
+person_fwd!(ms_person_get_acceleration, (), f64, get_acceleration);
+person_fwd!(ms_person_get_position_on_lane, (), f64, get_position_on_lane);
+person_fwd!(ms_person_get_back_position_on_lane, (lane: Ptr<MSLane>), f64, get_back_position_on_lane);
+person_fwd!(ms_person_get_angle, (), f64, get_angle);
+person_fwd!(ms_person_has_arrived, (), bool, has_arrived);
+person_fwd!(ms_person_has_influencer, (), bool, has_influencer);
+person_fwd!(ms_person_is_selected, (), bool, is_selected);
+person_fwd!(ms_person_get_device, (kind: &str), Ptr<MSDevice>, get_device);

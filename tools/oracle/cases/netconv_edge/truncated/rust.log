@@ -1,0 +1,7 @@
+Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.
+Warning: Environment variable SUMO_HOME is not set, using built in type maps.
+Error: syntax error: attribute value not closed: `"` not found before end of input
+ In file 'C:\Users\karti\sumo-rs\.claude\worktrees\wave2\tools\oracle\cases\netconv_edge\truncated\input.osm'
+ At line/column 9/5.
+
+Quitting (on error).

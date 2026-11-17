@@ -4,11 +4,12 @@ use crate::prelude::*;
 use std::cell::Cell;
 use utils::common::std_defs::{g_precision, g_precision_emissions};
 use utils::common::time::ts;
-use utils::options::options_cont::{get_string_vector, is_set};
+use utils::options::options_cont::{get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 thread_local! {
-    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask(0)) };
+    // C++ `myWrittenAttributes(getDefaultMask())`: all attributes written until emission-output.attributes is set
+    static MY_WRITTEN_ATTRIBUTES: Cell<SumoXMLAttrMask> = const { Cell::new(SumoXMLAttrMask((1u128 << SumoXMLAttrMask::SIZE) - 1)) };
     static MY_AM_INITIALIZED: Cell<bool> = const { Cell::new(false) };
 }
 
@@ -73,8 +74,19 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "emissions", v, isSet("emission-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
+        let outputOptionSet = is_set("emission-output");
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "emissions",
+                &v.get_id(),
+                &v.get_parameter().base,
+                &v.get_v_type_parameter().base,
+                outputOptionSet,
+                false,
+            )
+        });
+        if equipped {
             // the device is owned by the vehicle's device list for the rest of the run, as in C++
             let device: &mut MSDevice_Emissions = Box::leak(Box::new(MSDevice_Emissions::new(v)));
             into.push(Ptr::from_mut(&mut device.base));
@@ -88,6 +100,36 @@ impl MSDevice_Emissions {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Emissions>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        fn mr_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Emissions>().m().notify_idle(veh)
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: mr_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
+        };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_Emissions>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
+        let mut this = Self::new_device(holder);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle) -> Self {
         let id = format!("emissions_{}", holder.get_id());
         MSDevice_Emissions {
             base: MSVehicleDevice::new(holder, &id),

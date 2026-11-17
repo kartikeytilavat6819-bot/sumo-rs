@@ -49,10 +49,6 @@ fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
 }
 
-// shortcut: MSGlobals::gLateralResolution is not ported yet; read the same "lateral-resolution" option that MSFrame stores in it, upgrade when MSGlobals is ported
-fn g_lateral_resolution() -> f64 {
-    utils::options::options_cont::get_float("lateral-resolution")
-}
 
 /// C++ `MSVehicle::LaneQ()` default-constructed value
 fn lane_q_default() -> MSVehicle_LaneQ {
@@ -85,20 +81,8 @@ fn lane_q_copy(q: &MSVehicle_LaneQ) -> MSVehicle_LaneQ {
 const SUMO_const_laneWidth: f64 = 3.2;
 const SUMO_const_haltingSpeed: f64 = 0.1;
 
-// shortcut: MSGlobals::gSemiImplicitEulerUpdate is not ported; recomputed from "step-method.ballistic" (MSFrame's rule without the action-step-length override), upgrade when MSGlobals is ported
-fn g_semi_implicit_euler_update() -> bool {
-    !utils::options::options_cont::get_bool("step-method.ballistic")
-}
 
-// shortcut: MSAbstractLaneChangeModel::myAllowOvertakingRight (static) is not ported; read the "lanechange.overtake-right" option directly, upgrade when the base class is ported
-fn g_allow_overtaking_right() -> bool {
-    utils::options::options_cont::get_bool("lanechange.overtake-right")
-}
 
-// shortcut: MSGlobals::gLefthand (set from the net's location attribute in NLHandler) is not ported; assumes right-hand traffic, upgrade when MSGlobals and netload are ported
-fn g_lefthand() -> bool {
-    false
-}
 
 /// C++ `toString(SumoXMLAttr)`: the attribute name
 fn attr_name(a: SumoXMLAttr) -> &'static str {
@@ -109,6 +93,111 @@ fn attr_name(a: SumoXMLAttr) -> &'static str {
 fn traffic_object_of(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
     Ptr::from_mut(&mut v.m().base.base.base)
 }
+
+fn sl2015_inform(lcm: &mut MSAbstractLaneChangeModel, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().inform(info, sender)
+}
+
+fn sl2015_patch_speed(lcm: &mut MSAbstractLaneChangeModel, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().patch_speed(min, wanted, max, cfModel)
+}
+
+fn sl2015_changed(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().changed()
+}
+
+fn sl2015_wants_change(lcm: &mut MSAbstractLaneChangeModel, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().wants_change(laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, lastBlocked, firstBlocked)
+}
+
+fn sl2015_wants_change_sublane(lcm: &mut MSAbstractLaneChangeModel, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, targetDistLat: &mut f64, blocked: &mut i32) -> i32 {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().wants_change_sublane(laneOffset, alternatives, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, preb, lastBlocked, firstBlocked, latDist, targetDistLat, blocked)
+}
+
+fn sl2015_update_expected_sublane_speeds(lcm: &mut MSAbstractLaneChangeModel, ahead: &MSLeaderDistanceInfo, sublaneOffset: i32, laneIndex: i32) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().update_expected_sublane_speeds(ahead, sublaneOffset, laneIndex)
+}
+
+fn sl2015_decide_direction(lcm: &MSAbstractLaneChangeModel, sd1: MSAbstractLaneChangeModel_StateAndDist, sd2: MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().decide_direction(sd1, sd2)
+}
+
+fn sl2015_set_own_state(lcm: &mut MSAbstractLaneChangeModel, state: i32) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().set_own_state(state)
+}
+
+fn sl2015_prepare_step(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().prepare_step()
+}
+
+fn sl2015_update_safe_lat_dist(lcm: &mut MSAbstractLaneChangeModel, travelledLatDist: f64) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().update_safe_lat_dist(travelledLatDist)
+}
+
+fn sl2015_get_safety_factor(lcm: &MSAbstractLaneChangeModel) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().get_safety_factor()
+}
+
+fn sl2015_compute_speed_lat(lcm: &MSAbstractLaneChangeModel, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().compute_speed_lat(latDist, maneuverDist, urgent)
+}
+
+fn sl2015_save_blocker_length(lcm: &mut MSAbstractLaneChangeModel, length: f64, foeLeftSpace: f64) -> bool {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().save_blocker_length(length, foeLeftSpace)
+}
+
+fn sl2015_set_parameter(lcm: &mut MSAbstractLaneChangeModel, key: &str, value: &str) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().set_parameter(key, value)
+}
+
+fn sl2015_reset_state(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_SL2015>().m().reset_state()
+}
+
+fn sl2015_get_opposite_safety_factor(lcm: &MSAbstractLaneChangeModel) -> f64 {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().get_opposite_safety_factor()
+}
+
+fn sl2015_debug_vehicle(lcm: &MSAbstractLaneChangeModel) -> bool {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().debug_vehicle()
+}
+
+fn sl2015_get_parameter(lcm: &MSAbstractLaneChangeModel, key: &str) -> String {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().get_parameter(key)
+}
+
+fn sl2015_get_desired_alignment(lcm: &MSAbstractLaneChangeModel) -> LatAlignmentDefinition {
+    Ptr::new(lcm).cast::<MSLCM_SL2015>().m().get_desired_alignment()
+}
+
+/// Virtual dispatch table of MSLCM_SL2015
+pub static MSLCM_SL2015_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: sl2015_inform,
+    patch_speed: sl2015_patch_speed,
+    changed: sl2015_changed,
+    wants_change: sl2015_wants_change,
+    wants_change_sublane: sl2015_wants_change_sublane,
+    update_expected_sublane_speeds: sl2015_update_expected_sublane_speeds,
+    decide_direction: sl2015_decide_direction,
+    set_own_state: sl2015_set_own_state,
+    prepare_step: sl2015_prepare_step,
+    reset_speed_lat: MSAbstractLaneChangeModel::reset_speed_lat_base,
+    update_safe_lat_dist: sl2015_update_safe_lat_dist,
+    get_safety_factor: sl2015_get_safety_factor,
+    compute_speed_lat: sl2015_compute_speed_lat,
+    save_blocker_length: sl2015_save_blocker_length,
+    get_extra_reservation: MSAbstractLaneChangeModel::get_extra_reservation_base,
+    set_parameter: sl2015_set_parameter,
+    avoid_overtake_right: MSAbstractLaneChangeModel::avoid_overtake_right_base,
+    save_state: MSAbstractLaneChangeModel::save_state_base,
+    load_state: MSAbstractLaneChangeModel::load_state_base,
+    reset_state: sl2015_reset_state,
+    get_opposite_safety_factor: sl2015_get_opposite_safety_factor,
+    debug_vehicle: sl2015_debug_vehicle,
+    get_parameter: sl2015_get_parameter,
+    get_desired_alignment: sl2015_get_desired_alignment,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
+};
 
 /// A lane change model developed by J. Erdmann
 /// C++ class `MSLCM_SL2015` (microsim/lcmodels/MSLCM_SL2015.h)
@@ -224,7 +313,8 @@ impl MSLCM_SL2015 {
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
         // C++ base-class initializer runs first
-        let base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::SL2015);
+        let mut base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::SL2015);
+        base.vt = &MSLCM_SL2015_VT;
         let vt = v.get_vehicle_type();
         let p = vt.get_parameter();
         let myStrategicParam = p.get_lc_param(SUMO_ATTR_LCA_STRATEGIC_PARAM, 1.);
@@ -796,7 +886,7 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
-        self.base.prepare_step();
+        self.base.prepare_step_base();
         // keep information about strategic change direction
         self.myOwnState = if (self.myOwnState & (LCA_STRATEGIC | LCA_COOPERATIVE)) != 0 { self.myOwnState & LCA_WANTS_LANECHANGE } else { 0 };
         self.myLeadingBlockerLength = 0.;
@@ -824,14 +914,14 @@ impl MSLCM_SL2015 {
             let currEdge = Ptr::from_mut(self.myVehicle.get_lane().get_edge());
             let lanes = currEdge.get_lanes();
             for lane in lanes.iter() {
-                let subLanes = std::cmp::max(1, (lane.get_width() / g_lateral_resolution()).ceil() as i32);
+                let subLanes = std::cmp::max(1, (lane.get_width() / MSGlobals::lateral_resolution()).ceil() as i32);
                 for _i in 0..subLanes {
                     newExpectedSpeeds.push(lane.get_vehicle_max_speed(traffic_object_of(self.myVehicle)));
                 }
             }
             if currEdge.can_change_to_opposite() {
                 let opposite = lanes.last().unwrap().get_opposite();
-                let subLanes = std::cmp::max(1, (opposite.get_width() / g_lateral_resolution()).ceil() as i32);
+                let subLanes = std::cmp::max(1, (opposite.get_width() / MSGlobals::lateral_resolution()).ceil() as i32);
                 for _i in 0..subLanes {
                     newExpectedSpeeds.push(lanes.last().unwrap().get_vehicle_max_speed(traffic_object_of(self.myVehicle)));
                 }
@@ -902,7 +992,7 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn set_own_state(&mut self, state: i32) {
-        self.base.set_own_state(state);
+        self.base.set_own_state_base(state);
         if self.myVehicle.is_active() {
             if (state & (LCA_STRATEGIC | LCA_SPEEDGAIN)) != 0 && (state & LCA_BLOCKED) != 0 {
                 self.myImpatience = min2(1.0, self.myImpatience + self.myVehicle.get_action_step_length_secs() / self.myTimeToImpatience);
@@ -1500,7 +1590,7 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn get_desired_alignment(&self) -> LatAlignmentDefinition {
-        let mut align = self.base.get_desired_alignment();
+        let mut align = self.base.get_desired_alignment_base();
         // Check whether the vehicle should adapt its alignment to an upcoming turn
         if self.myTurnAlignmentDist > 0. {
             let (turnDist, turnLink) = *self.myVehicle.m().get_next_turn();
@@ -1512,11 +1602,11 @@ impl MSLCM_SL2015 {
                     LinkDirection::TURN | LinkDirection::LEFT | LinkDirection::PARTLEFT => {
                         if self.myVehicle.get_lane().get_bidi_lane().is_null() {
                             // no left alignment on bidi lane to avoid blocking oncoming traffic
-                            align = if g_lefthand() != indirect { LatAlignmentDefinition::RIGHT } else { LatAlignmentDefinition::LEFT };
+                            align = if MSGlobals::lefthand() != indirect { LatAlignmentDefinition::RIGHT } else { LatAlignmentDefinition::LEFT };
                         }
                     }
                     LinkDirection::TURN_LEFTHAND | LinkDirection::RIGHT | LinkDirection::PARTRIGHT => {
-                        align = if g_lefthand() != indirect { LatAlignmentDefinition::LEFT } else { LatAlignmentDefinition::RIGHT };
+                        align = if MSGlobals::lefthand() != indirect { LatAlignmentDefinition::LEFT } else { LatAlignmentDefinition::RIGHT };
                     }
                     _ => {}
                 }
@@ -3615,7 +3705,7 @@ impl MSLCM_SL2015 {
 
             if (dv < self.myOvertakeDeltaSpeedFactor * self.myVehicle.get_lane().get_speed_limit() + utils::geom::NUMERICAL_EPS
                 // overtaking on the right on an uncongested highway is forbidden (noOvertakeLCLeft)
-                || (dir == LCA_MLEFT && !self.myVehicle.congested() && !g_allow_overtaking_right())
+                || (dir == LCA_MLEFT && !self.myVehicle.congested() && !crate::microsim::lcmodels::ms_abstract_lane_change_model::MY_ALLOW_OVERTAKING_RIGHT.load(std::sync::atomic::Ordering::Relaxed))
                 // not enough space to overtake? (we will start to brake when approaching a dead end)
                 || self.myLeftSpace - self.myLeadingBlockerLength - self.myVehicle.get_car_follow_model().brake_gap(self.myVehicle.get_speed()) < overtakeDist
                 // not enough time to overtake?
@@ -3649,7 +3739,7 @@ impl MSLCM_SL2015 {
             let nv = neighLead.0;
             let dv: f64;
             let nextNVSpeed: f64;
-            if g_semi_implicit_euler_update() {
+            if MSGlobals::semi_implicit_euler_update() {
                 // XXX: the decrement (HELP_OVERTAKE) should be scaled with timestep length, I think.
                 //      It seems to function as an estimate nv's speed in the next simstep!? (so HELP_OVERTAKE should be an acceleration value.)
                 nextNVSpeed = nv.get_speed() - HELP_OVERTAKE; // conservative
@@ -3898,7 +3988,7 @@ impl MSLCM_SL2015 {
             } else if dv > 0. && dv * remainingSeconds > (secureGap - decelGap + utils::geom::POSITION_EPS) {
                 // decelerating once is sufficient to open up a large enough gap in time
                 self.msg(neighFollow, neighNewSpeed, dir | LCA_AMBLOCKINGFOLLOWER);
-            } else if dir == LCA_MRIGHT && !g_allow_overtaking_right() && !nv.congested() {
+            } else if dir == LCA_MRIGHT && !crate::microsim::lcmodels::ms_abstract_lane_change_model::MY_ALLOW_OVERTAKING_RIGHT.load(std::sync::atomic::Ordering::Relaxed) && !nv.congested() {
                 let vhelp = max2(neighNewSpeed, HELP_OVERTAKE);
                 self.msg(neighFollow, vhelp, dir | LCA_AMBLOCKINGFOLLOWER);
             } else {
@@ -4251,7 +4341,7 @@ impl MSLCM_SL2015 {
                 // this may happen if a sibling lane is wider than the changer lane
                 continue;
             }
-            if !link.is_null() && lane.get_width() > next.get_width() + utils::geom::NUMERICAL_EPS && g_lateral_resolution() > 0. && self.sublane_ends(sublane, next, shift) {
+            if !link.is_null() && lane.get_width() > next.get_width() + utils::geom::NUMERICAL_EPS && MSGlobals::lateral_resolution() > 0. && self.sublane_ends(sublane, next, shift) {
                 // sublane does not continue, discourage from use
                 self.myExpectedSublaneSpeeds[edgeSublane as usize] = 0.;
                 continue;
@@ -4286,7 +4376,40 @@ impl MSLCM_SL2015 {
                         vSafe = self.forecast_average_speed(vSafe, vMax, gap, leader.get_speed());
                     }
                 }
-                // shortcut: pedestrian blockers (MSLane::nextBlocking, hasPedestrians on the edge and on the bidi lane) are not ported, so pedestrians are ignored here; upgrade with the pedestrian model
+                // take pedestrians into account
+                if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {
+                    let mut foeRight: f64 = 0.;
+                    let mut foeLeft: f64 = 0.;
+                    ahead.get_sublane_borders(sublane, 0., &mut foeRight, &mut foeLeft);
+                    let ped_leader = lane.next_blocking(myVehicle.get_position_on_lane() - myVehicle.get_vehicle_type().get_length(), foeRight, foeLeft, 0., false);
+                    if !ped_leader.0.is_null() {
+                        let pedGap = ped_leader.1 - myVehicle.get_vehicle_type().get_min_gap() - myVehicle.get_vehicle_type().get_length();
+                        // we do not know the walking direction here so we take the pedestrian speed as 0
+                        vSafe = min2(
+                            myVehicle.get_car_follow_model().stop_speed(myVehicle, vMax, pedGap, MSCFModel_CalcReason::CURRENT),
+                            self.forecast_average_speed(vSafe, vMax, pedGap, 0.),
+                        );
+                    }
+                }
+                // take bidi pedestrians into account
+                if !bidi.is_null() && bidi.get_edge().get_persons().len() > 0 && bidi.has_pedestrians() {
+                    let mut foeRight: f64 = 0.;
+                    let mut foeLeft: f64 = 0.;
+                    ahead.get_sublane_borders(sublane, 0., &mut foeRight, &mut foeLeft);
+                    let foeRightBidi = bidi.get_width() - foeLeft;
+                    let foeLeftBidi = bidi.get_width() - foeRight;
+                    let relativeBackPos = myVehicle.get_lane().get_length() - myVehicle.get_position_on_lane() + myVehicle.get_length();
+                    let stopTime = (myVehicle.get_speed() / myVehicle.get_car_follow_model().get_max_decel()).ceil();
+                    let ped_leader = bidi.next_blocking(relativeBackPos, foeRightBidi, foeLeftBidi, stopTime, true);
+                    if !ped_leader.0.is_null() {
+                        let pedGap = ped_leader.1 - myVehicle.get_vehicle_type().get_min_gap() - myVehicle.get_vehicle_type().get_length();
+                        // we do not know the walking direction here so we take the pedestrian speed as 0
+                        vSafe = min2(
+                            myVehicle.get_car_follow_model().stop_speed(myVehicle, vMax, pedGap, MSCFModel_CalcReason::CURRENT),
+                            self.forecast_average_speed(vSafe, vMax, pedGap, 0.),
+                        );
+                    }
+                }
                 vSafe = min2(vMax, vSafe);
                 // forget old data when on the opposite side
                 let memoryFactor = if self.is_opposite() { 0. } else { SPEEDGAIN_MEMORY_FACTOR.powf(myVehicle.get_action_step_length_secs()) };
@@ -4440,7 +4563,7 @@ impl MSLCM_SL2015 {
             let sl2015 = unsafe { &mut *(model as *mut MSAbstractLaneChangeModel as *mut MSLCM_SL2015) };
             sl2015.inform(info, self.myVehicle);
         } else {
-            // shortcut: informing a neighbour with another lane change model goes through the base inform, which is not ported yet
+            // virtual dispatch: the base inform forwards to the neighbour model's vt
             model.inform(info, self.myVehicle);
         }
     }
@@ -5463,7 +5586,7 @@ impl MSLCM_SL2015 {
         // save the left space
 
         if laneOffset == 0 {
-            if overlap > max2(POSITION_EPS, g_lateral_resolution())
+            if overlap > max2(POSITION_EPS, MSGlobals::lateral_resolution())
                 && (self.get_shadow_lane().is_null() || !self.get_shadow_lane().allows_vehicle_class(self.myVehicle.get_v_class()))
                 && self.get_width() < self.myVehicle.get_lane().get_width()
             {
@@ -5480,12 +5603,12 @@ impl MSLCM_SL2015 {
                     let hwDiff = 0.5 * (cur.get_width() - next.get_width());
                     let rightVehSide = self.myVehicle.get_right_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let leftVehSide = self.myVehicle.get_left_side_on_lane() + link.get_lateral_shift() - hwDiff;
-                    let res = if g_lateral_resolution() > 0. { g_lateral_resolution() } else { next.get_width() };
-                    if rightVehSide < -res && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    let res = if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { next.get_width() };
+                    if rightVehSide < -res && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -rightVehSide;
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
-                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -(leftVehSide - next.get_width());
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
@@ -5685,7 +5808,7 @@ impl MSLCM_SL2015 {
         let mut leftmost: i32 = 0;
         let curHasStopped = !stoppedLeader.is_null();
         let dir = if latLaneDist < 0. { -1 } else { 1 };
-        let neighBeyond = neighLane.get_parallel_lane(dir, false);
+        let neighBeyond = neighLane.get_parallel_lane(dir, true);
         let hasLaneBeyond = checkCurrent && !neighBeyond.is_null() && neighBeyond.allows_vehicle_class(self.myVehicle.get_v_class());
         let _ = hasLaneBeyond; // UNUSED_PARAMETER in C++
         if curHasStopped || self.has_bidi_leader(leaders, conts) {
@@ -6216,7 +6339,7 @@ impl MSLCM_SL2015 {
                 if !foePair.0.is_null() && foePair.1 <= 0. && !self.myCFRelated.contains(&foePair.0) && (netOverlap == 0. || foePair.1 + foePair.0.get_vehicle_type().get_min_gap() < netOverlap) {
                     // foe vehicle occupies full sublanes
                     let foe = foePair.0;
-                    let res = if g_lateral_resolution() > 0. { g_lateral_resolution() } else { foe.get_lane().get_width() };
+                    let res = if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { foe.get_lane().get_width() };
                     let mut foeRight = 0.;
                     let mut foeLeft = 0.;
                     others.get_sublane_borders(i, foeOffset, &mut foeRight, &mut foeLeft);
@@ -6312,8 +6435,6 @@ impl MSLCM_SL2015 {
     //             if (overlap(rightVehSide, leftVehSide, foeRight, foeLeft) && !outsideEdge()
     //                     // account for imprecise driving by some models
     //                     && (vehDist.second >= vehDist.first->getVehicleType().getMinGap() * (1 - vehDist.first->getCarFollowModel().getCollisionMinGapFactor())
-    //                         || (vehDist.second < 0 && myVehicle.getLane()->isNormal() && vehDist.first->getLane()->isNormal()
-    //                             && vehDist.second >= -myVehicle.getVehicleType().getMinGap() * (1 - myVehicle.getCarFollowModel().getCollisionMinGapFactor()))
     //                         // avoid deadlock due to #3729
     //                         || (!leaders
     //                             && myVehicle.getPositionOnLane() >= myVehicle.getVehicleType().getLength()
@@ -6357,8 +6478,6 @@ impl MSLCM_SL2015 {
                 let keep = Self::overlap(rightVehSide, leftVehSide, foeRight, foeLeft) && !self.outside_edge()
                     // account for imprecise driving by some models
                     && (vehDist.1 >= vehDist.0.get_vehicle_type().get_min_gap() * (1. - vehDist.0.get_car_follow_model().get_collision_min_gap_factor())
-                        || (vehDist.1 < 0. && self.myVehicle.get_lane().is_normal() && vehDist.0.get_lane().is_normal()
-                            && vehDist.1 >= -self.myVehicle.get_vehicle_type().get_min_gap() * (1. - self.myVehicle.get_car_follow_model().get_collision_min_gap_factor()))
                         // avoid deadlock due to #3729
                         || (!leaders
                             && self.myVehicle.get_position_on_lane() >= self.myVehicle.get_vehicle_type().get_length()
@@ -6382,7 +6501,7 @@ impl MSLCM_SL2015 {
     //     }
     #[allow(unused_variables)]
     pub fn get_sublane_width(&mut self) -> f64 {
-        if g_lateral_resolution() > 0. { g_lateral_resolution() } else { self.myVehicle.get_lane().get_width() }
+        if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { self.myVehicle.get_lane().get_width() }
     }
 
     /// C++: `void MSLCM_SL2015::commitManoeuvre(int, int, const MSLeaderDistanceInfo &, const MSLeaderDistanceInfo &, const MSLane &, double)` [protected]
@@ -6476,7 +6595,7 @@ impl MSLCM_SL2015 {
             let step = veh.get_action_step_length_secs();
             // round to full action steps
             let mut secondsToLeaveLane: f64;
-            if g_semi_implicit_euler_update() {
+            if MSGlobals::semi_implicit_euler_update() {
                 secondsToLeaveLane = (maneuverDist.abs() / veh.get_vehicle_type().get_max_speed_lat() / step).ceil() * step;
                 // XXX myAccelLat must be taken into account (refs #3601, see ballistic case for solution)
 
@@ -6657,12 +6776,12 @@ impl MSLCM_SL2015 {
     // }
     #[allow(unused_variables)]
     pub fn sublane_ends(&mut self, i: i32, next: Ptr<MSLane>, shift: f64) -> bool {
-        let side = i as f64 * g_lateral_resolution() + shift;
+        let side = i as f64 * MSGlobals::lateral_resolution() + shift;
         let vclass = self.myVehicle.get_vehicle_type().get_vehicle_class();
         (side < -utils::geom::NUMERICAL_EPS
-            && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(vclass)))
-            || (side + g_lateral_resolution() > next.get_width()
-                && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(vclass)))
+            && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(vclass)))
+            || (side + MSGlobals::lateral_resolution() > next.get_width()
+                && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(vclass)))
     }
 
     /// C++: `double MSLCM_SL2015::forecastAverageSpeed(double, double, double, double) const` [const, protected]

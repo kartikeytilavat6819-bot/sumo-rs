@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSMeanData_Amitran.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Amitran::MSLaneMeanDataValues` (microsim/output/MSMeanData_Amitran.h)
@@ -40,8 +41,10 @@ impl MSMeanData_Amitran_MSLaneMeanDataValues {
     //     : MSMeanData::MeanDataValues(lane, length, doAdd, parent), amount(0) {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Amitran>) -> Self {
+        let mut base = MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base));
+        base.data_vt = &MS_MEAN_DATA_VALUES_AMITRAN_VT;
         MSMeanData_Amitran_MSLaneMeanDataValues {
-            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, Ptr::from_mut(&mut parent.m().base)),
+            base,
             amount: 0,
             typedAmount: BTreeMap::new(),
             typedSamples: BTreeMap::new(),
@@ -223,6 +226,100 @@ impl MSMeanData_Amitran_MSLaneMeanDataValues {
 }
 
 /// Network state mean data collector for edges/lanes
+/// Virtual dispatch table of MSMeanData_Amitran::MSLaneMeanDataValues (overrides reset, addTo, notifyEnter, notifyMoveInternal, isEmpty, write)
+static MS_MEAN_DATA_VALUES_AMITRAN_VT: MeanDataValuesVt = MeanDataValuesVt {
+    reset: amitran_values_reset,
+    add_to: amitran_values_add_to,
+    notify_enter: amitran_values_notify_enter,
+    notify_leave: MSMeanData_MeanDataValues::notify_leave_base,
+    notify_move_internal: amitran_values_notify_move_internal,
+    is_empty: amitran_values_is_empty,
+    update: MSMeanData_MeanDataValues::update_base,
+    write: amitran_values_write,
+    get_samples: MSMeanData_MeanDataValues::get_samples_base,
+    get_attribute_value: MSMeanData_MeanDataValues::get_attribute_value_base,
+};
+
+fn amitran_values_reset(v: &mut MSMeanData_MeanDataValues, afterWrite: bool) {
+    Ptr::from_mut(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().reset(afterWrite)
+}
+
+fn amitran_values_add_to(v: &MSMeanData_MeanDataValues, val: &mut MSMeanData_MeanDataValues) {
+    Ptr::new(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().add_to(val)
+}
+
+fn amitran_values_notify_enter(v: &mut MSMeanData_MeanDataValues, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().notify_enter(veh, reason, enteredLane)
+}
+
+fn amitran_values_notify_move_internal(v: &mut MSMeanData_MeanDataValues, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    Ptr::from_mut(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+fn amitran_values_is_empty(v: &MSMeanData_MeanDataValues) -> bool {
+    Ptr::new(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().is_empty()
+}
+
+fn amitran_values_write(v: &MSMeanData_MeanDataValues, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+    Ptr::new(v).cast::<MSMeanData_Amitran_MSLaneMeanDataValues>().m().write(dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, numVehicles)
+}
+
+/// Virtual dispatch table of MSMeanData_Amitran (overrides writeXMLDetectorProlog, getEdgeID, openInterval, writePrefix, getAttributeNames, createValues)
+static MS_MEAN_DATA_AMITRAN_VT: MSMeanDataVt = MSMeanDataVt {
+    create_values: amitran_mean_data_create_values,
+    get_attribute_names: amitran_mean_data_get_attribute_names,
+    write_xml_detector_prolog: amitran_mean_data_write_xml_detector_prolog,
+    get_edge_id: amitran_mean_data_get_edge_id,
+    open_interval: amitran_mean_data_open_interval,
+    write_prefix: amitran_mean_data_write_prefix,
+    reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
+};
+
+fn amitran_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+    Ptr::new(m).cast::<MSMeanData_Amitran>().m().create_values(lane, length, doAdd)
+}
+
+fn amitran_mean_data_get_attribute_names(m: &MSMeanData) -> Vec<String> {
+    Ptr::new(m).cast::<MSMeanData_Amitran>().m().get_attribute_names()
+}
+
+fn amitran_mean_data_write_xml_detector_prolog(m: &MSMeanData, dev: &mut OutputDevice) {
+    Ptr::new(m).cast::<MSMeanData_Amitran>().m().write_xml_detector_prolog(dev)
+}
+
+fn amitran_mean_data_get_edge_id(m: &mut MSMeanData, edge: Ptr<MSEdge>) -> String {
+    Ptr::from_mut(m).cast::<MSMeanData_Amitran>().m().get_edge_id(edge)
+}
+
+fn amitran_mean_data_open_interval(m: &mut MSMeanData, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(m).cast::<MSMeanData_Amitran>().m().open_interval(dev, startTime, stopTime)
+}
+
+fn amitran_mean_data_write_prefix(m: &MSMeanData, dev: &mut OutputDevice, values: &MSMeanData_MeanDataValues, tag: SumoXMLTag, id: String) {
+    Ptr::new(m).cast::<MSMeanData_Amitran>().m().write_prefix(dev, values, tag, id)
+}
+
+fn amitran_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
+}
+
+fn amitran_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
+}
+
+fn amitran_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+}
+
+/// Detector-level dispatch (MSDetectorFileOutput virtuals reached through the base pointer), as in MSMeanData_Emissions
+static MS_MEAN_DATA_AMITRAN_DETECTOR_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: amitran_detector_write_xml_output,
+    write_xml_detector_prolog: amitran_detector_write_xml_detector_prolog,
+    detector_update: amitran_detector_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
+
 /// C++ class `MSMeanData_Amitran` (microsim/output/MSMeanData_Amitran.h)
 #[repr(C)]
 pub struct MSMeanData_Amitran {
@@ -267,7 +364,9 @@ impl MSMeanData_Amitran {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, haltSpeed: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
-        let base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, minSamples, maxTravelTime, vTypes, writeAttributes, edges, aggregate);
+        let mut base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
+        base.meandata_vt = &MS_MEAN_DATA_AMITRAN_VT;
+        base.base.vt = &MS_MEAN_DATA_AMITRAN_DETECTOR_VT;
         Self {
             base,
             myHaltSpeed: haltSpeed,
@@ -354,7 +453,9 @@ impl MSMeanData_Amitran {
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
         // shortcut: the values are leaked (C++ deletes them in ~MSMeanData), upgrade when myMeasures owns its values
         let values = Box::leak(Box::new(MSMeanData_Amitran_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))));
-        Ptr::from_mut(&mut values.base)
+        let values = Ptr::from_mut(&mut values.base);
+        register_values(values, lane, doAdd);
+        values
     }
 
     /// C++: `void MSMeanData_Amitran::resetOnly(SUMOTime)` [protected]

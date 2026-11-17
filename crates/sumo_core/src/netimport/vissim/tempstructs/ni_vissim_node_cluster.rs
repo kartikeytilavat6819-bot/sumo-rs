@@ -178,7 +178,7 @@ impl NIVissimNodeCluster {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn recheck_edge_changes(&mut self) -> bool {
-        // shortcut: declared without a definition in SUMO (no C++ body), nothing to port yet
+        // C++ declares recheckEdgeChanges() without a definition, so there is no body to port; calling it is a link error
         panic!("NIVissimNodeCluster::recheckEdgeChanges has no C++ definition")
     }
 
@@ -304,7 +304,7 @@ impl NIVissimNodeCluster {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_to_edges() {
-        // shortcut: C++ declares assignToEdges() but has no definition in SUMO; upgrade only if SUMO adds one.
+        // C++ declares assignToEdges() without a definition, so there is no body to port; calling it is a link error
         panic!("NIVissimNodeCluster::assignToEdges is declared but not defined in SUMO")
     }
 

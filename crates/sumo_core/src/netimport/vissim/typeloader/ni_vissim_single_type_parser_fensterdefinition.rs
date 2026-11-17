@@ -28,7 +28,7 @@ impl NIVissimSingleTypeParser_Fensterdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Fensterdefinition::NIVissimSingleTypeParser_Fensterdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Fensterdefinition::~NIVissimSingleTypeParser_Fensterdefinition() noexcept` [virtual]
@@ -36,7 +36,7 @@ impl NIVissimSingleTypeParser_Fensterdefinition {
     // NIVissimSingleTypeParser_Fensterdefinition::~NIVissimSingleTypeParser_Fensterdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Fensterdefinition::~NIVissimSingleTypeParser_Fensterdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Fensterdefinition::parse(std::istream &)` [virtual]
@@ -57,8 +57,17 @@ impl NIVissimSingleTypeParser_Fensterdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Fensterdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        // from >> id ("typ") and the other discarded `from >> tmp` reads consume one token like my_read, which lowercases the token it discards
+        let _id: String = self.my_read(from);
+        let ty: String = self.my_read(from);
+        if ty == "fzinfo" {
+            let _tmp: String = self.my_read(from);
+            let _tmp: String = self.my_read(from);
+        } else if ty == "ldp" || ty == "szp" {
+            self.read_until(from, "lsa");
+        }
+        true
     }
 
 }

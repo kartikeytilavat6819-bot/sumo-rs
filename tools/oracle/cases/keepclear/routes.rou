@@ -1,0 +1,13 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="we" edges="W2C C2E"/>
+    <route id="ns" edges="S2C C2N"/>
+    <!-- blocker stops right behind the junction and forces w1 to wait on (or before) the junction -->
+    <vehicle id="blocker" type="car" depart="0" departSpeed="max" route="we">
+        <stop lane="C2E_0" endPos="25" duration="60"/>
+    </vehicle>
+    <vehicle id="w1" type="car" depart="2" departSpeed="max" route="we"/>
+    <vehicle id="w2" type="car" depart="4" departSpeed="max" route="we"/>
+    <vehicle id="s1" type="car" depart="6" departSpeed="max" route="ns"/>
+    <vehicle id="s2" type="car" depart="8" departSpeed="max" route="ns"/>
+</routes>

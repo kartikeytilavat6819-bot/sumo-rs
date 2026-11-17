@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_error;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 
 /// C++ class `libsumo::LaneArea` (libsumo/LaneArea.h)
 pub struct LaneArea {
@@ -19,6 +20,8 @@ thread_local! {
     static MY_SUBSCRIPTION_RESULTS: std::cell::RefCell<SubscriptionResults> = std::cell::RefCell::new(SubscriptionResults::new());
     /// C++ static `LaneArea::myContextSubscriptionResults`
     static MY_CONTEXT_SUBSCRIPTION_RESULTS: std::cell::RefCell<ContextSubscriptionResults> = std::cell::RefCell::new(ContextSubscriptionResults::new());
+    /// C++ static `LaneArea::myTree`
+    static MY_TREE: std::cell::Cell<Ptr<NamedRTree>> = std::cell::Cell::new(Ptr::null());
 }
 
 impl LaneArea {
@@ -268,9 +271,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(detID: &str, key: &str) -> String {
-        // shortcut: MSE2Collector has no ported getParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (detID, key);
-        panic!("LaneArea::getParameter: detector parameters not ported")
+        Self::get_detector(detID).base2.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> LaneArea::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -287,9 +288,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(detID: &str, key: &str, value: &str) {
-        // shortcut: MSE2Collector has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (detID, key, value);
-        panic!("LaneArea::setParameter: detector parameters not ported")
+        Self::get_detector(detID).m().base2.base2.set_parameter(key, value);
     }
 
     /// C++: `void LaneArea::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
@@ -352,7 +351,9 @@ impl LaneArea {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(LaneArea, LANEAREA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        panic!("shortcut: LaneArea::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_LANEAREA_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int LaneArea::domainID()` [static]
@@ -379,9 +380,21 @@ impl LaneArea {
     //     }
     //     return myTree;
     // }
-    #[allow(unused_variables)]
-    pub fn get_tree() -> Ptr<Unmapped /* NamedRTree */> {
-        panic!("shortcut: LaneArea::getTree needs NamedRTree (unmapped)")
+    pub fn get_tree() -> Ptr<NamedRTree> {
+        if MY_TREE.with(|t| t.get()).is_null() {
+            let tree = new_named_rtree();
+            MY_TREE.with(|t| t.set(tree));
+            for id in Self::get_id_list() {
+                let mut shape = PositionVector(Vec::new());
+                Self::store_shape(&id, &mut shape);
+                let b = shape.get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                let det = Self::get_detector(&id);
+                tree.m().insert(&cmin, &cmax, &Ptr::from_mut(&mut det.m().base2.base));
+            }
+        }
+        MY_TREE.with(|t| t.get())
     }
 
     /// C++: `void LaneArea::cleanup()` [static]
@@ -392,7 +405,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        // shortcut: myTree (NamedRTree) is never built while getTree is a shortcut, so there is nothing to delete; upgrade together with getTree
+        delete_named_rtree(MY_TREE.with(|t| t.replace(Ptr::null())));
     }
 
     /// C++: `void LaneArea::storeShape(const std::string &, PositionVector &)` [static]
@@ -418,7 +431,7 @@ impl LaneArea {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        panic!("shortcut: LaneArea::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool LaneArea::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -532,7 +545,7 @@ impl LaneArea {
         // shortcut: C++ dynamic_cast<MSE2Collector*> cannot be checked at runtime; a non-MSE2Collector typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
         let e2 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(detID).copied();
         match e2 {
-            Some(d) => d.cast::<MSE2Collector>(),
+            Some(d) => crate::microsim::output::mse2_collector::mse2_collector_of(d),
             None => {
                 let msg = format!("Lane area detector '{}' is not known", detID);
                 panic!("{}", msg);

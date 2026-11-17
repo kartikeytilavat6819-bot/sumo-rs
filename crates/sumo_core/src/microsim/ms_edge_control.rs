@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::options::options_cont;
+use utils::options::options_cont::with_options;
 
 /// C++ MIN2(a, b) = a < b ? a : b
 fn min2(a: f64, b: f64) -> f64 {
@@ -466,9 +467,9 @@ impl MSEdgeControl {
     #[allow(unused_variables)]
     pub fn change_lanes(&mut self, t: SUMOTime) {
         let mut toAdd: Vec<Ptr<MSLane>> = Vec::new();
-        // shortcut: MSGlobals::gComputeLC is not ported (ms_globals.rs has no statics), the flag is never set, upgrade when MSGlobals statics land
         // shortcut: multi-threaded lane changing (gNumSimThreads > 1) is not ported, edges change lanes serially, upgrade when ThreadPool lands
-        let lateralResolution = options_cont::get_float("lateral-resolution"); // MSGlobals::gLateralResolution
+        let lateralResolution = MSGlobals::lateral_resolution();
+        MSGlobals::set_compute_lc(true);
         let active: Vec<Ptr<MSLane>> = self.myActiveLanes.iter().copied().collect();
         for l in active {
             if self.myLanes[l.get_numerical_id() as usize].haveNeighbors {
@@ -492,6 +493,7 @@ impl MSEdgeControl {
                 break;
             }
         }
+        MSGlobals::set_compute_lc(false);
         for lane in toAdd {
             self.myActiveLanes.push_front(lane);
         }
@@ -601,7 +603,13 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn build_meso_segments(&mut self) {
-        // shortcut: MSGlobals::gMesoNet (MELoop::buildSegmentsFor) is not ported, meso segments are not built, upgrade when mesosim lands
+        with_options(|oc| {
+            for edge in self.myEdges.iter() {
+                if !edge.get_lanes().is_empty() {
+                    crate::microsim::ms_globals::meso_net().m().build_segments_for(edge, oc);
+                }
+            }
+        });
     }
 
     /// C++: `void MSEdgeControl::saveState(OutputDevice &)`

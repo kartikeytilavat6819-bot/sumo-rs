@@ -51,6 +51,12 @@ pub struct NLTriggerBuilder {
     pub myCurrentStop: Ptr<MSStoppingPlace>,
     pub myHaveWarnedAboutEigen: bool,
     pub myParkingAreaCapacitySet: bool,
+    /// C++ `registerParent(SUMO_TAG_REROUTER, myHandler)`: the rerouter that receives the elements until its closing tag
+    pub myChildRerouter: Ptr<MSTriggeredRerouter>,
+    /// C++ `registerParent(SUMO_TAG_VSS, myHandler)`: the lane speed trigger that receives the elements until `</variableSpeedSignal>`
+    pub myChildLaneSpeedTrigger: Ptr<MSLaneSpeedTrigger>,
+    /// C++ `registerParent(SUMO_TAG_CALIBRATOR, myHandler)`: the calibrator that receives the elements until `</calibrator>`
+    pub myChildCalibrator: Ptr<MSCalibrator>,
 }
 
 impl NLTriggerBuilder {
@@ -66,6 +72,9 @@ impl NLTriggerBuilder {
             myCurrentStop: Ptr::null(),
             myHaveWarnedAboutEigen: false,
             myParkingAreaCapacitySet: false,
+            myChildRerouter: Ptr::null(),
+            myChildLaneSpeedTrigger: Ptr::null(),
+            myChildCalibrator: Ptr::null(),
         }
     }
 
@@ -223,9 +232,9 @@ impl NLTriggerBuilder {
             throw_invalid_argument(format!("No lane defined for MSLaneSpeedTrigger '{}'.", id));
         }
         // C++ wraps the build in try/catch(ProcessError) and rethrows InvalidArgument; build_lane_speed_trigger already throws InvalidArgument
-        let _trigger = self.build_lane_speed_trigger(net, &id, &lanes, &file);
+        let trigger = self.build_lane_speed_trigger(net, &id, &lanes, &file);
         if file == "" {
-            // shortcut: trigger->registerParent(SUMO_TAG_VSS, myHandler) is not ported (no registerParent in sumo_core), upgrade when MSTrigger::registerParent lands
+            self.myChildLaneSpeedTrigger = trigger;
         }
     }
 
@@ -352,8 +361,9 @@ impl NLTriggerBuilder {
         if !ok {
             throw_invalid_argument(format!("Could not parse rerouter '{}'.", id));
         }
-        let _trigger = self.build_rerouter(net, &id, &mut edges, prob, off, optional, timeThreshold, &vTypes, &p, radius);
-        // shortcut: trigger->registerParent(SUMO_TAG_REROUTER, myHandler) is not ported (no registerParent in sumo_core), upgrade when MSTrigger::registerParent lands
+        let trigger = self.build_rerouter(net, &id, &mut edges, prob, off, optional, timeThreshold, &vTypes, &p, radius);
+        // read in the trigger description: NLHandler forwards every element to the rerouter until </rerouter> (XMLSubSys::setHandler emulation)
+        self.myChildRerouter = trigger;
     }
 
     /// C++: `void NLTriggerBuilder::parseAndBuildStoppingPlace(MSNet &, const SUMOSAXAttributes &, const SumoXMLTag)`
@@ -1587,14 +1597,15 @@ impl NLTriggerBuilder {
                     edge.m().get_id()
                 ));
             }
-            let _trigger = self.build_me_calibrator(&id, edge, pos, &file, &outfile, period, probe, invalidJamThreshold, &vTypes);
+            let trigger = self.build_me_calibrator(&id, edge, pos, &file, &outfile, period, probe, invalidJamThreshold, &vTypes);
             if file == "" {
-                // shortcut: trigger->registerParent(SUMO_TAG_CALIBRATOR, myHandler) is not ported (no registerParent in sumo_core), upgrade when MSTrigger::registerParent lands
+                // METriggeredCalibrator derives from MSCalibrator, which is the handler registered as the parent
+                self.myChildCalibrator = Ptr::from_mut(&mut *trigger.m().base);
             }
         } else {
-            let _trigger = self.build_calibrator(&id, edge, lane, node, pos, &file, &outfile, period, probe, invalidJamThreshold, &vTypes, local);
+            let trigger = self.build_calibrator(&id, edge, lane, node, pos, &file, &outfile, period, probe, invalidJamThreshold, &vTypes, local);
             if file == "" {
-                // shortcut: trigger->registerParent(SUMO_TAG_CALIBRATOR, myHandler) is not ported (no registerParent in sumo_core), upgrade when MSTrigger::registerParent lands
+                self.myChildCalibrator = trigger;
             }
         }
     }
@@ -1845,7 +1856,7 @@ impl NLTriggerBuilder {
     #[allow(unused_variables)]
     pub fn build_rerouter(&mut self, net: &mut MSNet, id: &str, edges: &mut MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Ptr<MSTriggeredRerouter> {
         // return new MSTriggeredRerouter(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius);
-        leak_ptr(Box::new(MSTriggeredRerouter::new(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius)))
+        leak_ptr(MSTriggeredRerouter::new(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius))
     }
 
     /// C++: `std::string NLTriggerBuilder::getFileName(const SUMOSAXAttributes &, const std::string &, const bool)` [protected]

@@ -1,6 +1,34 @@
 //! Port of microsim/trigger/MSOverheadWire.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::{delta_t, time2string, ts};
+use utils::traction_wire::circuit::AlphaFlag;
+use crate::microsim::ms_globals::overhead_wire_solver;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
+
+/// C++ `static std::mutex ow_mutex` (MSOverheadWire.cpp); a spin lock because lock()/unlock() are split calls
+static OW_MUTEX: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+fn ow_mutex_lock() {
+    while OW_MUTEX.compare_exchange(false, true, std::sync::atomic::Ordering::Acquire, std::sync::atomic::Ordering::Relaxed).is_err() {
+        std::hint::spin_loop();
+    }
+}
+
+fn ow_mutex_unlock() {
+    OW_MUTEX.store(false, std::sync::atomic::Ordering::Release);
+}
+
+/// C++ `WATT2WATTHR` macro (MSOverheadWire.h)
+fn watt2watthr(x: f64) -> f64 {
+    x * ts() / 3600.0
+}
+
+/// `MSNet::getStoppingPlace("ovrhd_inner_" + lane.getID(), SUMO_TAG_OVERHEAD_WIRE_SEGMENT)` cast to the segment type
+fn ovrhd_inner_segment(lane: Ptr<MSLane>) -> Ptr<MSOverheadWire> {
+    MSNet::get_instance().get_stopping_place(&format!("ovrhd_inner_{}", lane.m().get_id()), SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>()
+}
 
 /// struct to save information for the overhead wire segment output
 /// C++ class `MSOverheadWire::Charge` (microsim/trigger/MSOverheadWire.h)
@@ -35,7 +63,18 @@ impl MSOverheadWire_Charge {
     //             totalEnergyCharged(_totalEnergyCharged) {}
     #[allow(unused_variables)]
     pub fn new(_timeStep: SUMOTime, _vehicleID: String, _vehicleType: String, _status: String, _WCharged: f64, _actualBatteryCapacity: f64, _maxBatteryCapacity: f64, _voltage: f64, _totalEnergyCharged: f64) -> Self {
-        todo!("port Charge::Charge")
+        MSOverheadWire_Charge {
+            timeStep: _timeStep,
+            vehicleID: _vehicleID,
+            vehicleType: _vehicleType,
+            status: _status,
+            WCharged: _WCharged,
+            actualBatteryCapacity: _actualBatteryCapacity,
+            maxBatteryCapacity: _maxBatteryCapacity,
+            voltage: _voltage,
+            chargingEfficiency: 0.0, // not a C++ member of Charge; unused
+            totalEnergyCharged: _totalEnergyCharged,
+        }
     }
 
 }
@@ -53,17 +92,23 @@ pub struct MSOverheadWire {
     /// total energy charged by this charging station
     pub myTotalCharge: f64,
     /// map with the charges of this charging station (key = vehicleID)
-    pub myChargeValues: BTreeMap<String, Vec<MSChargingStation_Charge>>,
+    pub myChargeValues: BTreeMap<String, Vec<MSOverheadWire_Charge>>,
     /// order vehicles by time of first charge
     pub myChargedVehicles: Vec<String>,
     pub myChargingVehicles: Vec<Ptr<SUMOVehicle>>,
     /// Parameter, Pointer to the electrical substation (by default is nullptr)
     pub myTractionSubstation: Ptr<MSTractionSubstation>,
     pub myVoltageSource: bool,
-    pub myCircuitElementPos: Ptr<Element>,
-    pub myCircuitStartNodePos: Ptr<Node>,
-    pub myCircuitEndNodePos: Ptr<Node>,
+    /// index into the substation's circuit (C++ Element*)
+    pub myCircuitElementPos: Option<ElemIdx>,
+    /// index into the substation's circuit (C++ Node*)
+    pub myCircuitStartNodePos: Option<NodeIdx>,
+    /// index into the substation's circuit (C++ Node*)
+    pub myCircuitEndNodePos: Option<NodeIdx>,
 }
+
+/// C++ `const double WIRE_RESISTIVITY` (MSOverheadWire.h)
+const WIRE_RESISTIVITY: f64 = 2.0 * 0.000113;
 
 impl std::ops::Deref for MSOverheadWire {
     type Target = MSStoppingPlace;
@@ -98,7 +143,25 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn new(overheadWireSegmentID: &str, lane: &mut MSLane, startPos: f64, endPos: f64, voltageSource: bool) -> Self {
-        todo!("port MSOverheadWire::MSOverheadWire")
+        let base = MSStoppingPlace::new(overheadWireSegmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT, &Vec::new(), lane, startPos, endPos, String::new(), 0, 0.0, &RGBColor::INVISIBLE, 90.0);
+        let ow = MSOverheadWire {
+            base,
+            myVoltage: 0.0,
+            myChargingVehicle: false,
+            myTotalCharge: 0.0,
+            myChargeValues: BTreeMap::new(),
+            myChargedVehicles: Vec::new(),
+            myChargingVehicles: Vec::new(),
+            myTractionSubstation: Ptr::null(),
+            myVoltageSource: voltageSource,
+            myCircuitElementPos: None,
+            myCircuitStartNodePos: None,
+            myCircuitEndNodePos: None,
+        };
+        if ow.get_begin_lane_position() > ow.get_end_lane_position() {
+            utils::common::msg_handler::write_warning(&utils::tlf!("overheadWireSegment with ID = % doesn't have a valid range (% < %).", ow.get_id(), ow.get_begin_lane_position(), ow.get_end_lane_position()));
+        }
+        ow
     }
 
     /// C++: `void MSOverheadWire::~MSOverheadWire() noexcept` [virtual]
@@ -129,7 +192,23 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSOverheadWire::~MSOverheadWire")
+        if !self.myTractionSubstation.is_null() {
+            let mut circuit = self.myTractionSubstation.m().get_circuit();
+            if let (Some(el), Some(startNode), Some(endNode)) = (self.myCircuitElementPos, self.myCircuitStartNodePos, self.myCircuitEndNodePos) {
+                if circuit.m().element(el).p_node() == Some(startNode) && circuit.m().element(el).n_node() == Some(endNode) {
+                    circuit.m().erase_element(el);
+                    if circuit.m().node(endNode).num_of_elements() == 0 {
+                        circuit.m().erase_node(endNode);
+                    }
+                    if circuit.m().node(startNode).num_of_elements() == 0 {
+                        circuit.m().erase_node(startNode);
+                    }
+                }
+            }
+            // C++ calls eraseOverheadWireSegmentFromCircuit(this) in both branches of numberOfOverheadSegments() <= 1
+            let mut sub = self.myTractionSubstation;
+            sub.m().erase_overhead_wire_segment_from_circuit(Ptr::from_mut(self));
+        }
     }
 
     /// C++: `double MSOverheadWire::getVoltage() const` [const]
@@ -140,7 +219,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_voltage(&self) -> f64 {
-        todo!("port MSOverheadWire::getVoltage")
+        self.myVoltage
     }
 
     /// C++: `void MSOverheadWire::setVoltage(double)`
@@ -155,7 +234,11 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn set_voltage(&mut self, voltage: f64) {
-        todo!("port MSOverheadWire::setVoltage")
+        if voltage < 0.0 {
+            utils::common::msg_handler::write_warning(&utils::tlf!("New voltage for overheadWireSegment with ID = % isn't valid (%).", self.get_id(), voltage));
+        } else {
+            self.myVoltage = voltage;
+        }
     }
 
     /// C++: `void MSOverheadWire::setChargingVehicle(bool)`
@@ -166,7 +249,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn set_charging_vehicle(&mut self, value: bool) {
-        todo!("port MSOverheadWire::setChargingVehicle")
+        self.myChargingVehicle = value;
     }
 
     /// C++: `bool MSOverheadWire::vehicleIsInside(const double) const` [const]
@@ -181,7 +264,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn vehicle_is_inside(&self, position: f64) -> bool {
-        todo!("port MSOverheadWire::vehicleIsInside")
+        (position >= self.get_begin_lane_position()) && (position <= self.get_end_lane_position())
     }
 
     /// C++: `bool MSOverheadWire::isCharging() const` [const]
@@ -192,7 +275,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn is_charging(&self) -> bool {
-        todo!("port MSOverheadWire::isCharging")
+        self.myChargingVehicle
     }
 
     /// C++: `void MSOverheadWire::addVehicle(SUMOVehicle &)`
@@ -205,7 +288,12 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle(&mut self, veh: &mut SUMOVehicle) {
-        todo!("port MSOverheadWire::addVehicle")
+        ow_mutex_lock();
+        self.set_charging_vehicle(true);
+        self.myChargingVehicles.push(Ptr::from_mut(veh));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal positions tie)
+        utils::common::std_sort::std_sort_vec(&mut self.myChargingVehicles, |a, b| MSOverheadWire_vehicle_position_sorter::new().call_op(*a, *b) != 0);
+        ow_mutex_unlock();
     }
 
     /// C++: `void MSOverheadWire::eraseVehicle(SUMOVehicle &)`
@@ -220,7 +308,13 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn erase_vehicle(&mut self, veh: &mut SUMOVehicle) {
-        todo!("port MSOverheadWire::eraseVehicle")
+        ow_mutex_lock();
+        let target = Ptr::from_mut(veh);
+        self.myChargingVehicles.retain(|v| (*v).as_raw() != target.as_raw());
+        if self.myChargingVehicles.len() == 0 {
+            self.set_charging_vehicle(false);
+        }
+        ow_mutex_unlock();
     }
 
     /// C++: `int MSOverheadWire::getElecHybridCount() const` [const]
@@ -229,7 +323,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn get_elec_hybrid_count(&self) -> i32 {
-        todo!("port MSOverheadWire::getElecHybridCount")
+        self.myChargingVehicles.len() as i32
     }
 
     /// C++: `const std::vector<SUMOVehicle *> & MSOverheadWire::getChargingVehicles() const` [const]
@@ -238,7 +332,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn get_charging_vehicles(&self) -> &Vec<Ptr<SUMOVehicle>> {
-        todo!("port MSOverheadWire::getChargingVehicles")
+        &self.myChargingVehicles
     }
 
     /// C++: `double MSOverheadWire::getTotalCharged() const` [const]
@@ -247,7 +341,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn get_total_charged(&self) -> f64 {
-        todo!("port MSOverheadWire::getTotalCharged")
+        self.myTotalCharge
     }
 
     /// C++: `void MSOverheadWire::addChargeValueForOutput(double, MSDevice_ElecHybrid *, bool)`
@@ -273,7 +367,26 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn add_charge_value_for_output(&mut self, WCharged: f64, elecHybrid: Ptr<MSDevice_ElecHybrid>, ischarging: bool) {
-        todo!("port MSOverheadWire::addChargeValueForOutput")
+        let status: &str = if ischarging { "charging" } else { "not-charging" };
+        // update total charge
+        self.myTotalCharge += WCharged;
+        // create charge row and insert it in myChargeValues
+        let vehID: String = elecHybrid.m().get_holder().get_id().to_string();
+        if !self.myChargeValues.contains_key(&vehID) {
+            self.myChargedVehicles.push(vehID.clone());
+        }
+        let C = MSOverheadWire_Charge::new(
+            MSNet::get_instance().get_current_time_step(),
+            vehID.clone(),
+            elecHybrid.m().get_holder().get_vehicle_type().get_id().to_string(),
+            status.to_string(),
+            WCharged,
+            elecHybrid.m().get_actual_battery_capacity(),
+            elecHybrid.m().get_maximum_battery_capacity(),
+            elecHybrid.m().get_voltage_of_overhead_wire(),
+            self.myTotalCharge,
+        );
+        self.myChargeValues.entry(vehID).or_default().push(C);
     }
 
     /// C++: `void MSOverheadWire::writeOverheadWireSegmentOutput(OutputDevice &)`
@@ -329,7 +442,47 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn write_overhead_wire_segment_output(&mut self, output: &mut OutputDevice) {
-        todo!("port MSOverheadWire::writeOverheadWireSegmentOutput")
+        let mut chargingSteps_list: Vec<SUMOTime> = Vec::new();
+        for item in self.myChargeValues.values() {
+            for it in item.iter() {
+                if !chargingSteps_list.contains(&it.timeStep) {
+                    chargingSteps_list.push(it.timeStep);
+                }
+            }
+        }
+        let chargingSteps: i32 = chargingSteps_list.len() as i32;
+        output.open_tag_id(SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+        output.write_attr(SUMO_ATTR_ID, self.get_id());
+        let substationID: String = if !self.myTractionSubstation.is_null() {
+            self.myTractionSubstation.m().get_id().to_string()
+        } else {
+            String::new()
+        };
+        output.write_attr(SUMO_ATTR_TRACTIONSUBSTATIONID, substationID.as_str());
+        output.write_attr(SUMO_ATTR_TOTALENERGYCHARGED, &self.myTotalCharge);
+        // RICE_TODO QUESTION myChargeValues.size() vs. chargingSteps
+        output.write_attr(SUMO_ATTR_CHARGINGSTEPS, &chargingSteps);
+        output.write_attr(SUMO_ATTR_LANE, self.get_lane().get_id());
+
+        // Start writing
+        if self.myChargeValues.len() > 0 {
+            for vehID in self.myChargedVehicles.iter() {
+                let mut iStart: i32 = 0;
+                let chargeSteps = self.myChargeValues.entry(vehID.clone()).or_default();
+                while iStart < chargeSteps.len() as i32 {
+                    let mut iEnd: i32 = iStart + 1;
+                    let mut charged: f64 = chargeSteps[iStart as usize].WCharged;
+                    while iEnd < chargeSteps.len() as i32 && chargeSteps[iEnd as usize].timeStep == chargeSteps[(iEnd - 1) as usize].timeStep + delta_t() {
+                        charged += chargeSteps[iEnd as usize].WCharged;
+                        iEnd += 1;
+                    }
+                    MSOverheadWire::write_vehicle(output, chargeSteps, iStart, iEnd, charged);
+                    iStart = iEnd;
+                }
+            }
+        }
+        // close charging station tag
+        output.close_tag("");
     }
 
     /// C++: `std::string MSOverheadWire::getOverheadWireSegmentName()`
@@ -338,7 +491,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_overhead_wire_segment_name(&mut self) -> String {
-        todo!("port MSOverheadWire::getOverheadWireSegmentName")
+        self.get_id().to_string()
     }
 
     /// C++: `MSTractionSubstation * MSOverheadWire::getTractionSubstation() const` [const]
@@ -347,7 +500,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn get_traction_substation(&self) -> Ptr<MSTractionSubstation> {
-        todo!("port MSOverheadWire::getTractionSubstation")
+        self.myTractionSubstation
     }
 
     /// C++: `void MSOverheadWire::setTractionSubstation(MSTractionSubstation *)`
@@ -356,7 +509,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn set_traction_substation(&mut self, substation: Ptr<MSTractionSubstation>) {
-        todo!("port MSOverheadWire::setTractionSubstation")
+        self.myTractionSubstation = substation;
     }
 
     /// C++: `Circuit * MSOverheadWire::getCircuit() const` [const]
@@ -369,7 +522,10 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn get_circuit(&self) -> Ptr<Circuit> {
-        todo!("port MSOverheadWire::getCircuit")
+        if !self.myTractionSubstation.is_null() {
+            return self.myTractionSubstation.m().get_circuit();
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSOverheadWire::setCircuitStartNodePos(Node *)`
@@ -377,8 +533,8 @@ impl MSOverheadWire {
     //         myCircuitStartNodePos = node;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_start_node_pos(&mut self, node: Ptr<Node>) {
-        todo!("port MSOverheadWire::setCircuitStartNodePos")
+    pub fn set_circuit_start_node_pos(&mut self, node: Option<NodeIdx>) {
+        self.myCircuitStartNodePos = node;
     }
 
     /// C++: `void MSOverheadWire::setCircuitEndNodePos(Node *)`
@@ -386,8 +542,8 @@ impl MSOverheadWire {
     //         myCircuitEndNodePos = node;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_end_node_pos(&mut self, node: Ptr<Node>) {
-        todo!("port MSOverheadWire::setCircuitEndNodePos")
+    pub fn set_circuit_end_node_pos(&mut self, node: Option<NodeIdx>) {
+        self.myCircuitEndNodePos = node;
     }
 
     /// C++: `void MSOverheadWire::setCircuitElementPos(Element *)`
@@ -395,8 +551,8 @@ impl MSOverheadWire {
     //         myCircuitElementPos = element;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_element_pos(&mut self, element: Ptr<Element>) {
-        todo!("port MSOverheadWire::setCircuitElementPos")
+    pub fn set_circuit_element_pos(&mut self, element: Option<ElemIdx>) {
+        self.myCircuitElementPos = element;
     }
 
     /// C++: `Node * MSOverheadWire::getCircuitStartNodePos() const` [const]
@@ -404,8 +560,8 @@ impl MSOverheadWire {
     //         return myCircuitStartNodePos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_start_node_pos(&self) -> Ptr<Node> {
-        todo!("port MSOverheadWire::getCircuitStartNodePos")
+    pub fn get_circuit_start_node_pos(&self) -> Option<NodeIdx> {
+        self.myCircuitStartNodePos
     }
 
     /// C++: `Node * MSOverheadWire::getCircuitEndNodePos() const` [const]
@@ -413,8 +569,8 @@ impl MSOverheadWire {
     //         return myCircuitEndNodePos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_end_node_pos(&self) -> Ptr<Node> {
-        todo!("port MSOverheadWire::getCircuitEndNodePos")
+    pub fn get_circuit_end_node_pos(&self) -> Option<NodeIdx> {
+        self.myCircuitEndNodePos
     }
 
     /// C++: `Element * MSOverheadWire::getCircuitElementPos() const` [const]
@@ -422,8 +578,8 @@ impl MSOverheadWire {
     //         return myCircuitElementPos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_element_pos(&self) -> Ptr<Element> {
-        todo!("port MSOverheadWire::getCircuitElementPos")
+    pub fn get_circuit_element_pos(&self) -> Option<ElemIdx> {
+        self.myCircuitElementPos
     }
 
     /// C++: `bool MSOverheadWire::isThereVoltageSource() const` [const]
@@ -432,7 +588,7 @@ impl MSOverheadWire {
     //     }
     #[allow(unused_variables)]
     pub fn is_there_voltage_source(&self) -> bool {
-        todo!("port MSOverheadWire::isThereVoltageSource")
+        self.myVoltageSource
     }
 
     /// C++: `void MSOverheadWire::lock() const` [const]
@@ -442,7 +598,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn lock(&self) {
-        todo!("port MSOverheadWire::lock")
+        ow_mutex_lock();
     }
 
     /// C++: `void MSOverheadWire::unlock() const` [const]
@@ -452,7 +608,7 @@ impl MSOverheadWire {
     // }
     #[allow(unused_variables)]
     pub fn unlock(&self) {
-        todo!("port MSOverheadWire::unlock")
+        ow_mutex_unlock();
     }
 
     /// C++: `void MSOverheadWire::writeVehicle(OutputDevice &, const std::vector<Charge> &, int, int, double)` [static, protected]
@@ -484,8 +640,31 @@ impl MSOverheadWire {
     //     out.closeTag();
     // }
     #[allow(unused_variables)]
-    pub fn write_vehicle(out: &mut OutputDevice, chargeSteps: &Vec<MSChargingStation_Charge>, iStart: i32, iEnd: i32, charged: f64) {
-        todo!("port MSOverheadWire::writeVehicle")
+    pub fn write_vehicle(out: &mut OutputDevice, chargeSteps: &Vec<MSOverheadWire_Charge>, iStart: i32, iEnd: i32, charged: f64) {
+        let first = &chargeSteps[iStart as usize];
+        out.open_tag_id(SUMO_TAG_VEHICLE);
+        out.write_attr(SUMO_ATTR_ID, first.vehicleID.as_str());
+        out.write_attr(SUMO_ATTR_TYPE, first.vehicleType.as_str());
+        out.write_attr(SUMO_ATTR_TOTALENERGYCHARGED_VEHICLE, &charged);
+        out.write_attr(SUMO_ATTR_CHARGINGBEGIN, &time2string(first.timeStep));
+        out.write_attr(SUMO_ATTR_CHARGINGEND, &time2string(chargeSteps[(iEnd - 1) as usize].timeStep));
+        out.write_attr(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, &first.maxBatteryCapacity);
+        for i in iStart..iEnd {
+            let c = &chargeSteps[i as usize];
+            out.open_tag_id(SUMO_TAG_STEP);
+            out.write_attr(SUMO_ATTR_TIME, &time2string(c.timeStep));
+            // charge values
+            out.write_attr(SUMO_ATTR_CHARGING_STATUS, c.status.as_str());
+            out.write_attr(SUMO_ATTR_ENERGYCHARGED, &c.WCharged);
+            out.write_attr(SUMO_ATTR_PARTIALCHARGE, &c.totalEnergyCharged);
+            // charging values of charging station in this timestep
+            out.write_attr(SUMO_ATTR_VOLTAGE, &c.voltage);
+            // battery status of vehicle
+            out.write_attr(SUMO_ATTR_ACTUALBATTERYCAPACITY, &c.actualBatteryCapacity);
+            // close tag timestep
+            out.close_tag("");
+        }
+        out.close_tag("");
     }
 
     /// C++: `void MSOverheadWire::MSOverheadWire(const MSOverheadWire &)` [private]
@@ -493,7 +672,8 @@ impl MSOverheadWire {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSOverheadWire) -> Self {
-        todo!("port MSOverheadWire::MSOverheadWire")
+        // C++ copy constructor is deleted ("Invalidated"), copying is a programming error
+        panic!("MSOverheadWire copy constructor is invalidated in C++ and must not be used");
     }
 
     /// C++: `MSOverheadWire & MSOverheadWire::operator=(const MSOverheadWire &)` [private]
@@ -501,7 +681,8 @@ impl MSOverheadWire {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSOverheadWire) -> &mut MSOverheadWire {
-        todo!("port MSOverheadWire::operator=")
+        // C++ assignment operator is deleted ("Invalidated"), assignment is a programming error
+        panic!("MSOverheadWire assignment operator is invalidated in C++ and must not be used");
     }
 
 }
@@ -553,7 +734,20 @@ impl MSTractionSubstation {
     // {}
     #[allow(unused_variables)]
     pub fn new(substationId: &str, voltage: f64, currentLimit: f64) -> Self {
-        todo!("port MSTractionSubstation::MSTractionSubstation")
+        MSTractionSubstation {
+            base: Named::new(substationId),
+            myChargeValues: Vec::new(),
+            myChargingVehicle: false,
+            myElecHybridCount: 0,
+            mySubstationVoltage: voltage,
+            // C++ never deletes myCircuit (the destructor body is empty)
+            myCircuit: Ptr::from_mut(Box::leak(Box::new(Circuit::with_current_limit(currentLimit)))),
+            myOverheadWireSegments: Vec::new(),
+            myElecHybrid: Vec::new(),
+            myForbiddenLanes: Vec::new(),
+            myTotalEnergy: 0.0,
+            myOverheadWireClamps: Vec::new(),
+        }
     }
 
     /// C++: `void MSTractionSubstation::~MSTractionSubstation() noexcept` [virtual]
@@ -562,7 +756,8 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSTractionSubstation::~MSTractionSubstation")
+        // C++ destructor body is empty
+
     }
 
     /// C++: `Circuit * MSTractionSubstation::getCircuit() const` [const]
@@ -571,7 +766,7 @@ impl MSTractionSubstation {
     //     }
     #[allow(unused_variables)]
     pub fn get_circuit(&self) -> Ptr<Circuit> {
-        todo!("port MSTractionSubstation::getCircuit")
+        self.myCircuit
     }
 
     /// C++: `void MSTractionSubstation::addOverheadWireSegmentToCircuit(MSOverheadWire *)`
@@ -730,7 +925,115 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_overhead_wire_segment_to_circuit(&mut self, newOverheadWireSegment: Ptr<MSOverheadWire>) {
-        todo!("port MSTractionSubstation::addOverheadWireSegmentToCircuit")
+        let lane: Ptr<MSLane> = Ptr::new(newOverheadWireSegment.m().get_lane());
+        if lane.m().is_internal() {
+            return;
+        }
+
+        // RICE_TODO: consider the possibility of having more segments that belong to one lane.
+
+        self.myOverheadWireSegments.push(newOverheadWireSegment);
+        newOverheadWireSegment.m().set_traction_substation(Ptr::from_mut(self));
+
+        if overhead_wire_solver() {
+            let mut circuit = newOverheadWireSegment.m().get_circuit();
+            let segmentID = newOverheadWireSegment.m().get_id().to_string();
+
+            if circuit.m().get_node("negNode_ground").is_none() {
+                circuit.m().add_node("negNode_ground");
+            }
+
+            // convention: pNode is at the beginning of the wire segment, nNode is at the end of the wire segment
+            let startNode = circuit.m().add_node(&format!("pNode_pos_{}", segmentID));
+            newOverheadWireSegment.m().set_circuit_start_node_pos(startNode);
+            let endNode = circuit.m().add_node(&format!("nNode_pos_{}", segmentID));
+            newOverheadWireSegment.m().set_circuit_end_node_pos(endNode);
+            // RICE_TODO: to use startPos and endPos of ovhdsegment: set the length of wire here properly
+            let length = newOverheadWireSegment.m().get_lane().get_length();
+            let element = circuit.m().add_element(&format!("pos_{}", segmentID), length * WIRE_RESISTIVITY, startNode.expect("pNode_pos node is not created"), endNode.expect("nNode_pos node is not created"), ElementType::Resistor);
+            newOverheadWireSegment.m().set_circuit_element_pos(element);
+        }
+
+        /* in version before SUMO 1.0.1 the function getOutgoingLanes() returning MSLane* exists,
+           in new version of SUMO the funciton getOutgoingViaLanes() returning MSLane* and MSEdge* pair exists */
+        let outgoingLanesAndEdges = lane.m().get_outgoing_via_lanes();
+        let mut neigboringInnerLanes: Vec<Ptr<MSLane>> = outgoingLanesAndEdges.iter().map(|p| p.0).collect();
+
+        // Check if there is an overhead wire segment on the outgoing lane. If not, do nothing, otherwise find connnecting internal lanes and
+        // add all lanes (this and inner) to circuit
+        for it in neigboringInnerLanes.iter() {
+            let it: Ptr<MSLane> = *it;
+            let ovrhdSegmentID: String = MSNet::get_instance().get_stopping_place_id(it, utils::geom::NUMERICAL_EPS, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+            // If the overhead wire segment is over the outgoing (not internal) lane
+            if !ovrhdSegmentID.is_empty() && !it.m().is_internal() {
+                let ovrhdSegment: Ptr<MSOverheadWire> = MSNet::get_instance().get_stopping_place(&ovrhdSegmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>();
+                // If the outgoing overhead wire segment belongs to the same substation as newOverheadWireSegment
+                // RICE_TODO: define what happens if the traction stations are different
+                if ovrhdSegment.m().get_traction_substation().as_raw() == newOverheadWireSegment.m().get_traction_substation().as_raw() {
+                    let connection: Ptr<MSLane> = lane.m().get_internal_following_lane(it);
+                    if !connection.is_null() {
+                        // is connection a forbidden lane?
+                        let sub = ovrhdSegment.m().get_traction_substation();
+                        if !(sub.m().is_forbidden(connection) || sub.m().is_forbidden(lane.m().get_internal_following_lane(connection)) || sub.m().is_forbidden(connection.m().get_internal_following_lane(it))) {
+                            self.add_overhead_wire_inner_segment_to_circuit(newOverheadWireSegment, ovrhdSegment, connection, lane.m().get_internal_following_lane(connection), connection.m().get_internal_following_lane(it));
+                        }
+                    } else if overhead_wire_solver() {
+                        let unusedNode = newOverheadWireSegment.m().get_circuit_end_node_pos();
+                        for ows in self.myOverheadWireSegments.iter() {
+                            if ows.m().get_circuit_start_node_pos() == unusedNode {
+                                ows.m().set_circuit_start_node_pos(ovrhdSegment.m().get_circuit_start_node_pos());
+                            }
+                            if ows.m().get_circuit_end_node_pos() == unusedNode {
+                                ows.m().set_circuit_end_node_pos(ovrhdSegment.m().get_circuit_start_node_pos());
+                            }
+                        }
+                        newOverheadWireSegment.m().get_circuit().m().replace_and_delete_node(unusedNode.expect("unused node is not created"), ovrhdSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"));
+                    }
+                }
+            }
+        }
+
+        // RICE_TODO: to use startPos and endPos of ovhdsegment: if startPos-EPS < 0,
+        //            and the incoming lanes will be skipped as there is no wire at the beginning of the lane
+
+        // This is the same as above, only this time checking the wires on some incoming lanes.
+        neigboringInnerLanes = lane.m().get_normal_incoming_lanes();
+        for it in neigboringInnerLanes.iter() {
+            let it: Ptr<MSLane> = *it;
+            let ovrhdSegmentID: String = MSNet::get_instance().get_stopping_place_id(it, it.m().get_length() - utils::geom::NUMERICAL_EPS, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
+            // If the overhead wire segment is over the incoming (not internal) lane
+            if !ovrhdSegmentID.is_empty() && !it.m().is_internal() {
+                let ovrhdSegment: Ptr<MSOverheadWire> = MSNet::get_instance().get_stopping_place(&ovrhdSegmentID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>();
+                // If the incoming overhead wire segment belongs to the same substation as newOverheadWireSegment
+                if ovrhdSegment.m().get_traction_substation().as_raw() == newOverheadWireSegment.m().get_traction_substation().as_raw() {
+                    let connection: Ptr<MSLane> = it.m().get_internal_following_lane(lane);
+                    if !connection.is_null() {
+                        // is connection a forbidden lane?
+                        let sub = ovrhdSegment.m().get_traction_substation();
+                        if !(sub.m().is_forbidden(connection) || sub.m().is_forbidden(it.m().get_internal_following_lane(connection)) || sub.m().is_forbidden(connection.m().get_internal_following_lane(lane))) {
+                            self.add_overhead_wire_inner_segment_to_circuit(ovrhdSegment, newOverheadWireSegment, connection, it.m().get_internal_following_lane(connection), connection.m().get_internal_following_lane(lane));
+                        }
+                    } else if overhead_wire_solver() {
+                        let unusedNode = newOverheadWireSegment.m().get_circuit_start_node_pos();
+                        for ows in self.myOverheadWireSegments.iter() {
+                            if ows.m().get_circuit_start_node_pos() == unusedNode {
+                                ows.m().set_circuit_start_node_pos(ovrhdSegment.m().get_circuit_end_node_pos());
+                            }
+                            if ows.m().get_circuit_end_node_pos() == unusedNode {
+                                ows.m().set_circuit_end_node_pos(ovrhdSegment.m().get_circuit_end_node_pos());
+                            }
+                        }
+                        newOverheadWireSegment.m().get_circuit().m().replace_and_delete_node(unusedNode.expect("unused node is not created"), ovrhdSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"));
+                    }
+                }
+            }
+        }
+
+        if overhead_wire_solver() && newOverheadWireSegment.m().is_there_voltage_source() {
+            let mut circuit = newOverheadWireSegment.m().get_circuit();
+            let ground = circuit.m().get_node("negNode_ground");
+            circuit.m().add_element(&format!("voltage_source_{}", newOverheadWireSegment.m().get_id()), self.mySubstationVoltage, newOverheadWireSegment.m().get_circuit_start_node_pos().expect("segment has no start node"), ground.expect("negNode_ground is not created"), ElementType::VoltageSource);
+        }
     }
 
     /// C++: `void MSTractionSubstation::addOverheadWireClampToCircuit(const std::string, MSOverheadWire *, MSOverheadWire *)`
@@ -746,7 +1049,14 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_overhead_wire_clamp_to_circuit(&mut self, id: String, startSegment: Ptr<MSOverheadWire>, endSegment: Ptr<MSOverheadWire>) {
-        todo!("port MSTractionSubstation::addOverheadWireClampToCircuit")
+        let pos_start = startSegment.m().get_lane().get_shape(false);
+        let pos_end = endSegment.m().get_lane().get_shape(false);
+        let distance: f64 = pos_start.front().distance_to2d(pos_end.back());
+
+        if distance > 10.0 {
+            utils::common::msg_handler::write_warning(&utils::tlf!("The distance between two overhead wires during adding overhead wire clamp '%' defined for traction substation '%' is % m.", id.as_str(), startSegment.m().get_traction_substation().m().get_id(), distance));
+        }
+        self.get_circuit().m().add_element(&id, distance * WIRE_RESISTIVITY, startSegment.m().get_circuit_start_node_pos().expect("clamp start segment has no start node"), endSegment.m().get_circuit_end_node_pos().expect("clamp end segment has no end node"), ElementType::Resistor);
     }
 
     /// C++: `void MSTractionSubstation::eraseOverheadWireSegmentFromCircuit(MSOverheadWire *)`
@@ -757,7 +1067,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn erase_overhead_wire_segment_from_circuit(&mut self, oldWireSegment: Ptr<MSOverheadWire>) {
-        todo!("port MSTractionSubstation::eraseOverheadWireSegmentFromCircuit")
+        self.myOverheadWireSegments.retain(|s| (*s).as_raw() != oldWireSegment.as_raw());
     }
 
     /// C++: `void MSTractionSubstation::writeOut()`
@@ -770,7 +1080,10 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn write_out(&mut self) {
-        todo!("port MSTractionSubstation::writeOut")
+        print!("substation {} constrols segments: \n", self.get_id());
+        for seg in self.myOverheadWireSegments.iter() {
+            print!("        {}\n", seg.m().get_overhead_wire_segment_name());
+        }
     }
 
     /// C++: `std::size_t MSTractionSubstation::numberOfOverheadSegments() const` [const]
@@ -779,7 +1092,7 @@ impl MSTractionSubstation {
     //     }
     #[allow(unused_variables)]
     pub fn number_of_overhead_segments(&self) -> usize {
-        todo!("port MSTractionSubstation::numberOfOverheadSegments")
+        self.myOverheadWireSegments.len()
     }
 
     /// C++: `void MSTractionSubstation::setChargingVehicle(bool)`
@@ -790,7 +1103,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn set_charging_vehicle(&mut self, value: bool) {
-        todo!("port MSTractionSubstation::setChargingVehicle")
+        self.myChargingVehicle = value;
     }
 
     /// C++: `bool MSTractionSubstation::isCharging() const` [const]
@@ -801,7 +1114,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn is_charging(&self) -> bool {
-        todo!("port MSTractionSubstation::isCharging")
+        self.myChargingVehicle
     }
 
     /// C++: `void MSTractionSubstation::increaseElecHybridCount()`
@@ -811,7 +1124,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn increase_elec_hybrid_count(&mut self) {
-        todo!("port MSTractionSubstation::increaseElecHybridCount")
+        self.myElecHybridCount += 1;
     }
 
     /// C++: `void MSTractionSubstation::decreaseElecHybridCount()`
@@ -821,7 +1134,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn decrease_elec_hybrid_count(&mut self) {
-        todo!("port MSTractionSubstation::decreaseElecHybridCount")
+        self.myElecHybridCount -= 1;
     }
 
     /// C++: `void MSTractionSubstation::addForbiddenLane(MSLane *)`
@@ -830,7 +1143,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_forbidden_lane(&mut self, lane: Ptr<MSLane>) {
-        todo!("port MSTractionSubstation::addForbiddenLane")
+        self.myForbiddenLanes.push(lane);
     }
 
     /// C++: `bool MSTractionSubstation::isForbidden(const MSLane *)`
@@ -844,7 +1157,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn is_forbidden(&mut self, lane: Ptr<MSLane>) -> bool {
-        todo!("port MSTractionSubstation::isForbidden")
+        self.myForbiddenLanes.iter().any(|l| (*l).as_raw() == lane.as_raw())
     }
 
     /// C++: `void MSTractionSubstation::addClamp(const std::string &, MSOverheadWire *, MSOverheadWire *)`
@@ -855,7 +1168,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_clamp(&mut self, id: &str, startPos: Ptr<MSOverheadWire>, endPos: Ptr<MSOverheadWire>) {
-        todo!("port MSTractionSubstation::addClamp")
+        self.myOverheadWireClamps.push(MSTractionSubstation_OverheadWireClamp::new_2(id.to_string(), startPos, endPos, false));
     }
 
     /// C++: `int MSTractionSubstation::getElecHybridCount() const` [const]
@@ -864,7 +1177,7 @@ impl MSTractionSubstation {
     //     }
     #[allow(unused_variables)]
     pub fn get_elec_hybrid_count(&self) -> i32 {
-        todo!("port MSTractionSubstation::getElecHybridCount")
+        self.myElecHybridCount
     }
 
     /// C++: `void MSTractionSubstation::addVehicle(MSDevice_ElecHybrid *)`
@@ -874,7 +1187,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_vehicle(&mut self, elecHybrid: Ptr<MSDevice_ElecHybrid>) {
-        todo!("port MSTractionSubstation::addVehicle")
+        self.myElecHybrid.push(elecHybrid);
     }
 
     /// C++: `void MSTractionSubstation::eraseVehicle(MSDevice_ElecHybrid *)`
@@ -884,7 +1197,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn erase_vehicle(&mut self, elecHybrid: Ptr<MSDevice_ElecHybrid>) {
-        todo!("port MSTractionSubstation::eraseVehicle")
+        self.myElecHybrid.retain(|v| (*v).as_raw() != elecHybrid.as_raw());
     }
 
     /// C++: `double MSTractionSubstation::getSubstationVoltage() const` [const]
@@ -893,7 +1206,7 @@ impl MSTractionSubstation {
     //     }
     #[allow(unused_variables)]
     pub fn get_substation_voltage(&self) -> f64 {
-        todo!("port MSTractionSubstation::getSubstationVoltage")
+        self.mySubstationVoltage
     }
 
     /// C++: `bool MSTractionSubstation::isAnySectionPreviouslyDefined()`
@@ -906,7 +1219,7 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn is_any_section_previously_defined(&mut self) -> bool {
-        todo!("port MSTractionSubstation::isAnySectionPreviouslyDefined")
+        !self.myOverheadWireSegments.is_empty() || !self.myForbiddenLanes.is_empty() || self.myCircuit.m().get_last_id() > 0
     }
 
     /// C++: `void MSTractionSubstation::addSolvingCircuitToEndOfTimestepEvents()`
@@ -921,7 +1234,11 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_solving_circuit_to_end_of_timestep_events(&mut self) {
-        todo!("port MSTractionSubstation::addSolvingCircuitToEndOfTimestepEvents")
+        if !self.myChargingVehicle {
+            let cmd: Ptr<WrappingCommand<MSTractionSubstation>> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSTractionSubstation::solve_circuit))));
+            MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), -1);
+            self.set_charging_vehicle(true);
+        }
     }
 
     /// C++: `SUMOTime MSTractionSubstation::solveCircuit(SUMOTime)`
@@ -977,7 +1294,48 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn solve_circuit(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port MSTractionSubstation::solveCircuit")
+        // Circuit evaluation
+        self.set_charging_vehicle(false);
+
+        let circuit = self.myCircuit;
+        // RICE_TODO: Allow for updating current limits in each time step if changed e.g. via traci or similar
+        circuit.m().solve();
+
+        if circuit.m().get_alpha_best() != 1.0 {
+            utils::common::msg_handler::write_warning(&utils::tlf!("The requested total power could not be delivered by the overhead wire. Only % of originally requested power was provided.", circuit.m().get_alpha_best()));
+        }
+
+        // RICE_TODO: verify what happens if eigen is not defined?
+        // Note: addSolvingCircuitToEndOfTimestepEvents() and thus solveCircuit() should be called from notifyMove only if eigen is defined.
+        self.add_charge_value_for_output(watt2watthr(circuit.m().get_total_power_of_circuit_sources()), circuit.m().get_total_current_of_circuit_sources(), circuit.m().get_alpha_best(), circuit.m().get_alpha_reason());
+
+        let devices: Vec<Ptr<MSDevice_ElecHybrid>> = self.myElecHybrid.clone();
+        for it in devices {
+            let vehElem: ElemIdx = it.m().veh_elem.expect("elecHybrid device has no vehicle element in the circuit");
+            let circuit = it.m().myCircuit;
+            let voltage = circuit.m().element_voltage(vehElem);
+            let current = -circuit.m().element_current(vehElem); // Vehicle is a power source, hence its current (returned by getCurrent()) flows in opposite direction
+
+            it.m().set_current_from_overhead_wire(current);
+            it.m().set_voltage_of_overhead_wire(voltage);
+
+            // Calulate energy charged
+            let energyIn = watt2watthr(voltage * current); // [Wh]
+
+            // Compute energy charged into/from battery considering recuperation and propulsion efficiency (not considering battery capacity)
+            let energyCharged = it.m().compute_charged_energy(energyIn);
+
+            // Update energy saved in the battery pack and return trully charged energy considering limits of battery
+            let realEnergyCharged = it.m().store_energy_to_battery(energyCharged);
+
+            it.m().set_energy_charged(realEnergyCharged);
+
+            // Add energy wasted to the total sum
+            it.m().update_total_energy_wasted(energyCharged - realEnergyCharged);
+            // Add the energy provided by the overhead wire segment to the output of the segment
+            it.m().get_act_overhead_wire_segment().m().add_charge_value_for_output(energyIn, it, true);
+        }
+        0
     }
 
     /// C++: `void MSTractionSubstation::addChargeValueForOutput(double, double, double, Circuit::alphaFlag)`
@@ -1007,8 +1365,35 @@ impl MSTractionSubstation {
     //     myChargeValues.push_back(C);
     // }
     #[allow(unused_variables)]
-    pub fn add_charge_value_for_output(&mut self, energy: f64, current: f64, alpha: f64, alphaReason: Unmapped /* Circuit::alphaFlag */) {
-        todo!("port MSTractionSubstation::addChargeValueForOutput")
+    pub fn add_charge_value_for_output(&mut self, energy: f64, current: f64, alpha: f64, alphaReason: AlphaFlag) {
+        let mut vehicleIDs: String = String::new();
+        self.myTotalEnergy += energy; //[Wh]
+        for it in self.myElecHybrid.iter() {
+            vehicleIDs += &format!("{} ", it.m().base2.get_id());
+        }
+        // TODO vehicleIDs should not be empty, but in some case, it is (due to teleporting of vehicle?)
+        if !vehicleIDs.is_empty() {
+            vehicleIDs.pop();
+        }
+
+        let currents: String = self.myCircuit.m().get_currents_of_circuit_source();
+
+        // create charge row and insert it in myChargeValues
+        let C = MSTractionSubstation_chargeTS::new(
+            MSNet::get_instance().get_current_time_step(),
+            self.get_id().to_string(),
+            vehicleIDs,
+            energy,
+            current,
+            currents,
+            self.mySubstationVoltage,
+            String::new(),
+            self.myElecHybrid.len() as i32,
+            self.myCircuit.m().get_num_voltage_sources() as i32,
+            alpha,
+            alphaReason,
+        );
+        self.myChargeValues.push(C);
     }
 
     /// C++: `void MSTractionSubstation::writeTractionSubstationOutput(OutputDevice &)`
@@ -1058,7 +1443,41 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn write_traction_substation_output(&mut self, output: &mut OutputDevice) {
-        todo!("port MSTractionSubstation::writeTractionSubstationOutput")
+        output.open_tag_id(SUMO_TAG_TRACTION_SUBSTATION);
+        output.write_attr(SUMO_ATTR_ID, self.get_id());
+        output.write_attr(SUMO_ATTR_TOTALENERGYCHARGED, &self.myTotalEnergy); //[Wh]
+        let mut length: f64 = 0.0;
+        for it in self.myOverheadWireSegments.iter() {
+            length += it.m().get_end_lane_position() - it.m().get_begin_lane_position();
+        }
+        output.write_attr(SUMO_ATTR_LENGTH, &length);
+        output.write_attr("numVoltageSources", &(self.myCircuit.m().get_num_voltage_sources() as i32));
+        output.write_attr("numClamps", &(self.myOverheadWireClamps.len() as i32));
+        output.write_attr(SUMO_ATTR_CHARGINGSTEPS, &(self.myChargeValues.len() as i32));
+
+        // start writting
+        if self.myChargeValues.len() > 0 {
+            // iterate over charging values
+            for i in self.myChargeValues.iter() {
+                // open tag for timestep and write all parameters
+                output.open_tag_id(SUMO_TAG_STEP);
+                output.write_attr(SUMO_ATTR_TIME, &time2string(i.timeStep));
+                // charge values
+                output.write_attr("vehicleIDs", i.vehicleIDs.as_str());
+                output.write_attr("numVehicles", &i.numVehicles);
+                output.write_attr(SUMO_ATTR_ENERGYCHARGED, &i.energy);
+                output.write_attr(SUMO_ATTR_CURRENTFROMOVERHEADWIRE, &i.current);
+                output.write_attr("currents", i.currentsString.as_str());
+                // charging values of charging station in this timestep
+                output.write_attr(SUMO_ATTR_VOLTAGE, &i.voltage);
+                output.write_attr(SUMO_ATTR_ALPHACIRCUITSOLVER, &i.alpha);
+                output.write_attr("alphaFlag", &(i.alphaReason as i32));
+                // close tag timestep
+                output.close_tag("");
+            }
+        }
+        // close charging station tag
+        output.close_tag("");
     }
 
     /// C++: `OverheadWireClamp * MSTractionSubstation::findClamp(std::string)`
@@ -1066,7 +1485,12 @@ impl MSTractionSubstation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_clamp(&mut self, id: String) -> Ptr<MSTractionSubstation_OverheadWireClamp> {
-        todo!("port MSTractionSubstation::findClamp")
+        for it in self.myOverheadWireClamps.iter_mut() {
+            if it.id == id {
+                return Ptr::from_mut(it);
+            }
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSTractionSubstation::addOverheadWireInnerSegmentToCircuit(MSOverheadWire *, MSOverheadWire *, const MSLane *, const MSLane *, const MSLane *)` [private]
@@ -1179,7 +1603,97 @@ impl MSTractionSubstation {
     // }
     #[allow(unused_variables)]
     pub fn add_overhead_wire_inner_segment_to_circuit(&mut self, incomingSegment: Ptr<MSOverheadWire>, outgoingSegment: Ptr<MSOverheadWire>, connection: Ptr<MSLane>, frontConnection: Ptr<MSLane>, behindConnection: Ptr<MSLane>) {
-        todo!("port MSTractionSubstation::addOverheadWireInnerSegmentToCircuit")
+        if frontConnection.is_null() && behindConnection.is_null() {
+            // addOverheadWire from nNode of newOverheadWireSegment to pNode
+            let innerSegment = ovrhd_inner_segment(connection);
+            self.myOverheadWireSegments.push(innerSegment);
+            innerSegment.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            if overhead_wire_solver() {
+                let circuit = incomingSegment.m().get_circuit();
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
+            }
+        } else if !frontConnection.is_null() && behindConnection.is_null() {
+            let innerSegment = ovrhd_inner_segment(frontConnection);
+            let innerSegment2 = ovrhd_inner_segment(connection);
+
+            innerSegment.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment);
+            innerSegment2.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment2);
+
+            if overhead_wire_solver() {
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenFrontNode_pos = circuit.m().add_node(&format!("betweenFrontNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", frontConnection.m().get_id()), frontConnection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenFrontNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenFrontNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
+            }
+        } else if frontConnection.is_null() && !behindConnection.is_null() {
+            let innerSegment = ovrhd_inner_segment(connection);
+            let innerSegment2 = ovrhd_inner_segment(behindConnection);
+
+            innerSegment.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment);
+            innerSegment2.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment2);
+
+            if overhead_wire_solver() {
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenBehindNode_pos = circuit.m().add_node(&format!("betweenBehindNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", behindConnection.m().get_id()), behindConnection.m().get_length() * WIRE_RESISTIVITY, betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenBehindNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenBehindNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
+            }
+        } else if !frontConnection.is_null() && !behindConnection.is_null() {
+            let innerSegment = ovrhd_inner_segment(frontConnection);
+            let innerSegment2 = ovrhd_inner_segment(connection);
+            let innerSegment3 = ovrhd_inner_segment(behindConnection);
+
+            innerSegment.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment);
+            innerSegment2.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment2);
+            innerSegment3.m().set_traction_substation(incomingSegment.m().get_traction_substation());
+            self.myOverheadWireSegments.push(innerSegment3);
+
+            if overhead_wire_solver() {
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenFrontNode_pos = circuit.m().add_node(&format!("betweenFrontNode_pos_{}", connection.m().get_id()));
+                let betweenBehindNode_pos = circuit.m().add_node(&format!("betweenBehindNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", frontConnection.m().get_id()), frontConnection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), ElementType::Resistor);
+                let elem3 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", behindConnection.m().get_id()), behindConnection.m().get_length() * WIRE_RESISTIVITY, betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenFrontNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenFrontNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(betweenBehindNode_pos);
+
+                innerSegment3.m().set_circuit_element_pos(elem3);
+                innerSegment3.m().set_circuit_start_node_pos(betweenBehindNode_pos);
+                innerSegment3.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
+            }
+        }
     }
 
 }
@@ -1201,7 +1715,12 @@ impl MSTractionSubstation_OverheadWireClamp {
     //             usage(false) {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port OverheadWireClamp::OverheadWireClamp")
+        MSTractionSubstation_OverheadWireClamp {
+            id: "undefined".to_string(),
+            start: Ptr::null(),
+            end: Ptr::null(),
+            usage: false,
+        }
     }
 
     /// C++: `void OverheadWireClamp::OverheadWireClamp(const std::string, MSOverheadWire *, MSOverheadWire *, bool)`
@@ -1212,7 +1731,12 @@ impl MSTractionSubstation_OverheadWireClamp {
     //             usage(_usage) {}
     #[allow(unused_variables)]
     pub fn new_2(_id: String, _start: Ptr<MSOverheadWire>, _end: Ptr<MSOverheadWire>, _usage: bool) -> Self {
-        todo!("port OverheadWireClamp::OverheadWireClamp")
+        MSTractionSubstation_OverheadWireClamp {
+            id: _id,
+            start: _start,
+            end: _end,
+            usage: _usage,
+        }
     }
 
 }
@@ -1232,7 +1756,7 @@ pub struct MSTractionSubstation_chargeTS {
     pub numVehicles: i32,
     pub numVoltageSources: i32,
     pub alpha: f64,
-    pub alphaReason: Unmapped /* Circuit::alphaFlag */,
+    pub alphaReason: AlphaFlag,
 }
 
 impl MSTractionSubstation_chargeTS {
@@ -1254,8 +1778,21 @@ impl MSTractionSubstation_chargeTS {
     //             alpha(_alpha),
     //             alphaReason(_alphaReason) {}
     #[allow(unused_variables)]
-    pub fn new(_timeStep: SUMOTime, _substationID: String, _vehicleIDs: String, _energy: f64, _current: f64, _currentsString: String, _voltage: f64, _status: String, _numVehicle: i32, _numVoltageSources: i32, _alpha: f64, _alphaReason: Unmapped /* Circuit::alphaFlag */) -> Self {
-        todo!("port chargeTS::chargeTS")
+    pub fn new(_timeStep: SUMOTime, _substationID: String, _vehicleIDs: String, _energy: f64, _current: f64, _currentsString: String, _voltage: f64, _status: String, _numVehicle: i32, _numVoltageSources: i32, _alpha: f64, _alphaReason: AlphaFlag) -> Self {
+        MSTractionSubstation_chargeTS {
+            timeStep: _timeStep,
+            substationID: _substationID,
+            vehicleIDs: _vehicleIDs,
+            energy: _energy,
+            current: _current,
+            currentsString: _currentsString,
+            voltage: _voltage,
+            status: _status,
+            numVehicles: _numVehicle,
+            numVoltageSources: _numVoltageSources,
+            alpha: _alpha,
+            alphaReason: _alphaReason,
+        }
     }
 
 }
@@ -1271,7 +1808,7 @@ impl MSOverheadWire_vehicle_position_sorter {
     // explicit vehicle_position_sorter() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port vehicle_position_sorter::vehicle_position_sorter")
+        MSOverheadWire_vehicle_position_sorter {}
     }
 
     /// C++: `int vehicle_position_sorter::operator()(SUMOVehicle *, SUMOVehicle *)`
@@ -1281,7 +1818,7 @@ impl MSOverheadWire_vehicle_position_sorter {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&mut self, v1: Ptr<SUMOVehicle>, v2: Ptr<SUMOVehicle>) -> i32 {
-        todo!("port vehicle_position_sorter::operator()")
+        (v1.m().get_position_on_lane() > v2.m().get_position_on_lane()) as i32
     }
 
 }

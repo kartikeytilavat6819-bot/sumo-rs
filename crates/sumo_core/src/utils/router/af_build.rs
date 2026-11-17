@@ -1,6 +1,7 @@
 //! Port of utils/router/AFBuild.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// C++ typedef `typename AFInfo<FlippedEdge<E, N, V>>::ArcInfo AFBuild::ArcInfo`
 pub type AFBuild_ArcInfo = AFInfo_ArcInfo;
@@ -41,8 +42,14 @@ pub struct AFBuild<E, N, V, M> {
     pub myNode2EdgeRouter: Ptr<Node2EdgeRouter<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V, M>>,
     pub myCentralizedSPTree: Ptr<AFCentralizedSPTree<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>,
     /// The container of arc informations (for the centralized shortest path tree)
-    pub myArcInfos: i32,
+    pub myArcInfos: Vec<Ptr<AFBuild_ArcInfo>>,
     _p: std::marker::PhantomData<(E, N, V, M,)>,
+}
+
+fn delete_ptr<T>(p: Ptr<T>) {
+    if !p.is_null() {
+        unsafe { drop(Box::from_raw(p.as_raw())) };
+    }
 }
 
 impl<E, N, V, M> AFBuild<E, N, V, M> {
@@ -74,8 +81,10 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(flippedEdges: &i32, flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
-        todo!("port AFBuild::AFBuild<E, N, V, M>")
+    pub fn new(flippedEdges: &Vec<Ptr<FlippedEdge<E, N, V>>>,
+ flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>, numberOfLevels: i32, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Self {
+        // shortcut: Node2EdgeRouter/AFCentralizedSPTree constructors take i32 placeholder containers, and FlippedEdge has no RouterEdge impl, upgrade when those are typed
+        panic!("shortcut: AFBuild::new needs typed Node2EdgeRouter/AFCentralizedSPTree constructors")
     }
 
     /// C++: `void AFBuild::~AFBuild<E, N, V, M>()`
@@ -86,7 +95,16 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port AFBuild::~AFBuild<E, N, V, M>")
+        let tree = self.myCentralizedSPTree;
+        if !tree.is_null() {
+            tree.m().drop_();
+            delete_ptr(tree);
+        }
+        let router = self.myNode2EdgeRouter;
+        if !router.is_null() {
+            router.m().drop_();
+            delete_ptr(router);
+        }
     }
 
     /// C++: `typename SUMOAbstractRouter<FlippedEdge<E, N, V>, V>::Operation AFBuild::getFlippedOperation()`
@@ -96,7 +114,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn get_flipped_operation(&mut self) -> SUMOAbstractRouter_Operation {
-        todo!("port AFBuild::getFlippedOperation")
+        self.myFlippedOperation
     }
 
     /// C++: `const std::shared_ptr<const FlippedLookupTable> AFBuild::getFlippedLookup()`
@@ -106,7 +124,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn get_flipped_lookup(&mut self) -> Rc<AFBuild_FlippedLookupTable> {
-        todo!("port AFBuild::getFlippedLookup")
+        Rc::clone(&self.myFlippedLookupTable)
     }
 
     /// C++: `void AFBuild::init(SUMOTime, const V *const, int &)`
@@ -145,8 +163,9 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     myArcInfos.clear();
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut i32) {
-        todo!("port AFBuild::init")
+    pub fn init(&mut self, time: SUMOTime, vehicle: Ptr<V>, flagInfos: &mut Vec<Ptr<AFInfo_FlagInfo>>) {
+        // shortcut: ArcInfo::new takes an Unmapped edge placeholder, and FlippedEdge has no RouterEdge impl for numerical_id, upgrade when AFInfo and FlippedEdge are typed
+        panic!("shortcut: AFBuild::init needs typed AFInfo::ArcInfo::new and FlippedEdge accessors")
     }
 
     /// C++: `void AFBuild::setFlippedPartition(const KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V> *)`
@@ -156,7 +175,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn set_flipped_partition(&mut self, flippedPartition: Ptr<KDTreePartition<FlippedEdge<E, N, V>, FlippedNode<E, N, V>, V>>) {
-        todo!("port AFBuild::setFlippedPartition")
+        self.myFlippedPartition = flippedPartition;
     }
 
     /// C++: `int AFBuild::partitionLevel2SHARCLevel(int)`
@@ -166,7 +185,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn partition_level2_sharc_level(&mut self, partitionLevel: i32) -> i32 {
-        todo!("port AFBuild::partitionLevel2SHARCLevel")
+        AFRouter::<E, N, V, M>::partition_level2_sharc_level(partitionLevel, self.myNumberOfLevels)
     }
 
     /// C++: `int AFBuild::sHARCLevel2PartitionLevel(int)`
@@ -176,7 +195,7 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn s_harc_level2_partition_level(&mut self, sHARCLevel: i32) -> i32 {
-        todo!("port AFBuild::sHARCLevel2PartitionLevel")
+        AFRouter::<E, N, V, M>::s_harc_level2_partition_level(sHARCLevel, self.myNumberOfLevels)
     }
 
     /// C++: `void AFBuild::computeArcFlags(SUMOTime, int, const V *const)` [protected]
@@ -184,7 +203,15 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn compute_arc_flags(&mut self, msTime: SUMOTime, sHARCLevel: i32, vehicle: Ptr<V>) {
-        todo!("port AFBuild::computeArcFlags")
+        let partitionLevel = self.s_harc_level2_partition_level(sHARCLevel);
+        let levelCells = self.myFlippedPartition.m().get_cells_at_level(partitionLevel).clone();
+        for cell in levelCells {
+            self.compute_arc_flags_2(msTime, sHARCLevel, cell, vehicle);
+            for arcInfo in self.myArcInfos.iter() {
+                arcInfo.m().effortsToBoundaryNodes.clear();
+                arcInfo.m().touched = false;
+            }
+        }
     }
 
     /// C++: `void AFBuild::computeArcFlags(SUMOTime, const int, const Cell *, const V *const)` [protected]
@@ -260,7 +287,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn compute_arc_flags_2(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        todo!("port AFBuild::computeArcFlags")
+        // shortcut: needs typed boundary edge sets and FlippedEdge RouterEdge accessors, upgrade when Cell edge sets and FlippedEdge are typed
+        panic!("shortcut: AFBuild::computeArcFlags(cell) needs typed boundary edge sets and FlippedEdge accessors")
     }
 
     /// C++: `void AFBuild::computeArcFlagsNaive(SUMOTime, const int, const Cell *, const V *const)` [protected]
@@ -334,7 +362,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn compute_arc_flags_naive(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        todo!("port AFBuild::computeArcFlagsNaive")
+        // shortcut: needs typed boundary edge sets and FlippedEdge RouterEdge accessors, upgrade when Cell edge sets and FlippedEdge are typed
+        panic!("shortcut: AFBuild::computeArcFlagsNaive needs typed boundary edge sets and FlippedEdge accessors")
     }
 
     /// C++: `void AFBuild::putArcFlag(ArcInfo *, const int, const bool)` [protected]
@@ -346,7 +375,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn put_arc_flag(&mut self, arcInfo: Ptr<AFInfo_ArcInfo>, sHARCLevel: i32, isLeftOrLowerCell: bool) {
-        todo!("port AFBuild::putArcFlag")
+        debug_assert!(!arcInfo.is_null());
+        arcInfo.m().arcFlags[(sHARCLevel * 2 + if isLeftOrLowerCell { 0 } else { 1 }) as usize] = true;
     }
 
     /// C++: `void AFBuild::initBoundaryEdges(const int &)` [private]
@@ -367,7 +397,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn init_boundary_edges(&mut self, boundaryEdges: &i32) {
-        todo!("port AFBuild::initBoundaryEdges")
+        // shortcut: boundaryEdges is an i32 placeholder and numerical_id is not on FlippedEdge, upgrade when Cell boundary edge sets are typed
+        panic!("shortcut: AFBuild::initBoundaryEdges needs typed boundary edge sets")
     }
 
     /// C++: `void AFBuild::initSupercellEdges(const Cell *, const int &, size_t)` [private]
@@ -405,7 +436,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn init_supercell_edges(&mut self, supercell: Ptr<KDTreePartition_Cell>, boundaryEdges: &i32, numberOfBoundaryNodes: usize) {
-        todo!("port AFBuild::initSupercellEdges")
+        // shortcut: needs FlippedNode::getIncoming and typed boundary edge sets, upgrade when those are typed
+        panic!("shortcut: AFBuild::initSupercellEdges needs typed boundary edge sets and FlippedNode::getIncoming")
     }
 
     /// C++: `void AFBuild::computeArcFlagsAux(SUMOTime, const int, const Cell *, const V *const)` [private]
@@ -602,7 +634,8 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn compute_arc_flags_aux(&mut self, msTime: SUMOTime, sHARCLevel: i32, cell: Ptr<KDTreePartition_Cell>, vehicle: Ptr<V>) {
-        todo!("port AFBuild::computeArcFlagsAux")
+        // shortcut: needs typed arc info sets, FlippedEdge RouterEdge accessors and Node2EdgeRouter edge efforts, upgrade when those are typed
+        panic!("shortcut: AFBuild::computeArcFlagsAux needs typed arc info sets and FlippedEdge accessors")
     }
 
 }

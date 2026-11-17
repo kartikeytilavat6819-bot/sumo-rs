@@ -1,6 +1,7 @@
 //! Port of microsim/devices/MSDevice_Example.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::string_utils::to_double;
 use utils::common::to_string::{f64_to_string_default, to_string};
 use utils::options::options_cont::get_float;
@@ -91,8 +92,7 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "example", v, false) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "example", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
             // get custom vehicle parameter
             let mut customParameter2 = -1.0;
             if v.get_parameter().has_parameter("example") {
@@ -164,7 +164,14 @@ impl MSDevice_Example {
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
         println!("device '{}' notifyMove: newSpeed={}", self.base.base2.get_id(), f64_to_string_default(newSpeed));
-        // shortcut: the C++ isVehicle() branch needs a static_cast to SUMOVehicle and MSDevice_Tripinfo lookup via getDevice(typeid(...)), which takes an Unmapped std::type_info, so only the speed line is printed; upgrade when SUMOTrafficObject can be downcast and getDevice takes a device name
+        if veh.is_vehicle() {
+            let v = Ptr::from_mut(veh).cast::<SUMOVehicle>();
+            // check whether another device is present on the vehicle:
+            let otherDevice = MSDevice::get_device_by_name(v.get_devices(), "tripinfo");
+            if !otherDevice.is_null() {
+                println!("  veh '{} has device '{}'", v.get_id(), otherDevice.base2.get_id());
+            }
+        }
         true // keep the device
     }
 
@@ -218,16 +225,15 @@ impl MSDevice_Example {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "customValue1" {
-            to_string(&self.myCustomValue1)
+            Ok(to_string(&self.myCustomValue1))
         } else if key == "customValue2" {
-            to_string(&self.myCustomValue2)
+            Ok(to_string(&self.myCustomValue2))
         } else if key == "meaningOfLife" {
-            "42".to_string()
+            Ok("42".to_string())
         } else {
-            // shortcut: C++ throws InvalidArgument; this virtual returns String, so the same message is raised as a panic
-            panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0)
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -248,16 +254,16 @@ impl MSDevice_Example {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        // shortcut: C++ throws InvalidArgument; this virtual returns (), so the same messages are raised as panics
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())).0),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "customValue1" {
             self.myCustomValue1 = doubleValue;
+            Ok(())
         } else {
-            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0);
+            Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -295,6 +301,26 @@ impl MSDevice_Example {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, customValue1: f64, customValue2: f64, customValue3: f64) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Example>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, customValue1, customValue2, customValue3);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, customValue1: f64, customValue2: f64, customValue3: f64) -> Self {
         println!("initialized device '{}' with myCustomValue1={}, myCustomValue2={}, myCustomValue3={}", id, f64_to_string_default(customValue1), f64_to_string_default(customValue2), f64_to_string_default(customValue3));
         MSDevice_Example {
             base: MSVehicleDevice::new(holder, id),

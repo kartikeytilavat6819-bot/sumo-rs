@@ -2,6 +2,23 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `from >> id` for a std::string: skips whitespace, reads one token, case preserved.
+/// Mirrors the private `vissim_read_token` of ni_importer_vissim.rs (not visible here).
+fn auswertung_read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 /// C++ class `NIVissimSingleTypeParser_Auswertungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Auswertungsdefinition.h)
 #[repr(C)]
 pub struct NIVissimSingleTypeParser_Auswertungsdefinition {
@@ -28,7 +45,7 @@ impl NIVissimSingleTypeParser_Auswertungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Auswertungsdefinition::NIVissimSingleTypeParser_Auswertungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Auswertungsdefinition::~NIVissimSingleTypeParser_Auswertungsdefinition() noexcept` [virtual]
@@ -36,7 +53,7 @@ impl NIVissimSingleTypeParser_Auswertungsdefinition {
     // NIVissimSingleTypeParser_Auswertungsdefinition::~NIVissimSingleTypeParser_Auswertungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Auswertungsdefinition::~NIVissimSingleTypeParser_Auswertungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Auswertungsdefinition::parse(std::istream &)` [virtual]
@@ -70,8 +87,37 @@ impl NIVissimSingleTypeParser_Auswertungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Auswertungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let id = auswertung_read_raw_token(from);
+        if id == "DATENBANK" {
+            return true;
+        }
+
+        let mut ty = self.my_read(from);
+        if ty == "abfluss" {
+            while ty != "signalgruppe" {
+                ty = self.my_read(from);
+            }
+            while ty != "DATAEND" {
+                ty = self.read_end_secure(from, "messung");
+            }
+        } else if ty == "vbv" {
+        } else if ty == "dichte" {
+        } else if ty == "emissionen" {
+        } else if ty == "fzprot" {
+        } else if ty == "spwprot" {
+        } else if ty == "segment" {
+            while ty != "konfdatei" {
+                ty = self.my_read(from);
+            }
+        } else if ty == "wegeausw" {
+        } else if ty == "knoten" {
+        } else if ty == "konvergenz" {
+            while ty != "zeit" {
+                ty = self.my_read(from);
+            }
+        }
+        true
     }
 
 }

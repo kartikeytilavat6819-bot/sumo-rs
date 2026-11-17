@@ -120,8 +120,28 @@ impl Lane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_links(laneID: &str) -> Vec<TraCIConnection> {
-        // shortcut: needs MSLink::opened with its default arguments (posLat, collectFoes, ignoreRed, ego, dist) and MSLink::opened is still unported, upgrade when MSLink::opened is ported
-        panic!("shortcut: Lane::getLinks needs MSLink::opened with default arguments")
+        let mut v: Vec<TraCIConnection> = Vec::new();
+        let lane = Self::get_lane(laneID);
+        let currTime = MSNet::get_instance().get_current_time_step();
+        for link in lane.get_link_cont().iter() {
+            let approachedLane = if !link.get_lane().is_null() { link.get_lane().get_id().to_string() } else { String::new() };
+            let hasPrio = link.have_priority();
+            let speed = {
+                let a = lane.get_speed_limit();
+                let b = link.get_lane().get_speed_limit();
+                if a < b { a } else { b }
+            };
+            let defaults = SUMOVTypeParameter::get_default();
+            // C++ defaults of MSLink::opened: posLat=0, collectFoes=nullptr, ignoreRed=false, ego=nullptr, dist=-1
+            let isOpen = link.opened(currTime, speed, speed, defaults.length, defaults.impatience, SUMOVTypeParameter::get_default_decel(SVC_IGNORING), 0, 0.0, Ptr::null(), false, Ptr::null(), -1.0);
+            let hasFoe = link.has_approaching_foe(currTime, currTime, 0.0, SUMOVTypeParameter::get_default_decel(SVC_IGNORING));
+            let approachedInternal = if !link.get_via_lane().is_null() { link.get_via_lane().get_id().to_string() } else { String::new() };
+            let state = LinkStates.get_string(link.get_state()).to_string();
+            let direction = LinkDirections.get_string(link.get_direction()).to_string();
+            let length = link.get_length();
+            v.push(TraCIConnection { approachedLane, hasPrio, isOpen, hasFoe, approachedInternal, state, direction, length });
+        }
+        v
     }
 
     /// C++: `libsumo::TraCIPositionVector Lane::getShape(const std::string &)` [static]
@@ -153,8 +173,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co2_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO2>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getCO2Emission needs MSLane::getEmissions<CO2>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::CO2)
     }
 
     /// C++: `double Lane::getCOEmission(const std::string &)` [static]
@@ -164,8 +183,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_co_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::CO>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getCOEmission needs MSLane::getEmissions<CO>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::CO)
     }
 
     /// C++: `double Lane::getHCEmission(const std::string &)` [static]
@@ -175,8 +193,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_hc_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::HC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getHCEmission needs MSLane::getEmissions<HC>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::HC)
     }
 
     /// C++: `double Lane::getPMxEmission(const std::string &)` [static]
@@ -186,8 +203,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_p_mx_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::PM_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getPMxEmission needs MSLane::getEmissions<PM_X>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::PM_X)
     }
 
     /// C++: `double Lane::getNOxEmission(const std::string &)` [static]
@@ -197,8 +213,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_n_ox_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::NO_X>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getNOxEmission needs MSLane::getEmissions<NO_X>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::NO_X)
     }
 
     /// C++: `double Lane::getFuelConsumption(const std::string &)` [static]
@@ -208,8 +223,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_fuel_consumption(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::FUEL>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getFuelConsumption needs MSLane::getEmissions<FUEL>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::FUEL)
     }
 
     /// C++: `double Lane::getNoiseEmission(const std::string &)` [static]
@@ -219,8 +233,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_noise_emission(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getHarmonoise_NoiseEmissions, which is still unported in ms_lane.rs, upgrade when it is ported
-        panic!("shortcut: Lane::getNoiseEmission needs MSLane::getHarmonoise_NoiseEmissions")
+        Self::get_lane(laneID).get_harmonoise_noise_emissions()
     }
 
     /// C++: `double Lane::getElectricityConsumption(const std::string &)` [static]
@@ -230,8 +243,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn get_electricity_consumption(laneID: &str) -> f64 {
-        // shortcut: needs MSLane::getEmissions<PollutantsInterface::ELEC>, a template that the Rust MSLane::get_emissions does not carry (and is still todo!), upgrade with the typed emission port
-        panic!("shortcut: Lane::getElectricityConsumption needs MSLane::getEmissions<ELEC>")
+        Self::get_lane(laneID).get_emissions(PollutantsInterface_EmissionType::ELEC)
     }
 
     /// C++: `double Lane::getLastStepMeanSpeed(const std::string &)` [static]
@@ -620,8 +632,9 @@ impl Lane {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(Lane, LANE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: Lane::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_LANE_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int Lane::domainID()` [static]
@@ -755,8 +768,7 @@ impl Lane {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: Lane::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool Lane::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

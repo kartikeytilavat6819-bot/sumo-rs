@@ -24,9 +24,13 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn new(handler: Ptr<SUMORouteHandler>) -> Self {
-        // shortcut: parseFirst(handler) needs SUMORouteHandler as &mut dyn SaxHandler, but it has no SaxHandler impl yet (base is Unmapped SUMOSAXHandler), upgrade when sumo_route_handler.rs is ported
-        let _ = handler;
-        panic!("SUMORouteLoader: SUMORouteHandler does not implement SaxHandler yet")
+        // the reader is heap-allocated like XMLSubSys::getSAXReader's `new`; like the C++ implicit destructor, nothing frees it
+        let myParser: Ptr<SUMOSAXReader> = Ptr::from_raw(Box::into_raw(Box::new(utils::xml::xml_sub_sys::get_sax_reader(false, true))));
+        let file = handler.m().base.get_file_name().to_string();
+        if !myParser.m().parse_first(handler.m(), &file).unwrap_or_else(|e| std::panic::panic_any(e)) {
+            std::panic::panic_any(ProcessError::new(utils::tlf!("Can not read XML-file '%'.", file)));
+        }
+        SUMORouteLoader { myParser, myMoreAvailable: true, myHandler: handler }
     }
 
     /// C++: `void SUMORouteLoader::~SUMORouteLoader()`
@@ -64,8 +68,11 @@ impl SUMORouteLoader {
             return SUMOTIME_MAX;
         }
         while self.myHandler.get_last_depart() <= time {
-            // shortcut: parseNext(myHandler) needs SUMORouteHandler as &mut dyn SaxHandler, not implemented yet, upgrade when sumo_route_handler.rs is ported
-            panic!("SUMORouteLoader::loadUntil: SUMORouteHandler does not implement SaxHandler yet");
+            if !self.myParser.m().parse_next(self.myHandler.m()).unwrap_or_else(|e| std::panic::panic_any(e)) {
+                // no data available anymore
+                self.myMoreAvailable = false;
+                return SUMOTIME_MAX;
+            }
         }
         self.myHandler.get_last_depart()
     }

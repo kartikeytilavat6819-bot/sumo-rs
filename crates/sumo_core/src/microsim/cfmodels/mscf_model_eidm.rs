@@ -4,7 +4,47 @@ use crate::prelude::*;
 use super::mscf_model::*;
 use crate::microsim::ms_globals::MSGlobals;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
+
+fn eidm_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).finalize_speed(veh, vPos) }
+fn eidm_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_EIDM>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage) }
+fn eidm_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_EIDM>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
+fn eidm_insertion_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>) -> f64 { cf_cast::<MSCFModel_EIDM>(m).insertion_follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred) }
+fn eidm_insertion_stop_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).insertion_stop_speed(veh, speed, gap) }
+fn eidm_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_EIDM>(m).stop_speed(veh, speed, gap, decel, usage) }
+fn eidm_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).interaction_gap(veh, vL) }
+fn eidm_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel) }
+fn eidm_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).maximum_lane_speed_cf(veh, maxSpeed, maxSpeedLane) }
+fn eidm_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_EIDM>(m).get_model_id() }
+fn eidm_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_EIDM>(m).duplicate(vtype) }
+fn eidm_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_EIDM_VehicleVariables) }.save_state(out, m)
+}
+fn eidm_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_EIDM_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
+fn eidm_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_EIDM>(m).create_vehicle_variables() }
+
+/// Virtual table of MSCFModel_EIDM: its overrides on top of the MSCFModel default table
+pub const EIDM_VT: MSCFModelVt = MSCFModelVt {
+    finalize_speed: eidm_finalize_speed,
+    free_speed: eidm_free_speed,
+    follow_speed: eidm_follow_speed,
+    insertion_follow_speed: eidm_insertion_follow_speed,
+    insertion_stop_speed: eidm_insertion_stop_speed,
+    stop_speed_2: eidm_stop_speed_2,
+    interaction_gap: eidm_interaction_gap,
+    get_secure_gap: eidm_get_secure_gap,
+    brake_gap_2: eidm_brake_gap,
+    max_next_safe_min: eidm_max_next_safe_min,
+    maximum_lane_speed_cf: eidm_maximum_lane_speed_cf,
+    get_model_id: eidm_get_model_id,
+    duplicate: eidm_duplicate,
+    create_vehicle_variables: eidm_create_vehicle_variables,
+    save_vehicle_variables: eidm_save_vehicle_variables,
+    load_vehicle_variables: eidm_load_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
 use utils::geom::NUMERICAL_EPS;
 use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 use utils::common::rand_helper::with_default;
@@ -42,6 +82,13 @@ pub struct MSCFModel_EIDM {
     pub myUseVehDynamics: bool,
 }
 
+fn eidm_max_next_safe_min(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
+    cf_cast::<MSCFModel_EIDM>(m).max_next_safe_min(speed, veh)
+}
+fn eidm_brake_gap(m: &MSCFModel, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+    cf_cast::<MSCFModel_EIDM>(m).brake_gap(speed, decel, headwayTime)
+}
+/// Virtual table of MSCFModel_EIDM: its overrides on top of the MSCFModel table
 impl std::ops::Deref for MSCFModel_EIDM {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -97,6 +144,7 @@ impl MSCFModel_EIDM {
     pub fn new(vtype: Ptr<MSVehicleType>) -> Self {
         let p = vtype.get_parameter();
         let mut base = MSCFModel::new(vtype);
+        base.vt = &EIDM_VT;
         let myDelta = p.get_cf_param(SUMO_ATTR_CF_IDM_DELTA, 4.);
         let iterations0 = (ts() / p.get_cf_param(SUMO_ATTR_CF_IDM_STEPPING, 0.25) + 0.5) as i32;
         let myIterations = if 1 > iterations0 { 1 } else { iterations0 };
@@ -119,7 +167,9 @@ impl MSCFModel_EIDM {
         if vtype.get_action_step_length() != delta_t() {
             utils::common::msg_handler::write_warning(&format!("CarFollowModel EIDM is not compatible with actionStepLength {} in vType '{}'", f64_to_string_prec(steps2time(vtype.get_action_step_length()), 6), base.myType.get_id()));
         }
-        MSCFModel_EIDM { base, myDelta, myIterations, myTPersDrive, myTreaction, myTpreview, myTPersEstimate, myCcoolness, mySigmaleader, mySigmagap, mySigmaerror, myJerkmax, myEpsilonacc, myTaccmax, myMflatness, myMbegin, myUseVehDynamics }
+        let mut this = MSCFModel_EIDM { base, myDelta, myIterations, myTPersDrive, myTreaction, myTpreview, myTPersEstimate, myCcoolness, mySigmaleader, mySigmagap, mySigmaerror, myJerkmax, myEpsilonacc, myTaccmax, myMflatness, myMbegin, myUseVehDynamics };
+        this.base.vt = &EIDM_VT;
+        this
     }
 
     /// C++: `void MSCFModel_EIDM::~MSCFModel_EIDM() noexcept` [virtual]
@@ -1111,14 +1161,14 @@ impl MSCFModel_EIDM {
     #[allow(unused_variables)]
     pub fn brake_gap(&self, speed: f64, decel: f64, headwayTime: f64) -> f64 {
         if MSGlobals::compute_lc() {
-            self.base.brake_gap_2(speed, decel, headwayTime)
+            self.base.brake_gap_2_base(speed, decel, headwayTime)
         } else {
             // myDecel + 1.0 does not work correctly with the junction model and impatience > 0.
             // Vehicles may first be disregarded because their own arrivalTimeBraking is high (TIME2STEPS(30)).
             // This is amplified by this brakeGap-Term, because they "think" they could still brake in time (low brakeGap),
             // but actually 1.0 was only added for braking at traffic lights. But then when seen < brakeGap(v) happens (see MSVehicle: arrivalTimeBraking),
             // they realize, that they will soon arrive at the junction and other vehicles are notified to maybe then brake hard!
-            self.base.brake_gap_2(speed, max2(decel, self.myDecel + 1.0), headwayTime)
+            self.base.brake_gap_2_base(speed, max2(decel, self.myDecel + 1.0), headwayTime)
         }
     }
 
@@ -2378,24 +2428,24 @@ impl MSCFModel_EIDM_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "EIDM");
-        // C++ ostream default precision (6) for doubles; bool streams as 0/1
+        // C++ `ostringstream <<` on doubles: default format, bool streams as 0/1
         let parts = vec![
-            f64_to_string_prec(self.minaccel, 6),
-            f64_to_string_prec(self.wouldacc, 6),
-            f64_to_string_prec(self.lastacc, 6),
-            f64_to_string_prec(self.realacc, 6),
-            f64_to_string_prec(self.lastrealacc, 6),
-            f64_to_string_prec(self.realleaderacc, 6),
-            f64_to_string_prec(self.lastleaderacc, 6),
-            f64_to_string_prec(self.v0_int, 6),
-            f64_to_string_prec(self.v0_old, 6),
-            f64_to_string_prec(self.t_off, 6),
-            f64_to_string_prec(self.myw_gap, 6),
-            f64_to_string_prec(self.myw_speed, 6),
-            f64_to_string_prec(self.myw_error, 6),
-            f64_to_string_prec(self.myv_est_l, 6),
-            f64_to_string_prec(self.myv_est, 6),
-            f64_to_string_prec(self.mys_est, 6),
+            f64_to_string_default(self.minaccel),
+            f64_to_string_default(self.wouldacc),
+            f64_to_string_default(self.lastacc),
+            f64_to_string_default(self.realacc),
+            f64_to_string_default(self.lastrealacc),
+            f64_to_string_default(self.realleaderacc),
+            f64_to_string_default(self.lastleaderacc),
+            f64_to_string_default(self.v0_int),
+            f64_to_string_default(self.v0_old),
+            f64_to_string_default(self.t_off),
+            f64_to_string_default(self.myw_gap),
+            f64_to_string_default(self.myw_speed),
+            f64_to_string_default(self.myw_error),
+            f64_to_string_default(self.myv_est_l),
+            f64_to_string_default(self.myv_est),
+            f64_to_string_default(self.mys_est),
             (self.myrespectMinGap as i32).to_string(),
             self.myap_update.to_string(),
         ];
@@ -2467,3 +2517,16 @@ impl MSCFModel_EIDM_VehicleVariables {
 
 }
 
+
+#[cfg(test)]
+mod vt_tests {
+    use super::*;
+
+    #[test]
+    fn eidm_table_overrides_max_next_safe_min_and_brake_gap() {
+        // vtypes EIDM_1 t=62: C++ maxNextSafeMin is 0 for EIDM, so vSafeMin = 0; through the base table it was
+        // maxNextSpeed (5.84) and vSafeMin pinned the speed 0.10 m/s too high
+        assert_eq!(EIDM_VT.max_next_safe_min as usize, eidm_max_next_safe_min as usize);
+        assert_eq!(EIDM_VT.brake_gap_2 as usize, eidm_brake_gap as usize);
+    }
+}

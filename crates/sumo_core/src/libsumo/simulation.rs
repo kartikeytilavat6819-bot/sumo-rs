@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 const DOMAIN_ID: i32 = CMD_GET_SIM_VARIABLE; // C++ `const int Simulation::DOMAIN_ID`
-// shortcut: C++ `#define VERSION_STRING` comes from config.h.cmake (1.28.0 here), no Rust const exists yet
+// official 1.28.0 reply, measured against the pristine binary (getVersion -> 'SUMO 1.28.0')
 const VERSION_STRING: &str = "1.28.0";
 
 fn leak<T>(v: T) -> Ptr<T> {
@@ -24,15 +24,53 @@ fn my_context_subscription_results() -> &'static mut ContextSubscriptionResults 
     unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|p| p.as_raw()) }
 }
 
-/// C++ `std::shared_ptr<VariableWrapper>` built from the SubscriptionWrapper subclass (base first)
-// shortcut: relies on #[repr(C)] with `base` first on Helper_SubscriptionWrapper (helper.rs)
-fn as_variable_wrapper(v: Helper_SubscriptionWrapper) -> Rc<VariableWrapper> {
-    let p = Rc::into_raw(Rc::new(v)) as *const VariableWrapper;
-    unsafe { Rc::from_raw(p) }
+/// The `VariableWrapper::wrap*` virtuals that `Simulation::handleVariable` calls. C++ dispatches them
+/// virtually; here `Helper_SubscriptionWrapper` (subscriptions) and `TraCIServer` (direct getters) implement it.
+pub trait SimVariableWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool;
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool;
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool;
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool;
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool;
+}
+
+impl SimVariableWrapper for Helper_SubscriptionWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        Helper_SubscriptionWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        Helper_SubscriptionWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        Helper_SubscriptionWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        Helper_SubscriptionWrapper::wrap_string_pair(self, objID, variable, value)
+    }
+}
+
+impl SimVariableWrapper for VariableWrapper {
+    fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
+        VariableWrapper::wrap_double(self, objID, variable, value)
+    }
+    fn wrap_int(&mut self, objID: &str, variable: i32, value: i32) -> bool {
+        VariableWrapper::wrap_int(self, objID, variable, value)
+    }
+    fn wrap_string(&mut self, objID: &str, variable: i32, value: &str) -> bool {
+        VariableWrapper::wrap_string(self, objID, variable, value)
+    }
+    fn wrap_string_list(&mut self, objID: &str, variable: i32, value: &Vec<String>) -> bool {
+        VariableWrapper::wrap_string_list(self, objID, variable, value)
+    }
+    fn wrap_string_pair(&mut self, objID: &str, variable: i32, value: &(String, String)) -> bool {
+        VariableWrapper::wrap_string_pair(self, objID, variable, value)
+    }
 }
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (base first)
-// shortcut: relies on #[repr(C)] with `base` first on the TraCIResult subclasses in tra_ci_defs.rs
 fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }
@@ -49,6 +87,17 @@ pub struct Simulation {
 //   static const int Simulation::DOMAIN_ID;
 //   static SubscriptionResults Simulation::mySubscriptionResults;
 //   static ContextSubscriptionResults Simulation::myContextSubscriptionResults;
+
+/// C++ `toString(SumoXMLAttr)`: the canonical name of an attribute
+// shortcut: scans the ATTRS table instead of the SumoXMLAttrs bijection, upgrade when sumo_xml_definitions exposes toString
+fn attr_to_string(attr: i32) -> String {
+    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, v)| *v == attr).map(|(s, _)| s.to_string()).unwrap_or_default()
+}
+
+/// wall-clock milliseconds for the progress messages (C++ PROGRESS_BEGIN_TIME_MESSAGE)
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
 
 impl Simulation {
     /// C++: `std::pair<int, std::string> Simulation::init(int, int, const std::string &, const std::string &, FILE *const)` [static]
@@ -121,9 +170,20 @@ impl Simulation {
     pub fn load(args: &Vec<String>) {
         // the GUI branch is not compiled into this build (HAVE_LIBSUMOGUI is off)
         Simulation::close("Libsumo issued load command.");
-        // shortcut: XMLSubSys::init, OptionsIO::setArgs and NLBuilder::init are not wired into libsumo yet, so no simulation can be built here
-        let _ = args;
-        panic!("shortcut: Simulation::load needs NLBuilder::init (XMLSubSys, OptionsIO) which is not ported yet");
+        // C++ try/catch rethrowing ProcessError as TraCIException(e.what()): the errors below unwind with the same text
+        const VERSION_STRING: &str = "v1.28.0-0000000000";
+        utils::options::options_cont::with_options(|oc| oc.set_application_name("libsumo", &format!("Eclipse SUMO libsumo {VERSION_STRING}")));
+        utils::common::std_defs::set_g_simulation(true);
+        utils::xml::xml_sub_sys::init();
+        utils::options::options_io::set_args(args);
+        if !crate::netload::nl_builder::NLBuilder::init(true).is_null() {
+            let begin = match utils::common::time::string2time(&utils::options::options_cont::get_string("begin")) {
+                Ok(b) => b,
+                Err(e) => panic!("{}", e),
+            };
+            MSNet::get_instance().m().set_current_time_step(begin);
+            utils::common::msg_handler::write_message(&format!("Simulation version {} started via libsumo with time: {}.", VERSION_STRING, utils::common::time::time2string(begin)));
+        }
     }
 
     /// C++: `bool Simulation::hasGUI()` [static]
@@ -222,8 +282,11 @@ impl Simulation {
     pub fn close(reason: &str) {
         Helper::clear_subscriptions();
         if MSNet::has_instance() {
-            MSNet::get_instance().m().close_simulation(0, reason);
-            // shortcut: C++ then deletes the MSNet instance and calls SystemFrame::close(), not ported yet
+            let net = MSNet::get_instance();
+            net.m().close_simulation(0, reason);
+            // C++ `delete MSNet::getInstance()`; the instance pointer is cleared by closeSimulation, so it is taken first
+            unsafe { drop(Box::from_raw(net.as_raw())) };
+            utils::common::system_frame::close();
         }
     }
 
@@ -512,8 +575,11 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_bus_stop_id_list() -> Vec<String> {
-        // shortcut: MSNet::getStoppingPlaces returns Unmapped (NamedObjectCont), its keys cannot be listed yet
-        panic!("shortcut: MSNet::getStoppingPlaces is not mapped yet, cannot list bus stops");
+        let mut result: Vec<String> = Vec::new();
+        for (id, _) in MSNet::get_instance().get_stopping_places(SUMO_TAG_BUS_STOP).iter() {
+            result.push(id.clone());
+        }
+        result
     }
 
     /// C++: `int Simulation::getBusStopWaiting(const std::string &)` [static]
@@ -565,8 +631,23 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_collisions() -> Vec<TraCICollision> {
-        // shortcut: MSNet::getCollisions() (the collision map of MSNet::Collision records) is not ported yet
-        panic!("shortcut: MSNet::getCollisions is not mapped yet, cannot list collisions");
+        let mut result: Vec<TraCICollision> = Vec::new();
+        for (item_first, item_second) in MSNet::get_instance().get_collisions().iter() {
+            for c in item_second.iter() {
+                result.push(TraCICollision {
+                    collider: item_first.clone(),
+                    victim: c.victim.clone(),
+                    colliderType: c.colliderType.clone(),
+                    victimType: c.victimType.clone(),
+                    colliderSpeed: c.colliderSpeed,
+                    victimSpeed: c.victimSpeed,
+                    type_: c.type_.clone(),
+                    lane: c.lane.get_id().to_string(),
+                    pos: c.pos,
+                });
+            }
+        }
+        result
     }
 
     /// C++: `double Simulation::getScale()` [static]
@@ -747,8 +828,81 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_route(fromEdge: &str, toEdge: &str, vType: &str, depart: f64, routingMode: i32, departPos: f64, arrivalPos: f64) -> TraCIStage {
-        // shortcut: findRoute needs MSVehicleControl::buildVehicle, MSRoutingEngine::getRouterTT and vehicle route checks, not ported yet
-        panic!("shortcut: Simulation::findRoute needs MSVehicleControl::buildVehicle and MSRoutingEngine, not ported yet");
+        let mut result = TraCIStage::new(STAGE_DRIVING, "", "", "", &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "", INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "");
+        let from_e = MSEdge::dictionary_2(fromEdge);
+        if from_e.is_null() {
+            panic!("{}", format!("Unknown from edge '{}'.", fromEdge));
+        }
+        let to_e = MSEdge::dictionary_2(toEdge);
+        if to_e.is_null() {
+            panic!("{}", format!("Unknown to edge '{}'.", toEdge));
+        }
+        let mut vehicle: Ptr<MSBaseVehicle> = Ptr::null();
+        let type_ = MSNet::get_instance().m().get_vehicle_control().get_v_type(if vType == "" { DEFAULT_VTYPE_ID } else { vType }, Ptr::null(), false);
+        if type_.is_null() {
+            panic!("{}", format!("The vehicle type '{}' is not known.", vType));
+        }
+        let mut pars = SUMOVehicleParameter::new();
+        pars.id = "simulation.findRoute".to_string();
+        let pars = leak(pars);
+        let type_id = type_.get_id().to_string();
+        let route_dummy: ConstMSRoutePtr = Rc::new(MSRoute::new("", &vec![from_e], false, Ptr::null(), &Vec::new(), -1, -1));
+        let built = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            vehicle = MSNet::get_instance().m().get_vehicle_control().build_vehicle(pars, route_dummy, type_, false, MSVehicleControl_VehicleDefinitionSource::ROUTEFILE, true).cast::<MSBaseVehicle>();
+            let mut msg = String::new();
+            if !vehicle.m().has_valid_route_start(&mut msg) {
+                MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle.cast::<SUMOVehicle>(), true, false);
+                MSNet::get_instance().m().get_vehicle_control().discount_routing_vehicle();
+                panic!("{}", format!("Invalid departure edge for vehicle type '{}' ({})", type_id, msg));
+            }
+            vehicle.m().set_chosen_speed_factor(type_.get_speed_factor().get_parameter(0));
+            vehicle.m().set_routing_mode(routingMode);
+        }));
+        match built {
+            Ok(()) => {}
+            Err(payload) => match payload.downcast::<utils::common::util_exceptions::ProcessError>() {
+                Ok(e) => panic!("{}", format!("Invalid departure edge for vehicle type '{}' ({})", type_id, e)),
+                Err(other) => std::panic::resume_unwind(other),
+            },
+        }
+        let mut departPos = departPos;
+        let mut arrivalPos = arrivalPos;
+        if departPos.abs() > from_e.get_length() {
+            panic!("{}", format!("Invalid departPos {} on edge '{} (length {})", utils::common::to_string::f64_to_string(departPos), from_e.get_id(), utils::common::to_string::f64_to_string(from_e.get_length())));
+        }
+        if departPos < 0. {
+            departPos += from_e.get_length();
+        }
+        if arrivalPos == INVALID_DOUBLE_VALUE {
+            arrivalPos = to_e.get_length();
+        }
+        if arrivalPos.abs() > to_e.get_length() {
+            panic!("{}", format!("Invalid arrivalPos {} on edge '{} (length {})", utils::common::to_string::f64_to_string(arrivalPos), to_e.get_id(), utils::common::to_string::f64_to_string(to_e.get_length())));
+        }
+        if arrivalPos < 0. {
+            arrivalPos += to_e.get_length();
+        }
+        let mut edges: Vec<Ptr<MSEdge>> = Vec::new();
+        let dep: SUMOTime = if depart < 0. { MSNet::get_instance().get_current_time_step() } else { time2steps(depart) };
+        let router = if routingMode == ROUTING_MODE_AGGREGATED {
+            MSRoutingEngine::get_router_tt(0, vehicle.get_v_class(), &Default::default())
+        } else {
+            MSNet::get_instance().get_mut().unwrap().get_router_tt(0, &Default::default())
+        };
+        router.compute_2(from_e, departPos, to_e, arrivalPos, vehicle.cast::<SUMOVehicle>(), dep, &mut edges, false);
+        for e in &edges {
+            result.edges.push(e.get_id().to_string());
+        }
+        let costs = router.recompute_costs_pos(&edges, vehicle.cast::<SUMOVehicle>(), departPos, arrivalPos, dep, Ptr::from_mut(&mut result.length));
+        result.travelTime = costs;
+        result.cost = costs;
+        result.arrivalPos = arrivalPos;
+        result.departPos = departPos;
+        if !vehicle.is_null() {
+            MSNet::get_instance().m().get_vehicle_control().delete_vehicle(vehicle.cast::<SUMOVehicle>(), true, false);
+            MSNet::get_instance().m().get_vehicle_control().discount_routing_vehicle();
+        }
+        result
     }
 
     /// C++: `std::vector<libsumo::TraCIStage> Simulation::findIntermodalRoute(const std::string &, const std::string &, const std::string &, double, const int, double, double, double, double, const double, const std::string &, const std::string &, const std::string &)` [static]
@@ -917,11 +1071,151 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        // shortcut: only the generic network parameters (empty objectID, no prefix) are ported; the prefixed chargingStation./overheadWire./net./stats./parkingArea./busStop./device.tripinfo./buildConfig. branches need their owning classes
-        if objectID == "" && !key.starts_with("chargingStation.") && !key.starts_with("overheadWire.") && !key.starts_with("net.") && !key.starts_with("stats.") && !key.starts_with("parkingArea.") && !key.starts_with("busStop.") && !key.starts_with("device.tripinfo.") && !key.starts_with("buildConfig.") {
-            return panic!("shortcut: MSNet generic parameters not ported, upgrade when MSNet is Parameterised");
+        use utils::common::msg_handler::write_warning;
+        use utils::common::to_string::to_string;
+        if key.starts_with("chargingStation.") {
+            write_warning("Retrieving chargingStation parameters via the simulation API is deprecated, please use traci.chargingstation.");
+            let attrName = &key[16..];
+            let cs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_CHARGING_STATION).cast::<MSChargingStation>();
+            if cs.is_null() {
+                panic!("{}", format!("Invalid chargingStation '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_TOTALENERGYCHARGED) {
+                to_string(&cs.get_total_charged())
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                cs.base.get_my_name().to_string()
+            } else if attrName == "lane" {
+                cs.base.get_lane().get_id().to_string()
+            } else if cs.base.base2.has_parameter(attrName) {
+                cs.base.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid chargingStation parameter '{}'", attrName));
+            }
+        } else if key.starts_with("overheadWire.") {
+            write_warning("Retrieving overheadWire parameters via the simulation API is deprecated, please use traci.overheadwire.");
+            let attrName = &key[16..];
+            let cs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>();
+            if cs.is_null() {
+                panic!("{}", format!("Invalid overhead wire '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_TOTALENERGYCHARGED) {
+                to_string(&cs.get_total_charged())
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                cs.base.get_my_name().to_string()
+            } else {
+                panic!("{}", format!("Invalid overhead wire parameter '{}'", attrName));
+            }
+        } else if key.starts_with("net.") {
+            let attrName = &key[4..];
+            if attrName == attr_to_string(SUMO_ATTR_NET_OFFSET) {
+                utils::geom::geo_conv_helper::GeoConvHelper::with_final(|h| to_string(&h.get_offset_base()))
+            } else {
+                panic!("{}", format!("Invalid net parameter '{}'", attrName));
+            }
+        } else if key.starts_with("stats.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for stats", key, objectID));
+            }
+            let attrName = &key[6..];
+            let net = MSNet::get_instance();
+            if attrName == "vehicles.loaded" {
+                net.m().get_vehicle_control().get_loaded_vehicle_no().to_string()
+            } else if attrName == "vehicles.inserted" {
+                net.m().get_vehicle_control().get_departed_vehicle_no().to_string()
+            } else if attrName == "vehicles.running" {
+                net.m().get_vehicle_control().get_running_vehicle_no().to_string()
+            } else if attrName == "vehicles.waiting" {
+                net.m().get_insertion_control().get_waiting_vehicle_no().to_string()
+            } else if attrName == "teleports.total" {
+                net.m().get_vehicle_control().get_teleport_count().to_string()
+            } else if attrName == "teleports.jam" {
+                net.m().get_vehicle_control().get_teleports_jam().to_string()
+            } else if attrName == "teleports.yield" {
+                net.m().get_vehicle_control().get_teleports_yield().to_string()
+            } else if attrName == "teleports.wrongLane" {
+                net.m().get_vehicle_control().get_teleports_wrong_lane().to_string()
+            } else if attrName == "safety.collisions" {
+                net.m().get_vehicle_control().get_collision_count().to_string()
+            } else if attrName == "safety.emergencyStops" {
+                net.m().get_vehicle_control().get_emergency_stops().to_string()
+            } else if attrName == "safety.emergencyBraking" {
+                net.m().get_vehicle_control().get_emergency_braking_count().to_string()
+            } else if attrName == "persons.loaded" {
+                if net.has_persons() { net.m().get_person_control().get_loaded_number().to_string() } else { "0".to_string() }
+            } else if attrName == "persons.running" {
+                if net.has_persons() { net.m().get_person_control().get_running_number().to_string() } else { "0".to_string() }
+            } else if attrName == "persons.jammed" {
+                if net.has_persons() { net.m().get_person_control().get_jammed_number().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.total" {
+                if net.has_persons() { net.m().get_person_control().get_teleport_count().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.abortWait" {
+                if net.has_persons() { net.m().get_person_control().get_teleports_abort_wait().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.wrongDest" {
+                if net.has_persons() { net.m().get_person_control().get_teleports_wrong_dest().to_string() } else { "0".to_string() }
+            } else {
+                panic!("{}", format!("Invalid stats parameter '{}'", attrName));
+            }
+        } else if key.starts_with("parkingArea.") {
+            write_warning("Retrieving parkingArea parameters via the simulation API is deprecated, please use traci.parkingarea.");
+            let attrName = &key[12..];
+            let pa = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_PARKING_AREA).cast::<MSParkingArea>();
+            if pa.is_null() {
+                panic!("{}", format!("Invalid parkingArea '{}'", objectID));
+            }
+            if attrName == "capacity" {
+                pa.get_capacity().to_string()
+            } else if attrName == "occupancy" {
+                pa.get_occupancy_including_blocked().to_string()
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                pa.base.get_my_name().to_string()
+            } else if attrName == "lane" {
+                pa.base.get_lane().get_id().to_string()
+            } else if pa.base.base2.has_parameter(attrName) {
+                pa.base.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid parkingArea parameter '{}'", attrName));
+            }
+        } else if key.starts_with("busStop.") {
+            write_warning("Retrieving busStop parameters via the simulation API is deprecated, please use traci.busstop.");
+            let attrName = &key[8..];
+            let bs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_BUS_STOP);
+            if bs.is_null() {
+                panic!("{}", format!("Invalid busStop '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                bs.get_my_name().to_string()
+            } else if attrName == "lane" {
+                bs.get_lane().get_id().to_string()
+            } else if bs.base2.has_parameter(attrName) {
+                bs.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid busStop parameter '{}'", attrName));
+            }
+        } else if key.starts_with("device.tripinfo.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for global device parameters or vehicle domain for vehicle specific parameters", key, objectID));
+            }
+            let attrName = &key[16..];
+            MSDevice_Tripinfo::get_global_parameter(attrName)
+        } else if key.starts_with("buildConfig.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use an empty id for buildConfig parameters", key, objectID));
+            }
+            // this build has no Parquet or JuPedSim, so their versions are empty as in the C++ #else branches
+            if key == "buildConfig.ARROW_SO_VERSION" {
+                String::new()
+            } else if key == "buildConfig.JPS_VERSION" {
+                String::new()
+            } else if key == "buildConfig.ENABLED" {
+                utils::options::options_cont::HAVE_ENABLED.to_string()
+            } else {
+                panic!("{}", format!("Unknown parameter '{}'", key));
+            }
+        } else if objectID == "" {
+            MSNet::get_instance().get_parameter(key, "")
+        } else {
+            panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for generic network parameters", key, objectID));
         }
-        panic!("shortcut: Simulation::getParameter branch for '{}' is not ported yet", key);
     }
 
     /// C++: `const std::pair<std::string, std::string> Simulation::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -976,9 +1270,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn save_state(fileName: &str) {
-        // shortcut: MSStateHandler::saveState is not ported yet
-        let _ = fileName;
-        panic!("shortcut: MSStateHandler::saveState is not ported yet");
+        MSStateHandler::save_state(fileName, MSNet::get_instance().get_current_time_step(), true);
     }
 
     /// C++: `double Simulation::loadState(const std::string &)` [static]
@@ -1000,9 +1292,16 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn load_state(fileName: &str) -> f64 {
-        // shortcut: MSNet::loadState and the IOError/ProcessError rethrow are not ported yet
-        let _ = fileName;
-        panic!("shortcut: MSNet::loadState is not ported yet");
+        let before = {
+            utils::common::msg_handler::progress_begin_message(&format!("Loading state from '{}'", fileName));
+            current_millis()
+        };
+        // shortcut: C++ catches IOError and ProcessError and rethrows TraCIException with the "Loading state from ... failed" text; errors from MSNet::load_state unwind unchanged, upgrade with the Result-based libsumo error convention
+        let newTime = MSNet::get_instance().m().load_state(fileName, false);
+        Helper::clear_state_changes();
+        Helper::clear_subscriptions();
+        utils::common::msg_handler::progress_time_message(current_millis() - before);
+        steps2time(newTime)
     }
 
     /// C++: `void Simulation::writeMessage(const std::string &)` [static]
@@ -1118,7 +1417,7 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        as_variable_wrapper(Helper_SubscriptionWrapper::new((), my_subscription_results(), my_context_subscription_results()))
+        Helper::make_subscription_wrapper(Some(Simulation::handle_variable::<VariableWrapper>), my_subscription_results(), my_context_subscription_results())
     }
 
     /// C++: `bool Simulation::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]
@@ -1208,9 +1507,8 @@ impl Simulation {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn handle_variable(objID: &str, variable: i32, wrapper: Ptr<VariableWrapper>, paramData: Ptr<Storage>) -> bool {
-        // the wrapper is always the Helper::SubscriptionWrapper built by Simulation::makeWrapper
-        let w: Ptr<Helper_SubscriptionWrapper> = wrapper.cast::<Helper_SubscriptionWrapper>();
+    pub fn handle_variable<W: SimVariableWrapper>(objID: &str, variable: i32, wrapper: Ptr<W>, paramData: Ptr<Storage>) -> bool {
+        let w = wrapper;
         match variable {
             VAR_TIME => w.m().wrap_double(objID, variable, Simulation::get_time()),
             VAR_TIME_STEP => w.m().wrap_int(objID, variable, Simulation::get_current_time()),

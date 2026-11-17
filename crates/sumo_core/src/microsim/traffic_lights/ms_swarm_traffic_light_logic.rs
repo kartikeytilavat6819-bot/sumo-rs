@@ -1,6 +1,28 @@
 //! Port of microsim/traffic_lights/MSSwarmTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn swarm_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().init(nb)
+}
+fn swarm_decide_next_phase(l: &mut MSTrafficLightLogic) -> i32 {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().decide_next_phase()
+}
+fn swarm_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().can_release()
+}
+fn swarm_compute_return_time(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().compute_return_time()
+}
+
+static MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    init: swarm_init,
+    decide_next_phase: swarm_decide_next_phase,
+    can_release: swarm_can_release,
+    compute_return_time: swarm_compute_return_time,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// Leaks a heap object for the whole simulation, like the C++ `new` the constructor uses.
 fn leak<T>(value: T) -> &'static mut T {
@@ -44,31 +66,9 @@ fn distance_of_max_phero(map: &MSLaneId_PheromoneMap) -> (f64, f64) {
     (max_phero_val_current, temp_avg_other_lanes)
 }
 
-/// Owned copy of a phase. The generated countVehicles takes the phase by value, the C++ takes const&.
-// shortcut: copy only because MSSOTLTrafficLightLogic::count_vehicles takes MSPhaseDefinition by value, change it to &MSPhaseDefinition and drop this copy
+/// Owned copy of a phase (C++ passes MSPhaseDefinition by value to countVehicles).
 fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
-    MSPhaseDefinition {
-        duration: p.duration,
-        lastDuration: p.lastDuration,
-        minDuration: p.minDuration,
-        maxDuration: p.maxDuration,
-        earliestEnd: p.earliestEnd,
-        latestEnd: p.latestEnd,
-        earlyTarget: p.earlyTarget.clone(),
-        finalTarget: p.finalTarget.clone(),
-        myLastSwitch: p.myLastSwitch,
-        myLastEnd: p.myLastEnd,
-        nextPhases: p.nextPhases.clone(),
-        name: p.name.clone(),
-        yellow: p.yellow,
-        red: p.red,
-        vehext: p.vehext,
-        myTransientNotDecisional: p.myTransientNotDecisional,
-        myCommit: p.myCommit,
-        myUndefined: p.myUndefined,
-        myTargetLaneSet: p.myTargetLaneSet.clone(),
-        myState: p.myState.clone(),
-    }
+    p.clone()
 }
 
 /// C++ class `CircularBuffer` (microsim/traffic_lights/MSSwarmTrafficLightLogic.h)
@@ -333,8 +333,10 @@ impl MSSwarmTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
+        let mut hi = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters);
+        hi.base.base.base.vt = &MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT;
         let mut this = Self {
-            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters),
+            base: hi,
             pheromoneInputLanes: BTreeMap::new(),
             pheromoneOutputLanes: BTreeMap::new(),
             lastThetaSensitivityUpdate: 0,

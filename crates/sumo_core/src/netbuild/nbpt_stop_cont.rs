@@ -2,36 +2,32 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::{write_message, write_warning};
+use crate::utils::named_rtree::NamedRTree;
+use utils::common::named::{Named, NamedStoringVisitor};
 
 thread_local! {
     // C++ static member NBPTStopCont::myIgnoredStops
     static MY_IGNORED_STOPS: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
 }
 
-/// C++ NamedRTree is RTree<Named*, Named, float, 2, ...>; here data is the edge pointer.
-/// shortcut: NamedRTree overrides RectSphericalVolume; that only shapes the tree, and the
-/// search result set (collected in an ordered set) is the same, so the generic RTree is used.
-type StopEdgeTree = RTree<Ptr<NBEdge>, f32, 2, f32, 8, 4>;
+/// C++ `NamedRTree::Search` into a `std::set<const Named*>` of NBEdges, cast back to NBEdge*
+fn search_stop_edges(r: &NamedRTree, min: &[f32; 2], max: &[f32; 2]) -> BTreeSet<Ptr<NBEdge>> {
+    let mut named: BTreeSet<Ptr<Named>> = BTreeSet::new();
+    let visitor = NamedStoringVisitor::new(&mut named);
+    r.search(min, max, &visitor, |d, c| d.add_to(c));
+    named.iter().map(|n| n.cast::<NBEdge>()).collect()
+}
 
 /// C++ std::sort by distance of lane 0 shape to pos
 fn sort_by_lane0_distance(edges: &mut Vec<Ptr<NBEdge>>, pos: &Position) {
-    // determinism: C++ std::sort is unstable, ties may come out in another order
-    edges.sort_by(|a, b| {
-        let da = a.get_lane_shape(0).distance2d(pos, false);
-        let db = b.get_lane_shape(0).distance2d(pos, false);
-        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+    // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+    utils::common::std_sort::std_sort(edges.as_mut_slice(), |a, b| {
+        a.get_lane_shape(0).distance2d(pos, false) < b.get_lane_shape(0).distance2d(pos, false)
     });
 }
 
-/// shortcut: C++ shared_ptr<NBPTStop> is mutated freely; Rc only gives &T, so this goes through
-/// the raw pointer like Ptr::m(). Replace with RefCell<NBPTStop> once the owners are ported.
-#[allow(clippy::mut_from_ref)]
-fn stop_m(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 /// C++ typedef `std::map<std::string, std::shared_ptr<NBPTStop>> NBPTStopCont::PTStopsCont`
-pub type NBPTStopCont_PTStopsCont = BTreeMap<String, Rc<NBPTStop>>;
+pub type NBPTStopCont_PTStopsCont = BTreeMap<String, Ptr<NBPTStop>>;
 
 /// Container for public transport stops during the net building process
 /// C++ class `NBPTStopCont` (netbuild/NBPTStopCont.h)
@@ -39,8 +35,8 @@ pub struct NBPTStopCont {
     /// The map of names to pt stops
     pub myPTStops: NBPTStopCont_PTStopsCont,
     /// The map of edge ids to stops
-    pub myPTStopLookup: BTreeMap<String, Vec<Rc<NBPTStop>>>,
-    pub myFloatingStops: Vec<Rc<NBPTStop>>,
+    pub myPTStopLookup: BTreeMap<String, Vec<Ptr<NBPTStop>>>,
+    pub myFloatingStops: Vec<Ptr<NBPTStop>>,
 }
 
 // C++ static members of NBPTStopCont (port as module-level statics, see AGENTS.md):
@@ -70,7 +66,7 @@ impl NBPTStopCont {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn insert(&mut self, ptStop: Rc<NBPTStop>, floating: bool) -> bool {
+    pub fn insert(&mut self, ptStop: Ptr<NBPTStop>, floating: bool) -> bool {
                 let id = ptStop.get_id();
         if self.myPTStops.contains_key(&id) {
             return false;
@@ -92,7 +88,7 @@ impl NBPTStopCont {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get(&self, id: String) -> Option<Rc<NBPTStop>> {
+    pub fn get(&self, id: String) -> Option<Ptr<NBPTStop>> {
                 // None where C++ returns nullptr
         self.myPTStops.get(&id).cloned()
     }
@@ -103,30 +99,20 @@ impl NBPTStopCont {
     //         return myPTStops;
     //     }
     #[allow(unused_variables)]
-    pub fn get_stops(&self) -> &BTreeMap<String, Rc<NBPTStop>> {
+    pub fn get_stops(&self) -> &BTreeMap<String, Ptr<NBPTStop>> {
                 &self.myPTStops
     }
 
-    /// C++: `int NBPTStopCont::cleanupDeleted(NBEdgeCont &, bool)`
+    /// C++: `int NBPTStopCont::cleanupDeleted(NBEdgeCont &)`
     /// remove stops on non existing (removed) edges
     // int
-    // NBPTStopCont::cleanupDeleted(NBEdgeCont& cont, bool reAssign) {
+    // NBPTStopCont::cleanupDeleted(NBEdgeCont& cont) {
     //     int numDeleted = 0;
     //     for (auto i = myPTStops.begin(); i != myPTStops.end();) {
-    //         auto stop = i->second;
-    //         if (cont.getByID(stop->getEdgeId()) == nullptr) {
-    //             NBEdge* reverse = nullptr;
-    //             if (reAssign) {
-    //                 reverse = cont.getByID("-" + stop->getEdgeId());
-    //             }
-    //             if (reverse == nullptr) {
-    //                 WRITE_WARNINGF(TL("Removing pt stop '%' on non existing edge '%'."), i->first, i->second->getEdgeId());
-    //                 i = myPTStops.erase(i);
-    //                 numDeleted++;
-    //             } else {
-    //                 stop->replaceEdge(stop->getEdgeId(), {reverse});
-    //                 i++;
-    //             }
+    //         if (cont.getByID(i->second->getEdgeId()) == nullptr) {
+    //             WRITE_WARNINGF(TL("Removing pt stop '%' on non existing edge '%'."), i->first, i->second->getEdgeId());
+    //             i = myPTStops.erase(i);
+    //             numDeleted++;
     //         } else {
     //             i++;
     //         }
@@ -134,24 +120,15 @@ impl NBPTStopCont {
     //     return numDeleted;
     // }
     #[allow(unused_variables)]
-    pub fn cleanup_deleted(&mut self, cont: &mut NBEdgeCont, reAssign: bool) -> i32 {
-                let mut numDeleted = 0;
+    pub fn cleanup_deleted(&mut self, cont: &mut NBEdgeCont) -> i32 {
+        let mut numDeleted = 0;
         let keys: Vec<String> = self.myPTStops.keys().cloned().collect();
         for key in keys {
-            let stop = self.myPTStops[&key].clone();
-            let edgeId = stop.get_edge_id().to_string();
+            let edgeId = self.myPTStops[&key].get_edge_id().to_string();
             if cont.get_by_id(&edgeId).is_null() {
-                let mut reverse: Ptr<NBEdge> = Ptr::null();
-                if reAssign {
-                    reverse = cont.get_by_id(&format!("-{}", edgeId));
-                }
-                if reverse.is_null() {
-                    write_warning(&format!("Removing pt stop '{}' on non existing edge '{}'.", key, edgeId));
-                    self.myPTStops.remove(&key);
-                    numDeleted += 1;
-                } else {
-                    stop_m(&stop).replace_edge(&edgeId, &vec![reverse]);
-                }
+                write_warning(&format!("Removing pt stop '{}' on non existing edge '{}'.", key, edgeId));
+                self.myPTStops.remove(&key);
+                numDeleted += 1;
             }
         }
         numDeleted
@@ -180,7 +157,7 @@ impl NBPTStopCont {
         let keys: Vec<String> = self.myPTStops.keys().cloned().collect();
         for key in keys {
             let stop = self.myPTStops[&key].clone();
-            if !stop_m(&stop).find_lane_and_compute_bus_stop_extent(cont) {
+            if !stop.m().find_lane_and_compute_bus_stop_extent(cont) {
                 write_warning(&format!("Could not find corresponding edge or compatible lane for pt stop '{}' ({}). Thus, it will be removed!", key, stop.get_name()));
                 self.myPTStops.remove(&key);
             }
@@ -245,8 +222,8 @@ impl NBPTStopCont {
     #[allow(unused_variables)]
     pub fn generate_bidi_stops(&mut self, cont: &mut NBEdgeCont) -> i32 {
                 let mut existingBidiStops: i32 = 0;
-        let mut toAdd: Vec<Rc<NBPTStop>> = Vec::new();
-        let items: Vec<(String, Rc<NBPTStop>)> = self.myPTStops.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        let mut toAdd: Vec<Ptr<NBPTStop>> = Vec::new();
+        let items: Vec<(String, Ptr<NBPTStop>)> = self.myPTStops.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
         for (key, stop) in items {
             let edge = cont.get_by_id(&stop.get_edge_id().to_string());
             if !edge.is_null() && edge.is_bidi_rail(false) {
@@ -262,13 +239,13 @@ impl NBPTStopCont {
                     }
                     continue;
                 }
-                let bidiStop = Rc::new(NBPTStop::new(stop.get_element(), id.clone(), stop.get_position().clone(), bidiEdge.get_id().to_string(),
+                let bidiStop = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(stop.get_element(), id.clone(), stop.get_position().clone(), bidiEdge.get_id().to_string(),
                                                      stop.get_orig_edge_id(), stop.get_length(), stop.get_name(), stop.get_permissions(),
-                                                     0.0, RGBColor::new_valid(false), -1.0));
-                if stop_m(&bidiStop).find_lane_and_compute_bus_stop_extent(cont) {
+                                                     0.0, RGBColor::new_valid(false), -1.0))));
+                if bidiStop.m().find_lane_and_compute_bus_stop_extent(cont) {
                     toAdd.push(bidiStop.clone());
-                    stop_m(&stop).set_bidi_stop(bidiStop.clone());
-                    stop_m(&bidiStop).set_bidi_stop(stop.clone());
+                    stop.m().set_bidi_stop(bidiStop.clone());
+                    bidiStop.m().set_bidi_stop(stop.clone());
                 } else {
                     // should not happen
                     debug_assert!(false);
@@ -367,12 +344,12 @@ impl NBPTStopCont {
     // }
     #[allow(unused_variables)]
     pub fn localize_pt_stops(&mut self, cont: &mut NBEdgeCont) {
-                let mut reverseStops: Vec<Rc<NBPTStop>> = Vec::new();
+                let mut reverseStops: Vec<Ptr<NBPTStop>> = Vec::new();
         // first pass: localize pt stop at correct side of the street; create stop for opposite side if needed
-        let stops: Vec<Rc<NBPTStop>> = self.myPTStops.values().cloned().collect();
+        let stops: Vec<Ptr<NBPTStop>> = self.myPTStops.values().cloned().collect();
         for stop in stops {
             let multipleStopPositions = stop.get_is_multiple_stop_positions();
-            let platformsDefined = !stop_m(&stop).get_platform_cands().is_empty();
+            let platformsDefined = !stop.m().get_platform_cands().is_empty();
             if !platformsDefined {
                 // create pt stop for reverse edge if edge exists
                 if let Some(reverseStop) = self.get_reverse_stop(stop.clone(), cont) {
@@ -443,7 +420,7 @@ impl NBPTStopCont {
     #[allow(unused_variables)]
     pub fn assign_edge_for_floating_stops(&mut self, cont: &mut NBEdgeCont, maxRadius: f64) {
                 let publicPermissions: SVCPermissions = SVC_BUS | SVC_TRAM | SVC_RAIL | SVC_RAIL_URBAN | SVC_TAXI;
-        let mut r: StopEdgeTree = RTree::default();
+        let mut r = NamedRTree::new();
         for edgeItem in cont.myEdges.values() {
             let edge = *edgeItem;
             if (edge.get_permissions(-1) & publicPermissions) == 0 {
@@ -452,17 +429,14 @@ impl NBPTStopCont {
             let bound = edge.get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            r.insert(&min, &max, &edge);
+            r.insert(&min, &max, &edge.cast::<Named>());
         }
-        let floatingStops: Vec<Rc<NBPTStop>> = self.myFloatingStops.clone();
+        let floatingStops: Vec<Ptr<NBPTStop>> = self.myFloatingStops.clone();
         for ptStop in floatingStops {
-            let mut edges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
             let pos = ptStop.get_position().clone();
             let min = [(pos.x() - maxRadius) as f32, (pos.y() - maxRadius) as f32];
             let max = [(pos.x() + maxRadius) as f32, (pos.y() + maxRadius) as f32];
-            r.search(&min, &max, &(), |d, _| {
-                edges.insert(*d);
-            });
+            let edges = search_stop_edges(&r, &min, &max);
             let mut nearby: Vec<Ptr<NBEdge>> = Vec::new();
             for e in &edges {
                 if (e.get_permissions(-1) & ptStop.get_permissions()) != 0 {
@@ -471,7 +445,7 @@ impl NBPTStopCont {
             }
             sort_by_lane0_distance(&mut nearby, &pos);
             for e in nearby {
-                stop_m(&ptStop).set_edge_id(e.get_id().to_string(), cont);
+                ptStop.m().set_edge_id(e.get_id().to_string(), cont);
                 if !ptStop.get_lane_id().is_empty() {
                     break;
                 }
@@ -537,26 +511,23 @@ impl NBPTStopCont {
     // }
     #[allow(unused_variables)]
     pub fn find_access_edges_for_rail_stops(&mut self, cont: &mut NBEdgeCont, maxRadius: f64, maxCount: i32, accessFactor: f64) {
-                let mut r: StopEdgeTree = RTree::default();
+        let mut r = NamedRTree::new();
         for edgeItem in cont.myEdges.values() {
             let edge = *edgeItem;
             let bound = edge.get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            r.insert(&min, &max, &edge);
+            r.insert(&min, &max, &edge.cast::<Named>());
         }
-        let stops: Vec<Rc<NBPTStop>> = self.myPTStops.values().cloned().collect();
+        let stops: Vec<Ptr<NBPTStop>> = self.myPTStops.values().cloned().collect();
         for ptStop in stops {
             let stopEdgeID = ptStop.get_edge_id().to_string();
             let stopEdge = cont.get_by_id(&stopEdgeID);
             if !stopEdge.is_null() && (stopEdge.get_permissions(-1) & SVC_PEDESTRIAN) == 0 {
-                let mut edges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
                 let pos = ptStop.get_position().clone();
                 let min = [(pos.x() - maxRadius) as f32, (pos.y() - maxRadius) as f32];
                 let max = [(pos.x() + maxRadius) as f32, (pos.y() + maxRadius) as f32];
-                r.search(&min, &max, &(), |d, _| {
-                    edges.insert(*d);
-                });
+                let edges = search_stop_edges(&r, &min, &max);
                 let mut edgCants: Vec<Ptr<NBEdge>> = edges.into_iter().collect();
                 sort_by_lane0_distance(&mut edgCants, &pos);
                 let mut cnt = 0;
@@ -568,7 +539,7 @@ impl NBPTStopCont {
                             let finalLength = edge.get_final_length();
                             let laneLength = lane.shape.length();
                             let accessLength = pos.distance_to2d(&lane.shape.position_at_offset2d(offset, 0.0, false)) * accessFactor;
-                            stop_m(&ptStop).add_access(edge.get_lane_id(laneIdx), offset * finalLength / laneLength, accessLength);
+                            ptStop.m().add_access(edge.get_lane_id(laneIdx), offset * finalLength / laneLength, accessLength);
                             cnt += 1;
                             break;
                         }
@@ -625,9 +596,9 @@ impl NBPTStopCont {
             }
         }
         // make a copy because the vector gets modified
-        let stops: Vec<Rc<NBPTStop>> = self.myPTStopLookup.entry(edgeID.to_string()).or_default().clone();
+        let stops: Vec<Ptr<NBPTStop>> = self.myPTStopLookup.entry(edgeID.to_string()).or_default().clone();
         for stop in stops {
-            if !stop_m(&stop).replace_edge(edgeID, replacement) {
+            if !stop.m().replace_edge(edgeID, replacement) {
                 write_warning(&format!("Could not re-assign pt stop '{}' after replacing edge '{}'.", stop.get_id(), edgeID));
             } else {
                 let newEdgeId = stop.get_edge_id().to_string();
@@ -649,7 +620,7 @@ impl NBPTStopCont {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn find_stop(&self, origEdgeID: &str, pos: Position, threshold: f64) -> Option<Rc<NBPTStop>> {
+    pub fn find_stop(&self, origEdgeID: &str, pos: Position, threshold: f64) -> Option<Ptr<NBPTStop>> {
                 for item in self.myPTStops.values() {
             if item.get_orig_edge_id() == origEdgeID && item.get_position().distance_to2d(&pos) < threshold {
                 return Some(item.clone());
@@ -680,18 +651,18 @@ impl NBPTStopCont {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_reverse_stop(&mut self, pStop: Rc<NBPTStop>, ec: &NBEdgeCont) -> Option<Rc<NBPTStop>> {
+    pub fn get_reverse_stop(&mut self, pStop: Ptr<NBPTStop>, ec: &NBEdgeCont) -> Option<Ptr<NBPTStop>> {
                 let edgeId = pStop.get_edge_id().to_string();
         let edge = ec.get_by_id(&edgeId);
         let reverse = Self::get_reverse_edge(edge);
         if !reverse.is_null() {
             let reverseID = Self::get_reverse_id(&pStop.get_id());
             if !self.myPTStops.contains_key(&reverseID) {
-                let result = Rc::new(NBPTStop::new(pStop.get_element(), reverseID.clone(), pStop.get_position().clone(), reverse.get_id().to_string(), reverse.get_id().to_string(),
+                let result = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(pStop.get_element(), reverseID.clone(), pStop.get_position().clone(), reverse.get_id().to_string(), reverse.get_id().to_string(),
                                                    pStop.get_length(), pStop.get_name(), pStop.get_permissions(),
-                                                   0.0, RGBColor::new_valid(false), -1.0));
+                                                   0.0, RGBColor::new_valid(false), -1.0))));
                 for line in pStop.get_lines() {
-                    stop_m(&result).add_line(line);
+                    result.m().add_line(line);
                 }
                 return Some(result);
             } else {
@@ -724,19 +695,19 @@ impl NBPTStopCont {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn assign_pt_stop_to_edge_of_closest_platform(&mut self, pStop: Rc<NBPTStop>, cont: &mut NBEdgeCont) {
+    pub fn assign_pt_stop_to_edge_of_closest_platform(&mut self, pStop: Ptr<NBPTStop>, cont: &mut NBEdgeCont) {
                 let edgeId = pStop.get_edge_id().to_string();
         let edge = cont.get_by_id(&edgeId);
         let reverse = Self::get_reverse_edge(edge);
         let closestPlatform = self.get_closest_platform_to_pt_stop_position(pStop.clone());
-        stop_m(&pStop).set_pt_stop_length(closestPlatform.get_length());
+        pStop.m().set_pt_stop_length(closestPlatform.get_length());
         if !reverse.is_null() {
             // TODO in C++: make isLeft in PositionVector static
             let crossProd = self.compute_cross_product_edge_position(edge, closestPlatform.get_pos());
             // TODO in C++: consider driving on the left
             if crossProd > 0.0 {
                 // pt stop is on the left of the orig edge
-                stop_m(&pStop).set_edge_id(reverse.get_id().to_string(), cont);
+                pStop.m().set_edge_id(reverse.get_id().to_string(), cont);
             }
         }
     }
@@ -757,11 +728,11 @@ impl NBPTStopCont {
     //     return closest;
     // }
     #[allow(unused_variables)]
-    pub fn get_closest_platform_to_pt_stop_position(&mut self, pStop: Rc<NBPTStop>) -> Ptr<NBPTPlatform> {
+    pub fn get_closest_platform_to_pt_stop_position(&mut self, pStop: Ptr<NBPTStop>) -> Ptr<NBPTPlatform> {
                 let stopPosition = pStop.get_position().clone();
         let mut closest: Ptr<NBPTPlatform> = Ptr::null();
         let mut minSqrDist = f64::MAX;
-        for platform in stop_m(&pStop).get_platform_cands().iter() {
+        for platform in pStop.m().get_platform_cands().iter() {
             let sqrDist = stopPosition.distance_squared_to2d(platform.get_pos());
             if sqrDist < minSqrDist {
                 minSqrDist = sqrDist;
@@ -811,7 +782,7 @@ impl NBPTStopCont {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn assign_and_creat_new_pt_stop_as_needed(&mut self, pStop: Rc<NBPTStop>, cont: &mut NBEdgeCont) -> Option<Rc<NBPTStop>> {
+    pub fn assign_and_creat_new_pt_stop_as_needed(&mut self, pStop: Ptr<NBPTStop>, cont: &mut NBEdgeCont) -> Option<Ptr<NBPTStop>> {
                 let edgeId = pStop.get_edge_id().to_string();
         let edge = cont.get_by_id(&edgeId);
         if edge.is_null() {
@@ -820,7 +791,7 @@ impl NBPTStopCont {
         let mut rightOfEdge = false;
         let mut leftOfEdge = false;
         let mut left: Ptr<NBPTPlatform> = Ptr::null();
-        let platforms: Vec<Ptr<NBPTPlatform>> = stop_m(&pStop).get_platform_cands().iter().map(|p| Ptr::new(p)).collect();
+        let platforms: Vec<Ptr<NBPTPlatform>> = pStop.m().get_platform_cands().iter().map(|p| Ptr::new(p)).collect();
         for platform in platforms {
             let crossProd = self.compute_cross_product_edge_position(edge, platform.get_pos());
             // TODO in C++: consider driving on the left
@@ -829,21 +800,21 @@ impl NBPTStopCont {
                 left = platform;
             } else {
                 rightOfEdge = true;
-                stop_m(&pStop).set_pt_stop_length(platform.get_length());
+                pStop.m().set_pt_stop_length(platform.get_length());
             }
         }
 
         if leftOfEdge && rightOfEdge {
             let leftStop = self.get_reverse_stop(pStop.clone(), cont);
             if let Some(ls) = &leftStop {
-                stop_m(ls).set_pt_stop_length(left.get_length());
+                ls.m().set_pt_stop_length(left.get_length());
             }
             return leftStop;
         } else if leftOfEdge {
             let reverse = Self::get_reverse_edge(edge);
             if !reverse.is_null() {
-                stop_m(&pStop).set_edge_id(reverse.get_id().to_string(), cont);
-                stop_m(&pStop).set_pt_stop_length(left.get_length());
+                pStop.m().set_edge_id(reverse.get_id().to_string(), cont);
+                pStop.m().set_pt_stop_length(left.get_length());
             }
         }
         None
@@ -1005,7 +976,7 @@ impl NBPTStopCont {
     // }
     #[allow(unused_variables)]
     pub fn align_id_signs(&mut self) {
-                let stops: BTreeMap<String, Rc<NBPTStop>> = self.myPTStops.clone();
+                let stops: BTreeMap<String, Ptr<NBPTStop>> = self.myPTStops.clone();
         for (_, s) in stops {
             let stopId = s.get_id();
             if s.get_edge_id().is_empty() || s.was_loaded() {
@@ -1021,11 +992,11 @@ impl NBPTStopCont {
                         continue;
                     }
                 }
-                stop_m(&s).set_pt_stop_id(reverseID.clone());
+                s.m().set_pt_stop_id(reverseID.clone());
                 self.myPTStops.remove(&stopId);
                 self.myPTStops.insert(reverseID.clone(), s.clone());
                 if let Some(r) = rs {
-                    stop_m(&r).set_pt_stop_id(stopId.clone());
+                    r.m().set_pt_stop_id(stopId.clone());
                     self.myPTStops.insert(stopId.clone(), r);
                 }
             }

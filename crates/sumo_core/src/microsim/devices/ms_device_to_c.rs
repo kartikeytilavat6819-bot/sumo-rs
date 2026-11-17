@@ -1,13 +1,19 @@
 //! Port of microsim/devices/MSDevice_ToC.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont::with_options;
 use utils::common::to_string::f64_to_string_prec;
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
+/// C++ `new WrappingCommand<MSDevice_ToC>(this, op)` followed by `getBeginOfTimestepEvents()->addEvent(cmd, t)`
+fn schedule_to_c_command(dev: &mut MSDevice_ToC, op: fn(&mut MSDevice_ToC, SUMOTime) -> SUMOTime, t: SUMOTime) -> Ptr<WrappingCommand<MSDevice_ToC>> {
+    let cmd: Ptr<WrappingCommand<MSDevice_ToC>> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(dev), op))));
+    MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), t);
+    cmd
 }
+
 
 
 /// C++ enum `MSDevice_ToC::ToCState`
@@ -52,11 +58,11 @@ pub struct MSDevice_ToC {
     pub myState: MSDevice_ToC_ToCState,
     /// The holder vehicle casted to MSVehicle*
     pub myHolderMS: Ptr<MSVehicle>,
-    pub myTriggerMRMCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myTriggerToCCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myRecoverAwarenessCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myExecuteMRMCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
-    pub myPrepareToCCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_ToC> */>,
+    pub myTriggerMRMCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myTriggerToCCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myRecoverAwarenessCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myExecuteMRMCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
+    pub myPrepareToCCommand: Ptr<WrappingCommand<MSDevice_ToC>>,
     /// The file the devices output goes to
     pub myOutputFile: Ptr<OutputDevice>,
     /// Storage for events to be written to the output
@@ -138,7 +144,8 @@ const VEHPARS_COLOR_SET: i64 = 1;
 
 thread_local! {
     /// MSDevice_ToC::myInstances (registered devices)
-    static MY_INSTANCES: std::cell::RefCell<BTreeSet<Ptr<MSDevice_ToC>>> = std::cell::RefCell::new(BTreeSet::new());
+    // ordered by holder numerical id, as C++ ComparatorNumericalIdLess on MSVehicleDevice::getNumericalID()
+    static MY_INSTANCES: std::cell::RefCell<BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_ToC>>> = std::cell::RefCell::new(BTreeMap::new());
     /// MSDevice_ToC::createdOutputFiles
     static CREATED_OUTPUT_FILES: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
     /// MSDevice_ToC::myResponseTimeRNG, seeded as in C++ (`SumoRNG MSDevice_ToC::myResponseTimeRNG("toc")`)
@@ -274,9 +281,8 @@ impl MSDevice_ToC {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: with_options + equipped_by_default_assignment_options are not ported, upgrade when the OptionsCont-based default-equip check lands
-    if panic!("shortcut: equipped_by_default_assignment_options not ported") {
-            if g_use_meso_sim() {
+        if with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "toc", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)) {
+            if MSGlobals::use_meso_sim() {
                 utils::common::msg_handler::write_warning("ToC device is not supported by the mesoscopic simulation.");
                 return;
             }
@@ -304,7 +310,7 @@ impl MSDevice_ToC {
                 &mrmSafeSpot, mrmSafeSpotDuration, useColoring, ogp))));
             // register at static instance container (C++ does this in the constructor; done here because
             // the Rust constructor returns by value and the address must be the final one)
-            MY_INSTANCES.with(|m| m.borrow_mut().insert(device));
+            MY_INSTANCES.with(|m| m.borrow_mut().insert(v.get_numerical_id(), device));
             into.push(device.cast::<MSVehicleDevice>());
         }
     }
@@ -315,7 +321,7 @@ impl MSDevice_ToC {
     //         return myInstances;
     //     }
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static BTreeSet<Ptr<MSDevice_ToC>> {
+    pub fn get_instances() -> &'static BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_ToC>> {
         // SAFETY: thread-local storage lives for the thread; C++ returns a reference to the global set
         unsafe { &*MY_INSTANCES.with(|m| m.as_ptr()) }
     }
@@ -460,9 +466,25 @@ impl MSDevice_ToC {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // unregister from static instance container
-        let me = Ptr::from_mut(self);
-        MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
-        // shortcut: C++ deschedules the device's WrappingCommands here; commands are not ported, so nothing is descheduled, upgrade when Command/event control is ported
+        let id = self.base.get_numerical_id();
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&id));
+        // deschedule commands associated to this device
+        if !self.myTriggerMRMCommand.is_null() {
+            self.myTriggerMRMCommand.m().deschedule();
+        }
+        if !self.myTriggerToCCommand.is_null() {
+            self.myTriggerToCCommand.m().deschedule();
+        }
+        if !self.myRecoverAwarenessCommand.is_null() {
+            self.myRecoverAwarenessCommand.m().deschedule();
+        }
+        if !self.myExecuteMRMCommand.is_null() {
+            self.myExecuteMRMCommand.m().deschedule();
+            // skip resetDeliberateLCs(): vehicle is being destroyed
+        }
+        if !self.myPrepareToCCommand.is_null() {
+            self.myPrepareToCCommand.m().deschedule();
+        }
         // skip resetDeliberateLCs(): vehicle is being destroyed
         self.base.drop_();
     }
@@ -589,8 +611,8 @@ impl MSDevice_ToC {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == "manualType" {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == "manualType" {
             self.myManualTypeID.clone()
         } else if key == "automatedType" {
             self.myAutomatedTypeID.clone()
@@ -633,8 +655,8 @@ impl MSDevice_ToC {
         } else if key == "ogMaxDecel" {
             utils::common::to_string::to_string(&self.myOpenGapParams.maxDecel)
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `void MSDevice_ToC::setParameter(const std::string &, const std::string &)` [virtual]
@@ -738,9 +760,9 @@ impl MSDevice_ToC {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        let parse = |v: &str| -> f64 {
-            v.parse::<f64>().unwrap_or_else(|_| panic!("{}", ProcessError::new(format!("Invalid number '{}'", v))))
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
+        let parse = |v: &str| -> Result<f64, ProcessError> {
+            v.parse::<f64>().map_err(|_| ProcessError::new(format!("Invalid number '{}'", v)))
         };
         if key == "manualType" {
             self.myManualTypeID = value.to_string();
@@ -757,36 +779,36 @@ impl MSDevice_ToC {
                 self.switch_holder_type(value);
             }
         } else if key == "responseTime" {
-            self.myResponseTime = time2steps(parse(value));
+            self.myResponseTime = time2steps(parse(value)?);
         } else if key == "recoveryRate" {
-            self.myRecoveryRate = parse(value);
+            self.myRecoveryRate = parse(value)?;
         } else if key == "initialAwareness" {
-            self.myInitialAwareness = parse(value);
+            self.myInitialAwareness = parse(value)?;
         } else if key == "lcAbstinence" {
-            self.myLCAbstinence = parse(value);
+            self.myLCAbstinence = parse(value)?;
             if self.is_manually_driven() {
                 self.set_awareness(self.myCurrentAwareness); // to eventually trigger LC-prevention
             }
         } else if key == "currentAwareness" {
             if self.is_manually_driven() {
-                self.set_awareness(parse(value));
+                self.set_awareness(parse(value)?);
             } else {
                 utils::common::msg_handler::write_warning("Setting device.toc.currentAwareness during automated mode has no effect.");
             }
         } else if key == "mrmDecel" {
-            self.myMRMDecel = parse(value);
+            self.myMRMDecel = parse(value)?;
         } else if key == "requestToC" {
             // setting this magic parameter gives the interface for inducing a ToC
-            let timeTillMRM = time2steps(parse(value));
+            let timeTillMRM = time2steps(parse(value)?);
             self.request_to_c(timeTillMRM, self.myResponseTime);
         } else if key == "requestMRM" {
             // setting this magic parameter gives the interface for inducing an MRM
             self.request_mrm();
         } else if key == "awareness" {
             // setting this magic parameter gives the interface for setting the driverstate's awareness
-            self.set_awareness(parse(value));
+            self.set_awareness(parse(value)?);
         } else if key == "dynamicToCThreshold" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of dynamicToCThreshold must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else if newValue == 0.0 {
@@ -797,41 +819,42 @@ impl MSDevice_ToC {
                 self.myDynamicToCActive = true;
             }
         } else if key == "dynamicMRMProbability" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of dynamicMRMProbability must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else {
                 self.myMRMProbability = newValue;
             }
         } else if key == "mrmKeepRight" {
-            let newValue = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
+            let newValue = utils::common::string_utils::to_bool(value)?;
             self.myMRMKeepRight = newValue;
         } else if key == "mrmSafeSpot" {
             self.myMRMSafeSpot = value.to_string();
         } else if key == "mrmSafeSpotDuration" {
-            self.myMRMSafeSpotDuration = time2steps(parse(value));
+            self.myMRMSafeSpotDuration = time2steps(parse(value)?);
         } else if key == "maxPreparationAccel" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of maxPreparationAccel must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else {
                 self.myMaxPreparationAccel = newValue;
             }
         } else if key == "ogNewTimeHeadway" {
-            self.myOpenGapParams.newTimeHeadway = parse(value);
+            self.myOpenGapParams.newTimeHeadway = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogNewSpaceHeadway" {
-            self.myOpenGapParams.newSpaceHeadway = parse(value);
+            self.myOpenGapParams.newSpaceHeadway = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogChangeRate" {
-            self.myOpenGapParams.changeRate = parse(value);
+            self.myOpenGapParams.changeRate = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogMaxDecel" {
-            self.myOpenGapParams.maxDecel = parse(value);
+            self.myOpenGapParams.maxDecel = parse(value)?;
             self.myOpenGapParams.active = true;
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `SUMOTime MSDevice_ToC::triggerMRM(SUMOTime)`
@@ -888,8 +911,7 @@ impl MSDevice_ToC {
         self.deschedule_mrm();
         // Start MRM process
         if self.myMRMSafeSpot != "" {
-            // shortcut: SUMOVehicleParameter::Stop default constructor is not ported, upgrade when Stop::Stop() is ported
-        let mut stop: SUMOVehicleParameter_Stop = panic!("shortcut: SUMOVehicleParameter_Stop::default not ported");
+            let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
             let s = MSNet::get_instance().m().get_stopping_place(&self.myMRMSafeSpot, SUMO_TAG_PARKING_AREA);
             if s.is_null() {
                 write_warningf!("Ignoring unknown safe spot '%' for vehicle '%'.", self.myMRMSafeSpot, self.myHolder.get_id());
@@ -908,7 +930,7 @@ impl MSDevice_ToC {
                 }
             }
         } else {
-            // shortcut: C++ schedules MRMExecutionStep as a WrappingCommand at begin-of-timestep events; commands are not ported, so the MRM execution step is not scheduled here, upgrade when Command/event control is ported
+            self.myExecuteMRMCommand = schedule_to_c_command(self, MSDevice_ToC::mrm_execution_step, MSNet::get_instance().get_current_time_step() + delta_t());
         }
         if self.myState == MSDevice_ToC_ToCState::MANUAL || self.myState == MSDevice_ToC_ToCState::RECOVERING {
             let target = self.myAutomatedTypeID.clone();
@@ -1019,7 +1041,7 @@ impl MSDevice_ToC {
         // Eventually abort MRM
         self.deschedule_mrm();
         // Start awareness recovery process
-        // shortcut: C++ schedules awarenessRecoveryStep as a WrappingCommand at begin-of-timestep events; commands are not ported, upgrade when Command/event control is ported
+        self.myRecoverAwarenessCommand = schedule_to_c_command(self, MSDevice_ToC::awareness_recovery_step, MSNet::get_instance().get_current_time_step() + delta_t());
         self.set_state(MSDevice_ToC_ToCState::RECOVERING);
         // @todo: Sample initial awareness
         let initialAwareness = self.myInitialAwareness;
@@ -1163,7 +1185,10 @@ impl MSDevice_ToC {
         }
         let awarenessRecoveryCompleted = self.myCurrentAwareness == 1.0;
         if awarenessRecoveryCompleted {
-            // shortcut: C++ deschedules the recovery WrappingCommand here; commands are not ported, upgrade when Command/event control is ported
+            if !self.myRecoverAwarenessCommand.is_null() {
+                self.myRecoverAwarenessCommand.m().deschedule();
+                self.myRecoverAwarenessCommand = Ptr::null();
+            }
             self.set_state(MSDevice_ToC_ToCState::MANUAL);
             return 0;
         }
@@ -1369,6 +1394,20 @@ impl MSDevice_ToC {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, outputFilename: &str, manualType: &str, automatedType: &str, responseTime: SUMOTime, recoveryRate: f64, lcAbstinence: f64, initialAwareness: f64, mrmDecel: f64, dynamicToCThreshold: f64, dynamicMRMProbability: f64, maxPreparationAccel: f64, mrmKeepRight: bool, mrmSafeSpot: &str, mrmSafeSpotDuration: SUMOTime, useColorScheme: bool, ogp: MSDevice_ToC_OpenGapParams) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_ToC>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, outputFilename, manualType, automatedType, responseTime, recoveryRate, lcAbstinence, initialAwareness, mrmDecel, dynamicToCThreshold, dynamicMRMProbability, maxPreparationAccel, mrmKeepRight, mrmSafeSpot, mrmSafeSpotDuration, useColorScheme, ogp);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, outputFilename: &str, manualType: &str, automatedType: &str, responseTime: SUMOTime, recoveryRate: f64, lcAbstinence: f64, initialAwareness: f64, mrmDecel: f64, dynamicToCThreshold: f64, dynamicMRMProbability: f64, maxPreparationAccel: f64, mrmKeepRight: bool, mrmSafeSpot: &str, mrmSafeSpotDuration: SUMOTime, useColorScheme: bool, ogp: MSDevice_ToC_OpenGapParams) -> Self {
         let base = MSVehicleDevice::new(holder, id);
         let holderPtr = base.myHolder;
         let mut this = MSDevice_ToC {
@@ -1453,7 +1492,7 @@ impl MSDevice_ToC {
             let id = this.myManualTypeID.clone();
             this.myManualTypeID = vehCtrl.get_v_type(&id, SUMORouteHandler::get_parsing_rng(), false).get_id().to_string();
         }
-        // shortcut: C++ inserts `this` into myInstances here; the Rust constructor returns by value, so the registration is done by the caller (buildVehicleDevices) at the final address
+        // C++ inserts `this` into myInstances in the constructor; buildVehicleDevices registers the boxed device at its final address
         this.init_color_scheme();
         assert!(this.myInitialAwareness <= 1.0 && this.myInitialAwareness >= 0.0);
         this
@@ -1697,9 +1736,16 @@ impl MSDevice_ToC {
                 // this needs to be a separate line because TIME2STEPS may otherwise do two calls to sampleResponseTime
                 responseTime = time2steps(sample);
             }
-            // shortcut: C++ schedules the ToC trigger, MRM trigger and ToC preparation as WrappingCommands; commands are not ported, so nothing is scheduled, upgrade when Command/event control is ported
+            // Schedule ToC Event
+            self.myTriggerToCCommand = schedule_to_c_command(self, MSDevice_ToC::trigger_downward_to_c, MSNet::get_instance().get_current_time_step() + responseTime);
             assert!(self.myExecuteMRMCommand.is_null());
             assert!(self.myTriggerMRMCommand.is_null());
+            if responseTime > timeTillMRM && self.myState != MSDevice_ToC_ToCState::MRM {
+                // Schedule new MRM if driver response time is higher than permitted
+                self.myTriggerMRMCommand = schedule_to_c_command(self, MSDevice_ToC::trigger_mrm, MSNet::get_instance().get_current_time_step() + timeTillMRM);
+            }
+            // Start ToC preparation process
+            self.myPrepareToCCommand = schedule_to_c_command(self, MSDevice_ToC::to_c_preparation_step, MSNet::get_instance().get_current_time_step() + delta_t());
             self.set_state(MSDevice_ToC_ToCState::PREPARING_TOC);
             if self.myOpenGapParams.active {
                 // Start gap controller
@@ -1792,12 +1838,12 @@ impl MSDevice_ToC {
     pub fn deschedule_mrm(&mut self) {
         // Eventually abort scheduled MRM
         if !self.myTriggerMRMCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myTriggerMRMCommand.m().deschedule();
             self.myTriggerMRMCommand = Ptr::null();
         }
         // Eventually abort ongoing MRM
         if !self.myExecuteMRMCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myExecuteMRMCommand.m().deschedule();
             self.reset_deliberate_l_cs();
             self.myExecuteMRMCommand = Ptr::null();
         }
@@ -1815,7 +1861,7 @@ impl MSDevice_ToC {
     #[allow(unused_variables)]
     pub fn deschedule_to_c(&mut self) {
         if !self.myTriggerToCCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myTriggerToCCommand.m().deschedule();
             self.myTriggerToCCommand = Ptr::null();
         }
     }
@@ -1837,7 +1883,7 @@ impl MSDevice_ToC {
     pub fn deschedule_to_c_preparation(&mut self) {
         // Eventually stop ToC preparation process
         if !self.myPrepareToCCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myPrepareToCCommand.m().deschedule();
             if self.myState != MSDevice_ToC_ToCState::MRM {
                 self.reset_deliberate_l_cs();
             }
@@ -1859,7 +1905,7 @@ impl MSDevice_ToC {
     pub fn deschedule_recovery(&mut self) {
         // Eventually stop ToC preparation process
         if !self.myRecoverAwarenessCommand.is_null() {
-            // shortcut: deschedule() of the WrappingCommand is not ported, upgrade when Command/event control is ported
+            self.myRecoverAwarenessCommand.m().deschedule();
             self.myRecoverAwarenessCommand = Ptr::null();
         }
     }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T02:14:42.329733-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/../junction/ref_simple.net.xml"/>
+        <route-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/routes.rou"/>
+        <additional-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/vtypes.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/vtypes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="Krauss_0" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="24.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.06" duration="24.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.01" rerouteNo="0" devices="tripinfo_Krauss_0 fcd_Krauss_0" vType="Krauss" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="Krauss_1" depart="10.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="35.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.11" duration="25.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.15" rerouteNo="0" devices="tripinfo_Krauss_1 fcd_Krauss_1" vType="Krauss" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="IDM_0" depart="20.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="47.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="27.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.75" rerouteNo="0" devices="tripinfo_IDM_0 fcd_IDM_0" vType="IDM" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="IDM_1" depart="30.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="57.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="27.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.76" rerouteNo="0" devices="tripinfo_IDM_1 fcd_IDM_1" vType="IDM" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="EIDM_0" depart="40.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="67.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.80" duration="27.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.93" rerouteNo="0" devices="tripinfo_EIDM_0 fcd_EIDM_0" vType="EIDM" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="EIDM_1" depart="50.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="77.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="27.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.05" rerouteNo="0" devices="tripinfo_EIDM_1 fcd_EIDM_1" vType="EIDM" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="Wiedemann_0" depart="60.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="84.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="24.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.31" rerouteNo="0" devices="tripinfo_Wiedemann_0 fcd_Wiedemann_0" vType="Wiedemann" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="Wiedemann_1" depart="70.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="94.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="24.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.46" rerouteNo="0" devices="tripinfo_Wiedemann_1 fcd_Wiedemann_1" vType="Wiedemann" speedFactor="0.89" vaporized=""/>
+    <tripinfo id="W99_0" depart="80.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="104.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="24.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.83" rerouteNo="0" devices="tripinfo_W99_0 fcd_W99_0" vType="W99" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="W99_1" depart="90.00" departLane="-103224#0_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="114.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="13.89" duration="24.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.83" rerouteNo="0" devices="tripinfo_W99_1 fcd_W99_1" vType="W99" speedFactor="0.86" vaporized=""/>
+</tripinfos>

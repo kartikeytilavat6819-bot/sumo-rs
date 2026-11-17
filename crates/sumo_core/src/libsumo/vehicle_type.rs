@@ -5,6 +5,7 @@ use utils::common::msg_handler::write_warning;
 use utils::common::string_utils::starts_with;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_id, get_vehicle_shape_id, get_vehicle_shape_name, SUMO_VEHICLE_CLASS_STRINGS};
 use utils::common::time::{steps2time, time2steps};
+use crate::libsumo::helper::check_time_bounds;
 use utils::common::to_string::to_string;
 
 /// C++ class `libsumo::VehicleType` (libsumo/VehicleType.h)
@@ -34,7 +35,7 @@ fn vehicle_class_to_string(vc: SUMOVehicleClass) -> String {
 }
 
 /// C++ `toString(LatAlignmentDefinition)` (utils/common/ToString.h)
-fn lat_alignment_to_string(lad: LatAlignmentDefinition) -> &'static str {
+pub(crate) fn lat_alignment_to_string(lad: LatAlignmentDefinition) -> &'static str {
     match lad {
         LatAlignmentDefinition::RIGHT => "right",
         LatAlignmentDefinition::CENTER => "center",
@@ -84,7 +85,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_factor(typeID: &str) -> f64 {
-        panic!("shortcut: VehicleType::getSpeedFactor needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
+        Self::get_v_type(typeID.to_string()).get_speed_factor().get_parameter(0)
     }
 
     /// C++: `double VehicleType::getAccel(const std::string &)` [static]
@@ -280,7 +281,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn get_speed_deviation(typeID: &str) -> f64 {
-        panic!("shortcut: VehicleType::getSpeedDeviation needs the unmapped Distribution_Parameterized (Unmapped in ms_vehicle_type.rs)")
+        Self::get_v_type(typeID.to_string()).get_speed_factor().get_parameter(1)
     }
 
     /// C++: `double VehicleType::getBoardingDuration(const std::string &)` [static]
@@ -351,7 +352,18 @@ impl VehicleType {
     #[allow(unused_variables)]
     pub fn get_parameter(typeID: &str, key: &str) -> String {
         if starts_with(key, "junctionModel.") {
-            panic!("shortcut: VehicleType::getParameter junctionModel branch needs SUMOVTypeParameter::AllowedJMAttrs, which is not ported")
+            let attrName = &key[14..];
+            if !Attrs.has_string(attrName) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, typeID);
+            }
+            let attr = Attrs.get(attrName).unwrap() as SumoXMLAttr;
+            if !allowed_jm_attrs().contains(&attr) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, typeID);
+            }
+            match Self::get_v_type(typeID.to_string()).get_parameter().jmParameter.get(&attr) {
+                Some(v) => v.clone(),
+                None => String::new(),
+            }
         } else {
             Self::get_v_type(typeID.to_string()).get_parameter().get_parameter(key, "")
         }
@@ -388,7 +400,22 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(objectID: &str, key: &str, value: &str) {
-        panic!("shortcut: VehicleType::setParameter needs mutable access to MSVehicleType::getParameter, which is not ported")
+        if starts_with(key, "junctionModel.") {
+            let attrName = &key[14..];
+            if !Attrs.has_string(attrName) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, objectID);
+            }
+            let attr = Attrs.get(attrName).unwrap() as SumoXMLAttr;
+            if !allowed_jm_attrs().contains(&attr) {
+                panic!("Invalid junctionModel parameter '{}' for type '{}'", key, objectID);
+            }
+            if utils::common::string_utils::to_double(value).is_err() {
+                panic!("Invalid junctionModel parameter value '{}' for type '{} (should be numeric)'", value, objectID);
+            }
+            Self::get_v_type(objectID.to_string()).m().myParameter.jmParameter.insert(attr, value.to_string());
+        } else {
+            Self::get_v_type(objectID.to_string()).m().myParameter.set_parameter(key, value);
+        }
     }
 
     /// C++: `void VehicleType::setLength(const std::string &, double)` [static]
@@ -649,7 +676,9 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
-        // shortcut: checkTimeBounds (utils/common/SUMOTime.h) is not ported, so out-of-range durations are not rejected, upgrade when checkTimeBounds is ported
+        if !check_time_bounds(boardingDuration) {
+            panic!("BoardingDuration parameter exceeds the time value range.");
+        }
         Self::get_v_type(typeID.to_string()).m().set_boarding_duration(time2steps(boardingDuration), true);
     }
 
@@ -763,7 +792,9 @@ impl VehicleType {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(VehicleType, VEHICLETYPE)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        panic!("shortcut: VehicleType::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_VEHICLETYPE_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int VehicleType::domainID()` [static]
@@ -799,7 +830,7 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        panic!("shortcut: VehicleType::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool VehicleType::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

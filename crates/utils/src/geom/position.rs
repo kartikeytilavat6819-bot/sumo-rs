@@ -272,3 +272,17 @@ mod tests {
         assert!((r.x()).abs() < 1e-15 && (r.y() - 1.).abs() < 1e-15);
     }
 }
+
+// C++ Position::operator less-than (Position.h): needed where the C++ uses an ordered map keyed by Position.
+impl Eq for Position {}
+impl Ord for Position {
+    fn cmp(&self, o: &Self) -> std::cmp::Ordering {
+        self.partial_cmp(o).unwrap_or(std::cmp::Ordering::Equal)
+    }
+}
+
+impl crate::iodevices::output_device::OutputValue for Position {
+    fn to_output_string(&self, precision: i32) -> std::borrow::Cow<str> {
+        std::borrow::Cow::Owned(crate::common::to_string::to_string_prec(self, precision))
+    }
+}

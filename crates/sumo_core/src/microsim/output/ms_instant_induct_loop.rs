@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use utils::common::to_string::f64_to_string_default;
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
 /// C++ macro `SIMTIME`: STEPS2TIME(MSNet::getInstance()->getCurrentTimeStep())
 fn simtime() -> f64 {
@@ -40,6 +41,39 @@ impl std::ops::DerefMut for MSInstantInductLoop {
     }
 }
 
+fn ms_instant_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_instant_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_instant_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_INSTANT_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_instant_induct_loop_notify_enter,
+    notify_move: ms_instant_induct_loop_notify_move,
+    notify_leave: ms_instant_induct_loop_notify_leave,
+};
+
+// the MSDetectorFileOutput base is base2, not the first field: step back to the enclosing loop
+fn ms_instant_induct_loop_of(d: *mut MSDetectorFileOutput) -> *mut MSInstantInductLoop {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSInstantInductLoop, base2)) as *mut MSInstantInductLoop
+}
+fn ms_instant_induct_loop_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*ms_instant_induct_loop_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn ms_instant_induct_loop_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*ms_instant_induct_loop_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+
+static MS_INSTANT_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_instant_induct_loop_write_xml_output,
+    write_xml_detector_prolog: ms_instant_induct_loop_write_xml_detector_prolog,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
+
 impl MSInstantInductLoop {
     /// C++: `void MSInstantInductLoop::MSInstantInductLoop(const std::string &, OutputDevice &, MSLane *const, double, const std::string, const std::string &, const std::string &, int)`
     /// Constructor.
@@ -58,8 +92,8 @@ impl MSInstantInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, od: &mut OutputDevice, lane: Ptr<MSLane>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
-        // shortcut: C++ MSMoveReminder(id, lane) registers this reminder with the lane (doAdd); new() returns by value, so the caller must call MSLane::add_move_reminder after placing it
-        let this = MSInstantInductLoop {
+        // MSMoveReminder(id, lane) registers with the lane in C++; here NLDetectorBuilder::create_instant_induct_loop does it once the object is boxed
+        let mut this = MSInstantInductLoop {
             base: MSMoveReminder::new(id, lane, true),
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,
@@ -68,6 +102,8 @@ impl MSInstantInductLoop {
             myLastExitTime: -1.0,
             myEntryTimes: BTreeMap::new(),
         };
+        this.base.vt = &MS_INSTANT_INDUCT_LOOP_MSMOVE_REMINDER_VT;
+        this.base2.vt = &MS_INSTANT_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT;
         assert!(positionInMeters >= 0.0 && positionInMeters <= lane.get_length());
         this.write_xml_detector_prolog(od);
         this
@@ -193,7 +229,7 @@ impl MSInstantInductLoop {
 
         let oldSpeed = veh.get_previous_speed();
         // NOTE: For the euler update, the vehicle is assumed to travel at constant speed for the whole time step
-        let mut enterSpeed = if crate::microsim::cfmodels::mscf_model::g_semi_implicit_euler_update() { newSpeed } else { oldSpeed };
+        let mut enterSpeed = if MSGlobals::semi_implicit_euler_update() { newSpeed } else { oldSpeed };
 
         if newPos >= self.myPosition && oldPos < self.myPosition {
             let timeBeforeEnter = MSCFModel::passing_time(oldPos, self.myPosition, newPos, oldSpeed, newSpeed);

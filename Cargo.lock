@@ -69,6 +69,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "duarouter"
+version = "0.1.0"
+dependencies = [
+ "sumo_core",
+ "utils",
+]
+
+[[package]]
+name = "netconvert"
+version = "0.1.0"
+dependencies = [
+ "sumo_core",
+ "utils",
+]
+
+[[package]]
 name = "proc-macro2"
 version = "1.0.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -146,6 +162,10 @@ checksum = "3a219298ac11a56ea9a6d2120044824d6f01aeb034955e7af7bc16858527deea"
 [[package]]
 name = "sumo"
 version = "0.1.0"
+dependencies = [
+ "sumo_core",
+ "utils",
+]
 
 [[package]]
 name = "sumo_core"

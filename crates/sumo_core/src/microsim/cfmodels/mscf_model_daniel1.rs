@@ -1,6 +1,7 @@
 //! Port of microsim/cfmodels/MSCFModel_Daniel1.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mscf_model::*;
 
 // C++ MIN2/MAX2 macros (argument order and tie behaviour kept)
 fn min2(a: f64, b: f64) -> f64 {
@@ -32,6 +33,49 @@ pub struct MSCFModel_Daniel1 {
     pub myTmp5: f64,
 }
 
+fn daniel1_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_Daniel1>(m).finalize_speed(veh, vPos)
+}
+fn daniel1_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Daniel1>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn daniel1_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_Daniel1>(m).get_model_id()
+}
+fn daniel1_get_imperfection(m: &MSCFModel) -> f64 {
+    cf_cast::<MSCFModel_Daniel1>(m).get_imperfection()
+}
+fn daniel1_set_max_decel(m: &mut MSCFModel, decel: f64) {
+    cf_cast_mut::<MSCFModel_Daniel1>(m).set_max_decel(decel)
+}
+fn daniel1_set_imperfection(m: &mut MSCFModel, imperfection: f64) {
+    cf_cast_mut::<MSCFModel_Daniel1>(m).set_imperfection(imperfection)
+}
+fn daniel1_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
+    cf_cast_mut::<MSCFModel_Daniel1>(m).set_headway_time(headwayTime)
+}
+fn daniel1_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_Daniel1>(m).duplicate(vtype)
+}
+
+fn daniel1_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Daniel1>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_Daniel1: its overrides on top of the MSCFModel table
+pub const DANIEL1_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: daniel1_stop_speed_2,
+    finalize_speed: daniel1_finalize_speed,
+    follow_speed: daniel1_follow_speed,
+    get_model_id: daniel1_get_model_id,
+    get_imperfection: daniel1_get_imperfection,
+    set_max_decel: daniel1_set_max_decel,
+    set_imperfection: daniel1_set_imperfection,
+    set_headway_time: daniel1_set_headway_time,
+    duplicate: daniel1_duplicate,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_Daniel1 {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -62,7 +106,7 @@ impl MSCFModel_Daniel1 {
         let base = MSCFModel::new(vtype);
         let myDawdle = vtype.get_parameter().get_cf_param(SUMO_ATTR_SIGMA, SUMOVTypeParameter::get_default_imperfection(vtype.get_parameter().vehicleClass));
         let myTauDecel = base.myDecel * base.myHeadwayTime;
-        Self {
+        let mut this = Self {
             base,
             myDawdle,
             myTauDecel,
@@ -71,7 +115,9 @@ impl MSCFModel_Daniel1 {
             myTmp3: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP3, 1.0),
             myTmp4: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP4, 1.0),
             myTmp5: vtype.get_parameter().get_cf_param(SUMO_ATTR_TMP5, 1.0),
-        }
+        };
+        this.base.vt = &DANIEL1_VT;
+        this
     }
 
     /// C++: `void MSCFModel_Daniel1::~MSCFModel_Daniel1() noexcept` [virtual]
@@ -111,7 +157,7 @@ impl MSCFModel_Daniel1 {
         //  on lane changing
         let vMin = self.get_speed_after_max_decel(oldV);
         let vMax = min2(min2(veh.get_lane().get_vehicle_max_speed(Ptr::new(&veh.base.base.base)), self.max_next_speed(oldV, veh)), vSafe);
-        // shortcut: the _DEBUG-only warning for vMin > vMax is not ported, upgrade when debug-build output must match
+        // the vMin > vMax warning is inside C++ `#ifdef _DEBUG`, which release builds (the oracle) do not define
         let wanted = max2(vMin, self.dawdle(vMax, veh.get_rng()));
         veh.m().get_lane_change_model().patch_speed(vMin, wanted, vMax, self)
     }
@@ -200,7 +246,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        // shortcut: returns the MSCFModel base of a leaked Daniel1; virtual calls through it do not reach Daniel1 overrides, upgrade when car-following models get enum dispatch
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
         let p: *mut MSCFModel_Daniel1 = Box::into_raw(Box::new(MSCFModel_Daniel1::new(vtype)));
         Ptr::from_raw(unsafe { &mut (*p).base as *mut MSCFModel })
     }

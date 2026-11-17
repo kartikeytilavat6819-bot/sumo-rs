@@ -22,6 +22,7 @@ const DEFAULT_CONDITION: &str = "DEFAULT";
 // C++ MSActuatedTrafficLightLogic::OPERATOR_PRECEDENCE
 const OPERATOR_PRECEDENCE: &[&str] = &["**", "^", "*", "/", "+", "-", "%", "=", "==", "!=", "<", ">", "<=", ">=", "and", "&&", "or", "||"];
 use super::ms_phase_definition::OVERRIDE_DURATION;
+use super::ms_simple_traffic_light_logic::{simple_get_current_phase_def, simple_get_current_phase_index, simple_get_index_from_offset, simple_get_offset_from_index, simple_get_phase, simple_get_phase_index_at_time, simple_get_phase_number, simple_get_phases, simple_load_state, simple_map_time_in_cycle, simple_reset_last_switch, simple_save_state};
 // C++ RGBColor::ORANGE / RGBColor::GREEN (the loop keeps a pointer to them, so they need statics)
 static RGB_ORANGE: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::ORANGE;
 static RGB_GREEN: utils::common::rgb_color::RGBColor = utils::common::rgb_color::RGBColor::GREEN;
@@ -62,6 +63,10 @@ impl MSActuatedTrafficLightLogic_Function {
 }
 
 /// C++ class `MSActuatedTrafficLightLogic::InductLoopInfo` (microsim/traffic_lights/MSActuatedTrafficLightLogic.h)
+pub(crate) fn actuated_save_state(l: &MSTrafficLightLogic, out: &mut OutputDevice) {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().save_state(out)
+}
+
 pub struct MSActuatedTrafficLightLogic_InductLoopInfo {
     pub loop_: Ptr<MSInductLoop>,
     pub lane: Ptr<MSLane>,
@@ -180,6 +185,82 @@ impl std::ops::DerefMut for MSActuatedTrafficLightLogic {
 // C++ static members of MSActuatedTrafficLightLogic (port as module-level statics, see AGENTS.md):
 //   static const std::vector<std::string> MSActuatedTrafficLightLogic::OPERATOR_PRECEDENCE;
 
+fn actuated_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().try_switch()
+}
+fn actuated_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().init(nb)
+}
+fn actuated_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+fn actuated_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_detector_states()
+}
+fn actuated_get_conditions(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_conditions()
+}
+fn actuated_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, t: SUMOTime, step: i32, spentDuration: SUMOTime, nextSwitch: SUMOTime, timeInCycle: SUMOTime, active: bool) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
+}
+
+fn actuated_load_extra_state(l: &mut MSTrafficLightLogic, state: &str) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_extra_state(state)
+}
+fn actuated_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().get_parameter(key, defaultValue.to_string())
+}
+fn actuated_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().set_parameter(key, value)
+}
+fn actuated_ext_activate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().activate_program()
+}
+fn actuated_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().deactivate_program()
+}
+
+static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
+    get_priority_vehicles: super::ms_traffic_light_logic::default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
+    get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: actuated_load_extra_state,
+    get_parameter: actuated_ext_get_parameter,
+    set_parameter: actuated_ext_set_parameter,
+    activate_program: actuated_ext_activate_program,
+    deactivate_program: actuated_ext_deactivate_program,
+};
+
+static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: actuated_try_switch,
+    get_phase_number: simple_get_phase_number,
+    get_phases: simple_get_phases,
+    get_phase: simple_get_phase,
+    get_current_phase_index: simple_get_current_phase_index,
+    get_current_phase_def: simple_get_current_phase_def,
+    reset_last_switch: simple_reset_last_switch,
+    get_phase_index_at_time: simple_get_phase_index_at_time,
+    get_offset_from_index: simple_get_offset_from_index,
+    get_index_from_offset: simple_get_index_from_offset,
+    change_step_and_duration: actuated_change_step_and_duration,
+    add_link: MSTrafficLightLogic::add_link_base,
+    init: actuated_init,
+    adapt_link_information_from: MSTrafficLightLogic::adapt_link_information_from_base,
+    gets_major_green: MSTrafficLightLogic::gets_major_green_base,
+    get_detector_states: actuated_get_detector_states,
+    get_conditions: actuated_get_conditions,
+    get_blocking_vehicles: MSTrafficLightLogic::get_blocking_vehicles_base,
+    save_state: actuated_save_state,
+    load_state: actuated_load_state,
+    map_time_in_cycle: simple_map_time_in_cycle,
+    decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
+    can_release: super::ms_traffic_light_logic::default_can_release,
+    compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+};
+
 impl MSActuatedTrafficLightLogic {
     /// C++: `void MSActuatedTrafficLightLogic::MSActuatedTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const MSSimpleTrafficLightLogic::Phases &, int, SUMOTime, const Parameterised::Map &, const std::string &, const ConditionMap &, const AssignmentMap &, const FunctionMap &)`
     /// Constructor
@@ -219,9 +300,11 @@ impl MSActuatedTrafficLightLogic {
             myDetectorPrefix: format!("{}_{}_", id, programID),
             myTargets: BTreeMap::new(),
         };
+        this.base.base.vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT;
+        this.base.base.ext_vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let to_d = |s: String| utils::common::string_utils::to_double(&s).unwrap_or_else(|e| panic!("{}", e));
         this.myMaxGap = to_d(this.get_parameter("max-gap", DEFAULT_MAX_GAP.to_string()));
-        this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_string("tls.actuated.jam-threshold")));
+        this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_value_string("tls.actuated.jam-threshold")));
         this.myPassingTime = to_d(this.get_parameter("passing-time", DEFAULT_PASSING_TIME.to_string()));
         this.myDetectorGap = to_d(this.get_parameter("detector-gap", DEFAULT_DETECTOR_GAP.to_string()));
         this.myInactiveThreshold = string2time(&this.get_parameter("inactive-threshold", DEFAULT_INACTIVE_THRESHOLD.to_string())).unwrap_or_else(|e| panic!("{}", e));
@@ -343,7 +426,6 @@ impl MSActuatedTrafficLightLogic {
     //                 ilpos = length - inductLoopPosition;
     //                 MSLane* placementLane = lane;
     //                 while (ilpos < 0 && placementLane->getIncomingLanes().size() == 1
-    //                         && placementLane->getLogicalPredecessorLane() != nullptr
     //                         && placementLane->getIncomingLanes().front().viaLink->getCorrespondingEntryLink()->getTLLogic() == nullptr) {
     //                     placementLane = placementLane->getLogicalPredecessorLane();
     //                     ilpos += placementLane->getLength();
@@ -639,7 +721,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
         self.init_attribute_override();
         self.init_switching_rules();
         for i in 0..self.myPhases.len() {
@@ -658,7 +740,7 @@ impl MSActuatedTrafficLightLogic {
         let mut inductLoopInfoMap: BTreeMap<Ptr<MSInductLoop>, i32> = BTreeMap::new();
         let mut detEdgeIndex: i32 = -1;
         let mut detLaneIndex: i32 = 0;
-        let detDefaultLength: f64 = utils::common::string_utils::to_double(&self.get_parameter("detector-length", utils::options::options_cont::get_string("tls.actuated.detector-length"))).unwrap_or_else(|e| panic!("{}", e));
+        let detDefaultLength: f64 = utils::common::string_utils::to_double(&self.get_parameter("detector-length", utils::options::options_cont::get_value_string("tls.actuated.detector-length"))).unwrap_or_else(|e| panic!("{}", e));
         let mut prevDetEdge: Ptr<MSEdge> = Ptr::null();
         for lanes in self.myLanes.clone() {
             for lane in lanes {
@@ -697,7 +779,6 @@ impl MSActuatedTrafficLightLogic {
                     ilpos = length - inductLoopPosition;
                     let mut placementLane: Ptr<MSLane> = lane;
                     while ilpos < 0.0 && placementLane.get_incoming_lanes().len() == 1
-                        && !placementLane.get_logical_predecessor_lane().is_null()
                         && placementLane.get_incoming_lanes()[0].viaLink.get_corresponding_entry_link().get_tl_logic().is_null() {
                         placementLane = placementLane.get_logical_predecessor_lane();
                         ilpos += placementLane.get_length();
@@ -708,13 +789,18 @@ impl MSActuatedTrafficLightLogic {
                     // Build the induct loop and set it into the container
                     let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
                     let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
-                    loop_ = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true).cast::<MSInductLoop>();
-                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, loop_.cast::<MSDetectorFileOutput>(), &self.myFile, self.myFreq, 0);
+                    let det = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true);
+                    loop_ = crate::microsim::output::ms_induct_loop::induct_loop_of(det);
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, det, &self.myFile, self.myFreq, 0);
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so custom induction loops cannot be looked up; upgrade when that container is mapped
-                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| crate::microsim::output::ms_induct_loop::induct_loop_of(*d)).unwrap_or(Ptr::null());
+                    if loop_.is_null() {
+                        panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    }
+                    ilpos = loop_.get_position();
+                    inductLoopPosition = length - ilpos;
                 }
                 let maxGap: f64 = self.base2.get_double(&format!("max-gap:{}", lane.get_id()), self.myMaxGap);
                 let jamThreshold: f64 = self.base2.get_double(&format!("jam-threshold:{}", lane.get_id()), self.myJamThreshold);
@@ -1277,7 +1363,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        self.base.base.activate_program();
+        self.base.base.activate_program_base();
         for loopInfo in self.myInductLoops.iter() {
             loopInfo.loop_.m().set_visible(self.myShowDetectors);
         }
@@ -1293,7 +1379,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        self.base.base.deactivate_program();
+        self.base.base.deactivate_program_base();
         for loopInfo in self.myInductLoops.iter() {
             loopInfo.loop_.m().set_visible(false);
         }
@@ -1548,6 +1634,57 @@ impl MSActuatedTrafficLightLogic {
             }
         }
         result
+    }
+
+    /// C++: `void MSActuatedTrafficLightLogic::loadExtraState(const std::string &)` [virtual]
+    /// restore the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::loadExtraState(const std::string& state) {
+    //     std::vector<std::string> timeGaps = StringTokenizer(state).getVector();
+    //     int i = 0;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         if (i < (int)timeGaps.size()) {
+    //             loop->loadTimeSinceLastDetection(StringUtils::toDouble(timeGaps[i]));
+    //         }
+    //         i++;
+    //     }
+    // }
+    #[allow(unused_variables)]
+    pub fn load_extra_state(&mut self, state: &str) {
+        let timeGaps: Vec<String> = StringTokenizer::new(state).get_vector();
+        for (i, loopInfo) in self.myInductLoops.iter().enumerate() {
+            if i < timeGaps.len() {
+                loopInfo.loop_.m().load_time_since_last_detection(utils::common::string_utils::to_double(&timeGaps[i]).unwrap());
+            }
+        }
+    }
+
+    /// C++: `void MSActuatedTrafficLightLogic::saveState(OutputDevice &) const` [const, virtual]
+    /// save the time since the last detection of every induction loop
+    // void
+    // MSActuatedTrafficLightLogic::saveState(OutputDevice& out) const {
+    //     out.openTag(SUMO_TAG_TLLOGIC);
+    //     MSSimpleTrafficLightLogic::saveStateAttrs(out);
+    //
+    //     std::vector<double> state;
+    //     for (const InductLoopInfo& loopInfo : myInductLoops) {
+    //         MSInductLoop* loop = loopInfo.loop;
+    //         state.push_back(loop->getTimeSinceLastDetection());
+    //     }
+    //     out.writeAttr(SUMO_ATTR_STATE, state);
+    //     out.closeTag();
+    // }
+    #[allow(unused_variables)]
+    pub fn save_state(&self, out: &mut OutputDevice) {
+        out.open_tag_id(SUMO_TAG_TLLOGIC);
+        self.base.save_state_attrs(out);
+        let mut state: Vec<f64> = Vec::new();
+        for loopInfo in self.myInductLoops.iter() {
+            state.push(loopInfo.loop_.get().unwrap().get_time_since_last_detection());
+        }
+        out.write_attr(SUMO_ATTR_STATE, &state);
+        out.close_tag("");
     }
 
     /// C++: `void MSActuatedTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
@@ -2853,9 +2990,7 @@ impl MSActuatedTrafficLightLogic {
                         let foeIndex: i32 = foe.get_index();
                         let junction2: Ptr<MSJunction> = foe.get_junction();
                         if junction == junction2 {
-                            // shortcut: MSJunctionLogic::getFoesFor(linkIndex).test(foeIndex) is not usable yet (bitset Unmapped), so the junction foe relation is approximated by the MSLink foe links; upgrade when the junction logic bitsets are mapped
-                            let _ = (link.get_index(), foeIndex);
-                            if link.get_foe_links().contains(&foe)
+                            if junction.get_logic().get_foes_for(link.get_index()).test(foeIndex)
                                 && (foe.get_permissions() & !SVC_VULNERABLE) != 0 // check1e
                                 && Ptr::from_mut(foe.get_lane_before().get_edge()) != Ptr::from_mut(link.get_lane_before().get_edge()) { // check1f
                                 return false;

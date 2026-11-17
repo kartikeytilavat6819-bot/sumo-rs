@@ -1,0 +1,9 @@
+<routes>
+    <vType id="DEFAULT_VEHTYPE">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="1000"/>
+        <param key="device.rerouting.pre-period" value="0"/>
+    </vType>
+    <route id="r0" edges="LEAD IN AB OUT"/>
+    <flow id="f" begin="0.00" end="17.00" period="1.50" route="r0" departSpeed="max"/>
+</routes>

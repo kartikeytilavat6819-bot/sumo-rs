@@ -108,3 +108,18 @@ impl NIXMLShapeHandler {
 
 }
 
+impl SaxHandler for NIXMLShapeHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        // shortcut: no virtual dispatch, so ShapeHandler::add_poi calls the base get_lane_pos (panics); POIs with lane= in polygon files fail until the vtable work lands
+        ShapeHandler::my_start_element(&mut self.base, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        ShapeHandler::my_end_element(&mut self.base, element);
+        Ok(())
+    }
+}
+

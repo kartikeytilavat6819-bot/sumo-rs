@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:02:46.990162-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/emissions/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/emissions/routes.rou"/>
+        <additional-files value="tools/oracle/cases/emissions/edgedata.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/tmp/fcd_meso_edgedata.xml"/>
+        <tripinfo-output value="tools/oracle/cases/emissions/ref_meso_edgedata.tripinfo.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1"/>
+    </emissions>
+
+    <mesoscopic>
+        <mesosim value="true"/>
+    </mesoscopic>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="v3" depart="3.00" departLane="-103230_0" departPos="0.00" departSpeed="15.04" departDelay="0.00" arrival="10.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="24.05" duration="7.00" routeLength="107.07" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_v3 emissions_v3 fcd_v3" vType="DEFAULT_VEHTYPE" speedFactor="1.08" vaporized="">
+        <emissions CO_abs="112.59" CO2_abs="15556.68" HC_abs="0.78" PMx_abs="3.22" NOx_abs="5.83" fuel_abs="5043.34" electricity_abs="0.00"/>
+    </tripinfo>
+    <tripinfo id="v1" depart="1.00" departLane="-103227#0_0" departPos="0.00" departSpeed="26.07" departDelay="0.00" arrival="13.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="26.06" duration="12.00" routeLength="312.61" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_v1 emissions_v1 fcd_v1" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized="">
+        <emissions CO_abs="649.84" CO2_abs="48584.34" HC_abs="4.53" PMx_abs="10.31" NOx_abs="18.99" fuel_abs="15750.52" electricity_abs="0.00"/>
+    </tripinfo>
+    <tripinfo id="v0" depart="0.00" departLane="-103224#0_0" departPos="0.00" departSpeed="23.55" departDelay="0.00" arrival="14.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="23.55" duration="14.00" routeLength="310.65" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_v0 emissions_v0 fcd_v0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized="">
+        <emissions CO_abs="527.11" CO2_abs="45565.66" HC_abs="3.67" PMx_abs="9.92" NOx_abs="17.52" fuel_abs="14771.92" electricity_abs="0.00"/>
+    </tripinfo>
+    <tripinfo id="v2" depart="2.00" departLane="-103228_0" departPos="0.00" departSpeed="22.45" departDelay="0.00" arrival="16.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="28.07" duration="14.00" routeLength="358.59" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_v2 emissions_v2 fcd_v2" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized="">
+        <emissions CO_abs="791.50" CO2_abs="57180.94" HC_abs="5.52" PMx_abs="11.94" NOx_abs="22.46" fuel_abs="18537.44" electricity_abs="0.00"/>
+    </tripinfo>
+    <tripinfo id="v4" depart="4.00" departLane="-103224#0_0" departPos="0.00" departSpeed="22.89" departDelay="0.00" arrival="18.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="22.89" duration="14.00" routeLength="310.65" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_v4 emissions_v4 fcd_v4" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized="">
+        <emissions CO_abs="498.08" CO2_abs="45004.08" HC_abs="3.47" PMx_abs="9.85" NOx_abs="17.23" fuel_abs="14589.87" electricity_abs="0.00"/>
+    </tripinfo>
+</tripinfos>

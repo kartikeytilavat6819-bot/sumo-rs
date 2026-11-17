@@ -1,6 +1,17 @@
 //! Port of microsim/traffic_lights/MSSOTLPhasePolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn phase_policy_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLPhasePolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_PHASE_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: phase_policy_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
+use utils::common::msg_handler::write_message;
 
 /// Class for low-level phase policy.
 /// C++ class `MSSOTLPhasePolicy` (microsim/traffic_lights/MSSOTLPhasePolicy.h)
@@ -35,7 +46,15 @@ impl MSSOTLPhasePolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPhasePolicy::MSSOTLPhasePolicy")
+        let mut s = MSSOTLPhasePolicy {
+            base: MSSOTLPolicy::new("Phase".to_string(), parameters),
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+            base3: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            m_useVehicleTypesWeights: false,
+        };
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `void MSSOTLPhasePolicy::MSSOTLPhasePolicy(MSSOTLPolicyDesirability *)`
@@ -46,7 +65,16 @@ impl MSSOTLPhasePolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_2(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
-        todo!("port MSSOTLPhasePolicy::MSSOTLPhasePolicy")
+        let mut s = MSSOTLPhasePolicy {
+            base: MSSOTLPolicy::new_2("Phase".to_string(), desirabilityAlgorithm),
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+            base3: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            m_useVehicleTypesWeights: false,
+        };
+        s.get_desirability_algorithm().m().set_key_prefix("PHASE".to_string());
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `void MSSOTLPhasePolicy::MSSOTLPhasePolicy(MSSOTLPolicyDesirability *, const Parameterised::Map &)`
@@ -58,7 +86,16 @@ impl MSSOTLPhasePolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPhasePolicy::MSSOTLPhasePolicy")
+        let mut s = MSSOTLPhasePolicy {
+            base: MSSOTLPolicy::new_3("Phase".to_string(), desirabilityAlgorithm, parameters),
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+            base3: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            m_useVehicleTypesWeights: false,
+        };
+        s.get_desirability_algorithm().m().set_key_prefix("PHASE".to_string());
+        s.base.vt = &MS_SOTL_PHASE_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `bool MSSOTLPhasePolicy::canRelease(SUMOTime, bool, bool, const MSPhaseDefinition *, int)` [virtual]
@@ -85,7 +122,24 @@ impl MSSOTLPhasePolicy {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port MSSOTLPhasePolicy::canRelease")
+        // C++ streams the bool as 0/1 (no boolalpha)
+        write_message(&format!(
+            "MSSOTLPhasePolicy::canRelease threshold {} vehicle {} elapsed {} min {}",
+            thresholdPassed as i32, vehicleCount, elapsed, stage.minDuration
+        ));
+        if elapsed >= stage.minDuration {
+            if self.base2.push_button_logic(elapsed, pushButtonPressed, stage) {
+                return true;
+            }
+            if thresholdPassed {
+                return thresholdPassed;
+            } else if self.m_useVehicleTypesWeights {
+                if self.base3.sigmoid_logic(elapsed, stage, vehicleCount) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSSOTLPhasePolicy::init()` [virtual, protected]
@@ -96,7 +150,9 @@ impl MSSOTLPhasePolicy {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSSOTLPhasePolicy::init")
+        self.base2.init("MSSOTLPhasePolicy".to_string(), Ptr::from_mut(&mut self.base.base));
+        self.base3.init("MSSOTLPhasePolicy".to_string(), Ptr::from_mut(&mut self.base.base));
+        self.m_useVehicleTypesWeights = self.get_parameter("USE_VEHICLE_TYPES_WEIGHTS", "0") == "1";
     }
 
 }

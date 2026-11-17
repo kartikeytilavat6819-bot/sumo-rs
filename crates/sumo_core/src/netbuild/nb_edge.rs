@@ -1,6 +1,7 @@
 //! Port of netbuild/NBEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 use utils::common::to_string::f64_to_string;
 use utils::geom::{NUMERICAL_EPS, POSITION_EPS};
@@ -90,7 +91,7 @@ pub const UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
 const SUMO_const_laneWidth: f64 = 3.2;
 // C++ `static double NBEdge::myDefaultConnectionLength`, stored as bits so it is a plain global like the C++ static
 static MY_DEFAULT_CONNECTION_LENGTH: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(UNSPECIFIED_LOADED_LENGTH.to_bits());
-fn my_default_connection_length() -> f64 {
+pub fn my_default_connection_length() -> f64 {
     f64::from_bits(MY_DEFAULT_CONNECTION_LENGTH.load(std::sync::atomic::Ordering::Relaxed))
 }
 // C++ `static ConstRouterEdgePairVector Connection::myViaSuccessors` (always empty)
@@ -203,7 +204,7 @@ impl NBEdge_Connection {
         let id = if toEdge_.is_null() { String::new() } else { toEdge_.get_from_node().get_id().to_string() };
         NBEdge_Connection {
             base: Parameterised::new(),
-            base2: NBRouterEdge {},
+            base2: NBRouterEdge { kind: NBRouterEdgeKind::Connection },
             fromLane: fromLane_,
             toEdge: toEdge_,
             toLane: toLane_,
@@ -703,8 +704,8 @@ pub struct NBEdge {
     pub myRoutingType: String,
     /// the index of the edge in the list of all edges. Set by NBEdgeCont and requires re-set whenever the list of edges changes
     pub myIndex: i32,
-    pub mySuccessors: EdgeVector,
-    pub myViaSuccessors: ConstRouterEdgePairVector,
+    pub mySuccessors: std::cell::RefCell<EdgeVector>,
+    pub myViaSuccessors: std::cell::RefCell<ConstRouterEdgePairVector>,
 }
 
 impl std::ops::Deref for NBEdge {
@@ -787,7 +788,7 @@ impl NBEdge {
         NBEdge {
             base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
             base2: Parameterised::new(),
-            base3: NBRouterEdge {},
+            base3: NBRouterEdge { kind: NBRouterEdgeKind::Edge },
             myStep: NBEdge_EdgeBuildingStep::INIT,
             myType: utils::common::string_utils::convert_umlaute(&type_),
             myTurnSignTarget: String::new(),
@@ -826,8 +827,8 @@ impl NBEdge {
             myIsBidi: false,
             myRoutingType: String::new(),
             myIndex: -1,
-            mySuccessors: Vec::new(),
-            myViaSuccessors: Vec::new(),
+            mySuccessors: std::cell::RefCell::new(Vec::new()),
+            myViaSuccessors: std::cell::RefCell::new(Vec::new()),
         }
     }
 
@@ -1956,7 +1957,7 @@ impl NBEdge {
         if angle >= 360.0 {
             angle -= 360.0;
         }
-        // shortcut: gDebugFlag1 debug print omitted, no debug-flag global ported yet, upgrade with the debug-flag port
+        // C++ prints the angle only if gDebugFlag1, which is set only under DEBUG_NODE_BORDER (off in release builds)
         angle
     }
 
@@ -2956,16 +2957,8 @@ impl NBEdge {
             }
         }
         let sorter = NBContHelper_relative_outgoing_edge_sorter::new(Ptr::from_mut(self));
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        edges.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order (ties and non-transitive angle checks resolve as in C++)
+        utils::common::std_sort::std_sort(&mut edges, |a, b| sorter.call_op(a, b));
         Ptr::from_raw(Box::into_raw(Box::new(edges)))
     }
 
@@ -3055,16 +3048,8 @@ impl NBEdge {
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_angle(&mut self) {
         let sorter = NBEdge_connections_relative_edgelane_sorter::new(Ptr::from_mut(self));
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        self.myConnections.sort_by(|a, b| {
-            if sorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort_vec(&mut self.myConnections, |a, b| sorter.call_op(a, b) != 0);
     }
 
     /// C++: `void NBEdge::sortOutgoingConnectionsByIndex()`
@@ -3075,16 +3060,8 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_index(&mut self) {
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        self.myConnections.sort_by(|a, b| {
-            if NBEdge::connections_sorter(a, b) {
-                std::cmp::Ordering::Less
-            } else if NBEdge::connections_sorter(b, a) {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order (connections_sorter ties on different toEdges)
+        utils::common::std_sort::std_sort_vec(&mut self.myConnections, |a, b| NBEdge::connections_sorter(a, b));
     }
 
     /// C++: `void NBEdge::remapConnections(const EdgeVector &)`
@@ -8111,20 +8088,20 @@ impl NBEdge {
     //     return mySuccessors;
     // }
     #[allow(unused_variables)]
-    pub fn get_successors(&self, vClass: SUMOVehicleClass) -> &EdgeVector {
-        // mySuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
-        let this = Ptr::new(self);
-        this.m().mySuccessors.clear();
+    pub fn get_successors(&self, vClass: SUMOVehicleClass) -> EdgeVector {
+        // mySuccessors is a C++ mutable cache: rebuilt on every call, returned by copy
+        let mut successors = self.mySuccessors.borrow_mut();
+        successors.clear();
         for con in &self.myConnections {
             if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
                 && (vClass == utils::common::sumo_vehicle_class::SVC_IGNORING
                     || (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) != 0)
-                && !self.mySuccessors.contains(&con.toEdge)
+                && !successors.contains(&con.toEdge)
             {
-                this.m().mySuccessors.push(con.toEdge);
+                successors.push(con.toEdge);
             }
         }
-        &self.mySuccessors
+        successors.clone()
     }
 
     /// C++: `const ConstRouterEdgePairVector & NBEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -8151,17 +8128,17 @@ impl NBEdge {
     //     return myViaSuccessors;
     // }
     #[allow(unused_variables)]
-    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        // myViaSuccessors is a C++ mutable cache: clear and refill it through Ptr::m()
-        let this = Ptr::new(self);
-        this.m().myViaSuccessors.clear();
+    pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> ConstRouterEdgePairVector {
+        // myViaSuccessors is a C++ mutable cache: rebuilt on every call, returned by copy
+        let mut viaSuccessors = self.myViaSuccessors.borrow_mut();
+        viaSuccessors.clear();
         for con in &self.myConnections {
             // NBEdge* -> NBRouterEdge* is the base3 subobject; Connection* -> NBRouterEdge* is base2
             let to_router: Ptr<NBRouterEdge> = if con.toEdge.is_null() { Ptr::null() } else { Ptr::new(&con.toEdge.base3) };
             let mut pair: (Ptr<NBRouterEdge>, Ptr<NBRouterEdge>) = (to_router, Ptr::null());
             // special case for Persons in Netedit
             if vClass == utils::common::sumo_vehicle_class::SVC_PEDESTRIAN {
-                this.m().myViaSuccessors.push(pair); // Pedestrians have complete freedom of movement in all successors
+                viaSuccessors.push(pair); // Pedestrians have complete freedom of movement in all successors
             } else if con.fromLane >= 0 && con.toLane >= 0 && !con.toEdge.is_null()
                 && (self.get_permissions(con.fromLane) & con.toEdge.get_permissions(con.toLane) & vClass) == vClass
             {
@@ -8169,10 +8146,10 @@ impl NBEdge {
                 if con.get_length() > 0.0 {
                     pair.1 = Ptr::new(&con.base2);
                 }
-                this.m().myViaSuccessors.push(pair);
+                viaSuccessors.push(pair);
             }
         }
-        &self.myViaSuccessors
+        viaSuccessors.clone()
     }
 
     /// C++: `const std::string & NBEdge::getID() const` [const, virtual]
@@ -8298,16 +8275,8 @@ impl NBEdge {
             return Ptr::null();
         }
         let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), true);
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        cands.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort(&mut cands, |a, b| sorter.call_op(a, b) != 0);
         let best: Ptr<NBEdge> = cands[0];
         if best.is_turning_direction_at(Ptr::new(self)) {
             Ptr::null()
@@ -8339,16 +8308,8 @@ impl NBEdge {
             return Ptr::null();
         }
         let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), false);
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        cands.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort(&mut cands, |a, b| sorter.call_op(a, b) != 0);
         let best: Ptr<NBEdge> = cands[0];
         if best.is_turning_direction_at(Ptr::new(self)) {
             Ptr::null()
@@ -10476,11 +10437,39 @@ impl NBEdge {
 
 /// Superclass for NBEdge and NBEdge::Connection to initialize Router
 /// C++ class `NBRouterEdge` (netbuild/NBEdge.h)
+/// C++ dynamic type of an NBRouterEdge base subobject
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NBRouterEdgeKind {
+    /// NBEdge (its `base3` subobject)
+    Edge,
+    /// NBEdge::Connection (its `base2` subobject)
+    Connection,
+}
+
+/// Superclass for NBEdge and NBEdge::Connection to initialize Router
+/// C++ class `NBRouterEdge` (netbuild/NBEdge.h)
+/// `kind` replaces the C++ vtable: the owning subclass is recovered from this subobject's offset.
 #[derive(Clone)]
 pub struct NBRouterEdge {
+    /// which subclass embeds this base
+    pub kind: NBRouterEdgeKind,
 }
 
 impl NBRouterEdge {
+    /// The NBEdge that embeds this base as `base3`; only valid when `kind == Edge`
+    fn owner_edge(&self) -> &NBEdge {
+        debug_assert!(self.kind == NBRouterEdgeKind::Edge);
+        // SAFETY: kind == Edge means self is NBEdge::base3, a field of a repr(C) NBEdge
+        unsafe { &*((self as *const NBRouterEdge as *const u8).sub(std::mem::offset_of!(NBEdge, base3)) as *const NBEdge) }
+    }
+
+    /// The NBEdge::Connection that embeds this base as `base2`; only valid when `kind == Connection`
+    fn owner_connection(&self) -> &NBEdge_Connection {
+        debug_assert!(self.kind == NBRouterEdgeKind::Connection);
+        // SAFETY: kind == Connection means self is NBEdge_Connection::base2, a field of a repr(C) Connection
+        unsafe { &*((self as *const NBRouterEdge as *const u8).sub(std::mem::offset_of!(NBEdge_Connection, base2)) as *const NBEdge_Connection) }
+    }
+
     /// C++: `void NBRouterEdge::~NBRouterEdge() noexcept` [virtual]
     // virtual ~NBRouterEdge() {}
     #[allow(unused_variables)]
@@ -10493,48 +10482,69 @@ impl NBRouterEdge {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        // shortcut: pure virtual in C++ and NBRouterEdge is a data-less base with no vtable or type tag, so the NBEdge / NBEdge::Connection override cannot be reached from here; upgrade when NBRouterEdge carries a type tag or becomes a trait
-        panic!("NBRouterEdge::getID is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_id(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_id(),
+        }
     }
 
     /// C++: `double NBRouterEdge::getSpeed() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getSpeed is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_speed(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_speed(),
+        }
     }
 
     /// C++: `double NBRouterEdge::getLength() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_length(&self) -> f64 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getLength is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_length(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_length(),
+        }
     }
 
     /// C++: `const NBRouterEdge * NBRouterEdge::getBidiEdge() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<NBRouterEdge> {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getBidiEdge is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => match self.owner_edge().get_bidi_edge().get() {
+                Some(e) => Ptr::new(&e.base3),
+                None => Ptr::null(),
+            },
+            NBRouterEdgeKind::Connection => Ptr::null(),
+        }
     }
 
     /// C++: `int NBRouterEdge::getNumericalID() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_numerical_id(&self) -> i32 {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getNumericalID is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_numerical_id(),
+            NBRouterEdgeKind::Connection => self.owner_connection().get_numerical_id(),
+        }
     }
 
     /// C++: `const ConstRouterEdgePairVector & NBRouterEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &ConstRouterEdgePairVector {
-        // shortcut: pure virtual; no vtable, upgrade with the getID shortcut above
-        panic!("NBRouterEdge::getViaSuccessors is pure virtual")
+        match self.kind {
+            NBRouterEdgeKind::Edge => {
+                let edge = self.owner_edge();
+                // C++ returns a reference to the edge's mutable myViaSuccessors cache, which this call refills
+                edge.get_via_successors(vClass, ignoreTransientPermissions);
+                // SAFETY: the RefCell is only borrowed inside get_via_successors, which has returned; the slice lives until the next refill, as in C++
+                unsafe { &*edge.myViaSuccessors.as_ptr() }
+            }
+            NBRouterEdgeKind::Connection => self.owner_connection().get_via_successors(vClass, ignoreTransientPermissions),
+        }
     }
 
     /// C++: `bool NBRouterEdge::isInternal() const` [const, virtual]
@@ -10543,8 +10553,10 @@ impl NBRouterEdge {
     //     }
     #[allow(unused_variables)]
     pub fn is_internal(&self) -> bool {
-        // C++ base default: virtual bool isInternal() const { return false; }
-        false
+        match self.kind {
+            NBRouterEdgeKind::Edge => false,
+            NBRouterEdgeKind::Connection => self.owner_connection().is_internal(),
+        }
     }
 
     /// C++: `bool NBRouterEdge::prohibits(const NBVehicle *const) const` [const]
@@ -10573,10 +10585,81 @@ impl NBRouterEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<NBRouterEdge>, arg1: Ptr<NBVehicle>, arg2: f64) -> f64 {
-        // faithful body; edge.get_length() / edge.get_speed() are the pure virtuals (see the getID shortcut)
         edge.get_length() / edge.get_speed()
     }
 
+}
+
+impl RouterEdge<NBVehicle> for NBRouterEdge {
+    type Node = NBNode;
+    type Lane = NBEdge_Lane;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    // shortcut: NBRouterEdge has no getLengthGeometryFactor in C++, upgrade when a netbuild router calls it
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getLengthGeometryFactor")
+    }
+    // shortcut: NBRouterEdge has no getDistanceTo in C++, upgrade when a netbuild router calls it
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getDistanceTo")
+    }
+    // shortcut: C++ NBRouterEdge has no getSuccessors, routers use getViaSuccessors, upgrade when a netbuild router needs it
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("shortcut: NBRouterEdge has no getSuccessors in C++")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        self.get_via_successors(vclass, ignore_transient).as_slice()
+    }
+    // shortcut: C++ NBRouterEdge has no getSpeedLimit, upgrade when a netbuild router needs it
+    fn speed_limit(&self) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getSpeedLimit in C++")
+    }
+    // shortcut: C++ NBRouterEdge has no getMinimumTravelTime, upgrade when a netbuild router needs it
+    fn minimum_travel_time(&self, veh: Ptr<NBVehicle>) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getMinimumTravelTime in C++")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        self.get_bidi_edge()
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<NBVehicle>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<NBVehicle>) -> bool {
+        self.restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
+        NBRouterEdge::get_travel_time_static(edge, veh, time)
+    }
+    // shortcut: C++ NBRouterEdge has no getTravelTimeAggregated, upgrade when a netbuild router needs it
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<NBVehicle>, time: f64) -> f64 {
+        panic!("shortcut: NBRouterEdge has no getTravelTimeAggregated in C++")
+    }
+}
+
+impl RouterEdgeInfo for NBRouterEdge {
+    fn edge_numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.get_id().to_string()
+    }
+    // shortcut: only NBEdge has getPermissions in C++, the Connection branch is unreachable from the router paths; upgrade if a netbuild router reads Connection permissions
+    fn edge_permissions(&self) -> SVCPermissions {
+        match self.kind {
+            NBRouterEdgeKind::Edge => self.owner_edge().get_permissions(-1),
+            NBRouterEdgeKind::Connection => panic!("shortcut: NBEdge::Connection has no getPermissions in C++"),
+        }
+    }
 }
 
 /// A class that being a bresenham-callback assigns the incoming lanes to the edges

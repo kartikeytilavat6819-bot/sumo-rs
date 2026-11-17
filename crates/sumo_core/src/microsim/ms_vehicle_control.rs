@@ -11,19 +11,13 @@ use utils::options::options_cont::{get_float, get_string, is_set};
 // VTYPEPARS_VEHICLECLASS_SET bit from utils/vehicle/SUMOVTypeParameter.h (not exported by the ported module yet)
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
-// shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs is empty), returns the C++ default; upgrade once MSGlobals is filled
-fn g_use_meso_sim() -> bool {
-    false
-}
 
 /// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
-// shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
 fn as_base(v: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
     v.cast::<MSBaseVehicle>()
 }
 
 /// C++ `static_cast<MSVehicle*>(SUMOVehicle*)`
-// shortcut: this cast needs MSVehicle to be #[repr(C)] with `base` first (not done in ms_vehicle.rs yet)
 fn as_ms_vehicle(v: Ptr<SUMOVehicle>) -> Ptr<MSVehicle> {
     v.cast::<MSVehicle>()
 }
@@ -187,7 +181,19 @@ pub struct MSVehicleControl {
     /// List of vehicles which belong to public transport
     pub myPTVehicles: Vec<Ptr<SUMOVehicle>>,
     pub myPendingRemovals: Vec<Ptr<SUMOVehicle>>,
+    /// virtual dispatch for `buildVehicle` (overridden by MEVehicleControl)
+    pub vt: &'static MSVehicleControlVt,
 }
+
+/// Virtual method table of `MSVehicleControl` (C++ virtual `buildVehicle`)
+pub struct MSVehicleControlVt {
+    pub build_vehicle: fn(&mut MSVehicleControl, Ptr<SUMOVehicleParameter>, ConstMSRoutePtr, Ptr<MSVehicleType>, bool, MSVehicleControl_VehicleDefinitionSource, bool) -> Ptr<SUMOVehicle>,
+}
+
+/// Default `MSVehicleControl` vtable: the base class implementations
+pub static DEFAULT_MS_VEHICLE_CONTROL_VT: MSVehicleControlVt = MSVehicleControlVt {
+    build_vehicle: default_build_vehicle,
+};
 
 impl MSVehicleControl {
     /// C++: `void MSVehicleControl::MSVehicleControl()`
@@ -250,6 +256,7 @@ impl MSVehicleControl {
             // shortcut: C++ myPendingRemovals(gNumSimThreads > 1) is a locking container flag; a plain Vec is used
             myPTVehicles: Vec::new(),
             myPendingRemovals: Vec::new(),
+            vt: &DEFAULT_MS_VEHICLE_CONTROL_VT,
         };
 
         s.init_default_types();
@@ -279,6 +286,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle(&mut self, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
+        (self.vt.build_vehicle)(self, defs, route, type_, ignoreStopErrors, source, addRouteStops)
+    }
+}
+
+/// C++ body of `MSVehicleControl::buildVehicle` (the base implementation of the virtual)
+#[allow(unused_variables)]
+fn default_build_vehicle(vc: &mut MSVehicleControl, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
         let rng = if source == MSVehicleControl_VehicleDefinitionSource::ROUTEFILE {
             SUMORouteHandler::get_parsing_rng()
         } else {
@@ -286,10 +300,11 @@ impl MSVehicleControl {
         };
         let speedFactor = type_.compute_chosen_speed_deviation(defs.speedFactor, rng, -1.);
         let built: Ptr<MSVehicle> = Ptr::from_mut(Box::leak(Box::new(MSVehicle::new(defs, route, type_, speedFactor))));
-        self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        vc.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
         Ptr::from_mut(&mut built.m().base.base)
-    }
+}
 
+impl MSVehicleControl {
     /// C++: `bool MSVehicleControl::addVehicle(const std::string &, SUMOVehicle *)` [virtual]
     /// Tries to insert the vehicle into the internal vehicle container
     // bool
@@ -371,7 +386,17 @@ impl MSVehicleControl {
         if let Some(ptVehIt) = self.myPTVehicles.iter().position(|p| *p == veh) {
             self.myPTVehicles.remove(ptVehIt);
         }
-        // shortcut: C++ `delete veh` is not done, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
+        // `delete veh` runs ~MSVehicle (cleanupParkingReservation, cleanupFurtherLanes), then ~MSBaseVehicle (checkRouteRemoval);
+        // ~MEVehicle has no such cleanup, so only microsim vehicles get it (gUseMesoSim selects the vehicle class)
+        // shortcut: C++ `delete veh` frees the vehicle, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
+        if !veh.is_null() {
+            if !crate::microsim::ms_globals::use_meso_sim() {
+                let ms = as_ms_vehicle(veh);
+                ms.m().cleanup_parking_reservation();
+                ms.m().cleanup_further_lanes();
+            }
+            as_base(veh).m().check_route_removal();
+        }
     }
 
     /// C++: `void MSVehicleControl::deleteKeptVehicle(SUMOVehicle *)`
@@ -477,11 +502,9 @@ impl MSVehicleControl {
             self.myRunningVehNo -= 1;
             MSNet::get_instance().m().inform_vehicle_state_listener(veh, MSNet_VehicleState::ARRIVED, "");
             // vehicle is equipped with tripinfo device (not all vehicles are)
-            // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
-            let hasTripinfo = !tripinfoOut.is_null();
+            let hasTripinfo = veh.get_devices().iter().any(|d| MSDevice::get_device_name(d.base2.get_id()) == "tripinfo");
             for dev in veh.get_devices().iter() {
-                // shortcut: C++ virtual dispatch to the device subclass is not available, calls MSDevice's base generateOutput, upgrade when devices are trait objects
-                dev.base2.generate_output(if hasTripinfo { tripinfoOut } else { Ptr::null() });
+                MSDevice::generate_output_of(*dev, if hasTripinfo { tripinfoOut } else { Ptr::null() });
             }
             if !tripinfoOut.is_null() && hasTripinfo {
                 // close tag after tripinfo (possibly including emissions from another device) have been written
@@ -560,7 +583,7 @@ impl MSVehicleControl {
         if pars.departProcedure == DepartDefinition::TRIGGERED || pars.departProcedure == DepartDefinition::CONTAINER_TRIGGERED || pars.departProcedure == DepartDefinition::SPLIT {
             let firstEdge: Ptr<MSEdge> = v.get_route().get_edges()[pars.departEdge as usize];
             if add {
-                if !g_use_meso_sim() {
+                if !MSGlobals::use_meso_sim() {
                     // position will be checked against person position later
                     as_ms_vehicle(v).m().set_tentative_lane_and_position(Ptr::null(), pars.departPos, 0.);
                 }
@@ -1713,7 +1736,12 @@ impl MSVehicleControl {
     pub fn init_vehicle(&mut self, built: Ptr<MSBaseVehicle>, ignoreStopErrors: bool, addRouteStops: bool, source: MSVehicleControl_VehicleDefinitionSource) {
         self.myLoadedVehNo += 1;
         // shortcut: C++ catches ProcessError here only to delete `built` and rethrow; the error propagates unchanged and `built` is leaked
-        built.m().init_devices();
+        // C++ calls the virtual initDevices(); MEVehicle does not override it, so meso vehicles get MSBaseVehicle's
+        if crate::microsim::ms_globals::use_meso_sim() {
+            built.m().init_devices();
+        } else {
+            built.cast::<MSVehicle>().m().init_devices();
+        }
         if source != MSVehicleControl_VehicleDefinitionSource::STATE {
             built.m().add_stops(ignoreStopErrors, Ptr::null(), addRouteStops);
         }

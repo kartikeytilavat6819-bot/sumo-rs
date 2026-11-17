@@ -1,22 +1,54 @@
 //! Port of utils/router/SPTree.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
+use utils::common::to_string::f64_to_string_prec;
 
 /// C++ typedef `std::pair<const C *, const C *> SPTree::CHConnectionPair`
-pub type SPTree_CHConnectionPair = Unmapped /* std::pair<const C *, const C *> */;
+pub type SPTree_CHConnectionPair<C> = (Ptr<C>, Ptr<C>);
 
 /// C++ typedef `int SPTree::CHConnectionPairs`
-pub type SPTree_CHConnectionPairs = i32;
+pub type SPTree_CHConnectionPairs<C> = Vec<SPTree_CHConnectionPair<C>>;
 
 /// C++ typedef `int SPTree::CHConnections`
 pub type SPTree_CHConnections = i32;
 
-/// Class to compare (and so sort) nodes by their effort
-/// C++ class `SPTree::EdgeByTTComparator` (utils/router/SPTree.h)
-pub struct SPTree_EdgeByTTComparator {
+/// Node fields and edge accessors the SPTree reads on its element type `E` (C++ `E::traveltime`, `E::depth`,
+/// `E::visited`, `E::permissions`, `E::followers`, `E::edge`, `E::reset()`).
+pub trait SPTreeNode {
+    type Connection: SPTreeConnection<Self>;
+    fn traveltime(&self) -> f64;
+    fn set_traveltime(&mut self, traveltime: f64);
+    fn depth(&self) -> i32;
+    fn set_depth(&mut self, depth: i32);
+    fn visited(&self) -> bool;
+    fn set_visited(&mut self, visited: bool);
+    fn permissions(&self) -> SVCPermissions;
+    fn set_permissions(&mut self, permissions: SVCPermissions);
+    fn followers(&self) -> &[Self::Connection];
+    /// C++ `E::edge->getNumericalID()`
+    fn edge_numerical_id(&self) -> i32;
+    /// C++ `E::edge->getID()`
+    fn edge_id(&self) -> String;
+    /// C++ `E::edge->getPermissions()`
+    fn edge_permissions(&self) -> SVCPermissions;
+    fn reset(&mut self);
 }
 
-impl SPTree_EdgeByTTComparator {
+/// Connection fields the SPTree reads on its connection type `C` (C++ `C::target`, `C::cost`, `C::permissions`)
+pub trait SPTreeConnection<E: ?Sized> {
+    fn target(&self) -> Ptr<E>;
+    fn cost(&self) -> f64;
+    fn permissions(&self) -> SVCPermissions;
+}
+
+/// Class to compare (and so sort) nodes by their effort
+/// C++ class `SPTree::EdgeByTTComparator` (utils/router/SPTree.h)
+pub struct SPTree_EdgeByTTComparator<E> {
+    _p: std::marker::PhantomData<E>,
+}
+
+impl<E: SPTreeNode> SPTree_EdgeByTTComparator<E> {
     /// C++: `bool EdgeByTTComparator::operator()(const E *, const E *) const` [const]
     /// Comparing method
     // bool operator()(const E* a, const E* b) const {
@@ -26,8 +58,11 @@ impl SPTree_EdgeByTTComparator {
     //             return a->traveltime > b->traveltime;
     //         }
     #[allow(unused_variables)]
-    pub fn call_op(&self, a: Ptr<Unmapped /* E */>, b: Ptr<Unmapped /* E */>) -> bool {
-        todo!("port EdgeByTTComparator::operator()")
+    pub fn call_op(&self, a: Ptr<E>, b: Ptr<E>) -> bool {
+        if a.m().traveltime() == b.m().traveltime() {
+            return a.m().edge_numerical_id() > b.m().edge_numerical_id();
+        }
+        a.m().traveltime() > b.m().traveltime()
     }
 
 }
@@ -35,19 +70,19 @@ impl SPTree_EdgeByTTComparator {
 /// C++ class `SPTree` (utils/router/SPTree.h)
 pub struct SPTree<E, C> {
     /// the min edge heap
-    pub myFrontier: i32,
+    pub myFrontier: Vec<Ptr<E>>,
     /// the list of visited edges (used when resetting)
-    pub myFound: i32,
+    pub myFound: Vec<Ptr<E>>,
     /// comparator for search queue
-    pub myCmp: SPTree_EdgeByTTComparator,
+    pub myCmp: SPTree_EdgeByTTComparator<E>,
     /// maximum search depth
     pub myMaxDepth: i32,
     /// whether permissions should be validated
     pub myValidatePermissions: bool,
     /// vector of needed shortcuts after validation
-    pub myShortcutsToValidate: SPTree_CHConnectionPairs,
+    pub myShortcutsToValidate: SPTree_CHConnectionPairs<C>,
     /// vector of needed shortcuts after validation
-    pub myNeededShortcuts: SPTree_CHConnectionPairs,
+    pub myNeededShortcuts: SPTree_CHConnectionPairs<C>,
     _p: std::marker::PhantomData<(E, C,)>,
 }
 
@@ -60,9 +95,24 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn new(maxDepth: i32, validatePermissions: bool) -> Self {
-        todo!("port SPTree::SPTree<E, C>")
+        SPTree {
+            myFrontier: Vec::new(),
+            myFound: Vec::new(),
+            myCmp: SPTree_EdgeByTTComparator { _p: std::marker::PhantomData },
+            myMaxDepth: maxDepth,
+            myValidatePermissions: validatePermissions,
+            myShortcutsToValidate: Vec::new(),
+            myNeededShortcuts: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
+}
 
+impl<E, C> SPTree<E, C>
+where
+    E: SPTreeNode<Connection = C>,
+    C: SPTreeConnection<E>,
+{
     /// C++: `void SPTree::init()`
     // void init() {
     //         // all EdgeInfos touched in the previous query are either in myFrontier or myFound: clean those up
@@ -77,7 +127,14 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port SPTree::init")
+        for i in self.myFrontier.iter() {
+            i.m().reset();
+        }
+        self.myFrontier.clear();
+        for i in self.myFound.iter() {
+            i.m().reset();
+        }
+        self.myFound.clear();
     }
 
     /// C++: `void SPTree::rebuildFrom(E *, const E *)`
@@ -123,7 +180,42 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn rebuild_from(&mut self, start: Ptr<E>, excluded: Ptr<E>) {
-        todo!("port SPTree::rebuildFrom")
+        self.init();
+        start.m().set_traveltime(0.);
+        start.m().set_depth(0);
+        let startPermissions = start.m().edge_permissions();
+        start.m().set_permissions(startPermissions);
+        self.myFrontier.push(start);
+        // build SPT
+        while !self.myFrontier.is_empty() {
+            let min = self.myFrontier[0];
+            std_pop_heap(&mut self.myFrontier, &|a, b| self.myCmp.call_op(a, b));
+            self.myFrontier.pop();
+            self.myFound.push(min);
+            min.m().set_visited(true);
+            if min.m().depth() < self.myMaxDepth {
+                for con in min.m().followers().iter() {
+                    let follower = con.target();
+                    if follower == excluded {
+                        continue;
+                    }
+                    let traveltime = min.m().traveltime() + con.cost();
+                    let oldTraveltime = follower.m().traveltime();
+                    if !follower.m().visited() && traveltime < oldTraveltime {
+                        follower.m().set_traveltime(traveltime);
+                        follower.m().set_depth(min.m().depth() + 1);
+                        follower.m().set_permissions(min.m().permissions() & con.permissions());
+                        if oldTraveltime == f64::MAX {
+                            self.myFrontier.push(follower);
+                            std_push_heap(&mut self.myFrontier, &|a, b| self.myCmp.call_op(a, b));
+                        } else {
+                            let pos = self.myFrontier.iter().position(|x| *x == follower).expect("follower with a finite traveltime is on the frontier");
+                            std_push_heap(&mut self.myFrontier[..=pos], &|a, b| self.myCmp.call_op(a, b));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `bool SPTree::validatePermissions()`
@@ -133,7 +225,7 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn validate_permissions(&mut self) -> bool {
-        todo!("port SPTree::validatePermissions")
+        self.myValidatePermissions
     }
 
     /// C++: `void SPTree::registerForValidation(const C *, const C *)`
@@ -144,7 +236,8 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn register_for_validation(&mut self, aInfo: Ptr<C>, fInfo: Ptr<C>) {
-        todo!("port SPTree::registerForValidation")
+        assert!(self.myValidatePermissions);
+        self.myShortcutsToValidate.push((aInfo, fInfo));
     }
 
     /// C++: `const CHConnectionPairs & SPTree::getNeededShortcuts(const E *)`
@@ -165,8 +258,19 @@ impl<E, C> SPTree<E, C> {
     //         return myNeededShortcuts;
     //     }
     #[allow(unused_variables)]
-    pub fn get_needed_shortcuts(&mut self, excluded: Ptr<E>) -> &SPTree_CHConnectionPairs {
-        todo!("port SPTree::getNeededShortcuts")
+    pub fn get_needed_shortcuts(&mut self, excluded: Ptr<E>) -> &SPTree_CHConnectionPairs<C> {
+        assert!(self.myValidatePermissions);
+        self.myNeededShortcuts.clear();
+        for it in 0..self.myShortcutsToValidate.len() {
+            let (aInfo, fInfo) = self.myShortcutsToValidate[it];
+            let bestWitness = self.dijkstra_tt(aInfo.m().target(), fInfo.m().target(), excluded, aInfo.m().permissions() & fInfo.m().permissions());
+            let viaCost = aInfo.m().cost() + fInfo.m().cost();
+            if viaCost < bestWitness {
+                self.myNeededShortcuts.push((aInfo, fInfo));
+            }
+        }
+        self.myShortcutsToValidate.clear();
+        &self.myNeededShortcuts
     }
 
     /// C++: `double SPTree::dijkstraTT(E *, E *, const E *, SVCPermissions)` [private]
@@ -217,7 +321,47 @@ impl<E, C> SPTree<E, C> {
     //     }
     #[allow(unused_variables)]
     pub fn dijkstra_tt(&mut self, start: Ptr<E>, dest: Ptr<E>, excluded: Ptr<E>, permissions: SVCPermissions) -> f64 {
-        todo!("port SPTree::dijkstraTT")
+        self.init();
+        start.m().set_traveltime(0.);
+        start.m().set_depth(0);
+        self.myFrontier.push(start);
+        // build SPT
+        while !self.myFrontier.is_empty() {
+            let min = self.myFrontier[0];
+            if min == dest {
+                return dest.m().traveltime();
+            }
+            std_pop_heap(&mut self.myFrontier, &|a, b| self.myCmp.call_op(a, b));
+            self.myFrontier.pop();
+            self.myFound.push(min);
+            min.m().set_visited(true);
+            if min.m().depth() < self.myMaxDepth {
+                for con in min.m().followers().iter() {
+                    let follower = con.target();
+                    if follower == excluded {
+                        continue;
+                    }
+                    if (con.permissions() & permissions) != permissions {
+                        continue;
+                    }
+                    let traveltime = min.m().traveltime() + con.cost();
+                    let oldTraveltime = follower.m().traveltime();
+                    if !follower.m().visited() && traveltime < oldTraveltime {
+                        follower.m().set_traveltime(traveltime);
+                        follower.m().set_depth(min.m().depth() + 1);
+                        follower.m().set_permissions(min.m().permissions() & con.permissions());
+                        if oldTraveltime == f64::MAX {
+                            self.myFrontier.push(follower);
+                            std_push_heap(&mut self.myFrontier, &|a, b| self.myCmp.call_op(a, b));
+                        } else {
+                            let pos = self.myFrontier.iter().position(|x| *x == follower).expect("follower with a finite traveltime is on the frontier");
+                            std_push_heap(&mut self.myFrontier[..=pos], &|a, b| self.myCmp.call_op(a, b));
+                        }
+                    }
+                }
+            }
+        }
+        dest.m().traveltime()
     }
 
     /// C++: `void SPTree::debugPrintVector(int &, E *, const E *)` [private]
@@ -230,9 +374,12 @@ impl<E, C> SPTree<E, C> {
     //         std::cout << "\n";
     //     }
     #[allow(unused_variables)]
-    pub fn debug_print_vector(&mut self, vec: &mut i32, start: Ptr<E>, excluded: Ptr<E>) {
-        todo!("port SPTree::debugPrintVector")
+    pub fn debug_print_vector(&mut self, vec: &mut Vec<Ptr<E>>, start: Ptr<E>, excluded: Ptr<E>) {
+        print!("computed SPT from '{}' (excluding {}) with {} edges\n", start.m().edge_id(), excluded.m().edge_id(), self.myFound.len());
+        for e in vec.iter() {
+            print!("({},{}) ", e.m().edge_id(), f64_to_string_prec(e.m().traveltime(), 6));
+        }
+        print!("\n");
     }
 
 }
-

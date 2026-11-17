@@ -12,19 +12,16 @@ fn max3(a: f64, b: f64, c: f64) -> f64 {
     max2(c, if a > b { a } else { b })
 }
 
-// shortcut: MSGlobals::gComputeLC is a static that is not ported yet, this stub returns the C++ default (false), upgrade when MSGlobals statics are ported
 fn g_compute_lc() -> bool {
-    false
+    crate::microsim::ms_globals::compute_lc()
 }
 
-// shortcut: MSGlobals::gSublane is a static that is not ported yet, this stub returns the C++ default (false), upgrade when MSGlobals statics are ported
 fn g_sublane() -> bool {
-    false
+    crate::microsim::ms_globals::sublane()
 }
 
-// shortcut: MSGlobals::gIgnoreJunctionBlocker is a zero-initialised static that is not ported yet, this stub returns 0, upgrade when MSGlobals statics are ported
 fn g_ignore_junction_blocker() -> SUMOTime {
-    0
+    crate::microsim::ms_globals::ignore_junction_blocker()
 }
 
 /// C++ implicit upcast MSVehicle* -> SUMOVehicle* (MSVehicle -> MSBaseVehicle -> SUMOVehicle), null-safe
@@ -35,21 +32,29 @@ fn msveh_to_sumo_vehicle(v: Ptr<MSVehicle>) -> Ptr<SUMOVehicle> {
     Ptr::from_mut(&mut v.m().base.base)
 }
 
-/// C++ `MSLane::AnyVehicleIterator` range: myVehicles followed by myPartialVehicles
-// shortcut: MSLane::AnyVehicleIterator is not iterable in Rust yet (its constructor is still todo), this walks myVehicles then myPartialVehicles directly, upgrade when AnyVehicleIterator is ported
+/// C++ `for (it = lane->anyVehiclesBegin(); it != lane->anyVehiclesEnd(); ++it)`: myVehicles, then
+/// myTmpVehicles (vehicles the lane changer already processed this step), merged by position with myPartialVehicles
 fn any_vehicles_of(lane: Ptr<MSLane>) -> Vec<Ptr<MSVehicle>> {
-    lane.myVehicles.iter().chain(lane.myPartialVehicles.iter()).cloned().collect()
+    let end = lane.any_vehicles_end();
+    let mut it = lane.any_vehicles_begin();
+    let mut result = Vec::new();
+    while it.ne_op(&end) {
+        result.push(it.op_());
+        it.op__2();
+    }
+    result
 }
 
-// shortcut: dynamic_cast<const MSVehicle*>(SUMOTrafficObject*) has no Rust equivalent in this port, no foe can be downcast so getZipperSpeed ignores all foes until the downcast is ported; upgrade when SUMOTrafficObject can be downcast to MSVehicle
-fn zipper_foe_as_vehicle(_item: Ptr<SUMOTrafficObject>) -> Option<Ptr<MSVehicle>> {
-    None
+/// C++ `if (!item->isVehicle()) continue; dynamic_cast<const MSVehicle*>(item)`
+fn zipper_foe_as_vehicle(item: Ptr<SUMOTrafficObject>) -> Option<Ptr<MSVehicle>> {
+    if item.is_vehicle() { Some(item.cast::<MSVehicle>()) } else { None }
 }
 use utils::common::to_string::f64_to_string;
 use utils::common::std_defs::INVALID_DOUBLE;
 
 /// C++ implicit upcast MSVehicle* -> SUMOTrafficObject* (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
 fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base.base.base)
 }
 
@@ -59,17 +64,18 @@ use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 
 /// C++ implicit upcast SUMOVehicle* -> SUMOTrafficObject* (base sub-object, same address)
 fn veh_to_traffic_object(v: Ptr<SUMOVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base)
 }
 
 /// C++ implicit upcast MSPerson* -> SUMOTrafficObject* (through MSTransportable)
 fn person_to_traffic_object(p: Ptr<MSPerson>) -> Ptr<SUMOTrafficObject> {
+    if p.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut p.m().base.base)
 }
 
-// shortcut: ego->getRNG() (per-vehicle RNG) is not ported on SUMOTrafficObject, this uses the global rand helper, upgrade when the per-object RNG is ported
-fn ego_rand() -> f64 {
-    utils::common::rand_helper::rand()
+fn ego_rand(ego: Ptr<SUMOTrafficObject>) -> f64 {
+    ego.get_rng().m().rand()
 }
 use utils::geom::NUMERICAL_EPS;
 use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_degree, INVALID_OFFSET};
@@ -77,19 +83,16 @@ use utils::geom::geom_helper::{angle_diff, deg2rad, get_min_angle_diff, navi_deg
 /// C++ `#define INVALID_TIME -1000` (MSLink.cpp)
 const INVALID_TIME: SUMOTime = -1000;
 
-// shortcut: MSGlobals::gLefthand is a static that is not ported yet, this stub returns the C++ default (right-hand traffic), upgrade when MSGlobals statics are ported
 fn g_lefthand() -> bool {
-    false
+    crate::microsim::ms_globals::lefthand()
 }
 
-// shortcut: MSGlobals::gUseMesoSim is a static that is not ported yet, this stub returns the C++ default (micro simulation), upgrade when MSGlobals statics are ported
 fn g_use_meso_sim() -> bool {
-    false
+    crate::microsim::ms_globals::use_meso_sim()
 }
 
-// shortcut: MSGlobals::gUsingInternalLanes is a static that is not ported yet, this stub returns the usual setting (internal lanes enabled, option no-internal-links off), upgrade when MSGlobals statics are ported
 fn g_using_internal_lanes() -> bool {
-    true
+    crate::microsim::ms_globals::using_internal_lanes()
 }
 
 /// C++ `#define DIVERGENCE_MIN_WIDTH 2.5` (MSLink.cpp)
@@ -1506,6 +1509,13 @@ impl MSLink {
         &self.myApproachingVehicles
     }
 
+    /// C++ ApproachInfos iterates in ComparatorNumericalIdLess order; the map here is keyed by address, so sort by numerical id.
+    pub fn approach_iter_by_id(&self) -> Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> {
+        let mut v: Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (veh, it)).collect();
+        v.sort_by_key(|(veh, _)| veh.get_numerical_id());
+        v
+    }
+
     /// C++: `const PersonApproachInfos * MSLink::getApproachingPersons() const` [const]
     /// return all approaching vehicles
     // const PersonApproachInfos* getApproachingPersons() const {
@@ -1728,7 +1738,7 @@ impl MSLink {
         if g_lateral_resolution() > 0. {
             for &foeLink in self.mySublaneFoeLinks.iter() {
                 debug_assert!(self.myLane != foeLink.get_lane());
-                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                for (foe, info) in foeLink.approach_iter_by_id() {
                     let foeLat = foe.get_lateral_position_on_lane();
                     if ((posLat < foeLat + info.latOffset && self.myLane.get_index() > foeLink.myLane.get_index())
                         || (posLat > foeLat + info.latOffset && self.myLane.get_index() < foeLink.myLane.get_index()))
@@ -1747,7 +1757,7 @@ impl MSLink {
             let lhSign = if g_lefthand() { -1. } else { 1. };
             for &foeLink in self.mySublaneFoeLinks2.iter() {
                 debug_assert!(self.myDirection != LinkDirection::STRAIGHT);
-                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                for (foe, info) in foeLink.approach_iter_by_id() {
                     let egoWidth = if ego.is_null() { 1.8 } else { ego.get_vehicle_type().get_width() };
                     let foeLat = foe.get_lateral_position_on_lane() + info.latOffset;
                     if !MSLink::lateral_overlap(posLat, egoWidth, foeLat, foe.get_vehicle_type().get_width())
@@ -1938,13 +1948,13 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn blocked_at_time(&self, arrivalTime: SUMOTime, leaveTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, sameTargetLane: bool, impatience: f64, decel: f64, waitingTime: SUMOTime, collectFoes: Ptr<MSLink_BlockingFoes>, ego: Ptr<SUMOTrafficObject>, lastWasContRed: bool, dist: f64) -> bool {
-        for (&veh, it) in self.myApproachingVehicles.iter() {
+        for (veh, it) in self.approach_iter_by_id() {
             let vehObj = veh_to_traffic_object(veh);
             if vehObj != ego
                 && (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < it.speed
-                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand(ego))
                 && !MSLink::ignore_foe(ego, vehObj)
                 && (!lastWasContRed || veh.get_speed() > SUMO_CONST_HALTING_SPEED)
                 && self.blocked_by_foe(veh, it, arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, sameTargetLane, impatience, decel, waitingTime, ego)
@@ -1967,7 +1977,7 @@ impl MSLink {
                 if (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < person.get_speed()
-                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand())
+                    || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) < ego_rand(ego))
                     && !MSLink::ignore_foe(ego, personObj)
                     && !((arrivalTime > it.leavingTime + lookAhead) || (leaveTime + lookAhead < it.arrivalTime))
                 {
@@ -2052,7 +2062,7 @@ impl MSLink {
         let mut closest: Ptr<SUMOVehicle> = Ptr::null();
         let mut foeLink: Ptr<MSLink> = Ptr::null();
         for &link in self.myFoeLinks.iter() {
-            for (&veh, it) in link.myApproachingVehicles.iter() {
+            for (veh, it) in link.approach_iter_by_id() {
                 if link.get_lane_before() == wrapAround.get_lane_before() {
                     return (Ptr::null(), wrapAround);
                 } else if it.dist < closetDist {
@@ -3049,7 +3059,7 @@ impl MSLink {
             let vMax = ego.get_lane().get_vehicle_max_speed(ego.cast::<SUMOTrafficObject>());
             let vAccel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), ego.get_car_follow_model().get_max_accel());
             let vDecel = ego.get_car_follow_model().estimate_speed_after_distance(dist, ego.get_speed(), -ego.get_car_follow_model().get_max_decel());
-            let vEnd = min2(min2(vMax, vAccel), max2(uEnd, vDecel));
+            let vEnd = min2(max2(uEnd, vDecel), min2(vMax, vAccel));
             let vAvg = (ego.get_speed() + vEnd) / 2.;
             let te0 = dist / max2(NUMERICAL_EPS, vAvg);
             let te = max2(1.0, (te0 / ts()).ceil() * ts());
@@ -3165,7 +3175,7 @@ impl MSLink {
                 od.write_attr("arrivalSpeed", &f64_to_string(avi.arrivalSpeed));
                 od.write_attr("arrivalSpeedBraking", &f64_to_string(avi.arrivalSpeedBraking));
                 od.write_attr("leaveSpeed", &f64_to_string(avi.leaveSpeed));
-                od.write_attr("willPass", &avi.willPass.to_string());
+                od.write_attr("willPass", &avi.willPass);
                 od.close_tag("");
             }
             od.close_tag("");
@@ -3812,8 +3822,7 @@ impl MSLink {
                 egoPath.move2side((if g_lefthand() { 1. } else { -1. }) * ego.get_lateral_position_on_lane(), 100.);
             }
             for &t in foeLane.get_edge().get_persons().iter() {
-                // shortcut: static_cast<MSPerson*>(t) relies on MSPerson being #[repr(C)] with base first, upgrade when MSEdge stores MSPerson pointers
-                let p: Ptr<MSPerson> = Ptr::from_raw(t.as_raw() as *mut MSPerson);
+                let p: Ptr<MSPerson> = t.cast();
                 let mut dist = ego.get_position(0.).distance_to2d(&p.base.get_position(0.)) - p.base.get_vehicle_type().get_length();
                 let inFront = self.is_in_front(ego, &egoPath, &p.base.get_position(0.)) || self.is_in_front(ego, &egoPath, &self.get_future_position(p, 1.));
                 if inFront {
@@ -4410,3 +4419,26 @@ impl MSLink {
 
 }
 
+
+#[cfg(test)]
+mod any_vehicles_tests {
+    use super::*;
+
+    // shortcut: MSLane::new -> init_restrictions needs the MSNet singleton, which unit tests cannot build yet
+    // (see ms_vehicle.rs vt_dispatch_tests); real_dense in run_all.sh guards this meanwhile, remove #[ignore] once MSNet can be built
+    #[test]
+    #[ignore = "MSLane::new needs the MSNet singleton, see shortcut above"]
+    fn any_vehicles_includes_vehicles_already_processed_by_the_lane_changer() {
+        // real_dense v41 t=92: the foe on a sibling internal lane sat in myTmpVehicles while its edge was
+        // lane-changing; C++ AnyVehicleIterator still yields it as a link leader, the old helper did not
+        MSLane::init_one_rng_for_tests();
+        let edge = Ptr::from_mut(Box::leak(Box::new(MSEdge::new(":j_0", 0, SumoXMLEdgeFunc::INTERNAL, "", "", "", 0, 1.0))));
+        let lane = Ptr::from_mut(Box::leak(Box::new(MSLane::new(":j_0_4", 13.9, 1.0, 12.0, edge, 0, &PositionVector::new(), 3.2, utils::common::sumo_vehicle_class::SVC_PASSENGER, 0, 0, 0, false, "", &PositionVector::new()))));
+        // never dereferenced: without partial vehicles the iterator only hands the pointers out
+        let a: Ptr<MSVehicle> = Ptr::from_raw(0x10 as *mut MSVehicle);
+        let b: Ptr<MSVehicle> = Ptr::from_raw(0x20 as *mut MSVehicle);
+        lane.m().myVehicles.push(a);
+        lane.m().myTmpVehicles.push(b);
+        assert_eq!(any_vehicles_of(lane), vec![a, b]);
+    }
+}

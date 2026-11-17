@@ -621,7 +621,7 @@ impl NGNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &NGNet) -> Self {
-        todo!("port NGNet::NGNet")
+        panic!("NGNet is not copyable (private copy constructor in C++)")
     }
 
     /// C++: `NGNet & NGNet::operator=(const NGNet &)` [private]
@@ -629,7 +629,7 @@ impl NGNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &NGNet) -> &mut NGNet {
-        todo!("port NGNet::operator=")
+        panic!("NGNet is not assignable (private operator= in C++)")
     }
 
 }

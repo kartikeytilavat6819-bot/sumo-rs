@@ -13,6 +13,7 @@ use utils::options::options_cont::{get_bool, get_float, get_string, is_default, 
 use MSDevice_SSM_SSMParameterWarning::*;
 use MSDevice_SSM_EncounterType::*;
 use utils::tlf;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
 
 /// C++ `#define DEFAULT_EXTRA_TIME 5.` (MSDevice_SSM.cpp)
 const DEFAULT_EXTRA_TIME: f64 = 5.;
@@ -101,38 +102,8 @@ impl MSDevice_SSM_SSMParameterWarning {
 
 /// C++ typedef `int MSDevice_SSM::EncounterQueue`
 /// C++ typedef `priority_queue<Encounter*, vector<Encounter*>, Encounter::compare> MSDevice_SSM::EncounterQueue`
-/// determinism: C++ std::priority_queue and Rust BinaryHeap use the same sift-up/sift-down scheme, but ties are not guaranteed to pop in the same order
-pub type MSDevice_SSM_EncounterQueue = BinaryHeap<MSDevice_SSM_EncounterQueueEntry>;
-
-/// Heap entry ordered like C++ `Encounter::compare`: the top of the queue is the encounter with the earliest begin
-#[derive(Clone, Copy)]
-pub struct MSDevice_SSM_EncounterQueueEntry(pub Ptr<MSDevice_SSM_Encounter>);
-
-impl PartialEq for MSDevice_SSM_EncounterQueueEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == std::cmp::Ordering::Equal
-    }
-}
-impl Eq for MSDevice_SSM_EncounterQueueEntry {}
-impl PartialOrd for MSDevice_SSM_EncounterQueueEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for MSDevice_SSM_EncounterQueueEntry {
-    // std::priority_queue keeps the element for which comp(x, others) is false; BinaryHeap keeps the greatest,
-    // so an entry is greater when comp(other, self) holds, i.e. when it has the higher priority
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let mut comp = Encounter_compare {};
-        if comp.call_op(self.0, other.0) {
-            std::cmp::Ordering::Less
-        } else if comp.call_op(other.0, self.0) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    }
-}
+/// Kept as a plain vector ordered by the libstdc++ push_heap/pop_heap (ch_builder), so ties pop in C++ order
+pub type MSDevice_SSM_EncounterQueue = Vec<Ptr<MSDevice_SSM_Encounter>>;
 
 /// C++ typedef `std::vector<Encounter*> MSDevice_SSM::EncounterVector`
 pub type MSDevice_SSM_EncounterVector = Vec<Ptr<MSDevice_SSM_Encounter>>;
@@ -935,8 +906,9 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: equippedByDefaultAssignmentOptions needs the holder's Parameterised and vType parameters, which SUMOVehicle does not expose yet; until then no SSM device is equipped (only runs requesting device.ssm.* are affected), upgrade when SUMOVehicle exposes getParameter()/getVehicleType()
-        let equipped = false;
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "ssm", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
         if equipped {
             if MSGlobals::use_meso_sim() {
                 write_warningf!("SSM Device for vehicle '%' will not be built. (SSMs not supported in MESO)", v.get_id());
@@ -1096,21 +1068,21 @@ impl MSDevice_SSM {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'.");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "minTTC" && !self.myComputeTTC {
-            panic!("{}", InvalidArgument("Measure TTC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure TTC is not tracked by ssm device".to_string()));
         }
         if key == "maxDRAC" && !self.myComputeDRAC {
-            panic!("{}", InvalidArgument("Measure DRAC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure DRAC is not tracked by ssm device".to_string()));
         }
         if key == "maxMDRAC" && !self.myComputeMDRAC {
-            panic!("{}", InvalidArgument("Measure MDRAC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure MDRAC is not tracked by ssm device".to_string()));
         }
         if key == "minPET" && !self.myComputePET {
-            panic!("{}", InvalidArgument("Measure PET is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure PET is not tracked by ssm device".to_string()));
         }
         if key == "minPPET" && !self.myComputePPET {
-            panic!("{}", InvalidArgument("Measure PPET is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure PPET is not tracked by ssm device".to_string()));
         }
         if key == "minTTC" || key == "maxDRAC" || key == "maxMDRAC" || key == "minPET" || key == "minPPET" {
             let mut value = INVALID_DOUBLE;
@@ -1139,12 +1111,12 @@ impl MSDevice_SSM {
                 value = minPPET;
             }
             if value.abs() == INVALID_DOUBLE {
-                return String::new();
+                return Ok(String::new());
             } else {
-                return utils::common::to_string::to_string(&value);
+                return Ok(utils::common::to_string::to_string(&value));
             }
         }
-        panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'.", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_SSM::setParameter(const std::string &, const std::string &)` [virtual]
@@ -1164,16 +1136,17 @@ impl MSDevice_SSM {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'.", key, self.device_name())).0),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'.", key, self.device_name()))),
         };
         if false || key == "foo" {
             let _ = doubleValue;
         } else {
-            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'.", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_SSM::update()` [private]
@@ -2295,6 +2268,26 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, outputFilename: String, thresholds: BTreeMap<String, f64>, trajectories: bool, range: f64, extraTime: f64, useGeoCoords: bool, writePositions: bool, writeLanesPositions: bool, conflictTypeFilter: Vec<i32>) -> Box<Self> {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_SSM>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_SSM>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_SSM>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, outputFilename, thresholds, trajectories, range, extraTime, useGeoCoords, writePositions, writeLanesPositions, conflictTypeFilter);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, outputFilename: String, thresholds: BTreeMap<String, f64>, trajectories: bool, range: f64, extraTime: f64, useGeoCoords: bool, writePositions: bool, writeLanesPositions: bool, conflictTypeFilter: Vec<i32>) -> Box<Self> {
         // C++ member initialisers evaluated in declaration order
         let base = MSVehicleDevice::new(holder, id);
         let myMDRACPRT = Self::get_mdrac_prt(holder);
@@ -2336,7 +2329,7 @@ impl MSDevice_SSM {
             myFilterConflictTypes,
             myHolderMS: Ptr::default(),
             myActiveEncounters: Vec::new(),
-            myPastConflicts: BinaryHeap::new(),
+            myPastConflicts: Vec::new(),
             myGlobalMeasuresTimeSpan: Vec::new(),
             myGlobalMeasuresPositions: PositionVector(Vec::new()),
             myGlobalMeasuresLaneIDs: Vec::new(),
@@ -2739,7 +2732,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn flush_conflicts(&mut self, all: bool) {
-        while let Some(top) = self.myPastConflicts.peek().map(|entry| entry.0) {
+        while let Some(top) = self.myPastConflicts.first().copied() {
             if all || top.begin <= self.myOldestActiveEncounterBegin {
                 let mut write = true;
                 if self.myFilterConflictTypes {
@@ -2751,6 +2744,7 @@ impl MSDevice_SSM {
                 if write {
                     self.write_out_conflict(top);
                 }
+                std_pop_heap(&mut self.myPastConflicts, &|a, b| Encounter_compare {}.call_op(a, b));
                 self.myPastConflicts.pop();
                 delete_encounter(top);
             } else {
@@ -4491,7 +4485,8 @@ impl MSDevice_SSM {
         em.end = *em.timeSpan.last().unwrap();
         let wasConflict = self.qualifies_as_conflict(e);
         if wasConflict {
-            self.myPastConflicts.push(MSDevice_SSM_EncounterQueueEntry(e));
+            self.myPastConflicts.push(e);
+            std_push_heap(&mut self.myPastConflicts, &|a, b| Encounter_compare {}.call_op(a, b));
         } else {
             delete_encounter(e);
         }

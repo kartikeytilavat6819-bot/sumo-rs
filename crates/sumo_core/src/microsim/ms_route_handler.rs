@@ -3,6 +3,9 @@
 use crate::prelude::*;
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, DEFAULT_CONTAINER_TRANSHIP_SPEED, DEFAULT_VTYPE_ID, SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER, SVC_PEDESTRIAN};
+use crate::microsim::trigger::ms_charging_station::MSChargingStation;
+use crate::utils::map_matcher::{MapMatcher, MapMatcherHost, JUNCTION_TAZ_MISSING_HELP};
+use crate::utils::named_rtree::NamedRTree;
 
 /// C++ enum `MSRouteHandler::ObjectTypeEnum`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -13,14 +16,13 @@ pub enum MSRouteHandler_ObjectTypeEnum {
     UNDEFINED = 2,
 }
 
-// shortcut: VEHPARS_* and JUNCTION_TAZ_MISSING_HELP belong to SUMOVehicleParameter.h / MapMatcher.h, not ported yet, move them there
+// shortcut: VEHPARS_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
 const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
 const VEHPARS_ROUTE_SET: i64 = 2 << 10;
 const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
 const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
 const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
-const JUNCTION_TAZ_MISSING_HELP: &str = "\nSet option '--junction-taz' or load a TAZ-file";
 // shortcut: STOP_INDEX_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const STOP_INDEX_REPEAT: i32 = -3;
 const STOP_INDEX_END: i32 = -1;
@@ -77,14 +79,9 @@ fn exception_what(payload: &Box<dyn std::any::Any + Send>) -> String {
 
 /// C++ `MSRouteHandler` lookup `MSRoute::dictionary(id, &myParsingRNG)` that yields nullptr when unknown
 fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
-    if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, SUMORouteHandler::get_parsing_rng())) } else { None }
-}
-
-/// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
-// shortcut: parseGeoEdges belongs to the unported MapMatcher base class, geo-coordinate route parsing panics until it is ported
-#[allow(unused_variables)]
-fn parse_geo_edges(pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstMSEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
-    panic!("parseGeoEdges needs the unported MapMatcher base class");
+    let dist = MSRoute::dist_dictionary(id);
+    let known = MSRoute::has_route(id) || (!dist.is_null() && dist.get_overall_prob() != 0.0);
+    if known { Some(MSRoute::dictionary_3(id, SUMORouteHandler::get_parsing_rng())) } else { None }
 }
 
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
@@ -93,6 +90,116 @@ fn tag_to_string(tag: SumoXMLTag) -> String {
     utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
 }
 
+// C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+fn ms_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_vehicle_type_distribution(attrs)
+}
+fn ms_close_vehicle_type_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_vehicle_type_distribution()
+}
+fn ms_open_route(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route(attrs)
+}
+fn ms_open_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_flow(attrs)
+}
+fn ms_open_route_flow(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route_flow(attrs)
+}
+fn ms_open_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_trip(attrs)
+}
+fn ms_close_route(d: &mut SUMORouteHandler, mayBeDisconnected: bool) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_route(mayBeDisconnected)
+}
+fn ms_open_route_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().open_route_distribution(attrs)
+}
+fn ms_close_route_distribution(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_route_distribution()
+}
+fn ms_close_vehicle(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_vehicle()
+}
+fn ms_close_v_type(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_v_type()
+}
+fn ms_close_person(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_person()
+}
+fn ms_close_person_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_person_flow()
+}
+fn ms_close_container(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_container()
+}
+fn ms_close_container_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_container_flow()
+}
+fn ms_close_flow(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_flow()
+}
+fn ms_close_trip(d: &mut SUMORouteHandler) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().close_trip()
+}
+fn ms_add_transportable(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes, isPerson: bool) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_transportable(attrs, isPerson)
+}
+fn ms_add_stop(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) -> Ptr<Parameterised> {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_stop(attrs)
+}
+fn ms_add_person_trip(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_person_trip(attrs)
+}
+fn ms_add_walk(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_walk(attrs)
+}
+fn ms_add_ride(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_ride(attrs)
+}
+fn ms_add_transport(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_transport(attrs)
+}
+fn ms_add_tranship(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().add_tranship(attrs)
+}
+fn ms_get_v_type_parameter(d: &mut SUMORouteHandler, refid: &str) -> Ptr<SUMOVTypeParameter> {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().get_v_type_parameter(refid)
+}
+
+fn ms_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<MSRouteHandler>().m().my_start_element(element, attrs)
+}
+
+/// C++ MSRouteHandler overrides, installed in SUMORouteHandler::vt by MSRouteHandler::new
+pub const MS_ROUTE_HANDLER_VT: crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt = crate::utils::vehicle::sumo_route_handler::SUMORouteHandlerVt {
+    open_vehicle_type_distribution: ms_open_vehicle_type_distribution,
+    close_vehicle_type_distribution: ms_close_vehicle_type_distribution,
+    open_route: ms_open_route,
+    open_flow: ms_open_flow,
+    open_route_flow: ms_open_route_flow,
+    open_trip: ms_open_trip,
+    close_route: ms_close_route,
+    open_route_distribution: ms_open_route_distribution,
+    close_route_distribution: ms_close_route_distribution,
+    close_vehicle: ms_close_vehicle,
+    close_v_type: ms_close_v_type,
+    close_person: ms_close_person,
+    close_person_flow: ms_close_person_flow,
+    close_container: ms_close_container,
+    close_container_flow: ms_close_container_flow,
+    close_flow: ms_close_flow,
+    close_trip: ms_close_trip,
+    add_transportable: ms_add_transportable,
+    add_stop: ms_add_stop,
+    add_person_trip: ms_add_person_trip,
+    add_walk: ms_add_walk,
+    add_ride: ms_add_ride,
+    add_transport: ms_add_transport,
+    add_tranship: ms_add_tranship,
+    get_v_type_parameter: ms_get_v_type_parameter,
+};
+
 /// Parser and container for routes during their loading
 /// C++ class `MSRouteHandler` (microsim/MSRouteHandler.h)
 #[repr(C)]
@@ -100,7 +207,7 @@ pub struct MSRouteHandler {
     /// C++ base class `SUMORouteHandler`
     pub base: SUMORouteHandler,
     /// C++ base class `MapMatcher<MSEdge, MSLane, MSJunction>`
-    pub base2: Unmapped /* MapMatcher<MSEdge, MSLane, MSJunction> */,
+    pub base2: MSMapMatcher,
     /// The current route
     pub myActiveRoute: ConstMSEdgeVector,
     /// number of repetitions of the active route
@@ -152,6 +259,18 @@ impl std::ops::DerefMut for MSRouteHandler {
     }
 }
 
+impl MapMatcherHost<MSEdge> for MSRouteHandler {
+    fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        MSRouteHandler::init_lane_tree(self, tree)
+    }
+    fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
+        MSRouteHandler::retrieve_edge(self, id)
+    }
+    fn get_rng(&self) -> Ptr<SumoRNG> {
+        MSRouteHandler::get_rng(self)
+    }
+}
+
 impl MSRouteHandler {
     /// C++: `void MSRouteHandler::MSRouteHandler(const std::string &, bool)`
     /// standard constructor
@@ -178,10 +297,14 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, addVehiclesDirectly: bool) -> Self {
-        // shortcut: MapMatcher<MSEdge, MSLane, MSJunction> is not ported yet (base2 is a unit placeholder), its mapmatch.* options are not read, upgrade when utils MapMatcher exists
-        MSRouteHandler {
+        let mut h = MSRouteHandler {
             base: SUMORouteHandler::new(file, if addVehiclesDirectly { "" } else { "routes" }, true),
-            base2: (),
+            base2: MapMatcher::new(
+                utils::options::options_cont::get_bool("mapmatch.junctions"),
+                utils::options::options_cont::get_bool("mapmatch.taz"),
+                utils::options::options_cont::get_float("mapmatch.distance"),
+                Ptr::from_raw(utils::common::msg_handler::with_instance(MsgType::Error, |h| h as *mut MsgHandler)),
+            ),
             myActiveRoute: Vec::with_capacity(100),
             myActiveRouteRepeat: 0,
             myActiveRoutePeriod: 0,
@@ -201,7 +324,10 @@ impl MSRouteHandler {
             myScaleSuffix: utils::options::options_cont::get_string("scale-suffix"),
             myReplayRerouting: utils::options::options_cont::get_bool("replay-rerouting"),
             myStartTriggeredInFlow: false,
-        }
+        };
+        h.base.vt = &MS_ROUTE_HANDLER_VT;
+        h.base.start_element_override = Some(ms_my_start_element);
+        h
     }
 
     /// C++: `void MSRouteHandler::~MSRouteHandler() noexcept` [virtual]
@@ -414,6 +540,18 @@ impl MSRouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
+    /// C++ `MapMatcher::parseGeoEdges(positions, geo, vClass, into, rid, isFrom, ok)` (forceEdge false), called on the route handler
+    pub fn parse_geo_edges(&self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstMSEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
+        self.base2.parse_geo_edges(&*self, &pv, geo, vClass, into, rid, isFrom, ok, false);
+    }
+
+    /// `parseGeoEdges` into myActiveRoute: the route is taken out while the host is borrowed
+    fn parse_geo_edges_active(&mut self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, rid: &str, isFrom: bool, ok: &mut bool) {
+        let mut route = std::mem::take(&mut self.myActiveRoute);
+        self.parse_geo_edges(pv, geo, vClass, &mut route, rid, isFrom, ok);
+        self.myActiveRoute = route;
+    }
+
     pub fn parse_from_via_to(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes) {
         let element = tag_to_string(tag);
         self.myActiveRoute.clear();
@@ -458,7 +596,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, true, &mut ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, true, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().fromTaz = taz;
@@ -466,7 +604,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMLONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, true, &mut ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, true, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().fromTaz = taz;
@@ -487,10 +625,10 @@ impl MSRouteHandler {
         let mut viaEdges: ConstMSEdgeVector = Vec::new();
         if attrs.has_attribute(SUMO_ATTR_VIAXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIAXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, &mut ok);
+            self.parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, &mut ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIALONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIALONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, &mut ok);
+            self.parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, &mut ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIAJUNCTIONS) {
             let junctionIDs: Vec<String> = attrs.get(SUMO_ATTR_VIAJUNCTIONS, &self.myVehicleParameter.id, &mut ok, true);
             for junctionID in junctionIDs {
@@ -537,7 +675,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, false, &mut ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, false, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().toTaz = taz;
@@ -545,7 +683,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOLONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, false, &mut ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, false, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().toTaz = taz;
@@ -1271,7 +1409,7 @@ impl MSRouteHandler {
     #[allow(unused_variables)]
     pub fn close_route_distribution(&mut self) {
         if !self.myCurrentRouteDistribution.is_null() {
-            let haveSameID = MSRoute::has_route(&self.myCurrentRouteDistributionID);
+            let haveSameID = lookup_route(&self.myCurrentRouteDistributionID).is_some();
             if state_loaded() && haveSameID {
                 delete_ptr(self.myCurrentRouteDistribution);
                 self.myCurrentRouteDistribution = Ptr::null();
@@ -1486,7 +1624,8 @@ impl MSRouteHandler {
             if !(self.myAddVehiclesDirectly || self.check_last_depart())
                 || (self.myVehicleParameter.depart <= net.m().get_state_loader_time() && !self.myAmLoadingState)
             {
-                // shortcut: mySkippedVehicles is an i32 in the skeleton (C++ std::set of ids), skipped ids are not recorded until SUMORouteHandler is fixed
+                let skippedID = self.myVehicleParameter.id.clone();
+                self.mySkippedVehicles.insert(skippedID);
                 return;
             }
         }
@@ -1740,8 +1879,7 @@ impl MSRouteHandler {
         let mut vehType: Ptr<MSVehicleType> = Ptr::null();
         let net = MSNet::get_instance();
         if self.myCurrentVTypeRef.is_empty() {
-            // shortcut: SUMOSAXHandler base is Unmapped so getFileName() is unreachable, upgrade when SUMORouteHandler.base is ported
-            let fileName: String = panic!("SUMOSAXHandler::getFileName not ported");
+            let fileName: String = self.base.base.get_file_name().to_string();
             vehType = MSVehicleType::build(self.myCurrentVType.m(), &fileName);
             vehType.m().check();
             if !net.m().get_vehicle_control().add_v_type(vehType) {
@@ -2262,8 +2400,7 @@ impl MSRouteHandler {
             } else {
                 format!(" in route '{}'", self.myActiveRouteID)
             };
-            // shortcut: SUMOVehicleParameter::Stop default ctor is not ported, upgrade when SUMOVehicleParameter_Stop gets a new()
-            let mut stop: SUMOVehicleParameter_Stop = panic!("SUMOVehicleParameter::Stop() ctor not ported");
+            let mut stop: SUMOVehicleParameter_Stop = SUMOVehicleParameter_Stop::default();
             let ok = self.parse_stop(&mut stop, attrs, errorSuffix.clone(), Ptr::null());
             // shortcut: MsgHandler::getErrorInstance() has no accessor yet, parseStop reports to a null handler until it does
             if !ok {
@@ -2275,7 +2412,12 @@ impl MSRouteHandler {
             let mut edge: Ptr<MSEdge> = Ptr::null();
             // patch chargingStation stop on a parkingArea
             if !stop.chargingStation.is_empty() {
-                // shortcut: dynamic_cast<MSChargingStation*> needs a downcast from MSStoppingPlace, the parkingArea patch is skipped until it exists
+                let cs: Ptr<MSChargingStation> = MSNet::get_instance().m().get_stopping_place(&stop.chargingStation, SUMO_TAG_CHARGING_STATION).cast();
+                let pa = cs.m().get_parking_area();
+                if !pa.is_null() {
+                    stop.parkingarea = pa.get_id().to_string();
+                    stop.parking = ParkingType::OFFROAD;
+                }
             }
             let mut toStop = self.retrieve_stopping_place(attrs, &errorSuffix, Ptr::from_mut(&mut stop));
             let mut ok = true;
@@ -2340,7 +2482,7 @@ impl MSRouteHandler {
                             vClass = type_.get_parameter().vehicleClass;
                         }
                     }
-                    parse_geo_edges(positions, geo, vClass, &mut geoEdges, &self.myVehicleParameter.id, true, &mut ok);
+                    self.base2.parse_geo_edges(&*self, &positions, geo, vClass, &mut geoEdges, &self.myVehicleParameter.id, true, &mut ok, true);
                     if ok {
                         edge = geoEdges[0];
                         if geo {
@@ -2704,8 +2846,9 @@ impl MSRouteHandler {
                     arrivalPos,
                 );
                 let raw = Box::into_raw(Box::new(trip));
-                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
-                // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the trip stage is not pushed onto it until SUMORouteHandler is fixed
+                let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                self.myActiveTransportablePlan.m().push(plan_stage);
+                self.myParamStack.push(plan_stage.cast::<Parameterised>());
                 if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
                     self.myActiveTransportablePlan.last().unwrap().m().mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
@@ -2910,8 +3053,9 @@ impl MSRouteHandler {
                     stage.mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
                 let raw = Box::into_raw(Box::new(stage));
-                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
-                // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the walk stage is not pushed onto it until SUMORouteHandler is fixed
+                let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) });
+                self.myActiveTransportablePlan.m().push(plan_stage);
+                self.myParamStack.push(plan_stage.cast::<Parameterised>());
                 self.myActiveRoute.clear();
             }));
             if let Err(payload) = result {
@@ -3175,8 +3319,9 @@ impl MSRouteHandler {
             let arrivalPos: f64 = attrs.get_opt(SUMO_ATTR_ARRIVALPOS, &cid, &mut ok, arrivalDefault, true);
             let stage = MSStageTranship::new(&self.myActiveRoute, cs, speed, departPos, arrivalPos);
             let raw = Box::into_raw(Box::new(stage));
-            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
-            // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the tranship stage is not pushed onto it until SUMORouteHandler is fixed
+            let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) });
+            self.myActiveTransportablePlan.m().push(plan_stage);
+            self.myParamStack.push(plan_stage.cast::<Parameterised>());
             self.myActiveRoute.clear();
         }));
         if let Err(payload) = result {
@@ -3335,9 +3480,17 @@ impl MSRouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        // shortcut: NamedRTree is not ported, lanes are not inserted into the tree until it is (the tree only serves map matching)
-        let _ = tree;
+    pub fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        for edge in MSEdge::get_all_edges().iter() {
+            if edge.m().is_normal() || crate::microsim::ms_globals::using_internal_lanes() {
+                for lane in edge.m().get_lanes().iter() {
+                    let b = lane.m().get_shape(false).get_box_boundary();
+                    let cmin = [b.xmin() as f32, b.ymin() as f32];
+                    let cmax = [b.xmax() as f32, b.ymax() as f32];
+                    tree.m().insert(&cmin, &cmax, &Ptr::new(&lane.base));
+                }
+            }
+        }
     }
 
     /// C++: `MSEdge * MSRouteHandler::retrieveEdge(const std::string &)` [virtual, protected]
@@ -3346,7 +3499,7 @@ impl MSRouteHandler {
     //     return MSEdge::dictionary(id);
     // }
     #[allow(unused_variables)]
-    pub fn retrieve_edge(&mut self, id: &str) -> Ptr<MSEdge> {
+    pub fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
         MSEdge::dictionary_2(id)
     }
 
@@ -3356,7 +3509,7 @@ impl MSRouteHandler {
     //     return &myParsingRNG;
     // }
     #[allow(unused_variables)]
-    pub fn get_rng(&mut self) -> Ptr<SumoRNG> {
+    pub fn get_rng(&self) -> Ptr<SumoRNG> {
         SUMORouteHandler::get_parsing_rng()
     }
 
@@ -3711,7 +3864,9 @@ impl MSRouteHandler {
                             && s.get_stage_type() == MSStageType::WALKING
                             && !lastStage.get_destination_stop().is_null()
                         {
-                            // shortcut: C++ static_cast<MSStageMoving*> of the copied walk needs a checked downcast from MSStage, its departPos is not reset until it exists
+                            // the WALKING type check guarantees the copied stage is an MSStageWalking
+                            let walk: Ptr<MSStageMoving> = cloned.cast();
+                            walk.m().set_depart_pos(lastStage.get_destination_stop().get_access_pos(walk.m().get_edge(), SUMORouteHandler::get_parsing_rng()));
                         }
                         lastStage = *s;
                     }
@@ -4134,13 +4289,14 @@ impl MSRouteHandler {
                 }
                 match startVeh {
                     None => {
-                        // shortcut: mySkippedVehicles is i32 in the skeleton, vehicles skipped earlier cannot be recognised here, so this always reports the unknown vehicle
+                        if !self.mySkippedVehicles.contains(&vehID) {
+                            throw_process_error(format!(
+                                "Unknown vehicle '{}' in triggered departure for {} '{}'.",
+                                vehID, agent, aid
+                            ));
+                        }
                         // we cannot simply throw here because we need to parse the rest of the person (just to discard it)
-                        // C++ uses a dummy edge (MSEdge::getAllEdges().front()) to keep parsing active in that case
-                        throw_process_error(format!(
-                            "Unknown vehicle '{}' in triggered departure for {} '{}'.",
-                            vehID, agent, aid
-                        ));
+                        from = MSEdge::get_all_edges()[0];
                     }
                     Some(sv) => {
                         if sv.departProcedure == DepartDefinition::TRIGGERED {
@@ -4238,8 +4394,9 @@ impl MSRouteHandler {
             stage.set_vehicle_id(attrs.get_opt(SUMO_ATTR_VEHICLE, "", &mut ok, String::new(), true));
             stage.set_vehicle_distance(attrs.get_opt(SUMO_ATTR_ROUTELENGTH, "", &mut ok, -1.0, true));
             let raw = Box::into_raw(Box::new(stage));
-            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
-            // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the stage is not pushed onto it until SUMORouteHandler is fixed
+            let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            self.myActiveTransportablePlan.m().push(plan_stage);
+            self.myParamStack.push(plan_stage.cast::<Parameterised>());
         }));
         if let Err(payload) = result {
             self.delete_active_plan_and_vehicle_parameter();
@@ -4249,3 +4406,15 @@ impl MSRouteHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for MSRouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { self.base.handler() }
+    fn my_start_element(&mut self, element: i32, attrs: &utils::xml::sumo_sax_attributes::SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_start_element(element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.base.my_end_element(element);
+        Ok(())
+    }
+}

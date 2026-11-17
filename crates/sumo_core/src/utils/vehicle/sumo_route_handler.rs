@@ -24,6 +24,10 @@ pub enum SUMORouteHandler_StopPos {
 pub struct SUMORouteHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,
+    /// Virtual dispatch table; must stay after `base`
+    pub vt: &'static SUMORouteHandlerVt,
+    /// C++ virtual `myStartElement` override of a subclass (MSRouteHandler), reached from the SAX trait impl
+    pub start_element_override: Option<fn(&mut SUMORouteHandler, i32, &SUMOSAXAttributes)>,
     /// flag to enable or disable hard fails
     pub myHardFail: bool,
     /// Parameter of the current vehicle, trip, person, container or flow
@@ -112,6 +116,138 @@ const STOP_PRIORITY_SET: i32 = 2 << 22;
 const STOP_INDEX_END: i32 = -1;
 const STOP_INDEX_FIT: i32 = -2;
 
+/// Virtual dispatch table for the pure virtual methods of SUMORouteHandler (and addTransportable).
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct SUMORouteHandlerVt {
+    pub open_vehicle_type_distribution: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub close_vehicle_type_distribution: fn(&mut SUMORouteHandler),
+    pub open_route: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub open_flow: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub open_route_flow: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub open_trip: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub close_route: fn(&mut SUMORouteHandler, bool),
+    pub open_route_distribution: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub close_route_distribution: fn(&mut SUMORouteHandler),
+    pub close_vehicle: fn(&mut SUMORouteHandler),
+    pub close_v_type: fn(&mut SUMORouteHandler),
+    pub close_person: fn(&mut SUMORouteHandler),
+    pub close_person_flow: fn(&mut SUMORouteHandler),
+    pub close_container: fn(&mut SUMORouteHandler),
+    pub close_container_flow: fn(&mut SUMORouteHandler),
+    pub close_flow: fn(&mut SUMORouteHandler),
+    pub close_trip: fn(&mut SUMORouteHandler),
+    pub add_transportable: fn(&mut SUMORouteHandler, &SUMOSAXAttributes, bool),
+    pub add_stop: fn(&mut SUMORouteHandler, &SUMOSAXAttributes) -> Ptr<Parameterised>,
+    pub add_person_trip: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub add_walk: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub add_ride: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub add_transport: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub add_tranship: fn(&mut SUMORouteHandler, &SUMOSAXAttributes),
+    pub get_v_type_parameter: fn(&mut SUMORouteHandler, &str) -> Ptr<SUMOVTypeParameter>,
+}
+
+fn default_open_vehicle_type_distribution(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openVehicleTypeDistribution is pure virtual")
+}
+fn default_close_vehicle_type_distribution(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeVehicleTypeDistribution is pure virtual")
+}
+fn default_open_route(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openRoute is pure virtual")
+}
+fn default_open_flow(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openFlow is pure virtual")
+}
+fn default_open_route_flow(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openRouteFlow is pure virtual")
+}
+fn default_open_trip(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openTrip is pure virtual")
+}
+fn default_close_route(_: &mut SUMORouteHandler, _: bool) {
+    panic!("SUMORouteHandler::closeRoute is pure virtual")
+}
+fn default_open_route_distribution(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::openRouteDistribution is pure virtual")
+}
+fn default_close_route_distribution(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeRouteDistribution is pure virtual")
+}
+fn default_close_vehicle(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeVehicle is pure virtual")
+}
+fn default_close_v_type(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeVType is pure virtual")
+}
+fn default_close_person(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closePerson is pure virtual")
+}
+fn default_close_person_flow(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closePersonFlow is pure virtual")
+}
+fn default_close_container(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeContainer is pure virtual")
+}
+fn default_close_container_flow(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeContainerFlow is pure virtual")
+}
+fn default_close_flow(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeFlow is pure virtual")
+}
+fn default_close_trip(_: &mut SUMORouteHandler) {
+    panic!("SUMORouteHandler::closeTrip is pure virtual")
+}
+pub fn default_add_transportable(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes, _: bool) {}
+fn default_add_stop(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) -> Ptr<Parameterised> {
+    panic!("SUMORouteHandler::addStop is pure virtual")
+}
+fn default_add_person_trip(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::addPersonTrip is pure virtual")
+}
+fn default_add_walk(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::addWalk is pure virtual")
+}
+fn default_add_ride(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::addRide is pure virtual")
+}
+fn default_add_transport(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::addTransport is pure virtual")
+}
+fn default_add_tranship(_: &mut SUMORouteHandler, _: &SUMOSAXAttributes) {
+    panic!("SUMORouteHandler::addTranship is pure virtual")
+}
+fn default_get_v_type_parameter(_: &mut SUMORouteHandler, _: &str) -> Ptr<SUMOVTypeParameter> {
+    panic!("SUMORouteHandler::getVTypeParameter is pure virtual")
+}
+
+static DEFAULT_SUMO_ROUTE_HANDLER_VT: SUMORouteHandlerVt = SUMORouteHandlerVt {
+    open_vehicle_type_distribution: default_open_vehicle_type_distribution,
+    close_vehicle_type_distribution: default_close_vehicle_type_distribution,
+    open_route: default_open_route,
+    open_flow: default_open_flow,
+    open_route_flow: default_open_route_flow,
+    open_trip: default_open_trip,
+    close_route: default_close_route,
+    open_route_distribution: default_open_route_distribution,
+    close_route_distribution: default_close_route_distribution,
+    close_vehicle: default_close_vehicle,
+    close_v_type: default_close_v_type,
+    close_person: default_close_person,
+    close_person_flow: default_close_person_flow,
+    close_container: default_close_container,
+    close_container_flow: default_close_container_flow,
+    close_flow: default_close_flow,
+    close_trip: default_close_trip,
+    add_transportable: default_add_transportable,
+    add_stop: default_add_stop,
+    add_person_trip: default_add_person_trip,
+    add_walk: default_add_walk,
+    add_ride: default_add_ride,
+    add_transport: default_add_transport,
+    add_tranship: default_add_tranship,
+    get_v_type_parameter: default_get_v_type_parameter,
+};
+
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
 fn tag_to_string(tag: SumoXMLTag) -> String {
     utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, v)| *v == tag).map(|(s, _)| s.to_string()).unwrap_or_default()
@@ -140,8 +276,9 @@ impl SUMORouteHandler {
         let begin_default = if utils::options::options_cont::exists("begin") { utils::common::time::string2time(&utils::options::options_cont::get_string("begin")).unwrap_or_else(|e| panic!("{}", e)) } else { 0 };
         let end_default = if utils::options::options_cont::exists("end") { utils::common::time::string2time(&utils::options::options_cont::get_string("end")).unwrap_or_else(|e| panic!("{}", e)) } else { -1 };
         SUMORouteHandler {
-            // shortcut: the SUMOSAXHandler predefined tag/attribute tables are not passed (empty maps), upgrade when GenericSAXHandler::new takes the global SUMO tag table
-            base: GenericSAXHandler::new(&[], SUMO_TAG_NOTHING, &[], SUMO_ATTR_NOTHING, file, expectedRoot),
+            base: utils::xml::sumo_sax_handler::new(file, expectedRoot),
+            vt: &DEFAULT_SUMO_ROUTE_HANDLER_VT,
+            start_element_override: None,
             myHardFail: hardFail,
             myVehicleParameter: Ptr::null(),
             myParamStack: Vec::new(),
@@ -698,8 +835,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_vehicle_type_distribution(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openVehicleTypeDistribution is pure virtual; a subclass must override it")
+        (self.vt.open_vehicle_type_distribution)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::closeVehicleTypeDistribution()` [virtual, pure virtual, protected]
@@ -707,8 +843,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_vehicle_type_distribution(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeVehicleTypeDistribution is pure virtual; a subclass must override it")
+        (self.vt.close_vehicle_type_distribution)(self)
     }
 
     /// C++: `void SUMORouteHandler::openRoute(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -716,8 +851,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_route(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openRoute is pure virtual; a subclass must override it")
+        (self.vt.open_route)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::openFlow(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -725,8 +859,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openFlow is pure virtual; a subclass must override it")
+        (self.vt.open_flow)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::openRouteFlow(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -734,8 +867,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_route_flow(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openRouteFlow is pure virtual; a subclass must override it")
+        (self.vt.open_route_flow)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::openTrip(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -743,8 +875,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_trip(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openTrip is pure virtual; a subclass must override it")
+        (self.vt.open_trip)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::closeRoute(const bool)` [virtual, pure virtual, protected]
@@ -752,8 +883,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_route(&mut self, mayBeDisconnected: bool) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeRoute is pure virtual; a subclass must override it")
+        (self.vt.close_route)(self, mayBeDisconnected)
     }
 
     /// C++: `void SUMORouteHandler::openRouteDistribution(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -761,8 +891,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn open_route_distribution(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::openRouteDistribution is pure virtual; a subclass must override it")
+        (self.vt.open_route_distribution)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::closeRouteDistribution()` [virtual, pure virtual, protected]
@@ -770,8 +899,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_route_distribution(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeRouteDistribution is pure virtual; a subclass must override it")
+        (self.vt.close_route_distribution)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeVehicle()` [virtual, pure virtual, protected]
@@ -779,8 +907,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_vehicle(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeVehicle is pure virtual; a subclass must override it")
+        (self.vt.close_vehicle)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeVType()` [virtual, pure virtual, protected]
@@ -788,8 +915,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_v_type(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeVType is pure virtual; a subclass must override it")
+        (self.vt.close_v_type)(self)
     }
 
     /// C++: `void SUMORouteHandler::closePerson()` [virtual, pure virtual, protected]
@@ -797,8 +923,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_person(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closePerson is pure virtual; a subclass must override it")
+        (self.vt.close_person)(self)
     }
 
     /// C++: `void SUMORouteHandler::closePersonFlow()` [virtual, pure virtual, protected]
@@ -806,8 +931,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_person_flow(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closePersonFlow is pure virtual; a subclass must override it")
+        (self.vt.close_person_flow)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeContainer()` [virtual, pure virtual, protected]
@@ -815,8 +939,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_container(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeContainer is pure virtual; a subclass must override it")
+        (self.vt.close_container)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeContainerFlow()` [virtual, pure virtual, protected]
@@ -824,8 +947,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_container_flow(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeContainerFlow is pure virtual; a subclass must override it")
+        (self.vt.close_container_flow)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeFlow()` [virtual, pure virtual, protected]
@@ -833,8 +955,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_flow(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeFlow is pure virtual; a subclass must override it")
+        (self.vt.close_flow)(self)
     }
 
     /// C++: `void SUMORouteHandler::closeTrip()` [virtual, pure virtual, protected]
@@ -842,8 +963,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn close_trip(&mut self) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::closeTrip is pure virtual; a subclass must override it")
+        (self.vt.close_trip)(self)
     }
 
     /// C++: `void SUMORouteHandler::addTransportable(const SUMOSAXAttributes &, const bool)` [virtual, protected]
@@ -854,8 +974,7 @@ impl SUMORouteHandler {
     //     }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, attrs: &SUMOSAXAttributes, isPerson: bool) {
-        // the C++ base implementation does nothing (both parameters are unused)
-        let _ = (attrs, isPerson);
+        (self.vt.add_transportable)(self, attrs, isPerson)
     }
 
     /// C++: `Parameterised * SUMORouteHandler::addStop(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -863,8 +982,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, attrs: &SUMOSAXAttributes) -> Ptr<Parameterised> {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addStop is pure virtual; a subclass must override it")
+        (self.vt.add_stop)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::addPersonTrip(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -872,8 +990,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_person_trip(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addPersonTrip is pure virtual; a subclass must override it")
+        (self.vt.add_person_trip)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::addWalk(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -881,8 +998,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_walk(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addWalk is pure virtual; a subclass must override it")
+        (self.vt.add_walk)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::addRide(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -890,8 +1006,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_ride(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addRide is pure virtual; a subclass must override it")
+        (self.vt.add_ride)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::addTransport(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -899,8 +1014,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_transport(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addTransport is pure virtual; a subclass must override it")
+        (self.vt.add_transport)(self, attrs)
     }
 
     /// C++: `void SUMORouteHandler::addTranship(const SUMOSAXAttributes &)` [virtual, pure virtual, protected]
@@ -908,8 +1022,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add_tranship(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::addTranship is pure virtual; a subclass must override it")
+        (self.vt.add_tranship)(self, attrs)
     }
 
     /// C++: `bool SUMORouteHandler::checkLastDepart()` [virtual, protected]
@@ -1412,8 +1525,7 @@ impl SUMORouteHandler {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_v_type_parameter(&mut self, refid: &str) -> Ptr<SUMOVTypeParameter> {
-        // shortcut: pure virtual in C++ (no base body); the Rust base struct has no virtual dispatch, so subclasses must provide their own inherent method
-        panic!("SUMORouteHandler::getVTypeParameter is pure virtual; a subclass must override it")
+        (self.vt.get_v_type_parameter)(self, refid)
     }
 
     /// C++: `void SUMORouteHandler::SUMORouteHandler(const SUMORouteHandler &)` [private]
@@ -1434,3 +1546,18 @@ impl SUMORouteHandler {
 
 }
 
+
+impl utils::xml::generic_sax_handler::SaxHandler for SUMORouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler { &mut self.base }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        match self.start_element_override {
+            Some(f) => f(self, element, attrs),
+            None => self.my_start_element(element, attrs),
+        }
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), utils::common::util_exceptions::ProcessError> {
+        self.my_end_element(element);
+        Ok(())
+    }
+}

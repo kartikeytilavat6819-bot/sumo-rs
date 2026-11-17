@@ -110,6 +110,7 @@ impl NIVissimEdge {
             myToTreatAsSame: Vec::new(),
             myAmWithinJunction: false,
         });
+        b.base.myKind = NIVissimAbstractEdgeKind::Edge;
         // base constructor's `dictionary(id, this)`, done here because the base is embedded by value
         NIVissimAbstractEdge::dictionary(id, Ptr::from_mut(&mut b.base));
         MY_MAX_ID.with(|m| {

@@ -2,6 +2,22 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `from >> tmp` for a std::string: skips whitespace and reads one token without lower-casing it
+fn read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 /// C++ class `NIVissimSingleTypeParser_Haltestellendefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Haltestellendefinition.h)
 #[repr(C)]
 pub struct NIVissimSingleTypeParser_Haltestellendefinition {
@@ -28,7 +44,7 @@ impl NIVissimSingleTypeParser_Haltestellendefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Haltestellendefinition::NIVissimSingleTypeParser_Haltestellendefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Haltestellendefinition::~NIVissimSingleTypeParser_Haltestellendefinition() noexcept` [virtual]
@@ -36,7 +52,7 @@ impl NIVissimSingleTypeParser_Haltestellendefinition {
     // NIVissimSingleTypeParser_Haltestellendefinition::~NIVissimSingleTypeParser_Haltestellendefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Haltestellendefinition::~NIVissimSingleTypeParser_Haltestellendefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Haltestellendefinition::parse(std::istream &)` [virtual]
@@ -63,8 +79,25 @@ impl NIVissimSingleTypeParser_Haltestellendefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Haltestellendefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let mut tag = String::new();
+        while tag != "strecke" {
+            tag = self.my_read(from);
+        }
+        while tag != "laenge" {
+            tag = self.my_read(from);
+        }
+        read_raw_token(from);
+        tag = self.read_end_secure(from, "");
+        while tag == "einsteiger" && tag != "DATAEND" {
+            while tag != "linie" {
+                tag = self.my_read(from);
+            }
+            while tag != "einsteiger" && tag != "DATAEND" {
+                tag = self.read_end_secure(from, "");
+            }
+        }
+        true
     }
 
 }

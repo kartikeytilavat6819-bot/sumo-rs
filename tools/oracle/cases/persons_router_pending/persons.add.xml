@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additional>
+  <vType id="bus" vClass="bus" length="12" maxSpeed="13.89"/>
+  <busStop id="bs0" lane="--103226#1_1" startPos="5" endPos="40" lines="bus0"/>
+  <busStop id="bs1" lane="--103226#1_1" startPos="45" endPos="58" lines="v0"/>
+</additional>

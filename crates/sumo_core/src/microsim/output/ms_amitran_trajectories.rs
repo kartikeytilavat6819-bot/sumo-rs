@@ -80,7 +80,13 @@ impl MSAmitranTrajectories {
                 of.open_tag_id(SUMO_TAG_ACTORCONFIG).write_attr(SUMO_ATTR_ID, &veh.get_vehicle_type().get_numerical_id());
                 let c = veh.get_vehicle_type().get_emission_class();
                 if c != 0 {
-                    // shortcut: PollutantsInterface (getAmitranVehicleClass, getFuel, getEuroClass, getWeight) is not ported, so the vehicleclass/fuel/emissionclass/weight attributes are skipped; upgrade when the pollutants interface is ported
+                    of.write_attr(SUMO_ATTR_VEHICLECLASS, &PollutantsInterface::get_amitran_vehicle_class(c));
+                    of.write_attr("fuel", &PollutantsInterface::get_fuel(c));
+                    of.write_attr(SUMO_ATTR_EMISSIONCLASS, &format!("Euro{}", PollutantsInterface::get_euro_class(c)));
+                    let weight = PollutantsInterface::get_weight(c);
+                    if weight > 0. {
+                        of.write_attr(SUMO_ATTR_WEIGHT, &((weight / 10. + 0.5) as i32));
+                    }
                 }
                 of.write_attr(SUMO_ATTR_REF, type_.as_str()).close_tag("");
                 MY_WRITTEN_TYPES.with_borrow_mut(|s| s.insert(type_.clone()));

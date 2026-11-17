@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T03:16:50.317755-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="ref_simple.net.xml"/>
+        <ptstop-output value="ptstops.add.xml"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <busStop id="-1829038636" name="Victor Hugo" lane="-30986828#5_0" startPos="0.00" endPos="40.47" friendlyPos="true">
+        <access lane="482866162#2_0" pos="19.02" length="12.93" friendlyPos="1"/>
+        <access lane="482866232#2_0" pos="17.88" length="11.07" friendlyPos="1"/>
+        <access lane="685577151_0" pos="1.05" length="29.87" friendlyPos="1"/>
+        <access lane="685577153_0" pos="0.89" length="31.11" friendlyPos="1"/>
+        <access lane="685577154_0" pos="1.61" length="31.76" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4788103942" name="Victor Hugo" lane="-519254533#1_0" startPos="5.35" endPos="25.96" friendlyPos="true">
+        <access lane="480036533#1_0" pos="9.26" length="16.78" friendlyPos="1"/>
+        <access lane="480036557#2_0" pos="7.61" length="11.76" friendlyPos="1"/>
+        <access lane="489749949_0" pos="1.46" length="15.88" friendlyPos="1"/>
+        <access lane="489749950_0" pos="2.61" length="16.61" friendlyPos="1"/>
+        <access lane="518654132_0" pos="5.83" length="16.47" friendlyPos="1"/>
+    </busStop>
+    <trainStop id="1829038566" name="Victor Hugo" lane="59398784#4_0" startPos="2.20" endPos="43.04" friendlyPos="true">
+        <access lane="273791676#1_0" pos="20.74" length="10.66" friendlyPos="1"/>
+        <access lane="44932540#0_0" pos="14.80" length="2.03" friendlyPos="1"/>
+        <access lane="492113287#1_0" pos="0.92" length="13.23" friendlyPos="1"/>
+        <access lane="492113295#1_0" pos="0.20" length="12.90" friendlyPos="1"/>
+        <access lane="492113295#2_0" pos="6.53" length="8.15" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="1829038578" name="Victor Hugo" lane="37118659#9_0" startPos="13.93" endPos="54.76" friendlyPos="true">
+        <access lane="168908051#4_0" pos="22.89" length="10.75" friendlyPos="1"/>
+        <access lane="273791673#1_0" pos="6.70" length="12.54" friendlyPos="1"/>
+        <access lane="44932540#0_0" pos="14.79" length="2.76" friendlyPos="1"/>
+        <access lane="492113288#1_0" pos="4.30" length="14.03" friendlyPos="1"/>
+        <access lane="492113295#2_0" pos="6.17" length="12.91" friendlyPos="1"/>
+    </trainStop>
+    <busStop id="1829038636" name="Victor Hugo" lane="30986828#5_0" startPos="0.00" endPos="40.47" friendlyPos="true">
+        <access lane="482866162#2_0" pos="19.02" length="12.93" friendlyPos="1"/>
+        <access lane="482866232#2_0" pos="17.88" length="11.07" friendlyPos="1"/>
+        <access lane="685577151_0" pos="1.05" length="29.87" friendlyPos="1"/>
+        <access lane="685577153_0" pos="0.89" length="31.11" friendlyPos="1"/>
+        <access lane="685577154_0" pos="1.61" length="31.76" friendlyPos="1"/>
+    </busStop>
+    <busStop id="1831139730" name="Victor Hugo - Belgrade" lane="1349872838#0_0" startPos="0.00" endPos="20.70" friendlyPos="true">
+        <access lane="1545947029#1_0" pos="20.69" length="10.79" friendlyPos="1"/>
+        <access lane="1545947031#0_0" pos="0.00" length="13.33" friendlyPos="1"/>
+        <access lane="1545947032#0_0" pos="0.20" length="14.63" friendlyPos="1"/>
+        <access lane="1545947032#1_0" pos="0.15" length="11.47" friendlyPos="1"/>
+        <access lane="482866062_0" pos="55.94" length="15.56" friendlyPos="1"/>
+    </busStop>
+    <busStop id="1831139761" name="Victor Hugo - Belgrade" lane="33100107_0" startPos="0.00" endPos="22.31" friendlyPos="true">
+        <access lane="1574038659#1_0" pos="0.20" length="24.04" friendlyPos="1"/>
+        <access lane="258883132_0" pos="24.40" length="23.63" friendlyPos="1"/>
+        <access lane="273791720#4_0" pos="12.99" length="6.19" friendlyPos="1"/>
+        <access lane="482866054#2_0" pos="13.96" length="12.92" friendlyPos="1"/>
+        <access lane="482866076#1_0" pos="8.30" length="12.54" friendlyPos="1"/>
+    </busStop>
+    <trainStop id="1900674548" name="Hubert Dubedout - Maison du tourisme" lane="59398784#14_0" startPos="10.65" endPos="35.65" friendlyPos="true">
+        <access lane="273791683#0_0" pos="0.00" length="41.23" friendlyPos="1"/>
+        <access lane="273791683#10_0" pos="0.20" length="38.55" friendlyPos="1"/>
+        <access lane="273791683#11_0" pos="0.00" length="39.18" friendlyPos="1"/>
+        <access lane="273791683#9_0" pos="62.61" length="39.70" friendlyPos="1"/>
+        <access lane="492113273#0_0" pos="0.00" length="66.75" friendlyPos="1"/>
+    </trainStop>
+    <busStop id="21669804" name="Victor Hugo - Belgrade" lane="190112933#0_0" startPos="0.95" endPos="16.87" friendlyPos="true">
+        <access lane="1551015988#1_0" pos="6.29" length="10.05" friendlyPos="1"/>
+        <access lane="1551015989#1_0" pos="0.20" length="18.02" friendlyPos="1"/>
+        <access lane="482866022_0" pos="0.34" length="13.49" friendlyPos="1"/>
+        <access lane="482866024_0" pos="0.20" length="12.73" friendlyPos="1"/>
+        <access lane="482866076#1_0" pos="33.92" length="13.06" friendlyPos="1"/>
+    </busStop>
+    <busStop id="4788103942" name="Victor Hugo" lane="519254533#1_0" startPos="0.00" endPos="20.62" friendlyPos="true">
+        <access lane="480036533#1_0" pos="9.26" length="16.78" friendlyPos="1"/>
+        <access lane="480036557#2_0" pos="7.61" length="11.76" friendlyPos="1"/>
+        <access lane="489749949_0" pos="1.46" length="15.88" friendlyPos="1"/>
+        <access lane="489749950_0" pos="2.61" length="16.61" friendlyPos="1"/>
+        <access lane="518654132_0" pos="5.83" length="16.47" friendlyPos="1"/>
+    </busStop>
+    <trainStop id="736621113" name="Hubert Dubedout - Maison du tourisme" lane="37118659#0_0" startPos="129.25" endPos="154.25" friendlyPos="true">
+        <access lane="273791683#0_0" pos="0.00" length="42.50" friendlyPos="1"/>
+        <access lane="273791683#10_0" pos="0.00" length="38.64" friendlyPos="1"/>
+        <access lane="273791683#11_0" pos="0.00" length="40.10" friendlyPos="1"/>
+        <access lane="273791683#9_0" pos="62.61" length="38.93" friendlyPos="1"/>
+        <access lane="492113274#0_0" pos="0.00" length="66.52" friendlyPos="1"/>
+    </trainStop>
+    <busStop id="9905349792" name="Lycée Champollion" lane="23016001#1_0" startPos="10.87" endPos="24.72" friendlyPos="true">
+        <access lane="1472359675_0" pos="0.77" length="30.89" friendlyPos="1"/>
+        <access lane="1472359676_0" pos="0.00" length="31.19" friendlyPos="1"/>
+        <access lane="480036554_0" pos="17.88" length="9.39" friendlyPos="1"/>
+        <access lane="480036555#0_0" pos="0.20" length="30.98" friendlyPos="1"/>
+        <access lane="480036558_0" pos="26.77" length="13.22" friendlyPos="1"/>
+    </busStop>
+</additional>

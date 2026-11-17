@@ -191,7 +191,158 @@ impl TraCIServerAPI_Person {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Person::processSet")
+        use crate::libsumo::person::Person;
+        use crate::libsumo::storage_helper::StorageHelper;
+        use crate::libsumo::tra_ci_defs::TraCIStage;
+        // shortcut: C++ try/catch turns ProcessError and TraCIException raised by StorageHelper/Person into an error status; here they panic, upgrade when StorageHelper and Person return Result
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().unwrap();
+        if variable != VAR_PARAMETER
+            && variable != ADD
+            && variable != REMOVE
+            && variable != APPEND_STAGE
+            && variable != REPLACE_STAGE
+            && variable != REMOVE_STAGE
+            && variable != CMD_REROUTE_TRAVELTIME
+            && variable != VAR_MOVE_TO
+            && variable != MOVE_TO_XY
+            && variable != VAR_SPEED
+            && variable != VAR_TYPE
+            && variable != VAR_SPEED_FACTOR
+            && variable != VAR_LENGTH
+            && variable != VAR_WIDTH
+            && variable != VAR_HEIGHT
+            && variable != VAR_MINGAP
+            && variable != VAR_COLOR
+        {
+            return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, &format!("Change Person State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)), outputStorage);
+        }
+        // id
+        let id = inputStorage.read_string().unwrap();
+        let shouldExist = variable != ADD;
+        let p: Ptr<MSTransportable> = MSNet::get_instance().m().get_person_control().get(&id);
+        if p.is_null() && shouldExist {
+            return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, &format!("Person '{}' is not known", id), outputStorage);
+        }
+        // process
+        match variable {
+            VAR_SPEED => {
+                // set the speed for all present and future (walking) stages and modify the vType so that stages added later are also affected
+                Person::set_speed(&id, StorageHelper::read_typed_double(inputStorage, "Setting speed requires a double."));
+            }
+            VAR_TYPE => {
+                Person::set_type(&id, &StorageHelper::read_typed_string(inputStorage, "The vehicle type id must be given as a string."));
+            }
+            VAR_SPEED_FACTOR => {
+                Person::set_speed_factor(&id, StorageHelper::read_typed_double(inputStorage, "Setting SpeedFactor requires a double."));
+            }
+            VAR_COLOR => {
+                Person::set_color(&id, &StorageHelper::read_typed_color(inputStorage, "The color must be given using the according type."));
+            }
+            ADD => {
+                StorageHelper::read_compound(inputStorage, 4, "Adding a person needs four parameters.");
+                let vTypeID = StorageHelper::read_typed_string(inputStorage, "First parameter (type) requires a string.");
+                let edgeID = StorageHelper::read_typed_string(inputStorage, "Second parameter (edge) requires a string.");
+                let depart = StorageHelper::read_typed_double(inputStorage, "Third parameter (depart) requires a double.");
+                let pos = StorageHelper::read_typed_double(inputStorage, "Fourth parameter (position) requires a double.");
+                Person::add(&id, &edgeID, pos, depart, vTypeID);
+            }
+            REMOVE => {
+                Person::remove(&id, StorageHelper::read_typed_byte(inputStorage, "Removing a person requires a byte.") as i8);
+            }
+            APPEND_STAGE => {
+                let parameterCount = StorageHelper::read_compound(inputStorage, -1, "Adding a person stage requires a compound object.");
+                if parameterCount == 13 {
+                    let mut stage = TraCIStage::new(INVALID_INT_VALUE, "", "", "", &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "", INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "");
+                    StorageHelper::read_stage(inputStorage, &mut stage, "");
+                    Person::append_stage(&id, &stage);
+                } else {
+                    let stageType = StorageHelper::read_typed_int(inputStorage, "The first parameter for adding a stage must be the stage type given as int.");
+                    if stageType == STAGE_DRIVING {
+                        // append driving stage
+                        if parameterCount != 4 {
+                            return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, "Adding a driving stage needs four parameters.", outputStorage);
+                        }
+                        let edgeID = StorageHelper::read_typed_string(inputStorage, "Second parameter (edge) requires a string.");
+                        let lines = StorageHelper::read_typed_string(inputStorage, "Third parameter (lines) requires a string.");
+                        let stopID = StorageHelper::read_typed_string(inputStorage, "Fourth parameter (stopID) requires a string.");
+                        Person::append_driving_stage(&id, &edgeID, &lines, &stopID);
+                    } else if stageType == STAGE_WAITING {
+                        // append waiting stage
+                        if parameterCount != 4 {
+                            return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, "Adding a waiting stage needs four parameters.", outputStorage);
+                        }
+                        let duration = StorageHelper::read_typed_double(inputStorage, "Second parameter (duration) requires a double.");
+                        let description = StorageHelper::read_typed_string(inputStorage, "Third parameter (description) requires a string.");
+                        let stopID = StorageHelper::read_typed_string(inputStorage, "Fourth parameter (stopID) requires a string.");
+                        Person::append_waiting_stage(&id, duration, &description, &stopID);
+                    } else if stageType == STAGE_WALKING {
+                        // append walking stage
+                        if parameterCount != 6 {
+                            return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, "Adding a walking stage needs six parameters.", outputStorage);
+                        }
+                        let edgeIDs = StorageHelper::read_typed_string_list(inputStorage, "Second parameter (edges) route must be defined as a list of edge ids.");
+                        let arrivalPos = StorageHelper::read_typed_double(inputStorage, "Third parameter (arrivalPos) requires a double.");
+                        let duration = StorageHelper::read_typed_double(inputStorage, "Fourth parameter (duration) requires a double.");
+                        let speed = StorageHelper::read_typed_double(inputStorage, "Fifth parameter (speed) requires a double.");
+                        let stopID = StorageHelper::read_typed_string(inputStorage, "Sixth parameter (stopID) requires a string.");
+                        Person::append_walking_stage(&id, &edgeIDs, arrivalPos, duration, speed, &stopID);
+                    }
+                }
+            }
+            REPLACE_STAGE => {
+                StorageHelper::read_compound(inputStorage, 2, "Replacing a person stage requires a compound object of size 2.");
+                let nextStageIndex = StorageHelper::read_typed_int(inputStorage, "First parameter of replace stage should be an integer");
+                StorageHelper::read_compound(inputStorage, 13, "Second parameter of replace stage should be a compound object of size 13");
+                let mut stage = TraCIStage::new(INVALID_INT_VALUE, "", "", "", &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "", INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "");
+                StorageHelper::read_stage(inputStorage, &mut stage, "");
+                Person::replace_stage(&id, nextStageIndex, &stage);
+            }
+            REMOVE_STAGE => {
+                Person::remove_stage(&id, StorageHelper::read_typed_int(inputStorage, "The message must contain the stage index."));
+            }
+            CMD_REROUTE_TRAVELTIME => {
+                StorageHelper::read_compound(inputStorage, 0, "Resuming requires an empty compound object.");
+                Person::reroute_traveltime(&id);
+            }
+            VAR_MOVE_TO => {
+                StorageHelper::read_compound(inputStorage, 3, "Setting position should obtain the edge id, the position and the lateral position.");
+                let laneID = StorageHelper::read_typed_string(inputStorage, "The first parameter for setting a position must be the laneID given as a string.");
+                let position = StorageHelper::read_typed_double(inputStorage, "The second parameter for setting a position must be the position given as a double.");
+                let posLat = StorageHelper::read_typed_double(inputStorage, "The third parameter for setting a position must be the lateral position given as a double.");
+                Person::move_to(&id, &laneID, position, posLat);
+            }
+            MOVE_TO_XY => {
+                let parameterCount = StorageHelper::read_compound(inputStorage, -1, "MoveToXY person requires a compound object.");
+                if parameterCount != 5 && parameterCount != 6 {
+                    return server.write_error_status_cmd(CMD_SET_PERSON_VARIABLE, "MoveToXY person should obtain: edgeID, x, y, angle, keepRouteFlag and optionally matchThreshold.", outputStorage);
+                }
+                let edgeID = StorageHelper::read_typed_string(inputStorage, "The first parameter for moveToXY must be the edge ID given as a string.");
+                let x = StorageHelper::read_typed_double(inputStorage, "The second parameter for moveToXY must be the x-position given as a double.");
+                let y = StorageHelper::read_typed_double(inputStorage, "The third parameter for moveToXY must be the y-position given as a double.");
+                let angle = StorageHelper::read_typed_double(inputStorage, "The fourth parameter for moveToXY must be the angle given as a double.");
+                let keepRouteFlag = StorageHelper::read_typed_byte(inputStorage, "The fifth parameter for moveToXY must be the keepRouteFlag given as a byte.");
+                let mut matchThreshold: f64 = 100.;
+                if parameterCount == 6 {
+                    matchThreshold = StorageHelper::read_typed_double(inputStorage, "The sixth parameter for moveToXY must be the matchThreshold given as a double.");
+                }
+                Person::move_to_xy(&id, &edgeID, x, y, angle, keepRouteFlag, matchThreshold);
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                Person::set_parameter(&id, &name, &value);
+            }
+            _ => {
+                if !TraCIServerAPI_VehicleType::set_variable(CMD_SET_PERSON_VARIABLE, variable, p.m().get_singular_type().get_id(), server, inputStorage, outputStorage) {
+                    return false;
+                }
+            }
+        }
+        server.write_status_cmd(CMD_SET_PERSON_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `void TraCIServerAPI_Person::TraCIServerAPI_Person(const TraCIServerAPI_Person &)` [private]

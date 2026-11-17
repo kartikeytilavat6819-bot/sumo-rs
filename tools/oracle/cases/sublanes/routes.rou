@@ -1,0 +1,13 @@
+<routes>
+    <vType id="car" length="4.5" minGapLat="0.6" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5"/>
+    <vType id="slow" length="6" minGapLat="0.6" maxSpeed="5" accel="2.6" decel="4.5" sigma="0.5"/>
+    <route id="r0" edges="100"/>
+    <vehicle id="a0" type="car" route="r0" depart="0" departLane="0" departPos="5"/>
+    <vehicle id="a1" type="car" route="r0" depart="0" departLane="1" departPos="5"/>
+    <vehicle id="s0" type="slow" route="r0" depart="2" departLane="0" departPos="20"/>
+    <vehicle id="a2" type="car" route="r0" depart="4" departLane="1" departPos="5"/>
+    <vehicle id="a3" type="car" route="r0" depart="6" departLane="0" departPos="5"/>
+    <vehicle id="s1" type="slow" route="r0" depart="8" departLane="1" departPos="20"/>
+    <vehicle id="a4" type="car" route="r0" depart="10" departLane="0" departPos="5"/>
+    <vehicle id="a5" type="car" route="r0" depart="12" departLane="1" departPos="5"/>
+</routes>

@@ -118,9 +118,19 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str) -> Self {
-        MSTransportableDevice_FCD {
-            base: MSTransportableDevice::new(holder, id),
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            false
         }
+        static MS_MOVE_REMINDER_VT: crate::microsim::ms_move_reminder::MSMoveReminderVt = crate::microsim::ms_move_reminder::MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = MSTransportableDevice_FCD {
+            base: MSTransportableDevice::new(holder, id),
+        };
+        this.base.base2.vt = &MS_MOVE_REMINDER_VT;
+        this
     }
 
     /// C++: `void MSTransportableDevice_FCD::MSTransportableDevice_FCD(const MSTransportableDevice_FCD &)` [private]
@@ -128,7 +138,7 @@ impl MSTransportableDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSTransportableDevice_FCD) -> Self {
-        todo!("port MSTransportableDevice_FCD::MSTransportableDevice_FCD")
+        panic!("MSTransportableDevice_FCD copy constructor is invalidated in SUMO")
     }
 
     /// C++: `MSTransportableDevice_FCD & MSTransportableDevice_FCD::operator=(const MSTransportableDevice_FCD &)` [private]
@@ -136,7 +146,7 @@ impl MSTransportableDevice_FCD {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSTransportableDevice_FCD) -> &mut MSTransportableDevice_FCD {
-        todo!("port MSTransportableDevice_FCD::operator=")
+        panic!("MSTransportableDevice_FCD assignment operator is invalidated in SUMO")
     }
 
 }

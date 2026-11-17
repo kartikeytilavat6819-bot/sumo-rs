@@ -40,7 +40,13 @@ impl PCTypeDefHandler {
     // {}
     #[allow(unused_variables)]
     pub fn new(oc: &mut OptionsCont, con: &mut PCTypeMap) -> Self {
-        todo!("port PCTypeDefHandler::PCTypeDefHandler")
+        let overwrite = !oc.is_default("type");
+        PCTypeDefHandler {
+            base: utils::xml::sumo_sax_handler::new("", ""),
+            myOptions: Ptr::from_mut(oc),
+            myContainer: Ptr::from_mut(con),
+            myOverwriteType: overwrite,
+        }
     }
 
     /// C++: `void PCTypeDefHandler::~PCTypeDefHandler() noexcept` [virtual]
@@ -48,7 +54,7 @@ impl PCTypeDefHandler {
     // PCTypeDefHandler::~PCTypeDefHandler() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PCTypeDefHandler::~PCTypeDefHandler")
+        // C++ destructor body is empty; the Rust fields are dropped automatically
     }
 
     /// C++: `void PCTypeDefHandler::myStartElement(int, const SUMOSAXAttributes &)` [virtual, protected]
@@ -88,7 +94,36 @@ impl PCTypeDefHandler {
     // }
     #[allow(unused_variables)]
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
-        todo!("port PCTypeDefHandler::myStartElement")
+        if element == SUMO_TAG_POLYTYPE {
+            let mut ok = true;
+            // get the id, report an error if not given or empty...
+            let id: String = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
+            if !ok {
+                return;
+            }
+            let options = self.myOptions;
+            let icon: String = attrs.get_opt::<String>(SUMO_ATTR_ICON, &id, &mut ok, or_panic(options.get_string("icon")), true);
+            let layer: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LAYER, &id, &mut ok, or_panic(options.get_float("layer")), true);
+            let discard: bool = attrs.get_opt::<bool>(SUMO_ATTR_DISCARD, &id, &mut ok, false, true);
+            let mut allowFill = if or_panic(options.get_bool("fill")) { PCTypeMap_Filltype::FILL } else { PCTypeMap_Filltype::NOFILL };
+            if attrs.has_attribute(SUMO_ATTR_FILL) {
+                let allowFillS: String = attrs.get::<String>(SUMO_ATTR_FILL, &id, &mut ok, true);
+                if allowFillS == "force" {
+                    allowFill = PCTypeMap_Filltype::FORCE;
+                } else {
+                    allowFill = if or_panic(utils::common::string_utils::to_bool(&allowFillS)) { PCTypeMap_Filltype::FILL } else { PCTypeMap_Filltype::NOFILL };
+                }
+            }
+            let ty: String = attrs.get_opt::<String>(SUMO_ATTR_NAME, &id, &mut ok, if self.myOverwriteType { or_panic(options.get_string("type")) } else { id.clone() }, true);
+            let prefix: String = attrs.get_opt::<String>(SUMO_ATTR_PREFIX, &id, &mut ok, or_panic(options.get_string("prefix")), true);
+            let color: String = attrs.get_opt::<String>(SUMO_ATTR_COLOR, &id, &mut ok, or_panic(options.get_string("color")), true);
+            let angle: f64 = attrs.get_opt::<f64>(SUMO_ATTR_ANGLE, &id, &mut ok, DEFAULT_ANGLE, true);
+            let imgFile: String = attrs.get_opt::<String>(SUMO_ATTR_IMGFILE, &id, &mut ok, DEFAULT_IMG_FILE.to_string(), true);
+            // !!! what about error handling?
+            if !self.myContainer.m().add(&id, &ty, &color, &prefix, &icon, layer, angle, &imgFile, discard, allowFill) {
+                write_errorf!("Could not add polygon type '%' (probably the id is already used).", id);
+            }
+        }
     }
 
     /// C++: `void PCTypeDefHandler::PCTypeDefHandler(const PCTypeDefHandler &)` [private]
@@ -96,7 +131,7 @@ impl PCTypeDefHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &PCTypeDefHandler) -> Self {
-        todo!("port PCTypeDefHandler::PCTypeDefHandler")
+        panic!("PCTypeDefHandler copy constructor is private and never defined in C++; copying is not allowed")
     }
 
     /// C++: `PCTypeDefHandler & PCTypeDefHandler::operator=(const PCTypeDefHandler &)` [private]
@@ -104,8 +139,13 @@ impl PCTypeDefHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &PCTypeDefHandler) -> &mut PCTypeDefHandler {
-        todo!("port PCTypeDefHandler::operator=")
+        panic!("PCTypeDefHandler::operator= is private and never defined in C++; assignment is not allowed")
     }
 
+}
+
+// C++ TL()/WRITE_ERRORF argument evaluation: a failing options lookup throws, so it panics here
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
 }
 

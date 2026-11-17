@@ -1,6 +1,15 @@
 //! Port of utils/router/Node2EdgeRouter.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::a_star_lookup_table::AStarLookupTableKind;
+use crate::utils::router::a_star_router::AStarRouter_EdgeInfoComparator;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
+
+/// C++ `Named::getIDSecure(vehicle)`
+fn vehicle_id_secure<V: RouterVehicle>(vehicle: Ptr<V>) -> String {
+    if vehicle.is_null() { "NULL".to_string() } else { vehicle.get_id() }
+}
 
 /// C++ typedef `AbstractLookupTable<E, V> Node2EdgeRouter::LookupTable`
 pub type Node2EdgeRouter_LookupTable = Unmapped /* AbstractLookupTable<E, V> */;
@@ -26,7 +35,7 @@ impl<E, N, V, M> std::ops::DerefMut for Node2EdgeRouter<E, N, V, M> {
     }
 }
 
-impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
+impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     /// C++: `typename SUMOAbstractRouter<E, V>::EdgeInfo * Node2EdgeRouter::edgeInfo(const E *const)`
     /// Returns the edge information for the passed edge
     // typename SUMOAbstractRouter<E, V>::EdgeInfo* edgeInfo(const E* const edge) {
@@ -34,7 +43,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info(&mut self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Node2EdgeRouter::edgeInfo")
+        Ptr::from_mut(&mut self.myEdgeInfos[edge.numerical_id() as usize])
     }
 
     /// C++: `const typename SUMOAbstractRouter<E, V>::EdgeInfo * Node2EdgeRouter::edgeInfo(const E *const) const` [const]
@@ -44,7 +53,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn edge_info_2(&self, edge: Ptr<E>) -> Ptr<SUMOAbstractRouter_EdgeInfo> {
-        todo!("port Node2EdgeRouter::edgeInfo")
+        Ptr::new(&self.myEdgeInfos[edge.numerical_id() as usize])
     }
 
     /// C++: `void Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
@@ -55,8 +64,11 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>")
+    pub fn new(edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: AStarRouter::new(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const std::shared_ptr<const LookupTable>, const bool, const bool)`
@@ -67,8 +79,11 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         AStarRouter<E, V, M>(edges, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions) {
     //     }
     #[allow(unused_variables)]
-    pub fn new_2(edgeInfos: &i32, unbuildIsWarning: bool, operation: SUMOAbstractRouter_Operation, lookup: Rc<AStarRouter_LookupTable>, havePermissions: bool, haveRestrictions: bool) -> Self {
-        todo!("port Node2EdgeRouter::Node2EdgeRouter<E, N, V, M>")
+    pub fn new_2(edgeInfos: &Vec<SUMOAbstractRouter_EdgeInfo>, unbuildIsWarning: bool, operation: Option<SUMOAbstractRouter_TypedOperation<E, V>>, lookup: Option<Rc<AStarLookupTableKind<E, V, M>>>, havePermissions: bool, haveRestrictions: bool) -> Self {
+        Self {
+            base: AStarRouter::new_2(edgeInfos, unbuildIsWarning, operation, lookup, havePermissions, haveRestrictions),
+            _p: std::marker::PhantomData,
+        }
     }
 
     /// C++: `void Node2EdgeRouter::~Node2EdgeRouter<E, N, V, M>()` [virtual]
@@ -78,7 +93,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port Node2EdgeRouter::~Node2EdgeRouter<E, N, V, M>")
+        utils::common::msg_handler::write_message("The following stats for AStarRouter (which might also be empty) belong to Node2EdgeRouter, a derived class:");
     }
 
     /// C++: `SUMOAbstractRouter<E, V> * Node2EdgeRouter::clone()` [virtual]
@@ -89,7 +104,9 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        todo!("port Node2EdgeRouter::clone")
+        let unbuildIsWarning = self.myErrorMsgHandler == utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| Ptr::from_mut(h));
+        let router: Node2EdgeRouter<E, N, V, M> = Node2EdgeRouter::new_2(&self.myEdgeInfos, unbuildIsWarning, self.myOperation, self.myLookupTable.clone(), self.myHavePermissions, self.myHaveRestrictions);
+        Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
     }
 
     /// C++: `void Node2EdgeRouter::reset(const V *const)` [virtual]
@@ -107,7 +124,14 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn reset(&mut self, vehicle: Ptr<V>) {
-        todo!("port Node2EdgeRouter::reset")
+        for edgeInfo in self.myFrontierList.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFrontierList.clear();
+        for edgeInfo in self.myFound.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFound.clear();
     }
 
     /// C++: `bool Node2EdgeRouter::computeNode2Edges(const N *, const int &, const V *const, SUMOTime, bool)`
@@ -229,8 +253,121 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn compute_node2_edges(&mut self, fromNode: Ptr<N>, toEdges: &i32, vehicle: Ptr<V>, msTime: SUMOTime, silent: bool) -> bool {
-        todo!("port Node2EdgeRouter::computeNode2Edges")
+    pub fn compute_node2_edges(&mut self, fromNode: Ptr<N>, toEdges: &std::collections::HashSet<Ptr<E>>, vehicle: Ptr<V>, msTime: SUMOTime, silent: bool) -> bool
+    where
+        N: RouterNode<Edge = E>,
+    {
+        // check whether fromNode and to can be used
+        let mut found = false;
+        let mut allVisited = true; // we try to disprove this
+        for from in fromNode.m().outgoing().iter().copied() {
+            if from.is_internal() {
+                continue;
+            }
+            if self.is_prohibited(from, vehicle, steps2time(msTime)) {
+                if !silent {
+                    self.myErrorMsgHandler.m().inform(&format!("Vehicle '{}' is not allowed on source edge '{}'.", vehicle_id_secure(vehicle), from.id()), true);
+                }
+            } else {
+                found = true;
+                break;
+            }
+        }
+        if !found {
+            return false;
+        }
+        let fromEdges: Vec<Ptr<E>> = fromNode.m().outgoing().to_vec();
+
+        if fromEdges.is_empty() || toEdges.is_empty() {
+            // nothing to do here
+            return false;
+        }
+
+        let mut length = 0.; // dummy for the via edge cost update
+        self.start_query();
+
+        let vClass = if vehicle.is_null() { SVC_IGNORING } else { vehicle.v_class() };
+        self.init(fromEdges, vehicle, msTime);
+        self.myAmClean = false;
+        // loop
+        let mut num_visited: i32 = 0;
+        let cmp = AStarRouter_EdgeInfoComparator {};
+        while !self.myFrontierList.is_empty() {
+            num_visited += 1;
+            // use the edge with the minimal length
+            let minimumInfo = self.myFrontierList[0];
+            let minEdge = minimumInfo.edge.cast::<E>();
+            // check whether the destination edge was already reached
+            // determinism: C++ iterates an unordered_set here, but only whether every target is visited matters
+            if toEdges.contains(&minEdge) {
+                for to in toEdges.iter() {
+                    if !self.myEdgeInfos[to.numerical_id() as usize].visited {
+                        allVisited = false;
+                        break;
+                    }
+                }
+                if allVisited {
+                    self.end_query(num_visited);
+                    return true;
+                }
+            }
+            std_pop_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+            self.myFrontierList.pop();
+            self.myFound.push(minimumInfo);
+            minimumInfo.m().visited = true;
+            let effortDelta = self.get_effort(minEdge, vehicle, minimumInfo.leaveTime);
+            let leaveTime = minimumInfo.leaveTime + self.get_travel_time(minEdge, vehicle, minimumInfo.leaveTime, effortDelta);
+
+            let heuristic_remaining = 0.;
+            if heuristic_remaining == UNREACHABLE {
+                continue;
+            }
+            let heuristicEffort = minimumInfo.effort + effortDelta + heuristic_remaining;
+            // check all ways from the edge with the minimal length
+            for follower in minEdge.via_successors(vClass, false) {
+                let followerInfo = Ptr::from_mut(&mut self.myEdgeInfos[follower.0.numerical_id() as usize]);
+                // check whether it can be used
+                if self.is_prohibited(follower.0, vehicle, leaveTime) {
+                    continue;
+                }
+                let mut effort = minimumInfo.effort + effortDelta;
+                let mut time = leaveTime;
+                self.update_via_edge_cost(follower.1, vehicle, &mut time, &mut effort, &mut length);
+                let oldEffort = followerInfo.effort;
+                if !followerInfo.visited && effort < oldEffort {
+                    followerInfo.m().effort = effort;
+                    // if we use the effort including the via effort below we would count the via twice as shown by the ticket676 test
+                    // but we should never get below the real effort, see #12463
+                    followerInfo.m().heuristicEffort = max2(min2(heuristicEffort, followerInfo.heuristicEffort), effort);
+                    followerInfo.m().leaveTime = time;
+                    followerInfo.m().prev = minimumInfo;
+                    if oldEffort == f64::MAX {
+                        self.myFrontierList.push(followerInfo);
+                        std_push_heap(&mut self.myFrontierList, &|a, b| cmp.call_op::<E, V>(a, b));
+                    } else {
+                        let fi = self.myFrontierList.iter().position(|p| *p == followerInfo).expect("follower with a finite effort is on the frontier");
+                        std_push_heap(&mut self.myFrontierList[..=fi], &|a, b| cmp.call_op::<E, V>(a, b));
+                    }
+                }
+            }
+        }
+        self.end_query(num_visited);
+        for to in toEdges.iter() {
+            if self.myEdgeInfos[to.numerical_id() as usize].visited {
+                if !silent {
+                    let fromId = fromNode.m().id().to_string();
+                    let args: [&dyn ToStringPrec; 1] = [&fromId];
+                    self.myErrorMsgHandler.m().informf("Only some connections between node '%' and the given edges were found.", &args);
+                }
+                return true; // at least one connection could be found
+            }
+        }
+        if !silent {
+            let fromId = fromNode.m().id().to_string();
+            let args: [&dyn ToStringPrec; 1] = [&fromId];
+            self.myErrorMsgHandler.m().informf("No connections between node '%' and the given edges were found.", &args);
+        }
+        false
     }
 
     /// C++: `bool Node2EdgeRouter::computeNode2Edge(const N *, const E *, const V *const, SUMOTime, int &, bool)`
@@ -347,7 +484,8 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
-        todo!("port Node2EdgeRouter::computeNode2Edge")
+        // shortcut: C++ calls the two-argument isProhibited(edge, vehicle) and EdgeInfo::prohibited, which no base class provides (the C++ template is not instantiated for this path), upgrade when computeNode2Edge is instantiated in C++
+        panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported")
     }
 
     /// C++: `void Node2EdgeRouter::updateViaCostUpToEdge(const E *const, const E *const, const V *const, double &, double &, double &) const` [const]
@@ -364,7 +502,12 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     // }
     #[allow(unused_variables)]
     pub fn update_via_cost_up_to_edge(&self, prev: Ptr<E>, e: Ptr<E>, v: Ptr<V>, time: &mut f64, effort: &mut f64, length: &mut f64) {
-        todo!("port Node2EdgeRouter::updateViaCostUpToEdge")
+        for follower in prev.via_successors(SVC_IGNORING, false) {
+            if follower.0 == e {
+                self.update_via_edge_cost(follower.1, v, time, effort, length);
+                break;
+            }
+        }
     }
 
     /// C++: `double Node2EdgeRouter::recomputeCostsNoLastEdge(const int &, const V *const, SUMOTime, double *) const` [const]
@@ -394,8 +537,31 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //         return effort;
     //     }
     #[allow(unused_variables)]
-    pub fn recompute_costs_no_last_edge(&self, edges: &i32, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
-        todo!("port Node2EdgeRouter::recomputeCostsNoLastEdge")
+    pub fn recompute_costs_no_last_edge(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 {
+        let lastEdge = *edges.last().unwrap();
+        let mut time = utils::common::time::steps2time(msTime);
+        let mut effort = 0.;
+        let mut length = 0.;
+        let lengthp: &mut f64 = if lengthp.is_null() {
+            &mut length
+        } else {
+            *lengthp.m() = 0.;
+            lengthp.m()
+        };
+        let mut prev: Ptr<E> = Ptr::null();
+        for e in edges.iter().copied() {
+            if e == lastEdge {
+                break;
+            }
+            // shortcut: the C++ calls the two-argument isProhibited(e, v), which SUMOAbstractRouter does not provide, upgrade when that overload is ported
+            if panic!("shortcut: two-argument isProhibited(edge, vehicle) is not ported") {
+                return -1.;
+            }
+            self.update_via_cost(prev, e, v, &mut time, &mut effort, lengthp);
+            prev = e;
+        }
+        self.update_via_cost_up_to_edge(prev, lastEdge, v, &mut time, &mut effort, lengthp);
+        effort
     }
 
     /// C++: `void Node2EdgeRouter::setBulkMode(const bool)` [virtual]
@@ -406,7 +572,7 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        todo!("port Node2EdgeRouter::setBulkMode")
+        panic!("Bulk mode is not supported by the node-to-edge router.")
     }
 
     /// C++: `void Node2EdgeRouter::init(int, const V *const, const SUMOTime)` [protected]
@@ -439,8 +605,30 @@ impl<E, N, V, M> Node2EdgeRouter<E, N, V, M> {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init(&mut self, fromEdges: i32, vehicle: Ptr<V>, msTime: SUMOTime) {
-        todo!("port Node2EdgeRouter::init")
+    pub fn init(&mut self, fromEdges: Vec<Ptr<E>>, vehicle: Ptr<V>, msTime: SUMOTime) {
+        for edgeInfo in self.myFrontierList.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFrontierList.clear();
+        for edgeInfo in self.myFound.iter() {
+            edgeInfo.m().reset();
+        }
+        self.myFound.clear();
+        for from in fromEdges {
+            if from.is_internal() {
+                continue;
+            }
+            let edgeID = from.numerical_id();
+            let fromInfo = Ptr::from_mut(&mut self.myEdgeInfos[edgeID as usize]);
+            if self.is_prohibited(from, vehicle, steps2time(msTime)) {
+                continue;
+            }
+            fromInfo.m().effort = 0.;
+            fromInfo.m().heuristicEffort = 0.;
+            fromInfo.m().prev = Ptr::null();
+            fromInfo.m().leaveTime = steps2time(msTime);
+            self.myFrontierList.push(fromInfo);
+        }
     }
 
 }

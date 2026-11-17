@@ -33,9 +33,6 @@ fn attr_name(a: i32) -> &'static str {
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
 const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
 const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
-// shortcut: NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION is not ported as a const yet (nb_traffic_light_definition.rs keeps it as a comment); mirrors NBTrafficLightDefinition.cpp:49, switch to the ported constant when it lands
-const OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
-
 /// C++ static `NBNode::FORWARD` (netbuild/NBNode.cpp); NBNode statics are not ported as consts yet.
 const NBNODE_FORWARD: i32 = 1;
 /// C++ static `NBNode::BACKWARD` (netbuild/NBNode.cpp).
@@ -46,7 +43,6 @@ const NBEDGE_TURN_SIGN_SHIFT_BUS: i32 = 8;
 const NBEDGE_TURN_SIGN_SHIFT_TAXI: i32 = 16;
 const NBEDGE_TURN_SIGN_SHIFT_BICYCLE: i32 = 24;
 
-/// SAX reader results: a ProcessError is thrown in C++ and propagates to the caller, so panic here.
 // C++ MAX2/MIN2 macros (ties return the second operand for MAX2, as in the macro)
 fn max2(a: f64, b: f64) -> f64 {
     if a > b { a } else { b }
@@ -56,8 +52,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
+/// SAX reader results: C++ lets the ProcessError propagate, so rethrow it as one (netconvert reports it)
 fn sax_result(r: Result<bool, ProcessError>) -> bool {
-    r.unwrap_or_else(|e| panic!("{e}"))
+    r.unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
 /// SysUtils::getCurrentMillis()
@@ -117,15 +114,6 @@ pub enum RelationHandler_RestrictionType {
     ONLY = 0,
     NO = 1,
     UNKNOWN = 2,
-}
-
-/// C++ enum `NIImporter_OpenStreetMap::SignalType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(i64)]
-pub enum NIImporter_OpenStreetMap_SignalType {
-    SIGNAL_NONE = 0,
-    SIGNAL_MAIN = 1,
-    SIGNAL_ETCS_BLOCK = 2,
 }
 
 /// C++ enum `NIImporter_OpenStreetMap::WayType`
@@ -217,12 +205,6 @@ impl NIImporter_OpenStreetMap_CompareEdges {
 /// Functor which compares two NIOSMNodes according to their coordinates
 /// C++ class `NIImporter_OpenStreetMap::CompareNodes` (netimport/NIImporter_OpenStreetMap.h)
 pub struct NIImporter_OpenStreetMap_CompareNodes {
-}
-
-/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
-#[allow(clippy::mut_from_ref)]
-fn pt_stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
 }
 
 /// A node pointer ordered by CompareNodes, so a BTreeSet behaves like C++ `std::set<NIOSMNode *, CompareNodes>`
@@ -2080,8 +2062,6 @@ pub struct NIImporter_OpenStreetMap {
     pub myImportTurnSigns: bool,
     /// whether edges should carry information on the use of typemap defaults
     pub myAnnotateDefaults: bool,
-    /// whether ETCS signals default to moving block
-    pub myETCS_movingBlock: bool,
     /// number of placement skips due to non-explicit oneway
     pub myPlacementSkippedNonExplicitOneWay: i32,
     /// number of placement skips due to generated opposite-direction auxiliary edges
@@ -2200,7 +2180,6 @@ impl NIImporter_OpenStreetMap {
             myImportCrossings: false,
             myImportTurnSigns: false,
             myAnnotateDefaults: false,
-            myETCS_movingBlock: false,
             myPlacementSkippedNonExplicitOneWay: 0,
             myPlacementSkippedAuxOppositeDirection: 0,
         }
@@ -2537,7 +2516,6 @@ impl NIImporter_OpenStreetMap {
         self.myImportCrossings = oc.get_bool("osm.crossings").unwrap();
         self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk").unwrap();
         self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults").unwrap();
-        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block").unwrap();
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
@@ -2638,7 +2616,7 @@ impl NIImporter_OpenStreetMap {
         }
         // Mark which nodes are used by traffic lights or are pedestrian crossings
         for (id, nodesIt) in &self.myOSMNodes {
-            if nodesIt.tlsControlled || nodesIt.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 || (nodesIt.pedestrianCrossing && self.myImportCrossings) {
+            if nodesIt.tlsControlled || nodesIt.railwaySignal || (nodesIt.pedestrianCrossing && self.myImportCrossings) {
                 // If the key is not found in the map, the value is automatically initialized with 0.
                 *nodeUsage.entry(*id).or_insert(0) += 1;
             }
@@ -2784,7 +2762,7 @@ impl NIImporter_OpenStreetMap {
         // revise pt stops; remove stops on deleted edges (but assign them to the
         // opposite direction if possible
         let ec: Ptr<NBEdgeCont> = Ptr::from_mut(nb.get_edge_cont());
-        nb.get_pt_stop_cont().cleanup_deleted(ec.m(), true);
+        nb.get_pt_stop_cont().cleanup_deleted(ec.m());
 
         // load relations (after edges are built since we want to apply
         // turn-restrictions directly to NBEdges)
@@ -2815,7 +2793,7 @@ impl NIImporter_OpenStreetMap {
                     write_errorf!("Unable to project coordinates for node '%'.", n.id);
                 }
                 let element = if utils::common::sumo_vehicle_class::is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
-                let ptStop = Rc::new(NBPTStop::new(
+                let ptStop = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(
                     element,
                     n.id.to_string(),
                     ptPos,
@@ -2827,7 +2805,7 @@ impl NIImporter_OpenStreetMap {
                     0.0,
                     RGBColor::default(),
                     -1.0,
-                ));
+                ))));
                 nb.get_pt_stop_cont().insert(ptStop, true);
             }
         }
@@ -2916,14 +2894,8 @@ impl NIImporter_OpenStreetMap {
                 if n.get_parameter("crossing:barrier", "no") != "no" || n.get_parameter("crossing.light", "") == "yes" || n.tlsControlled {
                     node.m().reinit(&pos, SumoXMLNodeType::RAIL_CROSSING, false);
                 }
-            } else if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            } else if n.railwaySignal {
                 node.m().reinit(&pos, SumoXMLNodeType::RAIL_SIGNAL, false);
-                if (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32) == 0 {
-                    node.m().base2.set_parameter("virtual", "true");
-                }
-                if self.myETCS_movingBlock && (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32) != 0 {
-                    node.m().base2.set_parameter("moving-block", "true");
-                }
             } else if n.tlsControlled {
                 // ok, this node is a traffic light node where no other nodes
                 //  participate
@@ -2931,7 +2903,7 @@ impl NIImporter_OpenStreetMap {
                 let type_ = TrafficLightTypes
                     .get(&utils::options::options_cont::get_string("tls.default-type"))
                     .unwrap_or(TrafficLightType::INVALID);
-                let tlDef: &mut NBOwnTLDef = Box::leak(Box::new(NBOwnTLDef::new_2(&id.to_string(), node, 0, type_)));
+                let tlDef: &mut NBOwnTLDef = Box::leak(NBOwnTLDef::new_2(&id.to_string(), node, 0, type_));
                 if !tlsc.insert(Ptr::from_mut(&mut tlDef.base), false) {
                     // actually, nothing should fail here
                     panic!("Could not allocate tls '{id}'.");
@@ -2941,11 +2913,11 @@ impl NIImporter_OpenStreetMap {
                 node.m().base2.set_parameter("buffer_stop", "true");
                 node.m().set_fringe_type(FringeType::INNER);
             }
-            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            if n.railwaySignal {
                 if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32 {
-                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "forward");
+                    node.m().base2.set_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION, "forward");
                 } else if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32 {
-                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "backward");
+                    node.m().base2.set_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION, "backward");
                 }
             }
             let params = n.get_parameters_map().clone();
@@ -3650,36 +3622,36 @@ impl NIImporter_OpenStreetMap {
         let mut nodeDirection: i64 = WAY_UNKNOWN;
         let fromOSM = self.myOSMNodes[&to_long(from.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
         let toOSM = self.myOSMNodes[&to_long(to.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
-        if fromOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+        if fromOSM.railwaySignal {
             nodeDirection |= fromOSM.myRailDirection as i64;
         }
-        if toOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+        if toOSM.railwaySignal {
             nodeDirection |= toOSM.myRailDirection as i64;
         }
 
-        let mut ptStops: Vec<Rc<NBPTStop>> = Vec::new();
+        let mut ptStops: Vec<Ptr<NBPTStop>> = Vec::new();
         for i in passed.iter() {
             let n = self.myOSMNodes[i];
             // recheck permissions, maybe they got assigned to a strange edge, see #11656
             if n.ptStopPosition && (n.permissions == 0 || (permissions & n.permissions) != 0) {
-                let existingPtStop: Option<Rc<NBPTStop>> = sc.get_stops().get(&n.id.to_string()).cloned();
+                let existingPtStop: Option<Ptr<NBPTStop>> = sc.get_stops().get(&n.id.to_string()).cloned();
                 if let Some(existingPtStop) = existingPtStop {
-                    pt_stop_mut(&existingPtStop).register_additional_edge(e.id.to_string(), id.clone());
+                    existingPtStop.m().register_additional_edge(e.id.to_string(), id.clone());
                 } else {
                     let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
                     if !NBNetBuilder::transform_coordinate(&mut ptPos, true, Ptr::null()) {
                         write_errorf!("Unable to project coordinates for node '%'.", n.id);
                     }
                     let element = if is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
-                    let stop: Rc<NBPTStop> = Rc::new(NBPTStop::new(
+                    let stop: Ptr<NBPTStop> = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(
                         element, n.id.to_string(), ptPos, id.clone(), e.id.to_string(), n.ptStopLength, n.name.clone(), n.permissions,
                         0.0, RGBColor::new_valid(false), -1.0,
-                    ));
+                    ))));
                     ptStops.push(stop.clone());
                     sc.m().insert(stop, false);
                 }
             }
-            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            if n.railwaySignal {
                 nodeDirection |= n.myRailDirection as i64;
             }
             let pos = Position::new3(n.lon, n.lat, n.ele);
@@ -3955,7 +3927,7 @@ impl NIImporter_OpenStreetMap {
             }
         }
         if applyPlacement && placementOffset.abs() > utils::geom::POSITION_EPS {
-            // shortcut: C++ catches InvalidArgument from move2side and skips placement; the Rust move2side has no Result, so a failure here is not caught, upgrade when move2side returns Result
+            // C++ catch (InvalidArgument&) is unreachable: PositionVector::move2side(double) throws nothing
             shape.move2side(placementOffset, 100.0);
         }
 
@@ -4058,8 +4030,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '{id}'.")));
             }
         }
         if addBackward {
@@ -4124,8 +4095,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '-{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '-{id}'.")));
             }
         }
         if (e.myParkingType & PARKING_BOTH) != 0 && utils::options::options_cont::is_set("parking-output") {
@@ -4888,7 +4858,7 @@ pub struct NIImporter_OpenStreetMap_NIOSMNode {
     /// Whether this is a railway crossing
     pub railwayCrossing: bool,
     /// Whether this is a railway (main) signal
-    pub railwaySignal: i32,
+    pub railwaySignal: bool,
     /// Whether this is a railway buffer stop
     pub railwayBufferStop: bool,
     /// Whether this is a public transport stop position
@@ -4947,7 +4917,7 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
             tlsControlled: false,
             pedestrianCrossing: false,
             railwayCrossing: false,
-            railwaySignal: NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32,
+            railwaySignal: false,
             railwayBufferStop: false,
             ptStopPosition: false,
             ptStopLength: 0.0,
@@ -5317,12 +5287,8 @@ impl NIImporter_OpenStreetMap_NodesHandler {
                 } else if starts_with(&key, "railway:signal") || (key == "railway" && value == "signal") {
                     let kv = format!("{key}={value}");
                     let kglob = format!("{key}=");
-                    if key == "railway:signal:train_protection" && value == "DE-ESO:ne14" {
-                        node.m().railwaySignal |= NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32;
-                    } else if node.railwaySignal == NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
-                        if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
-                            node.m().railwaySignal = NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32;
-                        }
+                    if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
+                        node.m().railwaySignal = true;
                     }
                 } else if starts_with(&key, "railway:position") && value.len() > node.position.len() {
                     // use the entry with the highest precision (more digits)
@@ -6064,7 +6030,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                     }
 
                     let n = self.myOSMNodes[&ref_];
-                    let ptStop: Rc<NBPTStop> = match self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned() {
+                    let ptStop: Ptr<NBPTStop> = match self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned() {
                         Some(stop) => stop,
                         None => {
                             //WRITE_WARNING(
@@ -6103,7 +6069,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                                 continue;
                             }
                             let platform = NBPTPlatform::new(p[p.len() / 2], p.length());
-                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                            ptStop.m().add_platform_cand(platform);
                         } else {
                             if !self.myOSMNodes.contains_key(&myPlatform.ref_) {
                                 //WRITE_WARNING(
@@ -6117,15 +6083,15 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                                 write_errorf!("Unable to project coordinates for node '%'.", pNode.id);
                             }
                             let platform = NBPTPlatform::new(platformPos, utils::options::options_cont::get_float("osm.stop-output.length"));
-                            pt_stop_mut(&ptStop).add_platform_cand(platform);
+                            ptStop.m().add_platform_cand(platform);
                         }
                     }
-                    pt_stop_mut(&ptStop).set_is_multiple_stop_positions(self.myStops.len() > 1, self.myCurrentRelation);
+                    ptStop.m().set_is_multiple_stop_positions(self.myStops.len() > 1, self.myCurrentRelation);
                     if self.myStation != INVALID_ID {
                         if let Some(station) = (*self.myOSMNodes).get(&self.myStation) {
                             if station.has_parameter("railway:ref") {
                                 let stationRef = station.get_parameter("railway:ref", "");
-                                pt_stop_mut(&ptStop).set_parameter("stationRef", &stationRef);
+                                ptStop.m().set_parameter("stationRef", &stationRef);
                             }
                         }
                     }
@@ -6157,7 +6123,7 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                     // reset gap
                     consecutiveGap = 0;
 
-                    let mut ptStop: Option<Rc<NBPTStop>> = self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned();
+                    let mut ptStop: Option<Ptr<NBPTStop>> = self.myNBPTStopCont.get_stops().get(&n.id.to_string()).cloned();
                     if ptStop.is_none() {
                         // loose stop, which must later be mapped onto a line way
                         let mut ptPos = Position::new3(n.lon, n.lat, n.ele);
@@ -6165,16 +6131,16 @@ impl NIImporter_OpenStreetMap_RelationHandler {
                             write_errorf!("Unable to project coordinates for node '%'.", n.id);
                         }
                         let stopElement = if is_railway(n.permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
-                        let newStop: Rc<NBPTStop> = Rc::new(NBPTStop::new(
+                        let newStop: Ptr<NBPTStop> = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(
                             stopElement, n.id.to_string(), ptPos, String::new(), String::new(), n.ptStopLength, n.name.clone(), n.permissions,
                             0.0, RGBColor::new_valid(false), -1.0,
-                        ));
+                        ))));
                         self.myNBPTStopCont.m().insert(newStop.clone(), false);
                         if self.myStopAreas.contains_key(&n.id) {
-                            pt_stop_mut(&newStop).set_is_multiple_stop_positions(false, self.myStopAreas[&n.id]);
+                            newStop.m().set_is_multiple_stop_positions(false, self.myStopAreas[&n.id]);
                         }
                         if self.myPlatformStops.contains(&n.id) {
-                            pt_stop_mut(&newStop).set_is_platform();
+                            newStop.m().set_is_platform();
                         }
                         ptStop = Some(newStop);
                     }

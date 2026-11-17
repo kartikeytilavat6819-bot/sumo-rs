@@ -19,6 +19,45 @@ pub struct MSCFModel_Kerner {
     pub myTauDecel: f64,
 }
 
+fn kerner_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
+    cf_cast::<MSCFModel_Kerner>(m).finalize_speed(veh, vPos)
+}
+fn kerner_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Kerner>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage)
+}
+fn kerner_get_model_id(m: &MSCFModel) -> i32 {
+    cf_cast::<MSCFModel_Kerner>(m).get_model_id()
+}
+fn kerner_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
+    cf_cast::<MSCFModel_Kerner>(m).duplicate(vtype)
+}
+fn kerner_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Kerner_VehicleVariables) }.save_state(out, m)
+}
+fn kerner_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Kerner_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
+fn kerner_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
+    cf_cast::<MSCFModel_Kerner>(m).create_vehicle_variables()
+}
+
+fn kerner_stop_speed_2(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap: f64, decel: f64, usage: MSCFModel_CalcReason) -> f64 {
+    cf_cast::<MSCFModel_Kerner>(m).stop_speed(veh, speed, gap, decel, usage)
+}
+
+/// Virtual table of MSCFModel_Kerner: its overrides on top of the MSCFModel table
+pub const KERNER_VT: MSCFModelVt = MSCFModelVt {
+    stop_speed_2: kerner_stop_speed_2,
+    finalize_speed: kerner_finalize_speed,
+    follow_speed: kerner_follow_speed,
+    get_model_id: kerner_get_model_id,
+    duplicate: kerner_duplicate,
+    create_vehicle_variables: kerner_create_vehicle_variables,
+    save_vehicle_variables: kerner_save_vehicle_variables,
+    load_vehicle_variables: kerner_load_vehicle_variables,
+    ..DEFAULT_MSCF_MODEL_VT
+};
+
 impl std::ops::Deref for MSCFModel_Kerner {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
@@ -50,7 +89,9 @@ impl MSCFModel_Kerner {
         let myTauDecel = base.myDecel * base.myHeadwayTime;
         // Kerner does not drive very precise and may violate minGap on occasion
         base.myCollisionMinGapFactor = vtype.get_parameter().get_cf_param(SUMO_ATTR_COLLISION_MINGAP_FACTOR, 0.1);
-        MSCFModel_Kerner { base, myK, myPhi, myTauDecel }
+        let mut this = MSCFModel_Kerner { base, myK, myPhi, myTauDecel };
+        this.base.vt = &KERNER_VT;
+        this
     }
 
     /// C++: `void MSCFModel_Kerner::~MSCFModel_Kerner() noexcept` [virtual]
@@ -72,7 +113,7 @@ impl MSCFModel_Kerner {
     // }
     #[allow(unused_variables)]
     pub fn finalize_speed(&self, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
-        let vNext = self.base.finalize_speed(veh, vPos);
+        let vNext = self.base.finalize_speed_base(veh, vPos);
         let vars = Ptr::from_raw(veh.get_car_follow_variables().as_raw() as *mut MSCFModel_Kerner_VehicleVariables);
         vars.m().rand = veh.get_rng().m().rand();
         vNext

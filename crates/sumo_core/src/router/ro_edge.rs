@@ -1,6 +1,8 @@
 //! Port of router/ROEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::RouterEdge;
+use utils::common::stable_cache::StableCache;
 
 /// C++ typedef `std::vector<std::pair<const ROEdge *, const ROEdge *>> ROConstEdgePairVector`
 pub type ROConstEdgePairVector = Vec<(Ptr<ROEdge>, Ptr<ROEdge>)>;
@@ -67,14 +69,14 @@ pub struct ROEdge {
     /// cached value of parameters which may restrict access
     pub myParamRestrictions: Vec<f64>,
     /// The successors available for a given vClass
-    pub myClassesSuccessorMap: BTreeMap<SUMOVehicleClass, ROEdgeVector>,
+    pub myClassesSuccessorMap: StableCache<SUMOVehicleClass, ROEdgeVector>,
     /// The successors with vias available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, ROConstEdgePairVector>,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, ROConstEdgePairVector>,
     /// a reversed version for backward routing
-    pub myReversedRoutingEdge: Ptr<ReversedEdge<ROEdge, ROVehicle>>,
+    pub myReversedRoutingEdge: std::cell::Cell<Ptr<ReversedEdge<ROEdge, ROVehicle>>>,
     /// An extended version of the reversed edge for backward routing (used for the arc flag router)
-    pub myFlippedRoutingEdge: Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>>,
-    pub myRailwayRoutingEdge: Ptr<RailEdge<ROEdge, ROVehicle>>,
+    pub myFlippedRoutingEdge: std::cell::Cell<Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>>>,
+    pub myRailwayRoutingEdge: std::cell::Cell<Ptr<RailEdge<ROEdge, ROVehicle>>>,
 }
 
 impl std::ops::Deref for ROEdge {
@@ -86,6 +88,139 @@ impl std::ops::Deref for ROEdge {
 impl std::ops::DerefMut for ROEdge {
     fn deref_mut(&mut self) -> &mut Named {
         &mut self.base
+    }
+}
+
+use crate::utils::router::router_edge::RouterEdgeInfo;
+
+impl RouterEdgeInfo for ROEdge {
+    fn edge_numerical_id(&self) -> i32 {
+        <ROEdge as RouterEdge<ROVehicle>>::numerical_id(self)
+    }
+    fn edge_id(&self) -> String {
+        <ROEdge as RouterEdge<ROVehicle>>::id(self).to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.get_permissions()
+    }
+}
+
+impl RouterEdge<ROVehicle> for ROEdge {
+    type Node = RONode;
+    type Lane = ROLane;
+    fn bidi_edge(&self) -> Ptr<ROEdge> {
+        self.get_bidi_edge()
+    }
+    fn is_connected_to(&self, e: &ROEdge, vclass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> bool {
+        self.is_connected_to(e, vclass, ignoreTransientPermissions)
+    }
+    fn reversed_routing_edge(&self) -> Ptr<ReversedEdge<ROEdge, ROVehicle>> {
+        self.get_reversed_routing_edge()
+    }
+    fn travel_time(&self, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        self.get_travel_time(veh, time)
+    }
+    fn to_junction(&self) -> Ptr<RONode> {
+        self.get_to_junction()
+    }
+    fn from_junction(&self) -> Ptr<RONode> {
+        self.get_from_junction()
+    }
+    fn is_crossing(&self) -> bool {
+        self.is_crossing()
+    }
+    fn is_walking_area(&self) -> bool {
+        self.is_walking_area()
+    }
+    fn railway_routing_edge(&self) -> Ptr<RailEdge<ROEdge, ROVehicle>> {
+        self.get_railway_routing_edge()
+    }
+    fn all_edges() -> Vec<Ptr<ROEdge>> {
+        Self::get_all_edges().clone()
+    }
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        self.get_length_geometry_factor()
+    }
+    fn distance_to(&self, other: Ptr<ROEdge>, do_boundary_estimate: bool) -> f64 {
+        self.get_distance_to(other, do_boundary_estimate)
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<ROEdge>] {
+        self.get_successors(vclass)
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<ROEdge>, Ptr<ROEdge>)] {
+        self.get_via_successors(vclass, ignore_transient)
+    }
+    fn predecessors(&self) -> &[Ptr<ROEdge>] {
+        self.get_predecessors()
+    }
+    fn lanes(&self) -> &[Ptr<ROLane>] {
+        self.get_lanes()
+    }
+    fn function(&self) -> SumoXMLEdgeFunc {
+        self.get_function()
+    }
+    fn is_normal(&self) -> bool {
+        ROEdge::is_normal(self)
+    }
+    fn other_taz_connector(&self) -> Ptr<ROEdge> {
+        self.get_other_taz_connector()
+    }
+    fn time_penalty(&self) -> f64 {
+        self.get_time_penalty()
+    }
+    fn stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
+        ROEdge::get_stop_position(stop)
+    }
+    fn lane_edge(lane: Ptr<ROLane>) -> Ptr<ROEdge> {
+        Ptr::from_mut(lane.m().get_edge())
+    }
+    fn lane_outgoing_via_lanes(lane: Ptr<ROLane>) -> Vec<(Ptr<ROLane>, Ptr<ROEdge>)> {
+        lane.get_outgoing_via_lanes().clone()
+    }
+    fn lane_permissions(lane: Ptr<ROLane>) -> SVCPermissions {
+        lane.get_permissions()
+    }
+    fn lane_allows_vehicle_class(lane: Ptr<ROLane>, svc: SUMOVehicleClass) -> bool {
+        lane.allows_vehicle_class(svc)
+    }
+    fn speed_limit(&self) -> f64 {
+        self.get_speed_limit()
+    }
+    fn minimum_travel_time(&self, veh: Ptr<ROVehicle>) -> f64 {
+        self.get_minimum_travel_time(veh)
+    }
+    fn preference(&self, pars: &SUMOVTypeParameter) -> f64 {
+        self.get_preference(pars)
+    }
+    fn flipped_routing_edge(&self) -> Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>> {
+        self.get_flipped_routing_edge()
+    }
+    fn travel_time_static(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        ROEdge::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        ROEdge::get_travel_time_aggregated(edge, veh, time)
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn is_taz_connector(&self) -> bool {
+        self.is_taz_connector()
+    }
+    fn prohibits(&self, veh: Ptr<ROVehicle>, check_restrictions: bool) -> bool {
+        self.prohibits(veh, check_restrictions)
+    }
+    fn restricts(&self, veh: Ptr<ROVehicle>) -> bool {
+        self.restricts(veh)
     }
 }
 
@@ -233,11 +368,6 @@ fn as_routable(veh: Ptr<ROVehicle>) -> Ptr<RORoutable> {
     if veh.is_null() { Ptr::null() } else { Ptr::new(&veh.base) }
 }
 
-/// C++ `const_cast` to call a non-const method through a const `this` (the routing caches are mutable in C++)
-fn as_mut_edge(e: &ROEdge) -> &'static mut ROEdge {
-    Ptr::new(e).get_mut().expect("non-null ROEdge")
-}
-
 impl ROEdge {
     /// C++ `myEdges[index] = this` from the constructor; Rust constructors return by value, so the owner calls this once the edge sits at its final address
     pub fn register_in_all_edges(this: Ptr<ROEdge>) {
@@ -316,11 +446,11 @@ impl ROEdge {
             myBoundary: Boundary::new(),
             myTimePenalty: 0.,
             myParamRestrictions: Vec::new(),
-            myClassesSuccessorMap: BTreeMap::new(),
-            myClassesViaSuccessorMap: BTreeMap::new(),
-            myReversedRoutingEdge: Ptr::null(),
-            myFlippedRoutingEdge: Ptr::null(),
-            myRailwayRoutingEdge: Ptr::null(),
+            myClassesSuccessorMap: StableCache::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            myFlippedRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
         };
         // shortcut: C++ also does myEdges[index] = this here; Rust returns the edge by value, so the owner must call ROEdge::register_in_all_edges once it is at its final address
         if from.is_null() && to.is_null() {
@@ -385,11 +515,11 @@ impl ROEdge {
             myBoundary: Boundary::new(),
             myTimePenalty: 0.,
             myParamRestrictions: Vec::new(),
-            myClassesSuccessorMap: BTreeMap::new(),
-            myClassesViaSuccessorMap: BTreeMap::new(),
-            myReversedRoutingEdge: Ptr::null(),
-            myFlippedRoutingEdge: Ptr::null(),
-            myRailwayRoutingEdge: Ptr::null(),
+            myClassesSuccessorMap: StableCache::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            myFlippedRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
         }
     }
 
@@ -408,15 +538,15 @@ impl ROEdge {
         for lane in self.myLanes.iter() {
             drop(unsafe { Box::from_raw(lane.as_raw()) });
         }
-        let reversed = self.myReversedRoutingEdge;
+        let reversed = self.myReversedRoutingEdge.get();
         if !reversed.is_null() {
             drop(unsafe { Box::from_raw(reversed.as_raw()) });
         }
-        let flipped = self.myFlippedRoutingEdge;
+        let flipped = self.myFlippedRoutingEdge.get();
         if !flipped.is_null() {
             drop(unsafe { Box::from_raw(flipped.as_raw()) });
         }
-        let railway = self.myRailwayRoutingEdge;
+        let railway = self.myRailwayRoutingEdge.get();
         if !railway.is_null() {
             drop(unsafe { Box::from_raw(railway.as_raw()) });
         }
@@ -961,8 +1091,8 @@ impl ROEdge {
         if vClass == SVC_IGNORING || !RONet::get_instance().has_permissions() || self.is_taz_connector() {
             return &self.myFollowingEdges;
         }
-        // the C++ caches the result per vClass in a mutable map; same here, through the non-owning pointer
-        if !self.myClassesSuccessorMap.contains_key(&vClass) {
+        // the C++ caches the result per vClass in a mutable map
+        self.myClassesSuccessorMap.get_or_insert_with(vClass, || {
             // determinism: C++ std::set<ROEdge*> orders by address; BTreeSet<Ptr<ROEdge>> keeps that order
             let mut followers: BTreeSet<Ptr<ROEdge>> = BTreeSet::new();
             for lane in self.myLanes.iter() {
@@ -980,9 +1110,8 @@ impl ROEdge {
                     followers.insert(*e);
                 }
             }
-            as_mut_edge(self).myClassesSuccessorMap.insert(vClass, followers.into_iter().collect());
-        }
-        self.myClassesSuccessorMap.get(&vClass).expect("inserted above")
+            followers.into_iter().collect()
+        })
     }
 
     /// C++: `const ROConstEdgePairVector & ROEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -1026,8 +1155,8 @@ impl ROEdge {
         if vClass == SVC_IGNORING || !RONet::get_instance().has_permissions() || self.is_taz_connector() {
             return &self.myFollowingViaEdges;
         }
-        // the C++ caches the result per vClass in a mutable map; same here, through the non-owning pointer
-        if !self.myClassesViaSuccessorMap.contains_key(&vClass) {
+        // the C++ caches the result per vClass in a mutable map
+        self.myClassesViaSuccessorMap.get_or_insert_with(vClass, || {
             // determinism: C++ std::set<pair<ROEdge*, ROEdge*>> orders by address; BTreeSet keeps that order
             let mut followers: BTreeSet<(Ptr<ROEdge>, Ptr<ROEdge>)> = BTreeSet::new();
             for lane in self.myLanes.iter() {
@@ -1045,9 +1174,8 @@ impl ROEdge {
                     followers.insert((*e, *e));
                 }
             }
-            as_mut_edge(self).myClassesViaSuccessorMap.insert(vClass, followers.into_iter().collect());
-        }
-        self.myClassesViaSuccessorMap.get(&vClass).expect("inserted above")
+            followers.into_iter().collect()
+        })
     }
 
     /// C++: `void ROEdge::resetSuccessors()`
@@ -1598,11 +1726,10 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_reversed_routing_edge(&self) -> Ptr<ReversedEdge<ROEdge, ROVehicle>> {
-        let me = as_mut_edge(self);
-        if me.myReversedRoutingEdge.is_null() {
-            me.myReversedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self)))));
+        if self.myReversedRoutingEdge.get().is_null() {
+            self.myReversedRoutingEdge.set(Ptr::from_raw(Box::into_raw(Box::new(ReversedEdge::new(Ptr::new(self))))));
         }
-        me.myReversedRoutingEdge
+        self.myReversedRoutingEdge.get()
     }
 
     /// C++: `FlippedEdge<ROEdge, RONode, ROVehicle> * ROEdge::getFlippedRoutingEdge() const` [const]
@@ -1614,11 +1741,10 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_flipped_routing_edge(&self) -> Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>> {
-        let me = as_mut_edge(self);
-        if me.myFlippedRoutingEdge.is_null() {
-            me.myFlippedRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(FlippedEdge::new(Ptr::new(self)))));
+        if self.myFlippedRoutingEdge.get().is_null() {
+            self.myFlippedRoutingEdge.set(Ptr::from_raw(Box::into_raw(Box::new(FlippedEdge::new(Ptr::new(self))))));
         }
-        me.myFlippedRoutingEdge
+        self.myFlippedRoutingEdge.get()
     }
 
     /// C++: `RailEdge<ROEdge, ROVehicle> * ROEdge::getRailwayRoutingEdge() const` [const]
@@ -1630,11 +1756,10 @@ impl ROEdge {
     //     }
     #[allow(unused_variables)]
     pub fn get_railway_routing_edge(&self) -> Ptr<RailEdge<ROEdge, ROVehicle>> {
-        let me = as_mut_edge(self);
-        if me.myRailwayRoutingEdge.is_null() {
-            me.myRailwayRoutingEdge = Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self)))));
+        if self.myRailwayRoutingEdge.get().is_null() {
+            self.myRailwayRoutingEdge.set(Ptr::from_raw(Box::into_raw(Box::new(RailEdge::new(Ptr::new(self))))));
         }
-        me.myRailwayRoutingEdge
+        self.myRailwayRoutingEdge.get()
     }
 
     /// C++: `bool ROEdge::hasStoredEffort() const` [const]

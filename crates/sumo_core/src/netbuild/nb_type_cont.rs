@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
-use utils::common::sumo_vehicle_class::get_vehicle_class_names;
+use utils::common::sumo_vehicle_class::{get_vehicle_class_names, write_permissions};
 use utils::iodevices::output_device::OutputDevice;
 use utils::xml::sumo_xml_definitions::{
     LaneSpreadFunctions, SUMO_ATTR_ALLOW, SUMO_ATTR_BIKELANEWIDTH, SUMO_ATTR_DISALLOW, SUMO_ATTR_DISCARD, SUMO_ATTR_FRICTION, SUMO_ATTR_INDEX, SUMO_ATTR_NUMLANES,
@@ -873,7 +873,7 @@ impl NBTypeCont {
             into.write_optional_attr(SUMO_ATTR_FRICTION, &et.friction, !et.attrs.contains(&SUMO_ATTR_FRICTION));
             // write permissions
             if et.attrs.contains(&SUMO_ATTR_DISALLOW) || et.attrs.contains(&SUMO_ATTR_ALLOW) {
-                // shortcut: writePermissions (utils/common/SUMOVehicleClass.cpp) is not ported, so the allow/disallow attributes of edge types are not written yet; upgrade when writePermissions is ported
+                write_permissions(into, et.permissions);
             }
             // write spreadType (unless default)
             if et.attrs.contains(&SUMO_ATTR_SPREADTYPE) && et.spreadType != LaneSpreadFunction::RIGHT {
@@ -913,7 +913,7 @@ impl NBTypeCont {
                     }
                     // write permissions
                     if laneType.attrs.contains(&SUMO_ATTR_DISALLOW) || laneType.attrs.contains(&SUMO_ATTR_ALLOW) {
-                        // shortcut: writePermissions (utils/common/SUMOVehicleClass.cpp) is not ported, so lane-level allow/disallow are not written yet; upgrade when writePermissions is ported
+                        write_permissions(into, laneType.permissions);
                     }
                     // write width
                     if laneType.attrs.contains(&SUMO_ATTR_WIDTH) && laneType.width != et.width && laneType.width != UNSPECIFIED_WIDTH {

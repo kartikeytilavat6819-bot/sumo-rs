@@ -1,4 +1,4 @@
-//! Port of netbuild/NBLoadedSUMOTLDef.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+//! Port of netbuild/NBLoadedSUMOTLDef.{h,cpp} â€” GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
@@ -11,6 +11,85 @@ fn delete_tl_logic(logic: Ptr<NBTrafficLightLogic>) {
         drop(unsafe { Box::from_raw(logic.as_raw()) });
     }
 }
+
+// C++ virtual overrides of NBTrafficLightDefinition, dispatched through NBTrafficLightDefinition::vt
+fn sumo_tl_def_of(d: &NBTrafficLightDefinition) -> &NBLoadedSUMOTLDef {
+    Ptr::new(d).cast::<NBLoadedSUMOTLDef>().get().unwrap()
+}
+fn sumo_tl_def_of_mut(d: &mut NBTrafficLightDefinition) -> &mut NBLoadedSUMOTLDef {
+    Ptr::from_mut(d).cast::<NBLoadedSUMOTLDef>().get_mut().unwrap()
+}
+fn sumo_tl_def_collect_links(d: &mut NBTrafficLightDefinition) {
+    sumo_tl_def_of_mut(d).collect_links()
+}
+fn sumo_tl_def_set_tl_controlling_information(d: &NBTrafficLightDefinition) {
+    sumo_tl_def_of(d).set_tl_controlling_information()
+}
+fn sumo_tl_def_remap_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, incoming: &EdgeVector, outgoing: &EdgeVector) {
+    sumo_tl_def_of_mut(d).remap_removed(removed, incoming, outgoing)
+}
+fn sumo_tl_def_replace_removed(d: &mut NBTrafficLightDefinition, removed: Ptr<NBEdge>, removedLane: i32, by: Ptr<NBEdge>, byLane: i32, incoming: bool) {
+    sumo_tl_def_of_mut(d).replace_removed(removed, removedLane, by, byLane, incoming)
+}
+fn sumo_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) -> Ptr<NBTrafficLightLogic> {
+    sumo_tl_def_of_mut(d).my_compute(brakingTime)
+}
+fn sumo_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    sumo_tl_def_of_mut(d).get_max_index()
+}
+fn sumo_tl_def_set_program_id(d: &mut NBTrafficLightDefinition, programID: &str) {
+    sumo_tl_def_of_mut(d).set_program_id(programID)
+}
+fn sumo_tl_def_shift_tl_connection_lane_index(d: &mut NBTrafficLightDefinition, edge: Ptr<NBEdge>, offset: i32, threshold: i32) {
+    sumo_tl_def_of_mut(d).shift_tl_connection_lane_index(edge, offset, threshold)
+}
+fn sumo_tl_def_remove_connection(d: &mut NBTrafficLightDefinition, conn: &NBConnection, reconstruct: bool) {
+    sumo_tl_def_of_mut(d).remove_connection(conn, reconstruct)
+}
+fn sumo_tl_def_set_type(d: &mut NBTrafficLightDefinition, type_: TrafficLightType) {
+    sumo_tl_def_of_mut(d).set_type(type_)
+}
+fn sumo_tl_def_extra_conflict(d: &NBTrafficLightDefinition, index: i32, foeIndex: i32) -> bool {
+    sumo_tl_def_of(d).extra_conflict(index, foeIndex)
+}
+fn sumo_tl_def_using_signal_groups(d: &NBTrafficLightDefinition) -> bool {
+    sumo_tl_def_of(d).using_signal_groups()
+}
+fn sumo_tl_def_final_checks(d: &NBTrafficLightDefinition) {
+    sumo_tl_def_of(d).final_checks()
+}
+fn sumo_tl_def_collect_edges(d: &mut NBTrafficLightDefinition) {
+    sumo_tl_def_of_mut(d).collect_edges()
+}
+fn sumo_tl_def_am_invalid(d: &NBTrafficLightDefinition) -> bool {
+    sumo_tl_def_of(d).am_invalid()
+}
+fn sumo_tl_def_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    sumo_tl_def_of(d).init_needs_cont_relation()
+}
+fn sumo_tl_def_get_max_valid_index(d: &mut NBTrafficLightDefinition) -> i32 {
+    sumo_tl_def_of_mut(d).get_max_valid_index()
+}
+pub static NB_LOADED_SUMOTL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+    collect_links: sumo_tl_def_collect_links,
+    set_tl_controlling_information: sumo_tl_def_set_tl_controlling_information,
+    remap_removed: sumo_tl_def_remap_removed,
+    replace_removed: sumo_tl_def_replace_removed,
+    my_compute: sumo_tl_def_my_compute,
+    get_max_index: sumo_tl_def_get_max_index,
+    set_program_id: sumo_tl_def_set_program_id,
+    shift_tl_connection_lane_index: sumo_tl_def_shift_tl_connection_lane_index,
+    remove_connection: sumo_tl_def_remove_connection,
+    set_type: sumo_tl_def_set_type,
+    extra_conflict: sumo_tl_def_extra_conflict,
+    using_signal_groups: sumo_tl_def_using_signal_groups,
+    final_checks: sumo_tl_def_final_checks,
+    collect_edges: sumo_tl_def_collect_edges,
+    am_invalid: sumo_tl_def_am_invalid,
+    init_needs_cont_relation: sumo_tl_def_init_needs_cont_relation,
+    get_max_valid_index: sumo_tl_def_get_max_valid_index,
+    ..DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT
+};
 
 /// A loaded (complete) traffic light logic
 /// C++ class `NBLoadedSUMOTLDef` (netbuild/NBLoadedSUMOTLDef.h)
@@ -55,14 +134,17 @@ impl NBLoadedSUMOTLDef {
     #[allow(unused_variables)]
     pub fn new(id: &str, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
         let myTLLogic = Ptr::from_raw(Box::into_raw(Box::new(NBTrafficLightLogic::new(id, programID, 0, offset, type_))));
-        NBLoadedSUMOTLDef {
+        let mut d = NBLoadedSUMOTLDef {
             base: NBTrafficLightDefinition::new_3(id, programID, offset, type_),
             myTLLogic,
             myShifted: BTreeSet::new(),
             myReconstructAddedConnections: false,
             myReconstructRemovedConnections: false,
             myPhasesLoaded: false,
-        }
+        };
+        d.base.vt = &NB_LOADED_SUMOTL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::LoadedSUMOTL;
+        d
     }
 
     /// C++: `void NBLoadedSUMOTLDef::NBLoadedSUMOTLDef(const NBTrafficLightDefinition &, const NBTrafficLightLogic &)`
@@ -95,10 +177,16 @@ impl NBLoadedSUMOTLDef {
             myReconstructRemovedConnections: false,
             myPhasesLoaded: false,
         };
+        ret.base.vt = &NB_LOADED_SUMOTL_DEF_VT;
         ret.base.myControlledLinks = def.get_controlled_links().iter().map(NBConnection::new_4).collect();
         ret.base.myControlledNodes = def.get_nodes().clone();
         ret.base.base2.update_parameters(def.base2.get_parameters_map());
-        // shortcut: C++ dynamic_cast<const NBLoadedSUMOTLDef*>(&def) has no runtime type check in this port, so the reconstruct flags of a source NBLoadedSUMOTLDef are not copied, upgrade: add a kind tag to NBTrafficLightDefinition
+        ret.base.myKind = NBTrafficLightDefinitionKind::LoadedSUMOTL;
+        if def.myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+            let sumoDef = Ptr::new(def).cast::<NBLoadedSUMOTLDef>();
+            ret.myReconstructAddedConnections = sumoDef.myReconstructAddedConnections;
+            ret.myReconstructRemovedConnections = sumoDef.myReconstructRemovedConnections;
+        }
         ret
     }
 
@@ -135,7 +223,7 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn set_program_id(&mut self, programID: &str) {
-        self.base.set_program_id(programID);
+        self.base.set_program_id_base(programID);
         self.myTLLogic.m().set_program_id(programID);
     }
 
@@ -478,11 +566,11 @@ impl NBLoadedSUMOTLDef {
         if self.am_invalid() {
             return false;
         }
-        if !self.base.myExtraConflictsReady {
+        if !self.base.myExtraConflictsReady.get() {
             self.base.init_extra_conflicts();
-            assert!(self.base.myExtraConflictsReady);
+            assert!(self.base.myExtraConflictsReady.get());
         }
-        self.base.myExtraConflicts.contains(&(index, foeIndex))
+        self.base.myExtraConflicts.borrow().contains(&(index, foeIndex))
     }
 
     /// C++: `bool NBLoadedSUMOTLDef::cleanupStates()`
@@ -1073,7 +1161,7 @@ impl NBLoadedSUMOTLDef {
     #[allow(unused_variables)]
     pub fn collect_edges(&mut self) {
         if self.base.myControlledLinks.len() == 0 {
-            self.base.collect_edges();
+            self.base.collect_edges_base();
         }
         self.base.myIncomingEdges.clear();
         let mut myOutgoing: EdgeVector = Vec::new();
@@ -1233,13 +1321,12 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        let me = Ptr::new(self);
-        if !self.am_invalid() && !self.base.myNeedsContRelationReady {
-            me.m().base.myNeedsContRelation.clear();
-            me.m().base.myExtraConflicts.clear();
+        if !self.am_invalid() && !self.base.myNeedsContRelationReady.get() {
+            self.base.myNeedsContRelation.borrow_mut().clear();
+            self.base.myExtraConflicts.borrow_mut().clear();
             if self.base.myType == TrafficLightType::NEMA {
-                me.m().base.init_needs_cont_relation();
-                me.m().base.init_extra_conflicts();
+                self.base.init_needs_cont_relation_base();
+                self.base.init_extra_conflicts();
             } else {
                 let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
                 let phases: Vec<String> = self.myTLLogic.m().get_phases().iter().map(|p| p.state.clone()).collect();
@@ -1276,17 +1363,16 @@ impl NBLoadedSUMOTLDef {
                                     && !c2.get_from().is_turning_direction_at(c2.get_to());
                                 let hasContRel = (forbidden && at(i1) != b's') || rightTurnConflict;
                                 if hasContRel {
-                                    me.m().base.myNeedsContRelation.insert(NBTrafficLightDefinition_StreamPair::new(
+                                    self.base.myNeedsContRelation.borrow_mut().insert(NBTrafficLightDefinition_StreamPair::new(
                                         c1.get_from(),
                                         c1.get_to(),
                                         c2.get_from(),
                                         c2.get_to(),
                                     ));
                                 }
-                                // shortcut: NBEdge::get_connection returns CHBuilder_Connection, which has no indirectLeft field in this port, so indirectLeft is taken as false, upgrade: port NBEdge::getConnection returning NBEdge_Connection
-                                let indirectLeft = false;
+                                let indirectLeft = c1.get_from().get_connection(c1.get_from_lane(), c1.get_to(), c1.get_to_lane()).indirectLeft;
                                 if isFoes && (at(i1) == b's' || (!hasContRel && at(i2) == b'G' && !indirectLeft)) {
-                                    me.m().base.myExtraConflicts.insert((i1, i2));
+                                    self.base.myExtraConflicts.borrow_mut().insert((i1, i2));
                                 }
                             }
                         }
@@ -1294,8 +1380,8 @@ impl NBLoadedSUMOTLDef {
                 }
             }
         }
-        me.m().base.myNeedsContRelationReady = true;
-        me.m().base.myExtraConflictsReady = true;
+        self.base.myNeedsContRelationReady.set(true);
+        self.base.myExtraConflictsReady.set(true);
     }
 
     /// C++: `int NBLoadedSUMOTLDef::getMaxIndex()` [virtual, protected]

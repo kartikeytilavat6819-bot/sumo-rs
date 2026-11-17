@@ -1,0 +1,18 @@
+<routes>
+    <!-- routeDistribution (70/30 over a diamond) and vTypeDistribution (50/50) on flow fDist;
+         vehicles dep1/arr1/both1 use departEdge / arrivalEdge indices into their 4-edge route -->
+    <routeDistribution id="rd">
+        <route id="rUp" edges="E0 UP1 UP2 E3" probability="0.70"/>
+        <route id="rDn" edges="E0 DN1 DN2 E3" probability="0.30"/>
+    </routeDistribution>
+    <vTypeDistribution id="vd">
+        <vType id="vdCar" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" probability="0.50"/>
+        <vType id="vdBus" length="12.00" maxSpeed="11.11" accel="1.20" decel="4.00" probability="0.50"/>
+    </vTypeDistribution>
+    <vType id="vDep" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="rFull" edges="E0 UP1 UP2 E3"/>
+    <flow id="fDist" type="vd" route="rd" begin="0.00" end="150.00" period="3.00" departSpeed="max"/>
+    <vehicle id="dep1" type="vDep" route="rFull" depart="10.00" departEdge="2" departSpeed="max"/>
+    <vehicle id="arr1" type="vDep" route="rFull" depart="12.00" arrivalEdge="2" departSpeed="max"/>
+    <vehicle id="both1" type="vDep" route="rFull" depart="14.00" departEdge="1" arrivalEdge="3" departSpeed="max"/>
+</routes>

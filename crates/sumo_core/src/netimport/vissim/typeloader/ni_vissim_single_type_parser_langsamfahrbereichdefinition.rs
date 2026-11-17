@@ -2,6 +2,22 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `from >> tmp` for a std::string: skips whitespace and reads one token without lower-casing it
+fn read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 /// C++ class `NIVissimSingleTypeParser_Langsamfahrbereichdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Langsamfahrbereichdefinition.h)
 #[repr(C)]
 pub struct NIVissimSingleTypeParser_Langsamfahrbereichdefinition {
@@ -28,7 +44,7 @@ impl NIVissimSingleTypeParser_Langsamfahrbereichdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Langsamfahrbereichdefinition::NIVissimSingleTypeParser_Langsamfahrbereichdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Langsamfahrbereichdefinition::~NIVissimSingleTypeParser_Langsamfahrbereichdefinition() noexcept` [virtual]
@@ -36,7 +52,7 @@ impl NIVissimSingleTypeParser_Langsamfahrbereichdefinition {
     // NIVissimSingleTypeParser_Langsamfahrbereichdefinition::~NIVissimSingleTypeParser_Langsamfahrbereichdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Langsamfahrbereichdefinition::~NIVissimSingleTypeParser_Langsamfahrbereichdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Langsamfahrbereichdefinition::parse(std::istream &)` [virtual]
@@ -55,8 +71,16 @@ impl NIVissimSingleTypeParser_Langsamfahrbereichdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Langsamfahrbereichdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        read_raw_token(from);
+        self.read_until(from, "fahrzeugklasse");
+        let mut tag = "fahrzeugklasse".to_string();
+        while tag == "fahrzeugklasse" {
+            self.read_until(from, "maxverzoegerung");
+            tag = self.my_read(from);
+            tag = self.my_read(from);
+        }
+        true
     }
 
 }

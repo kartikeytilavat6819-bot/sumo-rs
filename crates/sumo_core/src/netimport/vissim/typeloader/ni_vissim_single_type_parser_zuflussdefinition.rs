@@ -21,6 +21,23 @@ impl std::ops::DerefMut for NIVissimSingleTypeParser_Zuflussdefinition {
     }
 }
 
+/// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token without lowercasing ("" at end of stream)
+fn read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let is_space = |c: u8| matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c);
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && is_space(data[i]) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !is_space(data[i]) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 impl NIVissimSingleTypeParser_Zuflussdefinition {
     /// C++: `void NIVissimSingleTypeParser_Zuflussdefinition::NIVissimSingleTypeParser_Zuflussdefinition(NIImporter_Vissim &)`
     /// Constructor
@@ -28,7 +45,7 @@ impl NIVissimSingleTypeParser_Zuflussdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Zuflussdefinition::NIVissimSingleTypeParser_Zuflussdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Zuflussdefinition::~NIVissimSingleTypeParser_Zuflussdefinition() noexcept` [virtual]
@@ -36,7 +53,7 @@ impl NIVissimSingleTypeParser_Zuflussdefinition {
     // NIVissimSingleTypeParser_Zuflussdefinition::~NIVissimSingleTypeParser_Zuflussdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Zuflussdefinition::~NIVissimSingleTypeParser_Zuflussdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Zuflussdefinition::parse(std::istream &)` [virtual]
@@ -81,8 +98,44 @@ impl NIVissimSingleTypeParser_Zuflussdefinition {
     //     return NIVissimSource::dictionary(id, name, edgeid);
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Zuflussdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        let id: String = read_raw_token(from); // type-checking is missing!
+        let mut tag: String = String::new();
+        let mut name: String = String::new();
+        let mut edgeid: String = String::new();
+        // override some optional values till q
+        while tag != "q" {
+            tag = self.override_optional_label(from, "");
+            if tag == "name" {
+                name = self.read_name(from);
+            } else if tag == "strecke" {
+                edgeid = read_raw_token(from); // type-checking is missing!
+            }
+        }
+        // read q
+        // bool exact = false;
+        tag = self.my_read(from);
+        if tag == "exakt" {
+            // exact = true;
+            tag = self.my_read(from);
+        }
+        // double q = StringUtils::toDouble(tag);
+        // read the vehicle types
+        tag = read_raw_token(from);
+        // from >> vehicle_combination (an int that is never used)
+        let _vehicle_combination: String = read_raw_token(from);
+        // check whether optional time information is available
+        tag = self.read_end_secure(from, "");
+        // beg and end are read but never used in the C++ code
+        let mut beg: f64 = -1.0;
+        let mut end: f64 = -1.0;
+        if tag == "zeit" {
+            tag = read_raw_token(from);
+            beg = read_raw_token(from).parse::<f64>().unwrap_or(0.0);
+            tag = read_raw_token(from);
+            end = read_raw_token(from).parse::<f64>().unwrap_or(0.0);
+        }
+        NIVissimSource::dictionary(&id, &name, &edgeid)
     }
 
 }

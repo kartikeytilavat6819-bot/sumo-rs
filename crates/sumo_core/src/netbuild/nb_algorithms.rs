@@ -2,34 +2,13 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-// determinism: C++ std::sort is unstable and Rust sort_by is stable, so edges that compare equal may end up in a different order.
-// Converts a C++ strict-weak-order comparator (returns bool) into the ordering std::sort would use.
-fn sort_by_less<T>(v: &mut Vec<T>, less: impl Fn(&T, &T) -> bool) {
-    v.sort_by(|a, b| {
-        if less(a, b) {
-            std::cmp::Ordering::Less
-        } else if less(b, a) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
-}
-
 fn sort_edges_by(v: &mut Vec<Ptr<NBEdge>>, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
-    v.sort_by(|a, b| {
-        if less(*a, *b) {
-            std::cmp::Ordering::Less
-        } else if less(*b, *a) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
+    utils::common::std_sort::std_sort(v.as_mut_slice(), less);
 }
 
 /// Stores the information about the angle between an incoming ("from") and an outgoing ("to") edge
 /// C++ class `NBTurningDirectionsComputer::Combination` (netbuild/NBAlgorithms.h)
+#[derive(Clone, Copy)]
 pub struct NBTurningDirectionsComputer_Combination {
     pub from: Ptr<NBEdge>,
     pub to: Ptr<NBEdge>,
@@ -898,8 +877,9 @@ impl NBNodeTypeComputer {
                     let type_ = TrafficLightTypes
                         .get(&utils::options::options_cont::get_string("tls.default-type"))
                         .unwrap_or_else(|e| std::panic::panic_any(e));
-                    let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(n.get_id(), n, 0, type_)));
+                    let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(n.get_id(), n, 0, type_));
                     let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                    n.m().add_traffic_light(tlDef);
                     n.m().myType = SumoXMLNodeType::TRAFFIC_LIGHT;
                     if !tlc.insert(tlDef, false) {
                         // actually, nothing should fail here
@@ -1192,7 +1172,7 @@ impl NBTurningDirectionsComputer {
         }
         // sort combinations so that the ones with the highest angle are at the begin
         let comb_sorter = NBTurningDirectionsComputer_combination_by_angle_sorter::new();
-        sort_by_less(&mut combinations, |a, b| comb_sorter.call_op(a, b) != 0);
+        utils::common::std_sort::std_sort(combinations.as_mut_slice(), |a, b| comb_sorter.call_op(&a, &b) != 0);
         let mut seen: HashSet<Ptr<NBEdge>> = HashSet::new();
         for j in combinations.iter() {
             if seen.contains(&j.from) || seen.contains(&j.to) {
@@ -1397,7 +1377,7 @@ impl NBNodesEdgesSorter_crossing_by_junction_angle_sorter {
         // reorder based on getAngleAtNodeToCenter
         let mut myOrdering: EdgeVector = ordering.clone();
         let centroid_sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(node);
-        sort_by_less(&mut myOrdering, |a, b| centroid_sorter.call_op(*a, *b));
+        sort_edges_by(&mut myOrdering, |a, b| centroid_sorter.call_op(a, b));
         // let the first edge remain the first
         let mid = match ordering.first() {
             Some(front) => myOrdering.iter().position(|e| e == front).unwrap_or(myOrdering.len()),

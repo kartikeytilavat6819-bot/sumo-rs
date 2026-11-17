@@ -1,0 +1,3 @@
+ptstop --ptstop-output @OUT@/ptstop.xml
+ptline --ptstop-output @OUT@/ptstop.xml --ptline-output @OUT@/ptline.xml --ptline-clean-up true
+railway --railway.topology.repair true

@@ -1,6 +1,96 @@
 //! Port of dfrouter/RODFNet.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_message, write_warning};
+use utils::common::sumo_vehicle_class::{get_vehicle_class_id, SVC_IGNORING, SVC_PASSENGER, SVC_TRUCK};
+use utils::common::to_string::{f64_to_string, f64_to_string_prec};
+use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector};
+
+/// SUMOXMLDefinitions::getEdgeIDFromLane: the lane id without its trailing "_<index>"
+fn edge_id_from_lane(lane_id: &str) -> String {
+    match lane_id.rfind('_') {
+        Some(pos) => lane_id[..pos].to_string(),
+        None => lane_id.to_string(),
+    }
+}
+
+/// C++ copy constructor of RODFRouteDesc (not derived in this port)
+fn copy_route_desc(src: &RODFRouteDesc) -> RODFRouteDesc {
+    RODFRouteDesc {
+        edges2Pass: src.edges2Pass.clone(),
+        routename: src.routename.clone(),
+        duration_2: src.duration_2,
+        distance: src.distance,
+        passedNo: src.passedNo,
+        endDetectorEdge: src.endDetectorEdge,
+        lastDetectorEdge: src.lastDetectorEdge,
+        distance2Last: src.distance2Last,
+        duration2Last: src.duration2Last,
+        overallProb: src.overallProb,
+        factor: src.factor,
+    }
+}
+
+/// C++ copy constructor of RODFRouteCont (not derived in this port)
+fn copy_route_cont(src: &RODFRouteCont) -> RODFRouteCont {
+    RODFRouteCont {
+        myRoutes: src.myRoutes.iter().map(copy_route_desc).collect(),
+        myConnectionOccurrences: src.myConnectionOccurrences.clone(),
+    }
+}
+
+/// std::push_heap with DFRouteDescByTimeComperator (libstdc++ sift order)
+fn route_desc_push_heap(heap: &mut Vec<RODFRouteDesc>, mut hole: usize, top: usize) {
+    // comp(parent, value): nod1.duration_2 > nod2.duration_2
+    while hole > top {
+        let parent = (hole - 1) / 2;
+        if !(heap[parent].duration_2 > heap[hole].duration_2) {
+            break;
+        }
+        heap.swap(parent, hole);
+        hole = parent;
+    }
+}
+
+/// std::priority_queue::push
+fn route_desc_heap_push(heap: &mut Vec<RODFRouteDesc>, value: RODFRouteDesc) {
+    heap.push(value);
+    let last = heap.len() - 1;
+    route_desc_push_heap(heap, last, 0);
+}
+
+/// std::priority_queue::pop returning the top element (libstdc++ __adjust_heap order)
+fn route_desc_heap_pop(heap: &mut Vec<RODFRouteDesc>) -> RODFRouteDesc {
+    let n = heap.len();
+    heap.swap(0, n - 1);
+    let top = heap.pop().unwrap();
+    let len = heap.len();
+    if len > 0 {
+        let mut hole: usize = 0;
+        let mut second: usize = 0;
+        while second < (len - 1) / 2 {
+            second = 2 * (second + 1);
+            // comp(child, sibling): nod1.duration_2 > nod2.duration_2
+            if heap[second].duration_2 > heap[second - 1].duration_2 {
+                second -= 1;
+            }
+            heap.swap(hole, second);
+            hole = second;
+        }
+        if len % 2 == 0 && second == (len - 2) / 2 {
+            second = 2 * (second + 1);
+            heap.swap(hole, second - 1);
+            hole = second - 1;
+        }
+        route_desc_push_heap(heap, hole, 0);
+    }
+    top
+}
+
+/// C++ FlowDef default state: all members zero, firstSet false
+fn zero_flow_def() -> FlowDef {
+    FlowDef { qPKW: 0.0, qLKW: 0.0, vPKW: 0.0, vLKW: 0.0, fLKW: 0.0, isLKW: 0.0, firstSet: false }
+}
 
 /// C++ class `RODFNet::DFRouteDescByTimeComperator` (dfrouter/RODFNet.h)
 pub struct RODFNet_DFRouteDescByTimeComperator {
@@ -12,7 +102,7 @@ impl RODFNet_DFRouteDescByTimeComperator {
     // explicit DFRouteDescByTimeComperator() { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        todo!("port DFRouteDescByTimeComperator::DFRouteDescByTimeComperator")
+        Self {}
     }
 
     /// C++: `void DFRouteDescByTimeComperator::~DFRouteDescByTimeComperator() noexcept`
@@ -20,7 +110,7 @@ impl RODFNet_DFRouteDescByTimeComperator {
     // ~DFRouteDescByTimeComperator() { }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port DFRouteDescByTimeComperator::~DFRouteDescByTimeComperator")
+        // empty destructor, as in C++
     }
 
     /// C++: `bool DFRouteDescByTimeComperator::operator()(const RODFRouteDesc &, const RODFRouteDesc &) const` [const]
@@ -30,7 +120,7 @@ impl RODFNet_DFRouteDescByTimeComperator {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, nod1: &RODFRouteDesc, nod2: &RODFRouteDesc) -> bool {
-        todo!("port DFRouteDescByTimeComperator::operator()")
+        nod1.duration_2 > nod2.duration_2
     }
 
 }
@@ -100,7 +190,25 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn new(amInHighwayMode: bool) -> Self {
-        todo!("port RODFNet::RODFNet")
+        Self {
+            base: RONet::new(),
+            myApproachingEdges: BTreeMap::new(),
+            myApproachedEdges: BTreeMap::new(),
+            myDetectorsOnEdges: BTreeMap::new(),
+            myDetectorEdges: BTreeMap::new(),
+            myAmInHighwayMode: amInHighwayMode,
+            mySourceNumber: 0,
+            mySinkNumber: 0,
+            myInBetweenNumber: 0,
+            myInvalidNumber: 0,
+            myDisallowedEdges: get_string_vector("disallowed-edges"),
+            myAllowedVClass: get_vehicle_class_id(&get_string("vclass")).unwrap_or_else(|e| panic!("{}", e)),
+            myKeepTurnarounds: get_bool("keep-turnarounds"),
+            myMaxSpeedFactorPKW: 1.0,
+            myMaxSpeedFactorLKW: 1.0,
+            myAvgSpeedFactorPKW: 1.0,
+            myAvgSpeedFactorLKW: 1.0,
+        }
     }
 
     /// C++: `void RODFNet::~RODFNet() noexcept` [virtual]
@@ -109,7 +217,7 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port RODFNet::~RODFNet")
+        // empty destructor, as in C++
     }
 
     /// C++: `void RODFNet::buildApproachList()`
@@ -137,7 +245,25 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn build_approach_list(&mut self) {
-        todo!("port RODFNet::buildApproachList")
+        for ce in ROEdge::get_all_edges().iter().copied() {
+            if !self.is_allowed(ce) {
+                continue;
+            }
+            for help in ce.get_successors(SVC_IGNORING).iter().copied() {
+                if !self.is_allowed(help) {
+                    // blocked edges will not be used
+                    continue;
+                }
+                if !self.myKeepTurnarounds && help.get_to_junction() == ce.get_from_junction() {
+                    // do not use turnarounds
+                    continue;
+                }
+                // add the connection help->ce to myApproachingEdges
+                self.myApproachingEdges.entry(help).or_default().push(ce);
+                // add the connection ce->help to myApproachingEdges
+                self.myApproachedEdges.entry(ce).or_default().push(help);
+            }
+        }
     }
 
     /// C++: `void RODFNet::computeTypes(RODFDetectorCon &, bool) const` [const]
@@ -180,8 +306,42 @@ impl RODFNet {
     //     WRITE_MESSAGEF(TL(" % invalid detectors"), toString(myInvalidNumber));
     // }
     #[allow(unused_variables)]
-    pub fn compute_types(&self, dets: &mut RODFDetectorCon, sourcesStrict: bool) {
-        todo!("port RODFNet::computeTypes")
+    pub fn compute_types(&mut self, dets: &mut RODFDetectorCon, sourcesStrict: bool) {
+        let this = self;
+        progress_begin_message("Computing detector types");
+        let dets_list = dets.get_detectors().clone();
+        // build needed information. first
+        this.build_detector_edge_dependencies(dets);
+        // compute detector types then
+        for i in dets_list.iter().copied() {
+            if this.is_source(i.m(), dets, sourcesStrict) {
+                i.m().set_type(RODFDetectorType::SOURCE_DETECTOR);
+                this.mySourceNumber += 1;
+            }
+            if this.is_destination(i.m(), dets) {
+                i.m().set_type(RODFDetectorType::SINK_DETECTOR);
+                this.mySinkNumber += 1;
+            }
+            if i.m().get_type() == RODFDetectorType::TYPE_NOT_DEFINED {
+                i.m().set_type(RODFDetectorType::BETWEEN_DETECTOR);
+                this.myInBetweenNumber += 1;
+            }
+        }
+        // recheck sources
+        for i in dets_list.iter().copied() {
+            if i.m().get_type() == RODFDetectorType::SOURCE_DETECTOR && this.is_false_source(i.m(), dets) {
+                i.m().set_type(RODFDetectorType::DISCARDED_DETECTOR);
+                this.myInvalidNumber += 1;
+                this.mySourceNumber -= 1;
+            }
+        }
+        // print results
+        progress_done_message();
+        write_message("Computed detector types:");
+        write_message(&format!(" {} source detectors", this.mySourceNumber));
+        write_message(&format!(" {} sink detectors", this.mySinkNumber));
+        write_message(&format!(" {} in-between detectors", this.myInBetweenNumber));
+        write_message(&format!(" {} invalid detectors", this.myInvalidNumber));
     }
 
     /// C++: `void RODFNet::buildRoutes(RODFDetectorCon &, bool, bool, bool, int) const` [const]
@@ -205,7 +365,7 @@ impl RODFNet {
     //         doneEdges[e] = routes;
     //         RODFRouteDesc rd;
     //         rd.edges2Pass.push_back(e);
-    //         rd.duration_2 = (e->getLength() / e->getSpeedLimit()); //!!!;
+    //         rd.duration_2 = (e->getLength() / e->getSpeedLimit()); // !!!;
     //         rd.endDetectorEdge = nullptr;
     //         rd.lastDetectorEdge = nullptr;
     //         rd.distance = e->getLength();
@@ -218,7 +378,7 @@ impl RODFNet {
     //         visited.push_back(e);
     //         computeRoutesFor(e, rd, 0, keepUnfoundEnds, keepShortestOnly,
     //                          visited, **i, *routes, detcont, maxFollowingLength, seen);
-    //         //!!!routes->removeIllegal(illegals);
+    //         // !!!routes->removeIllegal(illegals);
     //         (*i)->addRoutes(routes);
     //
     //         // add routes to in-between detectors if wished
@@ -244,7 +404,7 @@ impl RODFNet {
     //                         if (m.getType() == BETWEEN_DETECTOR) {
     //                             RODFRouteDesc nrd;
     //                             copy(k, routeend, back_inserter(nrd.edges2Pass));
-    //                             nrd.duration_2 = duration;//!!!;
+    //                             nrd.duration_2 = duration;// !!!;
     //                             nrd.endDetectorEdge = mrd.endDetectorEdge;
     //                             nrd.lastDetectorEdge = mrd.lastDetectorEdge;
     //                             nrd.distance = distance;
@@ -264,8 +424,85 @@ impl RODFNet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_routes(&self, det: &mut RODFDetectorCon, keepUnfoundEnds: bool, includeInBetween: bool, keepShortestOnly: bool, maxFollowingLength: i32) {
-        todo!("port RODFNet::buildRoutes")
+    pub fn build_routes(&mut self, det: &mut RODFDetectorCon, keepUnfoundEnds: bool, includeInBetween: bool, keepShortestOnly: bool, maxFollowingLength: i32) {
+        // build needed information first
+        self.build_detector_edge_dependencies(det);
+        // then build the routes
+        let mut doneEdges: BTreeMap<Ptr<ROEdge>, Ptr<RODFRouteCont>> = BTreeMap::new();
+        let dets = det.get_detectors().clone();
+        for i in dets.iter().copied() {
+            let e = self.get_detector_edge(i.m());
+            if let Some(done) = doneEdges.get(&e).copied() {
+                // use previously build routes
+                // shortcut: C++ owner is the detector (delete on addRoutes); the route container is leaked, as the detector does not own it yet
+                let copy = Box::leak(Box::new(copy_route_cont(done.m())));
+                i.m().add_routes(Ptr::from_mut(copy));
+                continue;
+            }
+            let mut seen: ROEdgeVector = Vec::new();
+            // shortcut: C++ owner is the detector (delete on addRoutes); the route container is leaked, as the detector does not own it yet
+            let routes: Ptr<RODFRouteCont> = Ptr::from_mut(Box::leak(Box::new(RODFRouteCont::new())));
+            doneEdges.insert(e, routes);
+            let mut rd = RODFRouteDesc {
+                edges2Pass: vec![e],
+                routename: String::new(),
+                duration_2: e.get_length() / e.get_speed_limit(), // !!!;
+                distance: e.get_length(),
+                passedNo: 0,
+                endDetectorEdge: Ptr::null(),
+                lastDetectorEdge: Ptr::null(),
+                distance2Last: 0.0,
+                duration2Last: 0,
+                overallProb: 0.0,
+                factor: 0.0,
+            };
+            let mut visited: ROEdgeVector = vec![e];
+            self.compute_routes_for(e, &mut rd, 0, keepUnfoundEnds, keepShortestOnly, &mut visited, i.m(), routes.m(), det, maxFollowingLength, &mut seen);
+            // !!!routes->removeIllegal(illegals);
+            i.m().add_routes(routes);
+
+            // add routes to in-between detectors if wished
+            if includeInBetween {
+                // go through the routes
+                let r = routes.m().get();
+                for mrd in r.iter() {
+                    let mut duration = mrd.duration_2;
+                    let mut distance = mrd.distance;
+                    // go through each route's edges
+                    for k in 0..mrd.edges2Pass.len() {
+                        let kedge = mrd.edges2Pass[k];
+                        // check whether any detectors lies on the current edge
+                        if !self.myDetectorsOnEdges.contains_key(&kedge) {
+                            duration -= kedge.get_length() / kedge.get_speed_limit();
+                            distance -= kedge.get_length();
+                            continue;
+                        }
+                        // go through the detectors
+                        for l in self.myDetectorsOnEdges[&kedge].iter() {
+                            let m = det.get_detector(l);
+                            if m.get_type() == RODFDetectorType::BETWEEN_DETECTOR {
+                                let mut nrd = RODFRouteDesc {
+                                    edges2Pass: mrd.edges2Pass[k..].to_vec(),
+                                    routename: String::new(),
+                                    duration_2: duration, // !!!;
+                                    distance,
+                                    passedNo: 0,
+                                    endDetectorEdge: mrd.endDetectorEdge,
+                                    lastDetectorEdge: mrd.lastDetectorEdge,
+                                    distance2Last: mrd.distance2Last,
+                                    duration2Last: mrd.duration2Last,
+                                    overallProb: mrd.overallProb,
+                                    factor: mrd.factor,
+                                };
+                                det.get_modifiable_detector(l).add_route(&mut nrd);
+                            }
+                        }
+                        duration -= kedge.get_length() / kedge.get_speed_limit();
+                        distance -= kedge.get_length();
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `double RODFNet::getAbsPos(const RODFDetector &) const` [const]
@@ -278,7 +515,10 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn get_abs_pos(&self, det: &RODFDetector) -> f64 {
-        todo!("port RODFNet::getAbsPos")
+        if det.get_pos() >= 0.0 {
+            return det.get_pos();
+        }
+        self.get_detector_edge(det).get_length() + det.get_pos()
     }
 
     /// C++: `void RODFNet::buildEdgeFlowMap(const RODFDetectorFlows &, const RODFDetectorCon &, SUMOTime, SUMOTime, SUMOTime)`
@@ -381,7 +621,111 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn build_edge_flow_map(&mut self, flows: &RODFDetectorFlows, detectors: &RODFDetectorCon, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime) {
-        todo!("port RODFNet::buildEdgeFlowMap")
+        let mut speedFactorSumPKW = 0.0;
+        let mut speedFactorSumLKW = 0.0;
+        let mut speedFactorCountPKW = 0.0;
+        let mut speedFactorCountLKW = 0.0;
+        // determinism: C++ std::map ordered by edge id (idComp), so visit edges in id order
+        let mut on_edges: Vec<(Ptr<ROEdge>, Vec<String>)> = self.myDetectorsOnEdges.iter().map(|(k, v)| (*k, v.clone())).collect();
+        on_edges.sort_by(|a, b| a.0.get_id().cmp(b.0.get_id()));
+        for (into, dets) in on_edges.iter() {
+            let into = *into;
+            let maxSpeedPKW = into.get_v_class_max_speed(SVC_PASSENGER);
+            let maxSpeedLKW = into.get_v_class_max_speed(SVC_TRUCK);
+
+            // cliques: std::map<double, std::vector<std::string>> keyed by position, kept sorted by key
+            let mut cliques: Vec<(f64, Vec<String>)> = Vec::new();
+            // maxClique is a pointer into cliques in C++; the key identifies it here
+            let mut maxClique: Option<f64> = None;
+            for j in dets.iter() {
+                if !flows.knows(j) {
+                    continue;
+                }
+                let det = detectors.get_detector(j);
+                match cliques.iter().position(|k| (k.0 - det.get_pos()).abs() < 1.0) {
+                    Some(idx) => {
+                        cliques[idx].1.push(j.clone());
+                        let better = match maxClique {
+                            None => true,
+                            Some(mk) => cliques[idx].1.len() > cliques.iter().find(|c| c.0 == mk).unwrap().1.len(),
+                        };
+                        if better {
+                            maxClique = Some(cliques[idx].0);
+                        }
+                    }
+                    None => {
+                        let pos = cliques.iter().position(|c| c.0 > det.get_pos()).unwrap_or(cliques.len());
+                        cliques.insert(pos, (det.get_pos(), vec![j.clone()]));
+                        maxClique = Some(det.get_pos());
+                    }
+                }
+            }
+            let Some(maxClique) = maxClique else {
+                continue;
+            };
+            let maxCliqueList: Vec<String> = cliques.iter().find(|c| c.0 == maxClique).unwrap().1.clone();
+            let maxCliqueSize = maxCliqueList.len() as f64;
+            let mut mflows: Vec<FlowDef> = Vec::new();
+            let mut t = startTime;
+            while t < endTime {
+                mflows.push(zero_flow_def());
+                t += stepOffset;
+            }
+            for l in maxCliqueList.iter() {
+                let mut didWarn = false;
+                let dflows = flows.get_flow_defs(l);
+                let mut index: usize = 0;
+                let mut t = startTime;
+                while t < endTime {
+                    let srcFD = &dflows[index];
+                    let fd = &mut mflows[index];
+                    fd.qPKW += srcFD.qPKW;
+                    fd.qLKW += srcFD.qLKW;
+                    fd.vLKW += srcFD.vLKW / maxCliqueSize;
+                    fd.vPKW += srcFD.vPKW / maxCliqueSize;
+                    fd.fLKW += srcFD.fLKW / maxCliqueSize;
+                    fd.isLKW += srcFD.isLKW / maxCliqueSize;
+                    let speedFactorPKW = srcFD.vPKW / 3.6 / maxSpeedPKW;
+                    let speedFactorLKW = srcFD.vLKW / 3.6 / maxSpeedLKW;
+                    let fdPKW = self.myMaxSpeedFactorPKW;
+                    self.myMaxSpeedFactorPKW = if fdPKW > speedFactorPKW { fdPKW } else { speedFactorPKW }; // MAX2
+                    let fdLKW = self.myMaxSpeedFactorLKW;
+                    self.myMaxSpeedFactorLKW = if fdLKW > speedFactorLKW { fdLKW } else { speedFactorLKW }; // MAX2
+                    speedFactorCountPKW += srcFD.qPKW;
+                    speedFactorCountLKW += srcFD.qLKW;
+                    speedFactorSumPKW += srcFD.qPKW * speedFactorPKW;
+                    speedFactorSumLKW += srcFD.qLKW * speedFactorLKW;
+                    if !didWarn && srcFD.vPKW > 0.0 && srcFD.vPKW < 255.0 && srcFD.vPKW / 3.6 > into.get_speed_limit() {
+                        write_message(&format!(
+                            "Detected PKW speed ({}) higher than allowed speed ({}) at '{}' on edge '{}'.",
+                            f64_to_string_prec(srcFD.vPKW / 3.6, 3), f64_to_string_prec(into.get_speed_limit(), 3), l, into.get_id()));
+                        didWarn = true;
+                    }
+                    if !didWarn && srcFD.vLKW > 0.0 && srcFD.vLKW < 255.0 && srcFD.vLKW / 3.6 > into.get_speed_limit() {
+                        write_message(&format!(
+                            "Detected LKW speed ({}) higher than allowed speed ({}) at '{}' on edge '{}'.",
+                            f64_to_string_prec(srcFD.vLKW / 3.6, 3), f64_to_string_prec(into.get_speed_limit(), 3), l, into.get_id()));
+                        didWarn = true;
+                    }
+                    t += stepOffset;
+                    index += 1;
+                }
+            }
+            into.cast::<RODFEdge>().m().set_flows(&mflows);
+        }
+        // @note: this assumes that the speedFactors are independent of location and time
+        if speedFactorCountPKW > 0.0 {
+            self.myAvgSpeedFactorPKW = speedFactorSumPKW / speedFactorCountPKW;
+            write_message(&format!(
+                "Average speedFactor for PKW is {} maximum speedFactor is {}.",
+                f64_to_string(self.myAvgSpeedFactorPKW), f64_to_string(self.myMaxSpeedFactorPKW)));
+        }
+        if speedFactorCountLKW > 0.0 {
+            self.myAvgSpeedFactorLKW = speedFactorSumLKW / speedFactorCountLKW;
+            write_message(&format!(
+                "Average speedFactor for LKW is {} maximum speedFactor is {}.",
+                f64_to_string(self.myAvgSpeedFactorLKW), f64_to_string(self.myMaxSpeedFactorLKW)));
+        }
     }
 
     /// C++: `void RODFNet::revalidateFlows(const RODFDetectorCon &, RODFDetectorFlows &, SUMOTime, SUMOTime, SUMOTime)`
@@ -398,7 +742,10 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn revalidate_flows(&mut self, detectors: &RODFDetectorCon, flows: &mut RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime) {
-        todo!("port RODFNet::revalidateFlows")
+        // check whether there is at least one entry with a flow larger than zero
+        for i in detectors.get_detectors().clone().iter().copied() {
+            self.revalidate_flows_2(i, flows, startTime, endTime, stepOffset);
+        }
     }
 
     /// C++: `void RODFNet::removeEmptyDetectors(RODFDetectorCon &, RODFDetectorFlows &)`
@@ -424,7 +771,23 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn remove_empty_detectors(&mut self, detectors: &mut RODFDetectorCon, flows: &mut RODFDetectorFlows) {
-        todo!("port RODFNet::removeEmptyDetectors")
+        let mut i: usize = 0;
+        while i < detectors.get_detectors().len() {
+            let id = detectors.get_detectors()[i].get_id().to_string();
+            let mut remove = true;
+            // check whether there is at least one entry with a flow larger than zero
+            if flows.knows(&id) {
+                remove = false;
+            }
+            if remove {
+                write_messagef!("Removed detector '%' because no flows for him exist.", id.as_str());
+                flows.remove_flow(&id);
+                detectors.remove_detector(&id);
+                i = 0;
+            } else {
+                i += 1;
+            }
+        }
     }
 
     /// C++: `void RODFNet::reportEmptyDetectors(RODFDetectorCon &, RODFDetectorFlows &)`
@@ -445,7 +808,16 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn report_empty_detectors(&mut self, detectors: &mut RODFDetectorCon, flows: &mut RODFDetectorFlows) {
-        todo!("port RODFNet::reportEmptyDetectors")
+        for i in detectors.get_detectors().iter() {
+            let mut remove = true;
+            // check whether there is at least one entry with a flow larger than zero
+            if flows.knows(i.get_id()) {
+                remove = false;
+            }
+            if remove {
+                write_messagef!("Detector '%' has no flow.", i.get_id());
+            }
+        }
     }
 
     /// C++: `void RODFNet::buildDetectorDependencies(RODFDetectorCon &)`
@@ -496,7 +868,44 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn build_detector_dependencies(&mut self, detectors: &mut RODFDetectorCon) {
-        todo!("port RODFNet::buildDetectorDependencies")
+        // !!! this will not work when several detectors are lying on the same edge on different positions
+        self.build_detector_edge_dependencies(detectors);
+        // for each detector, compute the lists of predecessor and following detectors
+        for (name, edge) in self.myDetectorEdges.clone().iter() {
+            let det = detectors.get_detector(name);
+            if !det.has_routes() {
+                continue;
+            }
+            // mark current detectors
+            let mut last: Vec<Ptr<RODFDetector>> = Vec::new();
+            {
+                let detNames = self.myDetectorsOnEdges[edge].clone();
+                for j in detNames.iter() {
+                    last.push(Ptr::from_mut(detectors.get_modifiable_detector(j)));
+                }
+            }
+            // iterate over the current detector's routes
+            let routes = det.get_route_vector();
+            for j in routes.iter() {
+                let edges2Pass = &j.edges2Pass;
+                for k in edges2Pass.iter().skip(1) {
+                    if let Some(detNames) = self.myDetectorsOnEdges.get(k).cloned() {
+                        // ok, consecutive detector found
+                        for l in last.iter().copied() {
+                            // mark as follower of current
+                            for m in detNames.iter() {
+                                detectors.get_modifiable_detector(m).add_prior_detector(l);
+                                l.m().add_following_detector(Ptr::new(detectors.get_detector(m)));
+                            }
+                        }
+                        last.clear();
+                        for m in detNames.iter() {
+                            last.push(Ptr::from_mut(detectors.get_modifiable_detector(m)));
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// C++: `void RODFNet::mesoJoin(RODFDetectorCon &, RODFDetectorFlows &)`
@@ -545,7 +954,43 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn meso_join(&mut self, detectors: &mut RODFDetectorCon, flows: &mut RODFDetectorFlows) {
-        todo!("port RODFNet::mesoJoin")
+        self.build_detector_edge_dependencies(detectors);
+        // determinism: C++ std::map ordered by edge id (idComp), so visit edges in id order
+        let mut on_edges: Vec<(Ptr<ROEdge>, Vec<String>)> = self.myDetectorsOnEdges.iter().map(|(k, v)| (*k, v.clone())).collect();
+        on_edges.sort_by(|a, b| a.0.get_id().cmp(b.0.get_id()));
+        for (_, dets) in on_edges.iter() {
+            // compute detector cliques: std::map<double, ...> keyed by position, kept sorted by key
+            let mut cliques: Vec<(f64, Vec<String>)> = Vec::new();
+            for j in dets.iter() {
+                let det = detectors.get_detector(j);
+                match cliques.iter().position(|k| (k.0 - det.get_pos()).abs() < 10.0) {
+                    Some(idx) => cliques[idx].1.push(j.clone()),
+                    None => {
+                        let at = cliques.iter().position(|c| c.0 > det.get_pos()).unwrap_or(cliques.len());
+                        cliques.insert(at, (det.get_pos(), vec![j.clone()]));
+                    }
+                }
+            }
+            // join detector cliques
+            for m in cliques.iter() {
+                let clique = m.1.clone();
+                // do not join if only one
+                if clique.len() == 1 {
+                    continue;
+                }
+                let mut nid = String::new();
+                for (idx, n) in clique.iter().enumerate() {
+                    print!("{} ", n);
+                    if idx != 0 {
+                        nid.push('_');
+                    }
+                    nid.push_str(n);
+                }
+                println!(":{}", nid);
+                flows.meso_join(&nid, &m.1);
+                detectors.meso_join(&nid, &m.1);
+            }
+        }
     }
 
     /// C++: `bool RODFNet::hasDetector(ROEdge *) const` [const]
@@ -556,7 +1001,7 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn has_detector(&self, edge: Ptr<ROEdge>) -> bool {
-        todo!("port RODFNet::hasDetector")
+        self.myDetectorsOnEdges.get(&edge).map_or(false, |v| v.len() != 0)
     }
 
     /// C++: `const std::vector<std::string> & RODFNet::getDetectorList(ROEdge *) const` [const]
@@ -566,7 +1011,7 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_list(&self, edge: Ptr<ROEdge>) -> &Vec<String> {
-        todo!("port RODFNet::getDetectorList")
+        &self.myDetectorsOnEdges[&edge]
     }
 
     /// C++: `double RODFNet::getMaxSpeedFactorPKW() const` [const]
@@ -575,7 +1020,7 @@ impl RODFNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed_factor_pkw(&self) -> f64 {
-        todo!("port RODFNet::getMaxSpeedFactorPKW")
+        self.myMaxSpeedFactorPKW
     }
 
     /// C++: `double RODFNet::getMaxSpeedFactorLKW() const` [const]
@@ -584,7 +1029,7 @@ impl RODFNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_speed_factor_lkw(&self) -> f64 {
-        todo!("port RODFNet::getMaxSpeedFactorLKW")
+        self.myMaxSpeedFactorLKW
     }
 
     /// C++: `double RODFNet::getAvgSpeedFactorPKW() const` [const]
@@ -593,7 +1038,7 @@ impl RODFNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_avg_speed_factor_pkw(&self) -> f64 {
-        todo!("port RODFNet::getAvgSpeedFactorPKW")
+        self.myAvgSpeedFactorPKW
     }
 
     /// C++: `double RODFNet::getAvgSpeedFactorLKW() const` [const]
@@ -602,7 +1047,7 @@ impl RODFNet {
     //     }
     #[allow(unused_variables)]
     pub fn get_avg_speed_factor_lkw(&self) -> f64 {
-        todo!("port RODFNet::getAvgSpeedFactorLKW")
+        self.myAvgSpeedFactorLKW
     }
 
     /// C++: `void RODFNet::revalidateFlows(const RODFDetector *, RODFDetectorFlows &, SUMOTime, SUMOTime, SUMOTime)` [protected]
@@ -750,7 +1195,136 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn revalidate_flows_2(&mut self, detector: Ptr<RODFDetector>, flows: &mut RODFDetectorFlows, startTime: SUMOTime, endTime: SUMOTime, stepOffset: SUMOTime) {
-        todo!("port RODFNet::revalidateFlows")
+        {
+            if flows.knows(detector.get_id()) {
+                let detFlows = flows.get_flow_defs(detector.get_id());
+                for j in detFlows.iter() {
+                    if j.qPKW > 0.0 || j.qLKW > 0.0 {
+                        return;
+                    }
+                }
+            }
+        }
+        // ok, there is no information for the whole time;
+        //  lets find preceding detectors and rebuild the flows if possible
+        write_warning(&format!("Detector '{}' has no flows.\n Trying to rebuild.", detector.get_id()));
+        // go back and collect flows
+        let mut previous: ROEdgeVector = Vec::new();
+        {
+            let mut missing: Vec<RODFNet_IterationEdge> = Vec::new();
+            missing.push(RODFNet_IterationEdge { depth: 0, edge: self.get_detector_edge(detector.m()) });
+            let mut maxDepthReached = false;
+            while !missing.is_empty() && !maxDepthReached {
+                let last = missing.pop().unwrap();
+                let approaching = self.myApproachingEdges.entry(last.edge).or_default().clone();
+                for j in approaching.iter().copied() {
+                    if self.has_detector(j) {
+                        previous.push(j);
+                    } else {
+                        let depth = last.depth + 1;
+                        missing.push(RODFNet_IterationEdge { depth, edge: j });
+                        if depth > 5 {
+                            maxDepthReached = true;
+                        }
+                    }
+                }
+            }
+            if maxDepthReached {
+                write_warning(" Could not build list of previous flows.");
+            }
+        }
+        // Edges with previous detectors are now in "previous";
+        //  compute following
+        let mut latter: ROEdgeVector = Vec::new();
+        {
+            let mut missing: Vec<RODFNet_IterationEdge> = Vec::new();
+            for k in previous.iter().copied() {
+                missing.push(RODFNet_IterationEdge { depth: 0, edge: k });
+            }
+            let mut maxDepthReached = false;
+            while !missing.is_empty() && !maxDepthReached {
+                let last = missing.pop().unwrap();
+                let approached = self.myApproachedEdges.entry(last.edge).or_default().clone();
+                for j in approached.iter().copied() {
+                    if j == self.get_detector_edge(detector.m()) {
+                        continue;
+                    }
+                    if self.has_detector(j) {
+                        latter.push(j);
+                    } else {
+                        let depth = last.depth + 1;
+                        missing.push(RODFNet_IterationEdge { depth, edge: j });
+                        if depth > 5 {
+                            maxDepthReached = true;
+                        }
+                    }
+                }
+            }
+            if maxDepthReached {
+                write_warning(" Could not build list of latter flows.");
+                return;
+            }
+        }
+        // Edges with latter detectors are now in "latter";
+
+        // lets not validate them by now - surely this should be done
+        // for each time step: collect incoming flows; collect outgoing;
+        let mut mflows: Vec<FlowDef> = Vec::new();
+        let mut index: usize = 0;
+        let mut t = startTime;
+        while t < endTime {
+            // collect incoming
+            let mut inFlow = zero_flow_def();
+            inFlow.qLKW = 0.0;
+            inFlow.qPKW = 0.0;
+            inFlow.vLKW = 0.0;
+            inFlow.vPKW = 0.0;
+            // !! time difference is missing
+            for e in previous.iter().copied() {
+                let ep = e.cast::<RODFEdge>();
+                let eflows = ep.get_flows();
+                if eflows.len() != 0 {
+                    let srcFD = &eflows[index];
+                    inFlow.qLKW += srcFD.qLKW;
+                    inFlow.qPKW += srcFD.qPKW;
+                    inFlow.vLKW += srcFD.vLKW;
+                    inFlow.vPKW += srcFD.vPKW;
+                }
+            }
+            inFlow.vLKW /= previous.len() as f64;
+            inFlow.vPKW /= previous.len() as f64;
+            // collect outgoing
+            let mut outFlow = zero_flow_def();
+            outFlow.qLKW = 0.0;
+            outFlow.qPKW = 0.0;
+            outFlow.vLKW = 0.0;
+            outFlow.vPKW = 0.0;
+            // !! time difference is missing
+            for e in latter.iter().copied() {
+                let ep = e.cast::<RODFEdge>();
+                let eflows = ep.get_flows();
+                if eflows.len() != 0 {
+                    let srcFD = &eflows[index];
+                    outFlow.qLKW += srcFD.qLKW;
+                    outFlow.qPKW += srcFD.qPKW;
+                    outFlow.vLKW += srcFD.vLKW;
+                    outFlow.vPKW += srcFD.vPKW;
+                }
+            }
+            outFlow.vLKW /= latter.len() as f64;
+            outFlow.vPKW /= latter.len() as f64;
+            //
+            let mut mFlow = zero_flow_def();
+            mFlow.qLKW = inFlow.qLKW - outFlow.qLKW;
+            mFlow.qPKW = inFlow.qPKW - outFlow.qPKW;
+            mFlow.vLKW = (inFlow.vLKW + outFlow.vLKW) / 2.0;
+            mFlow.vPKW = (inFlow.vPKW + outFlow.vPKW) / 2.0;
+            mflows.push(mFlow);
+            t += stepOffset;
+            index += 1;
+        }
+        self.get_detector_edge(detector.m()).cast::<RODFEdge>().m().set_flows(&mflows);
+        flows.set_flows(detector.get_id(), &mut mflows);
     }
 
     /// C++: `bool RODFNet::isSource(const RODFDetector &, const RODFDetectorCon &, bool) const` [const, protected]
@@ -762,7 +1336,8 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_source(&self, det: &RODFDetector, detectors: &RODFDetectorCon, strict: bool) -> bool {
-        todo!("port RODFNet::isSource")
+        let mut seen: ROEdgeVector = Vec::new();
+        self.is_source_2(det, self.get_detector_edge(det), &mut seen, detectors, strict)
     }
 
     /// C++: `bool RODFNet::isFalseSource(const RODFDetector &, const RODFDetectorCon &) const` [const, protected]
@@ -773,7 +1348,8 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_false_source(&self, det: &RODFDetector, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::isFalseSource")
+        let mut seen: ROEdgeVector = Vec::new();
+        self.is_false_source_2(det, self.get_detector_edge(det), &mut seen, detectors)
     }
 
     /// C++: `bool RODFNet::isDestination(const RODFDetector &, const RODFDetectorCon &) const` [const, protected]
@@ -784,7 +1360,8 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_destination(&self, det: &RODFDetector, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::isDestination")
+        let mut seen: ROEdgeVector = Vec::new();
+        self.is_destination_2(det, self.get_detector_edge(det), &mut seen, detectors)
     }
 
     /// C++: `ROEdge * RODFNet::getDetectorEdge(const RODFDetector &) const` [const, protected]
@@ -799,7 +1376,12 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn get_detector_edge(&self, det: &RODFDetector) -> Ptr<ROEdge> {
-        todo!("port RODFNet::getDetectorEdge")
+        let edgeName = edge_id_from_lane(det.get_lane_id());
+        let ret = self.get_edge(&edgeName);
+        if ret.is_null() {
+            panic!("{}", ProcessError::new(format!("Edge '{}' used by detector '{}' is not known.", edgeName, det.get_id())));
+        }
+        ret
     }
 
     /// C++: `bool RODFNet::isSource(const RODFDetector &, ROEdge *, ROEdgeVector &, const RODFDetectorCon &, bool) const` [const, protected]
@@ -902,7 +1484,96 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_source_2(&self, det: &RODFDetector, edge: Ptr<ROEdge>, seen: &mut ROEdgeVector, detectors: &RODFDetectorCon, strict: bool) -> bool {
-        todo!("port RODFNet::isSource")
+        if seen.len() == 1000 {
+            // !!!
+            write_warning(&format!("Quitting checking for being a source for detector '{}' due to seen edge limit.", det.get_id()));
+            return false;
+        }
+        if edge == self.get_detector_edge(det) {
+            // maybe there is another detector at the same edge
+            //  get the list of this/these detector(s)
+            let detsOnEdge = self.myDetectorsOnEdges[&edge].clone();
+            for i in detsOnEdge.iter() {
+                if i.as_str() == det.get_id() {
+                    continue;
+                }
+                let sec = detectors.get_detector(i);
+                if self.get_abs_pos(sec) < self.get_abs_pos(det) {
+                    // ok, there is another detector on the same edge and it is
+                    //  before this one -> no source
+                    return false;
+                }
+            }
+        }
+        // it's a source if no edges are approaching the edge
+        if !self.has_approaching(edge) {
+            if edge != self.get_detector_edge(det) {
+                if self.has_detector(edge) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if edge != self.get_detector_edge(det) {
+            // ok, we are at one of the edges in front
+            if self.myAmInHighwayMode {
+                if edge.get_speed_limit() >= 19.4 {
+                    if self.has_detector(edge) {
+                        // we are still on the highway and there is another detector
+                        return false;
+                    }
+                    // the next is a hack for the A100 scenario...
+                    //  We have to look into further edges herein edges
+                    let appr = self.myApproachingEdges[&edge].clone();
+                    let mut noFalse: i32 = 0;
+                    let noSkipped: i32 = 0;
+                    for i in 0..appr.len() {
+                        if self.has_detector(appr[i]) {
+                            noFalse += 1;
+                        }
+                    }
+                    if noFalse + noSkipped == appr.len() as i32 {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if self.myAmInHighwayMode {
+            if edge.get_speed_limit() < 19.4 && edge != self.get_detector_edge(det) {
+                // we have left the highway already
+                //  -> the detector will be a highway source
+                if !self.has_detector(edge) {
+                    return true;
+                }
+            }
+        }
+        if self.myDetectorsOnEdges.contains_key(&edge) && self.myDetectorEdges.get(det.get_id()) != Some(&edge) {
+            return false;
+        }
+
+        // let's check the edges in front
+        let appr = self.myApproachingEdges[&edge].clone();
+        let mut numOk: i32 = 0;
+        let mut numFalse: i32 = 0;
+        let mut numSkipped: i32 = 0;
+        seen.push(edge);
+        for i in 0..appr.len() {
+            let had = seen.contains(&appr[i]);
+            if !had {
+                if self.is_source_2(det, appr[i], seen, detectors, strict) {
+                    numOk += 1;
+                } else {
+                    numFalse += 1;
+                }
+            } else {
+                numSkipped += 1;
+            }
+        }
+        if strict {
+            return numOk + numSkipped == appr.len() as i32;
+        }
+        numFalse + numSkipped != appr.len() as i32
     }
 
     /// C++: `bool RODFNet::isFalseSource(const RODFDetector &, ROEdge *, ROEdgeVector &, const RODFDetectorCon &) const` [const, protected]
@@ -955,7 +1626,51 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_false_source_2(&self, det: &RODFDetector, edge: Ptr<ROEdge>, seen: &mut ROEdgeVector, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::isFalseSource")
+        if seen.len() == 1000 {
+            // !!!
+            write_warning(&format!("Quitting checking for being a false source for detector '{}' due to seen edge limit.", det.get_id()));
+            return false;
+        }
+        seen.push(edge);
+        if edge != self.get_detector_edge(det) {
+            // ok, we are at one of the edges coming behind
+            if self.has_detector(edge) {
+                let dets = self.myDetectorsOnEdges[&edge].clone();
+                for i in dets.iter() {
+                    if detectors.get_detector(i).get_type() == RODFDetectorType::SINK_DETECTOR {
+                        return false;
+                    }
+                    if detectors.get_detector(i).get_type() == RODFDetectorType::BETWEEN_DETECTOR {
+                        return false;
+                    }
+                    if detectors.get_detector(i).get_type() == RODFDetectorType::SOURCE_DETECTOR {
+                        return true;
+                    }
+                }
+            } else {
+                if self.myAmInHighwayMode && edge.get_speed_limit() < 19.0 {
+                    return false;
+                }
+            }
+        }
+
+        if !self.myApproachedEdges.contains_key(&edge) {
+            return false;
+        }
+
+        let appr = self.myApproachedEdges[&edge].clone();
+        let mut isall = false;
+        let mut i: usize = 0;
+        while i < appr.len() && !isall {
+            let had = seen.contains(&appr[i]);
+            if !had {
+                if self.is_false_source_2(det, appr[i], seen, detectors) {
+                    isall = true;
+                }
+            }
+            i += 1;
+        }
+        isall
     }
 
     /// C++: `bool RODFNet::isDestination(const RODFDetector &, ROEdge *, ROEdgeVector &, const RODFDetectorCon &) const` [const, protected]
@@ -1034,7 +1749,75 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_destination_2(&self, det: &RODFDetector, edge: Ptr<ROEdge>, seen: &mut ROEdgeVector, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::isDestination")
+        if seen.len() == 1000 {
+            // !!!
+            write_warning(&format!("Quitting checking for being a destination for detector '{}' due to seen edge limit.", det.get_id()));
+            return false;
+        }
+        if edge == self.get_detector_edge(det) {
+            // maybe there is another detector at the same edge
+            //  get the list of this/these detector(s)
+            let detsOnEdge = self.myDetectorsOnEdges[&edge].clone();
+            for i in detsOnEdge.iter() {
+                if i.as_str() == det.get_id() {
+                    continue;
+                }
+                let sec = detectors.get_detector(i);
+                if self.get_abs_pos(sec) > self.get_abs_pos(det) {
+                    // ok, there is another detector on the same edge and it is
+                    //  after this one -> no destination
+                    return false;
+                }
+            }
+        }
+        if !self.has_approached(edge) {
+            if edge != self.get_detector_edge(det) {
+                if self.has_detector(edge) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        if edge != self.get_detector_edge(det) {
+            // ok, we are at one of the edges coming behind
+            if self.myAmInHighwayMode {
+                if edge.get_speed_limit() >= 19.4 {
+                    if self.has_detector(edge) {
+                        // we are still on the highway and there is another detector
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if self.myAmInHighwayMode {
+            if edge.get_speed_limit() < 19.4 && edge != self.get_detector_edge(det) {
+                if self.has_detector(edge) {
+                    return true;
+                }
+                if self.myApproachedEdges[&edge].len() > 1 {
+                    return true;
+                }
+            }
+        }
+
+        if self.myDetectorsOnEdges.contains_key(&edge) && self.myDetectorEdges.get(det.get_id()) != Some(&edge) {
+            return false;
+        }
+        let appr = self.myApproachedEdges[&edge].clone();
+        let mut isall = true;
+        seen.push(edge);
+        let mut i: usize = 0;
+        while i < appr.len() && isall {
+            let had = seen.contains(&appr[i]);
+            if !had {
+                if !self.is_destination_2(det, appr[i], seen, detectors) {
+                    isall = false;
+                }
+            }
+            i += 1;
+        }
+        isall
     }
 
     /// C++: `void RODFNet::computeRoutesFor(ROEdge *, RODFRouteDesc &, int, bool, bool, ROEdgeVector &, const RODFDetector &, RODFRouteCont &, const RODFDetectorCon &, int, ROEdgeVector &) const` [const, protected]
@@ -1100,7 +1883,7 @@ impl RODFNet {
     //                     current.distance2Last = current.distance;
     //                     current.endDetectorEdge = last;
     //                     if (hasSourceDetector(last, detectors)) {
-    // ///!!!                        //toDiscard.push_back(current);
+    // /// !!!                        //toDiscard.push_back(current);
     //                     }
     //                     current.factor = 1.;
     //                     double cdist = current.edges2Pass[0]->getFromJunction()->getPosition().distanceTo(current.edges2Pass.back()->getToJunction()->getPosition());
@@ -1155,7 +1938,7 @@ impl RODFNet {
     //                 continue;
     //             }
     //             RODFRouteDesc t(current);
-    //             t.duration_2 += (appr[i]->getLength() / appr[i]->getSpeedLimit()); //!!!
+    //             t.duration_2 += (appr[i]->getLength() / appr[i]->getSpeedLimit()); // !!!
     //             t.distance += appr[i]->getLength();
     //             t.edges2Pass.push_back(appr[i]);
     //             if (!addNextNoFurther) {
@@ -1197,7 +1980,141 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn compute_routes_for(&self, edge: Ptr<ROEdge>, base: &mut RODFRouteDesc, no: i32, keepUnfoundEnds: bool, keepShortestOnly: bool, visited: &mut ROEdgeVector, det: &RODFDetector, into: &mut RODFRouteCont, detectors: &RODFDetectorCon, maxFollowingLength: i32, seen: &mut ROEdgeVector) {
-        todo!("port RODFNet::computeRoutesFor")
+        let mut unfoundEnds: Vec<RODFRouteDesc> = Vec::new();
+        // determinism: std::priority_queue ordering reproduced with libstdc++ heap operations
+        let mut toSolve: Vec<RODFRouteDesc> = Vec::new();
+        let mut dets2Follow: BTreeMap<Ptr<ROEdge>, ROEdgeVector> = BTreeMap::new();
+        dets2Follow.insert(edge, Vec::new());
+        base.passedNo = 0;
+        let minDist = get_float("min-route-length");
+        route_desc_heap_push(&mut toSolve, copy_route_desc(base));
+        while !toSolve.is_empty() {
+            let mut current = route_desc_heap_pop(&mut toSolve);
+            let last = *current.edges2Pass.last().unwrap(); // *(current.edges2Pass.end() - 1)
+            if self.has_detector(last) {
+                dets2Follow.entry(last).or_default();
+                for i in current.edges2Pass.iter().rev().skip(1).copied() {
+                    if self.has_detector(i) {
+                        dets2Follow.entry(i).or_default().push(last);
+                        break;
+                    }
+                }
+            }
+
+            // do not process an edge twice
+            if seen.contains(&last) && keepShortestOnly {
+                continue;
+            }
+            seen.push(last);
+            // end if the edge has no further connections
+            if !self.has_approached(last) {
+                // ok, no further connections to follow
+                current.factor = 1.0;
+                let cdist = current.edges2Pass[0].get_from_junction().get_position().distance_to(current.edges2Pass.last().unwrap().get_to_junction().get_position());
+                if minDist < cdist {
+                    into.add_route_desc(&mut current);
+                }
+                continue;
+            }
+            // check for passing detectors:
+            //  if the current last edge is not the one the detector is placed on ...
+            let mut addNextNoFurther = false;
+            if last != self.get_detector_edge(det) {
+                // ... if there is a detector ...
+                if self.has_detector(last) {
+                    if !self.has_in_between_detectors_only(last, detectors) {
+                        // ... and it's not an in-between-detector
+                        // -> let's add this edge and the following, but not any further
+                        addNextNoFurther = true;
+                        current.lastDetectorEdge = last;
+                        current.duration2Last = current.duration_2 as SUMOTime;
+                        current.distance2Last = current.distance;
+                        current.endDetectorEdge = last;
+                        // C++: hasSourceDetector(last) only feeds a commented-out toDiscard
+                        current.factor = 1.0;
+                        let cdist = current.edges2Pass[0].get_from_junction().get_position().distance_to(current.edges2Pass.last().unwrap().get_to_junction().get_position());
+                        if minDist < cdist {
+                            into.add_route_desc(&mut current);
+                        }
+                        continue;
+                    } else {
+                        // ... if it's an in-between-detector
+                        // -> mark the current route as to be continued
+                        current.passedNo = 0;
+                        current.duration2Last = current.duration_2 as SUMOTime;
+                        current.distance2Last = current.distance;
+                        current.lastDetectorEdge = last;
+                    }
+                }
+            }
+            // check for highway off-ramps
+            if self.myAmInHighwayMode {
+                // if it's beside the highway...
+                if last.get_speed_limit() < 19.4 && last != self.get_detector_edge(det) {
+                    // ... and has more than one following edge
+                    if self.myApproachedEdges[&last].len() > 1 {
+                        // -> let's add this edge and the following, but not any further
+                        addNextNoFurther = true;
+                    }
+                }
+            }
+            // check for missing end connections
+            if !addNextNoFurther {
+                // ... if this one would be processed, but already too many edge
+                //  without a detector occurred
+                if current.passedNo > maxFollowingLength {
+                    // mark not to process any further
+                    write_warning(&format!("Could not close route for '{}'", det.get_id()));
+                    unfoundEnds.push(copy_route_desc(&current));
+                    current.factor = 1.0;
+                    let cdist = current.edges2Pass[0].get_from_junction().get_position().distance_to(current.edges2Pass.last().unwrap().get_to_junction().get_position());
+                    if minDist < cdist {
+                        into.add_route_desc(&mut current);
+                    }
+                    continue;
+                }
+            }
+            // ... else: loop over the next edges
+            let appr = self.myApproachedEdges[&last].clone();
+            let mut hadOne = false;
+            for i in 0..appr.len() {
+                if current.edges2Pass.contains(&appr[i]) {
+                    // do not append an edge twice (do not build loops)
+                    continue;
+                }
+                let mut t = copy_route_desc(&current);
+                t.duration_2 += appr[i].get_length() / appr[i].get_speed_limit(); // !!!
+                t.distance += appr[i].get_length();
+                t.edges2Pass.push(appr[i]);
+                if !addNextNoFurther {
+                    t.passedNo += 1;
+                    route_desc_heap_push(&mut toSolve, t);
+                } else {
+                    if !hadOne {
+                        t.factor = 1.0 / appr.len() as f64;
+                        let cdist = current.edges2Pass[0].get_from_junction().get_position().distance_to(current.edges2Pass.last().unwrap().get_to_junction().get_position());
+                        if minDist < cdist {
+                            into.add_route_desc(&mut t);
+                        }
+                        hadOne = true;
+                    }
+                }
+            }
+        }
+        //
+        if !keepUnfoundEnds {
+            let mut lastDetEdges: ROEdgeVector = Vec::new();
+            for i in unfoundEnds.iter_mut() {
+                if !lastDetEdges.contains(&i.lastDetectorEdge) {
+                    lastDetEdges.push(i.lastDetectorEdge);
+                } else {
+                    let ok = into.remove_route_desc(i);
+                    debug_assert!(ok);
+                }
+            }
+        } else {
+            // !!! patch the factors
+        }
     }
 
     /// C++: `void RODFNet::buildDetectorEdgeDependencies(RODFDetectorCon &) const` [const, protected]
@@ -1213,8 +2130,14 @@ impl RODFNet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_detector_edge_dependencies(&self, dets: &mut RODFDetectorCon) {
-        todo!("port RODFNet::buildDetectorEdgeDependencies")
+    pub fn build_detector_edge_dependencies(&mut self, dets: &mut RODFDetectorCon) {
+        self.myDetectorsOnEdges.clear();
+        self.myDetectorEdges.clear();
+        for i in dets.get_detectors().iter().copied() {
+            let e = self.get_detector_edge(i.m());
+            self.myDetectorsOnEdges.entry(e).or_default().push(i.get_id().to_string());
+            self.myDetectorEdges.insert(i.get_id().to_string(), e);
+        }
     }
 
     /// C++: `bool RODFNet::hasApproaching(ROEdge *) const` [const, protected]
@@ -1225,7 +2148,7 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn has_approaching(&self, edge: Ptr<ROEdge>) -> bool {
-        todo!("port RODFNet::hasApproaching")
+        self.myApproachingEdges.get(&edge).map_or(false, |v| v.len() != 0)
     }
 
     /// C++: `bool RODFNet::hasApproached(ROEdge *) const` [const, protected]
@@ -1236,7 +2159,7 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn has_approached(&self, edge: Ptr<ROEdge>) -> bool {
-        todo!("port RODFNet::hasApproached")
+        self.myApproachedEdges.get(&edge).map_or(false, |v| v.len() != 0)
     }
 
     /// C++: `bool RODFNet::hasInBetweenDetectorsOnly(ROEdge *, const RODFDetectorCon &) const` [const, protected]
@@ -1256,7 +2179,15 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn has_in_between_detectors_only(&self, edge: Ptr<ROEdge>, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::hasInBetweenDetectorsOnly")
+        debug_assert!(self.myDetectorsOnEdges.contains_key(&edge));
+        let detIDs = &self.myDetectorsOnEdges[&edge];
+        for i in detIDs.iter() {
+            let det = detectors.get_detector(i);
+            if det.get_type() != RODFDetectorType::BETWEEN_DETECTOR {
+                return false;
+            }
+        }
+        true
     }
 
     /// C++: `bool RODFNet::hasSourceDetector(ROEdge *, const RODFDetectorCon &) const` [const, protected]
@@ -1276,7 +2207,15 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn has_source_detector(&self, edge: Ptr<ROEdge>, detectors: &RODFDetectorCon) -> bool {
-        todo!("port RODFNet::hasSourceDetector")
+        debug_assert!(self.myDetectorsOnEdges.contains_key(&edge));
+        let detIDs = &self.myDetectorsOnEdges[&edge];
+        for i in detIDs.iter() {
+            let det = detectors.get_detector(i);
+            if det.get_type() == RODFDetectorType::SOURCE_DETECTOR {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool RODFNet::isAllowed(const ROEdge *const) const` [const, protected]
@@ -1289,7 +2228,11 @@ impl RODFNet {
     // }
     #[allow(unused_variables)]
     pub fn is_allowed(&self, edge: Ptr<ROEdge>) -> bool {
-        todo!("port RODFNet::isAllowed")
+        !edge.is_internal()
+            && !edge.is_walking_area()
+            && !edge.is_crossing()
+            && (edge.get_permissions() & self.myAllowedVClass) == self.myAllowedVClass
+            && !self.myDisallowedEdges.iter().any(|s| s.as_str() == edge.get_id())
     }
 
 }
@@ -1306,7 +2249,7 @@ impl RODFNet_idComp {
     //         }
     #[allow(unused_variables)]
     pub fn call_op(&self, lhs: Ptr<ROEdge>, rhs: Ptr<ROEdge>) -> bool {
-        todo!("port idComp::operator()")
+        lhs.get_id() < rhs.get_id()
     }
 
 }

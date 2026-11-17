@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_priority/junction.nod.xml --edge-files tools/oracle/cases/jt_priority/junction.edg.xml --connection-files tools/oracle/cases/jt_priority/junction.con.xml

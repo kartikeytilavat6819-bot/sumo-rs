@@ -2,6 +2,9 @@
 //! random sequences are bit-identical to the C++ build.
 use std::cell::RefCell;
 
+use crate::options::option::SumoOption;
+use crate::options::options_cont::OptionsCont;
+
 pub fn splitmix64(seed: u64) -> u64 {
     let mut z = seed.wrapping_add(0x9e3779b97f4a7c15);
     z = (z ^ (z >> 30)).wrapping_mul(0xbf58476d1ce4e5b9);
@@ -58,7 +61,33 @@ impl Mt19937 {
             self.next_u32();
         }
     }
+    /// operator<< of std::mt19937 (libstdc++): the 624 state words, then the position
+    pub fn stream_state(&self) -> String {
+        let mut s: Vec<String> = self.mt.iter().map(|w| w.to_string()).collect();
+        s.push(self.idx.to_string());
+        s.join(" ")
+    }
+    /// operator>> of std::mt19937 (libstdc++); returns false if the stream is short or malformed
+    pub fn read_stream_state<'a>(&mut self, toks: &mut impl Iterator<Item = &'a str>) -> bool {
+        let mut mt = [0u32; 624];
+        for w in mt.iter_mut() {
+            match toks.next().and_then(|t| t.parse().ok()) {
+                Some(v) => *w = v,
+                None => return false,
+            }
+        }
+        let idx: usize = match toks.next().and_then(|t| t.parse().ok()) {
+            Some(v) if v <= 624 => v,
+            _ => return false,
+        };
+        self.mt = mt;
+        self.idx = idx;
+        true
+    }
 }
+
+/// SAVE_ONLY_COUNT in RandHelper.h: below this many draws the state is the count alone
+pub const SAVE_ONLY_COUNT: u64 = 1_000_000;
 
 #[derive(Clone)]
 pub struct SumoRNG {
@@ -156,14 +185,25 @@ impl SumoRNG {
             i -= 1;
         }
     }
+    /// RandHelper::saveState(rng): the draw count, plus the full engine state from SAVE_ONLY_COUNT draws on
     pub fn save_state(&self) -> String {
-        // shortcut: full generator state dump (count >= 1e6) not supported yet; add when state saving is ported
-        self.count.to_string()
+        let mut oss = self.count.to_string();
+        if self.count >= SAVE_ONLY_COUNT {
+            oss.push(' ');
+            oss.push_str(&self.engine.stream_state());
+        }
+        oss
     }
+    /// RandHelper::loadState(state, rng): below SAVE_ONLY_COUNT the saved draws are replayed from the engine's
+    /// current position (so the engine must be freshly seeded, as in C++); otherwise the engine state is restored
     pub fn load_state(&mut self, state: &str) {
-        let c: u64 = state.split_whitespace().next().and_then(|s| s.parse().ok()).unwrap_or(0);
-        self.count = c;
-        self.engine.discard(c);
+        let mut toks = state.split_ascii_whitespace();
+        self.count = toks.next().and_then(|s| s.parse().ok()).unwrap_or(0);
+        if self.count < SAVE_ONLY_COUNT {
+            self.engine.discard(self.count);
+        } else if !self.engine.read_stream_state(&mut toks) {
+            panic!("{}", crate::common::util_exceptions::ProcessError::Process(format!("Invalid random number generator state for '{}'", self.id)));
+        }
     }
 }
 
@@ -188,6 +228,19 @@ pub fn init_rand(rng: Option<&mut SumoRNG>, random: bool, seed: i32) {
         Some(r) => r.set_seed(s),
         None => with_default(|r| r.set_seed(s)),
     }
+}
+
+/// C++: `void RandHelper::insertRandOptions(OptionsCont& oc)`
+pub fn insert_rand_options(oc: &mut OptionsCont) {
+    oc.add_option_sub_topic("Random Number");
+
+    oc.do_register("random", SumoOption::bool(false));
+    oc.add_synonyme("random", "abs-rand", true);
+    oc.add_description("random", "Random Number", "Initialises the random number generator with the current system time");
+
+    oc.do_register("seed", SumoOption::integer(23423));
+    oc.add_synonyme("seed", "srand", true);
+    oc.add_description("seed", "Random Number", "Initialises the random number generator with the given value");
 }
 
 pub fn rand_hash(x: i64) -> f64 {
@@ -235,5 +288,36 @@ mod tests {
         let mut g = Mt19937::new(5489);
         g.discard(9999);
         assert_eq!(g.next_u32(), 4123659995);
+    }
+    #[test]
+    fn rng_state_resumes_small_count() {
+        let mut a = SumoRNG::new("t");
+        a.set_seed(23423);
+        for _ in 0..100 {
+            a.rand();
+        }
+        let s = a.save_state();
+        assert_eq!(s, "100");
+        let mut b = SumoRNG::new("t");
+        b.set_seed(23423);
+        b.load_state(&s);
+        for _ in 0..50 {
+            assert_eq!(a.rand(), b.rand());
+        }
+    }
+    #[test]
+    fn rng_state_resumes_full_state() {
+        let mut a = SumoRNG::new("t");
+        a.set_seed(23423);
+        for _ in 0..SAVE_ONLY_COUNT + 5 {
+            a.rand();
+        }
+        let s = a.save_state();
+        assert_eq!(s.split_ascii_whitespace().count(), 1 + 624 + 1);
+        let mut b = SumoRNG::new("t");
+        b.load_state(&s);
+        for _ in 0..50 {
+            assert_eq!(a.rand(), b.rand());
+        }
     }
 }

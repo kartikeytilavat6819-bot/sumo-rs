@@ -1,0 +1,7 @@
+Warning: Environment variable SUMO_HOME is not set properly, disabling XML validation. Set 'auto' or 'always' for web lookups.
+Warning: Environment variable SUMO_HOME is not set, using built in type maps.
+Error: Unexpected end of file
+ In file 'C:\Users\karti\sumo-rs\.claude\worktrees\wave2\tools\oracle\cases\netconv_edge\empty_zero\input.osm'
+ At line/column 2/1.
+
+Quitting (on error).

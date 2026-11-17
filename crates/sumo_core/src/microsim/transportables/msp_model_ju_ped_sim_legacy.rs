@@ -12,16 +12,18 @@ pub enum MSPModel_JuPedSim_legacy_JPS_Model {
     SocialForce = 3,
 }
 
-/// C++ typedef `int MSPModel_JuPedSim_legacy::WaypointDesc`
-pub type MSPModel_JuPedSim_legacy_WaypointDesc = i32;
+/// C++ typedef `std::tuple<JPS_StageId, Position, double> MSPModel_JuPedSim_legacy::WaypointDesc`
+pub type MSPModel_JuPedSim_legacy_WaypointDesc = (i64, Position, f64);
 
 /// Structure that keeps data related to vanishing areas (and other types of areas).
 /// C++ class `MSPModel_JuPedSim_legacy::AreaData` (microsim/transportables/MSPModel_JuPedSim_legacy.h)
 pub struct MSPModel_JuPedSim_legacy_AreaData {
     pub id: String,
     pub areaType: String,
-    pub areaBoundary: i32,
-    pub params: Ptr<Unmapped /* Parameterised::Map */>,
+    /// C++ `std::vector<JPS_Point>`, JPS_Point is {x, y}
+    pub areaBoundary: Vec<(f64, f64)>,
+    /// C++ `const Parameterised::Map&` (non-owning)
+    pub params: Ptr<ParameterisedMap>,
     /// The last time a pedestrian was removed in a vanishing area.
     pub lastRemovalTime: SUMOTime,
 }
@@ -33,6 +35,7 @@ impl MSPModel_JuPedSim_legacy_AreaData {
 #[repr(C)]
 pub struct MSPModel_JuPedSim_legacy_Event {
     /// C++ base class `Command`
+    // shortcut: Command has no Rust type yet, keep () until microsim Command is ported
     pub base: Unmapped /* Command */,
     pub myModel: Ptr<MSPModel_JuPedSim_legacy>,
 }
@@ -55,7 +58,7 @@ impl MSPModel_JuPedSim_legacy_Event {
     //             : myModel(model) { }
     #[allow(unused_variables)]
     pub fn new(model: Ptr<MSPModel_JuPedSim_legacy>) -> Self {
-        todo!("port Event::Event")
+        Self { base: (), myModel: model }
     }
 
     /// C++: `SUMOTime Event::execute(SUMOTime)` [virtual]
@@ -64,7 +67,7 @@ impl MSPModel_JuPedSim_legacy_Event {
     //         }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        todo!("port Event::execute")
+        self.myModel.m().execute(currentTime)
     }
 
 }
@@ -87,26 +90,33 @@ pub struct MSPModel_JuPedSim_legacy {
     pub myJPSDeltaT: SUMOTime,
     /// Threshold to decide if a pedestrian has ended its journey or not.
     pub myExitTolerance: f64,
-    pub myPedestrianStates: i32,
+    pub myPedestrianStates: Vec<Ptr<MSPModel_JuPedSim_legacy_PState>>,
     /// The GEOS polygon containing all computed connected components of the pedestrian network.
-    pub myGEOSPedestrianNetwork: Ptr<i32>,
+    // shortcut: owned GEOSGeometry* -> geos::Geometry (crate geos 11.3.1), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+    pub myGEOSPedestrianNetwork: Option<Box<dyn std::any::Any>>,
     /// The GEOS polygon representing the largest (by area) connected component of the pedestrian network.
-    pub myGEOSPedestrianNetworkLargestComponent: Ptr<i32>,
+    // shortcut: non-owning const GEOSGeometry* -> Ptr<geos::Geometry>, upgrade with the geos crate
+    pub myGEOSPedestrianNetworkLargestComponent: Option<Ptr<dyn std::any::Any>>,
     pub myHaveAdditionalWalkableAreas: bool,
     /// The JPS polygon representing the largest connected component of the pedestrian network.
-    pub myJPSGeometry: i32,
+    // shortcut: JPS_Geometry is an opaque jupedsim.h pointer; no jupedsim crate found on crates.io, bindgen over jupedsim/jupedsim.h when wiring it
+    pub myJPSGeometry: Option<Box<dyn std::any::Any>>,
     /// The JPS polygon representing the largest connected component plus carriages and ramps.
-    pub myJPSGeometryWithTrainsAndRamps: i32,
+    // shortcut: same as myJPSGeometry (JPS_Geometry opaque pointer), upgrade with the jupedsim bindings
+    pub myJPSGeometryWithTrainsAndRamps: Option<Box<dyn std::any::Any>>,
     pub myJPSModel: MSPModel_JuPedSim_JPS_Model,
-    pub myJPSOperationalModel: i32,
-    pub myJPSSimulation: i32,
+    // shortcut: JPS_OperationalModel opaque pointer, upgrade with the jupedsim bindings
+    pub myJPSOperationalModel: Option<Box<dyn std::any::Any>>,
+    // shortcut: JPS_Simulation opaque pointer, upgrade with the jupedsim bindings
+    pub myJPSSimulation: Option<Box<dyn std::any::Any>>,
     pub myPythonScript: Ptr<OutputDevice>,
     /// Array of special areas.
-    pub myAreas: i32,
+    pub myAreas: Vec<Box<MSPModel_JuPedSim_legacy_AreaData>>,
     /// Array of stopped trains, used to detect whether to add carriages and ramps to the geometry.
-    pub myAllStoppedTrainIDs: i32,
-    pub myCrossingWaits: i32,
-    pub myCrossings: i32,
+    pub myAllStoppedTrainIDs: Vec<SUMOTrafficObject_NumericalID>,
+    // determinism: C++ std::map ordered by ComparatorNumericalIdLess (lane numerical id); a Vec keeps insertion order, sort by lane id when iterating
+    pub myCrossingWaits: Vec<(Ptr<MSLane>, (i64, i64))>,
+    pub myCrossings: BTreeMap<i64, Ptr<MSLane>>,
 }
 
 impl std::ops::Deref for MSPModel_JuPedSim_legacy {
@@ -156,7 +166,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
-        todo!("port MSPModel_JuPedSim_legacy::MSPModel_JuPedSim_legacy")
+        // shortcut: needs the JuPedSim C API (jupedsim/jupedsim.h, no crate chosen, bindgen planned) for the operational model and simulation, and GEOS via initialize(), upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::new needs the JuPedSim C API (jupedsim.h) and GEOS (geos crate)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::~MSPModel_JuPedSim_legacy() noexcept` [virtual]
@@ -178,7 +189,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSPModel_JuPedSim_legacy::~MSPModel_JuPedSim_legacy")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGeom_destroy/finishGEOS) and JuPedSim C API frees (JPS_Simulation_Free, JPS_Geometry_Free), upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::~MSPModel_JuPedSim_legacy needs GEOS (geos crate) and the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel_JuPedSim_legacy::add(MSTransportable *, MSStageMoving *, SUMOTime)` [virtual]
@@ -351,7 +363,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, person: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        todo!("port MSPModel_JuPedSim_legacy::add")
+        // shortcut: needs the JuPedSim C API (jupedsim.h: AddJourney, AddAgent, SwitchAgentJourney), upgrade once the C API is bound via bindgen
+        panic!("MSPModel_JuPedSim_legacy::add needs the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::remove(MSTransportableStateAdapter *)` [virtual]
@@ -370,7 +383,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        todo!("port MSPModel_JuPedSim_legacy::remove")
+        // shortcut: needs the myActiveLanes member (C++ std::map<MSLane*, std::vector<PState*>>), which the generated struct omits, add it then port remove, upgrade when the struct is regenerated with it
+        panic!("MSPModel_JuPedSim_legacy::remove needs the myActiveLanes member, missing from the generated struct")
     }
 
     /// C++: `SUMOTime MSPModel_JuPedSim_legacy::execute(SUMOTime)`
@@ -705,7 +719,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn execute(&mut self, time: SUMOTime) -> SUMOTime {
-        todo!("port MSPModel_JuPedSim_legacy::execute")
+        // shortcut: needs the JuPedSim C API (JPS_Simulation_Iterate, JPS_Agent_* model states) and GEOS for train geometry, upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::execute needs the JuPedSim C API (jupedsim.h) and GEOS (geos crate)")
     }
 
     /// C++: `bool MSPModel_JuPedSim_legacy::usingShortcuts()` [virtual]
@@ -714,7 +729,7 @@ impl MSPModel_JuPedSim_legacy {
     //     }
     #[allow(unused_variables)]
     pub fn using_shortcuts(&mut self) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::usingShortcuts")
+        self.myHaveAdditionalWalkableAreas
     }
 
     /// C++: `bool MSPModel_JuPedSim_legacy::usingDoors()` [virtual]
@@ -724,7 +739,7 @@ impl MSPModel_JuPedSim_legacy {
     //     }
     #[allow(unused_variables)]
     pub fn using_doors(&mut self) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::usingDoors")
+        true
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::registerArrived(const int)`
@@ -734,7 +749,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn register_arrived(&mut self, agentID: i32) {
-        todo!("port MSPModel_JuPedSim_legacy::registerArrived")
+        // shortcut: needs the JuPedSim C API (JPS_Simulation_MarkAgentForRemoval), upgrade once the C API is bound via bindgen
+        panic!("MSPModel_JuPedSim_legacy::registerArrived needs the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::clearState()` [virtual]
@@ -744,7 +760,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port MSPModel_JuPedSim_legacy::clearState")
+        self.myPedestrianStates.clear();
+        self.myNumActivePedestrians = 0;
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::polygonChanged(const SUMOPolygon *const, const bool, const bool)` [virtual]
@@ -777,7 +794,29 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn polygon_changed(&mut self, poly: Ptr<SUMOPolygon>, added: bool, removed: bool) {
-        todo!("port MSPModel_JuPedSim_legacy::polygonChanged")
+        if poly.get_shape_type() == "jupedsim.vanishing_area" || poly.get_shape_type() == "jupedsim.influencer" {
+            let mut lastRemovalTime: SUMOTime = 0;
+            if !added {
+                if let Some(areaIt) = self.myAreas.iter().position(|a| poly.get_id() == a.id) {
+                    lastRemovalTime = self.myAreas[areaIt].lastRemovalTime;
+                    self.myAreas.remove(areaIt);
+                }
+            }
+            if !removed {
+                let mut areaBoundary: Vec<(f64, f64)> = poly.get_shape().iter().map(|p| (p.x(), p.y())).collect();
+                if !areaBoundary.is_empty() && areaBoundary.last() == areaBoundary.first() {
+                    areaBoundary.pop();
+                }
+                let type_ = StringTokenizer::with_token(poly.get_shape_type(), ".", false).get_vector()[1].clone();
+                self.myAreas.push(Box::new(MSPModel_JuPedSim_legacy_AreaData {
+                    id: poly.get_id().to_string(),
+                    areaType: type_,
+                    areaBoundary,
+                    params: Ptr::new(poly.base2.get_parameters_map()),
+                    lastRemovalTime,
+                }));
+            }
+        }
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::initialize(const OptionsCont &)` [private]
@@ -884,7 +923,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn initialize(&mut self, oc: &OptionsCont) {
-        todo!("port MSPModel_JuPedSim_legacy::initialize")
+        // shortcut: needs GEOS (geos 11.3.1) for the pedestrian network and the JuPedSim C API (model builders, JPS_Simulation_Create), upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::initialize needs GEOS (geos crate) and the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::tryPedestrianInsertion(PState *, const Position &)` [private]
@@ -957,7 +997,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn try_pedestrian_insertion(&mut self, state: Ptr<MSPModel_Striping_PState>, p: &Position) {
-        todo!("port MSPModel_JuPedSim_legacy::tryPedestrianInsertion")
+        // shortcut: needs the JuPedSim C API (JPS_Simulation_Add*ModelAgent), upgrade once the C API is bound via bindgen
+        panic!("MSPModel_JuPedSim_legacy::tryPedestrianInsertion needs the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `bool MSPModel_JuPedSim_legacy::addStage(int, int &, const std::string &, const int)` [private]
@@ -985,7 +1026,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn add_stage(&mut self, journey: i32, predecessor: &mut i32, agentID: &str, stage: i32) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::addStage")
+        // shortcut: needs the JuPedSim C API (JPS_JourneyDescription, JPS_Transition), upgrade once the C API is bound via bindgen
+        panic!("MSPModel_JuPedSim_legacy::addStage needs the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `bool MSPModel_JuPedSim_legacy::addWaypoint(int, int &, const std::string &, const WaypointDesc &)` [private]
@@ -1025,8 +1067,9 @@ impl MSPModel_JuPedSim_legacy {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn add_waypoint(&mut self, journey: i32, predecessor: &mut i32, agentID: &str, waypoint: &MSPModel_JuPedSim_WaypointDesc) -> bool {
-        todo!("port MSPModel_JuPedSim_legacy::addWaypoint")
+    pub fn add_waypoint(&mut self, journey: i32, predecessor: &mut i32, agentID: &str, waypoint: &MSPModel_JuPedSim_legacy_WaypointDesc) -> bool {
+        // shortcut: needs the JuPedSim C API (JPS_Simulation_AddStageWaypoint), upgrade once the C API is bound via bindgen
+        panic!("MSPModel_JuPedSim_legacy::addWaypoint needs the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `int * MSPModel_JuPedSim_legacy::createGeometryFromCenterLine(PositionVector, double, int)` [static, private]
@@ -1040,7 +1083,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn create_geometry_from_center_line(centerLine: PositionVector, width: f64, capStyle: i32) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim_legacy::createGeometryFromCenterLine")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSBufferWithStyle), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::createGeometryFromCenterLine needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim_legacy::createGeometryFromShape(PositionVector, std::string, std::string, bool)` [static, private]
@@ -1108,7 +1152,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn create_geometry_from_shape(shape: PositionVector, junctionID: String, shapeID: String, isInternalShape: bool) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim_legacy::createGeometryFromShape")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSisValid/GEOSConvexHull/GEOSBufferWithStyle), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::createGeometryFromShape needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim_legacy::buildPedestrianNetwork(MSNet *)` [private]
@@ -1224,7 +1269,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn build_pedestrian_network(&mut self, network: Ptr<MSNet>) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim_legacy::buildPedestrianNetwork")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSUnaryUnion/GEOSDifference/GEOSisSimple), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::buildPedestrianNetwork needs GEOS (geos crate)")
     }
 
     /// C++: `int * MSPModel_JuPedSim_legacy::convertToGEOSPoints(PositionVector)` [static, private]
@@ -1239,7 +1285,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_geos_points(shape: PositionVector) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim_legacy::convertToGEOSPoints")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSCoordSeq), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::convertToGEOSPoints needs GEOS (geos crate)")
     }
 
     /// C++: `int MSPModel_JuPedSim_legacy::convertToJPSPoints(const int *)` [static, private]
@@ -1261,7 +1308,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_jps_points(geometry: Ptr<i32>) -> i32 {
-        todo!("port MSPModel_JuPedSim_legacy::convertToJPSPoints")
+        // shortcut: needs GEOS (geos 11.3.1, reads coordinates) and returns a JPS_Point vector for the JuPedSim C API, upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::convertToJPSPoints needs GEOS (geos crate)")
     }
 
     /// C++: `PositionVector MSPModel_JuPedSim_legacy::convertToSUMOPoints(const int *)` [static, private]
@@ -1282,7 +1330,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn convert_to_sumo_points(geometry: Ptr<i32>) -> PositionVector {
-        todo!("port MSPModel_JuPedSim_legacy::convertToSUMOPoints")
+        // shortcut: needs GEOS (geos 11.3.1, reads coordinates), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::convertToSUMOPoints needs GEOS (geos crate)")
     }
 
     /// C++: `double MSPModel_JuPedSim_legacy::getLinearRingArea(const int *)` [static, private]
@@ -1296,7 +1345,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn get_linear_ring_area(linearRing: Ptr<i32>) -> f64 {
-        todo!("port MSPModel_JuPedSim_legacy::getLinearRingArea")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSArea), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::getLinearRingArea needs GEOS (geos crate)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::removePolygonFromDrawing(const std::string &)` [private]
@@ -1306,7 +1356,7 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn remove_polygon_from_drawing(&mut self, polygonId: &str) {
-        todo!("port MSPModel_JuPedSim_legacy::removePolygonFromDrawing")
+        self.myShapeContainer.m().remove_polygon(polygonId, true);
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::preparePolygonForDrawing(const int *, const std::string &, const RGBColor &)` [private]
@@ -1332,7 +1382,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn prepare_polygon_for_drawing(&mut self, polygon: Ptr<i32>, polygonId: &str, color: &RGBColor) {
-        todo!("port MSPModel_JuPedSim_legacy::preparePolygonForDrawing")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGetExteriorRing/GEOSGetInteriorRingN), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::preparePolygonForDrawing needs GEOS (geos crate)")
     }
 
     /// C++: `const int * MSPModel_JuPedSim_legacy::getLargestComponent(const int *, int &, double &, double &)` [static, private]
@@ -1356,7 +1407,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn get_largest_component(polygon: Ptr<i32>, nbrComponents: &mut i32, maxArea: &mut f64, totalArea: &mut f64) -> Ptr<i32> {
-        todo!("port MSPModel_JuPedSim_legacy::getLargestComponent")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSGetNumGeometries/GEOSArea), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::getLargestComponent needs GEOS (geos crate)")
     }
 
     /// C++: `int MSPModel_JuPedSim_legacy::buildJPSGeometryFromGEOSGeometry(const int *)` [static, private]
@@ -1394,7 +1446,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn build_jps_geometry_from_geos_geometry(polygon: Ptr<i32>) -> i32 {
-        todo!("port MSPModel_JuPedSim_legacy::buildJPSGeometryFromGEOSGeometry")
+        // shortcut: needs GEOS (geos 11.3.1, reads rings) and the JuPedSim C API (JPS_GeometryBuilder), upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::buildJPSGeometryFromGEOSGeometry needs GEOS (geos crate) and the JuPedSim C API (jupedsim.h)")
     }
 
     /// C++: `void MSPModel_JuPedSim_legacy::dumpGeometry(const int *, const std::string &, bool)` [static, private]
@@ -1438,7 +1491,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn dump_geometry(polygon: Ptr<i32>, filename: &str, useGeoCoordinates: bool) {
-        todo!("port MSPModel_JuPedSim_legacy::dumpGeometry")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSWKTWriter), upgrade once GEOS is linked (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::dumpGeometry needs GEOS (geos crate)")
     }
 
     /// C++: `double MSPModel_JuPedSim_legacy::getRadius(const MSVehicleType &)` [static, private]
@@ -1448,7 +1502,9 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn get_radius(vehType: &MSVehicleType) -> f64 {
-        todo!("port MSPModel_JuPedSim_legacy::getRadius")
+        let length = vehType.get_length();
+        let width = vehType.get_width();
+        0.5 * (if length > width { length } else { width })
     }
 
     /// C++: `int MSPModel_JuPedSim_legacy::addWaitingSet(const MSLane *const, const bool)` [private]
@@ -1510,7 +1566,8 @@ impl MSPModel_JuPedSim_legacy {
     // }
     #[allow(unused_variables)]
     pub fn add_waiting_set(&mut self, crossing: Ptr<MSLane>, entry: bool) -> i32 {
-        todo!("port MSPModel_JuPedSim_legacy::addWaitingSet")
+        // shortcut: needs GEOS (geos 11.3.1, GEOSContains on the pedestrian network) and the JuPedSim C API (JPS_Simulation_AddStageWaitingSet), upgrade once both are bound (tools/oracle/GEOS_DECISION.md)
+        panic!("MSPModel_JuPedSim_legacy::addWaitingSet needs GEOS (geos crate) and the JuPedSim C API (jupedsim.h)")
     }
 
 }
@@ -1522,10 +1579,10 @@ pub struct MSPModel_JuPedSim_legacy_PState {
     /// C++ base class `MSPModel_InteractingState`
     pub base: MSPModel_InteractingState,
     /// id of the journey, needed for modifying it
-    pub myJourneyId: i32,
-    pub myStageId: i32,
-    pub myWaypoints: i32,
-    pub myAgentId: i32,
+    pub myJourneyId: i64,
+    pub myStageId: i64,
+    pub myWaypoints: Vec<MSPModel_JuPedSim_legacy_WaypointDesc>,
+    pub myAgentId: i64,
 }
 
 impl std::ops::Deref for MSPModel_JuPedSim_legacy_PState {
@@ -1550,8 +1607,16 @@ impl MSPModel_JuPedSim_legacy_PState {
     //     myDir = FORWARD;
     // }
     #[allow(unused_variables)]
-    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: i32, stageId: i32, waypoints: &i32) -> Self {
-        todo!("port PState::PState")
+    pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, journeyId: i64, stageId: i64, waypoints: &[MSPModel_JuPedSim_legacy_WaypointDesc]) -> Self {
+        let mut state = Self {
+            base: MSPModel_InteractingState::new(person, stage, Ptr::null()),
+            myJourneyId: journeyId,
+            myStageId: stageId,
+            myWaypoints: waypoints.to_vec(),
+            myAgentId: 0,
+        };
+        state.myDir = 1; // MSPModel::FORWARD
+        state
     }
 
     /// C++: `void PState::~PState() noexcept` [virtual]
@@ -1559,7 +1624,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port PState::~PState")
+
     }
 
     /// C++: `void PState::reinit(MSStageMoving *, int, int, const int &)`
@@ -1575,8 +1640,14 @@ impl MSPModel_JuPedSim_legacy_PState {
     //     myWaypoints = waypoints;
     // }
     #[allow(unused_variables)]
-    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: i32, stageId: i32, waypoints: &i32) {
-        todo!("port PState::reinit")
+    pub fn reinit(&mut self, stage: Ptr<MSStageMoving>, journeyId: i64, stageId: i64, waypoints: &[MSPModel_JuPedSim_legacy_WaypointDesc]) {
+        if !self.myStage.is_null() {
+            self.myStage.m().set_p_state(Ptr::null());
+        }
+        self.myStage = stage;
+        self.myJourneyId = journeyId;
+        self.myStageId = stageId;
+        self.myWaypoints = waypoints.to_vec();
     }
 
     /// C++: `Position PState::getPosition(const MSStageMoving &, SUMOTime) const` [const, virtual]
@@ -1585,7 +1656,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_position(&self, arg0: &MSStageMoving, arg1: SUMOTime) -> Position {
-        todo!("port PState::getPosition")
+        self.myRemoteXYPos
     }
 
     /// C++: `void PState::setPosition(const double, const double, const double)`
@@ -1599,7 +1670,12 @@ impl MSPModel_JuPedSim_legacy_PState {
     // }
     #[allow(unused_variables)]
     pub fn set_position(&mut self, x: f64, y: f64, z: f64) {
-        todo!("port PState::setPosition")
+        if self.myRemoteXYPos != Position::INVALID {
+            self.mySpeed = self.myRemoteXYPos.distance_to2d(&Position::new3(x, y, z)) / utils::common::time::steps2time(utils::common::time::delta_t());
+        } else {
+            self.mySpeed = 0.;
+        }
+        self.myRemoteXYPos.set3(x, y, z);
     }
 
     /// C++: `void PState::setAngle(double)`
@@ -1608,7 +1684,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_angle(&mut self, angle: f64) {
-        todo!("port PState::setAngle")
+        self.myAngle.set(angle);
     }
 
     /// C++: `void PState::setStage(MSStageMoving *const)`
@@ -1617,7 +1693,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_stage(&mut self, stage: Ptr<MSStageMoving>) {
-        todo!("port PState::setStage")
+        self.myStage = stage;
     }
 
     /// C++: `void PState::setLane(MSLane *)`
@@ -1626,7 +1702,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_lane(&mut self, lane: Ptr<MSLane>) {
-        todo!("port PState::setLane")
+        self.myLane = lane;
     }
 
     /// C++: `void PState::setLanePosition(double)`
@@ -1635,7 +1711,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn set_lane_position(&mut self, lanePosition: f64) {
-        todo!("port PState::setLanePosition")
+        self.myEdgePos = lanePosition;
     }
 
     /// C++: `const MSEdge * PState::getNextEdge(const MSStageMoving &) const` [const, virtual]
@@ -1644,7 +1720,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_edge(&self, stage: &MSStageMoving) -> Ptr<MSEdge> {
-        todo!("port PState::getNextEdge")
+        stage.get_next_route_edge()
     }
 
     /// C++: `const MSPModel_JuPedSim_legacy::WaypointDesc * PState::getNextWaypoint(const int) const` [const]
@@ -1654,7 +1730,11 @@ impl MSPModel_JuPedSim_legacy_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_next_waypoint(&self, offset: i32) -> Ptr<MSPModel_JuPedSim_legacy_WaypointDesc> {
-        todo!("port PState::getNextWaypoint")
+        if (offset as usize) < self.myWaypoints.len() {
+            Ptr::new(&self.myWaypoints[offset as usize])
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `int PState::getAgentId() const` [const]
@@ -1662,8 +1742,8 @@ impl MSPModel_JuPedSim_legacy_PState {
     //             return myAgentId;
     //         }
     #[allow(unused_variables)]
-    pub fn get_agent_id(&self) -> i32 {
-        todo!("port PState::getAgentId")
+    pub fn get_agent_id(&self) -> i64 {
+        self.myAgentId
     }
 
     /// C++: `void PState::setAgentId(int)`
@@ -1672,8 +1752,9 @@ impl MSPModel_JuPedSim_legacy_PState {
     //             myWaitingToEnter = false;
     //         }
     #[allow(unused_variables)]
-    pub fn set_agent_id(&mut self, id: i32) {
-        todo!("port PState::setAgentId")
+    pub fn set_agent_id(&mut self, id: i64) {
+        self.myAgentId = id;
+        self.myWaitingToEnter = false;
     }
 
     /// C++: `bool PState::isFinished() const` [const, virtual]
@@ -1683,7 +1764,7 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn is_finished(&self) -> bool {
-        todo!("port PState::isFinished")
+        self.myWaypoints.is_empty()
     }
 
     /// C++: `int PState::getJourneyId() const` [const]
@@ -1691,8 +1772,8 @@ impl MSPModel_JuPedSim_legacy_PState {
     //             return myJourneyId;
     //         }
     #[allow(unused_variables)]
-    pub fn get_journey_id(&self) -> i32 {
-        todo!("port PState::getJourneyId")
+    pub fn get_journey_id(&self) -> i64 {
+        self.myJourneyId
     }
 
     /// C++: `int PState::getStageId() const` [const]
@@ -1701,8 +1782,8 @@ impl MSPModel_JuPedSim_legacy_PState {
     //             return myStageId;
     //         }
     #[allow(unused_variables)]
-    pub fn get_stage_id(&self) -> i32 {
-        todo!("port PState::getStageId")
+    pub fn get_stage_id(&self) -> i64 {
+        self.myStageId
     }
 
     /// C++: `bool PState::advanceNextWaypoint()`
@@ -1712,7 +1793,8 @@ impl MSPModel_JuPedSim_legacy_PState {
     //         }
     #[allow(unused_variables)]
     pub fn advance_next_waypoint(&mut self) -> bool {
-        todo!("port PState::advanceNextWaypoint")
+        self.myWaypoints.remove(0);
+        self.myWaypoints.is_empty()
     }
 
 }

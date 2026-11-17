@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/ped_stop_lat/ped_stop.nod.xml --edge-files tools/oracle/cases/ped_stop_lat/ped_stop.edg.xml --sidewalks.guess --crossings.guess --walkingareas

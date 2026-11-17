@@ -1,6 +1,12 @@
 //! Port of microsim/transportables/MSStage.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::transportables::ms_person::MSPerson_MSPersonStage_Access;
+use crate::microsim::transportables::ms_stage_driving::MSStageDriving;
+use crate::microsim::transportables::ms_stage_tranship::MSStageTranship;
+use crate::microsim::transportables::ms_stage_trip::MSStageTrip;
+use crate::microsim::transportables::ms_stage_waiting::MSStageWaiting;
+use crate::microsim::transportables::ms_stage_walking::MSStageWalking;
 
 /// C++ enum `MSStageType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -63,6 +69,16 @@ pub const ARRIVALPOS_UNSPECIFIED: f64 = f64::INFINITY;
 pub const ROADSIDE_OFFSET: f64 = 3.;
 
 impl MSStage {
+    /// Views this base stage as its concrete subclass. Only called after a `myType` check; every
+    /// concrete stage is `#[repr(C)]` with `base` first, so the prefix cast is valid.
+    fn as_concrete<T>(&self) -> &T {
+        unsafe { &*(self as *const MSStage as *const T) }
+    }
+
+    fn as_concrete_mut<T>(&mut self) -> &mut T {
+        unsafe { &mut *(self as *mut MSStage as *mut T) }
+    }
+
     /// C++: `void MSStage::MSStage(const MSStageType, const MSEdge *, MSStoppingPlace *, const double, const double, const std::string &)`
     /// constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
@@ -97,7 +113,10 @@ impl MSStage {
     // virtual void init(MSTransportable* /*transportable*/) {}
     #[allow(unused_variables)]
     pub fn init(&mut self, arg0: Ptr<MSTransportable>) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().init(arg0),
+            _ => {}
+        }
     }
 
     /// C++: `const MSEdge * MSStage::getDestination() const` [const]
@@ -128,7 +147,11 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_origin_stop(&self) -> Ptr<MSStoppingPlace> {
-        Ptr::null()
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_origin_stop(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_origin_stop(),
+            _ => Ptr::null(),
+        }
     }
 
     /// C++: `double MSStage::getArrivalPos() const` [const, virtual]
@@ -137,7 +160,12 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_arrival_pos(&self) -> f64 {
-        self.myArrivalPos
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_arrival_pos(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_arrival_pos(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_arrival_pos(),
+            _ => self.myArrivalPos,
+        }
     }
 
     /// C++: `bool MSStage::unspecifiedArrivalPos() const` [const]
@@ -176,7 +204,13 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_edge(&self) -> Ptr<MSEdge> {
-        self.myDestination
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_edge(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_edge(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_edge(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_edge(),
+            _ => self.myDestination,
+        }
     }
 
     /// C++: `const MSEdge * MSStage::getFromEdge() const` [const, virtual]
@@ -186,7 +220,12 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_from_edge(&self) -> Ptr<MSEdge> {
-        self.myDestination
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_from_edge(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_from_edge(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_from_edge(),
+            _ => self.myDestination,
+        }
     }
 
     /// C++: `double MSStage::getEdgePos(SUMOTime) const` [const, virtual]
@@ -196,7 +235,13 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_edge_pos(&self, now: SUMOTime) -> f64 {
-        self.myArrivalPos
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_edge_pos(now),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_edge_pos(now),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_edge_pos(now),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_edge_pos(now),
+            _ => self.myArrivalPos,
+        }
     }
 
     /// C++: `double MSStage::getEdgePosLat(SUMOTime) const` [const, virtual]
@@ -217,8 +262,12 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_direction(&self) -> i32 {
-        // shortcut: MSPModel::UNDEFINED_DIRECTION (=0) not ported as a constant yet
-        0
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_direction(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_direction(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_direction(),
+            _ => crate::microsim::transportables::msp_model::MSPMODEL_UNDEFINED_DIRECTION,
+        }
     }
 
     /// C++: `Position MSStage::getPosition(SUMOTime) const` [const, virtual, pure virtual]
@@ -226,8 +275,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_position(&self, now: SUMOTime) -> Position {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::getPosition is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_position(now),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_position(now),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_position(now),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_position(now),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_position(now),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_position(now),
+        }
     }
 
     /// C++: `double MSStage::getAngle(SUMOTime) const` [const, virtual, pure virtual]
@@ -235,8 +290,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_angle(&self, now: SUMOTime) -> f64 {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::getAngle is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_angle(now),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_angle(now),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_angle(now),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_angle(now),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_angle(now),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_angle(now),
+        }
     }
 
     /// C++: `const MSLane * MSStage::getLane() const` [const, virtual]
@@ -246,7 +307,12 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_lane(&self) -> Ptr<MSLane> {
-        Ptr::null()
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_lane(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_lane(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_lane(),
+            _ => Ptr::null(),
+        }
     }
 
     /// C++: `SUMOTime MSStage::getJumpDuration() const` [const, virtual]
@@ -256,7 +322,10 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_jump_duration(&self) -> SUMOTime {
-        -1
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_jump_duration(),
+            _ => -1,
+        }
     }
 
     /// C++: `MSStageType MSStage::getStageType() const` [const]
@@ -283,8 +352,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stage_description(&self, isPerson: bool) -> String {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::getStageDescription is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_stage_description(isPerson),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_stage_description(isPerson),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_stage_description(isPerson),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_stage_description(isPerson),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_stage_description(isPerson),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_stage_description(isPerson),
+        }
     }
 
     /// C++: `std::string MSStage::getStageSummary(const bool) const` [const, virtual, pure virtual]
@@ -292,8 +367,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_stage_summary(&self, isPerson: bool) -> String {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::getStageSummary is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_stage_summary(isPerson),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_stage_summary(isPerson),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_stage_summary(isPerson),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_stage_summary(isPerson),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_stage_summary(isPerson),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_stage_summary(isPerson),
+        }
     }
 
     /// C++: `bool MSStage::proceed(MSNet *, MSTransportable *, SUMOTime, MSStage *)` [virtual, pure virtual]
@@ -301,8 +382,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn proceed(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, previous: Ptr<MSStage>) -> bool {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::proceed is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete_mut::<MSStageWaiting>().proceed(net, transportable, now, previous),
+            MSStageType::WALKING => self.as_concrete_mut::<MSStageWalking>().proceed(net, transportable, now, previous),
+            MSStageType::TRANSHIP => self.as_concrete_mut::<MSStageTranship>().proceed(net, transportable, now, previous),
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().proceed(net, transportable, now, previous),
+            MSStageType::ACCESS => self.as_concrete_mut::<MSPerson_MSPersonStage_Access>().proceed(net, transportable, now, previous),
+            MSStageType::TRIP => self.as_concrete_mut::<MSStageTrip>().proceed(net, transportable, now, previous),
+        }
     }
 
     /// C++: `void MSStage::abort(MSTransportable *)` [virtual]
@@ -310,7 +397,12 @@ impl MSStage {
     // virtual void abort(MSTransportable*) {}
     #[allow(unused_variables)]
     pub fn abort(&mut self, arg0: Ptr<MSTransportable>) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete_mut::<MSStageWaiting>().abort(arg0),
+            MSStageType::WALKING => self.as_concrete_mut::<MSStageWalking>().abort(arg0),
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().abort(arg0),
+            _ => {}
+        }
     }
 
     /// C++: `void MSStage::setSpeed(double)` [virtual]
@@ -318,7 +410,10 @@ impl MSStage {
     // virtual void setSpeed(double) {}
     #[allow(unused_variables)]
     pub fn set_speed(&mut self, arg0: f64) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete_mut::<MSStageWalking>().set_speed(arg0),
+            _ => {}
+        }
     }
 
     /// C++: `SUMOTime MSStage::getDeparted() const` [const]
@@ -350,7 +445,11 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_time_loss(&self, transportable: Ptr<MSTransportable>) -> SUMOTime {
-        0
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_time_loss(transportable),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_time_loss(transportable),
+            _ => 0,
+        }
     }
 
     /// C++: `SUMOTime MSStage::getDuration() const` [const, virtual]
@@ -360,6 +459,16 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_duration(&self) -> SUMOTime {
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_duration(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_duration(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_duration(),
+            _ => self.get_duration_base(),
+        }
+    }
+
+    /// The C++ body of `MSStage::getDuration` without virtual dispatch (for subclasses calling it explicitly).
+    pub fn get_duration_base(&self) -> SUMOTime {
         if self.myArrived >= 0 {
             self.myArrived - self.myDeparted
         } else {
@@ -374,7 +483,12 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_travel_time(&self) -> SUMOTime {
-        self.get_duration()
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_travel_time(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_travel_time(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_travel_time(),
+            _ => self.get_duration(),
+        }
     }
 
     /// C++: `SUMOTime MSStage::getWaitingTime() const` [const, virtual]
@@ -384,7 +498,12 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_waiting_time(&self) -> SUMOTime {
-        0
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_waiting_time(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_waiting_time(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_waiting_time_2(),
+            _ => 0,
+        }
     }
 
     /// C++: `SUMOTime MSStage::getTotalWaitingTime() const` [const, virtual]
@@ -394,7 +513,11 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_total_waiting_time(&self) -> SUMOTime {
-        self.get_waiting_time()
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_total_waiting_time(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_total_waiting_time(),
+            _ => self.get_waiting_time(),
+        }
     }
 
     /// C++: `void MSStage::setDeparted(SUMOTime)`
@@ -421,8 +544,14 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn set_arrived(&mut self, net: Ptr<MSNet>, transportable: Ptr<MSTransportable>, now: SUMOTime, vehicleArrived: bool) -> String {
-        self.myArrived = now;
-        String::new()
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().set_arrived(net, transportable, now, vehicleArrived),
+            MSStageType::TRIP => self.as_concrete_mut::<MSStageTrip>().set_arrived(net, transportable, now, vehicleArrived),
+            _ => {
+                self.myArrived = now;
+                String::new()
+            }
+        }
     }
 
     /// C++: `void MSStage::setEnded(SUMOTime)`
@@ -444,7 +573,10 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn is_waiting_for(&self, vehicle: Ptr<SUMOVehicle>) -> bool {
-        false
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().is_waiting_for(vehicle),
+            _ => false,
+        }
     }
 
     /// C++: `bool MSStage::isWaiting4Vehicle() const` [const, virtual]
@@ -454,7 +586,10 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn is_waiting4_vehicle(&self) -> bool {
-        false
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().is_waiting4_vehicle(),
+            _ => false,
+        }
     }
 
     /// C++: `bool MSStage::isWalk() const` [const, virtual]
@@ -464,7 +599,11 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn is_walk(&self) -> bool {
-        false
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().is_walk(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().is_walk(),
+            _ => false,
+        }
     }
 
     /// C++: `SUMOVehicle * MSStage::getVehicle() const` [const, virtual]
@@ -474,7 +613,10 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_vehicle(&self) -> Ptr<SUMOVehicle> {
-        Ptr::null()
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_vehicle(),
+            _ => Ptr::null(),
+        }
     }
 
     /// C++: `double MSStage::getSpeed() const` [const, virtual]
@@ -485,7 +627,13 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        0.
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_speed(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_speed(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_speed(),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_speed(),
+            _ => 0.,
+        }
     }
 
     /// C++: `ConstMSEdgeVector MSStage::getEdges() const` [const, virtual]
@@ -498,7 +646,12 @@ impl MSStage {
     // }
     #[allow(unused_variables)]
     pub fn get_edges(&self) -> ConstMSEdgeVector {
-        vec![self.get_destination()]
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_edges(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_edges(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_edges(),
+            _ => vec![self.get_destination()],
+        }
     }
 
     /// C++: `int MSStage::getRoutePosition() const` [const, virtual]
@@ -508,7 +661,10 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        0
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_route_position(),
+            _ => 0,
+        }
     }
 
     /// C++: `Position MSStage::getEdgePosition(const MSEdge *, double, double) const` [const]
@@ -571,7 +727,11 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn set_origin(&mut self, origin: Ptr<MSEdge>, originStop: Ptr<MSStoppingPlace>, departPos: f64) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().set_origin(origin, originStop, departPos),
+            MSStageType::TRIP => self.as_concrete_mut::<MSStageTrip>().set_origin(origin, originStop, departPos),
+            _ => {}
+        }
     }
 
     /// C++: `double MSStage::getDistance() const` [const, virtual, pure virtual]
@@ -579,8 +739,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_distance(&self) -> f64 {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::getDistance is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().get_distance(),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_distance(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_distance(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_distance(),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().get_distance(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().get_distance(),
+        }
     }
 
     /// C++: `void MSStage::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual, pure virtual]
@@ -588,8 +754,14 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::tripInfoOutput is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().trip_info_output(os, transportable),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().trip_info_output(os, transportable),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().trip_info_output(os, transportable),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().trip_info_output(os, transportable),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().trip_info_output(os, transportable),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().trip_info_output(os, transportable),
+        }
     }
 
     /// C++: `void MSStage::routeOutput(const bool, OutputDevice &, const bool, const MSStage *const, const bool, const bool) const` [const, virtual, pure virtual]
@@ -597,16 +769,28 @@ impl MSStage {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn route_output(&self, isPerson: bool, os: &mut OutputDevice, withRouteLength: bool, previous: Ptr<MSStage>, withTiming: bool, saveState: bool) {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::routeOutput is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().route_output(isPerson, os, withRouteLength, previous, withTiming, saveState),
+        }
     }
 
     /// C++: `MSStage * MSStage::clone() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clone(&self) -> Ptr<MSStage> {
-        // shortcut: pure virtual in C++, needs vtable dispatch (PORTING.md), upgrade when vtables land
-        panic!("MSStage::clone is pure virtual; a subclass must override it");
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete::<MSStageWaiting>().clone(),
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().clone(),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().clone(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().clone(),
+            MSStageType::ACCESS => self.as_concrete::<MSPerson_MSPersonStage_Access>().clone(),
+            MSStageType::TRIP => self.as_concrete::<MSStageTrip>().clone(),
+        }
     }
 
     /// C++: `void MSStage::saveState(std::ostringstream &, MSTransportable *)` [virtual]
@@ -617,7 +801,13 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete_mut::<MSStageWaiting>().save_state(out, transportable),
+            MSStageType::WALKING => self.as_concrete_mut::<MSStageWalking>().save_state(out, transportable),
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().save_state(out, transportable),
+            MSStageType::ACCESS => self.as_concrete_mut::<MSPerson_MSPersonStage_Access>().save_state(out, transportable),
+            _ => {}
+        }
     }
 
     /// C++: `void MSStage::loadState(MSTransportable *, std::istringstream &)` [virtual]
@@ -628,7 +818,13 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
-        // empty C++ default body
+        match self.myType {
+            MSStageType::WAITING_FOR_DEPART | MSStageType::WAITING => self.as_concrete_mut::<MSStageWaiting>().load_state(transportable, state),
+            MSStageType::WALKING => self.as_concrete_mut::<MSStageWalking>().load_state(transportable, state),
+            MSStageType::DRIVING => self.as_concrete_mut::<MSStageDriving>().load_state(transportable, state),
+            MSStageType::ACCESS => self.as_concrete_mut::<MSPerson_MSPersonStage_Access>().load_state(transportable, state),
+            _ => {}
+        }
     }
 
     /// C++: `bool MSStage::wasSet(int) const` [const]
@@ -698,6 +894,16 @@ impl MSStage {
     //     }
     #[allow(unused_variables)]
     pub fn equals(&self, s: &MSStage) -> bool {
+        match self.myType {
+            MSStageType::WALKING => self.as_concrete::<MSStageWalking>().equals(s),
+            MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().equals(s),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().equals(s),
+            _ => self.equals_base(s),
+        }
+    }
+
+    /// The C++ body of `MSStage::equals` without virtual dispatch (for subclasses calling `MSStage::equals` explicitly).
+    pub fn equals_base(&self, s: &MSStage) -> bool {
         self.myDestination == s.myDestination
             && self.myDestinationStop == s.myDestinationStop
             && self.myArrivalPos == s.myArrivalPos

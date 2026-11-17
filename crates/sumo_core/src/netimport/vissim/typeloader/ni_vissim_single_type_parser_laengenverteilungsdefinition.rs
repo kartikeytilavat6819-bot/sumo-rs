@@ -2,6 +2,22 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `from >> tmp` for a std::string: skips whitespace and reads one token without lower-casing it
+fn read_raw_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let start = i;
+    while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
+        i += 1;
+    }
+    let tok = vissim_bytes_to_string(&data[start..i]);
+    from.set_position(i as u64);
+    tok
+}
+
 /// C++ class `NIVissimSingleTypeParser_Laengenverteilungsdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Laengenverteilungsdefinition.h)
 #[repr(C)]
 pub struct NIVissimSingleTypeParser_Laengenverteilungsdefinition {
@@ -28,7 +44,7 @@ impl NIVissimSingleTypeParser_Laengenverteilungsdefinition {
     //     : NIImporter_Vissim::VissimSingleTypeParser(parent) {}
     #[allow(unused_variables)]
     pub fn new(parent: &mut NIImporter_Vissim) -> Self {
-        todo!("port NIVissimSingleTypeParser_Laengenverteilungsdefinition::NIVissimSingleTypeParser_Laengenverteilungsdefinition")
+        Self { base: NIImporter_Vissim_VissimSingleTypeParser::new(parent) }
     }
 
     /// C++: `void NIVissimSingleTypeParser_Laengenverteilungsdefinition::~NIVissimSingleTypeParser_Laengenverteilungsdefinition() noexcept` [virtual]
@@ -36,7 +52,7 @@ impl NIVissimSingleTypeParser_Laengenverteilungsdefinition {
     // NIVissimSingleTypeParser_Laengenverteilungsdefinition::~NIVissimSingleTypeParser_Laengenverteilungsdefinition() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimSingleTypeParser_Laengenverteilungsdefinition::~NIVissimSingleTypeParser_Laengenverteilungsdefinition")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool NIVissimSingleTypeParser_Laengenverteilungsdefinition::parse(std::istream &)` [virtual]
@@ -62,8 +78,26 @@ impl NIVissimSingleTypeParser_Laengenverteilungsdefinition {
     //     return true;
     // }
     #[allow(unused_variables)]
-    pub fn parse(&mut self, from: &mut Unmapped /* std::istream */) -> bool {
-        todo!("port NIVissimSingleTypeParser_Laengenverteilungsdefinition::parse")
+    pub fn parse(&mut self, from: &mut std::io::Cursor<Vec<u8>> /* std::istream */) -> bool {
+        // id
+        let id = read_raw_token(from);
+        // list of points
+        let mut points = DistributionPoints::new(&id);
+        let mut tag;
+        loop {
+            tag = self.read_end_secure(from, "");
+            if tag != "DATAEND" {
+                let p1 = utils::common::string_utils::to_double(&tag).unwrap_or_else(|e| panic!("{e}"));
+                tag = read_raw_token(from);
+                let p2 = utils::common::string_utils::to_double(&tag).unwrap_or_else(|e| panic!("{e}"));
+                points.add(p1, p2, true);
+            }
+            if tag == "DATAEND" {
+                break;
+            }
+        }
+        utils::distribution::distribution_cont::dictionary_add("length", &id, std::sync::Arc::new(points));
+        true
     }
 
 }

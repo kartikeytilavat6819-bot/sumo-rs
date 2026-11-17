@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLPlatoonPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn platoon_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLPlatoonPolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_PLATOON_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: platoon_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
 
 /// Class for low-level platoon policy.
 /// C++ class `MSSOTLPlatoonPolicy` (microsim/traffic_lights/MSSOTLPlatoonPolicy.h)
@@ -34,7 +44,14 @@ impl MSSOTLPlatoonPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy")
+        let mut this = MSSOTLPlatoonPolicy {
+            base: MSSOTLPolicy::new("Platoon".to_string(), parameters),
+            base2: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            base3: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
+        this.init();
+        this
     }
 
     /// C++: `void MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy(MSSOTLPolicyDesirability *)`
@@ -45,7 +62,16 @@ impl MSSOTLPlatoonPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_2(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
-        todo!("port MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy")
+        let mut this = MSSOTLPlatoonPolicy {
+            base: MSSOTLPolicy::new_2("Platoon".to_string(), desirabilityAlgorithm),
+            base2: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            base3: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        let mut desirability = this.get_desirability_algorithm();
+        desirability.m().set_key_prefix("PLATOON".to_string());
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
+        this.init();
+        this
     }
 
     /// C++: `void MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy(MSSOTLPolicyDesirability *, const Parameterised::Map &)`
@@ -57,7 +83,16 @@ impl MSSOTLPlatoonPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPlatoonPolicy::MSSOTLPlatoonPolicy")
+        let mut this = MSSOTLPlatoonPolicy {
+            base: MSSOTLPolicy::new_3("Platoon".to_string(), desirabilityAlgorithm, parameters),
+            base2: SigmoidLogic { m_useSigmoid: false, m_k: 0.0, m_prefix: String::new() },
+            base3: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        let mut desirability = this.get_desirability_algorithm();
+        desirability.m().set_key_prefix("PLATOON".to_string());
+        this.base.vt = &MS_SOTL_PLATOON_POLICY_VT;
+        this.init();
+        this
     }
 
     /// C++: `bool MSSOTLPlatoonPolicy::canRelease(SUMOTime, bool, bool, const MSPhaseDefinition *, int)` [virtual]
@@ -89,7 +124,21 @@ impl MSSOTLPlatoonPolicy {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port MSSOTLPlatoonPolicy::canRelease")
+        if elapsed >= stage.minDuration {
+            if self.base3.push_button_logic(elapsed, pushButtonPressed, stage) {
+                return true;
+            }
+            if thresholdPassed {
+                // If there are no other vehicles approaching green lights
+                // or the declared maximum duration has been reached
+                return (vehicleCount == 0) || (elapsed >= stage.maxDuration);
+            } else {
+                if self.base2.sigmoid_logic(elapsed, stage, vehicleCount) {
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `void MSSOTLPlatoonPolicy::init()` [virtual, protected]
@@ -99,7 +148,8 @@ impl MSSOTLPlatoonPolicy {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSSOTLPlatoonPolicy::init")
+        self.base2.init("MSSOTLPlatoonPolicy".to_string(), Ptr::from_mut(&mut self.base.base));
+        self.base3.init("MSSOTLPlatoonPolicy".to_string(), Ptr::from_mut(&mut self.base.base));
     }
 
 }

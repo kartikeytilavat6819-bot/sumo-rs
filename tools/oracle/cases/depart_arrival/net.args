@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/depart_arrival/depart_arrival.nod.xml --edge-files tools/oracle/cases/depart_arrival/depart_arrival.edg.xml

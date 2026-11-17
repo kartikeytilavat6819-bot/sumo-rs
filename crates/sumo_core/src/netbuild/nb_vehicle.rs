@@ -88,3 +88,26 @@ impl NBVehicle {
 
 }
 
+impl crate::utils::router::router_edge::RouterVehicle for NBVehicle {
+    fn v_class(&self) -> SUMOVehicleClass {
+        self.myVClass
+    }
+    fn get_id(&self) -> String {
+        self.myID.clone()
+    }
+    // shortcut: C++ NBVehicle has no getMaxSpeed, only the af router's speed effort reads it, upgrade if NBVehicle is routed by that router
+    fn get_max_speed(&self) -> f64 {
+        panic!("shortcut: NBVehicle has no getMaxSpeed in C++")
+    }
+    // shortcut: C++ NBVehicle has no getChosenSpeedFactor, upgrade if NBVehicle is routed by the af router
+    fn get_chosen_speed_factor(&self) -> f64 {
+        panic!("shortcut: NBVehicle has no getChosenSpeedFactor in C++")
+    }
+    fn ignore_transient_permissions(&self) -> bool {
+        self.ignore_transient_permissions()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+}
+

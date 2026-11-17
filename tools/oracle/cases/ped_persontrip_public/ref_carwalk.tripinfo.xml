@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T06:13:07.251653-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ped_persontrip_public/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ped_persontrip_public/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ped_persontrip_public/ped_pt.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/tmp/pm01refs/ped_persontrip_public/ref_carwalk.fcd.xml"/>
+        <tripinfo-output value="/tmp/pm01refs/ped_persontrip_public/ref_carwalk.tripinfo.xml"/>
+        <personinfo-output value="/tmp/pm01refs/ped_persontrip_public/ref_carwalk.personinfo.xml"/>
+        <statistic-output value="/tmp/pm01refs/ped_persontrip_public/ref_carwalk.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <routing>
+        <persontrip.walkfactor value="0.75"/>
+        <persontrip.transfer.car-walk value="parkingAreas,ptStops,allJunctions"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="L1f.0" depart="0.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="206.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="5.97" duration="206.00" routeLength="288.10" waitingTime="0.00" waitingCount="0" stopTime="165.00" timeLoss="4.82" rerouteNo="0" devices="tripinfo_L1f.0 fcd_L1f.0" vType="bus" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="L1f.1" depart="100.00" departLane="E0_1" departPos="12.10" departSpeed="13.89" departDelay="0.00" arrival="305.00" arrivalLane="E2_1" arrivalPos="100.00" arrivalSpeed="6.33" duration="205.00" routeLength="288.10" waitingTime="53.00" waitingCount="1" stopTime="108.00" timeLoss="61.11" rerouteNo="0" devices="tripinfo_L1f.1 fcd_L1f.1" vType="bus" speedFactor="1.00" vaporized=""/>
+</tripinfos>

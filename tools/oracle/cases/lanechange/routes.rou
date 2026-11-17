@@ -1,0 +1,10 @@
+<routes>
+    <vType id="car" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5"/>
+    <vType id="slow" length="5" maxSpeed="3" accel="2.6" decel="4.5" sigma="0.5"/>
+    <route id="r0" edges="100"/>
+    <vehicle id="blocker" type="slow" route="r0" depart="0" departLane="1" departPos="30"/>
+    <vehicle id="lane0a" type="car" route="r0" depart="3" departLane="0" departPos="5"/>
+    <vehicle id="chaser0" type="car" route="r0" depart="5" departLane="1" departPos="5"/>
+    <vehicle id="chaser1" type="car" route="r0" depart="9" departLane="1" departPos="5"/>
+    <vehicle id="chaser2" type="car" route="r0" depart="14" departLane="1" departPos="5"/>
+</routes>

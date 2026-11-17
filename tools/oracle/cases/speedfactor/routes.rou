@@ -1,0 +1,7 @@
+<routes>
+    <!-- speedFactor drawn per vehicle from norm(1,0.1); flow fDef uses the default type, whose speedDev is what the default.speeddev option changes -->
+    <vType id="vSF" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" speedFactor="norm(1,0.1)"/>
+    <route id="r0" edges="A"/>
+    <flow id="fSF" type="vSF" route="r0" begin="0.00" end="120.00" period="6.00"/>
+    <flow id="fDef" route="r0" begin="3.00" end="120.00" period="7.00"/>
+</routes>

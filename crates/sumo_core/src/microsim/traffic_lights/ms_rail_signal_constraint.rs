@@ -1,6 +1,7 @@
 //! Port of microsim/traffic_lights/MSRailSignalConstraint.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::RefCell;
 
 /// C++ enum `MSRailSignalConstraint::ConstraintType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -20,6 +21,9 @@ pub struct MSRailSignalConstraint {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
     pub myType: MSRailSignalConstraint_ConstraintType,
+    /// C++ resolves the virtual methods of this class by dynamic dispatch; the Rust port
+    /// emulates that by casting to the only concrete subclass (MSRailSignalConstraint_Predecessor)
+    pub myIsPredecessor: bool,
 }
 
 impl std::ops::Deref for MSRailSignalConstraint {
@@ -37,13 +41,23 @@ impl std::ops::DerefMut for MSRailSignalConstraint {
 // C++ static members of MSRailSignalConstraint (port as module-level statics, see AGENTS.md):
 //   static std::map<std::string, std::string> MSRailSignalConstraint::myTripIdLookup;
 
+thread_local! {
+    // static std::map<std::string, std::string> MSRailSignalConstraint::myTripIdLookup
+    // the values are leaked so that lookupVehId can hand out a reference like the C++ version
+    static MY_TRIP_ID_LOOKUP: RefCell<BTreeMap<String, &'static str>> = RefCell::new(BTreeMap::new());
+}
+
 impl MSRailSignalConstraint {
     /// C++: `void MSRailSignalConstraint::MSRailSignalConstraint(ConstraintType)`
     /// Constructor
     // MSRailSignalConstraint(ConstraintType type) : myType(type) {}
     #[allow(unused_variables)]
     pub fn new(type_: MSRailSignalConstraint_ConstraintType) -> Self {
-        todo!("port MSRailSignalConstraint::MSRailSignalConstraint")
+        MSRailSignalConstraint {
+            base: Parameterised::new(),
+            myType: type_,
+            myIsPredecessor: false,
+        }
     }
 
     /// C++: `void MSRailSignalConstraint::~MSRailSignalConstraint() noexcept` [virtual]
@@ -51,7 +65,7 @@ impl MSRailSignalConstraint {
     // virtual ~MSRailSignalConstraint() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRailSignalConstraint::~MSRailSignalConstraint")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSRailSignalConstraint::cleared() const` [const, virtual, pure virtual]
@@ -59,21 +73,33 @@ impl MSRailSignalConstraint {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn cleared(&self) -> bool {
-        todo!("port MSRailSignalConstraint::cleared")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(self).cast::<MSRailSignalConstraint_Predecessor>().cleared();
+        }
+        panic!("pure virtual MSRailSignalConstraint::cleared")
     }
 
     /// C++: `void MSRailSignalConstraint::setActive(bool)` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_active(&mut self, active: bool) {
-        todo!("port MSRailSignalConstraint::setActive")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(&*self).cast::<MSRailSignalConstraint_Predecessor>().m().set_active(active);
+        }
+        panic!("pure virtual MSRailSignalConstraint::setActive")
     }
 
     /// C++: `bool MSRailSignalConstraint::isActive() const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn is_active(&self) -> bool {
-        todo!("port MSRailSignalConstraint::isActive")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(self).cast::<MSRailSignalConstraint_Predecessor>().is_active();
+        }
+        panic!("pure virtual MSRailSignalConstraint::isActive")
     }
 
     /// C++: `std::string MSRailSignalConstraint::getDescription() const` [const, virtual]
@@ -82,7 +108,11 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_description(&self) -> String {
-        todo!("port MSRailSignalConstraint::getDescription")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(self).cast::<MSRailSignalConstraint_Predecessor>().get_description();
+        }
+        "RailSignalConstraint".to_string()
     }
 
     /// C++: `const SUMOVehicle * MSRailSignalConstraint::getFoe() const` [const, virtual]
@@ -91,14 +121,22 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe(&self) -> Ptr<SUMOVehicle> {
-        todo!("port MSRailSignalConstraint::getFoe")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(self).cast::<MSRailSignalConstraint_Predecessor>().get_foe();
+        }
+        Ptr::null()
     }
 
     /// C++: `void MSRailSignalConstraint::write(OutputDevice &, const std::string &) const` [const, virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write(&self, out: &mut OutputDevice, tripId: &str) {
-        todo!("port MSRailSignalConstraint::write")
+        // C++ dispatches virtually; the port emulates that by casting to the only concrete subclass
+        if self.myIsPredecessor {
+            return Ptr::new(self).cast::<MSRailSignalConstraint_Predecessor>().write(out, tripId);
+        }
+        panic!("pure virtual MSRailSignalConstraint::write")
     }
 
     /// C++: `ConstraintType MSRailSignalConstraint::getType() const` [const]
@@ -107,7 +145,7 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_type(&self) -> MSRailSignalConstraint_ConstraintType {
-        todo!("port MSRailSignalConstraint::getType")
+        self.myType
     }
 
     /// C++: `SumoXMLTag MSRailSignalConstraint::getTag() const` [const]
@@ -127,7 +165,13 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_tag(&self) -> SumoXMLTag {
-        todo!("port MSRailSignalConstraint::getTag")
+        match self.myType {
+            MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR => SUMO_TAG_INSERTION_PREDECESSOR,
+            MSRailSignalConstraint_ConstraintType::FOE_INSERTION => SUMO_TAG_FOE_INSERTION,
+            MSRailSignalConstraint_ConstraintType::INSERTION_ORDER => SUMO_TAG_INSERTION_ORDER,
+            MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR => SUMO_TAG_BIDI_PREDECESSOR,
+            _ => SUMO_TAG_PREDECESSOR,
+        }
     }
 
     /// C++: `ConstraintType MSRailSignalConstraint::getSwappedType() const` [const]
@@ -143,7 +187,11 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn get_swapped_type(&self) -> MSRailSignalConstraint_ConstraintType {
-        todo!("port MSRailSignalConstraint::getSwappedType")
+        match self.myType {
+            MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR => MSRailSignalConstraint_ConstraintType::FOE_INSERTION,
+            MSRailSignalConstraint_ConstraintType::FOE_INSERTION => MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR,
+            _ => self.myType,
+        }
     }
 
     /// C++: `bool MSRailSignalConstraint::isInsertionConstraint() const` [const]
@@ -152,7 +200,8 @@ impl MSRailSignalConstraint {
     //     }
     #[allow(unused_variables)]
     pub fn is_insertion_constraint(&self) -> bool {
-        todo!("port MSRailSignalConstraint::isInsertionConstraint")
+        self.myType == MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR
+            || self.myType == MSRailSignalConstraint_ConstraintType::INSERTION_ORDER
     }
 
     /// C++: `void MSRailSignalConstraint::storeTripId(const std::string &, const std::string &)` [static]
@@ -162,7 +211,11 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn store_trip_id(tripId: &str, vehID: &str) {
-        todo!("port MSRailSignalConstraint::storeTripId")
+        // the value is leaked so that lookup_veh_id can return a reference like the C++ version
+        let value: &'static str = Box::leak(vehID.to_string().into_boxed_str());
+        MY_TRIP_ID_LOOKUP.with(|m| {
+            m.borrow_mut().insert(tripId.to_string(), value);
+        });
     }
 
     /// C++: `const std::string & MSRailSignalConstraint::lookupVehId(const std::string &)` [static]
@@ -172,7 +225,11 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn lookup_veh_id(tripId: &str) -> &'static str {
-        todo!("port MSRailSignalConstraint::lookupVehId")
+        // C++ uses operator[] which inserts an empty entry for unknown trip ids
+        MY_TRIP_ID_LOOKUP.with(|m| {
+            let mut map = m.borrow_mut();
+            *map.entry(tripId.to_string()).or_insert("")
+        })
     }
 
     /// C++: `void MSRailSignalConstraint::cleanup()` [static]
@@ -183,7 +240,7 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSRailSignalConstraint::cleanup")
+        MSRailSignalConstraint_Predecessor::cleanup();
     }
 
     /// C++: `void MSRailSignalConstraint::saveState(OutputDevice &)` [static]
@@ -208,7 +265,21 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn save_state(out: &mut OutputDevice) {
-        todo!("port MSRailSignalConstraint::saveState")
+        if utils::options::options_cont::get_bool("save-state.constraints") {
+            for s in MSRailSignalControl::get_instance().get_signals() {
+                if s.get_constraints().len() > 0 {
+                    out.open_tag_id(SUMO_TAG_RAILSIGNAL_CONSTRAINTS);
+                    out.write_attr(SUMO_ATTR_ID, s.get_id());
+                    for (trip_id, constraints) in s.get_constraints() {
+                        for c in constraints {
+                            c.get().unwrap().write(out, trip_id);
+                        }
+                    }
+                    out.close_tag("");
+                }
+            }
+        }
+        MSRailSignalConstraint_Predecessor::save_state(out);
     }
 
     /// C++: `void MSRailSignalConstraint::clearState()` [static]
@@ -220,7 +291,8 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn clear_state() {
-        todo!("port MSRailSignalConstraint::clearState")
+        MSRailSignalConstraint_Predecessor::clear_state();
+        MY_TRIP_ID_LOOKUP.with(|m| m.borrow_mut().clear());
     }
 
     /// C++: `void MSRailSignalConstraint::clearAll()` [static]
@@ -234,7 +306,11 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn clear_all() {
-        todo!("port MSRailSignalConstraint::clearAll")
+        let signals: Vec<Ptr<MSRailSignal>> = MSRailSignalControl::get_instance().get_signals().clone();
+        for s in signals {
+            s.m().remove_constraints();
+        }
+        MY_TRIP_ID_LOOKUP.with(|m| m.borrow_mut().clear());
     }
 
     /// C++: `const SUMOVehicle * MSRailSignalConstraint::getVeh(const std::string &, bool)` [static, protected]
@@ -258,7 +334,35 @@ impl MSRailSignalConstraint {
     // }
     #[allow(unused_variables)]
     pub fn get_veh(tripID: &str, checkID: bool) -> Ptr<SUMOVehicle> {
-        todo!("port MSRailSignalConstraint::getVeh")
+        let veh_id = Self::lookup_veh_id(tripID);
+        if veh_id != "" {
+            let veh = {
+                let net = MSNet::get_instance();
+                let control = net.m().get_vehicle_control();
+                control.get_vehicle(veh_id)
+            };
+            if !veh.is_null() {
+                return veh;
+            }
+        }
+        let found = {
+            let net = MSNet::get_instance();
+            let control = net.m().get_vehicle_control();
+            let mut result = Ptr::null();
+            for veh in control.myVehicleDict.values() {
+                let base = veh.cast::<MSBaseVehicle>();
+                let trip_id = base.get_parameter().get_parameter("tripId", "");
+                if trip_id == tripID || (checkID && veh.get_id() == tripID) {
+                    result = *veh;
+                    break;
+                }
+            }
+            result
+        };
+        if !found.is_null() {
+            return found;
+        }
+        Ptr::null()
     }
 
 }
@@ -295,6 +399,21 @@ impl std::ops::DerefMut for MSRailSignalConstraint_Predecessor {
 // C++ static members of MSRailSignalConstraint_Predecessor (port as module-level statics, see AGENTS.md):
 //   static std::map<const MSLane *, PassedTracker *, ComparatorNumericalIdLess> MSRailSignalConstraint_Predecessor::myTrackerLookup;
 
+thread_local! {
+    // static std::map<const MSLane *, PassedTracker *, ComparatorNumericalIdLess> MSRailSignalConstraint_Predecessor::myTrackerLookup
+    // determinism: C++ orders the trackers by lane numerical id, the Rust map orders by address
+    static MY_TRACKER_LOOKUP: RefCell<BTreeMap<Ptr<MSLane>, Ptr<MSRailSignalConstraint_Predecessor_PassedTracker>>> =
+        RefCell::new(BTreeMap::new());
+}
+
+/// creates a heap allocated tracker and registers it with its lane (as the C++ MSMoveReminder constructor does)
+fn new_passed_tracker(lane: Ptr<MSLane>) -> Ptr<MSRailSignalConstraint_Predecessor_PassedTracker> {
+    let mut boxed = Box::new(MSRailSignalConstraint_Predecessor_PassedTracker::new(lane));
+    let ptr = Ptr::from_box(&boxed);
+    lane.m().add_move_reminder(ptr.cast::<MSMoveReminder>(), true);
+    Ptr::from_raw(Box::into_raw(boxed))
+}
+
 impl MSRailSignalConstraint_Predecessor {
     /// C++: `void MSRailSignalConstraint_Predecessor::MSRailSignalConstraint_Predecessor(ConstraintType, const MSRailSignal *, const std::string &, int, bool)`
     /// Constructor
@@ -322,7 +441,31 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn new(type_: MSRailSignalConstraint_ConstraintType, signal: Ptr<MSRailSignal>, tripId: &str, limit: i32, active: bool) -> Self {
-        todo!("port MSRailSignalConstraint_Predecessor::MSRailSignalConstraint_Predecessor")
+        let mut result = MSRailSignalConstraint_Predecessor {
+            base: MSRailSignalConstraint::new(type_),
+            myTrackers: Vec::new(),
+            myTripId: tripId.to_string(),
+            myLimit: limit,
+            myAmActive: active,
+            myFoeSignal: signal,
+        };
+        result.base.myIsPredecessor = true;
+        for lv in signal.get_links() {
+            for link in lv {
+                let lane = link.get_via_lane_or_lane();
+                let pt = match MY_TRACKER_LOOKUP.with(|m| m.borrow().get(&lane).copied()) {
+                    Some(pt) => pt,
+                    None => {
+                        let pt = new_passed_tracker(lane);
+                        MY_TRACKER_LOOKUP.with(|m| m.borrow_mut().insert(lane, pt));
+                        pt
+                    }
+                };
+                pt.m().raise_limit(limit);
+                result.myTrackers.push(pt);
+            }
+        }
+        result
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::~MSRailSignalConstraint_Predecessor() noexcept` [virtual]
@@ -330,7 +473,7 @@ impl MSRailSignalConstraint_Predecessor {
     // ~MSRailSignalConstraint_Predecessor() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSRailSignalConstraint_Predecessor::~MSRailSignalConstraint_Predecessor")
+        // C++ destructor body is empty
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::write(OutputDevice &, const std::string &) const` [const, virtual]
@@ -351,7 +494,18 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn write(&self, out: &mut OutputDevice, tripId: &str) {
-        todo!("port MSRailSignalConstraint_Predecessor::write")
+        out.open_tag_id(self.get_tag());
+        out.write_attr(SUMO_ATTR_TRIP_ID, &tripId);
+        out.write_attr(SUMO_ATTR_TLID, self.myFoeSignal.get_id());
+        out.write_attr(SUMO_ATTR_FOES, &self.myTripId);
+        if self.myLimit > 1 {
+            out.write_attr(SUMO_ATTR_LIMIT, &self.myLimit);
+        }
+        if !self.myAmActive {
+            out.write_attr(SUMO_ATTR_ACTIVE, &self.myAmActive);
+        }
+        self.write_params(out);
+        out.close_tag("");
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::cleanup()` [static]
@@ -365,7 +519,12 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSRailSignalConstraint_Predecessor::cleanup")
+        let trackers: Vec<Ptr<MSRailSignalConstraint_Predecessor_PassedTracker>> =
+            MY_TRACKER_LOOKUP.with(|m| m.borrow().values().copied().collect());
+        for tracker in trackers {
+            unsafe { drop(Box::from_raw(tracker.as_raw())) };
+        }
+        MY_TRACKER_LOOKUP.with(|m| m.borrow_mut().clear());
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::saveState(OutputDevice &)` [static]
@@ -378,7 +537,11 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn save_state(out: &mut OutputDevice) {
-        todo!("port MSRailSignalConstraint_Predecessor::saveState")
+        let trackers: Vec<Ptr<MSRailSignalConstraint_Predecessor_PassedTracker>> =
+            MY_TRACKER_LOOKUP.with(|m| m.borrow().values().copied().collect());
+        for tracker in trackers {
+            tracker.m().save_state(out);
+        }
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::loadState(const SUMOSAXAttributes &)` [static]
@@ -402,7 +565,21 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn load_state(attrs: &SUMOSAXAttributes) {
-        todo!("port MSRailSignalConstraint_Predecessor::loadState")
+        let mut ok = false;
+        let lane_id = attrs.get_string(SUMO_ATTR_LANE);
+        let index = attrs.get::<i32>(SUMO_ATTR_INDEX, "", &mut ok, true);
+        let trip_ids = attrs.get::<Vec<String>>(SUMO_ATTR_STATE, "", &mut ok, true);
+        let lane = MSLane::dictionary_2(&lane_id);
+        if lane.is_null() {
+            panic!("{}", ProcessError::new(utils::tlf!("Unknown lane '%' in loaded state.", lane_id)));
+        }
+        let tracker = MY_TRACKER_LOOKUP.with(|m| m.borrow().get(&lane).copied());
+        match tracker {
+            None => {
+                utils::write_warningf!("Unknown tracker lane '%' in loaded state.", lane_id);
+            }
+            Some(tracker) => tracker.m().load_state(index, &trip_ids),
+        }
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::clearState()` [static]
@@ -415,7 +592,11 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn clear_state() {
-        todo!("port MSRailSignalConstraint_Predecessor::clearState")
+        let trackers: Vec<Ptr<MSRailSignalConstraint_Predecessor_PassedTracker>> =
+            MY_TRACKER_LOOKUP.with(|m| m.borrow().values().copied().collect());
+        for tracker in trackers {
+            tracker.m().clear_state();
+        }
     }
 
     /// C++: `bool MSRailSignalConstraint_Predecessor::cleared() const` [const, virtual]
@@ -433,7 +614,15 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn cleared(&self) -> bool {
-        todo!("port MSRailSignalConstraint_Predecessor::cleared")
+        if !self.myAmActive {
+            return true;
+        }
+        for pt in &self.myTrackers {
+            if pt.has_passed(&self.myTripId, self.myLimit) {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `void MSRailSignalConstraint_Predecessor::setActive(bool)` [virtual]
@@ -442,7 +631,7 @@ impl MSRailSignalConstraint_Predecessor {
     //     }
     #[allow(unused_variables)]
     pub fn set_active(&mut self, active: bool) {
-        todo!("port MSRailSignalConstraint_Predecessor::setActive")
+        self.myAmActive = active;
     }
 
     /// C++: `bool MSRailSignalConstraint_Predecessor::isActive() const` [const, virtual]
@@ -451,7 +640,7 @@ impl MSRailSignalConstraint_Predecessor {
     //     }
     #[allow(unused_variables)]
     pub fn is_active(&self) -> bool {
-        todo!("port MSRailSignalConstraint_Predecessor::isActive")
+        self.myAmActive
     }
 
     /// C++: `std::string MSRailSignalConstraint_Predecessor::getDescription() const` [const, virtual]
@@ -487,7 +676,43 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn get_description(&self) -> String {
-        todo!("port MSRailSignalConstraint_Predecessor::getDescription")
+        // try to retrieve vehicle id that belongs to myTripId
+        // this may be slow so it should only be used for debugging
+        let veh = MSRailSignalConstraint::get_veh(&self.myTripId, false);
+        let mut veh_id = String::new();
+        if !veh.is_null() {
+            veh_id = " (".to_string() + veh.get_id() + ")";
+        }
+        let mut passed_ids: Vec<String> = Vec::new();
+        for passed_trip_id in &self.myTrackers[0].myPassed {
+            if passed_trip_id == "" {
+                continue;
+            }
+            let passed_veh = MSRailSignalConstraint::get_veh(passed_trip_id, false);
+            if !passed_veh.is_null() {
+                passed_ids.push(passed_veh.get_id().to_string());
+            }
+        }
+        let mut passed_ids2 = String::new();
+        if passed_ids.len() > 0 {
+            passed_ids2 = " (".to_string() + &passed_ids.join(" ") + ")";
+        }
+        let mut params = String::new();
+        for item in self.get_parameters_map() {
+            params += &("\n  key=".to_string() + &item.0 + " value=" + &item.1);
+        }
+        let junction = self.myTrackers[0].get_lane().myEdge.get_from_junction().get_id().to_string();
+        let tag = utils::common::to_string::to_string(&self.get_tag());
+        format!(
+            "{}{}{} at signal {} passed={}{}{}",
+            tag,
+            "  ",
+            self.myTripId.clone() + &veh_id,
+            junction,
+            utils::common::string_utils::prune(&self.myTrackers[0].myPassed.join(" ")),
+            passed_ids2,
+            params
+        )
     }
 
     /// C++: `const SUMOVehicle * MSRailSignalConstraint_Predecessor::getFoe() const` [const, virtual]
@@ -497,7 +722,7 @@ impl MSRailSignalConstraint_Predecessor {
     // }
     #[allow(unused_variables)]
     pub fn get_foe(&self) -> Ptr<SUMOVehicle> {
-        todo!("port MSRailSignalConstraint_Predecessor::getFoe")
+        MSRailSignalConstraint::get_veh(&self.myTripId, true)
     }
 
     /// C++: `MSRailSignalConstraint_Predecessor & MSRailSignalConstraint_Predecessor::operator=(const MSRailSignalConstraint_Predecessor &)` [private]
@@ -505,10 +730,19 @@ impl MSRailSignalConstraint_Predecessor {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSRailSignalConstraint_Predecessor) -> &mut MSRailSignalConstraint_Predecessor {
-        todo!("port MSRailSignalConstraint_Predecessor::operator=")
+        panic!("MSRailSignalConstraint_Predecessor::operator= is deleted in C++")
     }
 
 }
+
+fn ms_rail_signal_passed_tracker_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSRailSignalConstraint_Predecessor_PassedTracker>().m().notify_enter(veh, reason, enteredLane)
+}
+static MS_RAIL_SIGNAL_PASSED_TRACKER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_rail_signal_passed_tracker_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
 
 /// C++ class `MSRailSignalConstraint_Predecessor::PassedTracker` (microsim/traffic_lights/MSRailSignalConstraint.h)
 #[repr(C)]
@@ -542,7 +776,14 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // { }
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>) -> Self {
-        todo!("port PassedTracker::PassedTracker")
+        MSRailSignalConstraint_Predecessor_PassedTracker {
+            base: MSMoveReminder {
+                vt: &MS_RAIL_SIGNAL_PASSED_TRACKER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(&format!("PassedTracker_{}", lane.get_id()), lane, true)
+            },
+            myPassed: vec![String::new()],
+            myLastIndex: -1,
+        }
     }
 
     /// C++: `bool PassedTracker::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -560,7 +801,12 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port PassedTracker::notifyEnter")
+        self.myLastIndex = (self.myLastIndex + 1) % self.myPassed.len() as i32;
+        // the traffic object is a vehicle, so its parameter is the vehicle parameter
+        let base = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+        let trip_id = base.get_parameter().get_parameter("tripId", base.get_id());
+        self.myPassed[self.myLastIndex as usize] = trip_id;
+        true
     }
 
     /// C++: `void PassedTracker::raiseLimit(int)`
@@ -577,7 +823,9 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn raise_limit(&mut self, limit: i32) {
-        todo!("port PassedTracker::raiseLimit")
+        while limit > self.myPassed.len() as i32 {
+            self.myPassed.insert(self.myLastIndex as usize + 1, String::new());
+        }
     }
 
     /// C++: `bool PassedTracker::hasPassed(const std::string &, int) const` [const]
@@ -602,7 +850,23 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn has_passed(&self, tripId: &str, limit: i32) -> bool {
-        todo!("port PassedTracker::hasPassed")
+        if self.myLastIndex < 0 {
+            return false;
+        }
+        let mut i = self.myLastIndex;
+        let mut limit = limit;
+        while limit > 0 {
+            if self.myPassed[i as usize] == tripId {
+                return true;
+            }
+            if i == 0 {
+                i = self.myPassed.len() as i32 - 1;
+            } else {
+                i -= 1;
+            }
+            limit -= 1;
+        }
+        false
     }
 
     /// C++: `void PassedTracker::clearState()`
@@ -614,7 +878,8 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        todo!("port PassedTracker::clearState")
+        self.myPassed = vec![String::new(); self.myPassed.len()];
+        self.myLastIndex = 0;
     }
 
     /// C++: `void PassedTracker::saveState(OutputDevice &)`
@@ -636,7 +901,21 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut OutputDevice) {
-        todo!("port PassedTracker::saveState")
+        // wrapped around
+        let wrapped = self.myPassed.last().map_or(false, |s| s.is_empty());
+        let state = if wrapped {
+            self.myPassed[..(self.myLastIndex + 1) as usize].join(" ")
+        } else {
+            self.myPassed.join(" ")
+        };
+        // no need to save state if no vehicles have passed this tracker
+        if state != "" {
+            out.open_tag_id(SUMO_TAG_RAILSIGNAL_CONSTRAINT_TRACKER);
+            out.write_attr(SUMO_ATTR_LANE, self.get_lane().get_id());
+            out.write_attr(SUMO_ATTR_INDEX, &self.myLastIndex);
+            out.write_attr(SUMO_ATTR_STATE, &state);
+            out.close_tag("");
+        }
     }
 
     /// C++: `void PassedTracker::loadState(int, const std::vector<std::string> &)`
@@ -659,8 +938,54 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, index: i32, tripIDs: &Vec<String>) {
-        todo!("port PassedTracker::loadState")
+        self.raise_limit(tripIDs.len() as i32);
+        for i in 0..tripIDs.len() {
+            self.myPassed[i] = tripIDs[i].clone();
+        }
+        self.myLastIndex = index;
     }
 
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// the tag / swapped type / insertion flag mapping of the constraint types
+    #[test]
+    fn constraint_type_mapping() {
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_INSERTION_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::FOE_INSERTION);
+        assert!(c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::FOE_INSERTION);
+        assert_eq!(c.get_tag(), SUMO_TAG_FOE_INSERTION);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::INSERTION_PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::INSERTION_ORDER);
+        assert_eq!(c.get_tag(), SUMO_TAG_INSERTION_ORDER);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::INSERTION_ORDER);
+        assert!(c.is_insertion_constraint());
+
+        let c = MSRailSignalConstraint::new(MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR);
+        assert_eq!(c.get_tag(), SUMO_TAG_BIDI_PREDECESSOR);
+        assert_eq!(c.get_swapped_type(), MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR);
+        assert!(!c.is_insertion_constraint());
+    }
+
+    /// the trip id lookup table (C++ uses operator[], so unknown ids are inserted as empty)
+    #[test]
+    fn trip_id_lookup() {
+        MSRailSignalConstraint::store_trip_id("trip0", "veh0");
+        assert_eq!(MSRailSignalConstraint::lookup_veh_id("trip0"), "veh0");
+        assert_eq!(MSRailSignalConstraint::lookup_veh_id("unknown"), "");
+    }
 }
 

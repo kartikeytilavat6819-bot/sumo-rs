@@ -12,7 +12,7 @@ pub struct SUMORouteLoaderControl {
     /// the number of routes to read in forward
     pub myInAdvanceStepNo: SUMOTime,
     /// the list of route loaders
-    pub myRouteLoaders: i32,
+    pub myRouteLoaders: Vec<Ptr<SUMORouteLoader>>,
     /// information whether all routes shall be loaded and whether they were loaded
     pub myLoadAll: bool,
     /// information whether all routes shall be loaded and whether they were loaded
@@ -32,7 +32,14 @@ impl SUMORouteLoaderControl {
     // }
     #[allow(unused_variables)]
     pub fn new(inAdvanceStepNo: SUMOTime) -> Self {
-        todo!("port SUMORouteLoaderControl::SUMORouteLoaderControl")
+        Self {
+            myFirstLoadTime: SUMOTIME_MAX,
+            myCurrentLoadTime: -SUMOTIME_MAX,
+            myInAdvanceStepNo: inAdvanceStepNo,
+            myRouteLoaders: Vec::new(),
+            myLoadAll: inAdvanceStepNo <= 0,
+            myAllLoaded: false,
+        }
     }
 
     /// C++: `void SUMORouteLoaderControl::~SUMORouteLoaderControl()`
@@ -40,7 +47,7 @@ impl SUMORouteLoaderControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port SUMORouteLoaderControl::~SUMORouteLoaderControl")
+        // destructor: nothing to release explicitly, the Vec fields drop with the struct
     }
 
     /// C++: `void SUMORouteLoaderControl::add(SUMORouteLoader *)`
@@ -51,7 +58,7 @@ impl SUMORouteLoaderControl {
     // }
     #[allow(unused_variables)]
     pub fn add(&mut self, loader: Ptr<SUMORouteLoader>) {
-        todo!("port SUMORouteLoaderControl::add")
+        self.myRouteLoaders.push(loader);
     }
 
     /// C++: `void SUMORouteLoaderControl::loadNext(SUMOTime)`
@@ -84,7 +91,29 @@ impl SUMORouteLoaderControl {
     // }
     #[allow(unused_variables)]
     pub fn load_next(&mut self, step: SUMOTime) {
-        todo!("port SUMORouteLoaderControl::loadNext")
+        // check whether new vehicles shall be loaded
+        //  return if not
+        if self.myAllLoaded {
+            return;
+        }
+        if self.myCurrentLoadTime > step {
+            return;
+        }
+        let loadMaxTime = if self.myLoadAll { SUMOTIME_MAX } else { std::cmp::max(self.myCurrentLoadTime + self.myInAdvanceStepNo, step) };
+        self.myCurrentLoadTime = SUMOTIME_MAX;
+        // load all routes for the specified time period
+        let mut furtherAvailable = false;
+        for &loader in self.myRouteLoaders.iter() {
+            self.myCurrentLoadTime = std::cmp::min(self.myCurrentLoadTime, loader.m().load_until(loadMaxTime));
+            if loader.get_first_depart() != -1 {
+                self.myFirstLoadTime = std::cmp::min(self.myFirstLoadTime, loader.get_first_depart());
+            }
+            furtherAvailable |= loader.more_available();
+        }
+        if self.myFirstLoadTime == SUMOTIME_MAX {
+            self.myFirstLoadTime = 0;
+        }
+        self.myAllLoaded = !furtherAvailable;
     }
 
     /// C++: `SUMOTime SUMORouteLoaderControl::getFirstLoadTime() const` [const]
@@ -94,7 +123,7 @@ impl SUMORouteLoaderControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_first_load_time(&self) -> SUMOTime {
-        todo!("port SUMORouteLoaderControl::getFirstLoadTime")
+        self.myFirstLoadTime
     }
 
     /// C++: `bool SUMORouteLoaderControl::haveAllLoaded() const` [const]
@@ -104,7 +133,7 @@ impl SUMORouteLoaderControl {
     //     }
     #[allow(unused_variables)]
     pub fn have_all_loaded(&self) -> bool {
-        todo!("port SUMORouteLoaderControl::haveAllLoaded")
+        self.myAllLoaded
     }
 
     /// C++: `SUMORouteLoader * SUMORouteLoaderControl::getFirstLoader() const` [const]
@@ -118,7 +147,10 @@ impl SUMORouteLoaderControl {
     // }
     #[allow(unused_variables)]
     pub fn get_first_loader(&self) -> Ptr<SUMORouteLoader> {
-        todo!("port SUMORouteLoaderControl::getFirstLoader")
+        if self.myRouteLoaders.len() > 0 {
+            return self.myRouteLoaders[0];
+        }
+        Ptr::null()
     }
 
     /// C++: `SUMOTime SUMORouteLoaderControl::getCurrentLoadTime() const` [const]
@@ -127,7 +159,7 @@ impl SUMORouteLoaderControl {
     //     }
     #[allow(unused_variables)]
     pub fn get_current_load_time(&self) -> SUMOTime {
-        todo!("port SUMORouteLoaderControl::getCurrentLoadTime")
+        self.myCurrentLoadTime
     }
 
     /// C++: `void SUMORouteLoaderControl::setCurrentLoadTime(SUMOTime)`
@@ -136,7 +168,7 @@ impl SUMORouteLoaderControl {
     //     }
     #[allow(unused_variables)]
     pub fn set_current_load_time(&mut self, time: SUMOTime) {
-        todo!("port SUMORouteLoaderControl::setCurrentLoadTime")
+        self.myCurrentLoadTime = time;
     }
 
     /// C++: `void SUMORouteLoaderControl::SUMORouteLoaderControl(const SUMORouteLoaderControl &)` [private]
@@ -144,7 +176,7 @@ impl SUMORouteLoaderControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &SUMORouteLoaderControl) -> Self {
-        todo!("port SUMORouteLoaderControl::SUMORouteLoaderControl")
+        panic!("SUMORouteLoaderControl copy constructor is invalidated")
     }
 
     /// C++: `SUMORouteLoaderControl & SUMORouteLoaderControl::operator=(const SUMORouteLoaderControl &)` [private]
@@ -152,7 +184,7 @@ impl SUMORouteLoaderControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &SUMORouteLoaderControl) -> &mut SUMORouteLoaderControl {
-        todo!("port SUMORouteLoaderControl::operator=")
+        panic!("SUMORouteLoaderControl assignment operator is invalidated")
     }
 
 }

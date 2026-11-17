@@ -49,6 +49,11 @@ fn delete_ptr<T>(p: Ptr<T>) {
     drop(unsafe { Box::from_raw(p.as_raw()) });
 }
 
+/// C++ `state[i]` on a phase state string, as a char value (0 past the end, like the C++ terminator)
+fn state_char(state: &str, i: i32) -> i32 {
+    state.as_bytes().get(i as usize).copied().unwrap_or(0) as i32
+}
+
 /// `std::istringstream(id) >> long long` as IDSupplier::avoid uses it: optional leading whitespace,
 /// optional sign, then digits; None when no number can be read
 fn parse_leading_i64(s: &str) -> Option<i64> {
@@ -443,7 +448,74 @@ impl NBTrafficLightLogicCont {
             delete_ptr(logic);
         }
         self.myComputed.clear();
-        // shortcut: the tls.rebuild, tls.group-signals and tls.ungroup-signals branches use dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which needs runtime type info that NBTrafficLightDefinition does not carry in the Rust port; these branches are skipped, upgrade when a type tag is added to NBTrafficLightDefinition
+        if oc.get_bool("tls.rebuild").unwrap() {
+            for def in self.get_definitions() {
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    let mut ty = def.m().get_type();
+                    if !oc.is_default("tls.default-type") {
+                        ty = TrafficLightTypes.get(&oc.get_string("tls.default-type").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+                    }
+                    let id = def.m().get_id().to_string();
+                    let nodes = def.m().get_nodes().clone();
+                    let offset = def.m().get_offset();
+                    let programID = def.m().get_program_id().to_string();
+                    let oDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(NBOwnTLDef::new(&id, &nodes, offset, ty)));
+                    oDef.m().set_program_id(&programID);
+                    oDef.m().set_participants_information();
+                    for e in oDef.m().get_incoming_edges().clone() {
+                        e.m().clear_controlling_tl_information();
+                    }
+                    oDef.m().set_tl_controlling_information();
+                    for node in oDef.m().get_nodes().clone() {
+                        node.m().remove_traffic_light(def);
+                        for c in node.m().get_crossings() {
+                            c.m().customTLIndex = -1;
+                            c.m().customTLIndex2 = -1;
+                            c.m().tlLinkIndex2 = -1;
+                        }
+                    }
+                    self.remove_program(id, programID, true);
+                    self.insert(oDef.cast::<NBTrafficLightDefinition>(), false);
+                }
+            }
+        }
+        if oc.get_bool("tls.group-signals").unwrap() {
+            // replace NBOwnTLDef tld with NBLoadedSUMOTLDef
+            for def in self.get_definitions() {
+                let mut lDef: Ptr<NBLoadedSUMOTLDef> = Ptr::null();
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    lDef = def.cast::<NBLoadedSUMOTLDef>();
+                } else {
+                    let logic = def.m().compute(oc);
+                    if !logic.is_null() {
+                        lDef = Ptr::from_raw(Box::into_raw(Box::new(NBLoadedSUMOTLDef::new_2(def.m(), logic.m()))));
+                        lDef.m().set_participants_information();
+                        for node in lDef.m().get_nodes().clone() {
+                            node.m().remove_traffic_light(def);
+                            node.m().add_traffic_light(lDef.cast::<NBTrafficLightDefinition>());
+                        }
+                        let id = def.m().get_id().to_string();
+                        let programID = def.m().get_program_id().to_string();
+                        self.remove_program(id, programID, true);
+                        self.insert(lDef.cast::<NBTrafficLightDefinition>(), false);
+                        delete_ptr(logic);
+                    }
+                }
+                if !lDef.is_null() {
+                    lDef.m().group_signals();
+                }
+            }
+        } else if oc.get_bool("tls.ungroup-signals").unwrap() {
+            for def in self.get_definitions() {
+                // NBOwnTLDef are always ungrouped
+                if def.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    let lDef = def.cast::<NBLoadedSUMOTLDef>();
+                    if lDef.m().using_signal_groups() {
+                        lDef.m().ungroup_signals();
+                    }
+                }
+            }
+        }
         let mut numPrograms = 0;
         for def in self.get_definitions() {
             if self.compute_single_logic(oc, def) {
@@ -494,7 +566,7 @@ impl NBTrafficLightLogicCont {
         // build program
         let built = def.m().compute(oc);
         if built.is_null() {
-            utils::common::msg_handler::write_warning(&format!("Could not build program '{}' for traffic light '{}'", programID, id));
+            utils::write_warningf!("Could not build program '%' for traffic light '%'", programID, id);
             return false;
         }
         // compute offset
@@ -689,7 +761,27 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn set_open_drive_signal_parameters(&mut self) {
-        // shortcut: NBEdge::Connection hasParameter/getParameter (the port maps getConnection to CHBuilder_Connection, which has no parameter map) and def->setParameter are not usable yet, so the signalID propagation is skipped; upgrade when NBEdge::Connection is ported with its Parameterised base
+        for def in self.get_definitions() {
+            let mut defaultSignalIDs: BTreeMap<Ptr<NBEdge>, String> = BTreeMap::new();
+            let controlledLinks = def.m().get_controlled_links().clone();
+            for con in controlledLinks.iter() {
+                let from = con.get_from();
+                let c = from.get_connection(con.get_from_lane(), con.get_to(), con.get_to_lane());
+                if c.has_parameter("signalID") {
+                    defaultSignalIDs.insert(from, c.get_parameter("signalID", ""));
+                    def.m().base2.set_parameter(&format!("linkSignalID:{}", con.get_tl_index()), &c.get_parameter("signalID", ""));
+                }
+            }
+            // oftentimes, signals are placed on connecting road but are meant to apply to all connections from the incoming edge
+            for con in controlledLinks.iter() {
+                let from = con.get_from();
+                let c = from.get_connection(con.get_from_lane(), con.get_to(), con.get_to_lane());
+                if !c.has_parameter("signalID") && defaultSignalIDs.contains_key(&from) {
+                    utils::write_warningf!("Guessing signalID for link index % at traffic light '%'.", con.get_tl_index(), def.m().get_id());
+                    def.m().base2.set_parameter(&format!("linkSignalID:{}", con.get_tl_index()), &defaultSignalIDs[&from]);
+                }
+            }
+        }
     }
 
     /// C++: `void NBTrafficLightLogicCont::applyOpenDriveControllers(OptionsCont &)`
@@ -801,8 +893,102 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_open_drive_controllers(&mut self, oc: &mut OptionsCont) {
-        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters) and rebuilds NBLoadedSUMOTLDef via dynamic_cast (needs runtime type info), so no OpenDRIVE controller groups are formed; upgrade when both are ported
-        let _ = oc;
+        // collect connections with controllerID which can be controlled together
+        let mut defsToGroup: BTreeMap<String, Ptr<NBTrafficLightDefinition>> = BTreeMap::new();
+        let mut controllerID2tlIndex: BTreeMap<String, BTreeMap<String, BTreeSet<i32>>> = BTreeMap::new();
+        for def in self.get_definitions() {
+            let mut makeGroups = false;
+            let connections = def.m().get_controlled_links().clone();
+            let defID = def.m().get_id().to_string();
+            for conn in connections.iter() {
+                let from = conn.get_from();
+                let controllerID = from.get_connection(conn.get_from_lane(), conn.get_to(), conn.get_to_lane()).get_parameter("controllerID", "");
+                if !controllerID.is_empty() {
+                    let indexSet = controllerID2tlIndex.entry(defID.clone()).or_default().entry(controllerID).or_default();
+                    indexSet.insert(conn.get_tl_index());
+                    makeGroups = indexSet.len() > 1 || makeGroups;
+                }
+            }
+            if makeGroups {
+                defsToGroup.insert(def.m().get_id().to_string(), def);
+            }
+        }
+        let mut same = true;
+        for computed in self.get_computed() {
+            let computedID = computed.m().get_id().to_string();
+            if defsToGroup.contains_key(&computedID) {
+                // remember corresponding tl indices and check if they can be joined
+                // execute tl index joins if possible
+                let phases = computed.m().get_phases().clone();
+                let mut major2minor: Vec<i32> = Vec::new();
+                let indexSets = controllerID2tlIndex.entry(computedID.clone()).or_default().clone();
+                for indexSet in indexSets.values() {
+                    if indexSet.len() < 2 {
+                        continue;
+                    }
+                    let mut toMinor = false;
+                    for phase in phases.iter() {
+                        let mut it = indexSet.iter();
+                        let mut firstChar = state_char(&phase.state, *it.next().unwrap());
+                        if firstChar == LINKSTATE_TL_GREEN_MAJOR {
+                            firstChar = LINKSTATE_TL_GREEN_MINOR;
+                        }
+                        for &idx in it {
+                            let compareChar = if state_char(&phase.state, idx) != LINKSTATE_TL_GREEN_MAJOR { state_char(&phase.state, idx) } else { LINKSTATE_TL_GREEN_MINOR };
+                            if compareChar != firstChar {
+                                same = false;
+                                break;
+                            } else if state_char(&phase.state, idx) == LINKSTATE_TL_GREEN_MINOR {
+                                toMinor = true;
+                            }
+                        }
+                        if !same {
+                            break;
+                        }
+                    }
+                    if toMinor {
+                        major2minor.push(*indexSet.iter().next().unwrap());
+                    }
+                }
+                if same {
+                    let def = defsToGroup[&computedID];
+                    if def.m().myKind != NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                        let mut lDef: Ptr<NBLoadedSUMOTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBLoadedSUMOTLDef::new_2(def.m(), computed.m()))));
+                        lDef.m().set_participants_information();
+                        for index in major2minor.iter() {
+                            for i in 0..phases.len() {
+                                if state_char(&phases[i].state, *index) == LINKSTATE_TL_GREEN_MAJOR {
+                                    lDef.m().get_logic().m().set_phase_state(i as i32, *index, LINKSTATE_TL_GREEN_MINOR);
+                                }
+                            }
+                        }
+                        // join signal groups, update the connections
+                        for indexSet in indexSets.values() {
+                            let minIndex = *indexSet.iter().next().unwrap();
+                            for &index in indexSet.iter() {
+                                if index != minIndex {
+                                    lDef.m().replace_index(index, minIndex);
+                                }
+                            }
+                        }
+                        // remove unused indices from signal programs
+                        lDef.m().cleanup_states();
+                        for node in lDef.m().get_nodes().clone() {
+                            node.m().remove_traffic_light(def);
+                            node.m().add_traffic_light(lDef.cast::<NBTrafficLightDefinition>());
+                        }
+                        let id = def.m().get_id().to_string();
+                        let programID = def.m().get_program_id().to_string();
+                        self.remove_program(id, programID, true);
+                        self.insert(lDef.cast::<NBTrafficLightDefinition>(), false);
+                        self.compute_single_logic(oc, lDef.cast::<NBTrafficLightDefinition>());
+                    }
+                } else {
+                    utils::write_warningf!("Was not able to apply the OpenDRIVE signal group information onto the signal program of traffic light % generated by SUMO.", computed.m().get_id());
+                }
+                break;
+            }
+        }
     }
 
     /// C++: `Definitions NBTrafficLightLogicCont::getDefinitions() const` [const]

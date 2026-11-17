@@ -1,6 +1,12 @@
 //! Port of netwrite/NWWriter_MATSim.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::f64_to_string_prec;
+
+/// C++ `OptionsCont` getters throw ProcessError; the options used here are always registered
+fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
+    r.unwrap_or_else(|e| panic!("{e}"))
+}
 
 /// Exporter writing networks using the MATSim format
 /// C++ class `NWWriter_MATSim` (netwrite/NWWriter_MATSim.h)
@@ -50,7 +56,43 @@ impl NWWriter_MATSim {
     // }
     #[allow(unused_variables)]
     pub fn write_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NWWriter_MATSim::writeNetwork")
+        // check whether a matsim-file shall be generated
+        if !or_panic(oc.is_set("matsim-output", true)) {
+            return;
+        }
+        let device = or_panic(OutputDevice::get_device(&or_panic(oc.get_string("matsim-output")), true));
+        let mut dev = device.borrow_mut();
+        let prec = dev.get_precision();
+        dev.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        dev.write("<!DOCTYPE network SYSTEM \"http://www.matsim.org/files/dtd/network_v1.dtd\">\n\n");
+        dev.write("<network name=\"NAME\">\n"); // !!! name
+        // write nodes
+        dev.write("   <nodes>\n");
+        let nc = nb.get_node_cont();
+        for (id, node) in nc.begin() {
+            dev.write("      <node id=\"").write(id.as_str())
+                .write("\" x=\"").write(&f64_to_string_prec(node.get_position().x(), prec))
+                .write("\" y=\"").write(&f64_to_string_prec(node.get_position().y(), prec))
+                .write("\"/>\n");
+        }
+        dev.write("   </nodes>\n");
+        // write edges
+        dev.write("   <links capperiod=\"01:00:00\">\n");
+        let ec = nb.get_edge_cont();
+        for (id, edge) in ec.begin() {
+            dev.write("      <link id=\"").write(id.as_str())
+                .write("\" from=\"").write(edge.get_from_node().get_id())
+                .write("\" to=\"").write(edge.get_to_node().get_id())
+                .write("\" length=\"").write(&f64_to_string_prec(edge.get_loaded_length(), prec))
+                .write("\" capacity=\"").write(&f64_to_string_prec(or_panic(oc.get_float("lanes-from-capacity.norm")) * edge.get_num_lanes() as f64, prec))
+                .write("\" freespeed=\"").write(&f64_to_string_prec(edge.get_speed(), prec))
+                .write("\" permlanes=\"").write(&format!("{}", edge.get_num_lanes()))
+                .write("\"/>\n");
+        }
+        dev.write("   </links>\n");
+        //
+        dev.write("</network>\n"); // !!! name
+        let _ = dev.close();
     }
 
 }

@@ -2,9 +2,81 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// Virtual dispatch table for the polymorphic methods of MSAbstractLaneChangeModel.
+/// Each subclass constructor installs its own table in `vt`; the base methods forward through it.
+pub struct MSAbstractLaneChangeModelVt {
+    pub inform: fn(&mut MSAbstractLaneChangeModel, Ptr<()>, Ptr<MSVehicle>) -> Ptr<()>,
+    pub patch_speed: fn(&mut MSAbstractLaneChangeModel, f64, f64, f64, &MSCFModel) -> f64,
+    pub changed: fn(&mut MSAbstractLaneChangeModel),
+    pub wants_change: fn(&mut MSAbstractLaneChangeModel, i32, &mut MSAbstractLaneChangeModel_MSLCMessager, i32, &(Ptr<MSVehicle>, f64), &(Ptr<MSVehicle>, f64), &(Ptr<MSVehicle>, f64), &(Ptr<MSVehicle>, f64), &MSLane, &Vec<MSVehicle_LaneQ>, Ptr<Ptr<MSVehicle>>, Ptr<Ptr<MSVehicle>>) -> i32,
+    pub wants_change_sublane: fn(&mut MSAbstractLaneChangeModel, i32, LaneChangeAction, &MSLeaderDistanceInfo, &MSLeaderDistanceInfo, &MSLeaderDistanceInfo, &MSLeaderDistanceInfo, &MSLeaderDistanceInfo, &MSLeaderDistanceInfo, &MSLane, &Vec<MSVehicle_LaneQ>, Ptr<Ptr<MSVehicle>>, Ptr<Ptr<MSVehicle>>, &mut f64, &mut f64, &mut i32) -> i32,
+    pub update_expected_sublane_speeds: fn(&mut MSAbstractLaneChangeModel, &MSLeaderDistanceInfo, i32, i32),
+    pub decide_direction: fn(&MSAbstractLaneChangeModel, MSAbstractLaneChangeModel_StateAndDist, MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist,
+    pub set_own_state: fn(&mut MSAbstractLaneChangeModel, i32),
+    pub prepare_step: fn(&mut MSAbstractLaneChangeModel),
+    pub reset_speed_lat: fn(&mut MSAbstractLaneChangeModel),
+    pub update_safe_lat_dist: fn(&mut MSAbstractLaneChangeModel, f64),
+    pub get_safety_factor: fn(&MSAbstractLaneChangeModel) -> f64,
+    pub compute_speed_lat: fn(&MSAbstractLaneChangeModel, f64, &mut f64, bool) -> f64,
+    pub save_blocker_length: fn(&mut MSAbstractLaneChangeModel, f64, f64) -> bool,
+    pub get_extra_reservation: fn(&MSAbstractLaneChangeModel, i32, f64) -> f64,
+    pub set_parameter: fn(&mut MSAbstractLaneChangeModel, &str, &str),
+    pub avoid_overtake_right: fn(&MSAbstractLaneChangeModel, Ptr<MSVehicle>, bool) -> bool,
+    pub save_state: fn(&MSAbstractLaneChangeModel, &mut OutputDevice),
+    pub load_state: fn(&mut MSAbstractLaneChangeModel, &SUMOSAXAttributes),
+    pub reset_state: fn(&mut MSAbstractLaneChangeModel),
+    pub get_opposite_safety_factor: fn(&MSAbstractLaneChangeModel) -> f64,
+    pub debug_vehicle: fn(&MSAbstractLaneChangeModel) -> bool,
+    pub get_parameter: fn(&MSAbstractLaneChangeModel, &str) -> String,
+    pub get_desired_alignment: fn(&MSAbstractLaneChangeModel) -> LatAlignmentDefinition,
+    pub check_change_before_committing: fn(&MSAbstractLaneChangeModel, Ptr<MSVehicle>, i32) -> i32,
+}
+
+fn default_inform(_: &mut MSAbstractLaneChangeModel, _: Ptr<()>, _: Ptr<MSVehicle>) -> Ptr<()> {
+    panic!("MSAbstractLaneChangeModel::inform is pure virtual")
+}
+
+fn default_patch_speed(_: &mut MSAbstractLaneChangeModel, _: f64, _: f64, _: f64, _: &MSCFModel) -> f64 {
+    panic!("MSAbstractLaneChangeModel::patchSpeed is pure virtual")
+}
+
+fn default_changed(_: &mut MSAbstractLaneChangeModel) {
+    panic!("MSAbstractLaneChangeModel::changed is pure virtual")
+}
+
+static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: default_inform,
+    patch_speed: default_patch_speed,
+    changed: default_changed,
+    wants_change: MSAbstractLaneChangeModel::wants_change_base,
+    wants_change_sublane: MSAbstractLaneChangeModel::wants_change_sublane_base,
+    update_expected_sublane_speeds: MSAbstractLaneChangeModel::update_expected_sublane_speeds_base,
+    decide_direction: MSAbstractLaneChangeModel::decide_direction_base,
+    set_own_state: MSAbstractLaneChangeModel::set_own_state_base,
+    prepare_step: MSAbstractLaneChangeModel::prepare_step_base,
+    reset_speed_lat: MSAbstractLaneChangeModel::reset_speed_lat_base,
+    update_safe_lat_dist: MSAbstractLaneChangeModel::update_safe_lat_dist_base,
+    get_safety_factor: MSAbstractLaneChangeModel::get_safety_factor_base,
+    compute_speed_lat: MSAbstractLaneChangeModel::compute_speed_lat_base,
+    save_blocker_length: MSAbstractLaneChangeModel::save_blocker_length_base,
+    get_extra_reservation: MSAbstractLaneChangeModel::get_extra_reservation_base,
+    set_parameter: MSAbstractLaneChangeModel::set_parameter_base,
+    avoid_overtake_right: MSAbstractLaneChangeModel::avoid_overtake_right_base,
+    save_state: MSAbstractLaneChangeModel::save_state_base,
+    load_state: MSAbstractLaneChangeModel::load_state_base,
+    reset_state: MSAbstractLaneChangeModel::reset_state_base,
+    get_opposite_safety_factor: MSAbstractLaneChangeModel::get_opposite_safety_factor_base,
+    debug_vehicle: MSAbstractLaneChangeModel::debug_vehicle_base,
+    get_parameter: MSAbstractLaneChangeModel::get_parameter_base,
+    get_desired_alignment: MSAbstractLaneChangeModel::get_desired_alignment_base,
+    check_change_before_committing: MSAbstractLaneChangeModel::check_change_before_committing_base,
+};
+
 /// Interface for lane-change models
 /// C++ class `MSAbstractLaneChangeModel` (microsim/lcmodels/MSAbstractLaneChangeModel.h)
 pub struct MSAbstractLaneChangeModel {
+    /// Virtual dispatch table; first field because this root class has no base
+    pub vt: &'static MSAbstractLaneChangeModelVt,
     /// The vehicle this lane-changer belongs to
     pub myVehicle: Ptr<MSVehicle>,
     /// The current state of the vehicle
@@ -231,7 +303,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        // shortcut: pure virtual in C++ (no base body); the field holds the model this object was built with, which is what every subclass returns
+        // pure virtual in C++; the stored model is what every subclass returns
         self.myModel
     }
 
@@ -242,8 +314,12 @@ impl MSAbstractLaneChangeModel {
     //         UNUSED_PARAMETER(state);
     //         return 0;
     //     }
-    #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
+        (self.vt.check_change_before_committing)(self, veh, state)
+    }
+
+    #[allow(unused_variables)]
+    pub fn check_change_before_committing_base(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
         0
     }
 
@@ -265,6 +341,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&self, out: &mut OutputDevice) {
+        (self.vt.save_state)(self, out)
+    }
+
+    pub fn save_state_base(&self, out: &mut OutputDevice) {
         let mut lc_state: Vec<f64> = vec![self.myOwnState as f64];
         for item in &self.myLCAccelerationAdvices {
             lc_state.push(item.0);
@@ -305,6 +385,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
+        (self.vt.load_state)(self, attrs)
+    }
+
+    pub fn load_state_base(&mut self, attrs: &SUMOSAXAttributes) {
         if attrs.has_attribute(SUMO_ATTR_LCSTATE_BASE) {
             let s = attrs.get_string(SUMO_ATTR_LCSTATE_BASE);
             // istringstream >> double: a failed read yields 0 (C++11) and ends the stream
@@ -322,14 +406,22 @@ impl MSAbstractLaneChangeModel {
         }
         if attrs.has_attribute(SUMO_ATTR_LCSTATE) {
             let s = attrs.get_string(SUMO_ATTR_LCSTATE);
+            // istringstream >> semantics: a token that fails to parse sets its value to 0 and ends the stream
             let mut toks = s.split_whitespace();
+            let mut ok = true;
             if let Some(t) = toks.next() {
                 self.mySpeedLat = t.parse::<f64>().unwrap_or(0.0);
+                ok = t.parse::<f64>().is_ok();
+            }
+            if ok {
                 if let Some(t) = toks.next() {
                     self.myLaneChangeCompletion = t.parse::<f64>().unwrap_or(0.0);
-                    if let Some(t) = toks.next() {
-                        self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
-                    }
+                    ok = t.parse::<f64>().is_ok();
+                }
+            }
+            if ok {
+                if let Some(t) = toks.next() {
+                    self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
                 }
             }
         }
@@ -426,6 +518,7 @@ impl MSAbstractLaneChangeModel {
         let p = vt.get_parameter();
         let max_speed_lat = vt.get_max_speed_lat();
         let mut s = MSAbstractLaneChangeModel {
+            vt: &DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT,
             myVehicle,
             myOwnState: 0,
             myPreviousState: 0,
@@ -483,8 +576,7 @@ impl MSAbstractLaneChangeModel {
             myCooperativeHelpThreshold: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_HELPTHRESHOLD, -1.),
             myCooperativeMinSpeed: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_MINSPEED, 0.),
             // see MSVehicle::initDevices
-            // shortcut: get_device(typeid) matches no device yet, so the blue light flag is always false until the device type key is ported
-            myHaveBlueLight: !v.get_device(&()).is_null(),
+            myHaveBlueLight: !v.get_device("bluelight").is_null(),
             myLCAccelerationAdvices: Vec::new(),
             myLastLaneChangeOffset: 0,
             myApproachedByShadow: std::cell::RefCell::new(Vec::new()),
@@ -535,6 +627,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn set_own_state(&mut self, state: i32) {
+        (self.vt.set_own_state)(self, state)
+    }
+
+    pub fn set_own_state_base(&mut self, state: i32) {
         self.myPreviousState2 = self.myPreviousState;
         self.myOwnState = state;
         self.myPreviousState = state; // myOwnState is modified in prepareStep so we make a backup
@@ -592,6 +688,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_safe_lat_dist(&mut self, travelledLatDist: f64) {
+        (self.vt.update_safe_lat_dist)(self, travelledLatDist)
+    }
+
+    pub fn update_safe_lat_dist_base(&mut self, travelledLatDist: f64) {
         // C++ base body is empty (UNUSED_PARAMETER only); subclasses override
 
     }
@@ -1052,6 +1152,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn prepare_step(&mut self) {
+        (self.vt.prepare_step)(self)
+    }
+
+    pub fn prepare_step_base(&mut self) {
         *self.get_canceled_state(-1) = LCA_NONE;
         *self.get_canceled_state(0) = LCA_NONE;
         *self.get_canceled_state(1) = LCA_NONE;
@@ -1102,6 +1206,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
+        (self.vt.wants_change)(self, laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, lastBlocked, firstBlocked)
+    }
+
+    pub fn wants_change_base(&mut self, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
         panic!(
             "{}",
             ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
@@ -1142,6 +1250,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn wants_change_sublane(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, targetDistLat: &mut f64, blocked: &mut i32) -> i32 {
+        (self.vt.wants_change_sublane)(self, laneOffset, alternatives, leaders, followers, blockers, neighLeaders, neighFollowers, neighBlockers, neighLane, preb, lastBlocked, firstBlocked, latDist, targetDistLat, blocked)
+    }
+
+    pub fn wants_change_sublane_base(&mut self, laneOffset: i32, alternatives: LaneChangeAction, leaders: &MSLeaderDistanceInfo, followers: &MSLeaderDistanceInfo, blockers: &MSLeaderDistanceInfo, neighLeaders: &MSLeaderDistanceInfo, neighFollowers: &MSLeaderDistanceInfo, neighBlockers: &MSLeaderDistanceInfo, neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>, latDist: &mut f64, targetDistLat: &mut f64, blocked: &mut i32) -> i32 {
         panic!(
             "{}",
             ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
@@ -1158,6 +1270,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn update_expected_sublane_speeds(&mut self, ahead: &MSLeaderDistanceInfo, sublaneOffset: i32, laneIndex: i32) {
+        (self.vt.update_expected_sublane_speeds)(self, ahead, sublaneOffset, laneIndex)
+    }
+
+    pub fn update_expected_sublane_speeds_base(&mut self, ahead: &MSLeaderDistanceInfo, sublaneOffset: i32, laneIndex: i32) {
         panic!(
             "{}",
             ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
@@ -1173,6 +1289,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn decide_direction(&self, sd1: MSAbstractLaneChangeModel_StateAndDist, sd2: MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
+        (self.vt.decide_direction)(self, sd1, sd2)
+    }
+
+    pub fn decide_direction_base(&self, sd1: MSAbstractLaneChangeModel_StateAndDist, sd2: MSAbstractLaneChangeModel_StateAndDist) -> MSAbstractLaneChangeModel_StateAndDist {
         panic!(
             "{}",
             ProcessError::Process(format!("Method not implemented by model {}", LaneChangeModels.get_string(self.myModel)))
@@ -1183,7 +1303,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn inform(&mut self, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
-        todo!("port MSAbstractLaneChangeModel::inform")
+        (self.vt.inform)(self, info, sender)
     }
 
     /// C++: `double MSAbstractLaneChangeModel::patchSpeed(const double, const double, const double, const MSCFModel &)` [virtual, pure virtual]
@@ -1191,20 +1311,24 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn patch_speed(&mut self, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
-        todo!("port MSAbstractLaneChangeModel::patchSpeed")
+        (self.vt.patch_speed)(self, min, wanted, max, cfModel)
     }
 
     /// C++: `void MSAbstractLaneChangeModel::changed()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn changed(&mut self) {
-        todo!("port MSAbstractLaneChangeModel::changed")
+        (self.vt.changed)(self)
     }
 
     /// C++: `void MSAbstractLaneChangeModel::resetState()` [virtual]
     // virtual void resetState() {}
     #[allow(unused_variables)]
     pub fn reset_state(&mut self) {
+        (self.vt.reset_state)(self)
+    }
+
+    pub fn reset_state_base(&mut self) {
         // C++ base body is empty; subclasses override
 
     }
@@ -1216,6 +1340,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_safety_factor(&self) -> f64 {
+        (self.vt.get_safety_factor)(self)
+    }
+
+    pub fn get_safety_factor_base(&self) -> f64 {
         1.0
 
     }
@@ -1227,6 +1355,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_opposite_safety_factor(&self) -> f64 {
+        (self.vt.get_opposite_safety_factor)(self)
+    }
+
+    pub fn get_opposite_safety_factor_base(&self) -> f64 {
         1.0
 
     }
@@ -1238,6 +1370,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn debug_vehicle(&self) -> bool {
+        (self.vt.debug_vehicle)(self)
+    }
+
+    pub fn debug_vehicle_base(&self) -> bool {
         false
 
     }
@@ -1958,6 +2094,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn update_shadow_lane(&mut self) {
+        // C++: if (!MSGlobals::gSublane) return; — without sublanes every vehicle sits at lane center
+        if !crate::microsim::ms_globals::sublane() {
+            return;
+        }
         if !self.myShadowLane.is_null() {
             self.myShadowLane.m().reset_partial_occupation(self.myVehicle);
         }
@@ -2254,6 +2394,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn save_blocker_length(&mut self, arg0: f64, arg1: f64) -> bool {
+        (self.vt.save_blocker_length)(self, arg0, arg1)
+    }
+
+    pub fn save_blocker_length_base(&mut self, arg0: f64, arg1: f64) -> bool {
         true
     }
 
@@ -2429,39 +2573,20 @@ impl MSAbstractLaneChangeModel {
             }
             let reason = format!("{}{}", actionString, self.myVehicle.get_parameter().get_parameter("lcReason", ""));
             of.write_attr("reason", &reason);
-            // NO_NEIGHBOR gaps are not written at all (C++ writeAttr with isNull=true)
-            if self.myLastLeaderGap != NO_NEIGHBOR {
-                of.write_attr("leaderGap", &f64_to_string(self.myLastLeaderGap));
-            }
-            if self.myLastLeaderSecureGap != NO_NEIGHBOR {
-                of.write_attr("leaderSecureGap", &f64_to_string(self.myLastLeaderSecureGap));
-            }
-            if self.myLastLeaderSpeed != NO_NEIGHBOR {
-                of.write_attr("leaderSpeed", &f64_to_string(self.myLastLeaderSpeed));
-            }
-            if self.myLastFollowerGap != NO_NEIGHBOR {
-                of.write_attr("followerGap", &f64_to_string(self.myLastFollowerGap));
-            }
-            if self.myLastFollowerSecureGap != NO_NEIGHBOR {
-                of.write_attr("followerSecureGap", &f64_to_string(self.myLastFollowerSecureGap));
-            }
-            if self.myLastFollowerSpeed != NO_NEIGHBOR {
-                of.write_attr("followerSpeed", &f64_to_string(self.myLastFollowerSpeed));
-            }
-            if self.myLastOrigLeaderGap != NO_NEIGHBOR {
-                of.write_attr("origLeaderGap", &f64_to_string(self.myLastOrigLeaderGap));
-            }
-            if self.myLastOrigLeaderSecureGap != NO_NEIGHBOR {
-                of.write_attr("origLeaderSecureGap", &f64_to_string(self.myLastOrigLeaderSecureGap));
-            }
-            if self.myLastOrigLeaderSpeed != NO_NEIGHBOR {
-                of.write_attr("origLeaderSpeed", &f64_to_string(self.myLastOrigLeaderSpeed));
-            }
+            // C++ writeAttr(name, value, isNull) always writes in XML output: NO_NEIGHBOR is written as "None"
+            let gap = |v: f64| if v == NO_NEIGHBOR { "None".to_string() } else { f64_to_string(v) };
+            of.write_attr("leaderGap", &gap(self.myLastLeaderGap));
+            of.write_attr("leaderSecureGap", &gap(self.myLastLeaderSecureGap));
+            of.write_attr("leaderSpeed", &gap(self.myLastLeaderSpeed));
+            of.write_attr("followerGap", &gap(self.myLastFollowerGap));
+            of.write_attr("followerSecureGap", &gap(self.myLastFollowerSecureGap));
+            of.write_attr("followerSpeed", &gap(self.myLastFollowerSpeed));
+            of.write_attr("origLeaderGap", &gap(self.myLastOrigLeaderGap));
+            of.write_attr("origLeaderSecureGap", &gap(self.myLastOrigLeaderSecureGap));
+            of.write_attr("origLeaderSpeed", &gap(self.myLastOrigLeaderSpeed));
             if MSGlobals::lateral_resolution() > 0. {
                 let latGap = if direction < 0 { self.myLastLateralGapRight } else { self.myLastLateralGapLeft };
-                if latGap != NO_NEIGHBOR {
-                    of.write_attr("latGap", &f64_to_string(latGap));
-                }
+                of.write_attr("latGap", &gap(latGap));
                 if maneuverDist != 0. {
                     of.write_attr("maneuverDistance", &f64_to_string(maneuverDist));
                 }
@@ -2580,6 +2705,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn reset_speed_lat(&mut self) {
+        (self.vt.reset_speed_lat)(self)
+    }
+
+    pub fn reset_speed_lat_base(&mut self) {
         if MSGlobals::lane_change_duration() > 0 && !self.is_changing_lanes() {
             self.set_speed_lat(0.);
         }
@@ -2630,6 +2759,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn compute_speed_lat(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
+        (self.vt.compute_speed_lat)(self, latDist, maneuverDist, urgent)
+    }
+
+    pub fn compute_speed_lat_base(&self, latDist: f64, maneuverDist: &mut f64, urgent: bool) -> f64 {
         if self.myVehicle.get_vehicle_type().was_set(VTYPEPARS_MAXSPEED_LAT_SET) {
             let stepsToChange = (maneuverDist.abs() / speed2dist(self.myVehicle.get_vehicle_type().get_max_speed_lat())).ceil() as i32;
             dist2speed(*maneuverDist / stepsToChange as f64)
@@ -2659,6 +2792,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
+        (self.vt.get_parameter)(self, key)
+    }
+
+    pub fn get_parameter_base(&self, key: &str) -> String {
         panic!(
             "{}",
             ProcessError::InvalidArgument(format!(
@@ -2677,6 +2814,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn set_parameter(&mut self, key: &str, value: &str) {
+        (self.vt.set_parameter)(self, key, value)
+    }
+
+    pub fn set_parameter_base(&mut self, key: &str, value: &str) {
         panic!(
             "{}",
             ProcessError::InvalidArgument(format!(
@@ -2702,6 +2843,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn get_extra_reservation(&self, bestLaneOffset: i32, neighExtraDist: f64) -> f64 {
+        (self.vt.get_extra_reservation)(self, bestLaneOffset, neighExtraDist)
+    }
+
+    pub fn get_extra_reservation_base(&self, bestLaneOffset: i32, neighExtraDist: f64) -> f64 {
         if neighExtraDist > self.myVehicle.get_vehicle_type().get_length_with_gap() {
             return 0.;
         }
@@ -2762,7 +2907,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn check_tra_ci_commands(&mut self) {
-        // shortcut: gDebugFlag2 debug printing is not ported (no debug flags in Rust yet), add it when the flags are ported
+        // gDebugFlag2 std::cout diagnostics are not ported; they do not affect simulation results
         let mut newstate = self.myVehicle.m().influence_change_decision(self.myOwnState);
         if self.myOwnState != newstate {
             if MSGlobals::lateral_resolution() > 0. {
@@ -2835,6 +2980,10 @@ impl MSAbstractLaneChangeModel {
     //     }
     #[allow(unused_variables)]
     pub fn get_desired_alignment(&self) -> LatAlignmentDefinition {
+        (self.vt.get_desired_alignment)(self)
+    }
+
+    pub fn get_desired_alignment_base(&self) -> LatAlignmentDefinition {
         *self.myVehicle.get_vehicle_type().get_preferred_lateral_alignment()
     }
 
@@ -2942,6 +3091,10 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn avoid_overtake_right(&self, neighLeader: Ptr<MSVehicle>, allowProb: bool) -> bool {
+        (self.vt.avoid_overtake_right)(self, neighLeader, allowProb)
+    }
+
+    pub fn avoid_overtake_right_base(&self, neighLeader: Ptr<MSVehicle>, allowProb: bool) -> bool {
         (!MY_ALLOW_OVERTAKING_RIGHT.load(Ordering::Relaxed)  // the highway case
             && !self.myVehicle.congested()
             && self.myVehicle.get_vehicle_type().get_vehicle_class() != SVC_EMERGENCY

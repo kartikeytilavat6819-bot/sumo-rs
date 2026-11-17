@@ -12,6 +12,36 @@ pub enum DetectorUsage {
     DU_TL_CONTROL = 2,
 }
 
+/// Virtual dispatch table for the polymorphic methods of MSDetectorFileOutput.
+/// Each detector constructor installs its own table in `vt`; the base methods forward through it.
+pub struct MSDetectorFileOutputVt {
+    pub write_xml_output: fn(&mut MSDetectorFileOutput, &mut OutputDevice, SUMOTime, SUMOTime),
+    pub write_xml_detector_prolog: fn(&MSDetectorFileOutput, &mut OutputDevice),
+    pub reset: fn(&mut MSDetectorFileOutput),
+    pub detector_update: fn(&mut MSDetectorFileOutput, SUMOTime),
+    pub clear_state: fn(&mut MSDetectorFileOutput, SUMOTime),
+}
+
+fn default_write_xml_output(_: &mut MSDetectorFileOutput, _: &mut OutputDevice, _: SUMOTime, _: SUMOTime) {
+    panic!("pure virtual MSDetectorFileOutput::writeXMLOutput, subclasses implement it")
+}
+fn default_write_xml_detector_prolog(_: &MSDetectorFileOutput, _: &mut OutputDevice) {
+    panic!("pure virtual MSDetectorFileOutput::writeXMLDetectorProlog, subclasses implement it")
+}
+fn default_reset(_: &mut MSDetectorFileOutput) {}
+fn default_detector_update(_: &mut MSDetectorFileOutput, step: SUMOTime) {
+    let _ = step; // UNUSED_PARAMETER(step)
+}
+fn default_clear_state(_: &mut MSDetectorFileOutput, _: SUMOTime) {}
+
+pub static DEFAULT_MSDETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: default_write_xml_output,
+    write_xml_detector_prolog: default_write_xml_detector_prolog,
+    reset: default_reset,
+    detector_update: default_detector_update,
+    clear_state: default_clear_state,
+};
+
 /// Base of value-generating classes (detectors)
 /// C++ class `MSDetectorFileOutput` (microsim/output/MSDetectorFileOutput.h)
 #[repr(C)]
@@ -26,6 +56,8 @@ pub struct MSDetectorFileOutput {
     pub myNextEdges: Vec<Ptr<MSEdge>>,
     /// Whether pedestrians shall be detected instead of vehicles
     pub myDetectPersons: i32,
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSDetectorFileOutputVt,
 }
 
 impl std::ops::Deref for MSDetectorFileOutput {
@@ -79,6 +111,7 @@ impl MSDetectorFileOutput {
             myVehicleTypes,
             myNextEdges,
             myDetectPersons: detectPersons,
+            vt: &DEFAULT_MSDETECTOR_FILE_OUTPUT_VT,
         })
     }
 
@@ -95,7 +128,8 @@ impl MSDetectorFileOutput {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write_xml_output(&mut self, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-        panic!("pure virtual MSDetectorFileOutput::writeXMLOutput, subclasses implement it")
+        let vt = self.vt;
+        (vt.write_xml_output)(self, dev, startTime, stopTime)
     }
 
     /// C++: `void MSDetectorFileOutput::writeXMLDetectorProlog(OutputDevice &) const` [const, virtual, pure virtual]
@@ -103,7 +137,7 @@ impl MSDetectorFileOutput {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn write_xml_detector_prolog(&self, dev: &mut OutputDevice) {
-        panic!("pure virtual MSDetectorFileOutput::writeXMLDetectorProlog, subclasses implement it")
+        (self.vt.write_xml_detector_prolog)(self, dev)
     }
 
     /// C++: `void MSDetectorFileOutput::reset()` [virtual]
@@ -111,7 +145,8 @@ impl MSDetectorFileOutput {
     // virtual void reset() { }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        // C++ body is empty; subclasses that collect values override it.
+        let vt = self.vt;
+        (vt.reset)(self)
     }
 
     /// C++: `void MSDetectorFileOutput::detectorUpdate(const SUMOTime)` [virtual]
@@ -121,7 +156,8 @@ impl MSDetectorFileOutput {
     //     }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        let _ = step; // UNUSED_PARAMETER(step)
+        let vt = self.vt;
+        (vt.detector_update)(self, step)
     }
 
     /// C++: `GUIDetectorWrapper * MSDetectorFileOutput::buildDetectorGUIRepresentation()` [virtual]
@@ -292,23 +328,8 @@ impl MSDetectorFileOutput {
     // virtual void clearState(SUMOTime /*step*/) {}
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, arg0: SUMOTime) {
-        // C++ body is empty
-    }
-
-    /// C++: `void MSDetectorFileOutput::saveState(OutputDevice &) const` [const, virtual]
-    /// Saves the state which is needed to continue after loading state
-    // virtual void saveState(OutputDevice& /*out*/) const {}
-    #[allow(unused_variables)]
-    pub fn save_state(&self, arg0: &mut OutputDevice) {
-        // C++ body is empty
-    }
-
-    /// C++: `void MSDetectorFileOutput::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
-    /// Loads the state, shifting all times by the given offset
-    // virtual void loadState(const SUMOSAXAttributes& /*attrs*/, const SUMOTime /*offset*/) {}
-    #[allow(unused_variables)]
-    pub fn load_state(&mut self, arg0: &SUMOSAXAttributes, arg1: SUMOTime) {
-        // C++ body is empty
+        let vt = self.vt;
+        (vt.clear_state)(self, arg0)
     }
 
     /// C++: `void MSDetectorFileOutput::MSDetectorFileOutput(const MSDetectorFileOutput &)` [private]

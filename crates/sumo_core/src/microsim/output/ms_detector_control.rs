@@ -146,7 +146,9 @@ impl MSDetectorControl {
         if begin <= utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))? {
             mn.m().init();
         }
-        // shortcut: MSGlobals::gHaveEmissions |= typeid(*md) == typeid(MSMeanData_Emissions) needs RTTI and MSGlobals statics are not ported, set it once both exist
+        // typeid(*md) == typeid(MSMeanData_Emissions): the exact subclass is identified by its vtable
+        let is_emissions = std::ptr::eq(mn.m().meandata_vt, &super::ms_mean_data_emissions::MS_MEAN_DATA_EMISSIONS_VT);
+        MSGlobals::set_have_emissions(MSGlobals::have_emissions() || is_emissions);
         Ok(())
     }
 
@@ -286,7 +288,8 @@ impl MSDetectorControl {
         }
         for (_, item) in self.myMeanData.iter() {
             for md in item.iter() {
-                md.m().detector_update(step);
+                // virtual md->detectorUpdate(step): dispatch through the detector table (subclass overrides)
+                md.m().base.detector_update(step);
             }
         }
     }
@@ -343,25 +346,6 @@ impl MSDetectorControl {
             }
         }
         self.myReminders.clear();
-    }
-
-    /// C++: `void MSDetectorControl::saveState(OutputDevice &) const` [const]
-    /// Saves the state of all detectors
-    // void
-    // MSDetectorControl::saveState(OutputDevice& out) const {
-    //     for (const auto& i : myDetectors) {
-    //         for (const auto& j : getTypedDetectors(i.first)) {
-    //             j.second->saveState(out);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn save_state(&self, out: &mut OutputDevice) {
-        for type_ in self.get_available_types() {
-            for j in self.get_typed_detectors(type_).values() {
-                j.m().save_state(out);
-            }
-        }
     }
 
     /// C++: `const std::map<std::string, MSMoveReminder *> & MSDetectorControl::getAllReminders()`

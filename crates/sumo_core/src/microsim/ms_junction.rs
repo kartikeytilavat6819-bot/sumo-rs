@@ -1,6 +1,10 @@
 //! Port of microsim/MSJunction.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_internal_junction::MSInternalJunction;
+use crate::microsim::ms_logic_junction::MSLogicJunction;
+use crate::microsim::ms_no_logic_junction::MSNoLogicJunction;
+use crate::microsim::ms_right_of_way_junction::MSRightOfWayJunction;
 
 /// The base class for an intersection
 /// C++ class `MSJunction` (microsim/MSJunction.h)
@@ -40,7 +44,41 @@ impl std::ops::DerefMut for MSJunction {
     }
 }
 
+impl crate::utils::router::router_edge::RouterNode for MSJunction {
+    type Edge = MSEdge;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn position(&self) -> &Position {
+        self.get_position(false)
+    }
+    fn incoming(&self) -> &[Ptr<MSEdge>] {
+        self.get_incoming()
+    }
+    fn outgoing(&self) -> &[Ptr<MSEdge>] {
+        self.get_outgoing()
+    }
+}
+
 impl MSJunction {
+    /// Concrete class follows the node type, as in NLJunctionControlBuilder::closeJunction: these types get MSNoLogicJunction
+    fn is_no_logic_type(&self) -> bool {
+        matches!(
+            self.myType,
+            SumoXMLNodeType::NOJUNCTION | SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED | SumoXMLNodeType::DISTRICT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION
+        )
+    }
+
+    /// C++ dynamic_cast<const MSRightOfWayJunction*>(this): every logic type except INTERNAL is built as MSRightOfWayJunction
+    pub fn as_right_of_way(&self) -> Option<&MSRightOfWayJunction> {
+        if self.is_no_logic_type() || self.myType == SumoXMLNodeType::INTERNAL { None } else { Ptr::new(self).cast::<MSRightOfWayJunction>().get() }
+    }
+
+    /// C++ dynamic_cast<const MSInternalJunction*>(this): built only for INTERNAL nodes
+    pub fn as_internal(&self) -> Option<&MSInternalJunction> {
+        if self.myType == SumoXMLNodeType::INTERNAL { Ptr::new(self).cast::<MSInternalJunction>().get() } else { None }
+    }
+
     /// C++: `void MSJunction::MSJunction(const std::string &, SumoXMLNodeType, const Position &, const PositionVector &, const std::string &)`
     /// Constructor
     // MSJunction::MSJunction(const std::string& id, SumoXMLNodeType type, const Position& position,
@@ -132,6 +170,12 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_links(&self, arg0: Ptr<MSLink>) -> &Vec<Ptr<MSLink>> {
+        if let Some(rw) = self.as_right_of_way() {
+            return rw.get_foe_links(arg0);
+        }
+        if let Some(ij) = self.as_internal() {
+            return ij.get_foe_links(arg0);
+        }
         &self.myEmptyLinks
     }
 
@@ -141,6 +185,12 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_foe_internal_lanes(&self, arg0: Ptr<MSLink>) -> &Vec<Ptr<MSLane>> {
+        if let Some(rw) = self.as_right_of_way() {
+            return rw.get_foe_internal_lanes(arg0);
+        }
+        if let Some(ij) = self.as_internal() {
+            return ij.get_foe_internal_lanes(arg0);
+        }
         &self.myEmptyLanes
     }
 
@@ -187,7 +237,11 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_internal_lanes(&self) -> Vec<Ptr<MSLane>> {
-        self.myEmptyLanes.clone()
+        if self.is_no_logic_type() {
+            Ptr::new(self).cast::<MSNoLogicJunction>().get().unwrap().get_internal_lanes()
+        } else {
+            Ptr::new(self).cast::<MSLogicJunction>().get().unwrap().get_internal_lanes()
+        }
     }
 
     /// C++: `void MSJunction::addIncoming(MSEdge *)`
@@ -232,7 +286,10 @@ impl MSJunction {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic(&self) -> Ptr<MSJunctionLogic> {
-        Ptr::null()
+        match self.as_right_of_way() {
+            Some(rw) => rw.get_logic(),
+            None => Ptr::null(),
+        }
     }
 
     // The C++ copy constructor and operator= are `= delete` (private): the type is intentionally non-copyable.

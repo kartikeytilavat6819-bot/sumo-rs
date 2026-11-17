@@ -3,6 +3,7 @@ pub mod options_hook;
 pub mod output_device;
 pub mod output_formatter;
 pub mod plain_xml_formatter;
+pub mod zstr;
 
 #[cfg(test)]
 mod tests {

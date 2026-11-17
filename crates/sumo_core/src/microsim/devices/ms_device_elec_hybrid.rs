@@ -1137,26 +1137,25 @@ impl MSDevice_ElecHybrid {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         // RICE_TODO: full traci support
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
-            to_string(&self.myActualBatteryCapacity)
+            Ok(to_string(&self.myActualBatteryCapacity))
         } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
-            to_string(&self.myConsum)
+            Ok(to_string(&self.myConsum))
         } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
-            to_string(&self.myEnergyCharged)
+            Ok(to_string(&self.myEnergyCharged))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) {
-            to_string(&self.myMaximumBatteryCapacity)
+            Ok(to_string(&self.myMaximumBatteryCapacity))
         } else if key == attr_str(SUMO_ATTR_OVERHEADWIREID) {
-            self.get_overhead_wire_segment_id()
+            Ok(self.get_overhead_wire_segment_id())
         } else if key == attr_str(SUMO_ATTR_SUBSTATIONID) {
-            self.get_traction_substation_id()
+            Ok(self.get_traction_substation_id())
         } else if key == attr_str(SUMO_ATTR_VEHICLEMASS) {
             write_warning("Getting the vehicle mass via parameters is deprecated, please use getMass for the vehicle or its type.");
-            to_string(&self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_MASS))
+            Ok(to_string(&self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_MASS)))
         } else {
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -1181,10 +1180,10 @@ impl MSDevice_ElecHybrid {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
             self.myActualBatteryCapacity = doubleValue;
@@ -1193,8 +1192,9 @@ impl MSDevice_ElecHybrid {
         } else if key == attr_str(SUMO_ATTR_OVERHEADWIRECHARGINGPOWER) {
             self.myOverheadWireChargingPower = doubleValue;
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_ElecHybrid::generateOutput(OutputDevice *) const` [const, virtual]
@@ -1590,7 +1590,6 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn get_veh_elem(&mut self) -> Ptr<Element> {
-        // shortcut: C++ returns the Element pointer; the port returns a pointer into the circuit's element arena, valid until the arena grows, upgrade when circuits hand out stable handles
         if let Some(ve) = self.veh_elem {
             Ptr::from_mut(self.myCircuit.m().element_mut(ve))
         } else {
@@ -1647,6 +1646,33 @@ impl MSDevice_ElecHybrid {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, actualBatteryCapacity: f64, maximumBatteryCapacity: f64, overheadWireChargingPower: f64) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_ElecHybrid>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_ElecHybrid>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        fn mr_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_ElecHybrid>().m().notify_leave(veh, lastPos, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: mr_notify_leave,
+        };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_ElecHybrid>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
+        let mut this = Self::new_device(holder, id, actualBatteryCapacity, maximumBatteryCapacity, overheadWireChargingPower);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, actualBatteryCapacity: f64, maximumBatteryCapacity: f64, overheadWireChargingPower: f64) -> Self {
         let mut s = MSDevice_ElecHybrid {
             base: MSVehicleDevice::new(holder, id),
             myActualBatteryCapacity: 0.,            // [actualBatteryCapacity <= maximumBatteryCapacity]

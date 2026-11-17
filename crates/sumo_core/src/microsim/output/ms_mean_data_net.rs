@@ -101,8 +101,10 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     //       myParent(parent) {}
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, length: f64, doAdd: bool, parent: Ptr<MSMeanData_Net>) -> Self {
+        let mut base = MSMeanData_MeanDataValues::new(lane, length, doAdd, parent.cast::<MSMeanData>());
+        base.data_vt = &MS_MEAN_DATA_VALUES_NET_VT;
         Self {
-            base: MSMeanData_MeanDataValues::new(lane, length, doAdd, parent.cast::<MSMeanData>()),
+            base,
             nVehDeparted: 0,
             nVehArrived: 0,
             nVehEntered: 0,
@@ -233,7 +235,6 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
             v.minimalVehicleLength = min2(self.minimalVehicleLength, v.minimalVehicleLength);
         }
         if !self.mySubData.is_null() {
-            // shortcut: C++ dispatches mySubData->addTo() virtually; MeanDataValues::add_to has no dispatch and panics, upgrade when sub-data types are known
             self.mySubData.add_to(val.get_sub_data().m());
         }
     }
@@ -255,10 +256,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
     //         } else if (reason == MSMoveReminder::NOTIFICATION_LANE_CHANGE) {
     //             ++nVehLaneChangeFrom;
     //         } else if (myParent == nullptr || reason != MSMoveReminder::NOTIFICATION_SEGMENT) {
-    //             if (reason != MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION && reason != MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED) {
-    //                 // if the entered this edge via teleport, we do not want to count it
-    //                 ++nVehLeft;
-    //             }
+    //             ++nVehLeft;
     //             if (reason == MSMoveReminder::NOTIFICATION_TELEPORT || reason == MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED) {
     //                 ++nVehTeleported;
     //             } else if (reason >= MSMoveReminder::NOTIFICATION_VAPORIZED_CALIBRATOR) {
@@ -285,10 +283,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
             } else if reason == MSMoveReminder_Notification::NOTIFICATION_LANE_CHANGE {
                 self.nVehLaneChangeFrom += 1;
             } else if self.myParent.is_null() || reason != MSMoveReminder_Notification::NOTIFICATION_SEGMENT {
-                if reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION && reason != MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED {
-                    // if the entered this edge via teleport, we do not want to count it
-                    self.nVehLeft += 1;
-                }
+                self.nVehLeft += 1;
                 if reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT || reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED {
                     self.nVehTeleported += 1;
                 } else if reason >= MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR {
@@ -776,6 +771,72 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
 }
 
 /// Network state mean data collector for edges/lanes
+/// Virtual dispatch table of MSMeanData_Net::MSLaneMeanDataValues (overrides reset, addTo, notifyEnter/Leave, notifyMoveInternal, isEmpty, write, getAttributeValue)
+static MS_MEAN_DATA_VALUES_NET_VT: MeanDataValuesVt = MeanDataValuesVt {
+    reset: net_values_reset,
+    add_to: net_values_add_to,
+    notify_enter: net_values_notify_enter,
+    notify_leave: net_values_notify_leave,
+    notify_move_internal: net_values_notify_move_internal,
+    is_empty: net_values_is_empty,
+    update: MSMeanData_MeanDataValues::update_base,
+    write: net_values_write,
+    get_samples: MSMeanData_MeanDataValues::get_samples_base,
+    get_attribute_value: net_values_get_attribute_value,
+};
+
+fn net_values_reset(v: &mut MSMeanData_MeanDataValues, afterWrite: bool) {
+    Ptr::from_mut(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().reset(afterWrite)
+}
+
+fn net_values_add_to(v: &MSMeanData_MeanDataValues, val: &mut MSMeanData_MeanDataValues) {
+    Ptr::new(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().add_to(val)
+}
+
+fn net_values_notify_enter(v: &mut MSMeanData_MeanDataValues, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().notify_enter(veh, reason, enteredLane)
+}
+
+fn net_values_notify_leave(v: &mut MSMeanData_MeanDataValues, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+fn net_values_notify_move_internal(v: &mut MSMeanData_MeanDataValues, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    Ptr::from_mut(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+fn net_values_is_empty(v: &MSMeanData_MeanDataValues) -> bool {
+    Ptr::new(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().is_empty()
+}
+
+fn net_values_write(v: &MSMeanData_MeanDataValues, dev: &mut OutputDevice, attributeMask: &SumoXMLAttrMask, period: SUMOTime, numLanes: i32, speedLimit: f64, defaultTravelTime: f64, numVehicles: i32) {
+    Ptr::new(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().write(dev, attributeMask, period, numLanes, speedLimit, defaultTravelTime, numVehicles)
+}
+
+fn net_values_get_attribute_value(v: &MSMeanData_MeanDataValues, a: SumoXMLAttr, period: SUMOTime, numLanes: f64, speedLimit: f64) -> f64 {
+    Ptr::new(v).cast::<MSMeanData_Net_MSLaneMeanDataValues>().m().get_attribute_value(a, period, numLanes, speedLimit)
+}
+
+/// Virtual dispatch table of MSMeanData_Net (overrides createValues and getAttributeNames only)
+static MS_MEAN_DATA_NET_VT: MSMeanDataVt = MSMeanDataVt {
+    create_values: net_mean_data_create_values,
+    get_attribute_names: net_mean_data_get_attribute_names,
+    write_xml_detector_prolog: MSMeanData::write_xml_detector_prolog_base,
+    get_edge_id: MSMeanData::get_edge_id_base,
+    open_interval: MSMeanData::open_interval_base,
+    write_prefix: MSMeanData::write_prefix_base,
+    reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
+};
+
+fn net_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
+    Ptr::new(m).cast::<MSMeanData_Net>().m().create_values(lane, length, doAdd)
+}
+
+fn net_mean_data_get_attribute_names(m: &MSMeanData) -> Vec<String> {
+    Ptr::new(m).cast::<MSMeanData_Net>().m().get_attribute_names()
+}
+
 /// C++ class `MSMeanData_Net` (microsim/output/MSMeanData_Net.h)
 #[repr(C)]
 pub struct MSMeanData_Net {
@@ -824,8 +885,10 @@ impl MSMeanData_Net {
     // { }
     #[allow(unused_variables)]
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, detectPersons: i32, maxTravelTime: f64, minSamples: f64, haltSpeed: f64, haltSpeedRel: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
+        let mut base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
+        base.meandata_vt = &MS_MEAN_DATA_NET_VT;
         Self {
-            base: MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, detectPersons, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate),
+            base,
             myHaltSpeed: haltSpeed,
             myHaltSpeedRel: haltSpeedRel,
         }
@@ -930,7 +993,9 @@ impl MSMeanData_Net {
     // }
     #[allow(unused_variables)]
     pub fn create_values(&self, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
-        Ptr::from_raw(Box::into_raw(Box::new(MSMeanData_Net_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))))).cast::<MSMeanData_MeanDataValues>()
+        let values = Ptr::from_raw(Box::into_raw(Box::new(MSMeanData_Net_MSLaneMeanDataValues::new(lane, length, doAdd, Ptr::new(self))))).cast::<MSMeanData_MeanDataValues>();
+        register_values(values, lane, doAdd);
+        values
     }
 
     /// C++: `void MSMeanData_Net::resetOnly(SUMOTime)` [protected]

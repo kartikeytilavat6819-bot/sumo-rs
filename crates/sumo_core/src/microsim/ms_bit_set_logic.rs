@@ -1,7 +1,6 @@
 //! Port of microsim/MSBitSetLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 
 /// C++ typedef `std::vector<std::bitset<N>> MSBitSetLogic::Foes`
 pub type MSBitSetLogic_Foes = Unmapped /* std::vector<std::bitset<N>> */;
@@ -19,10 +18,10 @@ pub struct MSBitSetLogic<const N: usize> {
     /// C++ base class `MSJunctionLogic`
     pub base: MSJunctionLogic,
     /// junctions logic based on std::bitset
-    pub myLogic: Vec<[bool; N]>,
+    pub myLogic: Vec<LinkBits>,
     /// internal lanes logic
-    pub myInternalLinksFoes: Vec<[bool; N]>,
-    pub myConts: [bool; SUMO_MAX_CONNECTIONS],
+    pub myInternalLinksFoes: Vec<LinkBits>,
+    pub myConts: LinkBits,
 }
 
 impl<const N: usize> std::ops::Deref for MSBitSetLogic<N> {
@@ -45,8 +44,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         : MSJunctionLogic(nLinks), myLogic(logic),
     //           myInternalLinksFoes(foes), myConts(conts) {}
     #[allow(unused_variables)]
-    pub fn new(nLinks: i32, logic: &Vec<[bool; N]>, foes: &Vec<[bool; N]>, conts: [bool; SUMO_MAX_CONNECTIONS]) -> Self {
-        // shortcut: std::bitset<N> is modelled as [bool; N] (no bit packing), upgrade if memory use matters
+    pub fn new(nLinks: i32, logic: &Vec<LinkBits>, foes: &Vec<LinkBits>, conts: LinkBits) -> Self {
         MSBitSetLogic {
             base: MSJunctionLogic::new(nLinks),
             myLogic: logic.clone(),
@@ -61,7 +59,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         return myLogic[linkIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_response_for(&self, linkIndex: i32) -> &[bool; N] {
+    pub fn get_response_for(&self, linkIndex: i32) -> &LinkBits {
         &self.myLogic[linkIndex as usize]
     }
 
@@ -71,7 +69,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     //         return myInternalLinksFoes[linkIndex];
     //     }
     #[allow(unused_variables)]
-    pub fn get_foes_for(&self, linkIndex: i32) -> &[bool; N] {
+    pub fn get_foes_for(&self, linkIndex: i32) -> &LinkBits {
         &self.myInternalLinksFoes[linkIndex as usize]
     }
 
@@ -81,7 +79,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     //     }
     #[allow(unused_variables)]
     pub fn get_is_cont(&self, linkIndex: i32) -> bool {
-        self.myConts[linkIndex as usize]
+        self.myConts.test(linkIndex)
     }
 
     /// C++: `bool MSBitSetLogic::hasFoes() const` [const, virtual]
@@ -96,7 +94,7 @@ impl<const N: usize> MSBitSetLogic<N> {
     #[allow(unused_variables)]
     pub fn has_foes(&self) -> bool {
         for i in &self.myLogic {
-            if i.iter().any(|b| *b) {
+            if i.any() {
                 return true;
             }
         }
@@ -128,21 +126,21 @@ mod tests {
     #[test]
     fn has_foes_and_is_cont() {
         // values follow the C++ bitset semantics: any() over each row, test() on conts
-        let mut conts = [false; SUMO_MAX_CONNECTIONS];
-        conts[2] = true;
-        let mut logic = [false; 4];
+        let mut conts = LinkBits::new();
+        conts.set(2, true);
+        let mut logic = LinkBits::new();
         let mut b = MSBitSetLogic::<4> {
             base: MSJunctionLogic { myNLinks: 2 },
-            myLogic: vec![[false; 4], [false; 4]],
-            myInternalLinksFoes: vec![[false; 4], [false; 4]],
+            myLogic: vec![LinkBits::new(), LinkBits::new()],
+            myInternalLinksFoes: vec![LinkBits::new(), LinkBits::new()],
             myConts: conts,
         };
         assert!(!b.has_foes());
         assert!(b.get_is_cont(2));
         assert!(!b.get_is_cont(1));
-        logic[3] = true;
+        logic.set(3, true);
         b.myLogic[1] = logic;
         assert!(b.has_foes());
-        assert!(b.get_response_for(1)[3]);
+        assert!(b.get_response_for(1).test(3));
     }
 }

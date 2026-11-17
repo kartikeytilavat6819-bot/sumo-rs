@@ -17,7 +17,7 @@ pub struct AFInfo_ArcInfo {
     /// C++ base class `ArcInfoBase`
     pub base: AFInfo_ArcInfoBase,
     /// The efforts to boundary nodes
-    pub effortsToBoundaryNodes: i32,
+    pub effortsToBoundaryNodes: Vec<f64>,
 }
 
 impl std::ops::Deref for AFInfo_ArcInfo {
@@ -40,7 +40,10 @@ impl AFInfo_ArcInfo {
     //         }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<Unmapped /* E */>) -> Self {
-        todo!("port ArcInfo::ArcInfo")
+        Self {
+            base: AFInfo_ArcInfoBase::new(e),
+            effortsToBoundaryNodes: Vec::new(),
+        }
     }
 
     /// C++: `ArcInfo & ArcInfo::operator=(const ArcInfo &)`
@@ -56,7 +59,13 @@ impl AFInfo_ArcInfo {
     //         }
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, other: &AFInfo_ArcInfo) -> &mut AFInfo_ArcInfo {
-        todo!("port ArcInfo::operator=")
+        // guard self assignment
+        if std::ptr::eq(self as *const _, other as *const _) {
+            return self;
+        }
+        self.base.assign_op(&other.base);
+        self.effortsToBoundaryNodes = other.effortsToBoundaryNodes.clone();
+        self
     }
 
     /// C++: `void ArcInfo::~ArcInfo()`
@@ -64,7 +73,7 @@ impl AFInfo_ArcInfo {
     // ~ArcInfo() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ArcInfo::~ArcInfo")
+        // C++ destructor body is empty
     }
 
     /// C++: `void ArcInfo::reset()`
@@ -74,7 +83,7 @@ impl AFInfo_ArcInfo {
     //         }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port ArcInfo::reset")
+        // do nothing
     }
 
 }
@@ -86,7 +95,7 @@ pub struct AFInfo_ArcInfoBase {
     /// C++ base class `FlagInfo`
     pub base: AFInfo_FlagInfo,
     /// The arc flags
-    pub arcFlags: i32,
+    pub arcFlags: Vec<bool>,
     /// The key for sorting the heap
     pub key: f64,
     /// The flag indicating whether the edge has already been touched or not
@@ -115,7 +124,12 @@ impl AFInfo_ArcInfoBase {
     //         }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<Unmapped /* E */>) -> Self {
-        todo!("port ArcInfoBase::ArcInfoBase")
+        Self {
+            base: AFInfo_FlagInfo::new(e),
+            arcFlags: Vec::new(),
+            key: f64::MAX,
+            touched: false,
+        }
     }
 
     /// C++: `ArcInfoBase & ArcInfoBase::operator=(const ArcInfoBase &)`
@@ -132,14 +146,21 @@ impl AFInfo_ArcInfoBase {
     //         }
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, other: &AFInfo_ArcInfoBase) -> &mut AFInfo_ArcInfoBase {
-        todo!("port ArcInfoBase::operator=")
+        // guard self assignment
+        if std::ptr::eq(self as *const _, other as *const _) {
+            return self;
+        }
+        self.base.assign_op(&other.base);
+        self.key = other.key;
+        self.touched = other.touched;
+        self
     }
 
     /// C++: `void ArcInfoBase::~ArcInfoBase()`
     // ~ArcInfoBase() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port ArcInfoBase::~ArcInfoBase")
+        // C++ destructor body is empty
     }
 
     /// C++: `void ArcInfoBase::reset()`
@@ -148,7 +169,7 @@ impl AFInfo_ArcInfoBase {
     //         }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port ArcInfoBase::reset")
+        // do nothing
     }
 
 }
@@ -159,7 +180,7 @@ pub struct AFInfo_FlagInfo {
     /// The current edge
     pub edge: Ptr<Unmapped /* E */>,
     /// The arc flags
-    pub arcFlags: i32,
+    pub arcFlags: Vec<bool>,
 }
 
 impl AFInfo_FlagInfo {
@@ -170,7 +191,10 @@ impl AFInfo_FlagInfo {
     //         }
     #[allow(unused_variables)]
     pub fn new(e: Ptr<Unmapped /* E */>) -> Self {
-        todo!("port FlagInfo::FlagInfo")
+        Self {
+            edge: e,
+            arcFlags: Vec::new(),
+        }
     }
 
     /// C++: `FlagInfo & FlagInfo::operator=(const FlagInfo &)`
@@ -186,7 +210,13 @@ impl AFInfo_FlagInfo {
     //         }
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, other: &AFInfo_FlagInfo) -> &mut AFInfo_FlagInfo {
-        todo!("port FlagInfo::operator=")
+        // guard self assignment
+        if std::ptr::eq(self as *const _, other as *const _) {
+            return self;
+        }
+        self.edge = other.edge;
+        self.arcFlags = other.arcFlags.clone();
+        self
     }
 
     /// C++: `void FlagInfo::~FlagInfo()` [virtual]
@@ -194,7 +224,7 @@ impl AFInfo_FlagInfo {
     // virtual ~FlagInfo() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port FlagInfo::~FlagInfo")
+        // C++ destructor body is empty
     }
 
     /// C++: `void FlagInfo::reset()` [virtual]
@@ -204,7 +234,7 @@ impl AFInfo_FlagInfo {
     //         }
     #[allow(unused_variables)]
     pub fn reset(&mut self) {
-        todo!("port FlagInfo::reset")
+        self.arcFlags.clear();
     }
 
 }

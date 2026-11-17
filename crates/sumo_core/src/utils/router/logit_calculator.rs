@@ -38,7 +38,7 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //                     const double theta) : myBeta(beta), myGamma(gamma), myTheta(theta) {}
     #[allow(unused_variables)]
     pub fn new(beta: f64, gamma: f64, theta: f64) -> Self {
-        todo!("port LogitCalculator::LogitCalculator<R, E, V>")
+        Self { base: RouteCostCalculator::new(), myBeta: beta, myGamma: gamma, myTheta: theta, myCommonalities: BTreeMap::new(), _p: std::marker::PhantomData }
     }
 
     /// C++: `void LogitCalculator::~LogitCalculator<R, E, V>()` [virtual]
@@ -46,7 +46,7 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     // virtual ~LogitCalculator() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port LogitCalculator::~LogitCalculator<R, E, V>")
+        // C++ destructor body is empty; nothing to release
     }
 
     /// C++: `void LogitCalculator::setCosts(std::shared_ptr<R>, const double, const bool) const` [const]
@@ -55,7 +55,8 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_costs(&self, route: Rc<R>, costs: f64, arg2: bool) {
-        todo!("port LogitCalculator::setCosts")
+        // shortcut: needs router trait bounds (lead), R::setCosts is not callable on generic R
+        panic!("shortcut: needs router trait bounds (lead), R::setCosts")
     }
 
     /// C++: `void LogitCalculator::calculateProbabilities(const std::vector<std::shared_ptr<R>> &, const V *const, const SUMOTime)`
@@ -98,7 +99,8 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_probabilities(&mut self, alternatives: &Vec<Rc<R>>, veh: Ptr<V>, time: SUMOTime) {
-        todo!("port LogitCalculator::calculateProbabilities")
+        // shortcut: needs router trait bounds (lead), R::getEdgeVector / R::getCosts / R::setProbability and E::getTravelTime are not callable on generic R, E
+        panic!("shortcut: needs router trait bounds (lead), R::getEdgeVector")
     }
 
     /// C++: `double LogitCalculator::getBetaForCLogit(const std::vector<std::shared_ptr<R>>) const` [const, private]
@@ -115,7 +117,8 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_beta_for_c_logit(&self, alternatives: Vec<Rc<R>>) -> f64 {
-        todo!("port LogitCalculator::getBetaForCLogit")
+        // shortcut: needs router trait bounds (lead), R::getCosts is not callable on generic R
+        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
     }
 
     /// C++: `double LogitCalculator::getThetaForCLogit(const std::vector<std::shared_ptr<R>>) const` [const, private]
@@ -145,7 +148,8 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_theta_for_c_logit(&self, alternatives: Vec<Rc<R>>) -> f64 {
-        todo!("port LogitCalculator::getThetaForCLogit")
+        // shortcut: needs router trait bounds (lead), R::getCosts is not callable on generic R
+        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
     }
 
     /// C++: `LogitCalculator<R, E, V> & LogitCalculator::operator=(const LogitCalculator<R, E, V> &)` [private]
@@ -153,7 +157,7 @@ impl<R, E, V> LogitCalculator<R, E, V> {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &LogitCalculator<R, E, V>) -> &mut LogitCalculator<R, E, V> {
-        todo!("port LogitCalculator::operator=")
+        panic!("LogitCalculator assignment operator is private and invalidated in C++")
     }
 
 }

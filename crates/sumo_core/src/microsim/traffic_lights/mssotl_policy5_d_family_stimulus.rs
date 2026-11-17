@@ -8,7 +8,7 @@ use crate::prelude::*;
 pub struct MSSOTLPolicy5DFamilyStimulus {
     /// C++ base class `MSSOTLPolicyDesirability`
     pub base: MSSOTLPolicyDesirability,
-    pub default_values: Unmapped /* Parameterised::Map */,
+    pub default_values: ParameterisedMap,
     pub params_names: Vec<String>,
     pub family: Vec<Ptr<MSSOTLPolicy5DStimulus>>,
 }
@@ -103,7 +103,75 @@ impl MSSOTLPolicy5DFamilyStimulus {
     // }
     #[allow(unused_variables)]
     pub fn new(keyPrefix: String, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLPolicy5DFamilyStimulus::MSSOTLPolicy5DFamilyStimulus")
+        let mut this = Self {
+            base: MSSOTLPolicyDesirability::new(keyPrefix.clone(), parameters),
+            default_values: ParameterisedMap::new(),
+            params_names: Vec::new(),
+            family: Vec::new(),
+        };
+
+        this.default_values.insert("_STIM_COX".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_OFFSET_IN".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_OFFSET_OUT".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_OFFSET_DISPERSION_IN".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_OFFSET_DISPERSION_OUT".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_DIVISOR_IN".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_DIVISOR_OUT".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_DIVISOR_DISPERSION_IN".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_DIVISOR_DISPERSION_OUT".to_string(), "1".to_string());
+        this.default_values.insert("_STIM_COX_EXP_IN".to_string(), "0".to_string());
+        this.default_values.insert("_STIM_COX_EXP_OUT".to_string(), "0".to_string());
+        this.default_values.insert("_STIM_COX_EXP_DISPERSION_IN".to_string(), "0".to_string());
+        this.default_values.insert("_STIM_COX_EXP_DISPERSION_OUT".to_string(), "0".to_string());
+
+        this.params_names.push("_STIM_COX".to_string());
+        this.params_names.push("_STIM_OFFSET_IN".to_string());
+        this.params_names.push("_STIM_OFFSET_OUT".to_string());
+        this.params_names.push("_STIM_OFFSET_DISPERSION_IN".to_string());
+        this.params_names.push("_STIM_OFFSET_DISPERSION_OUT".to_string());
+        this.params_names.push("_STIM_DIVISOR_IN".to_string());
+        this.params_names.push("_STIM_DIVISOR_OUT".to_string());
+        this.params_names.push("_STIM_DIVISOR_DISPERSION_IN".to_string());
+        this.params_names.push("_STIM_DIVISOR_DISPERSION_OUT".to_string());
+        this.params_names.push("_STIM_COX_EXP_IN".to_string());
+        this.params_names.push("_STIM_COX_EXP_OUT".to_string());
+        this.params_names.push("_STIM_COX_EXP_DISPERSION_IN".to_string());
+        this.params_names.push("_STIM_COX_EXP_DISPERSION_OUT".to_string());
+
+        let size_family = this.get_double(&format!("{}_SIZE_FAMILY", keyPrefix), 1.) as i32;
+
+        let mut sliced_maps: Vec<ParameterisedMap> = Vec::new();
+        for _ in 0..size_family {
+            sliced_maps.push(ParameterisedMap::new());
+        }
+
+        // For each param list, slice values
+        for i in 0..this.params_names.len() {
+            let key = format!("{}{}", keyPrefix, this.params_names[i]);
+            let default_value = this.default_values.get(&this.params_names[i]).cloned().unwrap_or_default();
+            let param_list = this.get_parameter(&key, &default_value);
+            let tokens = StringTokenizer::with_token(&param_list, ";", false).get_vector();
+
+            for token_counter in 0..size_family {
+                let tc = token_counter as usize;
+                if tc >= tokens.len() {
+                    utils::common::msg_handler::write_error(&format!("Error in {}: not enough tokens.", key));
+                    // assert(-1) in C++ never fires
+                }
+                // shortcut: C++ reads tokens[token_counter] past the end here (undefined behaviour), the missing value is stored as an empty string, upgrade when the C++ behaviour is defined
+                let value = tokens.get(tc).cloned().unwrap_or_default();
+                sliced_maps[tc].insert(key.clone(), value);
+            }
+        }
+
+        for i in 0..size_family {
+            let ref_map = sliced_maps[i as usize].clone();
+            // shortcut: C++ `new MSSOTLPolicy5DStimulus` is never deleted, the Box is leaked to match, upgrade when the family owner is typed
+            let stimulus: &'static mut MSSOTLPolicy5DStimulus = Box::leak(Box::new(MSSOTLPolicy5DStimulus::new(keyPrefix.clone(), &ref_map)));
+            this.family.push(Ptr::from_mut(stimulus));
+        }
+
+        this
     }
 
     /// C++: `std::string MSSOTLPolicy5DFamilyStimulus::getMessage()` [virtual]

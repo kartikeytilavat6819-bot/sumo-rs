@@ -1,6 +1,7 @@
 //! Port of microsim/traffic_lights/MSDelayBasedTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
 /// C++ `dynamic_cast<MSE2Collector*>(MSDetectorFileOutput*)`: MSDetectorFileOutput is the MSE2Collector base2 field,
 /// not its first base, so step back by the field offset.
@@ -48,13 +49,54 @@ impl std::ops::DerefMut for MSDelayBasedTrafficLightLogic {
     }
 }
 
+fn delay_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSDelayBasedTrafficLightLogic>().m().try_switch()
+}
+fn delay_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSDelayBasedTrafficLightLogic>().m().init(nb)
+}
+fn delay_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSDelayBasedTrafficLightLogic>().get().unwrap().get_detector_states()
+}
+
+fn delay_get_detector_state_ext(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    Ptr::new(logic).cast::<MSDelayBasedTrafficLightLogic>().m().get_detector_state(laneID)
+}
+
+fn delay_get_tl_queue_length_ext(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    Ptr::new(logic).cast::<MSDelayBasedTrafficLightLogic>().m().get_tl_queue_length(laneID)
+}
+
+static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::MSTrafficLightLogic::get_rival_vehicles_base,
+    get_priority_vehicles: super::ms_traffic_light_logic::MSTrafficLightLogic::get_priority_vehicles_base,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::MSTrafficLightLogic::get_blocking_drive_ways_base,
+    get_requested_drive_way: super::ms_traffic_light_logic::MSTrafficLightLogic::get_requested_drive_way_base,
+    get_detector_state: delay_get_detector_state_ext,
+    get_tl_queue_length: delay_get_tl_queue_length_ext,
+    load_extra_state: super::ms_traffic_light_logic::default_ext_load_extra_state,
+    get_parameter: super::ms_simple_traffic_light_logic::simple_ext_get_parameter,
+    set_parameter: super::ms_simple_traffic_light_logic::simple_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
+};
+
+static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: delay_try_switch,
+    init: delay_init,
+    get_detector_states: delay_get_detector_states,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 impl MSDelayBasedTrafficLightLogic {
     /// C++: `void MSDelayBasedTrafficLightLogic::MSDelayBasedTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const SUMOTime, const MSSimpleTrafficLightLogic::Phases &, int, SUMOTime, const Parameterised::Map &, const std::string &)`
     /// Constructor
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &ParameterisedMap, basePath: &str) -> Self {
-        let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
+        let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
+        base.base.vt = &MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT;
+        base.base.ext_vt = &MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let myShowDetectors = utils::common::string_utils::to_bool(&base.get_parameter("show-detectors", "false".to_string())).unwrap();
         let myDetectionRange = utils::common::string_utils::to_double(&base.get_parameter("detectorRange", utils::common::to_string::to_string(&utils::options::options_cont::get_float("tls.delay_based.detector-range")))).unwrap();
         let myTimeLossThreshold = utils::common::string_utils::to_double(&base.get_parameter("minTimeloss", "1.0".to_string())).unwrap();
@@ -129,7 +171,7 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
         debug_assert!(self.base.base.myLanes.len() > 0);
         let myId = self.get_id().to_string();
         let myProgramID = self.get_program_id().to_string();
@@ -252,8 +294,7 @@ impl MSDelayBasedTrafficLightLogic {
         // check if the actual phase should be prolonged
         let currentPhase: Ptr<MSPhaseDefinition> = Ptr::new(self.get_current_phase_def());
         let actDuration = MSNet::get_instance().get_current_time_step() - currentPhase.myLastSwitch;
-        // shortcut: MSGlobals::gUseMesoSim is not ported yet (ms_globals.rs), read the static once MSGlobals is ported
-        let useMesoSim = false;
+        let useMesoSim = crate::microsim::ms_globals::use_meso_sim();
         // flag whether to prolong or not
         if currentPhase.is_green_phase() && !useMesoSim {
             let mut othersEmpty = true; // whether no vehicles are present on concurrent approaches

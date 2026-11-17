@@ -5,7 +5,7 @@ use std::cell::{Cell, RefCell};
 use utils::common::string_utils::starts_with;
 use utils::common::time::string2time;
 use utils::iodevices::output_device::OutputDevice;
-use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set};
+use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
 /// shortcut: SumoXMLAttrMask has no reset()/all() in utils (bitset<96> semantics), local helpers mirror them, upgrade when the utils mask gains these methods
@@ -16,7 +16,6 @@ fn mask_reset(m: &mut SumoXMLAttrMask, bit: i32) {
     m.0 &= !(1u128 << bit);
 }
 
-/// shortcut: MSGlobals is unported (no accessors); gUseMesoSim is set from the "mesosim" option in MSFrame::init, so read it from there
 /// Names read by `while (strm.good()) { strm >> name; ... }`: whitespace-separated tokens, plus one
 /// empty name when the stream hits EOF on a `>>` (trailing whitespace or an empty file)
 fn edge_filter_names(content: &str) -> Vec<&str> {
@@ -27,14 +26,6 @@ fn edge_filter_names(content: &str) -> Vec<&str> {
     names
 }
 
-fn g_use_meso_sim() -> bool {
-    get_bool("mesosim")
-}
-/// shortcut: MSGlobals is unported (no accessors); gSublane is set in MSFrame::init from lanechange.duration and lateral-resolution, re-derived here
-fn g_sublane() -> bool {
-    string2time(&get_string("lanechange.duration")).unwrap_or_else(|e| panic!("{e}")) > 0
-        || get_float("lateral-resolution") > 0.0
-}
 
 thread_local! {
     static MY_BEGIN: Cell<SUMOTime> = const { Cell::new(0) };
@@ -133,12 +124,23 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: MSDevice::equippedByDefaultAssignmentOptions is declared in ms_device.rs without its (oc, "fcd", v, isSet("fcd-output")) parameters, so the call cannot take the C++ arguments yet; upgrade when ms_device.rs gets the C++ signature (this call will then fail to compile and must be updated)
-        if { panic!("shortcut: MSDevice::equippedByDefaultAssignmentOptions needs the holder vehicle parameters, which SUMOVehicle does not expose yet") } {
-            let id = format!("fcd_{}", v.get_id());
+        let vp = Ptr::from_mut(v);
+        let equipped = with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(
+                oc,
+                "fcd",
+                &vp.get_id(),
+                &vp.get_parameter().base,
+                &vp.get_v_type_parameter().base,
+                is_set("fcd-output"),
+                false,
+            )
+        });
+        if equipped {
+            let id = format!("fcd_{}", vp.get_id());
             // the device is owned by the vehicle's device list for the rest of the run, as in C++
-            let device: &mut MSDevice_FCD = Box::leak(Box::new(MSDevice_FCD::new(v, &id)));
-            into.push(Ptr::from_mut(&mut device.base));
+            let device: Ptr<MSDevice_FCD> = Ptr::from_mut(Box::leak(Box::new(MSDevice_FCD::new(vp.m(), &id))));
+            into.push(device.cast::<MSVehicleDevice>());
         }
     }
 
@@ -390,8 +392,7 @@ impl MSDevice_FCD {
             };
             for name in edge_filter_names(&content) {
                 let name = if starts_with(name, "edge:") { &name[5..] } else { name };
-                // shortcut: MSEdge::dictionary(const std::string&) is declared in ms_edge.rs as dictionary_2(&Unmapped string_view), so edge names cannot be resolved yet (name: {name}), upgrade when ms_edge.rs maps the string overload
-                panic!("shortcut: fcd-output.filter-edges.input-file cannot be used until MSEdge::dictionary(name) is ported (edge '{name}')");
+                MY_EDGE_FILTER.with(|c| c.borrow_mut().insert(MSEdge::dictionary_2(name)));
             }
         }
         let mut emissions = SumoXMLAttrMask::default();
@@ -446,7 +447,7 @@ impl MSDevice_FCD {
         if get_bool("fcd-output.acceleration") {
             written.set(SUMO_ATTR_ACCELERATION);
         }
-        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && g_sublane();
+        let accel_lat = written.test(SUMO_ATTR_ACCELERATION) && MSGlobals::sublane();
         if accel_lat {
             written.set(SUMO_ATTR_ACCELERATION_LAT);
         } else {
@@ -515,8 +516,19 @@ impl MSDevice_FCD {
         if !MY_SHAPE_FILTER_INITIALIZED.get() {
             MSDevice_FCD::build_shape_filter();
         }
-        // shortcut: dynamic_cast<const MSVehicle*> has no Rust equivalent for SUMOTrafficObject, so the back-position test (msVeh->getBackPosition()) is skipped, upgrade when a SUMOTrafficObject-to-MSVehicle downcast exists
+        let msVeh = if veh.is_vehicle() { Some(veh.cast::<MSVehicle>()) } else { None };
         let pos = veh.get_position(0.0);
+        MY_SHAPE4_FILTERS.with(|c| {
+            c.borrow().iter().any(|shape| shape.around(&pos, 0.0) || msVeh.map_or(false, |m| shape.around(&m.get_back_position(), 0.0)))
+        })
+    }
+
+    /// C++ `MSDevice_FCD::shapeFilter(const SUMOTrafficObject*)` called with a transportable: not an MSVehicle, so only the position is tested.
+    pub fn shape_filter_transportable(p: Ptr<MSTransportable>) -> bool {
+        if !MY_SHAPE_FILTER_INITIALIZED.get() {
+            MSDevice_FCD::build_shape_filter();
+        }
+        let pos = p.get_position_2();
         MY_SHAPE4_FILTERS.with(|c| c.borrow().iter().any(|shape| shape.around(&pos, 0.0)))
     }
 
@@ -537,6 +549,20 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_FCD>().m().notify_enter(veh, reason, enteredLane)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str) -> Self {
         MSDevice_FCD {
             base: MSVehicleDevice::new(holder, id),
         }
@@ -580,7 +606,7 @@ impl MSDevice_FCD {
         mask.set(SUMO_ATTR_LANE); // for micro vehicles only
         mask.set(SUMO_ATTR_EDGE); // for persons and meso vehicles
         mask.set(SUMO_ATTR_SLOPE);
-        if !g_use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
+        if !MSGlobals::use_meso_sim() && get_float("fcd-output.max-leader-distance") > 0.0 {
             mask.set(SUMO_ATTR_LEADER_ID);
             mask.set(SUMO_ATTR_LEADER_SPEED);
             mask.set(SUMO_ATTR_LEADER_GAP);
@@ -630,8 +656,18 @@ impl MSDevice_FCD {
     #[allow(unused_variables)]
     pub fn build_shape_filter() {
         if is_set("fcd-output.filter-shapes") {
-            // shortcut: ShapeContainer::getPolygons() is Unmapped in utils/shapes/shape_container.rs (NamedObjectCont<SUMOPolygon*> unported), so the loaded polygons cannot be looked up (and the empty-container and missing-shape branches cannot run), upgrade when shape_container.rs maps myPolygons
-            panic!("shortcut: fcd-output.filter-shapes cannot be used until ShapeContainer polygons are ported");
+            let net = MSNet::get_instance();
+            let loadedShapes = net.m().get_shape_container();
+            if loadedShapes.get_polygons().len() > 0 {
+                for attrName in get_string_vector("fcd-output.filter-shapes") {
+                    match loadedShapes.get_polygons().get(&attrName).copied() {
+                        None => utils::common::msg_handler::write_error(&utils::tlf!("Specified shape '%' for filtering fcd-output could not be found.", attrName)),
+                        // store the PositionVector, not reference, as traci can manipulate / detete the polygons
+                        Some(poly) => MY_SHAPE4_FILTERS.with(|f| f.borrow_mut().push(poly.get_shape().clone())),
+                    }
+                }
+                MY_SHAPE_FILTER_INITIALIZED.set(true);
+            }
         } else {
             MY_SHAPE_FILTER_INITIALIZED.set(true);
         }

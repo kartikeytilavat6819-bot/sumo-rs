@@ -126,8 +126,17 @@ impl NILoader {
         // load types first
         let mut handler = NIXMLTypesHandler::new(self.myNetBuilder.m().get_type_cont());
         if !throw(oc.is_set("type-files", true)) {
-            // shortcut: built-in osm/opendrive/visum typemaps (generated typemap.h from data/typemap/*.typ.xml) are not ported, so none are loaded here; upgrade by embedding those XML files and pushing them into `files`
-            let files: Vec<String> = Vec::new();
+            // built-in typemaps: C++ compiles data/typemap/*.typ.xml into typemap.h; the same files are embedded here
+            let mut files: Vec<String> = Vec::new();
+            if throw(oc.is_set("osm-files", true)) {
+                files.push(include_str!("../../data/typemap/osmNetconvert.typ.xml").to_string());
+            }
+            if throw(oc.is_set("opendrive-files", true)) {
+                files.push(include_str!("../../data/typemap/opendriveNetconvert.typ.xml").to_string());
+            }
+            if throw(oc.is_set("visum-file", true)) {
+                files.push(include_str!("../../data/typemap/visumNetconvert.typ.xml").to_string());
+            }
             ok &= NITypeLoader::load(&mut handler, &files, "types", true);
         } else {
             ok &= NITypeLoader::load(&mut handler, throw(oc.get_string_vector("type-files")).as_slice(), "types", false);
@@ -285,9 +294,8 @@ impl NILoader {
 
         // load shapes for output formats that embed shape data
         if ok && oc.exists("polygon-files") {
-            // shortcut: NIXMLShapeHandler needs the SUMOSAXHandler base of ShapeHandler (utils/shapes, still todo), so polygon-files cannot be parsed yet; upgrade when ShapeHandler.base is a GenericSAXHandler
-            write_error("Polygon data cannot be loaded yet: the polygon shape handler is not ported.");
-            ok = false;
+            let mut shapeHandler = NIXMLShapeHandler::new(self.myNetBuilder.m().get_shape_cont(), self.myNetBuilder.m().get_edge_cont());
+            ok = NITypeLoader::load(&mut shapeHandler, throw(oc.get_string_vector("polygon-files")).as_slice(), "polygon data", false);
         }
         ok
     }

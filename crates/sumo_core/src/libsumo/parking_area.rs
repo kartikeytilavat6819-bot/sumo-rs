@@ -95,7 +95,6 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn get_accepted_badges(stopID: &str) -> Vec<String> {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
         Self::get_parking_area(stopID).cast::<MSParkingArea>().get_accepted_badges()
     }
 
@@ -216,8 +215,9 @@ impl ParkingArea {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(ParkingArea, PARKINGAREA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIString is a subclass wrapper (base: TraCIResult), so std::make_shared<TraCIString> cannot be stored as Rc<TraCIResult> yet, upgrade with the TraCIResult class hierarchy
-        panic!("shortcut: ParkingArea::subscribeParameterWithKey needs TraCIString as Rc<TraCIResult>")
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_PARKINGAREA_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int ParkingArea::domainID()` [static]
@@ -234,7 +234,6 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn set_accepted_badges(stopID: &str, badges: &Vec<String>) {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because the lookup is for a PARKING_AREA stopping place; MSParkingArea needs #[repr(C)] (base first), upgrade when ms_parking_area.rs adds it
         let pa = Self::get_parking_area(stopID).cast::<MSParkingArea>();
         pa.m().myAcceptedBadges.clear();
         pa.m().myAcceptedBadges.extend(badges.iter().cloned());
@@ -247,8 +246,7 @@ impl ParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: Helper::SubscriptionWrapper borrows the class-level subscription statics by reference, which thread_local RefCells cannot hand out yet
-        panic!("shortcut: ParkingArea::makeWrapper needs the subscription wrapper over class statics")
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool ParkingArea::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

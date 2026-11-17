@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/train_join/train_join.nod.xml --edge-files tools/oracle/cases/train_join/train_join.edg.xml

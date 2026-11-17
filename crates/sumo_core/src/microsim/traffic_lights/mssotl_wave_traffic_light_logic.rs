@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLWaveTrafficLightLogic.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_traffic_light_logic::MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT;
+
+fn wave_can_release(l: &mut MSTrafficLightLogic) -> bool {
+    Ptr::from_mut(l).cast::<MSSOTLWaveTrafficLightLogic>().m().can_release()
+}
+
+static MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    can_release: wave_can_release,
+    ..MS_SOTL_TRAFFIC_LIGHT_LOGIC_VT
+};
 
 /// C++ class `MSSOTLWaveTrafficLightLogic` (microsim/traffic_lights/MSSOTLWaveTrafficLightLogic.h)
 #[repr(C)]
@@ -41,7 +51,15 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLWaveTrafficLightLogic::MSSOTLWaveTrafficLightLogic")
+        let mut base = MSSOTLTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters);
+        base.base.base.vt = &MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT;
+        utils::common::msg_handler::write_message(&format!("*** Intersection {} will run using MSSOTLWaveTrafficLightLogic ***", id));
+        let mut s = Self { base };
+        for i in 0..s.get_phase_number() {
+            let phase = s.myPhases[i as usize];
+            phase.m().lastDuration = phase.duration;
+        }
+        s
     }
 
     /// C++: `void MSSOTLWaveTrafficLightLogic::MSSOTLWaveTrafficLightLogic(MSTLLogicControl &, const std::string &, const std::string &, const Phases &, int, SUMOTime, const Parameterised::Map &, MSSOTLSensors *)`
@@ -60,7 +78,14 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn new_2(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap, sensors: Ptr<MSSOTLSensors>) -> Self {
-        todo!("port MSSOTLWaveTrafficLightLogic::MSSOTLWaveTrafficLightLogic")
+        let mut base = MSSOTLTrafficLightLogic::new_2(tlcontrol, id, programID, TrafficLightType::SOTL_WAVE, phases, step, delay, parameters, sensors);
+        base.base.base.vt = &MS_SOTL_WAVE_TRAFFIC_LIGHT_LOGIC_VT;
+        let mut s = Self { base };
+        for i in 0..s.get_phase_number() {
+            let phase = s.myPhases[i as usize];
+            phase.m().lastDuration = phase.duration;
+        }
+        s
     }
 
     /// C++: `const std::string MSSOTLWaveTrafficLightLogic::getLogicType() const` [const]
@@ -70,7 +95,7 @@ impl MSSOTLWaveTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_logic_type(&self) -> String {
-        todo!("port MSSOTLWaveTrafficLightLogic::getLogicType")
+        "waveTrafficLightLogic".to_string()
     }
 
     /// C++: `bool MSSOTLWaveTrafficLightLogic::canRelease()` [virtual, protected]
@@ -103,7 +128,28 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self) -> bool {
-        todo!("port MSSOTLWaveTrafficLightLogic::canRelease")
+        //10% of lastDuration
+        let mut delta: SUMOTime = 10 * self.get_current_phase_def().lastDuration / 100;
+
+        //this allows a minimum variation of +-1s
+        if delta < 1000 {
+            delta = 1000;
+        }
+        if self.get_current_phase_elapsed() >= self.get_current_phase_def().minDuration {
+            if self.get_current_phase_elapsed() >= self.get_current_phase_def().lastDuration - delta {
+                if (self.count_vehicles() == 0) //no other vehicles approaching green lights
+                    || (self.get_current_phase_elapsed() >= self.get_current_phase_def().lastDuration + delta) //maximum value of the window surrounding lastDuration
+                    || (self.get_current_phase_elapsed() >= self.get_current_phase_def().maxDuration)
+                //declared maximum duration has been reached
+                {
+                    let elapsed = self.get_current_phase_elapsed();
+                    let phase = self.myPhases[self.get_current_phase_index() as usize];
+                    phase.m().lastDuration = elapsed;
+                    return true;
+                }
+            }
+        }
+        false
     }
 
     /// C++: `int MSSOTLWaveTrafficLightLogic::countVehicles()` [private]
@@ -125,7 +171,17 @@ impl MSSOTLWaveTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn count_vehicles(&mut self) -> i32 {
-        todo!("port MSSOTLWaveTrafficLightLogic::countVehicles")
+        let state: String = self.get_current_phase_def().get_state().to_string();
+        let mut vehicles = 0;
+        for i in 0..self.get_lane_vectors().len() {
+            if i > 0 && (self.get_lane_vectors()[i][0].get_id() == self.get_lane_vectors()[i - 1][0].get_id()) {
+                continue;
+            }
+            if state.as_bytes()[i] != b'r' {
+                vehicles += self.get_sensors().m().count_vehicles(self.get_lane_vectors()[i][0]);
+            }
+        }
+        vehicles
     }
 
 }

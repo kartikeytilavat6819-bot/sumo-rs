@@ -106,7 +106,96 @@ impl NWWriter_Amitran {
     // }
     #[allow(unused_variables)]
     pub fn write_network(oc: &OptionsCont, nb: &mut NBNetBuilder) {
-        todo!("port NWWriter_Amitran::writeNetwork")
+        // check whether an amitran-file shall be generated
+        if !or_panic(oc.is_set("amitran-output", true)) {
+            return;
+        }
+        let ec = &nb.myEdgeCont;
+        let device_ref = OutputDevice::get_device(&or_panic(oc.get_string("amitran-output")), true).unwrap_or_else(|e| panic!("{e}"));
+        let mut device = device_ref.borrow_mut();
+        device.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
+        device.write("<network xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\"http://sumo.dlr.de/xsd/amitran/network.xsd\">\n");
+        // write nodes
+        let mut index: i32 = 0;
+        let nc = &nb.myNodeCont;
+        let mut singleRoundaboutNodes: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let mut multiRoundaboutNodes: BTreeSet<Ptr<NBNode>> = BTreeSet::new();
+        let roundabouts = ec.get_roundabouts();
+        for i in roundabouts.iter() {
+            for j in i.iter() {
+                if j.get_num_lanes() > 1 {
+                    multiRoundaboutNodes.insert(j.get_from_node());
+                } else {
+                    singleRoundaboutNodes.insert(j.get_from_node());
+                }
+            }
+        }
+        let mut nodeIds: BTreeMap<Ptr<NBNode>, i32> = BTreeMap::new();
+        for (_id, node) in nc.begin() {
+            device.write("    <node id=\"").write(&index);
+            nodeIds.insert(*node, index);
+            index += 1;
+            if singleRoundaboutNodes.contains(node) {
+                device.write("\" type=\"roundaboutSingle\"/>\n");
+                continue;
+            }
+            if multiRoundaboutNodes.contains(node) {
+                device.write("\" type=\"roundaboutMulti\"/>\n");
+                continue;
+            }
+            match node.get_type() {
+                SumoXMLNodeType::TRAFFIC_LIGHT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION | SumoXMLNodeType::TRAFFIC_LIGHT_RIGHT_ON_RED => {
+                    device.write("\" type=\"trafficLight");
+                }
+                SumoXMLNodeType::PRIORITY => {
+                    device.write("\" type=\"priority");
+                }
+                SumoXMLNodeType::PRIORITY_STOP => {
+                    device.write("\" type=\"priorityStop");
+                }
+                SumoXMLNodeType::RIGHT_BEFORE_LEFT => {
+                    device.write("\" type=\"rightBeforeLeft");
+                }
+                SumoXMLNodeType::LEFT_BEFORE_RIGHT => {
+                    device.write("\" type=\"leftBeforeRight");
+                }
+                SumoXMLNodeType::ALLWAY_STOP => {
+                    device.write("\" type=\"allwayStop");
+                }
+                SumoXMLNodeType::ZIPPER => {
+                    device.write("\" type=\"zipper");
+                }
+                SumoXMLNodeType::RAIL_SIGNAL => {
+                    device.write("\" type=\"railSignal");
+                }
+                SumoXMLNodeType::RAIL_CROSSING => {
+                    device.write("\" type=\"railCrossing");
+                }
+                SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED => {
+                    device.write("\" type=\"deadEnd");
+                }
+                _ => {}
+            }
+            device.write("\"/>\n");
+        }
+        // write edges
+        index = 0;
+        for (_id, edge) in ec.begin() {
+            device.write("    <link id=\"").write(&index);
+            index += 1;
+            // operator[] default-inserts 0 for unknown nodes, as in C++
+            let from = *nodeIds.entry(edge.get_from_node()).or_insert(0);
+            let to = *nodeIds.entry(edge.get_to_node()).or_insert(0);
+            device.write("\" from=\"").write(&from)
+                .write("\" to=\"").write(&to)
+                .write("\" roadClass=\"").write(&NWWriter_DlrNavteq::get_road_class(*edge))
+                .write("\" length=\"").write(&((1000.0 * edge.get_loaded_length()) as i32))
+                .write("\" speedLimitKmh=\"").write(&((3.6 * edge.get_speed() + 0.5) as i32))
+                .write("\" laneNr=\"").write(&edge.get_num_lanes())
+                .write("\"/>\n");
+        }
+        device.write("</network>\n");
+        device.close().unwrap_or_else(|e| panic!("{e}"));
     }
 
 }

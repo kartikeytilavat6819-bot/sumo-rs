@@ -1,9 +1,8 @@
 //! Port of mesosim/MESegment.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use std::cell::Cell;
 
-/// C++ typedef `std::map<std::pair<const MSEdge *, std::vector<int>>, std::vector<std::pair<double, int>>> MESegment::SearchedMap`
-pub type MESegment_SearchedMap = BTreeMap<(Ptr<MSEdge>, Vec<i32>), Vec<(f64, i32)>>;
 
 // C++ `#define MESO_MIN_SPEED (0.05)` (MESegment.cpp)
 const MESO_MIN_SPEED: f64 = 0.05;
@@ -34,6 +33,18 @@ fn min2(a: f64, b: f64) -> f64 {
 thread_local! {
     // static MESegment::myMultiModalWarnings
     static MY_MULTI_MODAL_WARNINGS: std::cell::Cell<SVCPermissions> = const { std::cell::Cell::new(0) };
+    // static MESegment::myDummyParent
+    static MY_DUMMY_PARENT: Ptr<MSEdge> = Ptr::from_mut(Box::leak(Box::new(MSEdge::new("MESegmentDummyParent", -1, SumoXMLEdgeFunc::UNKNOWN, "", "", "", -1, 0.))));
+    // static MESegment::myVaporizationTarget
+    static MY_VAPORIZATION_TARGET: Ptr<MESegment> = Ptr::from_mut(Box::leak(Box::new(MESegment::new_3("vaporizationTarget"))));
+}
+
+fn my_dummy_parent() -> Ptr<MSEdge> {
+    MY_DUMMY_PARENT.with(|p| *p)
+}
+
+fn my_vaporization_target() -> Ptr<MESegment> {
+    MY_VAPORIZATION_TARGET.with(|p| *p)
 }
 
 /// A single mesoscopic segment (cell)
@@ -81,14 +92,12 @@ pub struct MESegment {
     pub myNumVehicles: i32,
     /// The follower edge to allowed que index mapping for multi queue segments
     pub myFollowerMap: BTreeMap<Ptr<MSEdge>, i32>,
-    /// The number of route edges after myEdge to look up in myFollowerMap
-    pub myLookahead: i32,
     /// the last headway
     pub myLastHeadway: SUMOTime,
-    /// the mean speed on this segment. Updated at event time or on demand
-    pub myMeanSpeed: f64,
-    /// the time at which myMeanSpeed was last updated
-    pub myLastMeanSpeedUpdate: SUMOTime,
+    /// the mean speed on this segment. Updated at event time or on demand (C++ `mutable`)
+    pub myMeanSpeed: Cell<f64>,
+    /// the time at which myMeanSpeed was last updated (C++ `mutable`)
+    pub myLastMeanSpeedUpdate: Cell<SUMOTime>,
 }
 
 impl std::ops::Deref for MESegment {
@@ -148,10 +157,7 @@ impl MESegment {
     //         usableLanes = 1;
     //     }
     //     if (multiQueue) {
-    //         // vehicles choose their queue by their next edge on the last segment and on all segments ending within the lookahead distance
-    //         const double distToEnd = parent.getLength() - (idx + 1) * length;
-    //         if (next == nullptr || distToEnd < edgeType.lookahead) {
-    //             SearchedMap searched;
+    //         if (next == nullptr) {
     //             for (const MSEdge* const edge : parent.getSuccessors()) {
     //                 if (edge->isTazConnector()) {
     //                     continue;
@@ -162,18 +168,6 @@ impl MESegment {
     //                 for (MSLane* const l : *allowed) {
     //                     std::vector<MSLane*>::const_iterator it = std::find(lanes.begin(), lanes.end(), l);
     //                     myFollowerMap[edge] |= (1 << distance(lanes.begin(), it));
-    //                 }
-    //                 if (edgeType.lookahead > 0) {
-    //                     // follow the lanes of this edge into later edges whose turns are within the lookahead distance
-    //                     std::vector<int> reach(lanes.size(), 0);
-    //                     for (int i = 0; i < (int)lanes.size(); i++) {
-    //                         for (const MSLink* const link : lanes[i]->getLinkCont()) {
-    //                             if (&link->getLane()->getEdge() == edge) {
-    //                                 reach[i] |= 1 << link->getLane()->getIndex();
-    //                             }
-    //                         }
-    //                     }
-    //                     addDownstreamFollowers(*edge, reach, 0., edgeType.lookahead - MAX2(0., distToEnd), 1, searched);
     //                 }
     //             }
     //         }
@@ -214,10 +208,9 @@ impl MESegment {
             myQueues: Vec::new(),
             myNumVehicles: 0,
             myFollowerMap: BTreeMap::new(),
-            myLookahead: 1,
             myLastHeadway: time2steps(-1.0),
-            myMeanSpeed: speed,
-            myLastMeanSpeedUpdate: SUMOTIME_MIN,
+            myMeanSpeed: Cell::new(speed),
+            myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
         };
 
         let lanes = parent.get_lanes();
@@ -240,10 +233,7 @@ impl MESegment {
             usableLanes = 1;
         }
         if multiQueue {
-            // vehicles choose their queue by their next edge on the last segment and on all segments ending within the lookahead distance
-            let distToEnd = parent.get_length() - ((idx + 1) as f64) * length;
-            if next.is_null() || distToEnd < edgeType.lookahead {
-                let mut searched: MESegment_SearchedMap = BTreeMap::new();
+            if next.is_null() {
                 for edge in parent.get_successors(SVC_IGNORING).iter() {
                     if edge.is_taz_connector() {
                         continue;
@@ -254,18 +244,6 @@ impl MESegment {
                     for l in allowed.iter() {
                         let pos = lanes.iter().position(|x| x == l).unwrap_or(lanes.len());
                         *seg.myFollowerMap.entry(*edge).or_insert(0) |= 1i32 << pos;
-                    }
-                    if edgeType.lookahead > 0. {
-                        // follow the lanes of this edge into later edges whose turns are within the lookahead distance
-                        let mut reach: Vec<i32> = vec![0; lanes.len()];
-                        for i in 0..lanes.len() {
-                            for link in lanes[i].get_link_cont().iter() {
-                                if std::ptr::eq(&*link.get_lane().get_edge(), &**edge) {
-                                    reach[i] |= 1i32 << link.get_lane().get_index();
-                                }
-                            }
-                        }
-                        seg.add_downstream_followers(&**edge, &reach, 0., edgeType.lookahead - max2(0., distToEnd), 1, &mut searched);
                     }
                 }
             }
@@ -335,7 +313,7 @@ impl MESegment {
         if self.myQueues.len() == 1 {
             let laneScale = capacity / self.myLength;
             self.myQueueCapacity = capacity;
-            self.myTau_length = (time2steps(1.0) as f64) / max2(MESO_MIN_SPEED, self.myMeanSpeed) / laneScale;
+            self.myTau_length = (time2steps(1.0) as f64) / max2(MESO_MIN_SPEED, self.myMeanSpeed.get()) / laneScale;
             // Eissfeldt p. 90 and 151 ff.
             self.myTau_ff = ((edgeType.tauff as f64) / laneScale) as SUMOTime;
             self.myTau_fj = ((edgeType.taufj as f64) / laneScale) as SUMOTime;
@@ -456,36 +434,12 @@ impl MESegment {
     //     }
     //     const SUMOVehicleClass svc = veh->getVClass();
     //     int minSize = std::numeric_limits<int>::max();
-    //     // the queues leading to the next edges of the vehicle's route
-    //     int usable = -1;
-    //     if (!myFollowerMap.empty()) {
-    //         // the lane chain to a later route edge may run through lanes the vehicle may not use
-    //         int permitted = -1;
-    //         if (myLookahead > 1) {
-    //             permitted = 0;
-    //             for (int i = 0; i < (int)myQueues.size(); i++) {
-    //                 if (myQueues[i].allows(svc)) {
-    //                     permitted |= 1 << i;
-    //                 }
-    //             }
-    //         }
-    //         const int offset = veh->getEdge() == &myEdge ? 1 : 2;
-    //         for (int k = 0; k < myLookahead; k++) {
-    //             const MSEdge* const succ = veh->succEdge(offset + k);
-    //             if (succ == nullptr) {
-    //                 break;
-    //             }
-    //             const auto it = myFollowerMap.find(succ);
-    //             if (it != myFollowerMap.end() && (k == 0 || (usable & it->second & permitted) != 0)) {
-    //                 usable &= it->second;
-    //             }
-    //         }
-    //     }
+    //     const MSEdge* const succ = myNextSegment == nullptr ? veh->succEdge(veh->getEdge() == &myEdge ? 1 : 2) : nullptr;
     //     for (int i = 0; i < (int)myQueues.size(); i++) {
     //         const Queue& q = myQueues[i];
     //         const double newOccupancy = q.size() == 0 ? 0. : q.getOccupancy() + veh->getVehicleType().getLengthWithGap();
     //         if (newOccupancy <= myQueueCapacity) { // we must ensure that occupancy remains below capacity
-    //             if ((usable & (1 << i)) != 0) {
+    //             if (succ == nullptr || myFollowerMap.count(succ) == 0 || ((myFollowerMap.find(succ)->second & (1 << i)) != 0)) {
     //                 if (q.allows(svc) && q.size() < minSize) {
     //                     if (init) {
     //                         // regular insertions and initial insertions must respect different constraints:
@@ -522,38 +476,13 @@ impl MESegment {
         }
         let svc = veh.get_v_class();
         let mut minSize: i32 = i32::MAX;
-        // the queues leading to the next edges of the vehicle's route
-        let mut usable: i32 = -1;
-        if !self.myFollowerMap.is_empty() {
-            // the lane chain to a later route edge may run through lanes the vehicle may not use
-            let mut permitted: i32 = -1;
-            if self.myLookahead > 1 {
-                permitted = 0;
-                for i in 0..self.myQueues.len() {
-                    if self.myQueues[i].allows(svc) {
-                        permitted |= 1i32 << i;
-                    }
-                }
-            }
-            let offset: i32 = if veh.get_edge() == self.myEdge { 1 } else { 2 };
-            for k in 0..self.myLookahead {
-                let succ = veh.succ_edge(offset + k);
-                if succ.is_null() {
-                    break;
-                }
-                if let Some(&follower) = self.myFollowerMap.get(&succ) {
-                    if k == 0 || (usable & follower & permitted) != 0 {
-                        usable &= follower;
-                    }
-                }
-            }
-        }
+        let succ = if self.myNextSegment.is_null() { veh.succ_edge(if veh.get_edge() == self.myEdge { 1 } else { 2 }) } else { Ptr::null() };
         for i in 0..self.myQueues.len() {
             let q = &self.myQueues[i];
             let newOccupancy = if q.size() == 0 { 0. } else { q.get_occupancy() + veh.get_vehicle_type().get_length_with_gap() };
             if newOccupancy <= self.myQueueCapacity {
                 // we must ensure that occupancy remains below capacity
-                if (usable & (1i32 << i)) != 0 {
+                if succ.is_null() || self.myFollowerMap.get(&succ).map_or(true, |f| (f & (1i32 << i)) != 0) {
                     if q.allows(svc) && q.size() < minSize {
                         if init {
                             // regular insertions and initial insertions must respect different constraints:
@@ -616,7 +545,7 @@ impl MESegment {
     //                 && isRailwayOrShared(myEdge.getPermissions())) {
     //             const MSDriveWay* dw = MSDriveWay::getDepartureDriveway(veh);
     //             MSEdgeVector occupied;
-    //             if (dw->foeDriveWayOccupied(false, veh, occupied) || dw->sidingDeadlock(veh)) {
+    //             if (dw->foeDriveWayOccupied(false, veh, occupied)) {
     //                 myEdge.getLanes()[0]->setParameter("insertionBlocked:" + veh->getID(), dw->getID());
     //                 return false;
     //             }
@@ -648,7 +577,7 @@ impl MESegment {
                     && utils::common::sumo_vehicle_class::is_railway_or_shared(self.myEdge.get_permissions()) {
                 let dw = MSDriveWay::get_departure_driveway(veh.cast::<SUMOVehicle>(), false);
                 let mut occupied: MSEdgeVector = Vec::new();
-                if dw.foe_drive_way_occupied(false, veh.cast::<SUMOVehicle>(), &mut occupied) || dw.siding_deadlock(veh.cast::<SUMOVehicle>()) {
+                if dw.foe_drive_way_occupied(false, veh.cast::<SUMOVehicle>(), &mut occupied) {
                     self.myEdge.get_lanes()[0].m().base2.set_parameter(&format!("insertionBlocked:{}", veh.get_id()), dw.m().base2.get_id());
                     return false;
                 }
@@ -815,30 +744,27 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn get_mean_speed(&self, useCache: bool) -> f64 {
-        // C++ const method that updates the cache (mutable members): mutate through the Ptr
-        let this_ptr = Ptr::new(self);
-        let this = this_ptr.m();
         let currentTime = MSNet::get_instance().get_current_time_step();
-        if currentTime != this.myLastMeanSpeedUpdate || !useCache {
-            this.myLastMeanSpeedUpdate = currentTime;
+        if currentTime != self.myLastMeanSpeedUpdate.get() || !useCache {
+            self.myLastMeanSpeedUpdate.set(currentTime);
             let mut v: f64 = 0.;
             let mut count: i32 = 0;
-            for q in this.myQueues.iter() {
-                let tau = if q.get_occupancy() < this.myJamThreshold { this.myTau_ff } else { this.myTau_jf };
+            for q in self.myQueues.iter() {
+                let tau = if q.get_occupancy() < self.myJamThreshold { self.myTau_ff } else { self.myTau_jf };
                 let mut earliestExitTime = currentTime;
                 count += q.size();
                 for veh in q.get_vehicles().iter().rev() {
                     v += veh.get_conservative_speed(&mut earliestExitTime); // earliestExitTime is updated!
-                    earliestExitTime += this.tau_with_veh_length(tau, veh.get_vehicle_type().get_length_with_gap(), veh.get_vehicle_type().get_car_follow_model().get_headway_time());
+                    earliestExitTime += self.tau_with_veh_length(tau, veh.get_vehicle_type().get_length_with_gap(), veh.get_vehicle_type().get_car_follow_model().get_headway_time());
                 }
             }
             if count == 0 {
-                this.myMeanSpeed = this.myEdge.get_speed_limit();
+                self.myMeanSpeed.set(self.myEdge.get_speed_limit());
             } else {
-                this.myMeanSpeed = v / (count as f64);
+                self.myMeanSpeed.set(v / (count as f64));
             }
         }
-        this.myMeanSpeed
+        self.myMeanSpeed.get()
     }
 
     /// C++: `void MESegment::resetCachedSpeeds()`
@@ -849,7 +775,7 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn reset_cached_speeds(&mut self) {
-        self.myLastMeanSpeedUpdate = SUMOTIME_MIN;
+        self.myLastMeanSpeedUpdate.set(SUMOTIME_MIN);
     }
 
     /// C++: `double MESegment::getMeanSpeed() const` [const]
@@ -1008,7 +934,7 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn is_open(&self, veh: Ptr<MEVehicle>) -> bool {
-        // shortcut: DEBUG_OPENED trace block omitted (debug-only output)
+        // C++ `#ifdef DEBUG_OPENED` block not ported: MESegment.cpp:51 has `//#define DEBUG_OPENED`, so it is never compiled
         if self.myTLSPenalty {
             // XXX should limited control take precedence over tls penalty?
             return true;
@@ -1216,13 +1142,7 @@ impl MESegment {
                 let leaderOut = self.myQueues[qi].myVehicles[0].get_event_time();
                 if !isDepart && leaderOut > tleave && self.overtake() {
                     if self.myQueues[qi].myVehicles.len() == 1 {
-                        // the overtaken car is no longer the leader and must not block foes
-                        let car0 = self.myQueues[qi].myVehicles[0];
-                        let link = self.get_link(car0, false);
-                        if !link.is_null() {
-                            link.m().remove_approaching(car0.cast::<SUMOVehicle>());
-                        }
-                        meso_net().m().remove_leader_car(car0);
+                        meso_net().m().remove_leader_car(self.myQueues[qi].myVehicles[0]);
                         newLeader = veh;
                     }
                     self.myQueues[qi].myVehicles.insert(1, veh);
@@ -1289,8 +1209,7 @@ impl MESegment {
                 for veh in q.get_vehicles().iter() {
                     if filter.vehicle_applies(&**veh) {
                         meso_net().m().remove_leader_car(*veh);
-                        // shortcut: C++ myVaporizationTarget static segment not ported, a null target is treated as invalid (same as isInvalid)
-                        meso_net().m().change_segment(*veh, currentTime + 1, Ptr::null(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
+                        meso_net().m().change_segment(*veh, currentTime + 1, my_vaporization_target(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
                         return true;
                     }
                 }
@@ -1614,8 +1533,7 @@ impl MESegment {
     //     }
     #[allow(unused_variables)]
     pub fn is_invalid(segment: Ptr<MESegment>) -> bool {
-        // shortcut: C++ also treats the static myVaporizationTarget as invalid, not ported (null target used instead)
-        segment.is_null()
+        segment.is_null() || segment == my_vaporization_target()
     }
 
     /// C++: `SUMOTime MESegment::getNextInsertionTime(SUMOTime) const` [const]
@@ -2122,109 +2040,6 @@ impl MESegment {
         }
     }
 
-    /// C++: `void MESegment::addDownstreamFollowers(const MSEdge &, const std::vector<int> &, const double, const double, const int, SearchedMap &)` [protected]
-    /// add the queues leading to the successors of the given downstream edge to myFollowerMap
-    // void
-    // MESegment::addDownstreamFollowers(const MSEdge& edge, const std::vector<int>& reach, const double dist, const double lookahead, const int depth, SearchedMap& searched) {
-    //     if (dist + edge.getLength() >= lookahead) {
-    //         return;
-    //     }
-    //     // a search with the same reach that started no further away and at least as deep has added everything this one would
-    //     std::vector<std::pair<double, int> >& previous = searched[std::make_pair(&edge, reach)];
-    //     for (const std::pair<double, int>& p : previous) {
-    //         if (p.first <= dist && p.second >= depth) {
-    //             return;
-    //         }
-    //     }
-    //     previous.push_back(std::make_pair(dist, depth));
-    //     const std::vector<MSLane*>& lanes = edge.getLanes();
-    //     int usable = 0;
-    //     for (int i = 0; i < (int)reach.size(); i++) {
-    //         if (reach[i] != 0) {
-    //             usable |= 1 << i;
-    //         }
-    //     }
-    //     for (const MSEdge* const succ : edge.getSuccessors()) {
-    //         if (succ->isTazConnector()) {
-    //             continue;
-    //         }
-    //         // the queues of this segment from which succ can be reached without changing lanes
-    //         int queues = 0;
-    //         std::vector<int> succReach(reach.size(), 0);
-    //         for (int i = 0; i < (int)reach.size(); i++) {
-    //             for (int j = 0; j < (int)lanes.size(); j++) {
-    //                 if ((reach[i] & (1 << j)) != 0) {
-    //                     for (const MSLink* const link : lanes[j]->getLinkCont()) {
-    //                         if (&link->getLane()->getEdge() == succ) {
-    //                             queues |= 1 << i;
-    //                             succReach[i] |= 1 << link->getLane()->getIndex();
-    //                         }
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //         if (queues != 0) {
-    //             if (queues != usable) {
-    //                 myFollowerMap[succ] |= queues;
-    //                 myLookahead = MAX2(myLookahead, depth + 1);
-    //             }
-    //             addDownstreamFollowers(*succ, succReach, dist + edge.getLength(), lookahead, depth + 1, searched);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn add_downstream_followers(&mut self, edge: &MSEdge, reach: &Vec<i32>, dist: f64, lookahead: f64, depth: i32, searched: &mut MESegment_SearchedMap) {
-        if dist + edge.get_length() >= lookahead {
-            return;
-        }
-        // a search with the same reach that started no further away and at least as deep has added everything this one would
-        let edgeP = Ptr::new(edge);
-        {
-            let previous = searched.entry((edgeP, reach.clone())).or_default();
-            for p in previous.iter() {
-                if p.0 <= dist && p.1 >= depth {
-                    return;
-                }
-            }
-            previous.push((dist, depth));
-        }
-        let lanes = edge.get_lanes();
-        let mut usable: i32 = 0;
-        for i in 0..reach.len() {
-            if reach[i] != 0 {
-                usable |= 1i32 << i;
-            }
-        }
-        for succ in edge.get_successors(SVC_IGNORING).clone().iter() {
-            let succ = *succ;
-            if succ.is_taz_connector() {
-                continue;
-            }
-            // the queues of this segment from which succ can be reached without changing lanes
-            let mut queues: i32 = 0;
-            let mut succReach: Vec<i32> = vec![0; reach.len()];
-            for i in 0..reach.len() {
-                for j in 0..lanes.len() {
-                    if (reach[i] & (1i32 << j)) != 0 {
-                        for link in lanes[j].get_link_cont().iter() {
-                            if Ptr::from_mut(link.get_lane().get_edge()) == succ {
-                                queues |= 1i32 << i;
-                                succReach[i] |= 1i32 << link.get_lane().get_index();
-                            }
-                        }
-                    }
-                }
-            }
-            if queues != 0 {
-                if queues != usable {
-                    *self.myFollowerMap.entry(succ).or_insert(0) |= queues;
-                    self.myLookahead = std::cmp::max(self.myLookahead, depth + 1);
-                }
-                self.add_downstream_followers(&*succ, &succReach, dist + edge.get_length(), lookahead, depth + 1, searched);
-            }
-        }
-    }
-
     /// C++: `void MESegment::MESegment(const MESegment &)` [private]
     /// Invalidated copy constructor.
     // (no C++ body found: implicit/defaulted or defined elsewhere)
@@ -2257,10 +2072,9 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str) -> Self {
-        // shortcut: C++ myDummyParent static MSEdge not ported, myEdge stays null until a real edge is assigned, upgrade with the MESegment statics
         MESegment {
             base: Named::new(id),
-            myEdge: Ptr::null(),
+            myEdge: my_dummy_parent(),
             myNextSegment: Ptr::null(),
             myLength: 0.,
             myIndex: 0,
@@ -2280,10 +2094,9 @@ impl MESegment {
             myQueues: Vec::new(),
             myNumVehicles: 0,
             myFollowerMap: BTreeMap::new(),
-            myLookahead: 1,
             myLastHeadway: 0,
-            myMeanSpeed: 0.,
-            myLastMeanSpeedUpdate: SUMOTIME_MIN,
+            myMeanSpeed: Cell::new(0.),
+            myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
         }
     }
 

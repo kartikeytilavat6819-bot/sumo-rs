@@ -1,0 +1,5 @@
+Error: unexpected end of input
+ In file '/mnt/c/Users/karti/sumo-rs/.claude/worktrees/wave2/tools/oracle/cases/netconv_edge/truncated/input.osm'
+ At line/column 10/1.
+
+Quitting (on error).

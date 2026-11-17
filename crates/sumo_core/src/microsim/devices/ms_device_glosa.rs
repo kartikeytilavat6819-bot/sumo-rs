@@ -34,6 +34,21 @@ pub struct MSDevice_GLOSA {
     pub myUseQueue: bool,
 }
 
+/// C++ `MIN2` macro
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ `MAX2` macro
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+/// C++ `SIMSTEP`
+fn sim_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
+
 impl std::ops::Deref for MSDevice_GLOSA {
     type Target = MSVehicleDevice;
     fn deref(&self) -> &MSVehicleDevice {
@@ -77,7 +92,29 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn insert_options(oc: &mut OptionsCont) {
-        todo!("port MSDevice_GLOSA::insertOptions")
+        oc.add_option_sub_topic("GLOSA Device");
+        MSDevice::insert_default_assignment_options("glosa", "GLOSA Device", oc, false);
+
+        oc.do_register("device.glosa.range", SumoOption::float(100.0));
+        oc.add_description("device.glosa.range", "GLOSA Device", "The communication range to the traffic light");
+
+        oc.do_register("device.glosa.max-speedfactor", SumoOption::float(1.1));
+        oc.add_description("device.glosa.max-speedfactor", "GLOSA Device", "The maximum speed factor when approaching a green light");
+
+        oc.do_register("device.glosa.min-speed", SumoOption::float(5.0));
+        oc.add_description("device.glosa.min-speed", "GLOSA Device", "Minimum speed when coasting towards a red light");
+
+        oc.do_register("device.glosa.add-switchtime", SumoOption::float(0.0));
+        oc.add_description("device.glosa.add-switchtime", "GLOSA Device", "Additional time the vehicle shall need to reach the intersection after the signal turns green");
+
+        oc.do_register("device.glosa.use-queue", SumoOption::bool(false));
+        oc.add_description("device.glosa.use-queue", "GLOSA Device", "Use queue in front of the tls for GLOSA calculation");
+
+        oc.do_register("device.glosa.override-safety", SumoOption::bool(false));
+        oc.add_description("device.glosa.override-safety", "GLOSA Device", "Override safety features - ignore the current light state, always follow GLOSA's predicted state");
+
+        oc.do_register("device.glosa.ignore-cfmodel", SumoOption::bool(false));
+        oc.add_description("device.glosa.ignore-cfmodel", "GLOSA Device", "Vehicles follow a perfect speed calculation - ignore speed calculations from the CF model if not safety critical");
     }
 
     /// C++: `void MSDevice_GLOSA::buildVehicleDevices(SUMOVehicle &, std::vector<MSVehicleDevice *> &)` [static]
@@ -99,7 +136,22 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        todo!("port MSDevice_GLOSA::buildVehicleDevices")
+        let equipped = !MSGlobals::use_meso_sim() && utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "glosa", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
+        if equipped {
+            let id = format!("glosa_{}", v.get_id());
+            let minSpeed = v.get_float_param("device.glosa.min-speed", true, utils::common::std_defs::INVALID_DOUBLE, true);
+            let range = v.get_float_param("device.glosa.range", true, utils::common::std_defs::INVALID_DOUBLE, true);
+            let maxSpeedFactor = v.get_float_param("device.glosa.max-speedfactor", true, utils::common::std_defs::INVALID_DOUBLE, true);
+            let addSwitchTime = v.get_float_param("device.glosa.add-switchtime", true, utils::common::std_defs::INVALID_DOUBLE, true);
+            let useQueue = v.get_bool_param("device.glosa.use-queue", true, false);
+            let overrideSafety = v.get_bool_param("device.glosa.override-safety", true, false);
+            let ignoreCFModel = v.get_bool_param("device.glosa.ignore-cfmodel", true, false);
+            // shortcut: the device is leaked like the C++ new, so the vehicle's device list keeps a stable pointer; upgrade when MSVehicle owns its devices as Box
+            let device: &mut MSDevice_GLOSA = Box::leak(Box::new(MSDevice_GLOSA::new(v, &id, minSpeed, range, maxSpeedFactor, addSwitchTime, useQueue, overrideSafety, ignoreCFModel)));
+            into.push(Ptr::from_mut(&mut device.base));
+        }
     }
 
     /// C++: `void MSDevice_GLOSA::cleanup()` [static]
@@ -110,7 +162,7 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn cleanup() {
-        todo!("port MSDevice_GLOSA::cleanup")
+        // C++ body only cleans up global state (none in this port)
     }
 
     /// C++: `void MSDevice_GLOSA::~MSDevice_GLOSA() noexcept` [virtual]
@@ -119,7 +171,7 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port MSDevice_GLOSA::~MSDevice_GLOSA")
+        // C++ destructor body is empty
     }
 
     /// C++: `bool MSDevice_GLOSA::notifyMove(SUMOTrafficObject &, double, double, double)` [virtual]
@@ -312,7 +364,136 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
-        todo!("port MSDevice_GLOSA::notifyMove")
+        self.myDistance -= newPos - oldPos;
+        if !self.myNextTLSLink.is_null() && self.myDistance <= self.myRange {
+            let vMax = self.myVeh.get_lane().get_vehicle_max_speed(self.myVeh.cast::<SUMOTrafficObject>());
+            let mut timeToJunction = self.earliest_arrival(self.myDistance, vMax);
+            let mut countOld: i32 = 0;
+            let timeToSwitch = Self::get_time_to_switch(self.myNextTLSLink, &mut countOld);
+            let mut currentPhaseGreen = false;
+            let mut currentPhaseStop = false;
+            let mut solved = false;
+            let mut nextSwitch: f64 = 0.;
+            nextSwitch = timeToSwitch;
+            let mut QueueLength = 0.;
+            let mut greenTime = 0.;
+            let mut additionalJunctionTime = 0.;
+            // It takes factor [seconds/per meter queue] to dissolve the queue at drive off
+            // experimental value from calibrated drone data
+            let factor = 0.21;
+            // Additional time (offset) for the leading vehicle to accelerate
+            // experimental value from calibrated drone data
+            let addition = 3.;
+            // Vehicles are often not able to drive with their desired speed vMax.
+            // The further away from the junction, the more uncertain the arrival prediction becomes.
+            // For a vehicle trying to reach the begin/end of a green phase, this is critical.
+            // The vehicle should then rather opt for the next phase (trade travel time for traffic flow)
+            let mut switchOffset: i32 = 0;
+
+            if self.myNextTLSLink.have_green() {
+                currentPhaseGreen = true;
+            } else if self.myNextTLSLink.have_red() || self.myNextTLSLink.have_yellow() {
+                currentPhaseStop = true;
+            }
+            // else if any other phase, GLOSA does not interfere
+
+            if self.myUseQueue {
+                // Detect queue length at tls
+                QueueLength = self.myNextTLSLink.get_tl_logic().get_tl_queue_length(self.myNextTLSLink.get_lane_before().get_id().to_string());
+
+                if currentPhaseGreen {
+                    // how long has it already been green in this phase
+                    greenTime = Self::time_green(self.myNextTLSLink);
+                    additionalJunctionTime = (QueueLength * factor + addition) - greenTime;
+                    if (additionalJunctionTime > 0.) && (additionalJunctionTime < nextSwitch) {
+                        // do note use queue system if queue is to long
+                        timeToJunction += additionalJunctionTime;
+                    } else {
+                        // important for case: "speed can be increased to arrive at tls while green"
+                        additionalJunctionTime = 0.;
+                    }
+                }
+
+                if currentPhaseStop {
+                    nextSwitch += QueueLength * factor + addition;
+                }
+            }
+
+            // Search for the next passable phase, maximum 10 Phases
+            for countwhile in 1..11 {
+                if currentPhaseGreen {
+                    // reset nextSwitch because the queue matters only for the current Phase
+                    if countwhile == 2 && self.myUseQueue {
+                        nextSwitch -= QueueLength * factor + addition;
+                    }
+                    if self.mySpeedAdviceActive && self.myOriginalSpeedFactor > self.myVeh.get_chosen_speed_factor() {
+                        self.myVeh.m().set_chosen_speed_factor(self.myOriginalSpeedFactor);
+                        self.mySpeedAdviceActive = false;
+                    }
+                    // if we arrive at the tls after it switched to red (else do nothing)
+                    if timeToJunction > nextSwitch {
+                        // if speed can be increased to arrive at tls while green (else look for next phases)
+                        if self.myMaxSpeedFactor > self.myOriginalSpeedFactor {
+                            let vMax2 = vMax / self.myVeh.get_chosen_speed_factor() * self.myMaxSpeedFactor;
+                            let timetoJunction2 = self.earliest_arrival(self.myDistance, vMax2) + additionalJunctionTime;
+                            // reaching the signal at yellow might be sufficient
+                            let yellowSlack = self.myVeh.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_DRIVE_AFTER_YELLOW_TIME, 0.);
+                            // if increased speed is fast enough to arrive at tls while green (else look for next phases)
+                            if timetoJunction2 <= (nextSwitch + yellowSlack) {
+                                // increase speed factor up to a maximum if necessary and useful
+                                // XXX could compute optimal speed factor here
+                                self.myVeh.m().set_chosen_speed_factor(self.myMaxSpeedFactor);
+                                self.mySpeedAdviceActive = true;
+                                break; // solved
+                            }
+                            // else: speed can not be increased to arrive at tls while green
+                            // next switch is calculated at the end of the for-loop
+                        }
+                        // else: speed increase is not enough to reach tls while green
+                        // next switch is calculated at the end of the for-loop
+                    } else {
+                        // vehicle will arrive at tls while green
+                        break; // solved
+                    }
+                } else if currentPhaseStop {
+                    // tls is red at the moment
+                    if countwhile == 2 && self.myUseQueue {
+                        // take queue into account if current green phase can not be passed and next red phase is used instead
+                        nextSwitch += QueueLength * factor + addition;
+                    }
+                    self.adapt_speed(self.myDistance, timeToJunction, nextSwitch + self.myAddSwitchTime, &mut solved);
+                    if countwhile == 2 && self.myUseQueue {
+                        // reset queue because following phases should not calculate with current queue
+                        nextSwitch -= QueueLength * factor + addition;
+                        timeToJunction -= additionalJunctionTime;
+                    }
+                    if solved {
+                        break; // solved
+                    }
+                }
+                // calculate next Phase
+                nextSwitch += Self::get_time_to_next_switch(self.myNextTLSLink, &mut currentPhaseGreen, &mut currentPhaseStop, &mut countOld);
+                // For vehicles far away from the junction we add an offset
+                if nextSwitch > 80. {
+                    nextSwitch += switchOffset as f64;
+                    switchOffset = 6;
+                    nextSwitch -= switchOffset as f64;
+                } else if nextSwitch > 60. {
+                    nextSwitch += switchOffset as f64;
+                    switchOffset = 4;
+                    nextSwitch -= switchOffset as f64;
+                } else if nextSwitch > 40. {
+                    nextSwitch += switchOffset as f64;
+                    switchOffset = 3;
+                    nextSwitch -= switchOffset as f64;
+                } else if nextSwitch > 20. {
+                    nextSwitch += switchOffset as f64;
+                    switchOffset = 2;
+                    nextSwitch -= switchOffset as f64;
+                }
+            }
+        }
+        true // keep the device
     }
 
     /// C++: `bool MSDevice_GLOSA::notifyEnter(SUMOTrafficObject &, MSMoveReminder::Notification, const MSLane *)` [virtual]
@@ -371,7 +552,50 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn notify_enter(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-        todo!("port MSDevice_GLOSA::notifyEnter")
+        let prevLink = self.myNextTLSLink;
+        self.myNextTLSLink = Ptr::null();
+        let mut lane = self.myVeh.get_lane();
+        if self.myVeh.get_departure() < sim_step() {
+            // no need to call at insertion
+            self.myVeh.m().update_best_lanes(false, Ptr::null());
+        }
+        let bestLaneConts = self.myVeh.get_best_lanes_continuation_2(lane);
+        let mut seen = lane.get_length() - self.myVeh.get_position_on_lane();
+        let mut view: i32 = 1;
+        let mut linkIt: usize = MSLane::succ_link_sec(&*self.myVeh, view, &*lane, bestLaneConts);
+        while !lane.is_link_end(&mut linkIt) {
+            if !lane.myEdge.is_internal() {
+                let link = lane.myLinks[linkIt];
+                if link.is_tls_controlled() {
+                    self.myNextTLSLink = link;
+                    self.myDistance = seen;
+                    break;
+                }
+            }
+            lane = lane.myLinks[linkIt].get_via_lane_or_lane();
+            if !lane.myEdge.is_internal() {
+                view += 1;
+            }
+            seen += lane.get_length();
+            linkIt = MSLane::succ_link_sec(&*self.myVeh, view, &*lane, bestLaneConts);
+        }
+        if !prevLink.is_null() && self.myNextTLSLink.is_null() {
+            // moved pass tls
+            self.myVeh.m().set_chosen_speed_factor(self.myOriginalSpeedFactor);
+            self.mySpeedAdviceActive = false;
+        } else if !self.myNextTLSLink.is_null() && prevLink != self.myNextTLSLink {
+            // approaching new tls
+            let mut tlsRange = 1e10;
+            let val = self.myNextTLSLink.get_tl_logic().base2.get_parameter("device.glosa.range", "1e10");
+            match utils::common::string_utils::to_double(&val) {
+                Ok(d) => tlsRange = d,
+                Err(_) => {
+                    write_warningf!("Invalid value '%' for parameter 'device.glosa.range' of traffic light '%'", val, self.myNextTLSLink.get_tl_logic().base.get_id());
+                }
+            }
+            self.myRange = min2(self.myVeh.get_float_param("device.glosa.range", true, utils::common::std_defs::INVALID_DOUBLE, true), tlsRange);
+        }
+        true // keep the device
     }
 
     /// C++: `const std::string MSDevice_GLOSA::deviceName() const` [const, virtual]
@@ -381,7 +605,7 @@ impl MSDevice_GLOSA {
     //     }
     #[allow(unused_variables)]
     pub fn device_name(&self) -> String {
-        todo!("port MSDevice_GLOSA::deviceName")
+        "glosa".to_string()
     }
 
     /// C++: `double MSDevice_GLOSA::getOriginalSpeedFactor() const` [const]
@@ -391,7 +615,7 @@ impl MSDevice_GLOSA {
     //     }
     #[allow(unused_variables)]
     pub fn get_original_speed_factor(&self) -> f64 {
-        todo!("port MSDevice_GLOSA::getOriginalSpeedFactor")
+        self.myOriginalSpeedFactor
     }
 
     /// C++: `bool MSDevice_GLOSA::getOverrideSafety() const` [const]
@@ -424,8 +648,11 @@ impl MSDevice_GLOSA {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        todo!("port MSDevice_GLOSA::getParameter")
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        if key == "minSpeed" {
+            return Ok(utils::common::to_string::to_string(&self.myMinSpeed));
+        }
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_GLOSA::setParameter(const std::string &, const std::string &)` [virtual]
@@ -445,8 +672,17 @@ impl MSDevice_GLOSA {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        todo!("port MSDevice_GLOSA::setParameter")
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
+        let doubleValue = match utils::common::string_utils::to_double(value) {
+            Ok(d) => d,
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
+        };
+        if key == "minSpeed" {
+            self.myMinSpeed = doubleValue;
+        } else {
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        }
+        Ok(())
     }
 
     /// C++: `void MSDevice_GLOSA::generateOutput(OutputDevice *) const` [const, virtual]
@@ -462,7 +698,7 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn generate_output(&self, tripinfoOut: Ptr<OutputDevice>) {
-        todo!("port MSDevice_GLOSA::generateOutput")
+        // C++ body is commented out: nothing is written to the tripinfo output
     }
 
     /// C++: `double MSDevice_GLOSA::getTimeToSwitch(const MSLink *, int &)` [static, private]
@@ -491,7 +727,25 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn get_time_to_switch(tlsLink: Ptr<MSLink>, countOld: &mut i32) -> f64 {
-        todo!("port MSDevice_GLOSA::getTimeToSwitch")
+        assert!(!tlsLink.is_null());
+        let tl = tlsLink.get_tl_logic();
+        assert!(!tl.is_null());
+        let phases = tl.get_phases();
+        let n = phases.len() as i32;
+        let cur = tl.get_current_phase_index();
+        let mut result: SUMOTime = tl.get_next_switch_time() - sim_step();
+
+        for i in 1..n {
+            let phase = &phases[((cur + i) % n) as usize];
+            let ls = phase.get_state().as_bytes()[tlsLink.get_tl_index() as usize] as char;
+            if ((tlsLink.have_red() || tlsLink.have_yellow()) && (ls == 'g' || ls == 'G'))
+                    || (tlsLink.have_green() && ls != 'g' && ls != 'G') {
+                *countOld = cur + i;
+                break;
+            }
+            result += phase.duration;
+        }
+        utils::common::time::steps2time(result)
     }
 
     /// C++: `double MSDevice_GLOSA::getTimeToNextSwitch(const MSLink *, bool &, bool &, int &)` [static, private]
@@ -526,7 +780,31 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn get_time_to_next_switch(tlsLink: Ptr<MSLink>, currentPhaseGreen: &mut bool, currentPhaseStop: &mut bool, countOld: &mut i32) -> f64 {
-        todo!("port MSDevice_GLOSA::getTimeToNextSwitch")
+        // get time till the tls switches to a phase the vehicle can reach
+        assert!(!tlsLink.is_null());
+        let tl = tlsLink.get_tl_logic();
+        assert!(!tl.is_null());
+        let phases = tl.get_phases();
+        let n = phases.len() as i32;
+        let cur = *countOld;
+        let mut result: SUMOTime = 0;
+
+        for i in 0..n {
+            let phase = &phases[((cur + i) % n) as usize];
+            let ls = phase.get_state().as_bytes()[tlsLink.get_tl_index() as usize] as char;
+            if *currentPhaseGreen && (ls == 'g' || ls == 'G') {
+                *countOld = (cur + i) % n;
+                break;
+            }
+            if *currentPhaseStop && (ls != 'g' && ls != 'G') {
+                *countOld = (cur + i) % n;
+                break;
+            }
+            result += phase.duration;
+        }
+        *currentPhaseGreen = !*currentPhaseGreen;
+        *currentPhaseStop = !*currentPhaseStop;
+        utils::common::time::steps2time(result)
     }
 
     /// C++: `double MSDevice_GLOSA::timeGreen(const MSLink *)` [static, private]
@@ -554,7 +832,26 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn time_green(tlsLink: Ptr<MSLink>) -> f64 {
-        todo!("port MSDevice_GLOSA::timeGreen")
+        assert!(!tlsLink.is_null());
+        let tl = tlsLink.get_tl_logic();
+        assert!(!tl.is_null());
+        let phases = tl.get_phases();
+        let n = phases.len() as i32;
+        let cur = tl.get_current_phase_index();
+        // As there are multiple "microphases G" in one Greenphase this function only gives back
+        // the already spent time in the current microphase
+        let mut result: SUMOTime = tl.get_spent_duration(-1);
+
+        for i in 1..n {
+            // shortcut: C++ indexes phases[(cur - i) % n], which is a negative index (undefined behaviour) when cur < i; the port wraps it cyclically with rem_euclid, upgrade if the undefined case is ever reproduced
+            let phase = &phases[((cur - i).rem_euclid(n)) as usize];
+            let ls = phase.get_state().as_bytes()[tlsLink.get_tl_index() as usize] as char;
+            if ls != 'g' && ls != 'G' {
+                break;
+            }
+            result += phase.duration;
+        }
+        utils::common::time::steps2time(result)
     }
 
     /// C++: `double MSDevice_GLOSA::earliest_arrival(double, double)` [private]
@@ -570,8 +867,14 @@ impl MSDevice_GLOSA {
     //     return accel_time + remaining_time;
     // }
     #[allow(unused_variables)]
-    pub fn earliest_arrival(&mut self, speed: f64, distance: f64) -> f64 {
-        todo!("port MSDevice_GLOSA::earliest_arrival")
+    pub fn earliest_arrival(&mut self, distance: f64, vMax: f64) -> f64 {
+        // assume we keep acceleration until we hit maximum speed
+        let v = self.myVeh.get_speed();
+        let a = self.myVeh.get_car_follow_model().get_max_accel();
+        let accel_time = min2((vMax - v) / a, self.time_to_junction_at_continuous_accel(distance, v));
+        let remaining_dist = distance - self.distance_at_continuous_accel(v, accel_time);
+        let remaining_time = remaining_dist / vMax;
+        accel_time + remaining_time
     }
 
     /// C++: `double MSDevice_GLOSA::latest_arrival(double, double, double)` [private]
@@ -579,7 +882,8 @@ impl MSDevice_GLOSA {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn latest_arrival(&mut self, speed: f64, distance: f64, earliest: f64) -> f64 {
-        todo!("port MSDevice_GLOSA::latest_arrival")
+        // C++ defines latest_arrival only inside a /* */ block of pseudo-code, so the compiled C++ has no such method
+        panic!("MSDevice_GLOSA::latest_arrival has no C++ implementation (commented-out pseudo-code)")
     }
 
     /// C++: `double MSDevice_GLOSA::distance_at_continuous_accel(double, double)` [private]
@@ -593,7 +897,11 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn distance_at_continuous_accel(&mut self, speed: f64, time: f64) -> f64 {
-        todo!("port MSDevice_GLOSA::distance_at_continuous_accel")
+        let v = speed;
+        let t = time;
+        let a = self.myVeh.get_car_follow_model().get_max_accel();
+        // integrated area composed of a rectangle and a triangle
+        v * t + a * t * t / 2.
     }
 
     /// C++: `double MSDevice_GLOSA::time_to_junction_at_continuous_accel(double, double)` [private]
@@ -608,7 +916,12 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn time_to_junction_at_continuous_accel(&mut self, d: f64, v: f64) -> f64 {
-        todo!("port MSDevice_GLOSA::time_to_junction_at_continuous_accel")
+        // see distance_at_continuous_accel
+        // t^2 + (2v/a)t - 2d/a = 0
+        let a = self.myVeh.get_car_follow_model().get_max_accel();
+        let p_half = v / a;
+        let t = -p_half + (p_half * p_half + 2. * d / a).sqrt();
+        t
     }
 
     /// C++: `void MSDevice_GLOSA::adaptSpeed(double, double, double, bool &)` [private]
@@ -725,7 +1038,90 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn adapt_speed(&mut self, distance: f64, timeToJunction: f64, timeToSwitch: f64, solved: &mut bool) {
-        todo!("port MSDevice_GLOSA::adaptSpeed")
+        // ensure that myVehicle arrives at the
+        // junction with maximum speed when it switches to green
+        // car performs a slowDown at time z to speed x for duration y
+        // there are two basic strategies
+        // a) maximize z -> this saves road space but leads to low x and thus excessive braking
+        // b) maximize x -> this saves fuel but wastes road
+        // c) compromise: b) but only when distance to junction is below a threshold
+
+        let vMax = self.myVeh.get_lane().get_speed_limit() * self.myOriginalSpeedFactor;
+
+        // need to start/continue maneuver
+        let t = timeToSwitch;
+        let a = self.myVeh.get_car_follow_model().get_max_accel();
+        let u = self.myMinSpeed;
+        let w = vMax;
+        let s = distance;
+        let v = self.myVeh.get_speed();
+        // x : target speed
+        // y : slow down duration
+        // s is composed of 1 trapezoid (decel), 1 rectangle (maintain), 1 trapezoid (accel)
+        // s = (v^2-x^2)/2d + x*(t-y-(w-x)/a) + (w^2-x^2)/2a
+        // y = (v-x)/d
+        // solution for x curtesy of mathomatic.org
+
+        // First, we calculate targetSpeed assuming we are driving that speed already (v=x)
+        // If this results in targetSpeed < currentSpeed, then we need to decelerate (and vice versa)
+        let rootConst = a * a * t * t - 2.0 * a * w * t + 2. * a * s;
+        let mut vConst = 0.;
+        if rootConst >= 0. {
+            vConst = rootConst.sqrt() - a * t + w;
+        }
+        let mut d = self.myVeh.get_car_follow_model().get_max_decel();
+        if v < vConst {
+            d = a;
+        }
+
+        // Second, we calculate the correct targetSpeed, knowing if we need to accelerate or decelerate
+        let sign0 = -1.; // quadratic formula solution x1 (choose solution with higher speed)
+        let root_argument = a * d * ((2.0 * d * (s - (w * t))) - ((v - w) * (v - w)) + (a * ((d * (t * t)) + (2.0 * (s - (t * v))))));
+        if root_argument < 0. {
+            // no reset of speedFactor because in this case, current speed can be kept
+            *solved = true;
+            return;
+        }
+        let x = ((a * (v - (d * t))) + (d * w) - sign0 * root_argument.sqrt()) / (d + a);
+        let mut y = (v - x) / d;
+        if v < x {
+            y = (x - v) / d;
+        }
+        if s < (w * w - x * x) / 2.0 / a {
+            // end maneuver
+            if self.myIgnoreCFModel {
+                let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+                speedTimeLine.push((MSNet::get_instance().get_current_time_step(), self.myVeh.get_speed()));
+                speedTimeLine.push((MSNet::get_instance().get_current_time_step() + utils::common::time::time2steps(w - x / a), vMax));
+                self.myVeh.m().get_influencer().set_speed_time_line(&speedTimeLine);
+            } else {
+                self.myVeh.m().set_chosen_speed_factor(self.myOriginalSpeedFactor);
+            }
+            self.mySpeedAdviceActive = false;
+            return;
+        }
+        if !(x >= u && x <= w && y < t) {
+            if x < u {
+                // no reset of speedFactor because in this case, current speed can be kept
+                //myVeh.setChosenSpeedFactor(myOriginalSpeedFactor);
+                //mySpeedAdviceActive = false;
+                *solved = true;
+            }
+            // if x > w: the vehicle can not go fast enough (debug output only)
+            return;
+        }
+        let targetSpeed = max2(x, self.myVeh.get_car_follow_model().min_next_speed(self.myVeh.get_speed(), self.myVeh));
+        let duration = max2(y, utils::common::time::ts());
+        *solved = true;
+        if self.myIgnoreCFModel {
+            let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
+            speedTimeLine.push((MSNet::get_instance().get_current_time_step(), self.myVeh.get_speed()));
+            speedTimeLine.push((MSNet::get_instance().get_current_time_step() + utils::common::time::time2steps(duration), targetSpeed));
+            self.myVeh.m().get_influencer().set_speed_time_line(&speedTimeLine);
+        } else {
+            self.myVeh.m().set_chosen_speed_factor(targetSpeed / self.myVeh.get_lane().get_speed_limit());
+        }
+        self.mySpeedAdviceActive = true;
     }
 
     /// C++: `void MSDevice_GLOSA::MSDevice_GLOSA(SUMOVehicle &, const std::string &, double, double, double, double, bool, bool, bool)` [private]
@@ -750,7 +1146,40 @@ impl MSDevice_GLOSA {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, minSpeed: f64, range: f64, maxSpeedFactor: f64, addSwitchTime: f64, useQueue: bool, overrideSafety: bool, ignoreCFModel: bool) -> Self {
-        todo!("port MSDevice_GLOSA::MSDevice_GLOSA")
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_GLOSA>().m().notify_enter(veh, reason, enteredLane)
+        }
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_GLOSA>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, minSpeed, range, maxSpeedFactor, addSwitchTime, useQueue, overrideSafety, ignoreCFModel);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, minSpeed: f64, range: f64, maxSpeedFactor: f64, addSwitchTime: f64, useQueue: bool, overrideSafety: bool, ignoreCFModel: bool) -> Self {
+        let mut b = MSDevice_GLOSA {
+            myVeh: Ptr::from_mut(holder).cast::<MSVehicle>(),
+            base: MSVehicleDevice::new(holder, id),
+            myNextTLSLink: Ptr::null(),
+            myDistance: 0.,
+            myMinSpeed: minSpeed,
+            myRange: range,
+            myMaxSpeedFactor: maxSpeedFactor,
+            myAddSwitchTime: addSwitchTime,
+            myOverrideSafety: overrideSafety,
+            myIgnoreCFModel: ignoreCFModel,
+            myOriginalSpeedFactor: 0.,
+            mySpeedAdviceActive: false,
+            myUseQueue: useQueue,
+        };
+        b.myOriginalSpeedFactor = b.myVeh.get_chosen_speed_factor();
+        b
     }
 
     /// C++: `void MSDevice_GLOSA::MSDevice_GLOSA(const MSDevice_GLOSA &)` [private]
@@ -758,7 +1187,7 @@ impl MSDevice_GLOSA {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_GLOSA) -> Self {
-        todo!("port MSDevice_GLOSA::MSDevice_GLOSA")
+        panic!("MSDevice_GLOSA copy constructor is private and invalid")
     }
 
     /// C++: `MSDevice_GLOSA & MSDevice_GLOSA::operator=(const MSDevice_GLOSA &)` [private]
@@ -766,7 +1195,7 @@ impl MSDevice_GLOSA {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_GLOSA) -> &mut MSDevice_GLOSA {
-        todo!("port MSDevice_GLOSA::operator=")
+        panic!("MSDevice_GLOSA assignment operator is private and invalid")
     }
 
 }

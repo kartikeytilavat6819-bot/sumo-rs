@@ -59,7 +59,52 @@ impl TraCIServerAPI_VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_VehicleType::processSet")
+        let warning = String::new(); // additional description for response
+        // variable
+        let variable = inputStorage.read_unsigned_byte().expect("readUnsignedByte");
+        if variable != VAR_LENGTH
+            && variable != VAR_MAXSPEED
+            && variable != VAR_VEHICLECLASS
+            && variable != VAR_SPEED_FACTOR
+            && variable != VAR_SPEED_DEVIATION
+            && variable != VAR_EMISSIONCLASS
+            && variable != VAR_WIDTH
+            && variable != VAR_MINGAP
+            && variable != VAR_SHAPECLASS
+            && variable != VAR_ACCEL
+            && variable != VAR_IMPERFECTION
+            && variable != VAR_DECEL
+            && variable != VAR_EMERGENCY_DECEL
+            && variable != VAR_APPARENT_DECEL
+            && variable != VAR_TAU
+            && variable != VAR_COLOR
+            && variable != VAR_ACTIONSTEPLENGTH
+            && variable != VAR_SCALE
+            && variable != VAR_HEIGHT
+            && variable != VAR_MASS
+            && variable != VAR_MINGAP_LAT
+            && variable != VAR_MAXSPEED_LAT
+            && variable != VAR_LATALIGNMENT
+            && variable != VAR_BOARDING_DURATION
+            && variable != VAR_IMPATIENCE
+            && variable != VAR_PARAMETER
+            && variable != COPY
+        {
+            return server.write_error_status_cmd(
+                CMD_SET_VEHICLETYPE_VARIABLE,
+                &format!("Change Vehicle Type State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        // id
+        let id = inputStorage.read_string().expect("readString");
+        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // process
+        if Self::set_variable(CMD_SET_VEHICLETYPE_VARIABLE, variable, &id, server, inputStorage, outputStorage) {
+            server.write_status_cmd(CMD_SET_VEHICLETYPE_VARIABLE, RTYPE_OK, &warning, outputStorage);
+            return true;
+        }
+        false
     }
 
     /// C++: `bool TraCIServerAPI_VehicleType::setVariable(const int, const int, const std::string &, TraCIServer &, tcpip::Storage &, tcpip::Storage &)` [static]
@@ -260,7 +305,167 @@ impl TraCIServerAPI_VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_variable(cmd: i32, variable: i32, id: &str, server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_VehicleType::setVariable")
+        match variable {
+            VAR_LENGTH => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting length requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid length.", outputStorage);
+                }
+                VehicleType::set_length(id, value);
+            }
+            VAR_HEIGHT => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting height requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid height.", outputStorage);
+                }
+                VehicleType::set_height(id, value);
+            }
+            VAR_MASS => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting mass requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid mass.", outputStorage);
+                }
+                VehicleType::set_mass(id, value);
+            }
+            VAR_MAXSPEED => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting maximum speed requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid maximum speed.", outputStorage);
+                }
+                VehicleType::set_max_speed(id, value);
+            }
+            VAR_VEHICLECLASS => {
+                VehicleType::set_vehicle_class(id, &StorageHelper::read_typed_string(inputStorage, "Setting vehicle class requires a string."));
+            }
+            VAR_SPEED_FACTOR => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting speed factor requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid speed factor.", outputStorage);
+                }
+                VehicleType::set_speed_factor(id, value);
+            }
+            VAR_SPEED_DEVIATION => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting speed deviation requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid speed deviation.", outputStorage);
+                }
+                VehicleType::set_speed_deviation(id, value);
+            }
+            VAR_EMISSIONCLASS => {
+                VehicleType::set_emission_class(id, &StorageHelper::read_typed_string(inputStorage, "Setting emission class requires a string."));
+            }
+            VAR_WIDTH => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting width requires a double.");
+                if value <= 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid width.", outputStorage);
+                }
+                VehicleType::set_width(id, value);
+            }
+            VAR_MINGAP => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting minimum gap requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid minimum gap.", outputStorage);
+                }
+                VehicleType::set_min_gap(id, value);
+            }
+            VAR_MINGAP_LAT => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting minimum lateral gap requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid minimum lateral gap.", outputStorage);
+                }
+                VehicleType::set_min_gap_lat(id, value);
+            }
+            VAR_MAXSPEED_LAT => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting maximum lateral speed requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid maximum lateral speed.", outputStorage);
+                }
+                VehicleType::set_max_speed_lat(id, value);
+            }
+            VAR_LATALIGNMENT => {
+                VehicleType::set_lateral_alignment(id, &StorageHelper::read_typed_string(inputStorage, "Setting preferred lateral alignment requires a string."));
+            }
+            VAR_SHAPECLASS => {
+                VehicleType::set_shape_class(id, &StorageHelper::read_typed_string(inputStorage, "Setting vehicle shape requires a string."));
+            }
+            VAR_ACCEL => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting acceleration requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid acceleration.", outputStorage);
+                }
+                VehicleType::set_accel(id, value);
+            }
+            VAR_DECEL => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting deceleration requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid deceleration.", outputStorage);
+                }
+                VehicleType::set_decel(id, value);
+            }
+            VAR_EMERGENCY_DECEL => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting emergency deceleration requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid emergency deceleration.", outputStorage);
+                }
+                VehicleType::set_emergency_decel(id, value);
+            }
+            VAR_APPARENT_DECEL => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting apparent deceleration requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid apparent deceleration.", outputStorage);
+                }
+                VehicleType::set_apparent_decel(id, value);
+            }
+            VAR_SCALE => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Traffic scale requires a double.");
+                if value < 0.0 {
+                    return server.write_error_status_cmd(cmd, "Invalid traffic scale.", outputStorage);
+                }
+                VehicleType::set_scale(id, value);
+            }
+            VAR_ACTIONSTEPLENGTH => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting action step length requires a double.");
+                if value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid action step length.", outputStorage);
+                }
+                let resetActionOffset = value >= 0.0;
+                VehicleType::set_action_step_length(id, value.abs(), resetActionOffset);
+            }
+            VAR_IMPERFECTION => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting driver imperfection requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid driver imperfection.", outputStorage);
+                }
+                VehicleType::set_imperfection(id, value);
+            }
+            VAR_TAU => {
+                let value = StorageHelper::read_typed_double(inputStorage, "Setting headway time requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(cmd, "Invalid headway time.", outputStorage);
+                }
+                VehicleType::set_tau(id, value);
+            }
+            VAR_IMPATIENCE => {
+                VehicleType::set_impatience(id, StorageHelper::read_typed_double(inputStorage, "Setting impatience requires a double."));
+            }
+            VAR_BOARDING_DURATION => {
+                VehicleType::set_boarding_duration(id, StorageHelper::read_typed_double(inputStorage, "Setting boarding duration requires a double."));
+            }
+            VAR_COLOR => {
+                VehicleType::set_color(id, &StorageHelper::read_typed_color(inputStorage, "The color must be given using the according type."));
+            }
+            COPY => {
+                VehicleType::copy(id, &StorageHelper::read_typed_string(inputStorage, "Copying a vehicle type requires a string."));
+            }
+            VAR_PARAMETER => {
+                StorageHelper::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StorageHelper::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StorageHelper::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                VehicleType::set_parameter(id, &name, &value);
+            }
+            _ => {}
+        }
+        true
     }
 
     /// C++: `void TraCIServerAPI_VehicleType::TraCIServerAPI_VehicleType(const TraCIServerAPI_VehicleType &)` [private]

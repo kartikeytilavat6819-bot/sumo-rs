@@ -34,17 +34,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
-/// C++ `std::sort(v, less)` on an EdgeVector. determinism: std::sort is unstable, sort_by is stable.
+/// C++ `std::sort(v, less)` on an EdgeVector. determinism: libstdc++ introsort, so ties keep C++ order
 fn sort_edges_by(v: &mut EdgeVector, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
-    v.sort_by(|a, b| {
-        if less(*a, *b) {
-            std::cmp::Ordering::Less
-        } else if less(*b, *a) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
+    utils::common::std_sort::std_sort(v.as_mut_slice(), less);
 }
 
 /// C++ `rotate(begin, std::find(begin, end, first), end)`; a missing or absent element leaves the vector unchanged
@@ -66,16 +58,9 @@ struct NBNodeWaLane {
     width: f64,
 }
 
-// C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
-// nb_edge.rs / nb_node.rs expose them as statics).
-// shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
+// C++ static constants of NBNode used as defaults below
 const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.;
-const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
-const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
-const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
+use crate::netbuild::nb_edge::{UNSPECIFIED_SPEED as NBEDGE_UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION as NBEDGE_UNSPECIFIED_FRICTION, UNSPECIFIED_CONTPOS as NBEDGE_UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE as NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_CONNECTION_UNCONTROLLED as NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED};
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
@@ -105,7 +90,7 @@ fn nbnode_set_connection_same_dest(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<N
         NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
         NBEDGE_UNSPECIFIED_SPEED,
         NBEDGE_UNSPECIFIED_FRICTION,
-        NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+        crate::netbuild::nb_edge::my_default_connection_length(),
         &PositionVector::default(),
         NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
         SVC_UNSPECIFIED,
@@ -394,7 +379,7 @@ impl NBNode_ApproachingDivider {
                 NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
                 NBEDGE_UNSPECIFIED_SPEED,
                 NBEDGE_UNSPECIFIED_FRICTION,
-                NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+                crate::netbuild::nb_edge::my_default_connection_length(),
                 &PositionVector::default(),
                 NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
                 SVC_UNSPECIFIED,
@@ -705,7 +690,7 @@ pub struct NBNode {
     /// number of crossings loaded from a sumo net
     pub myCrossingsLoadedFromSumoNet: i32,
     /// geometry error after computation of internal lane shapes
-    pub myDisplacementError: f64,
+    pub myDisplacementError: std::cell::Cell<f64>,
     pub myIsBentPriority: bool,
     /// whether the node type was guessed rather than loaded
     pub myTypeWasGuessed: bool,
@@ -793,7 +778,7 @@ impl NBNode {
             myName: String::new(),
             myDiscardAllCrossings: false,
             myCrossingsLoadedFromSumoNet: 0,
-            myDisplacementError: 0.,
+            myDisplacementError: std::cell::Cell::new(0.),
             myIsBentPriority: false,
             myTypeWasGuessed: false,
         };
@@ -1165,8 +1150,22 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_tls(&mut self, tlCont: &mut NBTrafficLightLogicCont, addedConnections: bool, removedConnections: bool) {
-        // shortcut: the dynamic_cast checks (NBLoadedSUMOTLDef / NBOwnTLDef) need RTTI, and NBTrafficLightDefinition has no type tag yet; the TL-controlled node is left unchanged, upgrade when a type tag or downcast exists
-        let _ = (tlCont, addedConnections, removedConnections);
+        if self.is_tl_controlled() {
+            let oldDefs = self.myTrafficLights.clone();
+            for orig in oldDefs {
+                if orig.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    orig.cast::<NBLoadedSUMOTLDef>().m().register_modifications(addedConnections, removedConnections);
+                } else if orig.m().myKind != NBTrafficLightDefinitionKind::OwnTL {
+                    let newDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new_3(orig.m().get_id(), orig.m().get_offset(), orig.m().get_type()))));
+                    while let Some(node) = orig.get_nodes().first().copied() {
+                        newDef.m().add_node(node);
+                        node.m().remove_traffic_light(orig);
+                    }
+                    tlCont.remove_fully(orig.m().get_id().to_string());
+                    tlCont.insert(newDef.cast::<NBTrafficLightDefinition>(), false);
+                }
+            }
+        }
     }
 
     /// C++: `void NBNode::shiftTLConnectionLaneIndex(NBEdge *, int, int)`
@@ -1814,7 +1813,7 @@ impl NBNode {
                 && in_.is_connected_to(out, false)
             {
                 for i in inOffset..in_.get_num_lanes() {
-                    nbnode_set_connection_default(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED);
+                    nbnode_set_connection_same_dest(in_, i, out, std::cmp::min(outOffset + i, out.get_num_lanes() - 1), NBEdge_Lane2LaneInfoType::COMPUTED, true);
                 }
                 return;
             }
@@ -4300,8 +4299,8 @@ impl NBNode {
                     // (a linear dependency is to restrictive at low displacementAngles and too permisive at high angles)
                     *ok = false;
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
-                        let v = recordError.myDisplacementError.max((displacementAngle.sin() * dist).abs());
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max((displacementAngle.sin() * dist).abs());
+                        recordError.myDisplacementError.set(v);
                     }
                     return PositionVector::default();
                 } else {
@@ -4322,8 +4321,8 @@ impl NBNode {
                     *ok = false;
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
                         // it's unclear if this error can be solved via stretching the intersection.
-                        let v = recordError.myDisplacementError.max(1.0);
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max(1.0);
+                        recordError.myDisplacementError.set(v);
                     }
                     return PositionVector::default();
                 }
@@ -4337,8 +4336,8 @@ impl NBNode {
                 if lengthenBeg && lengthenEnd {
                     // This should be fixable with minor stretching
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
-                        let v = recordError.myDisplacementError.max(1.0);
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max(1.0);
+                        recordError.myDisplacementError.set(v);
                     }
                     *ok = false;
                     return PositionVector::default();
@@ -4450,7 +4449,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_displacement_error(&self) -> f64 {
-        self.myDisplacementError
+        self.myDisplacementError.get()
     }
 
     /// C++: `void NBNode::replaceIncoming(NBEdge *, NBEdge *, int)`
@@ -4776,17 +4775,15 @@ impl NBNode {
                 self.myCrossings.drain(0..connectedCandidates[0] as usize);
             }
         }
-        // determinism: C++ std::sort is unstable; a stable sort_by is used here
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let sorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(Ptr::from_mut(self), &self.myAllEdges);
-        self.myCrossings.sort_by(|a, b| {
-            if sorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        let mut order: Vec<usize> = (0..self.myCrossings.len()).collect();
+        {
+            let crossings = &self.myCrossings;
+            utils::common::std_sort::std_sort(&mut order, |i, j| sorter.call_op(&crossings[i], &crossings[j]) != 0);
+        }
+        let mut slots: Vec<Option<Box<NBNode_Crossing>>> = std::mem::take(&mut self.myCrossings).into_iter().map(Some).collect();
+        self.myCrossings = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
         if numGuessed > 0 && self.is_simple_continuation(true, true) {
             // avoid narrow node shape when there is a crossing
             self.compute_node_shape(-1.);
@@ -5009,7 +5006,7 @@ impl NBNode {
     #[allow(unused_variables)]
     pub fn build_inner_edges(&mut self) -> f64 {
         // myDisplacementError is computed during this operation. reset first
-        self.myDisplacementError = 0.;
+        self.myDisplacementError.set(0.);
         // build inner edges for vehicle movements across the junction
         let mut noInternalNoSplits: i32 = 0;
         for edge in self.myIncomingEdges.iter() {
@@ -5167,15 +5164,7 @@ impl NBNode {
             // sorting the edges in the right way is imperative. We want to sort
             // them by getAngleAtNodeToCenter() but need to be extra carefull to avoid wrapping around 0 somewhere in between
             let sorter = NBContHelper_edge_by_angle_to_nodeShapeCentroid_sorter::new(me);
-            edges.sort_by(|a, b| {
-                if sorter.call_op(*a, *b) {
-                    std::cmp::Ordering::Less
-                } else if sorter.call_op(*b, *a) {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            sort_edges_by(&mut edges, |a, b| sorter.call_op(a, b));
             // rotate the edges so that the largest relative angle difference comes at the end
             let mut rawAngleDiffs: Vec<f64> = Vec::new();
             let mut maxAngleDiff: f64 = 0.;
@@ -7091,15 +7080,14 @@ impl NBNode {
         }
         // sort the crossings
         let crossingSorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(me, &self.myAllEdges);
-        self.myCrossings.sort_by(|a, b| {
-            if crossingSorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if crossingSorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // sort positions with std::sort semantics, then move the boxes into that order
+        let mut order: Vec<usize> = (0..self.myCrossings.len()).collect();
+        {
+            let crossings = &self.myCrossings;
+            utils::common::std_sort::std_sort(&mut order, |i, j| crossingSorter.call_op(&crossings[i], &crossings[j]) != 0);
+        }
+        let mut slots: Vec<Option<Box<NBNode_Crossing>>> = std::mem::take(&mut self.myCrossings).into_iter().map(Some).collect();
+        self.myCrossings = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
 
         if useNodeShape && self.myAllEdges != allEdgesOriginal {
             // sorting order changed after node shape was computed.
@@ -7456,7 +7444,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn init_rail_signal_classes(nc: &NBNodeCont) {
-        // toString(vector<string>) joins with spaces (shortcut: assumed separator, verify against ToString.h)
+        // toString(vector<string>) joins with spaces (ToString.h joinToString(v, " "))
         let permit = utils::options::options_cont::get_string_vector("railway.signal.permit-unsignalized").join(" ");
         MY_PERMIT_UNSIGNALIZED_CLASSES.with(|c| c.set(utils::common::sumo_vehicle_class::parse_vehicle_classes(&permit)));
         MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.set(0));
@@ -7467,15 +7455,6 @@ impl NBNode {
                 }
             }
         }
-    }
-
-    /// C++: `void NBNode::setPriorityJunctionPriorities()` [private]
-    /// sets the priorites in case of a priority junction
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn set_priority_junction_priorities(&mut self) {
-        // shortcut: NBNode::setPriorityJunctionPriorities has no C++ definition (declared only, never called); delegating to NBEdgePriorityComputer::setPriorityJunctionPriorities (NBAlgorithms.cpp) with forceStraight=false, upgrade if a real NBNode body turns up
-        NBEdgePriorityComputer::set_priority_junction_priorities(self, false);
     }
 
     /// C++: `void NBNode::getEdgesThatApproach(NBEdge *, EdgeVector &)` [private]

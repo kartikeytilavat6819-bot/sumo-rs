@@ -31,6 +31,8 @@ pub struct NIVissimTL {
 //   static DictType NIVissimTL::myDict;
 thread_local! {
     static MY_DICT: std::cell::RefCell<NIVissimTL_DictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_SIGNAL_DICT: std::cell::RefCell<NIVissimTL_SignalDictType> = std::cell::RefCell::new(BTreeMap::new());
+    static MY_GROUP_DICT: std::cell::RefCell<NIVissimTL_GroupDictType> = std::cell::RefCell::new(BTreeMap::new());
 }
 
 impl NIVissimTL {
@@ -219,7 +221,57 @@ impl NIVissimTL {
     // }
     #[allow(unused_variables)]
     pub fn dict_set_signals(tlc: &mut NBTrafficLightLogicCont, ec: &mut NBEdgeCont) -> bool {
-        todo!("port NIVissimTL::dict_SetSignals")
+        let ref_ = 0;
+        let mut ref_groups = 0;
+        let mut ref_signals = 0;
+        let mut no_signals = 0;
+        let mut no_groups = 0;
+        let tls: Vec<Ptr<NIVissimTL>> = MY_DICT.with(|d| d.borrow().values().copied().collect());
+        for tl in tls.iter().copied() {
+            /*  if(tl->myType!="festzeit") {
+               cout << " Warning: The traffic light '" << tl->myID
+                << "' could not be assigned to a node." << endl;
+               ref++;
+               continue;
+              }*/
+            let id = tl.myID.to_string();
+            let type_ = if tl.get_type() == "festzeit" || tl.get_type() == "festzeit_fake" { TrafficLightType::STATIC } else { TrafficLightType::ACTUATED };
+            // shortcut: C++ NBTrafficLightLogicCont owns the new NBLoadedTLDef and deletes it; leaked until the logic container owns Box<NBLoadedTLDef>, upgrade with NBTrafficLightLogicCont
+            let def: Ptr<NBLoadedTLDef> = Ptr::from_mut(Box::leak(Box::new(NBLoadedTLDef::new_3(ec, &id, 0, type_))));
+            if !tlc.insert(def.cast::<NBTrafficLightDefinition>(), false) {
+                write_errorf!("Error on adding a traffic light\n Must be a multiple id ('%')", id);
+                continue;
+            }
+            def.m().set_cycle_duration(tl.myAbsDuration);
+            // add each group to the node's container
+            let sgs = NIVissimTL_NIVissimTLSignalGroup::get_groups_for(tl.get_id());
+            for (&j_key, j_val) in sgs.iter() {
+                if !j_val.add_to(def) {
+                    write_warningf!("The signal group '%' could not be assigned to tl '%'.", j_key, tl.myID);
+                    ref_groups += 1;
+                }
+                no_groups += 1;
+            }
+            // add the signal group signals to the node
+            let signals = NIVissimTL_NIVissimTLSignal::get_signals_for(tl.get_id());
+            for (&k_key, k_val) in signals.iter() {
+                if !k_val.add_to(ec, def) {
+                    write_warningf!("The signal '%' could not be assigned to tl '%'.", k_key, tl.myID);
+                    ref_signals += 1;
+                }
+                no_signals += 1;
+            }
+        }
+        if ref_ != 0 {
+            write_warningf!("Could not set % of % traffic lights.", ref_, tls.len());
+        }
+        if ref_groups != 0 {
+            write_warningf!("Could not set % of % groups.", ref_groups, no_groups);
+        }
+        if ref_signals != 0 {
+            write_warningf!("Could not set % of % signals.", ref_signals, no_signals);
+        }
+        true
     }
 
 }
@@ -252,14 +304,22 @@ impl NIVissimTL_NIVissimTLSignal {
     //       myVehicleTypes(vehicleTypes) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, groupids: &Vec<i32>, edgeid: i32, laneno: i32, position: f64, assignedVehicleTypes: &Vec<i32>) -> Self {
-        todo!("port NIVissimTLSignal::NIVissimTLSignal")
+        Self {
+            myID: id,
+            myName: name.to_string(),
+            myGroupIDs: groupids.clone(),
+            myEdgeID: edgeid,
+            myLane: laneno,
+            myPosition: position,
+            myVehicleTypes: assignedVehicleTypes.clone(),
+        }
     }
 
     /// C++: `void NIVissimTLSignal::~NIVissimTLSignal()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimTLSignal::~NIVissimTLSignal")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `bool NIVissimTLSignal::isWithin(const PositionVector &) const` [const]
@@ -269,7 +329,7 @@ impl NIVissimTL_NIVissimTLSignal {
     // }
     #[allow(unused_variables)]
     pub fn is_within(&self, poly: &PositionVector) -> bool {
-        todo!("port NIVissimTLSignal::isWithin")
+        poly.around(&self.get_position(), 0.)
     }
 
     /// C++: `Position NIVissimTLSignal::getPosition() const` [const]
@@ -279,7 +339,7 @@ impl NIVissimTL_NIVissimTLSignal {
     // }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> Position {
-        todo!("port NIVissimTLSignal::getPosition")
+        NIVissimAbstractEdge::dictionary_2(self.myEdgeID).get_geom_position(self.myPosition)
     }
 
     /// C++: `bool NIVissimTLSignal::addTo(NBEdgeCont &, NBLoadedTLDef *) const` [const]
@@ -344,21 +404,82 @@ impl NIVissimTL_NIVissimTLSignal {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, ec: &mut NBEdgeCont, node: Ptr<NBLoadedTLDef>) -> bool {
-        todo!("port NIVissimTLSignal::addTo")
+        let c = NIVissimConnection::dictionary_2(self.myEdgeID);
+        let mut assignedConnections: NBConnectionVector = Vec::new();
+        if c.is_null() {
+            // What to do if on an edge? -> close all outgoing connections
+            let edge = ec.retrieve_possibly_split_3(&self.myEdgeID.to_string(), self.myPosition);
+            if edge.is_null() {
+                write_warningf!("Could not set tls signal at edge '%' - the edge was not built.", self.myEdgeID);
+                return false;
+            }
+            // Check whether it is already known, which edges are approached
+            //  by which lanes
+            // check whether to use the original lanes only
+            if edge.lanes_were_assigned() {
+                let connections = edge.get_connections_from_lane(self.myLane - 1, Ptr::null(), -1);
+                for conn in connections.iter() {
+                    assert!(self.myLane - 1 < edge.get_num_lanes());
+                    assignedConnections.push(NBConnection::new_2(edge, self.myLane - 1, conn.toEdge, conn.toLane, -1, -1));
+                }
+            } else {
+                write_warningf!("Edge '%': Lanes were not assigned.", self.myEdgeID);
+                for j in 0..edge.get_num_lanes() {
+                    let connections = edge.get_connections_from_lane(j, Ptr::null(), -1);
+                    for conn in connections.iter() {
+                        assignedConnections.push(NBConnection::new_2(edge, j, conn.toEdge, conn.toLane, -1, -1));
+                    }
+                }
+            }
+        } else {
+            // get the edges
+            let tmpFrom = ec.retrieve_possibly_split_2(&c.get_from_edge_id().to_string(), &c.get_to_edge_id().to_string(), true);
+            let tmpTo = ec.retrieve_possibly_split_2(&c.get_to_edge_id().to_string(), &c.get_from_edge_id().to_string(), false);
+            // check whether the edges are known
+            if !tmpFrom.is_null() && !tmpTo.is_null() {
+                // add connections this signal is responsible for
+                assignedConnections.push(NBConnection::new_2(tmpFrom, -1, tmpTo, -1, -1, -1));
+            } else {
+                return false;
+                // !!! one of the edges could not be build
+            }
+        }
+        // add to the group
+        assert!(!self.myGroupIDs.is_empty());
+        // @todo just another hack?!
+        /*
+        if (myGroupIDs.size() == 1) {
+            return tl->addToSignalGroup(toString<int>(*(myGroupIDs.begin())),
+                                        assignedConnections);
+        } else {
+            // !!!
+            return tl->addToSignalGroup(toString<int>(*(myGroupIDs.begin())),
+                                        assignedConnections);
+        }
+        */
+        node.m().add_to_signal_group_2(&self.myGroupIDs[0].to_string(), &assignedConnections)
     }
 
     /// C++: `bool NIVissimTLSignal::dictionary(int, int, NIVissimTLSignal *)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dictionary(lsaid: i32, id: i32, o: Ptr<NIVissimTL_NIVissimTLSignal>) -> bool {
-        todo!("port NIVissimTLSignal::dictionary")
+        MY_SIGNAL_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            let inner = d.entry(lsaid).or_default();
+            if !inner.contains_key(&id) {
+                inner.insert(id, o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimTLSignal * NIVissimTLSignal::dictionary(int, int)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dictionary_2(lsaid: i32, id: i32) -> Ptr<NIVissimTL_NIVissimTLSignal> {
-        todo!("port NIVissimTLSignal::dictionary")
+        MY_SIGNAL_DICT.with(|d| d.borrow().get(&lsaid).and_then(|m| m.get(&id)).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimTLSignal::clearDict()` [static]
@@ -373,14 +494,30 @@ impl NIVissimTL_NIVissimTLSignal {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimTLSignal::clearDict")
+        MY_SIGNAL_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, inner) in d.iter() {
+                for (_, o) in inner.iter() {
+                    // delete (*j).second;
+                    drop(unsafe { Box::from_raw(o.as_raw()) });
+                }
+            }
+            d.clear();
+        })
     }
 
     /// C++: `SSignalDictType NIVissimTLSignal::getSignalsFor(int)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // NIVissimTL::SSignalDictType
+    // NIVissimTL::NIVissimTLSignal::getSignalsFor(int tlid) {
+    //     SignalDictType::iterator i = myDict.find(tlid);
+    //     if (i == myDict.end()) {
+    //         return SSignalDictType();
+    //     }
+    //     return (*i).second;
+    // }
     #[allow(unused_variables)]
     pub fn get_signals_for(tlid: i32) -> NIVissimTL_SSignalDictType {
-        todo!("port NIVissimTLSignal::getSignalsFor")
+        MY_SIGNAL_DICT.with(|d| d.borrow().get(&tlid).cloned().unwrap_or_default())
     }
 
 }
@@ -410,14 +547,21 @@ impl NIVissimTL_NIVissimTLSignalGroup {
     //       myTYellow(tyellow) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, isGreenBegin: bool, times: &Vec<SUMOTime>, tredyellow: SUMOTime, tyellow: SUMOTime) -> Self {
-        todo!("port NIVissimTLSignalGroup::NIVissimTLSignalGroup")
+        Self {
+            myID: id,
+            myName: name.to_string(),
+            myTimes: times.clone(),
+            myFirstIsRed: !isGreenBegin,
+            myTRedYellow: tredyellow,
+            myTYellow: tyellow,
+        }
     }
 
     /// C++: `void NIVissimTLSignalGroup::~NIVissimTLSignalGroup()`
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NIVissimTLSignalGroup::~NIVissimTLSignalGroup")
+        // C++ destructor is implicit; nothing to release.
     }
 
     /// C++: `bool NIVissimTLSignalGroup::addTo(NBLoadedTLDef *) const` [const]
@@ -445,21 +589,49 @@ impl NIVissimTL_NIVissimTLSignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn add_to(&self, node: Ptr<NBLoadedTLDef>) -> bool {
-        todo!("port NIVissimTLSignalGroup::addTo")
+        // get the color at the begin
+        let mut color = if self.myFirstIsRed { NBTrafficLightDefinition_TLColor::TLCOLOR_RED } else { NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN };
+        let id = self.myID.to_string();
+        node.m().add_signal_group(&id);
+        for &t in self.myTimes.iter() {
+            node.m().add_signal_group_phase_begin(&id, t, color);
+            color = if color == NBTrafficLightDefinition_TLColor::TLCOLOR_RED {
+                NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN
+            } else {
+                NBTrafficLightDefinition_TLColor::TLCOLOR_RED
+            };
+        }
+        if self.myTimes.is_empty() {
+            if self.myFirstIsRed {
+                node.m().add_signal_group_phase_begin(&id, 0, NBTrafficLightDefinition_TLColor::TLCOLOR_RED);
+            } else {
+                node.m().add_signal_group_phase_begin(&id, 0, NBTrafficLightDefinition_TLColor::TLCOLOR_GREEN);
+            }
+        }
+        node.m().set_signal_yellow_times(&id, self.myTRedYellow, self.myTYellow);
+        true
     }
 
     /// C++: `bool NIVissimTLSignalGroup::dictionary(int, int, NIVissimTLSignalGroup *)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dictionary(lsaid: i32, id: i32, o: Ptr<NIVissimTL_NIVissimTLSignalGroup>) -> bool {
-        todo!("port NIVissimTLSignalGroup::dictionary")
+        MY_GROUP_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            let inner = d.entry(lsaid).or_default();
+            if !inner.contains_key(&id) {
+                inner.insert(id, o);
+                return true;
+            }
+            false
+        })
     }
 
     /// C++: `NIVissimTLSignalGroup * NIVissimTLSignalGroup::dictionary(int, int)` [static]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dictionary_2(lsaid: i32, id: i32) -> Ptr<NIVissimTL_NIVissimTLSignalGroup> {
-        todo!("port NIVissimTLSignalGroup::dictionary")
+        MY_GROUP_DICT.with(|d| d.borrow().get(&lsaid).and_then(|m| m.get(&id)).copied().unwrap_or_else(Ptr::null))
     }
 
     /// C++: `void NIVissimTLSignalGroup::clearDict()` [static]
@@ -474,14 +646,30 @@ impl NIVissimTL_NIVissimTLSignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        todo!("port NIVissimTLSignalGroup::clearDict")
+        MY_GROUP_DICT.with(|d| {
+            let mut d = d.borrow_mut();
+            for (_, inner) in d.iter() {
+                for (_, o) in inner.iter() {
+                    // delete (*j).second;
+                    drop(unsafe { Box::from_raw(o.as_raw()) });
+                }
+            }
+            d.clear();
+        })
     }
 
     /// C++: `SGroupDictType NIVissimTLSignalGroup::getGroupsFor(int)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // NIVissimTL::SGroupDictType
+    // NIVissimTL::NIVissimTLSignalGroup::getGroupsFor(int tlid) {
+    //     GroupDictType::iterator i = myDict.find(tlid);
+    //     if (i == myDict.end()) {
+    //         return SGroupDictType();
+    //     }
+    //     return (*i).second;
+    // }
     #[allow(unused_variables)]
     pub fn get_groups_for(tlid: i32) -> NIVissimTL_SGroupDictType {
-        todo!("port NIVissimTLSignalGroup::getGroupsFor")
+        MY_GROUP_DICT.with(|d| d.borrow().get(&tlid).cloned().unwrap_or_default())
     }
 
 }

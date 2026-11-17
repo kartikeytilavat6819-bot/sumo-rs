@@ -29,8 +29,8 @@ fn sim_step() -> SUMOTime {
     MSNet::get_instance().get_current_time_step()
 }
 
-/// C++ `#define STATE_EMPTY_LANE "NONE"`
-const STATE_EMPTY_LANE: &str = "NONE";
+/// C++ `#define STATE_EMPTY_ARRIVALLANE "NONE"`
+const STATE_EMPTY_ARRIVALLANE: &str = "NONE";
 
 /// The C++ static members of MSDevice_Tripinfo (listed above the impl block), kept in one record per thread.
 /// The record is leaked once so that the pointers in myPendingOutput stay valid (as in ms_device_vehroutes.rs).
@@ -341,7 +341,7 @@ impl MSDevice_Tripinfo {
                             // tripinfo is special and vehroute has its own write-unfinished option
                             continue;
                         }
-                        dev.base2.generate_output(tripinfoOut);
+                        MSDevice::generate_output_of(*dev, tripinfoOut);
                     }
                     tripinfoOut.m().close_tag("");
                 }
@@ -1168,7 +1168,7 @@ impl MSDevice_Tripinfo {
     //         // @note vehicle may have moved past its arrivalPos during the last step
     //         // due to non-zero arrivalspeed but we consider it as arrived at the desired position
     //         // However, vaporization may happen anywhere (via TraCI)
-    //         if (reason > MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED) {
+    //         if (reason > MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED) {
     //             // vaporized
     //             myArrivalPos = veh.getPositionOnLane();
     //         } else {
@@ -1207,7 +1207,7 @@ impl MSDevice_Tripinfo {
             // @note vehicle may have moved past its arrivalPos during the last step
             // due to non-zero arrivalspeed but we consider it as arrived at the desired position
             // However, vaporization may happen anywhere (via TraCI)
-            if (reason as i32) > (MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED as i32) {
+            if (reason as i32) > (MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED as i32) {
                 // vaporized
                 self.myArrivalPos = veh.get_position_on_lane();
             } else {
@@ -1331,7 +1331,6 @@ impl MSDevice_Tripinfo {
     //             vaporized = "traci";
     //             break;
     //         case MSMoveReminder::NOTIFICATION_TELEPORT_ARRIVED:
-    //         case MSMoveReminder::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED:
     //             vaporized = "teleport";
     //             break;
     //         default:
@@ -1427,7 +1426,7 @@ impl MSDevice_Tripinfo {
             MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION => "collision",
             MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_VAPORIZER => "vaporizer",
             MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_TRACI => "traci",
-            MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED | MSMoveReminder_Notification::NOTIFICATION_TELEPORT_CONTINUATION_ARRIVED => "teleport",
+            MSMoveReminder_Notification::NOTIFICATION_TELEPORT_ARRIVED => "teleport",
             _ => {
                 let param = self.myHolder.get_parameter();
                 if self.myHolder.get_edge() == self.myHolder.get_route().get_last_edge()
@@ -1452,18 +1451,14 @@ impl MSDevice_Tripinfo {
     //     out.writeAttr(SUMO_ATTR_ID, getID());
     //     if (myHolder.hasDeparted()) {
     //         std::ostringstream internals;
-    //         // the depart lane is empty if the device was added when loading state
-    //         internals << (myDepartLane == "" ? STATE_EMPTY_LANE : myDepartLane) << " ";
+    //         internals << myDepartLane << " ";
     //         if (!MSGlobals::gUseMesoSim) {
     //             internals << myDepartPosLat << " ";
     //         }
-    //         std::string state_arrivalLane = myArrivalLane == "" ? STATE_EMPTY_LANE : myArrivalLane;
+    //         std::string state_arrivalLane = myArrivalLane == "" ? STATE_EMPTY_ARRIVALLANE : myArrivalLane;
     //         internals << myDepartSpeed << " " << myRouteLength << " " << myWaitingTime << " " << myAmWaiting << " " << myWaitingCount << " ";
     //         internals << myStoppingTime << " " << myParkingStarted << " ";
     //         internals << myArrivalTime << " " << state_arrivalLane << " " << myArrivalPos << " " << myArrivalPosLat << " " << myArrivalSpeed;
-    //         if (MSGlobals::gUseMesoSim) {
-    //             internals << " " << myMesoTimeLoss;
-    //         }
     //         out.writeAttr(SUMO_ATTR_STATE, internals.str());
     //     }
     //     out.closeTag();
@@ -1475,13 +1470,11 @@ impl MSDevice_Tripinfo {
         out.write_attr(SUMO_ATTR_ID, self.base.base2.get_id());
         if self.myHolder.has_departed() {
             let mut internals = String::new();
-            // the depart lane is empty if the device was added when loading state
-            let departLane: &str = if self.myDepartLane.is_empty() { STATE_EMPTY_LANE } else { &self.myDepartLane };
-            internals.push_str(&format!("{} ", departLane));
+            internals.push_str(&format!("{} ", self.myDepartLane));
             if !crate::microsim::ms_globals::use_meso_sim() {
                 internals.push_str(&format!("{} ", f64_to_string_default(self.myDepartPosLat)));
             }
-            let state_arrivalLane: &str = if self.myArrivalLane.is_empty() { STATE_EMPTY_LANE } else { &self.myArrivalLane };
+            let state_arrivalLane: &str = if self.myArrivalLane.is_empty() { STATE_EMPTY_ARRIVALLANE } else { &self.myArrivalLane };
             internals.push_str(&format!(
                 "{} {} {} {} {} ",
                 f64_to_string_default(self.myDepartSpeed),
@@ -1499,9 +1492,6 @@ impl MSDevice_Tripinfo {
                 f64_to_string_default(self.myArrivalPosLat),
                 f64_to_string_default(self.myArrivalSpeed)
             ));
-            if crate::microsim::ms_globals::use_meso_sim() {
-                internals.push_str(&format!(" {}", self.myMesoTimeLoss));
-            }
             out.write_attr(SUMO_ATTR_STATE, &internals);
         }
         out.close_tag("");
@@ -1520,13 +1510,7 @@ impl MSDevice_Tripinfo {
     //         bis >> myDepartSpeed >> myRouteLength >> myWaitingTime >> myAmWaiting >> myWaitingCount;
     //         bis >> myStoppingTime >> myParkingStarted;
     //         bis >> myArrivalTime >> myArrivalLane >> myArrivalPos >> myArrivalPosLat >> myArrivalSpeed;
-    //         if (MSGlobals::gUseMesoSim) {
-    //             bis >> myMesoTimeLoss;
-    //         }
-    //         if (myDepartLane == STATE_EMPTY_LANE) {
-    //             myDepartLane = "";
-    //         }
-    //         if (myArrivalLane == STATE_EMPTY_LANE) {
+    //         if (myArrivalLane == STATE_EMPTY_ARRIVALLANE) {
     //             myArrivalLane = "";
     //         }
     //     }
@@ -1552,13 +1536,7 @@ impl MSDevice_Tripinfo {
             bis.read(&mut self.myArrivalPos);
             bis.read(&mut self.myArrivalPosLat);
             bis.read(&mut self.myArrivalSpeed);
-            if crate::microsim::ms_globals::use_meso_sim() {
-                bis.read(&mut self.myMesoTimeLoss);
-            }
-            if self.myDepartLane == STATE_EMPTY_LANE {
-                self.myDepartLane = String::new();
-            }
-            if self.myArrivalLane == STATE_EMPTY_LANE {
+            if self.myArrivalLane == STATE_EMPTY_ARRIVALLANE {
                 self.myArrivalLane = String::new();
             }
         }
@@ -1598,8 +1576,8 @@ impl MSDevice_Tripinfo {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == SUMO_ATTR_WAITINGTIME.attr_name() {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == SUMO_ATTR_WAITINGTIME.attr_name() {
             to_string(&steps2time(self.myWaitingTime))
         } else if key == SUMO_ATTR_WAITINGCOUNT.attr_name() {
             to_string(&self.myWaitingCount)
@@ -1616,8 +1594,8 @@ impl MSDevice_Tripinfo {
         } else if key == SUMO_ATTR_ARRIVALSPEED.attr_name() {
             to_string(&self.myArrivalSpeed)
         } else {
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `std::string MSDevice_Tripinfo::getGlobalParameter(const std::string &)` [static]
@@ -1852,7 +1830,7 @@ impl MSDevice_Tripinfo {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        MSDevice_Tripinfo {
+        let mut this = MSDevice_Tripinfo {
             base: MSVehicleDevice::new(holder, id),
             myDepartLane: String::new(),
             myDepartSpeed: -1.0,
@@ -1870,7 +1848,11 @@ impl MSDevice_Tripinfo {
             myArrivalReason: MSMoveReminder_Notification::NOTIFICATION_ARRIVED,
             myMesoTimeLoss: 0,
             myRouteLength: 0.0,
-        }
+        };
+        this.base.base.vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_INTERNAL_VT;
+        this
     }
 
     /// C++: `void MSDevice_Tripinfo::notifyMoveInternal(const SUMOTrafficObject &, const double, const double, const double, const double, const double, const double, const double)` [virtual, protected]
@@ -2059,4 +2041,41 @@ impl MSDevice_Tripinfo {
     }
 
 }
+
+fn ms_device_tripinfo_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_enter(veh, reason, enteredLane)
+}
+fn ms_device_tripinfo_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_device_tripinfo_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_device_tripinfo_notify_enter,
+    notify_move: ms_device_tripinfo_notify_move,
+    notify_leave: ms_device_tripinfo_notify_leave,
+};
+fn ms_device_tripinfo_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+    notify_move_internal: ms_device_tripinfo_notify_move_internal,
+};
+fn ms_device_tripinfo_notify_idle(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject) -> bool {
+    let dev = Ptr::from_mut(mr).cast::<MSDevice_Tripinfo>().get_mut().unwrap();
+    dev.notify_idle(veh)
+}
+
+static MS_DEVICE_TRIPINFO_MSMOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+    notify_idle: ms_device_tripinfo_notify_idle,
+    notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+    notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
+};
 

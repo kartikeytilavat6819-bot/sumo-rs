@@ -28,6 +28,26 @@ impl std::ops::DerefMut for MSDispatch_Greedy {
     }
 }
 
+fn greedy_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    // SAFETY: installed only by MSDispatch_Greedy::new, so d is the base of an MSDispatch_Greedy (repr(C), base first)
+    let g = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_Greedy) };
+    g.compute_dispatch(now, fleet);
+}
+
+pub(crate) const MS_DISPATCH_GREEDY_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: greedy_compute_dispatch,
+};
+
+fn greedy_closest_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    // SAFETY: installed only by MSDispatch_GreedyClosest::new, so d is the base of an MSDispatch_GreedyClosest (repr(C), base first)
+    let g = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_GreedyClosest) };
+    g.compute_dispatch(now, fleet);
+}
+
+pub(crate) const MS_DISPATCH_GREEDY_CLOSEST_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: greedy_closest_compute_dispatch,
+};
+
 impl MSDispatch_Greedy {
     /// C++: `void MSDispatch_Greedy::MSDispatch_Greedy(const Parameterised::Map &)`
     // MSDispatch_Greedy(const Parameterised::Map& params) :
@@ -38,7 +58,8 @@ impl MSDispatch_Greedy {
     //     { }
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        let base = MSDispatch::new(params);
+        let mut base = MSDispatch::new(params);
+        base.vt = &MS_DISPATCH_GREEDY_VT;
         let myMaximumWaitingTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("maxWaitingTime", "300")).unwrap() as f64);
         let myRecheckTime = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckTime", "120")).unwrap() as f64);
         let myRecheckSafety = utils::common::time::time2steps(utils::common::string_utils::to_int(&base.base.get_parameter("recheckSafety", "3600")).unwrap() as f64);
@@ -159,17 +180,9 @@ impl MSDispatch_Greedy {
         // greedy assign closest vehicle in reservation order
         let router = Ptr::from_mut(self.get_router());
         let mut reservations: Vec<Ptr<Reservation>> = self.get_reservations();
-        // determinism: C++ std::sort is unstable; Rust sort_by is stable, so ties may be ordered differently
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let sorter = MSDispatch_time_sorter::new();
-        reservations.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(reservations.as_mut_slice(), |a, b| sorter.call_op(a, b) != 0);
         let mut it: usize = 0;
         while it < reservations.len() {
             if available.len() == 0 {
@@ -277,7 +290,7 @@ impl MSDispatch_Greedy {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDispatch_Greedy) -> &mut MSDispatch_Greedy {
-        todo!("port MSDispatch_Greedy::operator=")
+        panic!("MSDispatch_Greedy cannot be assigned: the assignment operator is invalidated in C++")
     }
 
 }
@@ -309,9 +322,9 @@ impl MSDispatch_GreedyClosest {
     //     {}
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
-        MSDispatch_GreedyClosest {
-            base: MSDispatch_Greedy::new(params),
-        }
+        let mut base = MSDispatch_Greedy::new(params);
+        base.base.vt = &MS_DISPATCH_GREEDY_CLOSEST_VT;
+        MSDispatch_GreedyClosest { base }
     }
 
     /// C++: `void MSDispatch_GreedyClosest::computeDispatch(SUMOTime, const std::vector<MSDevice_Taxi *> &)` [virtual]
@@ -425,7 +438,8 @@ impl MSDispatch_GreedyClosest {
                         continue;
                     }
                     let travelTime = MSDispatch::compute_pickup_time(now, taxi, &*res, router.m());
-                    let taxiWait = res.pickupTime - (now + travelTime);
+                    // determinism: unreachable taxis give travelTime == SUMOTime_MAX; C++ wraps here and the value is unused, so wrap too
+                    let taxiWait = res.pickupTime.wrapping_sub(now.wrapping_add(travelTime));
                     if travelTime < closestTime {
                         if taxiWait < self.myMaximumWaitingTime {
                             closestTime = travelTime;

@@ -1,6 +1,16 @@
 //! Port of microsim/traffic_lights/MSSOTLMarchingPolicy.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::mssotl_policy::{MSSOTLPolicyVt, MSSOTL_POLICY_BASE_VT};
+
+fn marching_can_release(p: &mut MSSOTLPolicy, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
+    Ptr::from_mut(p).cast::<MSSOTLMarchingPolicy>().m().can_release(elapsed, thresholdPassed, pushButtonPressed, stage, vehicleCount)
+}
+
+static MS_SOTL_MARCHING_POLICY_VT: MSSOTLPolicyVt = MSSOTLPolicyVt {
+    can_release: marching_can_release,
+    ..MSSOTL_POLICY_BASE_VT
+};
 
 /// Class for low-level marching policy.
 /// C++ class `MSSOTLMarchingPolicy` (microsim/traffic_lights/MSSOTLMarchingPolicy.h)
@@ -33,7 +43,13 @@ impl MSSOTLMarchingPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new(parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLMarchingPolicy::MSSOTLMarchingPolicy")
+        let mut s = Self {
+            base: MSSOTLPolicy::new("Marching".to_string(), parameters),
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `void MSSOTLMarchingPolicy::MSSOTLMarchingPolicy(MSSOTLPolicyDesirability *)`
@@ -45,7 +61,15 @@ impl MSSOTLMarchingPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_2(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>) -> Self {
-        todo!("port MSSOTLMarchingPolicy::MSSOTLMarchingPolicy")
+        let mut base = MSSOTLPolicy::new_2("Marching".to_string(), desirabilityAlgorithm);
+        base.get_desirability_algorithm().m().set_key_prefix("MARCHING".to_string());
+        let mut s = Self {
+            base,
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `void MSSOTLMarchingPolicy::MSSOTLMarchingPolicy(MSSOTLPolicyDesirability *, const Parameterised::Map &)`
@@ -58,7 +82,15 @@ impl MSSOTLMarchingPolicy {
     // }
     #[allow(unused_variables)]
     pub fn new_3(desirabilityAlgorithm: Ptr<MSSOTLPolicyDesirability>, parameters: &ParameterisedMap) -> Self {
-        todo!("port MSSOTLMarchingPolicy::MSSOTLMarchingPolicy")
+        let mut base = MSSOTLPolicy::new_3("Marching".to_string(), desirabilityAlgorithm, parameters);
+        base.get_desirability_algorithm().m().set_key_prefix("MARCHING".to_string());
+        let mut s = Self {
+            base,
+            base2: PushButtonLogic { m_pushButtonScaleFactor: 0.0, m_prefix: String::new() },
+        };
+        s.base.vt = &MS_SOTL_MARCHING_POLICY_VT;
+        s.init();
+        s
     }
 
     /// C++: `bool MSSOTLMarchingPolicy::canRelease(SUMOTime, bool, bool, const MSPhaseDefinition *, int)` [virtual]
@@ -71,7 +103,10 @@ impl MSSOTLMarchingPolicy {
     // }
     #[allow(unused_variables)]
     pub fn can_release(&mut self, elapsed: SUMOTime, thresholdPassed: bool, pushButtonPressed: bool, stage: Ptr<MSPhaseDefinition>, vehicleCount: i32) -> bool {
-        todo!("port MSSOTLMarchingPolicy::canRelease")
+        if elapsed >= stage.minDuration && self.base2.push_button_logic(elapsed, pushButtonPressed, stage) {
+            return true;
+        }
+        elapsed >= stage.duration
     }
 
     /// C++: `void MSSOTLMarchingPolicy::init()` [virtual, protected]
@@ -80,7 +115,7 @@ impl MSSOTLMarchingPolicy {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        todo!("port MSSOTLMarchingPolicy::init")
+        self.base2.init("MSSOTLMarchingPolicy".to_string(), Ptr::from_mut(&mut self.base.base));
     }
 
 }

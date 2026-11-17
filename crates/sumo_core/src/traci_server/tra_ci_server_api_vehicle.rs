@@ -1,6 +1,8 @@
 //! Port of traci-server/TraCIServerAPI_Vehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::time::{delta_t, steps2time, SUMOTIME_MAX};
+use utils::common::to_string::to_string;
 
 /// APIs for getting/setting vehicle values via TraCI
 /// C++ class `TraCIServerAPI_Vehicle` (traci-server/TraCIServerAPI_Vehicle.h)
@@ -595,7 +597,581 @@ impl TraCIServerAPI_Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        todo!("port TraCIServerAPI_Vehicle::processSet")
+        // shortcut: C++ try/catch turns ProcessError and TraCIException raised by StoHelp/libsumo into an error status; here they panic, upgrade when StoHelp and libsumo return Result
+        let warning = String::new();
+        let variable = inputStorage.read_unsigned_byte().unwrap();
+        let supported = variable == CMD_STOP
+            || variable == CMD_CHANGELANE
+            || variable == CMD_REROUTE_TO_PARKING
+            || variable == CMD_CHANGESUBLANE
+            || variable == CMD_OPENGAP
+            || variable == CMD_REPLACE_STOP
+            || variable == CMD_INSERT_STOP
+            || variable == VAR_STOP_PARAMETER
+            || variable == CMD_SLOWDOWN
+            || variable == CMD_CHANGETARGET
+            || variable == CMD_RESUME
+            || variable == VAR_TYPE
+            || variable == VAR_ROUTE_ID
+            || variable == VAR_ROUTE
+            || variable == VAR_LANEPOSITION_LAT
+            || variable == VAR_UPDATE_BESTLANES
+            || variable == VAR_EDGE_TRAVELTIME
+            || variable == VAR_EDGE_EFFORT
+            || variable == CMD_REROUTE_TRAVELTIME
+            || variable == CMD_REROUTE_EFFORT
+            || variable == VAR_SIGNALS
+            || variable == VAR_MOVE_TO
+            || variable == VAR_LENGTH
+            || variable == VAR_MAXSPEED
+            || variable == VAR_VEHICLECLASS
+            || variable == VAR_SPEED_FACTOR
+            || variable == VAR_EMISSIONCLASS
+            || variable == VAR_WIDTH
+            || variable == VAR_MINGAP
+            || variable == VAR_SHAPECLASS
+            || variable == VAR_ACCEL
+            || variable == VAR_DECEL
+            || variable == VAR_IMPERFECTION
+            || variable == VAR_APPARENT_DECEL
+            || variable == VAR_EMERGENCY_DECEL
+            || variable == VAR_ACTIONSTEPLENGTH
+            || variable == VAR_TAU
+            || variable == VAR_LANECHANGE_MODE
+            || variable == VAR_SPEED
+            || variable == VAR_ACCELERATION
+            || variable == VAR_PREV_SPEED
+            || variable == VAR_SPEEDSETMODE
+            || variable == VAR_COLOR
+            || variable == ADD
+            || variable == ADD_FULL
+            || variable == REMOVE
+            || variable == VAR_HEIGHT
+            || variable == VAR_MASS
+            || variable == VAR_ROUTING_MODE
+            || variable == VAR_LATALIGNMENT
+            || variable == VAR_MAXSPEED_LAT
+            || variable == VAR_MINGAP_LAT
+            || variable == VAR_LINE
+            || variable == VAR_VIA
+            || variable == VAR_IMPATIENCE
+            || variable == VAR_BOARDING_DURATION
+            || variable == VAR_HIGHLIGHT
+            || variable == CMD_TAXI_DISPATCH
+            || variable == MOVE_TO_XY
+            || variable == VAR_PARAMETER;
+        if !supported {
+            return server.write_error_status_cmd(
+                CMD_SET_VEHICLE_VARIABLE,
+                &format!("Change Vehicle State: unsupported variable {} specified", to_hex(variable as u64, 2, 0)),
+                outputStorage,
+            );
+        }
+        let id = inputStorage.read_string().unwrap();
+        let shouldExist = variable != ADD && variable != ADD_FULL;
+        let sumoVehicle = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id);
+        if sumoVehicle.is_null() {
+            if shouldExist {
+                return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, &format!("Vehicle '{}' is not known", id), outputStorage);
+            }
+        }
+        // shortcut: dynamic_cast<MSBaseVehicle*> is not checked at runtime, the vehicle control only holds base vehicles here
+        let v: Ptr<MSBaseVehicle> = sumoVehicle.cast::<MSBaseVehicle>();
+        if v.is_null() && shouldExist {
+            return server.write_error_status_cmd(CMD_GET_VEHICLE_VARIABLE, &format!("Vehicle '{}' is not a proper vehicle", id), outputStorage);
+        }
+        match variable {
+            CMD_STOP => {
+                let compoundSize = StoHelp::read_compound(inputStorage, -1, "Stop needs a compound object description.");
+                if compoundSize < 4 || compoundSize > 7 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Stop needs a compound object description of four to seven items.", outputStorage);
+                }
+                let edgeID = StoHelp::read_typed_string(inputStorage, "The first stop parameter must be the edge id given as a string.");
+                let pos = StoHelp::read_typed_double(inputStorage, "The second stop parameter must be the end position along the edge given as a double.");
+                let laneIndex = StoHelp::read_typed_byte(inputStorage, "The third stop parameter must be the lane index given as a byte.");
+                let duration = StoHelp::read_typed_double(inputStorage, "The fourth stop parameter must be the stopping duration given as a double.");
+                let mut stopFlags: i32 = 0;
+                if compoundSize >= 5 {
+                    stopFlags = StoHelp::read_typed_byte(inputStorage, "The fifth stop parameter must be a byte indicating its parking/triggered status.");
+                }
+                let mut startPos: f64 = INVALID_DOUBLE_VALUE;
+                if compoundSize >= 6 {
+                    startPos = StoHelp::read_typed_double(inputStorage, "The sixth stop parameter must be the start position along the edge given as a double.");
+                }
+                let mut until: f64 = INVALID_DOUBLE_VALUE;
+                if compoundSize >= 7 {
+                    until = StoHelp::read_typed_double(inputStorage, "The seventh stop parameter must be the minimum departure time given as a double.");
+                }
+                Vehicle::set_stop(&id, &edgeID, pos, laneIndex, duration, stopFlags, startPos, until);
+            }
+            CMD_REPLACE_STOP => {
+                if !Self::insert_replace_stop(server, inputStorage, outputStorage, &id, true) {
+                    return false;
+                }
+            }
+            CMD_INSERT_STOP => {
+                if !Self::insert_replace_stop(server, inputStorage, outputStorage, &id, false) {
+                    return false;
+                }
+            }
+            VAR_STOP_PARAMETER => {
+                let compoundSize = StoHelp::read_compound(inputStorage, -1, "Setting stop parameter needs a compound object description.");
+                if compoundSize != 3 && compoundSize != 4 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting a stop parameter needs a compound object description of 3 or 4 items.", outputStorage);
+                }
+                let nextStopIndex = StoHelp::read_typed_int(inputStorage, "The first setStopParameter parameter must be the nextStopIndex given as an integer.");
+                let param = StoHelp::read_typed_string(inputStorage, "The second setStopParameter parameter must be the param given as a string.");
+                let value = StoHelp::read_typed_string(inputStorage, "The third setStopParameter parameter must be the value given as a string.");
+                let mut customParam: i32 = 0;
+                if compoundSize == 4 {
+                    customParam = StoHelp::read_typed_byte(inputStorage, "The fourth setStopParameter parameter must be the customParam flag given as a byte.");
+                }
+                Vehicle::set_stop_parameter(&id, nextStopIndex, &param, &value, customParam != 0);
+            }
+            CMD_REROUTE_TO_PARKING => {
+                StoHelp::read_compound(inputStorage, 1, "Reroute to stop needs a compound object description of 1 item.");
+                Vehicle::reroute_parking_area(&id, &StoHelp::read_typed_string(inputStorage, "The first reroute to stop parameter must be the parking area id given as a string."));
+            }
+            CMD_RESUME => {
+                StoHelp::read_compound(inputStorage, 0, "Resuming requires an empty compound object.");
+                Vehicle::resume(&id);
+            }
+            CMD_CHANGELANE => {
+                let compoundSize = StoHelp::read_compound(inputStorage, -1, "Lane change needs a compound object description.");
+                if compoundSize != 3 && compoundSize != 2 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Lane change needs a compound object description of two or three items.", outputStorage);
+                }
+                let laneIndex = StoHelp::read_typed_byte(inputStorage, "The first lane change parameter must be the lane index given as a byte.");
+                let duration = StoHelp::read_typed_double(inputStorage, "The second lane change parameter must be the duration given as a double.");
+                let mut relative: i32 = 0;
+                if compoundSize == 3 {
+                    relative = StoHelp::read_typed_byte(inputStorage, "The third lane change parameter must be a Byte for defining whether a relative lane change should be applied.");
+                }
+
+                if (laneIndex < 0 || laneIndex >= v.get_edge().get_lanes().len() as i32) && relative < 1 {
+                    return server.write_error_status_cmd(
+                        CMD_SET_VEHICLE_VARIABLE,
+                        &format!("No lane with index '{}' on road '{}'.", laneIndex, v.get_edge().get_id()),
+                        outputStorage,
+                    );
+                }
+
+                if relative < 1 {
+                    Vehicle::change_lane(&id, laneIndex, duration);
+                } else {
+                    Vehicle::change_lane_relative(&id, laneIndex, duration);
+                }
+            }
+            CMD_CHANGESUBLANE => {
+                Vehicle::change_sublane(&id, StoHelp::read_typed_double(inputStorage, "Sublane-changing requires a double."));
+            }
+            CMD_SLOWDOWN => {
+                StoHelp::read_compound(inputStorage, 2, "Slow down needs a compound object description of two items.");
+                let newSpeed = StoHelp::read_typed_double(inputStorage, "The first slow down parameter must be the speed given as a double.");
+                if newSpeed < 0.0 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Speed must not be negative", outputStorage);
+                }
+                let duration = StoHelp::read_typed_double(inputStorage, "The second slow down parameter must be the duration given as a double.");
+                if duration < 0.0 || steps2time(MSNet::get_instance().get_current_time_step()) + duration > steps2time(SUMOTIME_MAX - delta_t()) {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid time interval", outputStorage);
+                }
+                Vehicle::slow_down(&id, newSpeed, duration);
+            }
+            CMD_CHANGETARGET => {
+                Vehicle::change_target(&id, &StoHelp::read_typed_string(inputStorage, "Change target requires a string containing the id of the new destination edge as parameter."));
+            }
+            CMD_OPENGAP => {
+                let compoundSize = StoHelp::read_compound(inputStorage, -1, "Create gap needs a compound object description.");
+                if compoundSize != 5 && compoundSize != 6 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Create gap needs a compound object description of five or six items.", outputStorage);
+                }
+                let newTimeHeadway = StoHelp::read_typed_double(inputStorage, "The first create gap parameter must be the new desired time headway (tau) given as a double.");
+                let newSpaceHeadway = StoHelp::read_typed_double(inputStorage, "The second create gap parameter must be the new desired space headway given as a double.");
+                let duration = StoHelp::read_typed_double(inputStorage, "The third create gap parameter must be the duration given as a double.");
+                let changeRate = StoHelp::read_typed_double(inputStorage, "The fourth create gap parameter must be the change rate given as a double.");
+                let maxDecel = StoHelp::read_typed_double(inputStorage, "The fifth create gap parameter must be the maximal braking rate given as a double.");
+
+                if newTimeHeadway == -1.0 && newSpaceHeadway == -1.0 && duration == -1.0 && changeRate == -1.0 && maxDecel == -1.0 {
+                    Vehicle::deactivate_gap_control(&id);
+                } else {
+                    if newTimeHeadway <= 0.0 {
+                        if newTimeHeadway != -1.0 {
+                            return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "The value for the new desired time headway (tau) must be positive for create gap", outputStorage);
+                        }
+                    }
+                    if newSpaceHeadway < 0.0 {
+                        return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "The value for the new desired space headway must be non-negative for create gap", outputStorage);
+                    }
+                    if (duration < 0.0 && duration != -1.0) || steps2time(MSNet::get_instance().get_current_time_step()) + duration > steps2time(SUMOTIME_MAX - delta_t()) {
+                        return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid time interval for create gap", outputStorage);
+                    }
+                    if changeRate <= 0.0 {
+                        return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "The value for the change rate must be positive for the openGap command", outputStorage);
+                    }
+                    if maxDecel <= 0.0 && maxDecel != -1.0 && maxDecel != INVALID_DOUBLE_VALUE {
+                        return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "The value for the maximal braking rate must be positive for the openGap command", outputStorage);
+                    }
+                    let mut refVehID = String::new();
+                    if compoundSize == 6 {
+                        refVehID = StoHelp::read_typed_string(inputStorage, "The sixth create gap parameter must be a reference vehicle's ID given as a string.");
+                    }
+                    Vehicle::open_gap(&id, newTimeHeadway, newSpaceHeadway, duration, changeRate, maxDecel, &refVehID);
+                }
+            }
+            VAR_TYPE => {
+                Vehicle::set_type(&id, &StoHelp::read_typed_string(inputStorage, "The vehicle type id must be given as a string."));
+            }
+            VAR_ROUTE_ID => {
+                Vehicle::set_route_id(&id, &StoHelp::read_typed_string(inputStorage, "The route id must be given as a string."));
+            }
+            VAR_ROUTE => {
+                Vehicle::set_route_2(&id, &StoHelp::read_typed_string_list(inputStorage, "A route must be defined as a list of edge ids."));
+            }
+            VAR_EDGE_TRAVELTIME => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "Setting travel time requires a compound object.");
+                let mut edgeID = String::new();
+                let mut begTime: f64 = 0.0;
+                let mut endTime: f64 = f64::MAX;
+                let mut value: f64 = INVALID_DOUBLE_VALUE;
+                if parameterCount == 4 {
+                    begTime = StoHelp::read_typed_double(inputStorage, "Setting travel time using 4 parameters requires the begin time as first parameter.");
+                    endTime = StoHelp::read_typed_double(inputStorage, "Setting travel time using 4 parameters requires the end time as second parameter.");
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting travel time using 4 parameters requires the referenced edge as third parameter.");
+                    value = StoHelp::read_typed_double(inputStorage, "Setting travel time using 4 parameters requires the travel time as double as fourth parameter.");
+                } else if parameterCount == 2 {
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting travel time using 2 parameters requires the referenced edge as first parameter.");
+                    value = StoHelp::read_typed_double(inputStorage, "Setting travel time using 2 parameters requires the travel time as double as second parameter.");
+                } else if parameterCount == 1 {
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting travel time using 1 parameter requires the referenced edge as first parameter.");
+                } else {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting travel time requires 1, 2, or 4 parameters.", outputStorage);
+                }
+                Vehicle::set_adapted_traveltime(&id, &edgeID, value, begTime, endTime);
+            }
+            VAR_EDGE_EFFORT => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "Setting travel time requires a compound object.");
+                let mut edgeID = String::new();
+                let mut begTime: f64 = 0.0;
+                let mut endTime: f64 = f64::MAX;
+                let mut value: f64 = INVALID_DOUBLE_VALUE;
+                if parameterCount == 4 {
+                    begTime = StoHelp::read_typed_double(inputStorage, "Setting effort using 4 parameters requires the begin time as first parameter.");
+                    endTime = StoHelp::read_typed_double(inputStorage, "Setting effort using 4 parameters requires the end time as second parameter.");
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting effort using 4 parameters requires the referenced edge as third parameter.");
+                    value = StoHelp::read_typed_double(inputStorage, "Setting effort using 4 parameters requires the effort as double as fourth parameter.");
+                } else if parameterCount == 2 {
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting effort using 2 parameters requires the referenced edge as first parameter.");
+                    value = StoHelp::read_typed_double(inputStorage, "Setting effort using 2 parameters requires the effort as double as second parameter.");
+                } else if parameterCount == 1 {
+                    edgeID = StoHelp::read_typed_string(inputStorage, "Setting effort using 1 parameter requires the referenced edge as first parameter.");
+                } else {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting effort requires 1, 2, or 4 parameters.", outputStorage);
+                }
+                Vehicle::set_effort(&id, &edgeID, value, begTime, endTime);
+            }
+            CMD_REROUTE_TRAVELTIME => {
+                StoHelp::read_compound(inputStorage, 0, "Rerouting by travel time requires an empty compound object.");
+                Vehicle::reroute_traveltime(&id, false);
+            }
+            CMD_REROUTE_EFFORT => {
+                StoHelp::read_compound(inputStorage, 0, "Rerouting by effort requires an empty compound object.");
+                Vehicle::reroute_effort(&id);
+            }
+            VAR_SIGNALS => {
+                Vehicle::set_signals(&id, StoHelp::read_typed_int(inputStorage, "Setting signals requires an integer."));
+            }
+            VAR_MOVE_TO => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "Setting position requires a compound object.");
+                if parameterCount < 2 || parameterCount > 3 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting position should obtain the lane id and the position and optionally the reason.", outputStorage);
+                }
+                let laneID = StoHelp::read_typed_string(inputStorage, "The first parameter for setting a position must be the lane ID given as a string.");
+                let position = StoHelp::read_typed_double(inputStorage, "The second parameter for setting a position must be the position given as a double.");
+                let mut reason: i32 = MOVE_AUTOMATIC;
+                if parameterCount == 3 {
+                    reason = StoHelp::read_typed_int(inputStorage, "The third parameter for setting a position must be the reason given as an int.");
+                }
+                Vehicle::move_to(&id, &laneID, position, reason);
+            }
+            VAR_IMPATIENCE => {
+                Vehicle::set_impatience(&id, StoHelp::read_typed_double(inputStorage, "Setting impatience requires a double."));
+            }
+            VAR_SPEED => {
+                Vehicle::set_speed(&id, StoHelp::read_typed_double(inputStorage, "Setting speed requires a double."));
+            }
+            VAR_ACCELERATION => {
+                StoHelp::read_compound(inputStorage, 2, "Setting acceleration requires 2 parameters.");
+                let accel = StoHelp::read_typed_double(inputStorage, "Setting acceleration requires the acceleration as first parameter given as a double.");
+                let duration = StoHelp::read_typed_double(inputStorage, "Setting acceleration requires the duration as second parameter given as a double.");
+                if duration < 0.0 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Duration must not be negative.", outputStorage);
+                }
+                Vehicle::set_acceleration(&id, accel, duration);
+            }
+            VAR_PREV_SPEED => {
+                let mut prevSpeed: f64 = 0.0;
+                let mut prevAcceleration: f64 = INVALID_DOUBLE_VALUE;
+                let inputtype = inputStorage.read_unsigned_byte().unwrap();
+                if inputtype == TYPE_COMPOUND {
+                    let parameterCount = inputStorage.read_int().unwrap();
+                    if parameterCount == 2 {
+                        prevSpeed = StoHelp::read_typed_double(inputStorage, "Setting previous speed using 2 parameters requires the previous speed as first parameter given as a double.");
+                        prevAcceleration = StoHelp::read_typed_double(inputStorage, "Setting previous speed using 2 parameters requires the previous acceleration as second parameter given as a double.");
+                    } else if parameterCount == 1 {
+                        prevSpeed = StoHelp::read_typed_double(inputStorage, "Setting previous speed using 1 parameter requires the previous speed as first parameter given as a double.");
+                    } else {
+                        return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting previous speed requires 1 or 2 parameters.", outputStorage);
+                    }
+                } else if inputtype == TYPE_DOUBLE {
+                    prevSpeed = inputStorage.read_double().unwrap();
+                } else {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Setting previous speed requires 1 parameter given as a double or 2 parameters as compound object description.", outputStorage);
+                }
+                if prevSpeed < 0.0 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Previous speed must not be negative.", outputStorage);
+                }
+                Vehicle::set_previous_speed(&id, prevSpeed, prevAcceleration);
+            }
+            VAR_SPEEDSETMODE => {
+                Vehicle::set_speed_mode(&id, StoHelp::read_typed_int(inputStorage, "Setting speed mode requires an integer."));
+            }
+            VAR_LANECHANGE_MODE => {
+                Vehicle::set_lane_change_mode(&id, StoHelp::read_typed_int(inputStorage, "Setting lane change mode requires an integer."));
+            }
+            VAR_ROUTING_MODE => {
+                Vehicle::set_routing_mode(&id, StoHelp::read_typed_int(inputStorage, "Setting routing mode requires an integer."));
+            }
+            VAR_COLOR => {
+                Vehicle::set_color(&id, &StoHelp::read_typed_color(inputStorage, "The color must be given using the according type."));
+            }
+            ADD => {
+                StoHelp::read_compound(inputStorage, 6, "Adding a vehicle needs six parameters.");
+                let vTypeID = StoHelp::read_typed_string(inputStorage, "First parameter (type) requires a string.");
+                let routeID = StoHelp::read_typed_string(inputStorage, "Second parameter (route) requires a string.");
+                let departCode = StoHelp::read_typed_int(inputStorage, "Third parameter (depart) requires an integer.");
+                let mut depart = to_string(&steps2time(departCode as i64));
+                if -departCode == DepartDefinition::TRIGGERED as i32 {
+                    depart = "triggered".to_string();
+                } else if -departCode == DepartDefinition::CONTAINER_TRIGGERED as i32 {
+                    depart = "containerTriggered".to_string();
+                } else if -departCode == DepartDefinition::NOW as i32 {
+                    depart = "now".to_string();
+                } else if -departCode == DepartDefinition::SPLIT as i32 {
+                    depart = "split".to_string();
+                } else if -departCode == DepartDefinition::BEGIN as i32 {
+                    depart = "begin".to_string();
+                }
+
+                let departPosCode = StoHelp::read_typed_double(inputStorage, "Fourth parameter (position) requires a double.");
+                let mut departPos = to_string(&departPosCode);
+                if -departPosCode == DepartPosDefinition::RANDOM as i64 as f64 {
+                    departPos = "random".to_string();
+                } else if -departPosCode == DepartPosDefinition::RANDOM_FREE as i64 as f64 {
+                    departPos = "random_free".to_string();
+                } else if -departPosCode == DepartPosDefinition::FREE as i64 as f64 {
+                    departPos = "free".to_string();
+                } else if -departPosCode == DepartPosDefinition::BASE as i64 as f64 {
+                    departPos = "base".to_string();
+                } else if -departPosCode == DepartPosDefinition::LAST as i64 as f64 {
+                    departPos = "last".to_string();
+                } else if -departPosCode == DepartPosDefinition::GIVEN as i64 as f64 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid departure position.", outputStorage);
+                }
+
+                let departSpeedCode = StoHelp::read_typed_double(inputStorage, "Fifth parameter (speed) requires a double.");
+                let mut departSpeed = to_string(&departSpeedCode);
+                if -departSpeedCode == DepartSpeedDefinition::RANDOM as i64 as f64 {
+                    departSpeed = "random".to_string();
+                } else if -departSpeedCode == DepartSpeedDefinition::MAX as i64 as f64 {
+                    departSpeed = "max".to_string();
+                } else if -departSpeedCode == DepartSpeedDefinition::DESIRED as i64 as f64 {
+                    departSpeed = "desired".to_string();
+                } else if -departSpeedCode == DepartSpeedDefinition::LIMIT as i64 as f64 {
+                    departSpeed = "speedLimit".to_string();
+                } else if -departSpeedCode == DepartSpeedDefinition::LAST as i64 as f64 {
+                    departSpeed = "last".to_string();
+                } else if -departSpeedCode == DepartSpeedDefinition::AVG as i64 as f64 {
+                    departSpeed = "avg".to_string();
+                }
+
+                let departLaneCode = StoHelp::read_typed_byte(inputStorage, "Sixth parameter (lane) requires a byte.");
+                let mut departLane = departLaneCode.to_string();
+                if -departLaneCode == DepartLaneDefinition::RANDOM as i32 {
+                    departLane = "random".to_string();
+                } else if -departLaneCode == DepartLaneDefinition::FREE as i32 {
+                    departLane = "free".to_string();
+                } else if -departLaneCode == DepartLaneDefinition::ALLOWED_FREE as i32 {
+                    departLane = "allowed".to_string();
+                } else if -departLaneCode == DepartLaneDefinition::BEST_FREE as i32 {
+                    departLane = "best".to_string();
+                } else if -departLaneCode == DepartLaneDefinition::FIRST_ALLOWED as i32 {
+                    departLane = "first".to_string();
+                }
+                Vehicle::add(&id, &routeID, &vTypeID, &depart, &departLane, &departPos, &departSpeed, "current", "max", "current", "", "", "", 4, 0, "", "", -1.0, "");
+            }
+            ADD_FULL => {
+                let numElements = StoHelp::read_compound(inputStorage, -1, "Adding a fully specified vehicle needs fourteen to eighteen parameters.");
+                if numElements < 14 || numElements > 18 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Adding a fully specified vehicle needs fourteen to eighteen parameters.", outputStorage);
+                }
+                let routeID = StoHelp::read_typed_string(inputStorage, "First parameter (route) requires a string.");
+                let vTypeID = StoHelp::read_typed_string(inputStorage, "Second parameter (type) requires a string.");
+                let depart = StoHelp::read_typed_string(inputStorage, "Third parameter (depart) requires an string.");
+                let departLane = StoHelp::read_typed_string(inputStorage, "Fourth parameter (depart lane) requires a string.");
+                let departPos = StoHelp::read_typed_string(inputStorage, "Fifth parameter (depart position) requires a string.");
+                let departSpeed = StoHelp::read_typed_string(inputStorage, "Sixth parameter (depart speed) requires a string.");
+                let arrivalLane = StoHelp::read_typed_string(inputStorage, "Seventh parameter (arrival lane) requires a string.");
+                let arrivalPos = StoHelp::read_typed_string(inputStorage, "Eighth parameter (arrival position) requires a string.");
+                let arrivalSpeed = StoHelp::read_typed_string(inputStorage, "Ninth parameter (arrival speed) requires a string.");
+                let fromTaz = StoHelp::read_typed_string(inputStorage, "Tenth parameter (from taz) requires a string.");
+                let toTaz = StoHelp::read_typed_string(inputStorage, "Eleventh parameter (to taz) requires a string.");
+                let line = StoHelp::read_typed_string(inputStorage, "Twelth parameter (line) requires a string.");
+                let personCapacity = StoHelp::read_typed_int(inputStorage, "13th parameter (person capacity) requires an int.");
+                let personNumber = StoHelp::read_typed_int(inputStorage, "14th parameter (person number) requires an int.");
+                let mut departPosLat = String::new();
+                let mut arrivalPosLat = String::new();
+                let mut speedFactor: f64 = -1.0;
+                let mut insertionChecks = String::new();
+                if numElements >= 15 {
+                    departPosLat = StoHelp::read_typed_string(inputStorage, "15th parameter (depart position lat) requires a string.");
+                }
+                if numElements >= 16 {
+                    arrivalPosLat = StoHelp::read_typed_string(inputStorage, "16th parameter (arrival position lat) requires a string.");
+                }
+                if numElements >= 17 {
+                    speedFactor = StoHelp::read_typed_double(inputStorage, "17th parameter (speed factor) requires a double.");
+                }
+                if numElements >= 18 {
+                    insertionChecks = StoHelp::read_typed_string(inputStorage, "18th parameter (insertion checks) requires a string.");
+                }
+                Vehicle::add(
+                    &id,
+                    &routeID,
+                    &vTypeID,
+                    &depart,
+                    &departLane,
+                    &departPos,
+                    &departSpeed,
+                    &arrivalLane,
+                    &arrivalPos,
+                    &arrivalSpeed,
+                    &fromTaz,
+                    &toTaz,
+                    &line,
+                    personCapacity,
+                    personNumber,
+                    &departPosLat,
+                    &arrivalPosLat,
+                    speedFactor,
+                    &insertionChecks,
+                );
+            }
+            REMOVE => {
+                Vehicle::remove(&id, StoHelp::read_typed_byte(inputStorage, "Removing a vehicle requires a byte.") as i8 as i32);
+            }
+            MOVE_TO_XY => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "MoveToXY vehicle requires a compound object.");
+                if parameterCount < 5 || parameterCount > 7 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "MoveToXY vehicle should obtain: edgeID, lane, x, y, angle and optionally keepRouteFlag and matchThreshold.", outputStorage);
+                }
+                let edgeID = StoHelp::read_typed_string(inputStorage, "The first parameter for moveToXY must be the edge ID given as a string.");
+                let laneIndex = StoHelp::read_typed_int(inputStorage, "The second parameter for moveToXY must be lane given as an int.");
+                let x = StoHelp::read_typed_double(inputStorage, "The third parameter for moveToXY must be the x-position given as a double.");
+                let y = StoHelp::read_typed_double(inputStorage, "The fourth parameter for moveToXY must be the y-position given as a double.");
+                let angle = StoHelp::read_typed_double(inputStorage, "The fifth parameter for moveToXY must be the angle given as a double.");
+                let mut keepRouteFlag: i32 = 1;
+                if parameterCount >= 6 {
+                    keepRouteFlag = StoHelp::read_typed_byte(inputStorage, "The sixth parameter for moveToXY must be the keepRouteFlag given as a byte.");
+                }
+                let mut matchThreshold: f64 = 100.0;
+                if parameterCount == 7 {
+                    matchThreshold = StoHelp::read_typed_double(inputStorage, "The seventh parameter for moveToXY must be the matchThreshold given as a double.");
+                }
+                Vehicle::move_to_xy(&id, &edgeID, laneIndex, x, y, angle, keepRouteFlag, matchThreshold);
+            }
+            VAR_SPEED_FACTOR => {
+                Vehicle::set_speed_factor(&id, StoHelp::read_typed_double(inputStorage, "Setting speed factor requires a double."));
+            }
+            VAR_LINE => {
+                Vehicle::set_line(&id, &StoHelp::read_typed_string(inputStorage, "The line must be given as a string."));
+            }
+            VAR_VIA => {
+                Vehicle::set_via(&id, &StoHelp::read_typed_string_list(inputStorage, "Vias must be defined as a list of edge ids."));
+            }
+            VAR_PARAMETER => {
+                StoHelp::read_compound(inputStorage, 2, "A compound object of size 2 is needed for setting a parameter.");
+                let name = StoHelp::read_typed_string(inputStorage, "The name of the parameter must be given as a string.");
+                let value = StoHelp::read_typed_string(inputStorage, "The value of the parameter must be given as a string.");
+                Vehicle::set_parameter(&id, &name, &value);
+            }
+            VAR_HIGHLIGHT => {
+                let parameterCount = StoHelp::read_compound(inputStorage, -1, "A compound object is needed for highlighting an object.");
+                if parameterCount > 5 {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Highlighting an object needs zero to five parameters.", outputStorage);
+                }
+
+                let mut col = TraCIColor::new_2(255, 0, 0, 255);
+                if parameterCount > 0 {
+                    col = StoHelp::read_typed_color(inputStorage, "The first parameter for highlighting must be the highlight color.");
+                }
+                let mut size: f64 = -1.0;
+                if parameterCount > 1 {
+                    size = StoHelp::read_typed_double(inputStorage, "The second parameter for highlighting must be the highlight size.");
+                }
+                let mut alphaMax: i32 = -1;
+                if parameterCount > 2 {
+                    alphaMax = StoHelp::read_typed_unsigned_byte(inputStorage, "The third parameter for highlighting must be maximal alpha.");
+                }
+                let mut duration: f64 = -1.0;
+                if parameterCount > 3 {
+                    duration = StoHelp::read_typed_double(inputStorage, "The fourth parameter for highlighting must be the highlight duration.");
+                }
+                let mut type_: i32 = 0;
+                if parameterCount > 4 {
+                    type_ = StoHelp::read_typed_unsigned_byte(inputStorage, "The fifth parameter for highlighting must be the highlight type id as ubyte.");
+                }
+                Vehicle::highlight(&id, &col, size, alphaMax, duration, type_);
+            }
+            CMD_TAXI_DISPATCH => {
+                Vehicle::dispatch_taxi(&id, &StoHelp::read_typed_string_list(inputStorage, "A dispatch command  must be defined as a list of reservation ids."));
+            }
+            VAR_ACTIONSTEPLENGTH => {
+                let value = StoHelp::read_typed_double(inputStorage, "Setting action step length requires a double.");
+                if value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid action step length.", outputStorage);
+                }
+                let resetActionOffset = value >= 0.0;
+                Vehicle::set_action_step_length(&id, value.abs(), resetActionOffset);
+            }
+            VAR_LANEPOSITION_LAT => {
+                Vehicle::set_lateral_lane_position(&id, StoHelp::read_typed_double(inputStorage, "Setting lateral lane position requires a double."));
+            }
+            VAR_UPDATE_BESTLANES => {
+                Vehicle::update_best_lanes(&id);
+            }
+            VAR_MINGAP => {
+                let value = StoHelp::read_typed_double(inputStorage, "Setting minimum gap requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid minimum gap.", outputStorage);
+                }
+                Vehicle::set_min_gap(&id, value);
+            }
+            VAR_MINGAP_LAT => {
+                let value = StoHelp::read_typed_double(inputStorage, "Setting minimum lateral gap requires a double.");
+                if value < 0.0 || value.abs() == f64::INFINITY {
+                    return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, "Invalid minimum lateral gap.", outputStorage);
+                }
+                Vehicle::set_min_gap_lat(&id, value);
+            }
+            _ => {
+                // shortcut: C++ catches ProcessError and TraCIException from the vehicle type setter and answers with an error status; here they panic, upgrade with the TraCI server Result rework
+                if !TraCIServerAPI_VehicleType::set_variable(CMD_SET_VEHICLE_VARIABLE, variable, v.m().get_singular_type().get_id(), server, inputStorage, outputStorage) {
+                    return false;
+                }
+            }
+        }
+        server.write_status_cmd(CMD_SET_VEHICLE_VARIABLE, RTYPE_OK, &warning, outputStorage);
+        true
     }
 
     /// C++: `bool TraCIServerAPI_Vehicle::insertReplaceStop(TraCIServer &, tcpip::Storage &, tcpip::Storage &, const std::string &, bool)` [static, private]
@@ -629,7 +1205,31 @@ impl TraCIServerAPI_Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn insert_replace_stop(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage, id: &str, replace: bool) -> bool {
-        todo!("port TraCIServerAPI_Vehicle::insertReplaceStop")
+        let m1 = if replace { "Replacing" } else { "Inserting" };
+        let m2 = if replace { "replacement" } else { "insertion" };
+        let parameterCount = StoHelp::read_compound(inputStorage, -1, &format!("{} stop needs a compound object description.", m1));
+        if parameterCount != 8 && parameterCount != 9 {
+            return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, &format!("{} stop needs a compound object description of eight or nine items.", m1), outputStorage);
+        }
+        // read road map position
+        let edgeID = StoHelp::read_typed_string(inputStorage, &format!("The first stop {} parameter must be the edge id given as a string.", m2));
+        let pos = StoHelp::read_typed_double(inputStorage, &format!("The second stop {} parameter must be the end position along the edge given as a double.", m2));
+        let laneIndex = StoHelp::read_typed_byte(inputStorage, &format!("The third stop {} parameter must be the lane index given as a byte.", m2));
+        let duration = StoHelp::read_typed_double(inputStorage, &format!("The fourth stop {} parameter must be the stopping duration given as a double.", m2));
+        let stopFlags = StoHelp::read_typed_int(inputStorage, &format!("The fifth stop {} parameter must be an int indicating its parking/triggered status.", m2));
+        let startPos = StoHelp::read_typed_double(inputStorage, &format!("The sixth stop {} parameter must be the start position along the edge given as a double.", m2));
+        let until = StoHelp::read_typed_double(inputStorage, &format!("The seventh stop {} parameter must be the minimum departure time given as a double.", m2));
+        let nextStopIndex = StoHelp::read_typed_int(inputStorage, &format!("The eighth stop {} parameter must be the replacement index given as an int.", m2));
+        let mut teleport: i32 = 0;
+        if parameterCount == 9 {
+            teleport = StoHelp::read_typed_byte(inputStorage, &format!("The ninth stop {} parameter must be the teleport flag given as a byte.", m2));
+        }
+        if replace {
+            Vehicle::replace_stop(id, nextStopIndex, &edgeID, pos, laneIndex, duration, stopFlags, startPos, until, teleport);
+        } else {
+            Vehicle::insert_stop(id, nextStopIndex, &edgeID, pos, laneIndex, duration, stopFlags, startPos, until, teleport);
+        }
+        true
     }
 
     /// C++: `void TraCIServerAPI_Vehicle::TraCIServerAPI_Vehicle(const TraCIServerAPI_Vehicle &)` [private]

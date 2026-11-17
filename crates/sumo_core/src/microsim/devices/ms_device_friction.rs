@@ -133,18 +133,17 @@ impl MSDevice_Friction {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "frictionCoefficient" {
-            return utils::common::to_string::to_string(&self.myMeasuredFrictionCoefficient);
+            return Ok(utils::common::to_string::to_string(&self.myMeasuredFrictionCoefficient));
         } else if key == "stdDev" {
-            return utils::common::to_string::to_string(&self.myStdDeviation);
+            return Ok(utils::common::to_string::to_string(&self.myStdDeviation));
         } else if key == "offset" {
-            return utils::common::to_string::to_string(&self.myOffset);
+            return Ok(utils::common::to_string::to_string(&self.myOffset));
         } else if key == "rawFriction" {
-            return utils::common::to_string::to_string(&self.myRawFriction);
+            return Ok(utils::common::to_string::to_string(&self.myRawFriction));
         }
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Friction::setParameter(const std::string &, const std::string &)` [virtual]
@@ -167,11 +166,10 @@ impl MSDevice_Friction {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "frictionCoefficient" {
             self.myMeasuredFrictionCoefficient = doubleValue;
@@ -180,8 +178,9 @@ impl MSDevice_Friction {
         } else if key == "offset" {
             self.myOffset = doubleValue;
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `double MSDevice_Friction::getMeasuredFriction()`
@@ -204,6 +203,20 @@ impl MSDevice_Friction {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str, stdDev: f64, offset: f64) -> Self {
+        fn mr_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+            Ptr::from_mut(mr).cast::<MSDevice_Friction>().m().notify_move(veh, oldPos, newPos, newSpeed)
+        }
+        static MS_MOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+            notify_enter: crate::microsim::ms_move_reminder::default_notify_enter,
+            notify_move: mr_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = Self::new_device(holder, id, stdDev, offset);
+        this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this
+    }
+
+    fn new_device(holder: &mut SUMOVehicle, id: &str, stdDev: f64, offset: f64) -> Self {
         MSDevice_Friction {
             base: MSVehicleDevice::new(holder, id),
             myMeasuredFrictionCoefficient: 1.,
@@ -218,7 +231,7 @@ impl MSDevice_Friction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSDevice_Friction) -> Self {
-        todo!("port MSDevice_Friction::MSDevice_Friction")
+        panic!("MSDevice_Friction copy constructor is invalidated")
     }
 
     /// C++: `MSDevice_Friction & MSDevice_Friction::operator=(const MSDevice_Friction &)` [private]
@@ -226,7 +239,7 @@ impl MSDevice_Friction {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSDevice_Friction) -> &mut MSDevice_Friction {
-        todo!("port MSDevice_Friction::operator=")
+        panic!("MSDevice_Friction assignment operator is invalidated")
     }
 
 }

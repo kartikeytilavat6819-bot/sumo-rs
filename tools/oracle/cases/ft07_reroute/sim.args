@@ -1,0 +1,1 @@
+--end 200 --device.rerouting.probability 1 --device.rerouting.period 20 --device.rerouting.adaptation-steps 18 --device.rerouting.adaptation-interval 10 --device.rerouting.threads 0

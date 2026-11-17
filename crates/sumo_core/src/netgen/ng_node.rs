@@ -1,6 +1,8 @@
 //! Port of netgen/NGNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::options::options_cont;
+use utils::xml::sumo_xml_definitions::{NodeTypes, TrafficLightTypes};
 
 /// C++ typedef `std::list<NGNode *> NGNodeList`
 pub type NGNodeList = VecDeque<Ptr<NGNode>>;
@@ -46,7 +48,7 @@ impl NGNode {
     //     : Named(id), myXID(-1), myYID(-1), myAmCenter(false), myAmFringe(false) {}
     #[allow(unused_variables)]
     pub fn new(id: &str) -> Self {
-        todo!("port NGNode::NGNode")
+        NGNode { base: Named::new(id), myXID: -1, myYID: -1, myLinkList: VecDeque::new(), myPosition: Position::default(), myMaxNeighbours: 0, myAmCenter: false, myAmFringe: false }
     }
 
     /// C++: `void NGNode::NGNode(const std::string &, int, int)`
@@ -55,7 +57,7 @@ impl NGNode {
     //     : Named(id), myXID(xIDa), myYID(yIDa), myAmCenter(false), myAmFringe(false) {}
     #[allow(unused_variables)]
     pub fn new_2(id: &str, xPos: i32, yPos: i32) -> Self {
-        todo!("port NGNode::NGNode")
+        NGNode { base: Named::new(id), myXID: xPos, myYID: yPos, myLinkList: VecDeque::new(), myPosition: Position::default(), myMaxNeighbours: 0, myAmCenter: false, myAmFringe: false }
     }
 
     /// C++: `void NGNode::NGNode(const std::string &, int, int, bool)`
@@ -64,7 +66,7 @@ impl NGNode {
     //     : Named(id), myXID(xIDa), myYID(yIDa), myAmCenter(amCenter), myAmFringe(false) {}
     #[allow(unused_variables)]
     pub fn new_3(id: &str, xID: i32, yID: i32, amCenter: bool) -> Self {
-        todo!("port NGNode::NGNode")
+        NGNode { base: Named::new(id), myXID: xID, myYID: yID, myLinkList: VecDeque::new(), myPosition: Position::default(), myMaxNeighbours: 0, myAmCenter: amCenter, myAmFringe: false }
     }
 
     /// C++: `void NGNode::~NGNode() noexcept` [virtual]
@@ -78,7 +80,12 @@ impl NGNode {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        todo!("port NGNode::~NGNode")
+        // delete (*li): ~NGEdge removes the link from both end nodes, then the storage is freed
+        while self.myLinkList.len() != 0 {
+            let li = *self.myLinkList.front().unwrap();
+            li.m().drop_();
+            drop(unsafe { Box::from_raw(li.as_raw()) });
+        }
     }
 
     /// C++: `const Position & NGNode::getPosition() const` [const]
@@ -88,7 +95,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_position(&self) -> &Position {
-        todo!("port NGNode::getPosition")
+        &self.myPosition
     }
 
     /// C++: `int NGNode::getMaxNeighbours()`
@@ -98,7 +105,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_max_neighbours(&mut self) -> i32 {
-        todo!("port NGNode::getMaxNeighbours")
+        self.myMaxNeighbours
     }
 
     /// C++: `void NGNode::setMaxNeighbours(int)`
@@ -108,7 +115,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_max_neighbours(&mut self, value: i32) {
-        todo!("port NGNode::setMaxNeighbours")
+        self.myMaxNeighbours = value;
     }
 
     /// C++: `void NGNode::setX(double)`
@@ -118,7 +125,8 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_x(&mut self, x: f64) {
-        todo!("port NGNode::setX")
+        let y = self.myPosition.y();
+        self.myPosition.set(x, y);
     }
 
     /// C++: `void NGNode::setY(double)`
@@ -128,7 +136,8 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_y(&mut self, y: f64) {
-        todo!("port NGNode::setY")
+        let x = self.myPosition.x();
+        self.myPosition.set(x, y);
     }
 
     /// C++: `void NGNode::setFringe()`
@@ -138,7 +147,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn set_fringe(&mut self) {
-        todo!("port NGNode::setFringe")
+        self.myAmFringe = true;
     }
 
     /// C++: `NBNode * NGNode::buildNBNode(NBNetBuilder &, const Position &) const` [const]
@@ -182,7 +191,40 @@ impl NGNode {
     // }
     #[allow(unused_variables)]
     pub fn build_nb_node(&self, nb: &mut NBNetBuilder, perturb: &Position) -> Ptr<NBNode> {
-        todo!("port NGNode::buildNBNode")
+        let mut pos = self.myPosition + *perturb;
+        GeoConvHelper::with_processing(|g| {
+            g.x2cartesian(&mut pos, true);
+        });
+        // the center will have no logic!
+        if self.myAmCenter {
+            return Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(self.get_id(), &pos, SumoXMLNodeType::NOJUNCTION))));
+        }
+        let typeS = if options_cont::is_set("default-junction-type") { options_cont::get_string("default-junction-type") } else { String::new() };
+
+        let node: Ptr<NBNode>;
+        if NodeTypes.has_string(&typeS) {
+            let type_ = NodeTypes.get(&typeS).unwrap();
+            node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(self.get_id(), &pos, type_))));
+
+            // check whether it is a traffic light junction
+            if NBNode::is_traffic_light(type_) {
+                let tlType = TrafficLightTypes.get(&options_cont::get_string("tls.default-type")).unwrap();
+                let tlDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(NBOwnTLDef::new_2(self.get_id(), node, 0, tlType)));
+                if !nb.get_tl_logic_cont().insert(tlDef.cast::<NBTrafficLightDefinition>(), false) {
+                    // actually, nothing should fail here
+                    drop(unsafe { Box::from_raw(tlDef.as_raw()) });
+                    std::panic::panic_any(ProcessError::default_msg());
+                }
+            }
+        } else {
+            // otherwise netbuild may guess SumoXMLNodeType::TRAFFIC_LIGHT without actually building one
+            node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new(self.get_id(), &pos, SumoXMLNodeType::PRIORITY))));
+        }
+        if self.myAmFringe {
+            node.m().set_fringe_type(FringeType::OUTER);
+        }
+
+        node
     }
 
     /// C++: `void NGNode::addLink(NGEdge *)`
@@ -193,7 +235,7 @@ impl NGNode {
     // }
     #[allow(unused_variables)]
     pub fn add_link(&mut self, link: Ptr<NGEdge>) {
-        todo!("port NGNode::addLink")
+        self.myLinkList.push_back(link);
     }
 
     /// C++: `void NGNode::removeLink(NGEdge *)`
@@ -204,7 +246,7 @@ impl NGNode {
     // }
     #[allow(unused_variables)]
     pub fn remove_link(&mut self, link: Ptr<NGEdge>) {
-        todo!("port NGNode::removeLink")
+        self.myLinkList.retain(|l| *l != link);
     }
 
     /// C++: `const NGEdgeList & NGNode::getLinks() const` [const]
@@ -213,7 +255,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_links(&self) -> &NGEdgeList {
-        todo!("port NGNode::getLinks")
+        &self.myLinkList
     }
 
     /// C++: `bool NGNode::connected(const NGNode *const, const bool) const` [const]
@@ -232,7 +274,16 @@ impl NGNode {
     // }
     #[allow(unused_variables)]
     pub fn connected(&self, node: Ptr<NGNode>, withDir: bool) -> bool {
-        todo!("port NGNode::connected")
+        let this = Ptr::new(self);
+        for ngEdge in self.myLinkList.iter() {
+            if ngEdge.get_start_node() == this && ngEdge.get_end_node() == node {
+                return true;
+            }
+            if !withDir && ngEdge.get_end_node() == this && ngEdge.get_start_node() == node {
+                return true;
+            }
+        }
+        false
     }
 
     /// C++: `bool NGNode::samePos(int, int) const` [const]
@@ -242,7 +293,7 @@ impl NGNode {
     //     }
     #[allow(unused_variables)]
     pub fn same_pos(&self, xPos: i32, yPos: i32) -> bool {
-        todo!("port NGNode::samePos")
+        self.myXID == xPos && self.myYID == yPos
     }
 
 }
