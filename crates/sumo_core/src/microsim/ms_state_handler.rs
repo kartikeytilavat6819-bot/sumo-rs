@@ -787,7 +787,8 @@ impl MSStateHandler {
             }
             SUMO_TAG_RAILSIGNAL_CONSTRAINTS => {
                 let signalID = attrs.get::<String>(SUMO_ATTR_ID, "", &mut ok, true);
-                let tls = MSNet::get_instance().m().get_tls_control();
+                let net = MSNet::get_instance();
+                let tls = net.m().get_tls_control();
                 if !tls.knows(&signalID) {
                     std::panic::panic_any(ProcessError::InvalidArgument(format!("Rail signal '{}' in railSignalConstraints loaded from state is not known", signalID)));
                 }
