@@ -13589,16 +13589,10 @@ impl MSVehicle {
                 }
             }
             // adapt to pedestrians on the same lane
-            if std::env::var_os("PT03").is_some() && format!("{}", self.get_id()) == "L1f.0" {
-                eprintln!("PT03 t={} lane={} persons={} hasPed={} seen={:.4} pos={:.4}", MSNet::get_instance().get_current_time_step(), lane.get_id(), lane.get_edge().get_persons().len(), lane.has_pedestrians(), seen, self.get_position_on_lane());
-            }
             if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {
                 let relativePos = lane.get_length() - seen;
                 let stopTime = max2(1.0, (self.get_speed() / cfModel.get_max_decel()).ceil());
                 let leader = lane.next_blocking(relativePos, self.get_right_side_on_lane_2(lane), self.get_right_side_on_lane_2(lane) + self.get_vehicle_type().get_width(), stopTime, false);
-                if std::env::var_os("PT03").is_some() && format!("{}", self.get_id()) == "L1f.0" {
-                    eprintln!("PT03 leader_null={} dist={:.4} relPos={:.4}", leader.0.is_null(), leader.1, relativePos);
-                }
                 if !leader.0.is_null() {
                     let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
                     v = min2(v, stopSpeed);

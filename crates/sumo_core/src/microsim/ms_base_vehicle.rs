@@ -2503,6 +2503,9 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
+        if std::env::var_os("PT03").is_some() {
+            eprintln!("PT03 add {} person={} devNull={} ndev={}", self.get_id(), transportable.is_person(), self.myPersonDevice.is_null(), self.myDevices.len());
+        }
         if transportable.is_person() {
             if self.myPersonDevice.is_null() {
                 self.init_transportable_device(true);
@@ -2545,6 +2548,9 @@ impl MSBaseVehicle {
         let mut devices = std::mem::take(&mut self.myDevices);
         let device = MSDevice_Transportable::build_vehicle_devices(v, &mut devices, !isPerson);
         self.myDevices = devices;
+        if std::env::var_os("PT03").is_some() {
+            eprintln!("PT03 init {} ndev={}", self.get_id(), self.myDevices.len());
+        }
         if isPerson {
             self.myPersonDevice = device;
         } else {
