@@ -2850,6 +2850,12 @@ impl MSLink {
                 }
             }
         }
+        if !ego.is_null() && std::env::var("FP01_DBG").is_ok() && ego.get_id() == "car12" {
+            eprintln!("FP01 t={} lane={} n={}", MSNet::get_instance().get_current_time_step(), self.myLaneBefore.get_id(), result.len());
+            for l in result.iter() {
+                eprintln!("FP01   veh_null={} gap={} dtc={} flags={} lat={}", l.vehAndGap.0.is_null(), l.vehAndGap.1, l.distToCrossing, l.llFlags, l.latOffset);
+            }
+        }
         result
     }
 
