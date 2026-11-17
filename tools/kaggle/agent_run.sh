@@ -5,7 +5,7 @@ OURS=${OURS:-${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo}
 OUT=${OUT:-/tmp/mc04}
 rm -rf $OUT; mkdir -p $OUT/ours $OUT/pristine
 cp -r $C/. $OUT/ours/; cp -r $C/. $OUT/pristine/
-EXTRA=$(cat $C/sim_meso_edgedata.args)
+EXTRA=$(cat $C/sim_meso_edgedata.args | sed "s#tools/oracle/cases/emissions/##g")
 for side in ours pristine; do
   if [ $side = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
   (cd $OUT/$side && $BIN -n ref_simple.net.xml -r routes.rou \
