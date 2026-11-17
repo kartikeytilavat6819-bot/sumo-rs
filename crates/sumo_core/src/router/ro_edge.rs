@@ -165,6 +165,12 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn lanes(&self) -> &[Ptr<ROLane>] {
         self.get_lanes()
     }
+    fn lane_permissions(lane: Ptr<ROLane>) -> SVCPermissions {
+        lane.get_permissions()
+    }
+    fn lane_allows_vehicle_class(lane: Ptr<ROLane>, svc: SUMOVehicleClass) -> bool {
+        lane.allows_vehicle_class(svc)
+    }
     fn speed_limit(&self) -> f64 {
         self.get_speed_limit()
     }
