@@ -1,7 +1,6 @@
 //! Port of utils/router/StopEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::intermodal_edge::IntermodalEdgeKind;
 use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// the stop edge type representing bus and train stops
@@ -42,7 +41,7 @@ where
     #[allow(unused_variables)]
     pub fn new(id: String, numericalID: i32, edge: Ptr<E>, startPos: f64, endPos: f64) -> Self {
         StopEdge {
-            base: IntermodalEdge::new(id, numericalID, edge, "!stop", 0.0).with_kind(IntermodalEdgeKind::Stop),
+            base: IntermodalEdge::new(id, numericalID, edge, "!stop", 0.0),
             myStartPos: startPos,
             myEndPos: endPos,
             _p: std::marker::PhantomData,
