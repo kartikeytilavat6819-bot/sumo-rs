@@ -1,6 +1,7 @@
 //! Port of netbuild/NBAlgorithms_Railway.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::string_utils::{is_int, to_bool, to_int};
 use utils::geom::geom_helper::{angle_diff, deg2rad, rad2deg};
