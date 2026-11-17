@@ -3,21 +3,37 @@
 OURS=${OURS:-/tmp/target/debug/sumo}
 OUT=${OUT:-/tmp/agent_run}
 mkdir -p $OUT
+stops() {
+python3 - "$1" <<'EOF'
+import sys, xml.etree.ElementTree as ET
+prev = None
+for ev, el in ET.iterparse(sys.argv[1]):
+    if el.tag != 'timestep':
+        continue
+    t = el.get('time')
+    for v in el.findall('vehicle'):
+        if v.get('id') != 'truck0':
+            continue
+        sp = float(v.get('speed'))
+        if sp == 0 and prev != 'stop':
+            print('truck0 stop start t=%s lane=%s pos=%s' % (t, v.get('lane'), v.get('pos')))
+            prev = 'stop'
+        elif sp > 0 and prev == 'stop':
+            print('truck0 stop end   t=%s lane=%s pos=%s' % (t, v.get('lane'), v.get('pos')))
+            prev = 'go'
+    el.clear()
+EOF
+}
 for n in rerouter_parking containers; do
   C=tools/oracle/cases/$n
   RUST_BACKTRACE=1 $OURS -n $C/ref_simple.net.xml -r $C/routes.rou --no-step-log true \
-      --tripinfo-output $OUT/$n.ours.ti.xml $(cat $C/sim.args) > $OUT/$n.ours.log 2>&1
+      --tripinfo-output $OUT/$n.ours.ti.xml --fcd-output $OUT/$n.ours.fcd.xml $(cat $C/sim.args) > $OUT/$n.ours.log 2>&1
   echo "== $n ours exit=$?"
-  grep -m1 -A60 'panicked' $OUT/$n.ours.log | grep -E 'panicked|\.rs:' | cut -c1-200 | head -40
-  echo "-- ref truck0/ti:"
-  grep -E 'truck0|personinfo' $C/ref.tripinfo.xml | head -4 | cut -c1-250
-  echo "-- ours truck0/ti:"
-  grep -E 'truck0' $OUT/$n.ours.ti.xml 2>/dev/null | head -4 | cut -c1-250
-  python tools/oracle/compare_sim.py --tripinfo $C/ref.tripinfo.xml $OUT/$n.ours.ti.xml 2>&1 | head -20
-  if [ -n "$SUMO_PRISTINE_BIN" ]; then
-    $SUMO_PRISTINE_BIN/sumo -n $C/ref_simple.net.xml -r $C/routes.rou --no-step-log true \
-        --tripinfo-output $OUT/$n.cpp.ti.xml $(cat $C/sim.args) > $OUT/$n.cpp.log 2>&1
-    echo "== $n pristine exit=$?"
-    python tools/oracle/compare_sim.py --tripinfo $C/ref.tripinfo.xml $OUT/$n.cpp.ti.xml 2>&1 | head -5
+  grep -m1 -A60 'panicked' $OUT/$n.ours.log | grep -E 'panicked|\.rs:' | cut -c1-200 | head -12
+  if [ "$n" = containers ]; then
+    echo "-- ref stops:"; stops $C/ref.fcd.xml
+    echo "-- ours stops:"; stops $OUT/$n.ours.fcd.xml
+    grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
   fi
+  python tools/oracle/compare_sim.py --tripinfo $C/ref.tripinfo.xml $OUT/$n.ours.ti.xml 2>&1 | head -6
 done
