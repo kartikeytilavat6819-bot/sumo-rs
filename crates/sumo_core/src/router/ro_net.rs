@@ -1520,9 +1520,7 @@ impl RONet {
                     }
                     let list = self.myRoutables.get(&k).cloned().unwrap_or_default();
                     for routable in list {
-                        eprintln!("DU02 compute_route {}", routable.m().myParameter.id);
                         routable.m().compute_route(provider, removeLoops, self.myErrorHandler);
-                        eprintln!("DU02 computed");
                     }
                 }
             }
@@ -1557,9 +1555,7 @@ impl RONet {
                     if r.get_routing_success() {
                         // write the route
                         let quota = utils::common::std_defs::get_scaling_quota(scale, self.myWrittenRouteNo as i64);
-                        eprintln!("DU02 write begin {}", r.myParameter.id);
                         r.write(self.myRoutesOutput, self.myRouteAlternativesOutput, self.myTypesOutput, options, quota);
-                        eprintln!("DU02 write end");
                         self.myWrittenRouteNo += 1;
                     } else {
                         self.myDiscardedRouteNo += 1;
@@ -1657,7 +1653,7 @@ impl RONet {
             if self.myRoutesOutput.m().is_null() {
                 self.myRoutesOutput = Ptr::null();
             } else {
-                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oexists_in(options, "alternatives-output") && oset(options, "alternatives-output") && !(oexists_in(options, "write-trips") && ob(options, "write-trips")) {
@@ -1665,12 +1661,12 @@ impl RONet {
             if self.myRouteAlternativesOutput.m().is_null() {
                 self.myRouteAlternativesOutput = Ptr::null();
             } else {
-                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oset(options, "vtype-output") {
             self.myTypesOutput = get_device_ptr(&ostring(options, "vtype-output"));
-            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
         }
     }
 
