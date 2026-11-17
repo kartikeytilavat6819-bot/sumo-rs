@@ -54,9 +54,11 @@ for c in $CASES; do
   o=$ROOT/$src
   [ -n "${DEST:-}" ] && o=$DEST/$c
   mkdir -p "$o"
+  # NEW_CASE marker: a case without committed refs writes all outputs (fcd + stat too)
+  new=0; [ -f "$src/NEW_CASE" ] && new=1
   outs="--tripinfo-output $(wp "$o")/ref.tripinfo.xml"
-  [ -f "$src/ref.fcd.xml" ] && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
-  [ -f "$src/ref.stat.xml" ] && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
+  { [ -f "$src/ref.fcd.xml" ] || [ $new = 1 ]; } && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
+  { [ -f "$src/ref.stat.xml" ] || [ $new = 1 ]; } && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
   flags=$(cat "$src/sim.args" 2>/dev/null)
   run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
