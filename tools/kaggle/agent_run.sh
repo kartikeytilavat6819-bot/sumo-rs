@@ -24,18 +24,15 @@ for spec in "sl2015_lat04 m5" "sl2015_lat08 c2"; do
 import sys
 def load(p): return [l.rstrip('\n') for l in open(p) if l.startswith('LCT')]
 a = load(sys.argv[1]); b = load(sys.argv[2])
+def toks(l): return l.replace(',', ' ').split()
 for i, (x, y) in enumerate(zip(a, b)):
-    if x != y:
-        xs = x.replace(',', ' ').split(); ys = y.replace(',', ' ').split()
-        for j, (p, q) in enumerate(zip(xs, ys)):
-            if p != q:
-                print('first diff line', i + 1, 'token', j, 'ours', p, 'cpp', q)
-                break
-        else:
-            print('first diff line', i + 1, 'length differs')
-        print('ours:', x[:260]); print('cpp :', y[:260])
+    xs = toks(x); ys = toks(y)
+    if xs != ys:
+        j = next((k for k, (p, q) in enumerate(zip(xs, ys)) if p != q), min(len(xs), len(ys)))
+        print('first real diff line', i + 1, 'token', j, 'ours', xs[j] if j < len(xs) else '-', 'cpp', ys[j] if j < len(ys) else '-', 'ntok', len(xs), len(ys))
+        print('ours:', x[:300]); print('cpp :', y[:300])
         break
 else:
-    print('no diff in common prefix', len(a), len(b))
+    print('no real diff in common prefix', len(a), len(b))
 EOF
 done
