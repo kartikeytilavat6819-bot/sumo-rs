@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<connections>
+    <!-- lane 1 of e1 is a turn-off lane: the route r0 must leave it before n2 -->
+    <connection from="e0" to="e1" fromLane="0" toLane="0"/>
+    <connection from="e0" to="e1" fromLane="1" toLane="1"/>
+    <connection from="e1" to="e2" fromLane="0" toLane="0"/>
+    <connection from="e1" to="e3" fromLane="1" toLane="0"/>
+</connections>

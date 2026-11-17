@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="automated" sigma="0" speedFactor="1" maxSpeed="20"/>
+  <vType id="manual" sigma="0.5" speedFactor="normc(0.9,0.1,0.5,1.5)" maxSpeed="20"/>
+  <route id="r0" edges="e0 e1 e2"/>
+  <!-- starts on lane 1, which leaves r0 at e1: dynamic ToC is triggered before n2 -->
+  <vehicle id="toc_dyn" type="automated" route="r0" depart="1" departLane="1">
+    <param key="device.toc.manualType" value="manual"/>
+    <param key="device.toc.automatedType" value="automated"/>
+    <param key="device.toc.responseTime" value="6"/>
+    <param key="device.toc.recoveryRate" value="0.1"/>
+    <param key="device.toc.initialAwareness" value="0.25"/>
+    <param key="device.toc.mrmDecel" value="1.2"/>
+    <param key="device.toc.dynamicToCThreshold" value="3"/>
+    <param key="device.toc.dynamicMRMProbability" value="0.5"/>
+  </vehicle>
+  <!-- response slower than the lead time: a dynamic MRM follows if the driver misses the takeover -->
+  <vehicle id="toc_mrm" type="automated" route="r0" depart="4" departLane="1">
+    <param key="device.toc.manualType" value="manual"/>
+    <param key="device.toc.automatedType" value="automated"/>
+    <param key="device.toc.responseTime" value="12"/>
+    <param key="device.toc.recoveryRate" value="0.05"/>
+    <param key="device.toc.initialAwareness" value="0.25"/>
+    <param key="device.toc.mrmDecel" value="1.2"/>
+    <param key="device.toc.dynamicToCThreshold" value="3"/>
+    <param key="device.toc.dynamicMRMProbability" value="0.5"/>
+  </vehicle>
+</routes>

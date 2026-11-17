@@ -1548,8 +1548,8 @@ impl MSDevice_Taxi {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == "customers" {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == "customers" {
             self.myCustomersServed.to_string()
         } else if key == "occupiedDistance" {
             utils::common::to_string::to_string(&self.myOccupiedDistance)
@@ -1564,8 +1564,8 @@ impl MSDevice_Taxi {
         } else if key == "dropOffDuration" {
             self.myHolder.get_string_param("device.taxi.dropOffDuration", false, "60")
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `void MSDevice_Taxi::setParameter(const std::string &, const std::string &)` [virtual]
@@ -1587,9 +1587,9 @@ impl MSDevice_Taxi {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         if value.parse::<f64>().is_err() {
-            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())));
         }
         if key == "pickUpDuration" || key == "dropOffDuration" {
             // store as generic vehicle parameters
@@ -1597,8 +1597,9 @@ impl MSDevice_Taxi {
             let par: &mut SUMOVehicleParameter = unsafe { &mut *Ptr::new(holderPtr.m().get_parameter()).as_raw() };
             par.set_parameter(&format!("device.taxi.{}", key), value);
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Taxi::generateOutput(OutputDevice *) const` [const, virtual]

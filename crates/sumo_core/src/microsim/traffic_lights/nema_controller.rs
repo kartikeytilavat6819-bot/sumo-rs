@@ -3,9 +3,18 @@
 use crate::prelude::*;
 use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
-// shortcut: the lookup is get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR)[id] downcast from MSDetectorFileOutput to MSE2Collector, but MSDetectorFileOutput is MSE2Collector's second base (MSMoveReminder is first), so a plain Ptr::cast is wrong; upgrade when a base-offset-aware downcast exists
+/// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`: MSDetectorFileOutput
+/// is the MSE2Collector base2 field, not its first base, so step back by the field offset.
+// shortcut: no runtime type check; the lane-area detector map holds only MSE2Collector, upgrade with a type flag check
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
-    panic!("shortcut: E2 detector lookup for '{}' needs typed MSDetectorControl::getTypedDetectors", id)
+    let det: Ptr<MSDetectorFileOutput> = match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
+        Some(d) => *d,
+        None => return Ptr::null(),
+    };
+    if det.is_null() {
+        return Ptr::null();
+    }
+    Ptr::from_raw((det.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector)
 }
 
 /// C++ enum `LightState`

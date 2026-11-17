@@ -43,8 +43,14 @@ impl RORoute {
     //       myProbability(prop), myRoute(route), myColor(color), myStops(stops) {}
     #[allow(unused_variables)]
     pub fn new(id: &str, costs: f64, prob: f64, route: &ConstROEdgeVector, color: Ptr<RGBColor>, stops: &StopParVector) -> Self {
-        // shortcut: C++ copies the stops into myStops; SUMOVehicleParameter::Stop has no Clone yet (utils/vehicle/sumo_vehicle_parameter.rs, outside this batch), add #[derive(Clone)] there and copy the stops
-        panic!("RORoute::RORoute: copying SUMOVehicleParameter::Stop is not ported yet")
+        RORoute {
+            base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
+            myCosts: costs,
+            myProbability: prob,
+            myRoute: route.clone(),
+            myColor: color,
+            myStops: stops.clone(),
+        }
     }
 
     /// C++: `void RORoute::RORoute(const std::string &, const ConstROEdgeVector &)`
