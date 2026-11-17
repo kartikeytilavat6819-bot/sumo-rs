@@ -10,7 +10,7 @@ set -u
 D=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$D/../../../.." && pwd)
 BIN=${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target-main}/debug/sumo.exe
-OUT=/c/Users/karti/Temp/score/depart
+OUT=${SCORE_OUT:-/c/Users/karti/Temp/score}/depart
 mkdir -p "$OUT"
 cd "$ROOT" || exit 1
 PASS=0; FAIL=0
