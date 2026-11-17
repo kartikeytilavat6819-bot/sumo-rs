@@ -47,9 +47,10 @@ mod tests {
     use super::tokenize;
 
     #[test]
-    fn tokenize_skips_empty_tokens() {
-        // StringTokenizer("1,2  3,4", " ") yields two tokens, a split would yield an empty one
-        assert_eq!(tokenize("1,2  3,4", " "), ["1,2", "3,4"]);
+    fn tokenize_keeps_empty_segments() {
+        // C++ StringTokenizer::prepare pushes every segment, so a double separator gives an empty token
+        assert_eq!(tokenize("1,2  3,4", " "), ["1,2", "", "3,4"]);
+        assert_eq!(tokenize("1,,2,", ","), ["1", "", "2", ""]);
         assert_eq!(tokenize("", " "), Vec::<String>::new());
     }
 }

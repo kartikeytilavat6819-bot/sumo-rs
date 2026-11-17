@@ -19,9 +19,9 @@ pub fn clear_errors() {
 pub fn tokenize_white(s: &str) -> Vec<&str> {
     s.split(|c: char| c <= ' ').filter(|t| !t.is_empty()).collect()
 }
-/// StringTokenizer(s, sep).getVector(): split at the separator, empty tokens are dropped (as in C++)
+/// StringTokenizer(s, sep).getVector(): keeps empty tokens, but "" gives no token
 pub fn tokenize<'a>(s: &'a str, sep: &str) -> Vec<&'a str> {
-    s.split(sep).filter(|t| !t.is_empty()).collect()
+    if s.is_empty() { Vec::new() } else { s.split(sep).collect() }
 }
 
 /// utils/geom/Position
@@ -156,7 +156,7 @@ mod tests {
     use super::*;
     #[test]
     fn helpers() {
-        assert_eq!(tokenize("1,,2,", ","), vec!["1", "2"]);
+        assert_eq!(tokenize("1,,2,", ","), vec!["1", "", "2", ""]);
         assert!(tokenize("", ",").is_empty());
         assert_eq!(tokenize_white("  a \t b\n"), vec!["a", "b"]);
         assert_eq!(append_before_extension("out/a.xml", "_x"), "out/a_x.xml");
