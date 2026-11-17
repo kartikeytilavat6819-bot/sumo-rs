@@ -1520,7 +1520,9 @@ impl RONet {
                     }
                     let list = self.myRoutables.get(&k).cloned().unwrap_or_default();
                     for routable in list {
+                        eprintln!("DU02 compute_route {}", routable.m().myParameter.id);
                         routable.m().compute_route(provider, removeLoops, self.myErrorHandler);
+                        eprintln!("DU02 computed");
                     }
                 }
             }

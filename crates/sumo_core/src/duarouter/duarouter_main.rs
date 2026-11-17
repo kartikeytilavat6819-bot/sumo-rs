@@ -171,7 +171,9 @@ use crate::prelude::*;
 #[allow(unused_variables)]
 pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
     // initialise the loader
+    eprintln!("DU02 open_routes start");
     loader.open_routes(net);
+    eprintln!("DU02 open_routes done");
     // build the router
     let measure = oc.get_string("weight-attribute").unwrap();
     let routingAlgorithm = oc.get_string("routing-algorithm").unwrap();

@@ -1592,7 +1592,9 @@ impl RORouteHandler {
             self.myNet,
             self.myErrorOutput,
         ))));
+        eprintln!("DU02 close_vehicle built {}", self.myVehicleParameter.id);
         if self.myNet.m().add_vehicle(&self.myVehicleParameter.id, veh) {
+            eprintln!("DU02 close_vehicle added {}", self.myVehicleParameter.id);
             self.register_last_depart();
         } else if needCopy {
             delete_ptr(route);
