@@ -70,6 +70,16 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MSDeterministicHiLevelTrafficLightLogic | init | MAIN |
 | MSSOTLPhase / PolicyBased / Wave | no own overrides; inherit SOTL table | MAIN |
 | NEMALogic | init, trySwitch, getCurrentPhaseDef, resetLastSwitch, getDetectorStates | MAIN (NEMA_LOGIC_VT) |
+| MSTrafficLightLogic (base) | getParameter, setParameter, activateProgram, deactivateProgram (virtual in C++) | FIXED (pv03): `get_parameter` / `set_parameter` / `activate_program` / `deactivate_program` dispatch through four new `MSTrafficLightLogicExtVt` slots; the base bodies are `activate_program_base` / `deactivate_program_base`. libsumo `TrafficLight::getParameter/setParameter` now call the virtual pair (they read `base2` directly before) |
+| MSSimpleTrafficLightLogic | getParameter (cycleTime, offset, coordinated, cycleSecond, typeName), setParameter | FIXED (pv03): ext slots installed in `new` for every Simple-based logic, which is how C++ inherits them |
+| MSActuatedTrafficLightLogic | getParameter (condition.*), setParameter (max-gap, jam-threshold, show-detectors, ...), activateProgram, deactivateProgram | FIXED (pv03): own ext table; activate/deactivate call the `_base` bodies, no recursion |
+| NEMALogic | getParameter (NEMA.phaseCall), setParameter (NEMA.splits/maxGreens/cycleLength/offset), activateProgram, deactivateProgram | FIXED (pv03): own ext table (spreads the default table) |
+| MSRailSignal | setParameter | FIXED (pv03): `set_parameter` slot in its existing ext table |
+| MSRailCrossing | setParameter (getParameter inherited from Simple) | FIXED (pv03): own ext table |
+| MSDelayBased, SOTL family, MSSwarm, MSOff, MSDeterministicHiLevel | no getParameter/setParameter/activateProgram/deactivateProgram override in C++ (grep of `microsim/traffic_lights`) | PASS: inherit the Simple or base slot |
+| Router slots (CCH / AF / Node2Edge) | not checked in this pass | OPEN |
+| TraCI probes `tl param: ...` (traci_basic, `signal_actuated`) | 11 of 14 probe rows MATCH live. The 3 DIFF rows are C++ aborting its TraCI server on an uncaught `InvalidArgument` (condition.none, passing-time, typeName); ours returns the message text that C++ builds. Same class as the wrong-length divergence in TRAci_STATUS.md | probed |
+| NEMA live probe (setParameter NEMA.* / getParameter NEMA.phaseCall on a NEMA logic) | NOT DONE: no valid NEMA net yet. Four attempts on the signal_nema net with type NEMA failed on C++ validation (missing ring1/ring2, phase names, barrier sides). Needs an 8-phase design | OPEN |
 | MSRailSignal (ext table) | getRivalVehicles, getPriorityVehicles, getBlockingDriveWays, getRequestedDriveWay | FIXED: base queries went to the base no-op (libsumo `trafficlight.getRivalVehicles`). Now `MSTrafficLightLogicExtVt` via `ext_vt` (base field, default installed in `new`) |
 | MSDelayBasedTrafficLightLogic (ext table) | getDetectorState, getTLQueueLength | FIXED: GLOSA's `get_tl_queue_length` on the base type ignored the override |
 | MSActuatedTrafficLightLogic | getMinDur, getMaxDur, getEarliestEnd, getLatestEnd, getDetectorState, activate/deactivateProgram, loadExtraState, get/setParameter | GAP, tl01 owns: overrides exist as inherent methods, not in any table |

@@ -13,6 +13,16 @@ fn rail_crossing_add_link(l: &mut MSTrafficLightLogic, link: Ptr<MSLink>, lane: 
     Ptr::from_mut(l).cast::<MSRailCrossing>().m().add_link(link, lane, pos)
 }
 
+fn rail_crossing_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().set_parameter(key, value)
+}
+
+static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_parameter: super::ms_simple_traffic_light_logic::simple_ext_get_parameter,
+    set_parameter: rail_crossing_ext_set_parameter,
+    ..super::ms_traffic_light_logic::DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT
+};
+
 static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: rail_crossing_try_switch,
     init: rail_crossing_init,
@@ -72,6 +82,7 @@ impl MSRailCrossing {
         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS), "")))));
         base.myDefaultCycleTime = 1;
         base.base.vt = &MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT;
+        base.base.ext_vt = &MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         Self {
             base,
             myIncomingRailLinks: Vec::new(),

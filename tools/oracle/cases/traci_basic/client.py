@@ -55,6 +55,7 @@ def warn_if_stale(ours: Path) -> None:
 CASE_PARAMS = {
     "junction": ("-103224#1_0", ""),
     "signal": ("-324752522_0", "1802245009"),
+    "signal_actuated": ("-324752522_0", "1802245009"),
 }
 
 
@@ -522,7 +523,25 @@ def probes(lane, tl_id):
         t.vehicle.rerouteTraveltime("v0")
         return t.vehicle.getRoute("v0")
 
+    def tl_set_param_get(key, value):
+        def f(t):
+            t.trafficlight.setParameter(tl, key, value)
+            return t.trafficlight.getParameter(tl, key)
+        return f
+
     base = {
+        "tl param: getParameter max-gap": lambda t: t.trafficlight.getParameter(tl, "max-gap"),
+        "tl param: getParameter cycleTime (simple)": lambda t: t.trafficlight.getParameter(tl, "cycleTime"),
+        "tl param: getParameter typeName (simple)": lambda t: t.trafficlight.getParameter(tl, "typeName"),
+        "tl param: getParameter NEMA.phaseCall": lambda t: t.trafficlight.getParameter(tl, "NEMA.phaseCall"),
+        "tl param: getParameter condition.none": lambda t: t.trafficlight.getParameter(tl, "condition.none"),
+        "tl param: setParameter max-gap 4.5 + get": tl_set_param_get("max-gap", "4.5"),
+        "tl param: setParameter inactive-threshold 7 + get": tl_set_param_get("inactive-threshold", "7"),
+        "tl param: setParameter cycleTime 42 + get": tl_set_param_get("cycleTime", "42"),
+        "tl param: setParameter passing-time (refused)": lambda t: t.trafficlight.setParameter(tl, "passing-time", "5"),
+        "tl param: setParameter typeName (refused)": lambda t: t.trafficlight.setParameter(tl, "typeName", "x"),
+        "tl param: setParameter NEMA.cycleLength (not NEMA)": lambda t: t.trafficlight.setParameter(tl, "NEMA.cycleLength", "90"),
+        "tl param: setProgram unknown id": lambda t: t.trafficlight.setProgram(tl, "nope"),
         "effect: lane.setDisallowed(all) +30 + summary": lane_close,
         "effect: lane.setDisallowed(all) +15, reopen +30": lane_close_reopen,
         "effect: lane.setDisallowed(passenger) +30": lane_disallow_passenger,
