@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:06:52.124156-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_probes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_probes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_probes/probes.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <routeDistribution id="rp_0.00">
+        <route id="rA_0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" probability="10.00"/>
+        <route id="rE_0.00" edges="-103224#0 -103224#1 -103227#2" probability="4.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp_60.00">
+        <route id="rE_60.00" edges="-103224#0 -103224#1 -103227#2" probability="2.00"/>
+        <route id="rA_60.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" probability="3.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp_120.00">
+        <route id="rA_120.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" probability="1.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp_180.00">
+        <route id="rA_180.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" probability="13.00"/>
+        <route id="rE_180.00" edges="-103224#0 -103224#1 -103227#2" probability="5.00"/>
+    </routeDistribution>
+    <routeDistribution id="rp_240.00">
+        <route id="rE_240.00" edges="-103224#0 -103224#1 -103227#2" probability="2.00"/>
+        <route id="rA_240.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" probability="6.00"/>
+    </routeDistribution>
+</routes>

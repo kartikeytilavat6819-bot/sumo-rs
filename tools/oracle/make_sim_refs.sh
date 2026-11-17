@@ -18,6 +18,7 @@
 #   device_toc, device_ssm, device_stationfinder, device_driverstate, device_glosa, device_friction   (--end per sim.args)
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
 # A case with extra_outputs.txt (lines "<option> <suffix>") writes fcd+stat and each <suffix> as ref.<suffix>.xml.
+# A case with add_outputs.txt (lines "<file> <suffix>"; <file> is written by its additional file) keeps it as ref.<suffix>.xml.
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
 # DEST=/c/... writes <DEST>/<case>/ instead, to check committed references without touching them.
 set -u
@@ -39,6 +40,11 @@ run_ref() {  # run_ref <log> <wsl-cmd> <end or empty> <outdir> <tag>
     echo "  $tag: signal/interrupt (exit $rc), retry $try" >&2
   done
   [ $rc -eq 0 ] || { echo "FAILED $tag: C++ exit $rc (see $log)" >&2; exit 1; }
+  # add_outputs.txt: files the case's additional file writes next to itself become <tag>.<suffix>.xml
+  [ -f "$src/add_outputs.txt" ] && while read -r af suf; do
+    af=${af%$''}; suf=${suf%$''}
+    mv "$src/$af" "$od/$tag.$suf.xml" || { echo "FAILED $tag: no $src/$af" >&2; exit 1; }
+  done < "$src/add_outputs.txt"
   local chk=(--tripinfo "$od/$tag.tripinfo.xml")
   [ -f "$od/$tag.fcd.xml" ] && chk+=(--fcd "$od/$tag.fcd.xml")
   [ -f "$od/$tag.stat.xml" ] && chk+=(--stat "$od/$tag.stat.xml")
