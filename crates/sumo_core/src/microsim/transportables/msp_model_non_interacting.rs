@@ -2,7 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::microsim::ms_event_control::Command;
-use crate::microsim::transportables::msp_model::{adapter_default_get_path_length, adapter_default_get_lane, adapter_default_get_total_waiting_time, adapter_default_is_finished, adapter_default_is_jammed, adapter_default_move_to, adapter_default_move_to_xy, adapter_default_save_state};
 
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
@@ -35,6 +34,79 @@ fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
     Ptr::null()
 }
 
+// Virtual dispatch for the PState/CState overrides: the adapter base is the first field of both repr(C) structs.
+fn ni_pstate(a: &MSTransportableStateAdapter) -> &MSPModel_NonInteracting_PState {
+    unsafe { &*(a as *const MSTransportableStateAdapter as *const MSPModel_NonInteracting_PState) }
+}
+fn ni_cstate(a: &MSTransportableStateAdapter) -> &MSPModel_NonInteracting_CState {
+    unsafe { &*(a as *const MSTransportableStateAdapter as *const MSPModel_NonInteracting_CState) }
+}
+fn pstate_get_edge_pos(a: &MSTransportableStateAdapter, now: SUMOTime) -> f64 {
+    ni_pstate(a).get_edge_pos(now)
+}
+fn pstate_get_direction(a: &MSTransportableStateAdapter) -> i32 {
+    ni_pstate(a).get_direction()
+}
+fn pstate_get_position(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> Position {
+    ni_pstate(a).get_position(stage, now)
+}
+fn pstate_get_angle(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> f64 {
+    ni_pstate(a).get_angle(stage, now)
+}
+fn pstate_get_waiting_time(a: &MSTransportableStateAdapter) -> SUMOTime {
+    ni_pstate(a).get_waiting_time()
+}
+fn pstate_get_speed(a: &MSTransportableStateAdapter, stage: &MSStageMoving) -> f64 {
+    ni_pstate(a).get_speed(stage)
+}
+fn pstate_get_next_edge(a: &MSTransportableStateAdapter, stage: &MSStageMoving) -> Ptr<MSEdge> {
+    ni_pstate(a).get_next_edge(stage)
+}
+fn cstate_get_position(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> Position {
+    ni_cstate(a).get_position(stage, now)
+}
+fn cstate_get_angle(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now: SUMOTime) -> f64 {
+    ni_cstate(a).get_angle(stage, now)
+}
+
+/// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge)
+static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_edge_pos: pstate_get_edge_pos,
+    get_direction: pstate_get_direction,
+    get_position: pstate_get_position,
+    get_angle: pstate_get_angle,
+    get_waiting_time: pstate_get_waiting_time,
+    get_total_waiting_time: adapter_default_get_total_waiting_time,
+    get_speed: pstate_get_speed,
+    get_next_edge: pstate_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: adapter_default_is_jammed,
+    is_finished: adapter_default_is_finished,
+    get_lane: adapter_default_get_lane,
+    get_path_length: adapter_default_get_path_length,
+    save_state: adapter_default_save_state,
+};
+
+/// C++ CState overrides (getPosition, getAngle) on top of the PState table
+static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_edge_pos: pstate_get_edge_pos,
+    get_direction: pstate_get_direction,
+    get_position: cstate_get_position,
+    get_angle: cstate_get_angle,
+    get_waiting_time: pstate_get_waiting_time,
+    get_total_waiting_time: adapter_default_get_total_waiting_time,
+    get_speed: pstate_get_speed,
+    get_next_edge: pstate_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: adapter_default_is_jammed,
+    is_finished: adapter_default_is_finished,
+    get_lane: adapter_default_get_lane,
+    get_path_length: adapter_default_get_path_length,
+    save_state: adapter_default_save_state,
+};
+
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
 #[repr(C)]
 pub struct MSPModel_NonInteracting_CState {
@@ -62,8 +134,10 @@ impl MSPModel_NonInteracting_CState {
     // }
     #[allow(unused_variables)]
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
+        let mut pstate = MSPModel_NonInteracting_PState::new(cmd, in_);
+        pstate.base.vt = &MSPMODEL_NONINTERACTING_CSTATE_VT;
         Self {
-            base: MSPModel_NonInteracting_PState::new(cmd, in_),
+            base: pstate,
             myCurrentBeginPosition: Position::default(),
             myCurrentEndPosition: Position::default(),
         }
@@ -466,26 +540,6 @@ impl std::ops::DerefMut for MSPModel_NonInteracting_PState {
         &mut self.base
     }
 }
-
-/// vtable of the PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge);
-/// the other virtuals are not overridden by the C++ PState and use the MSTransportableStateAdapter defaults
-static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
-    get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_edge_pos(now),
-    get_direction: |a| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_direction(),
-    get_position: |a, stage, now| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_position(stage, now),
-    get_angle: |a, stage, now| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_angle(stage, now),
-    get_waiting_time: |a| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_waiting_time(),
-    get_total_waiting_time: adapter_default_get_total_waiting_time,
-    get_speed: |a, stage| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_speed(stage),
-    get_next_edge: |a, stage| Ptr::new(a).cast::<MSPModel_NonInteracting_PState>().get_next_edge(stage),
-    move_to: adapter_default_move_to,
-    move_to_xy: adapter_default_move_to_xy,
-    is_jammed: adapter_default_is_jammed,
-    is_finished: adapter_default_is_finished,
-    get_lane: adapter_default_get_lane,
-    get_path_length: adapter_default_get_path_length,
-    save_state: adapter_default_save_state,
-};
 
 impl MSPModel_NonInteracting_PState {
     /// C++: `void PState::PState(MoveToNextEdge *, std::istringstream *)`
