@@ -338,7 +338,6 @@ impl SUMOVTypeParameter {
         // obtain default values depending of vclass
         let defaultValues = SUMOVTypeParameter_VClassDefaultValues::new(vc);
         let mut speedFactor = defaultValues.speedFactor.clone();
-        eprintln!("SFDBG new id={} exists={} dev0={}", vtid, utils::options::options_cont::exists("default.speeddev"), speedFactor.get_parameter(1));
         // check if default speeddev was defined
         if utils::options::options_cont::exists("default.speeddev") {
             let defaultSpeedDev = utils::options::options_cont::get_float("default.speeddev");
