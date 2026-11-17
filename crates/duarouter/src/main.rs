@@ -40,10 +40,11 @@ fn run(argv: &[String]) -> Result<bool, ProcessError> {
     utils::common::rand_helper::init_rand(None, get_bool("random"), get_int("seed"));
     // load data
     with_options(|oc| -> Result<(), ProcessError> {
-        let mut loader = ROLoader::new(oc, false, !get_bool("no-step-log"));
+        // C++ declares net before the try-scoped loader, so the loader is destroyed first and net last
         let mut net = Box::new(RONet::new());
         // C++ RONet::RONet sets myInstance = this
         RONet::register_instance(utils::common::ptr::Ptr::from_box(&net));
+        let mut loader = ROLoader::new(oc, false, !get_bool("no-step-log"));
         init_net(&mut net, &mut loader, oc);
         // build routes
         // shortcut: C++ also catches Xerces SAXParseException/SAXException here (ret = 1); the Rust parsers report ProcessError only

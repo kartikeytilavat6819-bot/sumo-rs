@@ -49,15 +49,16 @@ impl NIVissimDisturbance {
     //     : myID(id), myNode(-1), myName(name), myEdge(edge), myDisturbance(by) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, edge: &NIVissimExtendedEdgePoint, by: &NIVissimExtendedEdgePoint) -> Box<Self> {
-        // shortcut: the C++ base constructor registers `this` in NIVissimBoundedClusterObject::myDict, which is private to ni_vissim_bounded_cluster_object.rs, so computeBounding() never runs for disturbances; upgrade by adding a pub register fn there and calling it here
-        Box::new(Self {
+        let mut b = Box::new(Self {
             base: NIVissimBoundedClusterObject { myBoundary: Ptr::null(), myClusterID: -1 },
             myID: id,
             myNode: -1,
             myName: name.to_string(),
             myEdge: NIVissimExtendedEdgePoint::new(edge.get_edge_id(), edge.get_lanes(), edge.get_position(), &edge.myAssignedVehicles),
             myDisturbance: NIVissimExtendedEdgePoint::new(by.get_edge_id(), by.get_lanes(), by.get_position(), &by.myAssignedVehicles),
-        })
+        });
+        NIVissimBoundedClusterObject::register(Ptr::from_mut(&mut b.base), |o| Ptr::from_mut(o).cast::<NIVissimDisturbance>().m().compute_bounding());
+        b
     }
 
     /// C++: `void NIVissimDisturbance::~NIVissimDisturbance() noexcept` [virtual]

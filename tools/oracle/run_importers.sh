@@ -22,7 +22,15 @@ for dir in "$HERE"/import_cases/*/; do
     mkdir -p "$OUT/$name/$side"
     cp "$dir"/* "$OUT/$name/$side/"
     (cd "$OUT/$name/$side" && "$bin" $opts $extra > netconvert.log 2>&1)
+    rc=$?
+    if [ "$side" = ref ]; then rc_ref=$rc; else rc_ours=$rc; fi
   done
+  # error parity: the official netconvert rejects this input too (no net, same exit code)
+  if [ ! -f "$OUT/$name/ref/net.net.xml" ] && [ ! -f "$OUT/$name/ours/net.net.xml" ] && [ "$rc_ref" = "$rc_ours" ]; then
+    echo "PASS $name (both exit $rc_ref without net.net.xml)"
+    pass=$((pass + 1))
+    continue
+  fi
   if [ ! -f "$OUT/$name/ref/net.net.xml" ] || [ ! -f "$OUT/$name/ours/net.net.xml" ]; then
     echo "FAIL $name: no net.net.xml (ref: $(test -f "$OUT/$name/ref/net.net.xml" && echo ok || echo missing), ours: $(test -f "$OUT/$name/ours/net.net.xml" && echo ok || echo missing))"
     tail -3 "$OUT/$name/ours/netconvert.log"

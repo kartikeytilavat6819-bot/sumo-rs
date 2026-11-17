@@ -15,6 +15,15 @@ pub fn std_sort<T: Copy>(v: &mut [T], less: impl Fn(T, T) -> bool) {
     final_insertion_sort(v, 0, n, &less);
 }
 
+/// C++ `std::sort(v.begin(), v.end(), less)` on a vector whose elements are not `Copy`:
+/// sorts the indices with `std_sort`, then moves the elements into that order
+pub fn std_sort_vec<T>(v: &mut Vec<T>, less: impl Fn(&T, &T) -> bool) {
+    let mut order: Vec<usize> = (0..v.len()).collect();
+    std_sort(&mut order, |i, j| less(&v[i], &v[j]));
+    let mut slots: Vec<Option<T>> = std::mem::take(v).into_iter().map(Some).collect();
+    *v = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
+}
+
 fn introsort_loop<T: Copy>(v: &mut [T], mut first: isize, mut last: isize, mut depth: isize, less: &impl Fn(T, T) -> bool) {
     while last - first > THRESHOLD {
         if depth == 0 {

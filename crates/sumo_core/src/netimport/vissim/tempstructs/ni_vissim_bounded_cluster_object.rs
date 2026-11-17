@@ -14,8 +14,9 @@ pub struct NIVissimBoundedClusterObject {
 // C++ static members of NIVissimBoundedClusterObject (port as module-level statics, see AGENTS.md):
 //   static ContType NIVissimBoundedClusterObject::myDict;
 thread_local! {
-    // determinism: C++ std::set orders by pointer address; BTreeSet orders by Ptr's Ord (address), same relative order
-    static MY_DICT: std::cell::RefCell<NIVissimBoundedClusterObject_ContType> = std::cell::RefCell::new(BTreeSet::new());
+    // determinism: C++ std::set orders by pointer address; BTreeMap orders by Ptr's Ord (address), same relative order.
+    // The value is the subclass's virtual computeBounding(), since the base pointer cannot dispatch it.
+    static MY_DICT: std::cell::RefCell<BTreeMap<Ptr<NIVissimBoundedClusterObject>, fn(&mut NIVissimBoundedClusterObject)>> = std::cell::RefCell::new(BTreeMap::new());
 }
 
 impl NIVissimBoundedClusterObject {
@@ -28,9 +29,14 @@ impl NIVissimBoundedClusterObject {
     pub fn new() -> Box<Self> {
         // the constructor registers `this` in myDict, so the object must stay at a fixed address: return the Box
         let mut b = Box::new(Self { myBoundary: Ptr::null(), myClusterID: -1 });
-        let this = Ptr::from_mut(&mut *b);
-        MY_DICT.with(|d| d.borrow_mut().insert(this));
+        Self::register(Ptr::from_mut(&mut *b), |o| o.compute_bounding());
         b
+    }
+
+    /// C++: the base constructor's `myDict.insert(this)`, called by subclasses that build their own base.
+    /// `compute` is the subclass's computeBounding() override, which closeLoading() must reach virtually.
+    pub fn register(this: Ptr<NIVissimBoundedClusterObject>, compute: fn(&mut NIVissimBoundedClusterObject)) {
+        MY_DICT.with(|d| d.borrow_mut().insert(this, compute));
     }
 
     /// C++: `void NIVissimBoundedClusterObject::~NIVissimBoundedClusterObject() noexcept` [virtual]
@@ -104,11 +110,12 @@ impl NIVissimBoundedClusterObject {
     // }
     #[allow(unused_variables)]
     pub fn close_loading() {
-        MY_DICT.with(|d| {
-            for o in d.borrow().iter() {
-                o.m().compute_bounding();
-            }
-        });
+        // snapshot first: a computeBounding() must not hold the dictionary borrow
+        let entries: Vec<(Ptr<NIVissimBoundedClusterObject>, fn(&mut NIVissimBoundedClusterObject))> =
+            MY_DICT.with(|d| d.borrow().iter().map(|(o, f)| (*o, *f)).collect());
+        for (o, compute) in entries {
+            compute(o.m());
+        }
     }
 
 }

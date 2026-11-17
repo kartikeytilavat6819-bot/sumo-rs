@@ -2725,6 +2725,7 @@ impl NBOwnTLDef {
         //  by priority, first
         let mut used: EdgeVector = Vec::new();
         let sorter = NBOwnTLDef_edge_by_incoming_priority_sorter {};
+        // strict order: ties are broken by edge id
         incoming.sort_by(|a, b| {
             if sorter.call_op(*a, *b) != 0 {
                 std::cmp::Ordering::Less

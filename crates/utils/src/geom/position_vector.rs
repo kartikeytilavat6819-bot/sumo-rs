@@ -539,13 +539,15 @@ impl PositionVector {
     pub fn sort_as_poly_cw_by_angle(&mut self) {
         let centroid = self.iter().fold(Position::new(0., 0.), |a, b| a + *b) / self.len() as f64;
         self.sub(&centroid);
-        self.0.sort_by(|p1, p2| ordering_from_less(as_poly_cw_less, p1, p2));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        crate::common::std_sort::std_sort_vec(&mut self.0, |p1, p2| as_poly_cw_less(p1, p2));
         self.add(&centroid);
     }
 
     /// sort by increasing X-Y Positions
     pub fn sort_by_increasing_xy(&mut self) {
-        self.0.sort_by(|p1, p2| ordering_from_less(increasing_x_y_less, p1, p2));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        crate::common::std_sort::std_sort_vec(&mut self.0, |p1, p2| increasing_x_y_less(p1, p2));
     }
 
     pub fn add_xyz(&mut self, xoff: f64, yoff: f64, zoff: f64) {
@@ -1593,16 +1595,6 @@ fn increasing_x_y_less(p1: &Position, p2: &Position) -> bool {
         return p1.x() < p2.x();
     }
     p1.y() < p2.y()
-}
-
-fn ordering_from_less(less: fn(&Position, &Position) -> bool, a: &Position, b: &Position) -> Ordering {
-    if less(a, b) {
-        Ordering::Less
-    } else if less(b, a) {
-        Ordering::Greater
-    } else {
-        Ordering::Equal
-    }
 }
 
 impl AbstractPoly for PositionVector {

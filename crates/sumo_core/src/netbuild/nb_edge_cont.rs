@@ -881,8 +881,8 @@ impl NBEdgeCont {
             return;
         }
         let origID = e.get_id().to_string();
-        // determinism: C++ std::sort is unstable (introsort); Rust sort_by is stable, equal pos values may be ordered differently
-        splits.sort_by(|a, b| a.pos.partial_cmp(&b.pos).unwrap_or(std::cmp::Ordering::Equal));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal pos values tie)
+        utils::common::std_sort::std_sort_vec(&mut splits, |a, b| a.pos < b.pos);
         let mut maxNumLanes = e.get_num_lanes();
         // compute the node positions and sort the lanes
         for split in splits.iter_mut() {
