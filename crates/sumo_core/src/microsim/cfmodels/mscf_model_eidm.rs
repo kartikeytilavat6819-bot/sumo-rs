@@ -33,6 +33,8 @@ pub const EIDM_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: eidm_get_model_id,
     duplicate: eidm_duplicate,
     create_vehicle_variables: eidm_create_vehicle_variables,
+    brake_gap_2: eidm_brake_gap_2,
+    max_next_safe_min: eidm_max_next_safe_min,
     ..DEFAULT_MSCF_MODEL_VT
 };
 use utils::geom::NUMERICAL_EPS;
@@ -75,7 +77,9 @@ pub struct MSCFModel_EIDM {
 fn eidm_max_next_safe_min(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
     cf_cast::<MSCFModel_EIDM>(m).max_next_safe_min(speed, veh)
 }
-/// Virtual table of MSCFModel_EIDM: its overrides on top of the MSCFModel table
+fn eidm_brake_gap_2(m: &MSCFModel, speed: f64, decel: f64, headwayTime: f64) -> f64 {
+    cf_cast::<MSCFModel_EIDM>(m).brake_gap(speed, decel, headwayTime)
+}
 impl std::ops::Deref for MSCFModel_EIDM {
     type Target = MSCFModel;
     fn deref(&self) -> &MSCFModel {
