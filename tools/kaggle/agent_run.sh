@@ -72,6 +72,21 @@ s = s.replace(d, r'''if (getenv("RX01") != nullptr && getID() == "train3" && SIM
 open(p, 'wb').write(s.encode())
 print('patched MSVehicle')
 EOF
+python - "$D/src/microsim/MSVehicle.cpp" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p, 'rb').read().decode().replace('\r\n', '\n')
+p1 = '    if ((getVClass() & SVC_RAIL_CLASSES) != 0\n'
+assert s.count(p1) == 1, 'p1'
+s = s.replace(p1, r'''    if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; bool routeOk = (myCurrEdge + 1) != myRoute->end(); cvt.d = getPreviousSpeed(); unsigned long long ps = cvt.u; cvt.d = speedThreshold; unsigned long long th = cvt.u; cvt.d = seen; unsigned long long sn = cvt.u; fprintf(stderr, "RX01 rev t=%lld rail=%d spdOK=%d posOK=%d normal=%d routeOK=%d bidi=%d stopOk=%d prevSpd=%llx thr=%llx seen=%llx\n", (long long)SIMSTEP, (int)((getVClass() & SVC_RAIL_CLASSES) != 0), (int)(getPreviousSpeed() <= speedThreshold), (int)(myState.myPos <= myLane->getLength()), (int)!myLane->isInternal(), (int)routeOk, (int)(routeOk && myLane->getEdge().getBidiEdge() == *(myCurrEdge + 1)), (int)stopOk, ps, th, sn); }
+''' + p1)
+p2 = '        const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);\n'
+assert s.count(p2) == 1, 'p2'
+s = s.replace(p2, p2 + r'''        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = vReverse; unsigned long long vr = cvt.u; fprintf(stderr, "RX01 revret t=%lld vReverse=%llx canRev=%d\n", (long long)SIMSTEP, vr, (int)canReverseEventually); }
+''')
+open(p, 'wb').write(s.encode())
+print('patched rev')
+EOF
 (cd $D/build && make -j8 sumo > $O/cppbuild.log 2>&1); CPP=$D/bin/sumo
 echo "cpp bin: $CPP errors: $(grep -c -i ' error' $O/cppbuild.log) binary RX01: $(grep -a -c RX01 $CPP)"
 grep -i ' error' $O/cppbuild.log | head -c 800

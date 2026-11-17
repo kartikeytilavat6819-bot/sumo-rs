@@ -11652,6 +11652,7 @@ impl MSVehicle {
         let stopOk = self.myStops.is_empty()
             || self.myStops.front().unwrap().edge != self.myCurrEdge
             || (self.myStops.front().unwrap().get_speed() > 0.0 && self.myState.myPos > self.myStops.front().unwrap().pars.endPos - 2.0 * POSITION_EPS);
+        if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { let routeOk = self.myCurrEdge + 1 != self.myRoute.size() as usize; eprintln!("RX01 rev t={} rail={} spdOK={} posOK={} normal={} routeOK={} bidi={} stopOk={} prevSpd={:x} thr={:x} seen={:x}", MSNet::get_instance().get_current_time_step(), utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) as i32, (self.get_previous_speed() <= speedThreshold) as i32, (self.myState.myPos <= self.myLane.get_length()) as i32, (!self.myLane.is_internal()) as i32, routeOk as i32, (routeOk && self.myLane.get_edge().get_bidi_edge() == self.get_next_edge_ptr()) as i32, stopOk as i32, self.get_previous_speed().to_bits(), speedThreshold.to_bits(), seen.to_bits()); }
         if utils::common::sumo_vehicle_class::is_railway(self.get_v_class())
             && self.get_previous_speed() <= speedThreshold
             && self.myState.myPos <= self.myLane.get_length()
@@ -13887,6 +13888,7 @@ impl MSVehicle {
 
             let mut canReverseEventually = false;
             let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 revret t={} vReverse={:x} canRev={}", MSNet::get_instance().get_current_time_step(), vReverse.to_bits(), canReverseEventually as i32); }
             v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
