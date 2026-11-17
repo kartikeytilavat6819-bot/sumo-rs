@@ -434,6 +434,11 @@ impl MSBaseVehicle {
         self.myParameter.get().unwrap()
     }
 
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this owner-based `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
+    }
+
     /// C++: `std::string MSBaseVehicle::getPrefixedParameter(const std::string &, std::string &) const` [const]
     /// retrieve parameters of devices, models and the vehicle itself
     // std::string
@@ -536,7 +541,7 @@ impl MSBaseVehicle {
                 return String::new();
             };
             let attrName = &key[16..];
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.m().get_lane_change_model().get_parameter(attrName)));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.get_lane_change_model_2().get_parameter(attrName)));
             match result {
                 Ok(v) => return v,
                 Err(payload) => {
@@ -5361,7 +5366,11 @@ impl MSBaseVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        panic!("getBaseInfluencer() is pure virtual in MSBaseVehicle")
+        if MSGlobals::use_meso_sim() {
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get_mut().unwrap().get_base_influencer()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get_mut().unwrap().get_base_influencer()
+        }
     }
 
     /// C++: `const BaseInfluencer * MSBaseVehicle::getBaseInfluencer() const` [const, virtual, pure virtual]
@@ -6078,9 +6087,21 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_transient_model_params(&mut self) {
-        // shortcut: the junction-model / carFollow-model transient parameter setup (MSBaseVehicle.cpp:2725)
-        // depends on SUMOVehicleParameter::getParameter and the model setters, which are not ported yet
-        let _ = self.myParameter.parametersSet;
+        // Design idea for additional junction model parameters:
+        // 1. typically shared by multiple vehicles -> vType parameter
+        // 2. specific to one vehicle but stays constant throughout the simulation -> vehicle parameter
+        // 3. specific to one vehicle and expected to change during simulation -> prefixed generic vehicle parameter
+        let items: Vec<(String, String)> = self.get_parameter().get_parameters_map().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        for (key, value) in items {
+            if utils::common::string_utils::starts_with(&key, "junctionModel.") {
+                self.set_junction_model_parameter(&key, &value);
+            } else if utils::common::string_utils::starts_with(&key, "carFollowModel.") {
+                if let Err(e) = self.set_car_follow_model_parameter(&key, &value) {
+                    std::panic::panic_any(e);
+                }
+            }
+        }
+        // shortcut: the device.rerouting.mode -> setRoutingMode part of MSBaseVehicle::initTransientModelParams is not ported, upgrade with the rerouting device
     }
 
     /// C++: `std::string MSBaseVehicle::getFlowID() const` [const, private]

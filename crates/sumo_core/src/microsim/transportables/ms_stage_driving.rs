@@ -846,10 +846,10 @@ impl MSStageDriving {
     pub fn is_waiting_for(&self, vehicle: Ptr<SUMOVehicle>) -> bool {
         assert!(self.myLines.len() > 0);
         let line = vehicle.get_parameter().line.clone();
-        // shortcut: MSDevice_Taxi::compatibleLine (a static C++ helper) is not ported yet, so taxi line compatibility is not checked
         self.myLines.contains(vehicle.get_id())
             || ((self.myLines.contains(&line) || self.myLines.contains(LINE_ANY))
                 && (if self.myDestinationStop.is_null() { vehicle.stops_at_edge(self.myDestination) } else { vehicle.stops_at(self.myDestinationStop) }))
+            || crate::microsim::devices::ms_device_taxi::MSDevice_Taxi::compatible_line_2(&line, self.myLines.first().unwrap())
     }
 
     /// C++: `bool MSStageDriving::isWaiting4Vehicle() const` [const, virtual]

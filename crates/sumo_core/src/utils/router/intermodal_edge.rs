@@ -95,11 +95,8 @@ where
     fn length_geometry_factor(&self) -> f64 {
         self.get_length_geometry_factor()
     }
-    // shortcut: IntermodalEdge::getDistanceTo always estimates the boundary, a false flag is not supported, upgrade when the C++ flag is threaded through
-    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
-        if !do_boundary_estimate {
-            panic!("shortcut: IntermodalEdge::getDistanceTo without boundary estimate")
-        }
+    // C++ IntermodalEdge::getDistanceTo takes no flag and always estimates the boundary
+    fn distance_to(&self, other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 {
         self.get_distance_to(other)
     }
     fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {

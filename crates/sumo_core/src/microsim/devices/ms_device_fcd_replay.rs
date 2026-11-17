@@ -16,7 +16,7 @@ pub struct MSDevice_FCDReplay_FCDHandler {
     /// C++ base class `MapMatcher<MSEdge, MSLane, MSJunction>`
     pub base2: Unmapped /* MapMatcher<MSEdge, MSLane, MSJunction> */,
     pub myTime: SUMOTime,
-    pub myTrajectories: BTreeMap<String, MSDevice_FCDReplay_Trajectory>,
+    pub myTrajectories: BTreeMap<String, Box<MSDevice_FCDReplay_Trajectory>>,
     pub myRoutes: BTreeMap<String, (SUMOTime, String, bool, ConstMSEdgeVector, Vec<FCDHandler_StageStart>)>, // C++: std::map<std::string, std::tuple<SUMOTime, std::string, bool, ConstMSEdgeVector, std::vector<StageStart>>>
     pub myPositions: BTreeMap<Position, String>,
 }
@@ -182,8 +182,7 @@ impl MSDevice_FCDReplay_FCDHandler {
         let ids: Vec<String> = self.myRoutes.keys().cloned().collect();
         for id in ids {
             let (depart, vType0, isPerson, routeEdges, stages) = self.myRoutes[&id].clone();
-            // shortcut: C++ std::map keeps element addresses stable (devices store &t); BTreeMap moves values on insert, upgrade to a node-stable map
-            let t: Ptr<MSDevice_FCDReplay_Trajectory> = Ptr::from_mut(self.myTrajectories.entry(id.clone()).or_default());
+            let t: Ptr<MSDevice_FCDReplay_Trajectory> = Ptr::from_mut(&mut **self.myTrajectories.entry(id.clone()).or_default());
             if t[0].time >= intervalStart {
                 // new vehicle or person
                 let mut params = SUMOVehicleParameter::new();
@@ -294,7 +293,7 @@ impl MSDevice_FCDReplay_FCDHandler {
     //             return myTrajectories;
     //         }
     #[allow(unused_variables)]
-    pub fn get_trajectories(&mut self) -> &BTreeMap<String, MSDevice_FCDReplay_Trajectory> {
+    pub fn get_trajectories(&mut self) -> &BTreeMap<String, Box<MSDevice_FCDReplay_Trajectory>> {
         &self.myTrajectories
     }
 
@@ -949,13 +948,12 @@ impl MSDevice_FCDReplay {
     pub fn move_(&mut self, currentTime: SUMOTime) {
         let holderID = self.get_holder().get_id().to_string();
         if self.myTrajectory.is_null() {
-            // shortcut: C++ takes &it->second of std::map; the port takes the same element address through a raw Ptr
             let mut found: Ptr<MSDevice_FCDReplay_Trajectory> = Ptr::null();
             MY_HANDLERS.with(|hs| {
                 for handler in hs.borrow_mut().iter_mut() {
                     let trajs = handler.get_trajectories();
                     if let Some(t) = trajs.get(&holderID) {
-                        found = Ptr::from_raw(t as *const MSDevice_FCDReplay_Trajectory as *mut MSDevice_FCDReplay_Trajectory);
+                        found = Ptr::new(&**t);
                         break;
                     }
                 }

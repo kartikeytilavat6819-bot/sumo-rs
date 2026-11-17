@@ -54,6 +54,7 @@ use utils::common::std_defs::INVALID_DOUBLE;
 
 /// C++ implicit upcast MSVehicle* -> SUMOTrafficObject* (MSVehicle -> MSBaseVehicle -> SUMOVehicle -> SUMOTrafficObject)
 fn msveh_to_traffic_object(v: Ptr<MSVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base.base.base)
 }
 
@@ -63,11 +64,13 @@ use utils::common::std_defs::SUMO_CONST_HALTING_SPEED;
 
 /// C++ implicit upcast SUMOVehicle* -> SUMOTrafficObject* (base sub-object, same address)
 fn veh_to_traffic_object(v: Ptr<SUMOVehicle>) -> Ptr<SUMOTrafficObject> {
+    if v.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut v.m().base)
 }
 
 /// C++ implicit upcast MSPerson* -> SUMOTrafficObject* (through MSTransportable)
 fn person_to_traffic_object(p: Ptr<MSPerson>) -> Ptr<SUMOTrafficObject> {
+    if p.is_null() { return Ptr::null(); }
     Ptr::from_mut(&mut p.m().base.base)
 }
 

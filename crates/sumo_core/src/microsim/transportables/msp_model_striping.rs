@@ -171,37 +171,8 @@ pub fn walking_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane>
 }
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
-// shortcut: local copy because the generic getSidewalk in utils/router/intermodal_edge.rs is a stub (needs router trait bounds for E::getLanes and L::getPermissions); delete this copy and call that one once it is ported
 fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    // prefer lanes that are exclusive to pedestrians
-    let lanes = edge.get_lanes();
-    for lane in lanes.iter() {
-        if lane.get_permissions() == svc {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(svc) {
-            return *lane;
-        }
-    }
-    if svc != SVC_PEDESTRIAN {
-        // persons should always be able to use the sidewalk
-        for lane in lanes.iter() {
-            if lane.get_permissions() == SVC_PEDESTRIAN {
-                return *lane;
-            }
-        }
-        for lane in lanes.iter() {
-            if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-                return *lane;
-            }
-        }
-    }
-    Ptr::null()
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, svc)
 }
 
 // C++ constants (static const double members)
@@ -234,13 +205,26 @@ static MSPMODEL_STRIPING_VT: MSPModelVt = MSPModelVt {
     using_internal_lanes: striping_vt_using_internal_lanes,
     get_active_number: striping_vt_get_active_number,
     load_state: striping_vt_load_state,
+    has_pedestrians: striping_vt_has_pedestrians,
+    blocked_at_dist: striping_vt_blocked_at_dist,
+    next_blocking: striping_vt_next_blocking,
 };
+fn striping_vt_has_pedestrians(m: &mut MSPModel, lane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().has_pedestrians(lane)
+}
+fn striping_vt_blocked_at_dist(m: &mut MSPModel, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().blocked_at_dist(ego, lane, vehCenter, vehWidth, oncomingGap, collectBlockers)
+}
+fn striping_vt_next_blocking(m: &mut MSPModel, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().next_blocking(lane, minPos, minRight, maxLeft, stopTime, bidi)
+}
 fn striping_vt_load_state(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_Striping>().m().load_state(t, s, state)
 }
 
 /// PState overrides of the MSTransportableStateAdapter virtual methods (the others come from MSPModel_InteractingState)
 static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_lat_offset(),
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: |a, stage, now| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_position(stage, now),
@@ -256,6 +240,20 @@ static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransporta
     get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
     get_path_length: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_path_length(),
     save_state: |a, out| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().save_state(out),
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myPerson.get_id(),
+    get_min_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_min_x_base(g),
+    get_max_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_max_x_base(g),
+    get_width: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_width_base(),
+    get_o_type: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get().unwrap().get_o_type_base(),
+};
+/// PStateVehicle overrides getID, getMinX, getMaxX, getWidth, getOType (C++ PStateVehicle)
+static MSPMODEL_STRIPING_PSTATE_VEHICLE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_id: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_id(),
+    get_min_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_min_x(g),
+    get_max_x: |a, g| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_max_x(g),
+    get_width: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_width(),
+    get_o_type: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_o_type(),
+    ..MSPMODEL_STRIPING_PSTATE_VT
 };
 fn striping_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_Striping>().m().add(t, s, now)
@@ -627,7 +625,7 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn move_in_direction(&mut self, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32) {
-        // shortcut: DEBUGCOND (person/lane isSelected, GUI-only) debug output is not ported; debugPath stays null
+        // GUI-only debug dump: DEBUGCOND is person/lane isSelected(), always false in a headless run, so debugPath stays null
         // shortcut: the C++ holds a reference into myActiveLanes; here a lane's vector is taken out while it is advanced and put back afterwards
         // C++ iterates the live std::map: lanes inserted by arriveAndAdvance are visited when their key is larger than the current one
         let mut cursor: Option<MSPModel_Interacting_LaneKey> = None;
@@ -951,7 +949,7 @@ impl MSPModel_Striping {
     // }
     #[allow(unused_variables)]
     pub fn move_in_direction_on_lane(&mut self, pedestrians: &mut MSPModel_Interacting_Pedestrians, lane: Ptr<MSLane>, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32, debug: bool) {
-        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND is person isSelected(), always false in a headless run, so not ported
         let _ = debug;
         let stripes = Self::num_stripes(lane);
         //std::cout << " laneWidth=" << lane->getWidth() << " stripeWidth=" << stripeWidth << " stripes=" << stripes << "\n";
@@ -1782,7 +1780,7 @@ impl MSPModel_Striping {
                 }
             }
         }
-        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND is person isSelected(), always false in a headless run, so not ported
         obs
     }
 
@@ -2097,7 +2095,7 @@ impl MSPModel_Striping {
     pub fn add_crossing_vehs(crossing: Ptr<MSLane>, stripes: i32, lateral_offset: f64, dir: i32, crossingVehs: &mut MSPModel_Striping_Obstacles, prio: bool, flipY: bool) -> bool {
         let mut hasCrossingVehObs = false;
         let crossingExitLink = crossing.get_link_cont()[0];
-        // shortcut: gDebugFlag1 / DEBUGCOND2 (lane isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND2 is lane isSelected(), always false in a headless run, so not ported
         let linkLeaders = crossingExitLink.get_leader_info(Ptr::null(), crossing.get_length(), Ptr::null(), false);
         if linkLeaders.len() > 0 {
             for it in linkLeaders.iter() {
@@ -2163,7 +2161,7 @@ impl MSPModel_Striping {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_vehicle_obstacles(lane: Ptr<MSLane>, dir: i32, ped: Ptr<MSPModel_Striping_PState>) -> MSPModel_Striping_Obstacles {
-        // shortcut: debug output (DEBUGCOND / DEBUGCOND2, GUI-only) is not ported
+        // GUI-only debug dump: DEBUGCOND / DEBUGCOND2 are isSelected(), always false in a headless run, so not ported
         let stripes = Self::num_stripes(lane);
         let mut vehObs: MSPModel_Striping_Obstacles = (0..stripes).map(|_| MSPModel_Striping_Obstacle::new(dir, DIST_FAR_AWAY)).collect();
         let mut current: i32 = -1;
@@ -2332,7 +2330,7 @@ impl MSPModel_Striping {
         arrivalTime += utils::common::time::time2steps(wa.length / speed);
         let leavingTime = arrivalTime + utils::common::time::time2steps(crossing.get_length() / speed);
         crossing.get_incoming_lanes()[0].viaLink.m().set_approaching_person(ped.get_person(), arrivalTime, leavingTime);
-        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND is person isSelected(), always false in a headless run, so not ported
     }
 
 }
@@ -2402,7 +2400,7 @@ impl MSPModel_Striping_MovePedestrians {
         let mut changedLane: BTreeSet<Ptr<MSPerson>> = BTreeSet::new();
         self.myModel.m().move_in_direction(currentTime, &mut changedLane, MSPMODEL_FORWARD);
         self.myModel.m().move_in_direction(currentTime, &mut changedLane, MSPMODEL_BACKWARD);
-        // shortcut: the C++ LOG_ALL debug dump (compile-time option, off by default) is not ported
+        // LOG_ALL is a compile-time option, commented out in C++ 1.28.0 (off by default), so not ported
         utils::common::time::delta_t()
     }
 
@@ -2732,7 +2730,7 @@ impl MSPModel_Striping_PState {
                 s.myDir = if !mayStartBackward { MSPMODEL_FORWARD } else { MSPMODEL_BACKWARD };
             }
         }
-        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND is person isSelected(), always false in a headless run, so not ported
         if s.myPosLat == UNSPECIFIED_POS_LAT || my_legacy_pos_lat() {
             if s.myPosLat == UNSPECIFIED_POS_LAT {
                 s.myPosLat = 0.;
@@ -3351,8 +3349,11 @@ impl MSPModel_Striping_PState {
     //     }
     //     return myEdgePos - (includeMinGap ? getMinGap() : 0.);
     // }
-    #[allow(unused_variables)]
     pub fn get_min_x(&self, includeMinGap: bool) -> f64 {
+        (self.base.base.vt.get_min_x)(&self.base.base, includeMinGap)
+    }
+    #[allow(unused_variables)]
+    pub fn get_min_x_base(&self, includeMinGap: bool) -> f64 {
         if self.myDir == MSPMODEL_FORWARD {
             return self.myEdgePos - self.get_length();
         }
@@ -3369,8 +3370,11 @@ impl MSPModel_Striping_PState {
     //     }
     //     return myEdgePos + getLength();
     // }
-    #[allow(unused_variables)]
     pub fn get_max_x(&self, includeMinGap: bool) -> f64 {
+        (self.base.base.vt.get_max_x)(&self.base.base, includeMinGap)
+    }
+    #[allow(unused_variables)]
+    pub fn get_max_x_base(&self, includeMinGap: bool) -> f64 {
         if self.myDir == MSPMODEL_FORWARD {
             return self.myEdgePos + (if includeMinGap { self.get_min_gap() } else { 0. });
         }
@@ -3916,7 +3920,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn walk(&mut self, obs: &MSPModel_Striping_Obstacles) {
-        // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
+        // GUI-only debug dump: DEBUGCOND is person isSelected(), always false in a headless run, so not ported
         let stripes = obs.len() as i32;
         let sMax = stripes - 1;
         debug_assert!(stripes == MSPModel_Striping::num_stripes(self.myLane));
@@ -4248,7 +4252,7 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn merge_obstacles(&mut self, into: &mut MSPModel_Striping_Obstacles, obs2: &MSPModel_Striping_Obstacles) {
-        // shortcut: gDebugFlag1 debug output (GUI-only) is not ported
+        // GUI-only debug dump: gDebugFlag1 is set only from DEBUGCOND (isSelected(), always false in a headless run), so not ported
         for i in 0..into.len() {
             let dO = self.distance_to(&obs2[i], obs2[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED);
             let dI = self.distance_to(&into[i], into[i].type_ == MSPModel_Striping_ObstacleType::OBSTACLE_PED);
@@ -4379,6 +4383,9 @@ impl MSPModel_Striping_PState {
     // }
     #[allow(unused_variables)]
     pub fn get_width(&self) -> f64 {
+        (self.base.base.vt.get_width)(&self.base.base)
+    }
+    pub fn get_width_base(&self) -> f64 {
         self.myPerson.get_vehicle_type().get_width()
     }
 
@@ -4388,6 +4395,9 @@ impl MSPModel_Striping_PState {
     //         }
     #[allow(unused_variables)]
     pub fn get_o_type(&self) -> MSPModel_Striping_ObstacleType {
+        (self.base.base.vt.get_o_type)(&self.base.base)
+    }
+    pub fn get_o_type_base(&self) -> MSPModel_Striping_ObstacleType {
         MSPModel_Striping_ObstacleType::OBSTACLE_PED
     }
 
@@ -4639,6 +4649,7 @@ impl MSPModel_Striping_PStateVehicle {
             myXWidth: xWidth,
             myYWidth: yWidth,
         };
+        s.base.base.base.vt = &MSPMODEL_STRIPING_PSTATE_VEHICLE_VT;
         s.myLane = walkingarea; // to ensure correct limits when calling otherStripe()
         // relX is the center but we want it to be the max value if the movement direction is forward
         // and the min value otherwise (indicated by xWidth sign)

@@ -24,11 +24,29 @@ pub struct MSPModelVt {
     pub using_internal_lanes: fn(&mut MSPModel) -> bool,
     pub get_active_number: fn(&mut MSPModel) -> i32,
     pub load_state: fn(&mut MSPModel, Ptr<MSTransportable>, Ptr<MSStageMoving>, &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter>,
+    pub has_pedestrians: fn(&mut MSPModel, Ptr<MSLane>) -> bool,
+    pub blocked_at_dist: fn(&mut MSPModel, Ptr<SUMOTrafficObject>, Ptr<MSLane>, f64, f64, f64, Ptr<Vec<Ptr<MSPerson>>>) -> bool,
+    pub next_blocking: fn(&mut MSPModel, Ptr<MSLane>, f64, f64, f64, f64, bool) -> PersonDist,
 }
 
 /// C++ MSPModel::loadState base implementation (returns nullptr)
 pub fn msp_model_default_load_state(_m: &mut MSPModel, _transportable: Ptr<MSTransportable>, _stage: Ptr<MSStageMoving>, _state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
     Ptr::null()
+}
+
+/// C++ MSPModel::hasPedestrians base implementation (returns false)
+pub fn msp_model_default_has_pedestrians(_m: &mut MSPModel, _lane: Ptr<MSLane>) -> bool {
+    false
+}
+
+/// C++ MSPModel::blockedAtDist base implementation (returns false)
+pub fn msp_model_default_blocked_at_dist(_m: &mut MSPModel, _ego: Ptr<SUMOTrafficObject>, _lane: Ptr<MSLane>, _vehCenter: f64, _vehWidth: f64, _oncomingGap: f64, _collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
+    false
+}
+
+/// C++ MSPModel::nextBlocking base implementation (returns PersonDist(nullptr, -1))
+pub fn msp_model_default_next_blocking(_m: &mut MSPModel, _lane: Ptr<MSLane>, _minPos: f64, _minRight: f64, _maxLeft: f64, _stopTime: f64, _bidi: bool) -> PersonDist {
+    (Ptr::null(), -1.0)
 }
 
 // C++ static members of MSPModel (port as module-level statics, see AGENTS.md):
@@ -96,9 +114,8 @@ impl MSPModel {
     //         UNUSED_PARAMETER(collectBlockers);
     //         return false;
     //     }
-    #[allow(unused_variables)]
     pub fn blocked_at_dist(&mut self, ego: Ptr<SUMOTrafficObject>, lane: Ptr<MSLane>, vehCenter: f64, vehWidth: f64, oncomingGap: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
-        false
+        (self.vt.blocked_at_dist)(self, ego, lane, vehCenter, vehWidth, oncomingGap, collectBlockers)
     }
 
     /// C++: `bool MSPModel::hasPedestrians(const MSLane *)` [virtual]
@@ -109,7 +126,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn has_pedestrians(&mut self, lane: Ptr<MSLane>) -> bool {
-        false
+        (self.vt.has_pedestrians)(self, lane)
     }
 
     /// C++: `PersonDist MSPModel::nextBlocking(const MSLane *, double, double, double, double, bool)` [virtual]
@@ -125,7 +142,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn next_blocking(&mut self, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
-        (Ptr::null(), -1.0)
+        (self.vt.next_blocking)(self, lane, minPos, minRight, maxLeft, stopTime, bidi)
     }
 
     /// C++: `bool MSPModel::usingInternalLanes()` [virtual, pure virtual]
@@ -232,6 +249,17 @@ pub struct MSTransportableStateAdapterVt {
     pub get_lane: fn(&MSTransportableStateAdapter) -> Ptr<MSLane>,
     pub get_path_length: fn(&MSTransportableStateAdapter) -> f64,
     pub save_state: fn(&mut MSTransportableStateAdapter, &mut String),
+    pub get_lat_offset: fn(&MSTransportableStateAdapter) -> f64,
+    pub get_id: fn(&MSTransportableStateAdapter) -> &str,
+    pub get_min_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_max_x: fn(&MSTransportableStateAdapter, bool) -> f64,
+    pub get_width: fn(&MSTransportableStateAdapter) -> f64,
+    pub get_o_type: fn(&MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType,
+}
+
+/// C++ MSPModel_InteractingState::getLatOffset is only reachable on interacting states (the base adapter has none)
+pub fn adapter_default_get_lat_offset(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("MSPModel_InteractingState::getLatOffset is only available on interacting states")
 }
 
 /// C++ MSTransportableStateAdapter base implementations (pure virtuals panic, as the concrete state must provide them)
@@ -279,6 +307,21 @@ pub fn adapter_default_get_path_length(_: &MSTransportableStateAdapter) -> f64 {
 }
 pub fn adapter_default_save_state(_: &mut MSTransportableStateAdapter, _: &mut String) {
 }
+pub fn adapter_default_get_id(_: &MSTransportableStateAdapter) -> &str {
+    panic!("getID is virtual on MSPModel_InteractingState only; call it on an interacting state")
+}
+pub fn adapter_default_get_min_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMinX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_max_x(_: &MSTransportableStateAdapter, _: bool) -> f64 {
+    panic!("getMaxX is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_width(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("getWidth is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
+pub fn adapter_default_get_o_type(_: &MSTransportableStateAdapter) -> super::msp_model_striping::MSPModel_Striping_ObstacleType {
+    panic!("getOType is virtual on MSPModel_Striping::PState only; call it on a striping state")
+}
 
 /// base vtable of MSTransportableStateAdapter, used by states that do not override the virtual methods
 pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
@@ -297,6 +340,12 @@ pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MST
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
+    get_lat_offset: adapter_default_get_lat_offset,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
 };
 
 impl MSTransportableStateAdapter {

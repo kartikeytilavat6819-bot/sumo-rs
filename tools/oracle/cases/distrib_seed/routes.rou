@@ -1,0 +1,16 @@
+<routes>
+    <vTypeDistribution id="vd">
+        <vType id="vdA" vClass="passenger" maxSpeed="13.89" speedFactor="normc(1.00,0.10,0.80,1.20)" probability="0.6"/>
+        <vType id="vdB" vClass="passenger" maxSpeed="20.00" accel="2.00" probability="0.4"/>
+    </vTypeDistribution>
+    <routeDistribution id="rd">
+        <route id="rdA" edges="D0 D1" probability="0.7"/>
+        <route id="rdB" edges="D0" probability="0.3"/>
+    </routeDistribution>
+    <vehicle id="v0" type="vd" route="rd" depart="0.00"/>
+    <vehicle id="v1" type="vd" route="rd" depart="3.00"/>
+    <vehicle id="v2" type="vd" route="rd" depart="6.00"/>
+    <interval begin="10.00" end="120.00">
+        <flow id="fi" type="vd" route="rd" number="20"/>
+    </interval>
+</routes>
