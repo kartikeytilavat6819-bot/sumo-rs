@@ -14,6 +14,14 @@ diff --git a/src/microsim/MSVehicle.cpp b/src/microsim/MSVehicle.cpp
  MSVehicle::boardTransportables(MSStop& stop) {
 +    if (getenv("CD01") && getID() == "L1f.0") std::cerr << "CD01 BT time=" << SIMSTEP << " hp=" << MSNet::getInstance()->hasPersons() << " edge=" << myLane->getEdge().getNumericalID() << "\n";
      if (stop.skipOnDemand) {
+diff --git a/src/microsim/transportables/MSPerson.cpp b/src/microsim/transportables/MSPerson.cpp
+--- a/src/microsim/transportables/MSPerson.cpp
++++ b/src/microsim/transportables/MSPerson.cpp
+@@ -181,3 +181,4 @@
+ bool
+ MSPerson::checkAccess(const MSStage* const prior, const bool waitAtStop) {
++    if (getenv("CD01") && getID() == "pwL10") std::cerr << "CD01 CA wait=" << waitAtStop << " dstop_null=" << (prior->getDestinationStop() == nullptr) << " dedge=" << prior->getDestination()->getNumericalID() << " walk=" << (prior->getStageType() == MSStageType::WALKING) << "\n";
+     MSStoppingPlace* prevStop = prior->getDestinationStop();
 diff --git a/src/microsim/transportables/MSTransportableControl.cpp b/src/microsim/transportables/MSTransportableControl.cpp
 --- a/src/microsim/transportables/MSTransportableControl.cpp
 +++ b/src/microsim/transportables/MSTransportableControl.cpp
@@ -22,11 +30,3 @@ diff --git a/src/microsim/transportables/MSTransportableControl.cpp b/src/micros
  MSTransportableControl::addWaiting(const MSEdge* const edge, MSTransportable* transportable) {
 +    if (getenv("CD01")) std::cerr << "CD01 AW t=" << transportable->getID() << " edge=" << edge->getNumericalID() << " time=" << SIMSTEP << "\n";
      myWaiting4Vehicle[edge].push_back(transportable);
-@@ -324,5 +325,7 @@
-         const SUMOTime currentTime = SIMSTEP;
-         TransportableVector& transportables = wait->second;
-+        if (getenv("CD01") && vehicle->getID() == "L1f.0") std::cerr << "CD01 LAW edge=" << edge->getNumericalID() << " n=" << transportables.size() << " time=" << currentTime << " tnl=" << timeToLoadNext << " stopdur=" << stopDuration << "\n";
-         for (TransportableVector::iterator i = transportables.begin(); i != transportables.end();) {
-             MSTransportable* const t = *i;
-+            if (getenv("CD01") && vehicle->getID() == "L1f.0") std::cerr << "CD01 CAND t=" << t->getID() << " wf=" << t->isWaitingFor(vehicle) << " allow=" << vehicle->allowsBoarding(t) << " pos=" << t->getEdgePos() << " sir=" << vehicle->isStoppedInRange(t->getEdgePos(), MSGlobals::gStopTolerance) << " edge=" << t->getEdge()->getNumericalID() << "\n";
-             if (t->isWaitingFor(vehicle) && (t == force ||
