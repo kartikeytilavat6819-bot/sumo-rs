@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T22:52:12.347805-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T22:56:43.331496-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -11,9 +11,6 @@
 
     <output>
         <precision value="6"/>
-        <emission-output value="tools/oracle/cases/ev/ref_energy.emission.xml"/>
-        <battery-output value="tools/oracle/cases/ev/ref_energy.battery.xml"/>
-        <chargingstations-output value="tools/oracle/cases/ev/ref_energy.chargingstations.xml"/>
         <fcd-output value="tools/oracle/cases/ev/ref_energy.fcd.xml"/>
         <tripinfo-output value="tools/oracle/cases/ev/ref_energy.tripinfo.xml"/>
         <statistic-output value="tools/oracle/cases/ev/ref_energy.stat.xml"/>

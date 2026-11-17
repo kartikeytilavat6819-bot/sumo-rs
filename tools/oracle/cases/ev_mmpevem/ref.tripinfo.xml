@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T22:52:12.569603-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T22:56:43.547940-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -11,9 +11,6 @@
 
     <output>
         <precision value="6"/>
-        <emission-output value="tools/oracle/cases/ev_mmpevem/ref.emission.xml"/>
-        <battery-output value="tools/oracle/cases/ev_mmpevem/ref.battery.xml"/>
-        <chargingstations-output value="tools/oracle/cases/ev_mmpevem/ref.chargingstations.xml"/>
         <fcd-output value="tools/oracle/cases/ev_mmpevem/ref.fcd.xml"/>
         <tripinfo-output value="tools/oracle/cases/ev_mmpevem/ref.tripinfo.xml"/>
         <statistic-output value="tools/oracle/cases/ev_mmpevem/ref.stat.xml"/>
@@ -31,12 +28,10 @@
 -->
 
 <tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
-    <tripinfo id="ev_drive" depart="5.000" departLane="-103227#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="21.000" arrivalLane="-103227#2_0" arrivalPos="142.310000" arrivalSpeed="19.033765" duration="16.000" routeLength="308.510000" waitingTime="0.000" waitingCount="0" stopTime="0.000" timeLoss="0.571" rerouteNo="0" devices="tripinfo_ev_drive emissions_ev_drive battery_ev_drive fcd_ev_drive" vType="EV" speedFactor="0.938300" vaporized="">
-        <emissions CO_abs="0.000000" CO2_abs="0.000000" HC_abs="0.000000" PMx_abs="0.000000" NOx_abs="0.000000" fuel_abs="0.000000" electricity_abs="19.884727"/>
+    <tripinfo id="ev_drive" depart="5.000" departLane="-103227#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="21.000" arrivalLane="-103227#2_0" arrivalPos="142.310000" arrivalSpeed="19.033765" duration="16.000" routeLength="308.510000" waitingTime="0.000" waitingCount="0" stopTime="0.000" timeLoss="0.571" rerouteNo="0" devices="tripinfo_ev_drive battery_ev_drive fcd_ev_drive" vType="EV" speedFactor="0.938300" vaporized="">
         <battery depleted="0" actualBatteryCapacity="9980.115273" totalEnergyConsumed="56.233716" totalEnergyRegenerated="36.348989"/>
     </tripinfo>
-    <tripinfo id="ev_charge" depart="0.000" departLane="-103224#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="67.000" arrivalLane="-103224#3_0" arrivalPos="35.740000" arrivalSpeed="19.166211" duration="67.000" routeLength="306.550000" waitingTime="0.000" waitingCount="0" stopTime="40.000" timeLoss="5.768" rerouteNo="0" devices="tripinfo_ev_charge emissions_ev_charge battery_ev_charge fcd_ev_charge" vType="EV" speedFactor="1.060000" vaporized="">
-        <emissions CO_abs="0.000000" CO2_abs="0.000000" HC_abs="0.000000" PMx_abs="0.000000" NOx_abs="0.000000" fuel_abs="0.000000" electricity_abs="129.242792"/>
+    <tripinfo id="ev_charge" depart="0.000" departLane="-103224#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="67.000" arrivalLane="-103224#3_0" arrivalPos="35.740000" arrivalSpeed="19.166211" duration="67.000" routeLength="306.550000" waitingTime="0.000" waitingCount="0" stopTime="40.000" timeLoss="5.768" rerouteNo="0" devices="tripinfo_ev_charge battery_ev_charge fcd_ev_charge" vType="EV" speedFactor="1.060000" vaporized="">
         <battery depleted="0" actualBatteryCapacity="10398.534986" totalEnergyConsumed="186.957336" totalEnergyRegenerated="57.714545"/>
     </tripinfo>
 </tripinfos>
