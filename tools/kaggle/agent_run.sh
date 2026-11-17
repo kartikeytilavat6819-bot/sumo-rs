@@ -19,6 +19,7 @@ open(p, 'w').write(s)
 PY
 git -C $P diff > $T/cpp.patch; echo "patch lines: $(wc -l < $T/cpp.patch)"
 CPPBIN=$(bash tools/gcloud/vm_cpp_trace.sh pt03 $T/cpp.patch 2>$T/build.log | tail -1); echo "cpp bin: $CPPBIN"
+[ -x "$CPPBIN" ] || { echo "CPP BUILD FAILED:"; tail -12 $T/build.log | cut -c1-240; }
 NET="-n $C/ref_simple.net.xml -r $C/routes.rou $(cat $C/sim.args) --no-step-log true"
 OUTS=$(sed "s#@OUT@#$T/ref#g" $C/sim_outputs.txt | tr -d '\r')
 $SUMO_PRISTINE_BIN/sumo $NET --fcd-output $T/ref/fcd.xml --tripinfo-output $T/ref/ti.xml $OUTS >$T/ref/log 2>&1; echo "ref rc=$?"
@@ -31,5 +32,6 @@ for s in ref rs; do
 done
 echo "FCD first diff ref vs rs:"; diff $T/ref/bus.txt $T/rs/bus.txt | head -4 | cut -c1-200
 echo "C++ trace lines: $(grep -c PT03 $T/cpp/trace.txt)"; grep PT03 $T/cpp/trace.txt | head -14
-echo "RS trace lines: $(grep -c PT03 $T/rs/trace.txt)"; grep PT03 $T/rs/trace.txt | head -14
+echo "RS trace lines: $(grep -c PT03 $T/rs/trace.txt) hasPed=true: $(grep -c 'hasPed=true' $T/rs/trace.txt) leader rows: $(grep -c leader_null $T/rs/trace.txt)"
+grep 'lane=E1_0' $T/rs/trace.txt | sed -n '/t=10000 /,/t=31000 /p' | head -30 | cut -c1-200
 echo "personinfo rows ref=$(grep -c '<personinfo' $T/ref/personinfo.xml 2>/dev/null) rs=$(grep -c '<personinfo' $T/rs/personinfo.xml 2>/dev/null)"
