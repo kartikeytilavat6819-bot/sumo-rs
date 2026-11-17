@@ -1525,7 +1525,8 @@ impl MSBaseVehicle {
                         }
                     }
                     sourcePos = stops[idx].pos;
-                    startTime += self.myStops[stopIt].get_min_duration(startTime);
+                    // shortcut: the C++ int64 add wraps in the release build; a SUMOTIME_MAX duration (setStop default) overflows here, so wrap the same way, upgrade if C++ is ever checked for overflow
+                    startTime = startTime.wrapping_add(self.myStops[stopIt].get_min_duration(startTime));
                 }
                 edges.pop();
                 edges.extend(into.iter().copied());
