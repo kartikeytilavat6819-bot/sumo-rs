@@ -378,6 +378,7 @@ impl std::ops::DerefMut for MSPModel_InteractingState {
 
 /// virtual overrides of MSPModel_InteractingState (the others keep the MSTransportableStateAdapter base implementation)
 pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lat_offset_base(),
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: adapter_default_get_position,
@@ -529,6 +530,11 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_lat_offset(&self) -> f64 {
+        (self.base.vt.get_lat_offset)(&self.base)
+    }
+
+    /// base implementation of the virtual getLatOffset (dispatched through the state vtable)
+    pub fn get_lat_offset_base(&self) -> f64 {
         self.myPosLat
     }
 

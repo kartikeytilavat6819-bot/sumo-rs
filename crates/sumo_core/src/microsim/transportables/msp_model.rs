@@ -244,6 +244,12 @@ pub struct MSTransportableStateAdapterVt {
     pub get_lane: fn(&MSTransportableStateAdapter) -> Ptr<MSLane>,
     pub get_path_length: fn(&MSTransportableStateAdapter) -> f64,
     pub save_state: fn(&mut MSTransportableStateAdapter, &mut String),
+    pub get_lat_offset: fn(&MSTransportableStateAdapter) -> f64,
+}
+
+/// C++ MSPModel_InteractingState::getLatOffset is only reachable on interacting states (the base adapter has none)
+pub fn adapter_default_get_lat_offset(_: &MSTransportableStateAdapter) -> f64 {
+    panic!("MSPModel_InteractingState::getLatOffset is only available on interacting states")
 }
 
 /// C++ MSTransportableStateAdapter base implementations (pure virtuals panic, as the concrete state must provide them)
@@ -309,6 +315,7 @@ pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MST
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
+    get_lat_offset: adapter_default_get_lat_offset,
 };
 
 impl MSTransportableStateAdapter {

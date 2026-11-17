@@ -249,6 +249,7 @@ fn striping_vt_load_state(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSSt
 
 /// PState overrides of the MSTransportableStateAdapter virtual methods (the others come from MSPModel_InteractingState)
 static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_lat_offset(),
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: |a, stage, now| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_position(stage, now),

@@ -75,6 +75,7 @@ fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
 
 /// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
 static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: pstate_get_position,
@@ -94,6 +95,7 @@ static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTran
 
 /// C++ CState overrides (getPosition, getAngle) on top of the PState table
 static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: cstate_get_position,
