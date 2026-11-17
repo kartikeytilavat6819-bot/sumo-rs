@@ -744,8 +744,8 @@ impl MSTriggeredRerouter {
                 };
                 let end = mainStart + oloc.main.len();
                 // exit main within
-                // shortcut: C++ also skips when v.getNextStop().edge lies within main (stop in main); MSStop::edge is an Unmapped route iterator, upgrade when MSRouteIterator is ported
-                if oldEdges.get(mainStart..end) != Some(&oloc.cMain[..]) {
+                // stop in main
+                if oldEdges.get(mainStart..end) != Some(&oloc.cMain[..]) || (v.has_stops() && v.get_next_stop().edge < end) {
                     continue;
                 }
                 // negated iterator distance for descending order
