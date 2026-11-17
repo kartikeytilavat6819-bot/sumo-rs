@@ -180,6 +180,12 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
         ROEdge::get_stop_position(stop)
     }
+    fn lane_edge(lane: Ptr<ROLane>) -> Ptr<ROEdge> {
+        Ptr::from_mut(lane.m().get_edge())
+    }
+    fn lane_outgoing_via_lanes(lane: Ptr<ROLane>) -> Vec<(Ptr<ROLane>, Ptr<ROEdge>)> {
+        lane.get_outgoing_via_lanes().clone()
+    }
     fn lane_permissions(lane: Ptr<ROLane>) -> SVCPermissions {
         lane.get_permissions()
     }
