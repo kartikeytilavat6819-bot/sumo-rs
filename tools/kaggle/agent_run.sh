@@ -14,8 +14,13 @@ timeout 1500 bash tools/oracle/run_state.sh "${cases[@]}" >/tmp/sl07_state_run.t
 res=$STATE_OUT/results.txt
 echo "cases=${#cases[@]}"
 if [ -f "$res" ]; then
-  echo "variants=$(grep -c ' state=' "$res") state_PASS=$(grep -c 'state=PASS' "$res") load_PASS=$(grep -c 'load=PASS' "$res")"
+  awk '/ state=/{n++; if ($0 !~ /state=PASS/) sf++; if ($0 !~ /load=PASS/) lf++} END{print "variants=" n+0, "state_nonPASS=" sf+0, "load_nonPASS=" lf+0}' "$res"
   grep -vE 'state=PASS +load=PASS' "$res" | cut -c1-260
+  grep -E 'load=(FAIL|NOLOAD)' "$res" | awk '{print $1}' | while read -r cv; do
+    c=${cv%%/*}; t=${cv#*/}
+    echo "== load $cv"; tail -4 "$STATE_OUT/$c/$t.load.txt" 2>/dev/null | cut -c1-240
+    grep -hE 'WARN|rror|panicked' "$STATE_OUT/$c/$t.load_ours.log" 2>/dev/null | head -6 | cut -c1-240
+  done
 else
   tail -20 /tmp/sl07_state_run.txt | cut -c1-260
 fi
