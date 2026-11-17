@@ -9065,8 +9065,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn may_continue(&self, veh: Ptr<MSVehicle>) -> bool {
-        // shortcut: get_device() is not keyed by type yet, so the MSDevice_Taxi lookup never finds a device
-        if !veh.get_device(&()).is_null() {
+        if !veh.get_device("taxi").is_null() {
             // taxi device may assign a new route that continues past the end of the initial route
             return true;
         }

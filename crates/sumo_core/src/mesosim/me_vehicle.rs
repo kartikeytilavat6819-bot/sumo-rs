@@ -532,8 +532,10 @@ fn me_vehicle_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
 fn me_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
     me_vehicle_ref(o).is_selected()
 }
-fn me_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
-    me_vehicle_ref(o).get_device(type_)
+fn me_vehicle_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    let dev = me_vehicle_ref(o).get_device(kind);
+    // C++ implicit upcast MSVehicleDevice* -> MSDevice*: MSDevice is the second base, so offset it
+    if dev.is_null() { Ptr::default() } else { Ptr::from_raw(&dev.base2 as *const MSDevice as *mut MSDevice) }
 }
 fn me_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
     me_vehicle_ref(o).get_edge()

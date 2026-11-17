@@ -27,13 +27,6 @@ fn leak_track(t: NBRailwayTopologyAnalyzer_Track) -> Ptr<NBRailwayTopologyAnalyz
     Ptr::from_raw(Box::into_raw(Box::new(t)))
 }
 
-/// shortcut: C++ shared_ptr<NBPTStop> is mutated freely; Rc only gives &T, so this goes through
-/// the raw pointer like Ptr::m(). Replace with RefCell<NBPTStop> once the owners are ported.
-#[allow(clippy::mut_from_ref)]
-fn stop_m(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 /// C++ class `NBRailwayGeometryHelper` (netbuild/NBAlgorithms_Railway.h)
 pub struct NBRailwayGeometryHelper {
 }
@@ -489,7 +482,7 @@ impl NBRailwaySignalGuesser {
                                 ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
                             }
                             addedSignals += 1;
-                            stop_m(item).find_lane_and_compute_bus_stop_extent_2(stopEdge);
+                            item.m().find_lane_and_compute_bus_stop_extent_2(stopEdge);
                             stopEdge = ec.retrieve(&stopEdgeID, false);
                             NBTurningDirectionsComputer::compute_turn_directions_for_node(stopEdge.get_from_node(), false);
                             NBTurningDirectionsComputer::compute_turn_directions_for_node(stopEdge.get_to_node(), false);
@@ -539,7 +532,7 @@ impl NBRailwaySignalGuesser {
                                 ec.split_at_2(dc, bidi, n, bidi.get_id(), &edgeID2, bidi.get_num_lanes(), bidi.get_num_lanes(), -1.0, 1.0, 0);
                             }
                             addedSignals += 1;
-                            stop_m(item).find_lane_and_compute_bus_stop_extent_2(stopEdge);
+                            item.m().find_lane_and_compute_bus_stop_extent_2(stopEdge);
                             curr = ec.retrieve(&currID, false);
                             NBTurningDirectionsComputer::compute_turn_directions_for_node(curr.get_from_node(), false);
                             NBTurningDirectionsComputer::compute_turn_directions_for_node(curr.get_to_node(), false);
@@ -2059,7 +2052,7 @@ impl NBRailwayTopologyAnalyzer {
             write_messagef!("Reversed % sequences (count by length: %)", numReversed, joined);
             for item in sc.get_stops().values() {
                 if reversedIDs.contains(item.get_edge_id()) {
-                    stop_m(item).find_lane_and_compute_bus_stop_extent(ec);
+                    item.m().find_lane_and_compute_bus_stop_extent(ec);
                 }
             }
         }
@@ -2661,7 +2654,7 @@ impl NBRailwayTopologyAnalyzer {
         let mut added = 0;
         let mut numDisconnected = 0;
         // determinism: std::set<std::shared_ptr<NBPTStop>> and the edge sets are ordered by id here
-        let mut addBidiStops: BTreeMap<String, Rc<NBPTStop>> = BTreeMap::new();
+        let mut addBidiStops: BTreeMap<String, Ptr<NBPTStop>> = BTreeMap::new();
         let mut addBidiStopEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
         let mut addBidiEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
         let mut visited: BTreeSet<(String, String)> = BTreeSet::new();
@@ -2785,7 +2778,7 @@ impl NBRailwayTopologyAnalyzer {
         for stop in addBidiStops.values() {
             if let Some(fromReverse) = sc.get_reverse_stop(stop.clone(), ec) {
                 sc.insert(fromReverse.clone(), false);
-                stop_m(stop).set_bidi_stop(fromReverse);
+                stop.m().set_bidi_stop(fromReverse);
             }
         }
         if addBidiEdges.len() > 0 || numDisconnected > 0 {
@@ -3031,7 +3024,7 @@ impl NBRailwayTopologyAnalyzer {
             let stops = item.m().get_stops();
             if stops.len() > 1 {
                 for w in stops.windows(2) {
-                    visited.insert((Rc::as_ptr(&w[0]) as usize, Rc::as_ptr(&w[1]) as usize));
+                    visited.insert((w[0].as_raw() as usize, w[1].as_raw() as usize));
                 }
             }
         }
@@ -3039,7 +3032,7 @@ impl NBRailwayTopologyAnalyzer {
             let stops = item.m().get_stops();
             if stops.len() > 1 {
                 for w in stops.windows(2) {
-                    let reverseTrip = (Rc::as_ptr(&w[1]) as usize, Rc::as_ptr(&w[0]) as usize);
+                    let reverseTrip = (w[1].as_raw() as usize, w[0].as_raw() as usize);
                     if visited.contains(&reverseTrip) {
                         result.insert(*item);
                         break;

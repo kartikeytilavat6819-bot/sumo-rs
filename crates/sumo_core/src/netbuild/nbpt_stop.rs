@@ -34,7 +34,8 @@ pub struct NBPTStop {
     pub myAccesses: Vec<(String, f64, f64)>,
     /// list of public transport lines (for displaying)
     pub myLines: Vec<String>,
-    pub myBidiStop: std::rc::Weak<NBPTStop>,
+    /// C++ `std::weak_ptr<NBPTStop>`; shortcut: stops are leaked (never freed), so the link never expires as in C++ once a stop is erased
+    pub myBidiStop: Ptr<NBPTStop>,
     /// whether the stop was not part of the road network and must be mapped
     pub myIsLoose: bool,
     /// whether this stop was build from a platform position
@@ -102,7 +103,7 @@ impl NBPTStop {
             myEndPos: 0.0,
             myAccesses: Vec::new(),
             myLines: Vec::new(),
-            myBidiStop: std::rc::Weak::new(),
+            myBidiStop: Ptr::null(),
             myIsLoose: is_loose,
             myIsPlatform: false,
             myPlatformCands: Vec::new(),
@@ -564,8 +565,8 @@ impl NBPTStop {
     //         myBidiStop = bidiStop;
     //     }
     #[allow(unused_variables)]
-    pub fn set_bidi_stop(&mut self, bidiStop: Rc<NBPTStop>) {
-                self.myBidiStop = Rc::downgrade(&bidiStop);
+    pub fn set_bidi_stop(&mut self, bidiStop: Ptr<NBPTStop>) {
+                self.myBidiStop = bidiStop;
     }
 
     /// C++: `std::shared_ptr<NBPTStop> NBPTStop::getBidiStop() const` [const]
@@ -573,8 +574,8 @@ impl NBPTStop {
     //         return myBidiStop.lock();
     //     }
     #[allow(unused_variables)]
-    pub fn get_bidi_stop(&self) -> Option<Rc<NBPTStop>> {
-                self.myBidiStop.upgrade()
+    pub fn get_bidi_stop(&self) -> Option<Ptr<NBPTStop>> {
+                if self.myBidiStop.is_null() { None } else { Some(self.myBidiStop) }
     }
 
     /// C++: `bool NBPTStop::isLoose() const` [const]
