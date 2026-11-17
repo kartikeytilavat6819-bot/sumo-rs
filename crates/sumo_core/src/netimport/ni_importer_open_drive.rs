@@ -1784,8 +1784,12 @@ impl NIImporter_OpenDrive {
                 &i.shape, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
 
             if i.origID != "" && saveOrigIDs {
-                // shortcut: C++ sets the ORIGID parameter on the matching NBEdge::Connection; the Rust
-                // NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so it cannot be set yet
+                for k in from.m().get_connections_2().iter_mut() {
+                    if k.fromLane == fromLane && k.toEdge == to && k.toLane == toLane {
+                        k.base.set_parameter(utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID, &format!("{}_{}", i.origID, i.origLane));
+                        break;
+                    }
+                }
             }
         }
 
@@ -1902,9 +1906,31 @@ impl NIImporter_OpenDrive {
                                 }
                             }
                         }
-                        // shortcut: C++ loops over from->getConnections() to set tlLinkIndex, signalID and controllerID;
-                        // the Rust NBEdge::get_connections() still returns NIImporter_OpenDrive_Connection, so this is skipped until it is ported
-                        let _ = to;
+                        for c in from.m().get_connections_2().iter_mut() {
+                            if c.toEdge == to {
+                                let odLane = laneIndexMap.get(&(from, c.fromLane)).copied().unwrap_or(0);
+                                if signal.minLane == 0 || (signal.minLane <= odLane && signal.maxLane >= odLane) {
+                                    if c.base.has_parameter("signalID") {
+                                        let joined = format!("{} {}", c.base.get_parameter("signalID", ""), signal.id);
+                                        c.base.set_parameter("signalID", &joined);
+                                    } else {
+                                        c.base.set_parameter("signalID", &signal.id);
+                                    }
+                                }
+                                // set tlIndex to allow signal groups (defined in OpenDRIVE controller elements)
+                                if importSignalGroups {
+                                    let controllerID = handler.get_controller(signal.id.clone()).id.clone();
+                                    if controllerID != "" {
+                                        if c.base.get_parameter("controllerID", "") != "" {
+                                            write_warningf!("The signaling of the connection from '%' to '%' (controller '%') is ambiguous because it is overwritten signal '%' and with controller '%'.", from.m().get_id(), c.toEdge.m().get_id(), c.base.get_parameter("controllerID", ""), signal.id, controllerID);
+                                        }
+                                        let tlIndex = handler.get_tl_index_for_controller(controllerID.clone());
+                                        c.tlLinkIndex = tlIndex;
+                                        c.base.set_parameter("controllerID", &controllerID);
+                                    }
+                                }
+                            }
+                        }
                         NIImporter_OpenDrive::get_tls_secure(from, nb)?;
                     } else {
                         write_warningf!("Found a traffic light signal on an unknown edge (original edge id='%').", e.id);
@@ -1921,8 +1947,29 @@ impl NIImporter_OpenDrive {
                         write_warningf!("Could not find edge '%' for signal '%'.", id, signal.id);
                         continue;
                     }
-                    // shortcut: connection-level signalID/controllerID/tlLinkIndex assignment is skipped, see above
-                    let _ = importSignalGroups;
+                    for c in edge.m().get_connections_2().iter_mut() {
+                        let odLane = laneIndexMap.get(&(edge, c.fromLane)).copied().unwrap_or(0);
+                        if signal.minLane == 0 || (signal.minLane <= odLane && signal.maxLane >= odLane) {
+                            if c.base.has_parameter("signalID") {
+                                let joined = format!("{} {}", c.base.get_parameter("signalID", ""), signal.id);
+                                c.base.set_parameter("signalID", &joined);
+                            } else {
+                                c.base.set_parameter("signalID", &signal.id);
+                            }
+                        }
+                        // set tlIndex to allow signal groups (defined in OpenDRIVE controller elements)
+                        if importSignalGroups {
+                            let controllerID = handler.get_controller(signal.id.clone()).id.clone();
+                            if controllerID != "" {
+                                if c.base.get_parameter("controllerID", "") != "" {
+                                    write_warningf!("The signaling of the connection from '%' to '%' (controller '%') is ambiguous because it is overwritten with signal '%' and controller '%'.", edge.m().get_id(), c.toEdge.m().get_id(), c.base.get_parameter("controllerID", ""), signal.id, controllerID);
+                                }
+                                let tlIndex = handler.get_tl_index_for_controller(controllerID.clone());
+                                c.tlLinkIndex = tlIndex;
+                                c.base.set_parameter("controllerID", &controllerID);
+                            }
+                        }
+                    }
                     NIImporter_OpenDrive::get_tls_secure(edge, nb)?;
                 }
                 // @note: tls 'signalID' parameters are set via NBTrafficLightLogicCont::setOpenDriveSignalParameters
