@@ -7,7 +7,7 @@
         <detEntry lane="-103224#0_0" pos="5"/>
         <detExit lane="-103224#3_0" pos="5"/>
     </e3Detector>
-    <calibrator id="cal0" edge="-103224#2" pos="5" frequency="60"/>
+    <calibrator id="cal0" edge="-103224#2" pos="5"/>
     <busStop id="bs0" lane="-103224#1_0" startPos="10" endPos="30" name="BusStop0"/>
     <parkingArea id="pa0" lane="-103224#2_0" startPos="5" endPos="40" roadsideCapacity="4"/>
     <chargingStation id="cs0" lane="-103224#3_0" startPos="5" endPos="20" power="50000" name="Charge0"/>
