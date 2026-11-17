@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-17T05:49:22.375464-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-17T06:13:07.479580-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,10 @@
     </input>
 
     <output>
-        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft08/tools/oracle/cases/ped_stop_lat/ref_legacy.fcd.xml"/>
-        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft08/tools/oracle/cases/ped_stop_lat/ref_legacy.tripinfo.xml"/>
-        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft08/tools/oracle/cases/ped_stop_lat/ref_legacy.stat.xml"/>
+        <fcd-output value="/tmp/pm01refs/ped_stop_lat/ref_legacy.fcd.xml"/>
+        <tripinfo-output value="/tmp/pm01refs/ped_stop_lat/ref_legacy.tripinfo.xml"/>
+        <personinfo-output value="/tmp/pm01refs/ped_stop_lat/ref_legacy.personinfo.xml"/>
+        <statistic-output value="/tmp/pm01refs/ped_stop_lat/ref_legacy.stat.xml"/>
     </output>
 
     <time>
@@ -34,21 +35,5 @@
     <tripinfo id="cars.1" depart="20.00" departLane="E0_1" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="35.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="13.06" duration="15.00" routeLength="195.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.78" rerouteNo="0" devices="tripinfo_cars.1 fcd_cars.1" vType="car" speedFactor="1.05" vaporized=""/>
     <tripinfo id="cars.2" depart="40.00" departLane="E0_1" departPos="5.10" departSpeed="12.31" departDelay="0.00" arrival="57.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="11.29" duration="17.00" routeLength="195.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.02" rerouteNo="0" devices="tripinfo_cars.2 fcd_cars.2" vType="car" speedFactor="0.89" vaporized=""/>
     <tripinfo id="cars.3" depart="60.00" departLane="E0_1" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="76.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="12.41" duration="16.00" routeLength="195.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.75" rerouteNo="0" devices="tripinfo_cars.3 fcd_cars.3" vType="car" speedFactor="0.94" vaporized=""/>
-    <personinfo id="ps4" depart="45.00" type="ped" speedFactor="0.83" duration="51.00" waitingTime="0.00" timeLoss="5.87" traveltime="51.00">
-        <walk depart="45.00" departPos="30.00" arrival="96.00" arrivalPos="90.00" duration="51.00" routeLength="60.00" timeLoss="5.87" maxSpeed="1.33" waitingTime="0.00"/>
-    </personinfo>
     <tripinfo id="cars.4" depart="80.00" departLane="E0_1" departPos="5.10" departSpeed="11.90" departDelay="0.00" arrival="98.00" arrivalLane="E1_1" arrivalPos="100.00" arrivalSpeed="11.65" duration="18.00" routeLength="195.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.00" rerouteNo="0" devices="tripinfo_cars.4 fcd_cars.4" vType="car" speedFactor="0.86" vaporized=""/>
-    <personinfo id="ps0" depart="0.00" type="ped" speedFactor="1.06" duration="126.00" waitingTime="0.00" timeLoss="11.66" traveltime="106.00">
-        <walk depart="0.00" departPos="0.00" arrival="33.00" arrivalPos="50.00" duration="33.00" routeLength="50.00" timeLoss="3.52" maxSpeed="1.70" waitingTime="0.00"/>
-        <stop duration="20.00" arrival="53.00" arrivalPos="50.00" actType="waiting"/>
-        <walk depart="53.00" departPos="50.00" arrival="126.00" arrivalPos="60.00" duration="73.00" routeLength="110.00" timeLoss="8.14" maxSpeed="1.70" waitingTime="0.00"/>
-    </personinfo>
-    <personinfo id="ps1" depart="5.00" type="ped" speedFactor="0.94" duration="130.00" waitingTime="0.00" timeLoss="13.33" traveltime="130.00">
-        <walk depart="5.00" departPos="10.00" arrival="135.00" arrivalPos="50.00" duration="130.00" routeLength="140.00" timeLoss="13.33" maxSpeed="1.20" waitingTime="0.00"/>
-    </personinfo>
-    <personinfo id="ps2" depart="15.00" type="ped" speedFactor="1.08" duration="134.00" waitingTime="0.00" timeLoss="11.32" traveltime="121.00">
-        <walk depart="15.00" departPos="0.00" arrival="47.00" arrivalPos="50.00" duration="32.00" routeLength="50.00" timeLoss="3.14" maxSpeed="1.73" waitingTime="0.00"/>
-        <stop duration="13.00" arrival="60.00" arrivalPos="50.00" actType="waiting"/>
-        <walk depart="60.00" departPos="50.00" arrival="149.00" arrivalPos="90.00" duration="89.00" routeLength="140.00" timeLoss="8.18" maxSpeed="1.73" waitingTime="0.00"/>
-    </personinfo>
 </tripinfos>

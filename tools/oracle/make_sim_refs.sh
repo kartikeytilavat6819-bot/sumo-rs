@@ -81,6 +81,7 @@ for c in $CASES; do
     # run_all always passes --fcd-output, which adds fcd_<id> to every device list: write a scratch fcd when none is wanted
     if want "$src/ref_$v.fcd.xml"; then vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"; else vouts="$vouts --fcd-output /tmp/fcd_$v.xml"; fi
     want "$src/ref_$v.stat.xml" && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
+    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do vouts="$vouts $opt $(wp "$o")/ref_$v.$suf.xml"; done < "$src/extra_outputs.txt"
     run_ref "$LOG/ref_${c}_$v.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" "$(echo "$vflags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" "ref_$v"
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
   done
