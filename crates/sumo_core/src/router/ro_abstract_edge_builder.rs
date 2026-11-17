@@ -7,6 +7,13 @@ use crate::prelude::*;
 pub struct ROAbstractEdgeBuilder {
     /// The next edge's index
     pub myCurrentIndex: i32,
+    /// shortcut: virtual dispatch of buildEdge, set by each subclass constructor (C++ vtable), since the base is not a trait object yet
+    pub buildEdgeFn: fn(&mut ROAbstractEdgeBuilder, &str, Ptr<RONode>, Ptr<RONode>, i32, &str, &str) -> Ptr<ROEdge>,
+}
+
+/// C++ pure virtual buildEdge: a subclass that does not set buildEdgeFn is a bug
+fn pure_virtual_build_edge(_eb: &mut ROAbstractEdgeBuilder, _name: &str, _from: Ptr<RONode>, _to: Ptr<RONode>, _priority: i32, _type_: &str, _routingType: &str) -> Ptr<ROEdge> {
+    panic!("ROAbstractEdgeBuilder::buildEdge is pure virtual; subclasses must implement it")
 }
 
 impl ROAbstractEdgeBuilder {
@@ -15,7 +22,7 @@ impl ROAbstractEdgeBuilder {
     // ROAbstractEdgeBuilder() : myCurrentIndex(0) { }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        ROAbstractEdgeBuilder { myCurrentIndex: 0 }
+        ROAbstractEdgeBuilder { myCurrentIndex: 0, buildEdgeFn: pure_virtual_build_edge }
     }
 
     /// C++: `void ROAbstractEdgeBuilder::~ROAbstractEdgeBuilder() noexcept` [virtual]
@@ -31,8 +38,8 @@ impl ROAbstractEdgeBuilder {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        // C++ pure virtual: only subclasses define it
-        panic!("ROAbstractEdgeBuilder::buildEdge is pure virtual; subclasses must implement it")
+        // C++ virtual call: dispatched to the subclass through buildEdgeFn
+        (self.buildEdgeFn)(self, name, from, to, priority, type_, routingType)
     }
 
     /// C++: `int ROAbstractEdgeBuilder::getNextIndex()` [protected]

@@ -39,7 +39,7 @@ pub fn compute_all_pairs(net: &mut RONet, oc: &mut OptionsCont) {
     OutputDevice::create_device_by_option("all-pairs-output", "", "", -1).unwrap_or_else(|e| panic!("{e}"));
     let outFile = OutputDevice::get_device_by_option("all-pairs-output").unwrap_or_else(|e| panic!("{e}"));
     // build the router
-    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), Some(get_travel_time), None, false, Ptr::null(), false, false);
+    let mut router: crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}")), Some(get_travel_time), None, false, Ptr::null(), false, false).with_compute();
     let mut into: Vec<Ptr<ROEdge>> = Vec::new();
     let numInternalEdges: i32 = net.get_internal_edge_number();
     let numTotalEdges: i32 = net.get_edge_number();
@@ -282,7 +282,7 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
         match routingAlgorithm.as_str() {
             "dijkstra" => {
                 // shortcut: C++ selects the effort operation from the paths option (penalised TT or ROEdge::getTravelTimeStatic) and that selection is not ported, so no effort operation is set yet; upgrade with the option port
-                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false);
+                dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
             }
             "astar" | "CH" | "CHWrapper" | "CCH" => {
                 // shortcut: astar, CH, CHWrapper and CCH routers need the SUMOAbstractRouter trait object, not ported
@@ -297,7 +297,7 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
             utils::common::msg_handler::write_warning(&format!("No weight data was loaded for attribute '{}'.", measure));
         }
         // shortcut: C++ selects the effort operation from the measure and the priority-factor option, which is not ported, so the weighted router has no effort operation and cannot route yet
-        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false);
+        dijkstra = crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, None, None, false, Ptr::null(), net.has_permissions(), false).with_compute();
     }
     let router: &mut crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle> = &mut dijkstra.base;
     // shortcut: RORouterProvider and the HAVE_FOX worker threads are not ported, routing runs on this thread only
@@ -311,9 +311,9 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
         matrix.apply_curve(&points);
     }
     matrix.sort_by_begin_time();
-    let haveOutput = OutputDevice::create_device_by_option("netload-output", "meandata", "", -1).unwrap_or_else(|e| panic!("{e}"));
+    let mut haveOutput = OutputDevice::create_device_by_option("netload-output", "meandata", "", -1).unwrap_or_else(|e| panic!("{e}"));
     let defaultVType = net.get_vehicle_type_secure(utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID);
-    let defaultVehicle = ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), defaultVType, Ptr::from_mut(&mut *net), Ptr::null());
+    let mut defaultVehicle = ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), defaultVType, Ptr::from_mut(&mut *net), Ptr::null());
     let netloadOutput: Ptr<OutputDevice> = if haveOutput {
         Ptr::from_raw(OutputDevice::get_device_by_option("netload-output").unwrap_or_else(|e| panic!("{e}")).as_ptr())
     } else {
@@ -354,8 +354,82 @@ pub fn compute_routes(net: &mut RONet, oc: &mut OptionsCont, matrix: &mut ODMatr
     // update path costs and output
     let dev = net.get_route_output(false);
     if !dev.is_null() {
-        // shortcut: the per-ODCell route flow output (pathsVector, departures, OutputDevice_String and RORoute::writeXMLDefinition) is not ported
-        panic!("shortcut: route output per ODCell is not ported");
+        let tazParamKeys: Vec<String> = if oc.is_set("taz-param", true).unwrap_or_else(|e| panic!("{e}")) {
+            oc.get_string_vector("taz-param").unwrap_or_else(|e| panic!("{e}")).clone()
+        } else {
+            Vec::new()
+        };
+        let mut sortedOut: BTreeMap<SUMOTime, String> = BTreeMap::new();
+        let mut lastEnd: SUMOTime = -1;
+        let mut num: i32 = 0;
+        let cells: Vec<Ptr<ODCell>> = matrix.get_cells().clone();
+        let prefix = oc.get_string("prefix").unwrap_or_else(|e| panic!("{e}"));
+        let ignoreType = oc.get_bool("ignore-vehicle-type").unwrap_or_else(|e| panic!("{e}"));
+        for c in cells.iter().copied() {
+            if c.begin >= end || c.end <= begin || c.pathsVector.is_empty() || c.pathsVector[0].get_edge_vector().is_empty() {
+                continue;
+            }
+            if lastEnd >= 0 && lastEnd <= c.begin {
+                for desc in sortedOut.values() {
+                    dev.m().write_preformatted_tag(desc);
+                }
+                sortedOut.clear();
+            }
+            if c.departures.is_empty() {
+                let b = std::cmp::max(begin, c.begin);
+                let e = std::cmp::min(end, c.end);
+                let numVehs: i32 = (c.vehicleNumber * (e - b) as f64 / (c.end - c.begin) as f64) as i32;
+                let mut od = OutputDevice::new_string(1);
+                let id = format!("{}{}", prefix, num);
+                num += 1;
+                od.open_tag_id(SUMO_TAG_FLOW).write_attr(SUMO_ATTR_ID, &id);
+                od.write_attr(SUMO_ATTR_BEGIN, &time2string(b)).write_attr(SUMO_ATTR_END, &time2string(e));
+                od.write_attr(SUMO_ATTR_NUMBER, &numVehs);
+                matrix.write_default_attrs(&mut od, ignoreType, c);
+                od.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION);
+                for r in c.pathsVector.iter() {
+                    let costs = router.recompute_costs(r.get_edge_vector(), Ptr::from_mut(&mut defaultVehicle), begin, Ptr::null());
+                    Ptr::from_raw(Rc::as_ptr(r) as *mut RORoute).m().set_costs(costs);
+                    r.write_xml_definition(&mut od, Ptr::null(), true, true, false, false, "");
+                }
+                od.close_tag("");
+                od.close_tag("");
+                sortedOut.entry(c.begin).or_default().push_str(&od.get_string());
+            } else {
+                for (depTime, vehs) in c.departures.iter() {
+                    if *depTime >= end || *depTime < begin {
+                        continue;
+                    }
+                    for veh in vehs.iter() {
+                        let mut od = OutputDevice::new_string(1);
+                        let vtype: &str = if ignoreType || veh.vtypeid == utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID { "" } else { veh.vtypeid.as_str() };
+                        veh.write(&mut od, oc, SUMO_TAG_VEHICLE, vtype);
+                        od.open_tag_id(SUMO_TAG_ROUTE_DISTRIBUTION);
+                        for r in c.pathsVector.iter() {
+                            let costs = router.recompute_costs(r.get_edge_vector(), Ptr::from_mut(&mut defaultVehicle), begin, Ptr::null());
+                            Ptr::from_raw(Rc::as_ptr(r) as *mut RORoute).m().set_costs(costs);
+                            r.write_xml_definition(&mut od, Ptr::null(), true, true, false, false, "");
+                        }
+                        od.close_tag("");
+                        if !tazParamKeys.is_empty() {
+                            od.open_tag_id(SUMO_TAG_PARAM).write_attr(SUMO_ATTR_KEY, &tazParamKeys[0]).write_attr(SUMO_ATTR_VALUE, &c.origin).close_tag("");
+                            if tazParamKeys.len() > 1 {
+                                od.open_tag_id(SUMO_TAG_PARAM).write_attr(SUMO_ATTR_KEY, &tazParamKeys[1]).write_attr(SUMO_ATTR_VALUE, &c.destination).close_tag("");
+                            }
+                        }
+                        od.close_tag("");
+                        sortedOut.entry(*depTime).or_default().push_str(&od.get_string());
+                    }
+                }
+            }
+            if c.end > lastEnd {
+                lastEnd = c.end;
+            }
+        }
+        for desc in sortedOut.values() {
+            dev.m().write_preformatted_tag(desc);
+        }
+        haveOutput = true;
     }
     if !haveOutput {
         panic!("{}", ProcessError::new("No output file given."));

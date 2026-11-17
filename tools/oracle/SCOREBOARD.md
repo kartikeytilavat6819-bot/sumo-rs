@@ -1,13 +1,14 @@
 # Scoreboard — current state
 
-Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at sha `8093db8c`
-(main has since moved to `b150f85c`, a docs/CI commit):
+Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main `933e39f6`. The gate ran branch
+`worktree-agent-sb02` at `5765bfcb`, which is main plus one temporary commit that adds
+`tools/kaggle/agent_run.sh` (prints every row verdict). The final commit removes that file again.
 
-**`run_all.sh` PASS=151 FAIL=5 SKIP=18; depart 15/15; unit tests 67 + 118 passed, 0 failed.**
+**`run_all.sh` PASS=271 FAIL=9 SKIP=26 (306 rows); depart 15/15 PASS; unit tests 81 + 126 passed, 0 failed (2 ignored).**
 
-This page is written from that gate result only. Per-case `REPORT.md` verdicts are not repeated
-here; read them for details. A row is `PASS (gate 8093db8c)` unless it is in the FAIL list or
-explained as SKIP.
+This page is written from that gate output only. Every row below is either PASS, FAIL (listed
+with its owner) or SKIP (reason given). Per-case `REPORT.md` files hold older detail and are not
+re-measured here.
 
 ## Reproduce
 
@@ -28,102 +29,179 @@ bash tools/oracle/cases/depart/run_all_variants.sh          # 15 depart variants
 (plus `net.args` if present), or `net.args` alone for plain-XML cases. Sim stage: one row per
 committed reference variant (`ref` uses `sim.args`, `ref_<v>` uses `sim_<v>.args`).
 
-## FAIL rows (sim) on main at 8093db8c
+## FAIL rows (9)
 
-| row | owner |
-|---|---|
-| `city_kansas_rural/ref` sim | ck01 |
-| `city_karlsruhe_tram/ref` sim | ck02 |
-| `city_london_lh/ref` sim | in01 (fix being merged) |
-| `city_paris_dense/ref` sim | cb01 |
-| `city_tokyo_lefthand/ref` sim | cb01 |
+Owners are from `tools/lead/agent_preamble.md`. All nine fail at the sim stage; their net stages PASS.
 
-All five fail at the sim stage; their net stages PASS.
-
-## SKIPs (18)
-
-- **Net stage SKIP, no `input.osm` and no `net.args` (14):** cfmodels, emissions, ev, netconv_edge,
-  reroute, reroute_bypass_p1, route_check, state_roundtrip, stops, stress, traci_basic, trips,
-  vtypes (13 rows) + depart (whole-row SKIP, own runner).
-- **Sim stage SKIP, no routes/refs (3):** netconv_edge, traci_basic, state_roundtrip — each has
-  its own runner (see below).
-
-`netconv_edge`, `traci_basic`, `state_roundtrip` and `depart` are measured by their own runners
-(`run_all.sh` in the case dir, `client.py`, `roundtrip.sh`, `run_all_variants.sh`); their status
-is not part of the 151 PASS count.
-
-## Case directories (`tools/oracle/cases/`)
-
-Status from the 8093db8c gate. The four own-runner cases are listed with what they cover.
-
-| case | what it tests | status |
+| row | gate symptom | owner |
 |---|---|---|
-| cfmodels | car-following models on the stress net/routes (`--end 200`): IDM/Krauss/W99/EIDM/Wiedemann/SmartSK/ACC/CACC/CC … | PASS (gate 8093db8c) |
-| city_amsterdam_bikes | Amsterdam centre OSM extract, net + sim | PASS (gate 8093db8c) |
-| city_atlanta_motorway | Atlanta motorway OSM extract, net + sim | PASS (gate 8093db8c) |
-| city_barcelona_eixample | Barcelona Eixample OSM extract, net + sim | PASS (gate 8093db8c) |
-| city_bengaluru_blr | Bengaluru OSM extract, `--lefthand` | PASS (gate 8093db8c) |
-| city_bengaluru_sublane | same net/routes as `city_bengaluru_blr` + sublane model | PASS (gate 8093db8c) |
-| city_kansas_rural | rural Kansas OSM extract, right-hand traffic | **FAIL** (`ref` sim) — ck01 |
-| city_karlsruhe_tram | Karlsruhe OSM extract with tram ways | **FAIL** (`ref` sim) — ck02 |
-| city_la_interchange | Los Angeles interchange OSM extract | PASS (gate 8093db8c) |
-| city_london_lh | London (Trafalgar Square) OSM extract, left-hand traffic | **FAIL** (`ref` sim) — in01, fix being merged |
-| city_manhattan_midtown | Manhattan midtown OSM extract | PASS (gate 8093db8c) |
-| city_manhattan_sublane | same net/routes as `city_manhattan_midtown` + sublane model | PASS (gate 8093db8c) |
-| city_milton_keynes | Milton Keynes OSM extract | PASS (gate 8093db8c) |
-| city_munich | Munich old-town grid OSM extract | PASS (gate 8093db8c) |
-| city_paris_chapelle_ramps | Paris Chapelle ramps OSM extract | PASS (gate 8093db8c) |
-| city_paris_dense | dense Paris OSM extract | **FAIL** (`ref` sim) — cb01 |
-| city_plano | Plano TX suburban arterial OSM extract (UTM report in `REPORT_UTM.md`) | PASS (gate 8093db8c) |
-| city_tokyo_lefthand | Tokyo OSM extract, left-hand traffic | **FAIL** (`ref` sim) — cb01 |
-| closed_edge | a closed lane blocks traffic already committed to it (`v0` reroutes at t=8) | PASS (gate 8093db8c) |
-| depart | 15 departure variants (`lane_*`, `pos_*`, `speed_*`) | SKIP here (own runner); **15/15 PASS** |
-| detectors | lane/area detector additional-file outputs + sim | PASS (gate 8093db8c) |
-| emissions | emission models: energy, HBEFA3, PHEMlight(+5) | PASS (gate 8093db8c) |
-| ev | EV battery + charging-station outputs | PASS (gate 8093db8c) |
-| junction | plain OSM junction net + sim | PASS (gate 8093db8c) |
-| jt_allway_stop | allway_stop junction from plain XML | PASS (gate 8093db8c) |
-| jt_left_before_right | left_before_right junction | PASS (gate 8093db8c) |
-| jt_priority | priority junction (unregulated arms) | PASS (gate 8093db8c) |
-| jt_priority_stop | priority_stop junction | PASS (gate 8093db8c) |
-| jt_right_before_left | right_before_left junction | PASS (gate 8093db8c) |
-| jt_right_before_left_lefthand | right_before_left + `--lefthand` | PASS (gate 8093db8c) |
-| jt_traffic_light_right_on_red | traffic_light_right_on_red junction | PASS (gate 8093db8c) |
-| jt_traffic_light_unregulated | traffic_light_unregulated junction | PASS (gate 8093db8c) |
-| jt_t_priority | T-junction, 3 arms, priority | PASS (gate 8093db8c) |
-| jt_unregulated | unregulated junction | PASS (gate 8093db8c) |
-| lanechange | lane changing, `dur3` / `lat04` / `lcdur3` variants | PASS (gate 8093db8c) |
-| lefthand | left-hand traffic net + sim (`net.args` = `--lefthand`) | PASS (gate 8093db8c) |
-| netconv_edge | netconvert on bad/unusual OSM corpora | SKIP here (own runner, `run_all.sh` in the dir) |
-| rail | hand-written railway net with a passing loop | PASS (gate 8093db8c) |
-| real | Times Square, step-length/step-method/reroute variants | PASS (gate 8093db8c) |
-| real_dense | congested Times Square (`--end 125`) | PASS (gate 8093db8c) |
-| reroute | rerouter + routing-device variants (`ref`, `closing`, `device`) | PASS (gate 8093db8c) |
-| reroute_alt | rerouting at t=0; astar / ch / chwrapper variants | PASS (gate 8093db8c) |
-| reroute_bypass | mid-route detour through a bypass, `period=1000` | PASS (gate 8093db8c) |
-| reroute_bypass_p1 | same net, `period=1`; C++ reverts the detour | PASS (gate 8093db8c) |
-| reroute_contention | 12 vehicles reroute at once and compete for a bypass | PASS (gate 8093db8c) |
-| roundabout | roundabout net + sim | PASS (gate 8093db8c) |
-| routes_forms | route-file syntax forms (inline `<route>`, `<trip>`) | PASS (gate 8093db8c) |
-| route_check | route validation incl. disconnected route (`run_error.sh`) | PASS (gate 8093db8c) |
-| sigma_seed | RNG parity for `sigma`/`speedFactor` draws under `--seed` | PASS (gate 8093db8c) |
-| signal | traffic light sim, step variants | PASS (gate 8093db8c) |
-| signal_actuated | actuated TLS | PASS (gate 8093db8c) |
-| signal_delay | delay_based TLS | PASS (gate 8093db8c) |
-| signal_nema | NEMA TLS | PASS (gate 8093db8c) |
-| state_roundtrip | save/load state at t=10 | SKIP here (own runner, `roundtrip.sh`) |
-| stops | stop handling | PASS (gate 8093db8c) |
-| stops_parking | lane stop / `until` / parking-area / multi-stop | PASS (gate 8093db8c) |
-| stress | 120 vehicles oversaturating Times Square (+ collision/mdd5/ttt variants) | PASS (gate 8093db8c) |
-| sublanes | `--lateral-resolution 0.8` sublane model | PASS (gate 8093db8c) |
-| teleport | blocked jam triggers `--time-to-teleport 20` | PASS (gate 8093db8c) |
-| traci_basic | TraCI live command probes | SKIP here (own runner, `client.py`) |
-| trips | trip-based input | PASS (gate 8093db8c) |
-| vtypes | vType defaults and per-model overrides | PASS (gate 8093db8c) |
-| zipper | 2-lane edge into a zipper merge | PASS (gate 8093db8c) |
+| `busride/ref` | sim-PANIC: `No connection between edge 'E1' and stop 'bs0' found` | pt02 |
+| `city_paris_etoile/ref` | sim FAIL: vehicle 0 `arrivalSpeed` ref 8.72, ours 8.60 | rb02 |
+| `city_portland_actuated/ref` | sim FAIL: vehicle 15 `arrivalSpeed` ref 7.76, ours 7.68 | tl01 |
+| `containers/ref` | sim-PANIC in `transportables/msp_model.rs` | rc01 |
+| `rerouter_parking/ref` | sim-PANIC in `trigger/ms_stopping_place` | rc01 |
+| `taxi/ref` | sim-PANIC in `devices/ms_device_taxi.rs` | tx01 |
+| `taxi/ref_closest` | sim-PANIC in `devices/ms_device_taxi.rs` | tx01 |
+| `tls_actuated_loops/ref` | sim FAIL: vehicle `fn.0` `arrival` ref 32.00, ours 30.00 | tl01 |
+| `tls_waut/ref` | sim FAIL: vehicle `fw.3` `arrival` ref 55.00, ours 56.00 | tl01 |
 
-## Still-open non-case work
+Against the 8093db8c scoreboard (5 FAILs), `city_kansas_rural`, `city_karlsruhe_tram`, `city_london_lh`,
+`city_paris_dense` and `city_tokyo_lefthand` now PASS. The nine rows above are not in that old FAIL list.
 
-Non-tripinfo outputs, TraCI coverage, meso, and the other known gaps are not re-measured by the
-8093db8c gate and keep their previous status; see `tools/oracle/OUTPUTS.md`,
-`tools/oracle/TRAci_STATUS.md` and the older SCOREBOARD history in git.
+## SKIP rows (26)
+
+Reasons come from `tools/oracle/run_all.sh`. Checked against the case files on disk.
+
+| reason (run_all.sh) | rows | count |
+|---|---|---|
+| `depart` is a whole-row SKIP (line 36): 15 variants need 15 sims, run by `cases/depart/run_all_variants.sh` | depart | 1 |
+| `PENDING` marker (lines 40-41): intermodal router (`MSNet::getIntermodalRouter`), owner ir01 | persons, persons_router_pending | 2 |
+| net SKIP `no input.osm and no net.args` (line 72) | astar_landmark, calibrator_multi, cfmodels_new, cfmodels_rail, device_driverstate, device_friction, device_glosa, device_ssm, device_stationfinder, device_toc, ev_mmpevem, harmonoise, meso_city_plano, stops_transport, netconv_edge, netwrite_variants, traci_basic | 17 |
+| sim SKIP `no routes/refs` (line 164): `routes.rou` + `ref.tripinfo.xml` + `ref_simple.net.xml` must all exist | city_london_lh_sidewalks, city_tokyo_lefthand_stops (net-only, have `net.args`); stops_transport (has `routes.rou`, no `ref.tripinfo.xml`); netconv_edge, netwrite_variants, traci_basic | 6 |
+
+Notes:
+- The net SKIP message is generic: the branch taken is the same for "no net inputs" and for "plain XML with no
+  `net_plain.args`". `netconv_edge`, `netwrite_variants` and `traci_basic` have no input files at all, so they are
+  measured by their own runners (see below), not by this loop.
+- `stops_transport` is measured by `run_outputs.sh` (see below), not by the tripinfo loop.
+
+## Case directories (`tools/oracle/cases/`, 118)
+
+Verdicts are the gate rows. "sim n/n" is the number of sim-stage variant rows for that case, all PASS
+unless shown. Descriptions come from each case's `CASE.md` / `REPORT.md` first line; cases with
+neither file are named by their directory.
+
+| case | what it is | net | sim |
+|---|---|---|---|
+| astar_landmark | A* with ALT landmark distances (plain, gzip tables) | SKIP | ref, ref_gz PASS |
+| bluelight | blue-light (emergency) vehicles | PASS | ref PASS |
+| busline | bus line (name only) | PASS | ref PASS |
+| busride | bus ride with stops `bs0` on edge `E1` | PASS | **FAIL** ref sim-PANIC (pt02) |
+| calibrator | calibrator | PASS | ref PASS |
+| calibrator_multi | several calibrators | SKIP | ref PASS |
+| cfmodels | one variant per car-following / lane-change model | net-plain PASS | 20/20 PASS |
+| cfmodels_new | KraussX car-following model | SKIP | ref, ref_KraussX PASS |
+| cfmodels_rail | rail car-following (Rail model) | SKIP | ref, ref_Rail PASS |
+| city_amsterdam_bikes | Amsterdam Leidseplein, cycle lanes | PASS | PASS |
+| city_atlanta_motorway | motorway interchange with on/off ramps | PASS | PASS |
+| city_autobahn_interchange | A5/A6 Autobahnkreuz Walldorf, high speeds | PASS | PASS |
+| city_barcelona_eixample | Eixample grid, many traffic lights | PASS | PASS |
+| city_bengaluru_blr | Bengaluru MG Road, left-hand | PASS | PASS |
+| city_bengaluru_sublane | same as above, sublane model | PASS | PASS |
+| city_berlin_priority | Berlin Mitte priority junctions and traffic lights | PASS | ref, ref_meso_overtaking PASS |
+| city_kansas_rural | rural Kansas road extract | PASS | PASS |
+| city_karlsruhe_tram | Karlsruhe centre, tram tracks, bus stops | PASS (+ ptstop, ptline, railway PASS) | PASS |
+| city_la_interchange | Los Angeles four-level interchange | PASS | PASS |
+| city_london_lh | central London, left-hand | PASS | PASS |
+| city_london_lh_sidewalks | London left-hand, net only (sidewalks) | PASS (net.args) | SKIP (no routes/refs) |
+| city_manhattan_midtown | Midtown Manhattan grid, many signals | PASS | PASS |
+| city_manhattan_sublane | same as above, sublane model | PASS | PASS |
+| city_milton_keynes | roundabout-heavy UK new town | PASS | PASS |
+| city_mumbai_mixed | central Mumbai, passenger and bus mix | PASS | PASS |
+| city_munich | central Munich old-town grid | PASS | PASS |
+| city_paris_chapelle_ramps | Porte de la Chapelle, Périphérique ramps | PASS | PASS |
+| city_paris_dense | Paris Opéra, dense signals | PASS | PASS |
+| city_paris_etoile | Place de l'Étoile, multi-lane roundabout | PASS | **FAIL** ref arrivalSpeed (rb02) |
+| city_plano | Plano TX suburban arterial | PASS | PASS |
+| city_portland_actuated | downtown Portland, actuated signals | PASS | **FAIL** ref arrivalSpeed (tl01) |
+| city_rotterdam_port | Rotterdam port area, trucks only | PASS | PASS |
+| city_saopaulo_grid | central São Paulo, dense grid | PASS | PASS |
+| city_sf_hills | steep SF streets, elevation on | PASS | PASS |
+| city_singapore_lefthand | central Singapore, left-hand | PASS | PASS |
+| city_tokyo_lefthand | Shibuya, left-hand | PASS | PASS |
+| city_tokyo_lefthand_stops | Tokyo, net only (stops) | PASS (net.args) | SKIP (no routes/refs) |
+| city_zurich_tram | central Zurich, tram tracks and trams | PASS (+ ptstop, ptline, railway PASS) | PASS |
+| closed_edge | closed lane enforced; blocks traffic already committed to it | PASS | PASS |
+| collision | collision handling | PASS | ref, ref_none, ref_remove, ref_teleport PASS |
+| containers | container transport | PASS | **FAIL** ref sim-PANIC (rc01) |
+| depart | 15 departure variants (`run_all_variants.sh`) | — | variants SKIP here; **15/15 PASS** in the depart run |
+| departlanepos | departure lane and position | PASS | PASS |
+| detectors | lane and area detector outputs | PASS | PASS |
+| device_driverstate | driver-state device | SKIP | PASS |
+| device_friction | friction device | SKIP | PASS |
+| device_glosa | GLOSA device | SKIP | PASS |
+| device_ssm | SSM device | SKIP | PASS |
+| device_stationfinder | station finder device | SKIP | PASS |
+| device_toc | takeover (ToC) device | SKIP | PASS |
+| emissions | emission models (HBEFA3, PHEMlight(5), energy, edgedata, meso edgedata) | net-plain PASS | 7/7 PASS |
+| ev | electric vehicles, battery and charging | net-plain PASS | ref, ref_energy PASS |
+| ev_mmpevem | EV with MMPEVEM emission class, precision 6 | SKIP | PASS |
+| flowprob | flow probability (`ref`, `ref_seed11`) | PASS | 2/2 PASS |
+| harmonoise | harmonoise noise model | SKIP | ref, ref_edgedata PASS |
+| jmignore | jmignore (name only) | PASS | PASS |
+| jt_allway_stop | 4-arm `allway_stop` junction | PASS | PASS |
+| jt_left_before_right | 4-arm `left_before_right` junction | PASS | PASS |
+| jt_priority | 4-arm `priority` junction | PASS | PASS |
+| jt_priority_stop | 4-arm `priority_stop` junction | PASS | PASS |
+| jt_right_before_left | 4-arm `right_before_left` junction | PASS | PASS |
+| jt_right_before_left_lefthand | `right_before_left`, left-hand | PASS | PASS |
+| jt_t_priority | 3-arm T-junction, `priority` | PASS | PASS |
+| jt_traffic_light_right_on_red | 4-arm `traffic_light_right_on_red` | PASS | PASS |
+| jt_traffic_light_unregulated | 4-arm `traffic_light_unregulated` | PASS | PASS |
+| jt_unregulated | 4-arm `unregulated` | PASS | PASS |
+| junction | plain junction net | PASS | PASS |
+| keepclear | keep-clear area | PASS | PASS |
+| lanechange | lane changing (`ref`, `dur3`, `lat04`, `lcdur3`) | PASS | 4/4 PASS |
+| lcparams | lane-change parameters | PASS | PASS |
+| lefthand | left-hand traffic net and sim | PASS | PASS |
+| meso_city_plano | mesoscopic Plano (name only) | SKIP | PASS |
+| meso_junction | mesoscopic junction | PASS | PASS |
+| meso_real | mesoscopic Times Square | PASS | PASS |
+| netconv_edge | netconvert on bad and unusual OSM input | SKIP | SKIP (no routes/refs) |
+| netwrite_variants | netconvert output-writing variants | SKIP | SKIP (no routes/refs) |
+| opts_scale_end | scale and end options (`ref`, `ref_end120`, `ref_scale2`) | PASS | 3/3 PASS |
+| parking_stop | parking stop | PASS | PASS |
+| peds_crossing | pedestrian crossing | PASS | PASS |
+| persons | pedestrian persons | PENDING (ir01) | — |
+| persons_router_pending | pedestrian persons, pending the router | PENDING (ir01) | — |
+| rail | railway net with passing loop | PASS | PASS |
+| real | Times Square, step / reroute / speed-deviation variants | PASS | 7/7 PASS |
+| real_dense | congested Times Square, `--end 125` | PASS | PASS |
+| reroute | rerouter and routing-device variants | net-plain PASS | 4/4 PASS |
+| reroute_alt | rerouting at t=0; astar, ch, chwrapper variants | PASS | 4/4 PASS |
+| reroute_bypass | mid-route detour through a bypass | PASS | 3/3 PASS |
+| reroute_bypass_p1 | same net, `period=1` | net-plain PASS | PASS |
+| reroute_contention | many vehicles compete for a bypass (`ref`, `ref_adapt`) | PASS | 2/2 PASS |
+| rerouter_parking | rerouter with parking | PASS | **FAIL** ref sim-PANIC (rc01) |
+| roundabout | roundabout | PASS | PASS |
+| route_check | disconnected route handling | net-plain PASS | PASS |
+| routeprobe | route probe | PASS | PASS |
+| routes_forms | route-file syntax forms | net-plain PASS | PASS |
+| sigma_seed | RNG parity for `sigma` and `speedFactor` draws (`ref`, `ref_seed7`) | PASS | 2/2 PASS |
+| signal | traffic light, step and model variants | PASS | 6/6 PASS |
+| signal_actuated | actuated TLS | PASS | PASS |
+| signal_delay | delay_based TLS | PASS | PASS |
+| signal_nema | NEMA TLS | PASS | PASS |
+| sl2015 | sl2015 (name only) | PASS | PASS |
+| speeddev | speed deviation (`ref`, `ref_seed7`) | PASS | 2/2 PASS |
+| stops | stops | net-plain PASS | PASS |
+| stops_parking | lane, `until`, parking-area and multi-stop | PASS | PASS |
+| stops_reroute | stops with reroute | PASS | PASS |
+| stops_transport | transport stops (outputs runner, see below) | SKIP | SKIP (no `ref.tripinfo.xml`) |
+| stress | 120 vehicles oversaturating Times Square (+ collision, mdd5, ttt variants) | net-plain PASS | 5/5 PASS |
+| sublanes | sublane model | PASS | PASS |
+| taxi | taxi device | PASS | **FAIL** ref and ref_closest sim-PANIC (tx01) |
+| teleport | blocked jam triggers `--time-to-teleport` | PASS | PASS |
+| tls_actuated_loops | actuated loops TLS | PASS | **FAIL** ref arrival (tl01) |
+| tls_waut | waut TLS | PASS | **FAIL** ref arrival (tl01) |
+| traci_basic | TraCI probes (own runner, see below) | SKIP | SKIP (no routes/refs) |
+| trips | trip input | net-plain PASS | PASS |
+| ttt_highways | time-to-teleport on highways (name only) | PASS | PASS |
+| vclass | vehicle classes | PASS | PASS |
+| vss | variable speed signs | PASS | PASS |
+| vtypes | vType defaults and per-model overrides | net-plain PASS | PASS |
+| zipper | 2-lane edge into a zipper merge | PASS | PASS |
+
+## Other runners (not in the gate)
+
+Last results found in committed docs. These are older than the 933e39f6 gate and were not re-measured.
+
+| runner | last documented result | source |
+|---|---|---|
+| `run_outputs.sh` (non-tripinfo outputs) | 32 rows PASS, 0 FAIL, 0 PANIC on the `real`, `signal`, `stress`, `lanechange` outputs (commit `552f5a8e`); ou04 added `stopout`, `queue_agg` (PASS) | `OUTPUTS.md` |
+| `run_netopts.sh` (netconvert options) | 48 PASS, 21 FAIL, 0 PANIC of 69 runs. Failing rows: `city_munich` junction `1413262637` type zipper vs priority | `NETCONVERT_OPTIONS.md` |
+| `traci_basic/client.py` (TraCI probes) | 13 of 32 probes match (junction 7/16, signal 6/16); branch `tc01` | `cases/traci_basic/REPORT.md` |
+| release build | `PROFILE=release` PASS=172 FAIL=2 SKIP=20 at commit `f29591b4` (same verdicts as debug then); 0.57-0.60x C++ wall time on the 5 largest city cases | `PERF.md` |
+| `run_state.sh` (state save/load) | no committed result found; referenced only in `HANDOVER.md` | — |
+| `run_netwrite_variants.sh` | no committed result found; `netwrite_variants` is a SKIP row in the gate | — |
+| `run_duarouter.sh` | not in this checkout; no `duarouter_*` case directories exist | — |

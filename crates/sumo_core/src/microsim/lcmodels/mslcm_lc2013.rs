@@ -834,10 +834,17 @@ impl MSLCM_LC2013 {
     #[allow(unused_variables)]
     pub fn get_parameter(&self, key: &str) -> String {
         // integer-valued internals: C++ long long / long long stays integral
+        // C++ `long long / int` (HYST_PRECISION is an int macro): integer division, integer string
         if key == "speedGainRP" {
             return (self.mySpeedGainProbabilityRight / self.myChangeProbThresholdRight).to_string();
         } else if key == "speedGainLP" {
             return (self.mySpeedGainProbabilityLeft / self.myChangeProbThresholdLeft).to_string();
+        } else if key == "speedGainProbabilityRight" {
+            return (self.mySpeedGainProbabilityRight / (HYST_PRECISION as i64)).to_string();
+        } else if key == "speedGainProbabilityLeft" {
+            return (self.mySpeedGainProbabilityLeft / (HYST_PRECISION as i64)).to_string();
+        } else if key == "keepRightProbability" {
+            return (-self.myKeepRightProbability / (HYST_PRECISION as i64)).to_string();
         }
         let v: f64 = if key == attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM) {
             self.myStrategicParam
@@ -879,12 +886,6 @@ impl MSLCM_LC2013 {
             self.myMaxSpeedLatFactor
         } else if key == attr_name(SUMO_ATTR_LCA_MAXDISTLATSTANDING) {
             self.myMaxDistLatStanding
-        } else if key == "speedGainProbabilityRight" {
-            self.mySpeedGainProbabilityRight as f64 / HYST_PRECISION
-        } else if key == "speedGainProbabilityLeft" {
-            self.mySpeedGainProbabilityLeft as f64 / HYST_PRECISION
-        } else if key == "keepRightProbability" {
-            -self.myKeepRightProbability as f64 / HYST_PRECISION
         } else if key == "lookAheadSpeed" {
             self.myLookAheadSpeed
         } else if key == "keepRightP" {

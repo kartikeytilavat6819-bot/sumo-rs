@@ -405,13 +405,12 @@ impl MSDevice_Transportable {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "IDList" {
             let ids: Vec<String> = self.myTransportables.iter().map(|t| t.get_id().to_string()).collect();
-            return ids.join(" ");
+            return Ok(ids.join(" "));
         }
-        // C++ throws InvalidArgument here; the skeleton signature has no error channel
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Transportable::addTransportable(MSTransportable *)`

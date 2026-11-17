@@ -1,0 +1,7 @@
+<additional>
+    <rerouter id="walkRerouter" edges="CE">
+        <interval begin="0" end="200">
+            <closingReroute id="EC"/>
+        </interval>
+    </rerouter>
+</additional>

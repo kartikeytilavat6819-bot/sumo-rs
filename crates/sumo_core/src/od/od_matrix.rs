@@ -1074,7 +1074,15 @@ impl ODMatrix {
             if !is_readable(&file) {
                 throw_process_error(utils::tlf!("Could not access matrix file '%' to load.", file.clone()));
             }
-            // shortcut: SAXWeightsHandler and ToRetrieveDefinition are not ported yet, so tazRelation matrices are checked but not loaded; port them to load these files
+            progress_begin_message(&format!("Loading matrix in tazRelation format from '{}'", file));
+            let attr = or_throw(oc.get_string("tazrelation-attribute"));
+            let retrieverDefs = vec![utils::xml::saxweights_handler::ToRetrieveDefinition::new(&attr, true, &mut *self)];
+            let mut handler = utils::xml::saxweights_handler::SAXWeightsHandler::new(retrieverDefs, "");
+            if !run_parser(&mut handler, &file, false, false, false, true).unwrap_or(false) {
+                progress_failed_message();
+            } else {
+                progress_done_message();
+            }
         }
     }
 
@@ -1219,6 +1227,15 @@ impl ODMatrix {
         let vtype = if self.myVType == "" { intervalID } else { self.myVType.clone() };
         self.add(val, &(time2steps(beg), time2steps(end)), from, to, &vtype, false, false, false);
     }
+}
+
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for ODMatrix {
+    fn add_taz_rel_weight(&mut self, intervalID: &str, from: &str, to: &str, val: f64, beg: f64, end: f64) {
+        ODMatrix::add_taz_rel_weight(self, intervalID.to_string(), from, to, val, beg, end);
+    }
+}
+
+impl ODMatrix {
 
     /// C++: `double ODMatrix::computeDeparts(ODCell *, int &, std::vector<ODVehicle> &, const bool, const bool, const std::string &)` [protected]
     /// Computes the vehicle departs stored in the given cell and saves them in "into"

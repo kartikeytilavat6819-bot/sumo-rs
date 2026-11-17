@@ -648,12 +648,11 @@ impl MSDevice_GLOSA {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "minSpeed" {
-            return utils::common::to_string::to_string(&self.myMinSpeed);
+            return Ok(utils::common::to_string::to_string(&self.myMinSpeed));
         }
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_GLOSA::setParameter(const std::string &, const std::string &)` [virtual]
@@ -673,17 +672,17 @@ impl MSDevice_GLOSA {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "minSpeed" {
             self.myMinSpeed = doubleValue;
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_GLOSA::generateOutput(OutputDevice *) const` [const, virtual]

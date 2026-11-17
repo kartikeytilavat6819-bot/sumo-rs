@@ -142,7 +142,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouterWrapper<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        let clone: CHRouterWrapper<E, V> = CHRouterWrapper::new(self.myEdges.m(), self.myIgnoreErrors, self.myOperation, self.myBegin, self.myEnd, self.myWeightPeriod, self.myHavePermissions, self.myMaxNumInstances);
+        let clone: CHRouterWrapper<E, V> = CHRouterWrapper::new(self.myEdges.m(), self.myIgnoreErrors, self.myOperation, self.myBegin, self.myEnd, self.myWeightPeriod, self.myHavePermissions, self.myMaxNumInstances).with_compute();
         let clone = Ptr::from_raw(Box::into_raw(Box::new(clone)));
         for (key, item) in self.myRouters.iter() {
             clone.m().myRouters.insert(*key, item.m().clone().cast());

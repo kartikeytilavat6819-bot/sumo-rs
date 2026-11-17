@@ -1,0 +1,16 @@
+<routes>
+    <!-- stop jump / jumpUntil: a vehicle may skip ahead to a later stop when the jump time is reached -->
+    <vehicle id="j0" depart="0.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E0_0" endPos="250.00" jump="20.00" duration="5.00"/>
+        <stop lane="E2_0" endPos="150.00" duration="5.00"/>
+    </vehicle>
+    <vehicle id="j1" depart="2.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E1_0" endPos="200.00" jumpUntil="60.00" duration="5.00"/>
+    </vehicle>
+    <vehicle id="j2" depart="4.00" departSpeed="max">
+        <route edges="E0 E1 E2"/>
+        <stop lane="E2_0" endPos="100.00" jump="10.00" duration="4.00"/>
+    </vehicle>
+</routes>
