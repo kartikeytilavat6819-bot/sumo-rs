@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:42.343813-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/busride/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/busride/routes.rou"/>
+        <additional-files value="tools/oracle/cases/busride/busride.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="tools/oracle/cases/busride/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/busride.sim/personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/busride.sim/stop.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<stops xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/stopinfo_file.xsd">
+    <stopinfo id="L1f.0" type="bus" lane="E1_0" pos="119.98" parking="0" started="111.00" ended="126.00" delay="96.00" busStop="bs0" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="E1_0" pos="119.98" parking="0" started="143.00" ended="158.00" delay="28.00" busStop="bs0" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.0" type="bus" lane="E2_0" pos="220.00" parking="0" started="174.00" ended="200.00" delay="0.00" busStop="bs1" initialPersons="1" loadedPersons="0" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.2" type="bus" lane="E1_0" pos="119.97" parking="0" started="242.00" ended="257.00" delay="27.00" busStop="bs0" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="E2_0" pos="219.98" parking="0" started="215.00" ended="300.00" delay="0.00" busStop="bs1" initialPersons="1" loadedPersons="0" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+</stops>

@@ -661,10 +661,10 @@ impl NLBuilder {
             MSFrame::fill_options();
             utils::options::options_io::get_options(false).unwrap();
             if oc.process_meta_options(utils::options::options_io::get_arg_c() < 2).unwrap() {
-                // shortcut: SystemFrame::close() is not ported yet
+                utils::common::system_frame::close();
                 return Ptr::default();
             }
-            // shortcut: SystemFrame::checkOptions(oc) is not ported yet
+            utils::common::system_frame::check_options(oc);
             let mut validation = oc.get_string("xml-validation").unwrap();
             let mut routeValidation = oc.get_string("xml-validation.routes").unwrap();
             if isLibsumo {
@@ -738,7 +738,7 @@ impl NLBuilder {
         utils::common::rand_helper::init_rand(None, utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *SUMORouteHandler::get_parsing_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice::get_equipment_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
-        // shortcut: OUProcess::getRNG() is not ported yet, so its RNG is not re-initialised here
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *OUProcess::get_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_ToC::get_response_time_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_BTreceiver::get_recognition_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::options::options_cont::with_options(|oc| MSLane::init_rn_gs(oc));
@@ -907,8 +907,8 @@ impl NLBuilder {
         // shortcut: the C++ try/catch (cleanup of edges/junctions/loaders/tlc, then rethrow) is not replicated; a ProcessError here unwinds the run instead
         // ensure streams are ready for output during building
         MSFrame::build_streams();
-        // shortcut: NLEdgeControlBuilder::build and closeBuilding take the Unmapped MMVersion, so the network version is passed as unit until that type is ported
-        let edges = self.myEdgeBuilder.m().build(&(0, 0.0));
+        let networkVersion = self.myXMLHandler.network_version();
+        let edges = self.myEdgeBuilder.m().build(&networkVersion);
         let junctions = self.myJunctionBuilder.m().build();
         junctions.m().postload_init_container();
         for e in edges.m().get_edges().iter().copied() {
@@ -936,6 +936,7 @@ impl NLBuilder {
         }
 
         // if anthing goes wrong after this point, the net is responsible for cleaning up
+        // shortcut: MSNet::closeBuilding takes the Unmapped MMVersion, so the network version is passed as unit until that type is ported
         self.myNet.m().close_building(
             &self.myOptions,
             edges,
@@ -946,7 +947,7 @@ impl NLBuilder {
             stateDumpFiles,
             self.myXMLHandler.have_seen_internal_edge(),
             self.myXMLHandler.has_junction_higher_speeds(),
-            &(),
+            &self.myXMLHandler.network_version(),
         );
     }
 

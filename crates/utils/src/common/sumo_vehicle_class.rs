@@ -1,12 +1,12 @@
 //! Port of utils/common/SUMOVehicleClass.{h,cpp}
-// shortcut: writePreferences and the StopOffset constructor from SUMOSAXAttributes are not ported; add them with utils/iodevices and utils/xml
-use super::msg_handler::write_warning;
+use super::msg_handler::{write_error, write_warning};
 use super::std_defs::g_ignore_unknown_vclass;
 use super::string_bijection::StringBijection;
 use super::string_tokenizer::StringTokenizer;
 use super::util_exceptions::ProcessError;
 use crate::iodevices::output_device::OutputDevice;
-use crate::xml::sumo_xml_definitions::{SUMO_ATTR_ALLOW, SUMO_ATTR_DISALLOW};
+use crate::xml::sumo_sax_attributes::SUMOSAXAttributes;
+use crate::xml::sumo_xml_definitions::{SUMO_ATTR_ALLOW, SUMO_ATTR_DISALLOW, SUMO_ATTR_EXCEPTIONS, SUMO_ATTR_PREFER, SUMO_ATTR_VALUE, SUMO_ATTR_VCLASSES};
 use crate::{write_errorf, write_warningf};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{LazyLock, Mutex, MutexGuard};
@@ -262,6 +262,30 @@ impl Default for StopOffset {
 }
 
 impl StopOffset {
+    /// C++ `StopOffset(const SUMOSAXAttributes& attrs, bool& ok)`
+    pub fn from_attrs(attrs: &SUMOSAXAttributes, ok: &mut bool) -> Self {
+        let mut s = StopOffset { permissions: SVC_IGNORING, offset: 0. };
+        if attrs.has_attribute(SUMO_ATTR_VCLASSES) && attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+            write_error("Simultaneous specification of vClasses and exceptions is not allowed");
+            *ok = false;
+        }
+        if !attrs.has_attribute(SUMO_ATTR_VALUE) {
+            write_error("StopOffset requires an offset value");
+            *ok = false;
+        }
+        let v_classes = attrs.get_opt::<String>(SUMO_ATTR_VCLASSES, "", ok, String::new(), true);
+        let exceptions = attrs.get_opt::<String>(SUMO_ATTR_EXCEPTIONS, "", ok, String::new(), true);
+        if attrs.has_attribute(SUMO_ATTR_VCLASSES) {
+            s.permissions = parse_vehicle_classes(&v_classes);
+        } else if attrs.has_attribute(SUMO_ATTR_EXCEPTIONS) {
+            s.permissions = !parse_vehicle_classes(&exceptions);
+        } else {
+            // no vClasses specified, thus apply to all
+            s.permissions = parse_vehicle_classes("all");
+        }
+        s.offset = attrs.get_opt::<f64>(SUMO_ATTR_VALUE, "", ok, 0., true);
+        s
+    }
     pub fn is_defined(&self) -> bool {
         self.offset != 0.
     }
@@ -315,6 +339,11 @@ pub fn get_vehicle_class_names_list(permissions: SVCPermissions) -> Vec<String> 
                 .collect()
         })
         .clone()
+}
+
+/// C++: `void writePreferences(OutputDevice& into, SVCPermissions preferred)`
+pub fn write_preferences(into: &mut OutputDevice, preferred: SVCPermissions) {
+    into.write_optional_attr(SUMO_ATTR_PREFER, get_vehicle_class_names(preferred, false).as_str(), preferred == SVC_ALL || preferred == 0);
 }
 
 /// C++: `void writePermissions(OutputDevice& into, SVCPermissions permissions)`
@@ -571,5 +600,29 @@ mod tests {
         assert!(is_railway(SVC_TRAM | SVC_RAIL) && !is_railway(SVC_ALL));
         assert!(is_sidewalk(SVC_PEDESTRIAN) && no_vehicles(0));
         assert_eq!(get_default_vehicle_length(SVC_RAIL), 135.);
+    }
+
+    #[test]
+    fn stop_offset_from_attributes() {
+        use crate::xml::sumo_xml_definitions::Attrs;
+        use std::sync::Arc;
+        let attrs = |a: &[(&str, &str)]| {
+            SUMOSAXAttributes::new(a.iter().map(|(k, v)| (k.to_string(), v.to_string())).collect(), Arc::new(Attrs.get_strings()), "stop")
+        };
+        let mut ok = true;
+        let s = StopOffset::from_attrs(&attrs(&[("value", "2.5"), ("vClasses", "passenger")]), &mut ok);
+        assert!(ok && s.is_defined());
+        assert_eq!(s.get_offset(), 2.5);
+        assert_eq!(s.get_permissions(), SVC_PASSENGER);
+        let mut ok = true;
+        let e = StopOffset::from_attrs(&attrs(&[("value", "1"), ("exceptions", "bus")]), &mut ok);
+        assert!(ok);
+        assert_eq!(e.get_permissions(), !SVC_BUS);
+        let mut ok = true;
+        let d = StopOffset::from_attrs(&attrs(&[("value", "1")]), &mut ok);
+        assert_eq!(d.get_permissions(), SVC_ALL);
+        let mut ok = true;
+        StopOffset::from_attrs(&attrs(&[("vClasses", "bus")]), &mut ok);
+        assert!(!ok, "a missing value makes the stop offset invalid");
     }
 }

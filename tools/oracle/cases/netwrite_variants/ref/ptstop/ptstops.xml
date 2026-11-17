@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:33:25.654617-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/vtypes/plain/net.nod.xml"/>
+        <edge-files value="tools/oracle/cases/vtypes/plain/net.edg.xml"/>
+        <connection-files value="tools/oracle/cases/vtypes/plain/net.con.xml"/>
+        <tllogic-files value="tools/oracle/cases/vtypes/plain/net.tll.xml"/>
+        <type-files value="tools/oracle/cases/vtypes/plain/net.typ.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/netwrite_variants/ref/ptstop/net.xml"/>
+        <ptstop-output value="tools/oracle/cases/netwrite_variants/ref/ptstop/ptstops.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+</additional>

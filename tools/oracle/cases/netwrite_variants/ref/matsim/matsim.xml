@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE network SYSTEM "http://www.matsim.org/files/dtd/network_v1.dtd">
+
+<network name="NAME">
+   <nodes>
+      <node id="-137709" x="0.00" y="150.38"/>
+      <node id="-137711" x="310.63" y="148.50"/>
+      <node id="-137712" x="66.25" y="207.78"/>
+      <node id="-137713" x="65.00" y="84.24"/>
+      <node id="-137714" x="144.38" y="312.61"/>
+      <node id="-137715" x="142.50" y="0.00"/>
+      <node id="-137716" x="223.75" y="282.03"/>
+      <node id="-137717" x="144.19" y="282.03"/>
+      <node id="-137718" x="268.13" y="79.24"/>
+      <node id="-137719" x="269.38" y="148.75"/>
+      <node id="-137720" x="65.67" y="149.98"/>
+      <node id="-137721" x="143.40" y="149.51"/>
+   </nodes>
+   <links capperiod="01:00:00">
+      <link id="--103226#0" from="-137720" to="-137712" length="50.59" capacity="1800.00" freespeed="13.89" permlanes="1"/>
+      <link id="--103226#1" from="-137713" to="-137720" length="58.53" capacity="1800.00" freespeed="13.89" permlanes="1"/>
+      <link id="--103227#0" from="-137717" to="-137714" length="23.34" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="--103227#1" from="-137721" to="-137717" length="118.16" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="--103227#2" from="-137715" to="-137721" length="142.31" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="-103224#0" from="-137709" to="-137720" length="50.46" capacity="3600.00" freespeed="22.22" permlanes="2"/>
+      <link id="-103224#1" from="-137720" to="-137721" length="60.12" capacity="3600.00" freespeed="22.22" permlanes="2"/>
+      <link id="-103224#2" from="-137721" to="-137719" length="109.99" capacity="3600.00" freespeed="22.22" permlanes="2"/>
+      <link id="-103224#3" from="-137719" to="-137711" length="35.74" capacity="3600.00" freespeed="22.22" permlanes="2"/>
+      <link id="-103226#0" from="-137712" to="-137720" length="50.59" capacity="1800.00" freespeed="13.89" permlanes="1"/>
+      <link id="-103226#1" from="-137720" to="-137713" length="58.53" capacity="1800.00" freespeed="13.89" permlanes="1"/>
+      <link id="-103227#0" from="-137714" to="-137717" length="23.34" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="-103227#1" from="-137717" to="-137721" length="118.16" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="-103227#2" from="-137721" to="-137715" length="142.31" capacity="3600.00" freespeed="27.78" permlanes="2"/>
+      <link id="-103228" from="-137716" to="-137717" length="69.15" capacity="3600.00" freespeed="22.22" permlanes="2"/>
+      <link id="-103230" from="-137718" to="-137719" length="62.35" capacity="1800.00" freespeed="13.89" permlanes="1"/>
+   </links>
+</network>

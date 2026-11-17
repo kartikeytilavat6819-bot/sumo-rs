@@ -583,7 +583,74 @@ impl MSTrafficLightLogic {
             };
             utils::write_warningf!("Unsafe green phase % in tlLogic '%', program '%'. Lane '%' is targeted by % 'G'-links. (use 'g' instead)%", firstUnsafePhase, self.get_id(), self.get_program_id(), firstUnsafeLane.get_id(), firstUnsafeOrigins, furtherAffected);
         }
-        // shortcut: the incompatible-junction-logic check (symmetric response between junction links) is skipped because MSLogicJunction::LinkBits is still Unmapped; upgrade when the response bitset is mapped
+        // check incompatible junction logic
+        let mustCheck = MSNet::get_instance().m().has_internal_links();
+        if mustCheck && phases.len() > 0 {
+            // see NBNode::tlsConflict
+            // determinism: C++ std::set<const MSJunction*> is ordered by address; first-seen order is used here
+            let mut controlledJunctions: Vec<Ptr<MSJunction>> = Vec::new();
+            for j in 0..numLinks {
+                for k in 0..self.myLinks[j].len() {
+                    let junction = self.myLinks[j][k].get_junction();
+                    if !controlledJunctions.contains(&junction) {
+                        controlledJunctions.push(junction);
+                    }
+                }
+            }
+            let minor = "gos";
+            for junction in controlledJunctions.iter().copied() {
+                let logic = junction.get_logic();
+                if !logic.is_null() {
+                    let logicSize = logic.get_logic_size();
+                    let mut foundProblem = false;
+                    let mut tlIndex: Vec<i32> = Vec::new();
+                    for u in 0..logicSize {
+                        if foundProblem {
+                            break;
+                        }
+                        let response = logic.get_response_for(u);
+                        for v in 0..logicSize {
+                            if foundProblem {
+                                break;
+                            }
+                            if response.test(v) && logic.get_response_for(v).test(u) {
+                                if tlIndex.len() == 0 {
+                                    tlIndex.resize(logicSize as usize, -1);
+                                    for j in 0..numLinks {
+                                        for k in 0..self.myLinks[j].len() {
+                                            let link = self.myLinks[j][k];
+                                            if link.get_junction() == junction {
+                                                if link.from_internal_lane() {
+                                                    continue;
+                                                }
+                                                if link.is_cont() && !link.get_via_lane().is_null() && link.get_via_lane().get_link_cont()[0].get_tl_index() >= 0 {
+                                                    continue;
+                                                }
+                                                tlIndex[link.get_index() as usize] = link.get_tl_index();
+                                            }
+                                        }
+                                    }
+                                }
+                                let tlu = tlIndex[u as usize];
+                                let tlv = tlIndex[v as usize];
+                                if tlu >= 0 && tlv >= 0 {
+                                    let mut phaseIndex = 0;
+                                    for p in phases.iter() {
+                                        let state = p.get_state().as_bytes();
+                                        if minor.as_bytes().contains(&state[tlu as usize]) && minor.as_bytes().contains(&state[tlv as usize]) {
+                                            utils::write_warningf!("Program '%' at tlLogic '%' is incompatible with logic at junction '%' (mutual conflict between link indices %,% tl indices %,% phase %).\n  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit\n  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.", self.get_program_id(), self.get_id(), junction.get_id(), u, v, tlu, tlv, phaseIndex);
+                                            foundProblem = true;
+                                            break;
+                                        }
+                                        phaseIndex += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         self.myNumLinks = self.myLinks.len() as i32;
     }
 

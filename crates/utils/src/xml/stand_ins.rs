@@ -1,32 +1,18 @@
 //! Minimal stand-ins for pieces of utils/common and utils/geom that xml and iodevices need.
-// shortcut: replace with utils::geom/common once merged (UtilExceptions, MsgHandler, StringTokenizer,
-// FileHelpers, StringUtils::isoTimeString/escapeXML, Position, PositionVector, Boundary)
-use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+// shortcut: Position/PositionVector/Boundary below are xml-local copies, because sumo_sax_attributes reads
+// PositionVector.0 directly; switch them to utils::geom once that code uses the geom types
+use crate::common::msg_handler::{with_instance, MsgType};
 
+pub use crate::common::msg_handler::{write_error, write_message, write_warning};
 pub use crate::common::util_exceptions::ProcessError;
 
-static ERROR_INFORMED: AtomicBool = AtomicBool::new(false);
-
-/// WRITE_ERROR: MsgHandler::getErrorInstance()->inform(msg)
-pub fn write_error(msg: &str) {
-    eprintln!("Error: {msg}");
-    ERROR_INFORMED.store(true, Relaxed);
-}
-/// WRITE_WARNING
-pub fn write_warning(msg: &str) {
-    eprintln!("Warning: {msg}");
-}
-/// WRITE_MESSAGE
-pub fn write_message(msg: &str) {
-    println!("{msg}");
-}
 /// MsgHandler::getErrorInstance()->wasInformed()
 pub fn error_was_informed() -> bool {
-    ERROR_INFORMED.load(Relaxed)
+    with_instance(MsgType::Error, |h| h.was_informed())
 }
 /// MsgHandler::getErrorInstance()->clear()
 pub fn clear_errors() {
-    ERROR_INFORMED.store(false, Relaxed);
+    with_instance(MsgType::Error, |h| h.clear(true));
 }
 
 /// StringTokenizer(s).getVector(): split at chars <= ' ', no empty tokens
