@@ -680,7 +680,12 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        1.
+        // C++ virtual: MSPerson overrides it, so the persons' value is reached through the object's vtable; containers keep the base value
+        if self.is_person() {
+            self.base.get_chosen_speed_factor()
+        } else {
+            1.
+        }
     }
 
     /// C++: `MSStageType MSTransportable::getCurrentStageType() const` [const]
