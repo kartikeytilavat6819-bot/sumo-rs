@@ -2988,8 +2988,7 @@ impl NIImporter_VISUM {
             return;
         }
         //
-        // shortcut: C++ passes NBEdge::myDefaultConnectionLength as the connection length; the static is private to nb_edge.rs so UNSPECIFIED_LOADED_LENGTH (-1) is used, upgrade when my_default_connection_length is pub
-        fromEdge.m().add_lane2_lane_connection(fromLane, toEdge, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+        fromEdge.m().add_lane2_lane_connection(fromLane, toEdge, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
     }
 
     /// C++: `void NIImporter_VISUM::parse_stopPoints()` [private]
