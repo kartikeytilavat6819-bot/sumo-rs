@@ -3,13 +3,6 @@
 use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
-fn lct_on(v: Ptr<MSVehicle>) -> bool {
-    std::env::var("LCTRACE_ID").map(|t| t == v.get_id().to_string()).unwrap_or(false)
-}
-fn lct_bits(d: f64) -> String {
-    format!("{:016x}", d.to_bits())
-}
-
 /// C++ typedef `MSAbstractLaneChangeModel::StateAndDist MSLaneChangerSublane::StateAndDist`
 pub type MSLaneChangerSublane_StateAndDist = MSAbstractLaneChangeModel_StateAndDist;
 
@@ -258,11 +251,6 @@ impl MSLaneChangerSublane {
         self.myCandi = self.find_candidate();
         let vehicle = self.veh(self.myCandi);
         vehicle.m().get_lane_change_model().clear_neighbors();
-        if lct_on(vehicle) {
-            let lcm = vehicle.get_lane_change_model_2();
-            eprintln!("LCT {} {} posLat={} angle={} speedLat={} manDist={} own={} active={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(),
-                lct_bits(vehicle.get_lateral_position_on_lane()), lct_bits(vehicle.get_angle()), lct_bits(lcm.get_speed_lat()), lct_bits(lcm.get_maneuver_dist()), lcm.get_own_state(), vehicle.is_active() as i32);
-        }
 
         if vehicle.m().get_lane_change_model().already_changed() || vehicle.is_stopped_on_lane() {
             self.register_unchanged(vehicle);
@@ -881,9 +869,6 @@ impl MSLaneChangerSublane {
         let urgent = (vehicle.m().get_lane_change_model().get_own_state() & LCA_URGENT) != 0;
         let speedLat = vehicle.m().get_lane_change_model().compute_speed_lat(remLatDist, &mut remLatDist, urgent);
         let nextLatDist = speed2dist(speedLat);
-        if lct_on(vehicle) {
-            eprintln!("LCT-CONT {} {} rem={} next={} urgent={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(), lct_bits(remLatDist), lct_bits(nextLatDist), urgent as i32);
-        }
         let changed = self.start_change_sublane(vehicle, from, nextLatDist, remLatDist);
         changed
     }
@@ -1075,9 +1060,6 @@ impl MSLaneChangerSublane {
     pub fn start_change_sublane(&mut self, vehicle: Ptr<MSVehicle>, from: &mut MSLaneChanger_ChangerIt, latDist: f64, maneuverDist: f64) -> bool {
         if vehicle.is_remote_controlled() {
             return false;
-        }
-        if lct_on(vehicle) {
-            eprintln!("LCT-START {} {} latDist={} manDist={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(), lct_bits(latDist), lct_bits(maneuverDist));
         }
         let fromIdx: usize = *from;
         let source = self.myChanger[fromIdx].lane;
@@ -1420,9 +1402,6 @@ impl MSLaneChangerSublane {
                 vehicle.get_best_lanes()
             };
             result.state = self.check_change_sublane(laneOffset, alternatives, preb, &mut result.latDist, &mut result.maneuverDist);
-            if lct_on(vehicle) {
-                eprintln!("LCT-CH {} {} lo={} state={} latDist={} manDist={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(), laneOffset, result.state, lct_bits(result.latDist), lct_bits(result.maneuverDist));
-            }
             result.dir = laneOffset;
             if (result.state & LCA_WANTS_LANECHANGE) != 0 && (result.state & LCA_URGENT) != 0 && (result.state & LCA_BLOCKED) != 0 {
                 let t = ((self.myCandi as i32) + laneOffset) as usize;

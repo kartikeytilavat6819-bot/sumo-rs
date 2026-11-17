@@ -2230,7 +2230,6 @@ impl MSLaneChanger {
             }
         }
 
-        let targetLane = self.myChanger[(self.myCandi as i32 + laneOffset) as usize].lane;
         if blocked == 0 && targetLane.has_pedestrians() {
             let rightSide = vehicle.get_right_side_on_lane_2(targetLane);
             let nextLeader = targetLane.next_blocking(
