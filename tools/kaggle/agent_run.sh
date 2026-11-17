@@ -28,7 +28,7 @@ open(q, 'w').write(s)
 PY
 git -C $P diff > $T/cpp.patch; echo "patch lines: $(wc -l < $T/cpp.patch)"
 CPPBIN=$(bash tools/gcloud/vm_cpp_trace.sh pt03 $T/cpp.patch 2>$T/build.log | tail -1); echo "cpp bin: $CPPBIN"
-[ -x "$CPPBIN" ] || { echo "CPP BUILD FAILED:"; tail -12 $T/build.log | cut -c1-240; }
+[ -x "$CPPBIN" ] || { echo "CPP BUILD FAILED:"; (cd /home/gate/cpp-pt03/build && make sumo 2>&1 | grep -E 'undefined|multiple|error' | head -6 | cut -c1-300); }
 echo "PT03 markers in cpp bin: $(grep -c PT03 $CPPBIN) ; build.log lines: $(wc -l < $T/build.log)"; ls -l --time-style=+%T $CPPBIN | cut -c1-120
 NET="-n $C/ref_simple.net.xml -r $C/routes.rou $(cat $C/sim.args) --no-step-log true"
 OUTS=$(sed "s#@OUT@#$T/ref#g" $C/sim_outputs.txt | tr -d '\r')
