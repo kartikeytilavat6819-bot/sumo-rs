@@ -5796,11 +5796,51 @@ impl MSBaseVehicle {
     /// C++: `std::vector<StopEdgeInfo> MSBaseVehicle::getStopEdges(double &, double &, std::set<int> &) const` [const, protected]
     /// Returns the list of still pending stop edges also returns the first and last stop position
     // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
     pub fn get_stop_edges(&self, firstPos: &mut f64, lastPos: &mut f64, jumps: &mut BTreeSet<i32>) -> Vec<MSBaseVehicle_StopEdgeInfo> {
-        // shortcut: getStopEdges needs the StopEdgeInfo/MSStop edge iterators (Unmapped); not ported yet, so no stop edges are reported
-        let _ = (firstPos, lastPos, jumps);
-        Vec::new()
+        let mut result: Vec<MSBaseVehicle_StopEdgeInfo> = Vec::new();
+        let mut prev: Option<&MSStop> = None;
+        let mut internalSuccessor: Ptr<MSEdge> = Ptr::null();
+        for stop in self.myStops.iter() {
+            if stop.reached {
+                if stop.pars.jump >= 0 {
+                    jumps.insert(result.len() as i32);
+                }
+                continue;
+            }
+            let mut stopPos = stop.get_end_pos(&self.base);
+            let stopEdge: Ptr<MSEdge> = self.myRoute.get_edges()[stop.edge];
+            if (prev.map_or(true, |p| p.edge != stop.edge || (p.lane == stop.lane && p.get_end_pos(&self.base) > stopPos))) && stopEdge != internalSuccessor {
+                if stop.lane.is_internal() {
+                    stopPos = stopEdge.get_length();
+                }
+                let mut info = MSBaseVehicle_StopEdgeInfo::new(stopEdge, stop.pars.priority, stop.get_arrival_fallback(), stopPos, false);
+                info.nameTag = stop.get_stopping_place_name();
+                info.stopPar = Ptr::new(&stop.pars);
+                result.push(info);
+                if stop.lane.is_internal() {
+                    internalSuccessor = stop.lane.get_next_normal();
+                    result.push(MSBaseVehicle_StopEdgeInfo::new(internalSuccessor, stop.pars.priority, stop.get_arrival_fallback(), 0.0, false));
+                } else {
+                    internalSuccessor = Ptr::null();
+                }
+            } else if prev.map_or(false, |p| p.edge == stop.edge) {
+                let last = result.last_mut().unwrap();
+                last.priority = Self::add_stop_priority(last.priority, stop.pars.priority);
+            }
+            prev = Some(stop);
+            if *firstPos == utils::common::std_defs::INVALID_DOUBLE {
+                if !stop.parkingarea.is_null() {
+                    *firstPos = if 0.0 > stopPos { 0.0 } else { stopPos }; // MAX2(0., stopPos)
+                } else {
+                    *firstPos = stopPos;
+                }
+            }
+            *lastPos = stopPos;
+            if stop.pars.jump >= 0 {
+                jumps.insert(result.len() as i32 - 1);
+            }
+        }
+        result
     }
 
     /// C++: `double MSBaseVehicle::addStopPriority(double, double)` [static, protected]
