@@ -1653,7 +1653,7 @@ impl RONet {
             if self.myRoutesOutput.m().is_null() {
                 self.myRoutesOutput = Ptr::null();
             } else {
-                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRoutesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oexists_in(options, "alternatives-output") && oset(options, "alternatives-output") && !(oexists_in(options, "write-trips") && ob(options, "write-trips")) {
@@ -1661,12 +1661,12 @@ impl RONet {
             if self.myRouteAlternativesOutput.m().is_null() {
                 self.myRouteAlternativesOutput = Ptr::null();
             } else {
-                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+                self.myRouteAlternativesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
             }
         }
         if oset(options, "vtype-output") {
             self.myTypesOutput = get_device_ptr(&ostring(options, "vtype-output"));
-            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), false);
+            self.myTypesOutput.m().write_xml_header("routes", "routes_file.xsd", BTreeMap::new(), true);
         }
     }
 

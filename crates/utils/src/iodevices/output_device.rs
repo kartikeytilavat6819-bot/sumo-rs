@@ -314,8 +314,13 @@ impl OutputDevice {
     }
 
     /// Closes all open tags, finishes the file and removes the device from the registry.
+    /// C++ `close()` ends with `delete this`: the registry removal (the last step) frees the device, so nothing touches `self` after it.
     pub fn close(&mut self) -> Result<(), ProcessError> {
         while self.close_tag("") {}
+        let r = self.my_stream.flush();
+        if let Sink::File(f) = &mut self.my_stream.sink {
+            drop(f.take()); // GzEncoder writes its trailer on drop
+        }
         let me = self as *const OutputDevice;
         MY_OUTPUT_DEVICES.with(|m| {
             let mut m = m.borrow_mut();
@@ -323,10 +328,6 @@ impl OutputDevice {
                 m.remove(&k);
             }
         });
-        let r = self.my_stream.flush();
-        if let Sink::File(f) = &mut self.my_stream.sink {
-            drop(f.take()); // GzEncoder writes its trailer on drop
-        }
         r.map_err(|e| ProcessError::IOError(e.to_string()))
     }
 

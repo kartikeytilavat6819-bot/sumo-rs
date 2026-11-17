@@ -1,0 +1,1 @@
+--trip-files @CASE@/trips.xml --output-file @DIR@/routes.rou.xml
