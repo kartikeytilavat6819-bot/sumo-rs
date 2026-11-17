@@ -126,6 +126,10 @@ impl utils::xml::generic_sax_handler::SaxHandler for RORouteHandler {
 }
 
 // C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+/// C++ virtual `RORouteHandler::myStartElement`, reached from SUMORouteLoader through the base handler
+fn ro_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().my_start_element(element, attrs)
+}
 fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
     Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)
 }
@@ -267,7 +271,7 @@ impl RORouteHandler {
         let mut myActiveRoute: ConstROEdgeVector = Vec::new();
         myActiveRoute.reserve(100);
         RORouteHandler {
-            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
+            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, start_element_override: Some(ro_my_start_element), ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
             base2: (),
             myNet: Ptr::from_mut(net),
             myActiveRoute,
@@ -661,7 +665,6 @@ impl RORouteHandler {
             self.parse_edges(&desc, &mut route, &rid, ok);
             self.myActiveRoute = route;
         }
-        eprintln!("DU02 after-from {} len={} ok={} fromattr={:?}", self.myVehicleParameter.id, self.myActiveRoute.len(), *ok, attrs.get_opt::<String>(SUMO_ATTR_FROM, "", &mut true, String::new(), false));
         if !attrs.has_attribute(SUMO_ATTR_VIA) && !attrs.has_attribute(SUMO_ATTR_VIALONLAT) && !attrs.has_attribute(SUMO_ATTR_VIAXY) {
             self.myInsertStopEdgesAt = self.myActiveRoute.len() as i32;
         }
@@ -1166,7 +1169,6 @@ impl RORouteHandler {
                 self.myActiveRoute.push(edge);
             }
         }
-        eprintln!("DU02 close_route {} len={} mayBeDisc={}", self.myActiveRouteID, self.myActiveRoute.len(), mayBeDisconnected);
         if self.myActiveRoute.len() == 0 {
             if self.myActiveRouteRefID != "" && !self.myCurrentAlternatives.is_null() {
                 let def = self.myNet.get_route_def(&self.myActiveRouteRefID);
