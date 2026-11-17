@@ -83,11 +83,13 @@ for dir in tools/oracle/cases/*/; do
         EXTRA=$(cat "$argsf")
       fi
       # extra_outputs.txt: "<option> <suffix>" lines, each output compared against $dir/$tag.<suffix>.xml
+      # fcd/stat outputs only when the reference has them: the FCD device adds itself to tripinfo's device list
       XOUT=""
       [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
+      [ -f "$dir/$tag.fcd.xml" ] && XOUT="$XOUT --fcd-output $OUT/$c.$tag.fcd.xml"
+      [ -f "$dir/$tag.stat.xml" ] && XOUT="$XOUT --statistic-output $OUT/$c.$tag.stat.xml"
       "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
-          --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \
-          --statistic-output "$OUT/$c.$tag.stat.xml" --no-step-log true $EXTRA $XOUT \
+          --tripinfo-output "$OUT/$c.$tag.ti.xml" --no-step-log true $EXTRA $XOUT \
           >"$OUT/$c.$tag.sumo.log" 2>&1
       if [ $? -ne 0 ]; then
         line "$c/$tag" sim-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.$tag.sumo.log" | cut -c1-90)"; FAIL=$((FAIL+1))
