@@ -25,6 +25,11 @@ import sys
 def load(p): return [l.rstrip('\n') for l in open(p) if l.startswith('LCT')]
 a = load(sys.argv[1]); b = load(sys.argv[2])
 def toks(l): return l.replace(',', ' ').split()
+for t in ('38000 c2 ', '13000 c2 '):
+    for tag, p in (('ours', a), ('cpp', b)):
+        for l in p:
+            if t in l and ('LCT-GL' in l or 'LCT-AN' in l or 'LCT-AH' in l):
+                print(tag, l[:330])
 def per_veh(lines):
     d = {}
     for l in lines:
