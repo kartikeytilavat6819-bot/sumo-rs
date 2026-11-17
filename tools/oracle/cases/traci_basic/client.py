@@ -145,6 +145,15 @@ def probes(lane, tl_id):
         t.simulationStep(11)
         return t.vehicle.getIDList()
 
+    def veh_highlight_fade(t):
+        t.vehicle.highlight("v0", (0, 255, 0, 255), 5.0, 200, 3.0)
+        t.simulationStep(11)
+        return (sorted(i for i in t.polygon.getIDList() if "_hl" in i), t.polygon.getShape("v0_hl0"), t.polygon.getColor("v0_hl0"))
+
+    def veh_highlight_default(t):
+        t.vehicle.highlight("v0")
+        return (sorted(i for i in t.polygon.getIDList() if "_hl" in i), t.polygon.getShape("v0_hl0"), t.polygon.getColor("v0_hl0"))
+
     edge = lane.rsplit("_", 1)[0]
     tl = tl_id or "none"
 
@@ -596,6 +605,9 @@ def probes(lane, tl_id):
         "vehicle.getLeader(v0, 200)": lambda t: t.vehicle.getLeader("v0", 200.0),
         "vehicle.getDistance(v0)": lambda t: t.vehicle.getDistance("v0"),
         "vehicle.getTypeID(v0)": lambda t: t.vehicle.getTypeID("v0"),
+        "vehicle.highlight(v0, fade) + step + polygons": veh_highlight_fade,
+        "vehicle.highlight(v0, default) + polygons": veh_highlight_default,
+        "vehicle.highlight(nope)": lambda t: t.vehicle.highlight("nope"),
         "vehicle.getLaneID(nope)": lambda t: t.vehicle.getLaneID("nope"),
         "vehicle.getLanePosition(nope)": lambda t: t.vehicle.getLanePosition("nope"),
         "vehicle.getAngle(nope)": lambda t: t.vehicle.getAngle("nope"),
