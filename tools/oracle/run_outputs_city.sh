@@ -64,7 +64,7 @@ row() {
   else
     python3 tools/oracle/compare_xml.py "$dr/$file" "$dc/$file" >"$sub/compare.log" 2>&1
     case $? in
-      0) verdict=PASS ;;
+      0) verdict=PASS; detail="ref elements=$(grep -c '<[a-zA-Z]' "$dr/$file")" ;;
       1) verdict=FAIL; detail=$(head -1 "$sub/compare.log" | cut -c1-200) ;;
       *) verdict=FAIL; detail="unreadable: $(head -1 "$sub/compare.log" | cut -c1-120)" ;;
     esac
