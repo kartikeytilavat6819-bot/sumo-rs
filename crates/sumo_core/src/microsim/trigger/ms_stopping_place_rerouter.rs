@@ -2,7 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::microsim::ms_globals::MSGlobals;
-use crate::microsim::devices::ms_routing_engine::MSRoutingEngine;
 use utils::common::string_utils::to_double;
 use utils::common::time::time2string;
 use utils::common::to_string::to_string;
@@ -1112,7 +1111,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited)
+        MSNet::get_instance().get_mut().unwrap().get_router_tt(veh.get_rng_index(), prohibited)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]
