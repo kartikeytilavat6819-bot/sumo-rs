@@ -296,7 +296,6 @@ self.myPhases.push(mk(openingTime, (LINKSTATE_TL_REDYELLOW as u8 as char).to_str
                 stayRedUntil = std::cmp::max(stayRedUntil, now + delta_t() + self.myOpeningDelay);
             }
         }
-        if std::env::var_os("RX01").is_some() { eprintln!("RX01 upd t={} step={} stayRed={}", now, self.myStep, stayRedUntil); for link in self.myIncomingRailLinks.iter() { for (k, avi) in link.get_approaching_2().iter() { eprintln!("RX01  apv {} arr={} leave={} dist={}", k.get_id(), avi.arrivalTime, avi.leavingTime, avi.dist); } } }
         let wait = stayRedUntil - now;
 
         if self.myStep == 0 {
