@@ -66,6 +66,7 @@ for dir in tools/oracle/cases/*/; do
   # writes net.net.xml plus its own output files; every file in ref_net_out/<variant>/ must match its candidate.
   if [ -f "$dir/net_outputs.txt" ] && [ -f "$dir/input.osm" ]; then
     while read -r v args; do
+      v=${v%$'\r'}; args=${args%$'\r'}
       [ -n "$v" ] || continue
       D="$OUT/$c.net_$v"; rm -rf "$D"; mkdir -p "$D"
       read -ra A <<< "${args//@OUT@/$D}"
@@ -103,7 +104,7 @@ for dir in tools/oracle/cases/*/; do
       SIMOUT=""
       if [ "$tag" = "ref" ] && [ -f "$dir/sim_outputs.txt" ]; then
         SIMOUT="$OUT/$c.sim_out"; rm -rf "$SIMOUT"; mkdir -p "$SIMOUT"
-        EXTRA="$EXTRA $(sed "s#@OUT@#$SIMOUT#g" "$dir/sim_outputs.txt")"
+        EXTRA="$EXTRA $(sed "s#@OUT@#$SIMOUT#g" "$dir/sim_outputs.txt" | tr -d '\r')"
       fi
       "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
           --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \

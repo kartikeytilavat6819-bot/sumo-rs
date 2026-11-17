@@ -16,6 +16,7 @@ for c in $CASES; do
   d=tools/oracle/cases/$c
   if [ -f "$d/net_outputs.txt" ]; then
     while read -r v args; do
+      v=${v%$'\r'}; args=${args%$'\r'}
       [ -n "$v" ] || continue
       o=$T/$c.$v; rm -rf "$o"; mkdir -p "$o"
       # shellcheck disable=SC2086
@@ -31,11 +32,11 @@ for c in $CASES; do
     o=$T/$c.sim; rm -rf "$o"; mkdir -p "$o"
     # shellcheck disable=SC2046
     $PRI/bin/sumo -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") \
-        --tripinfo-output "$d/ref.tripinfo.xml" $(sed "s#@OUT@#$o#g" "$d/sim_outputs.txt") \
+        --tripinfo-output "$d/ref.tripinfo.xml" $(sed "s#@OUT@#$o#g" "$d/sim_outputs.txt" | tr -d '\r') \
         --no-step-log true > "$o/sumo.log" 2>&1 < /dev/null || fail "$c sumo exit (see $o/sumo.log)"
     grep -q 'Interrupt signal' "$o/sumo.log" && fail "$c: C++ interrupted, rerun"
     rm -rf "$d/ref_sim_out"; mkdir -p "$d/ref_sim_out"
-    for f in $(sed "s#@OUT@/##g" "$d/sim_outputs.txt" | tr ' ' '\n' | grep '\.xml$'); do
+    for f in $(sed "s#@OUT@/##g" "$d/sim_outputs.txt" | tr -d '\r' | tr ' ' '\n' | grep '\.xml$'); do
       cp "$o/$f" "$d/ref_sim_out/" || fail "$c: missing $f"
     done
     echo "$c sim: $(ls "$d/ref_sim_out" | tr '\n' ' ')"
