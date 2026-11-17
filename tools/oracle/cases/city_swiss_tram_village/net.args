@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/city_swiss_tram_village/city_swiss_tram_village.nod.xml --edge-files tools/oracle/cases/city_swiss_tram_village/city_swiss_tram_village.edg.xml

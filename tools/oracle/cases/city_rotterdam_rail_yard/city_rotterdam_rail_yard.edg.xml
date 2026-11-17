@@ -1,0 +1,14 @@
+<edges>
+    <edge id="E1" from="W" to="J1" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="E2" from="J1" to="J2" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="E3" from="J2" to="E" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="W1" from="E" to="J2" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="W2" from="J2" to="J1" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="W3" from="J1" to="W" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YA1" from="J1" to="Y1" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YA2" from="Y1" to="Y2" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YA3" from="Y2" to="J2" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YB1" from="J2" to="Y2" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YB2" from="Y2" to="Y1" numLanes="1" speed="20.00" allow="rail"/>
+    <edge id="YB3" from="Y1" to="J1" numLanes="1" speed="20.00" allow="rail"/>
+</edges>

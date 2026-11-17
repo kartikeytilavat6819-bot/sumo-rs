@@ -1,0 +1,275 @@
+<routes>
+    <vType id="car" vClass="passenger" length="4.8" maxSpeed="29.06" accel="2.6" decel="4.5"/>
+    <vType id="truck" vClass="truck" length="12" maxSpeed="25" accel="1.0" decel="3.0"/>
+    <vType id="hovcar" vClass="hov" length="4.8" maxSpeed="29.06" accel="2.6" decel="4.5"/>
+    <vehicle id="car28" type="car" depart="0.03">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car30" type="car" depart="4.98">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car48" type="car" depart="5.96">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car53" type="car" depart="22.08">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="car58" type="car" depart="25.09">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car7" type="car" depart="28.79">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car21" type="car" depart="39.90">
+        <route edges="mb2 off1"/>
+    </vehicle>
+    <vehicle id="car1" type="car" depart="40.79">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car42" type="car" depart="40.93">
+        <route edges="mb0 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car52" type="car" depart="41.02">
+        <route edges="mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov2" type="hovcar" depart="43.51">
+        <route edges="hb0 hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="car49" type="car" depart="49.33">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car29" type="car" depart="52.10">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car20" type="car" depart="54.57">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car44" type="car" depart="69.15">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car38" type="car" depart="71.25">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="truck0" type="truck" depart="72.34">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov15" type="hovcar" depart="74.68">
+        <route edges="hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="hov17" type="hovcar" depart="77.59">
+        <route edges="feed_in hb0 hb1"/>
+    </vehicle>
+    <vehicle id="car2" type="car" depart="81.91">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car35" type="car" depart="82.71">
+        <route edges="on1 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="hov13" type="hovcar" depart="94.78">
+        <route edges="hb1 hb2"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" depart="102.32">
+        <route edges="on1 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="hov18" type="hovcar" depart="107.97">
+        <route edges="hb0 hb1 hb2"/>
+    </vehicle>
+    <vehicle id="hov11" type="hovcar" depart="118.10">
+        <route edges="hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="hov0" type="hovcar" depart="121.04">
+        <route edges="hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="hov7" type="hovcar" depart="122.50">
+        <route edges="hb2 hb3"/>
+    </vehicle>
+    <vehicle id="truck6" type="truck" depart="125.55">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car40" type="car" depart="128.56">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car9" type="car" depart="147.78">
+        <route edges="on1 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="hov3" type="hovcar" depart="151.26">
+        <route edges="hb1 hb2 hb3"/>
+    </vehicle>
+    <vehicle id="car57" type="car" depart="152.34">
+        <route edges="mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov19" type="hovcar" depart="160.08">
+        <route edges="hb2 hb3"/>
+    </vehicle>
+    <vehicle id="car25" type="car" depart="169.27">
+        <route edges="mb0 mb1"/>
+    </vehicle>
+    <vehicle id="car37" type="car" depart="169.43">
+        <route edges="mb0 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car24" type="car" depart="172.26">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car46" type="car" depart="173.88">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car31" type="car" depart="178.33">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car50" type="car" depart="183.25">
+        <route edges="mb0 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="hov8" type="hovcar" depart="187.94">
+        <route edges="hb0 hb1 hb2 hb3"/>
+    </vehicle>
+    <vehicle id="car23" type="car" depart="188.69">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="hov16" type="hovcar" depart="190.06">
+        <route edges="feed_in hb0 hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="car33" type="car" depart="190.44">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="hov9" type="hovcar" depart="193.78">
+        <route edges="hb1 hb2 hb3"/>
+    </vehicle>
+    <vehicle id="car17" type="car" depart="195.78">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="hov4" type="hovcar" depart="199.81">
+        <route edges="hb0 hb1 hb2"/>
+    </vehicle>
+    <vehicle id="car18" type="car" depart="202.34">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car45" type="car" depart="203.13">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="car6" type="car" depart="207.26">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car16" type="car" depart="216.56">
+        <route edges="mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car59" type="car" depart="217.09">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car51" type="car" depart="219.03">
+        <route edges="mb0 mb1"/>
+    </vehicle>
+    <vehicle id="truck5" type="truck" depart="223.50">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car13" type="car" depart="230.26">
+        <route edges="mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car36" type="car" depart="232.16">
+        <route edges="mb0 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="hov12" type="hovcar" depart="233.81">
+        <route edges="hb0 hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="hov14" type="hovcar" depart="236.80">
+        <route edges="hb1 hb2 hb3 feed_out"/>
+    </vehicle>
+    <vehicle id="car32" type="car" depart="238.41">
+        <route edges="mb2 off1"/>
+    </vehicle>
+    <vehicle id="truck3" type="truck" depart="238.70">
+        <route edges="mb0 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car54" type="car" depart="244.53">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car26" type="car" depart="250.04">
+        <route edges="mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car47" type="car" depart="254.34">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="truck9" type="truck" depart="254.53">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="truck2" type="truck" depart="257.89">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car56" type="car" depart="263.04">
+        <route edges="mb0 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car27" type="car" depart="266.52">
+        <route edges="mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car12" type="car" depart="272.70">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car19" type="car" depart="282.13">
+        <route edges="mb0 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car43" type="car" depart="304.17">
+        <route edges="mb0 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="truck8" type="truck" depart="311.74">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov1" type="hovcar" depart="314.49">
+        <route edges="hb0 hb1 hb2 hb3"/>
+    </vehicle>
+    <vehicle id="car5" type="car" depart="319.05">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car8" type="car" depart="325.20">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car55" type="car" depart="337.45">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car3" type="car" depart="340.90">
+        <route edges="mb2 mb3"/>
+    </vehicle>
+    <vehicle id="truck7" type="truck" depart="342.62">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="car14" type="car" depart="343.48">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="car4" type="car" depart="347.12">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="car0" type="car" depart="347.38">
+        <route edges="mb0 mb1"/>
+    </vehicle>
+    <vehicle id="car41" type="car" depart="351.43">
+        <route edges="on1 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="truck4" type="truck" depart="353.09">
+        <route edges="on1 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="hov6" type="hovcar" depart="359.59">
+        <route edges="hb1 hb2"/>
+    </vehicle>
+    <vehicle id="car39" type="car" depart="359.81">
+        <route edges="on1 mb1 mb2"/>
+    </vehicle>
+    <vehicle id="car15" type="car" depart="364.27">
+        <route edges="on1 mb1"/>
+    </vehicle>
+    <vehicle id="car34" type="car" depart="369.56">
+        <route edges="mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car22" type="car" depart="375.18">
+        <route edges="mb0 mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov10" type="hovcar" depart="382.84">
+        <route edges="feed_in hb0 hb1 hb2"/>
+    </vehicle>
+    <vehicle id="car11" type="car" depart="384.33">
+        <route edges="on1 mb1 mb2 mb3"/>
+    </vehicle>
+    <vehicle id="car10" type="car" depart="390.67">
+        <route edges="mb1 mb2 off1"/>
+    </vehicle>
+    <vehicle id="hov5" type="hovcar" depart="397.02">
+        <route edges="hb0 hb1 hb2"/>
+    </vehicle>
+</routes>

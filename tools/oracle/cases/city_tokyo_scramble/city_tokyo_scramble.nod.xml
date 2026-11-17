@@ -1,0 +1,11 @@
+<nodes>
+    <node id="c" x="0.00" y="0.00" type="traffic_light"/>
+    <node id="N" x="0.00" y="120.00"/>
+    <node id="S" x="0.00" y="-120.00"/>
+    <node id="E" x="120.00" y="0.00"/>
+    <node id="W" x="-120.00" y="0.00"/>
+    <node id="NW" x="-10.00" y="10.00"/>
+    <node id="NE" x="10.00" y="10.00"/>
+    <node id="SE" x="10.00" y="-10.00"/>
+    <node id="SW" x="-10.00" y="-10.00"/>
+</nodes>

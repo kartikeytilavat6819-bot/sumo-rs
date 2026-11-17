@@ -1,0 +1,39 @@
+<routes>
+    <vType id="freight" vClass="rail" length="150" maxSpeed="20" accel="0.6" decel="0.8" tau="2"/>
+    <vehicle id="fr0" type="freight" depart="4.72">
+        <route edges="E1 E2 E3"/>
+    </vehicle>
+    <vehicle id="fr1" type="freight" depart="52.06">
+        <route edges="E1 YA1 YA2 YA3 E3"/>
+    </vehicle>
+    <vehicle id="fr2" type="freight" depart="107.92">
+        <route edges="W1 W2 W3"/>
+    </vehicle>
+    <vehicle id="fr3" type="freight" depart="153.10">
+        <route edges="W1 YB1 YB2 YB3 W3"/>
+    </vehicle>
+    <vehicle id="fr4" type="freight" depart="201.33">
+        <route edges="E1 E2 E3"/>
+    </vehicle>
+    <vehicle id="fr5" type="freight" depart="258.03">
+        <route edges="E1 YA1 YA2 YA3 E3"/>
+    </vehicle>
+    <vehicle id="fr6" type="freight" depart="318.36">
+        <route edges="W1 W2 W3"/>
+    </vehicle>
+    <vehicle id="fr7" type="freight" depart="366.01">
+        <route edges="W1 YB1 YB2 YB3 W3"/>
+    </vehicle>
+    <vehicle id="fr8" type="freight" depart="415.30">
+        <route edges="E1 E2 E3"/>
+    </vehicle>
+    <vehicle id="fr9" type="freight" depart="454.44">
+        <route edges="E1 YA1 YA2 YA3 E3"/>
+    </vehicle>
+    <vehicle id="fr10" type="freight" depart="510.73">
+        <route edges="W1 W2 W3"/>
+    </vehicle>
+    <vehicle id="fr11" type="freight" depart="555.53">
+        <route edges="W1 YB1 YB2 YB3 W3"/>
+    </vehicle>
+</routes>

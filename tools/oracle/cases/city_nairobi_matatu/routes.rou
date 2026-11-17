@@ -1,0 +1,156 @@
+<routes>
+    <vType id="car" vClass="passenger" length="4.8" maxSpeed="13.89" accel="2.6" decel="4.5"/>
+    <vType id="matatu" vClass="bus" length="8.5" width="2.2" maxSpeed="11.11" accel="1.2" decel="3.0" guiShape="bus"/>
+    <vehicle id="car37" type="car" depart="1.26">
+        <route edges="rg0 E_out"/>
+    </vehicle>
+    <vehicle id="car38" type="car" depart="9.24">
+        <route edges="rg3 rg0"/>
+    </vehicle>
+    <vehicle id="car33" type="car" depart="12.26">
+        <route edges="N_in rg0 E_out"/>
+    </vehicle>
+    <vehicle id="car0" type="car" depart="25.46">
+        <route edges="E_in rg1 rg2 W_out"/>
+    </vehicle>
+    <vehicle id="car32" type="car" depart="34.57">
+        <route edges="E_in rg1 rg2 W_out"/>
+    </vehicle>
+    <vehicle id="car10" type="car" depart="52.08">
+        <route edges="rg0 rg1 rg2 W_out"/>
+    </vehicle>
+    <vehicle id="car9" type="car" depart="53.23">
+        <route edges="rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car35" type="car" depart="55.12">
+        <route edges="rg0 rg1 rg2"/>
+    </vehicle>
+    <vehicle id="car26" type="car" depart="57.42">
+        <route edges="E_in rg1 S_out"/>
+    </vehicle>
+    <vehicle id="mat0" type="matatu" depart="67.40">
+        <route edges="W_in rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car34" type="car" depart="76.71">
+        <route edges="E_in rg1 rg2 rg3"/>
+    </vehicle>
+    <vehicle id="car21" type="car" depart="80.44">
+        <route edges="rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car16" type="car" depart="83.73">
+        <route edges="rg1 rg2 W_out"/>
+    </vehicle>
+    <vehicle id="car22" type="car" depart="90.99">
+        <route edges="W_in rg3"/>
+    </vehicle>
+    <vehicle id="car18" type="car" depart="105.23">
+        <route edges="W_in rg3 rg0"/>
+    </vehicle>
+    <vehicle id="car31" type="car" depart="108.71">
+        <route edges="E_in rg1 rg2 W_out"/>
+    </vehicle>
+    <vehicle id="mat1" type="matatu" depart="109.02">
+        <route edges="S_in rg2 rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car24" type="car" depart="109.98">
+        <route edges="W_in rg3 rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car4" type="car" depart="118.06">
+        <route edges="S_in rg2"/>
+    </vehicle>
+    <vehicle id="car15" type="car" depart="119.96">
+        <route edges="rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="mat2" type="matatu" depart="147.56">
+        <route edges="N_in rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car17" type="car" depart="154.62">
+        <route edges="W_in rg3 rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car29" type="car" depart="156.71">
+        <route edges="N_in rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="car12" type="car" depart="157.61">
+        <route edges="S_in rg2"/>
+    </vehicle>
+    <vehicle id="car27" type="car" depart="172.32">
+        <route edges="N_in rg0 E_out"/>
+    </vehicle>
+    <vehicle id="car28" type="car" depart="177.51">
+        <route edges="E_in rg1 rg2 rg3"/>
+    </vehicle>
+    <vehicle id="car13" type="car" depart="178.05">
+        <route edges="rg3 rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="car2" type="car" depart="181.78">
+        <route edges="rg2 rg3"/>
+    </vehicle>
+    <vehicle id="mat3" type="matatu" depart="188.62">
+        <route edges="W_in rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car19" type="car" depart="197.67">
+        <route edges="W_in rg3 rg0"/>
+    </vehicle>
+    <vehicle id="car11" type="car" depart="202.34">
+        <route edges="rg3 rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car3" type="car" depart="204.37">
+        <route edges="E_in rg1"/>
+    </vehicle>
+    <vehicle id="car20" type="car" depart="209.87">
+        <route edges="rg3 rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="car23" type="car" depart="219.28">
+        <route edges="S_in rg2 rg3"/>
+    </vehicle>
+    <vehicle id="mat4" type="matatu" depart="227.05">
+        <route edges="S_in rg2 rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car39" type="car" depart="229.79">
+        <route edges="W_in rg3 rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car1" type="car" depart="242.69">
+        <route edges="rg0 rg1 rg2"/>
+    </vehicle>
+    <vehicle id="car25" type="car" depart="246.12">
+        <route edges="N_in rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="car30" type="car" depart="247.42">
+        <route edges="rg2 rg3 N_out"/>
+    </vehicle>
+    <vehicle id="car6" type="car" depart="261.31">
+        <route edges="rg2 rg3 rg0 E_out"/>
+    </vehicle>
+    <vehicle id="mat5" type="matatu" depart="264.73">
+        <route edges="N_in rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="car8" type="car" depart="267.54">
+        <route edges="S_in rg2 rg3 rg0"/>
+    </vehicle>
+    <vehicle id="car7" type="car" depart="279.55">
+        <route edges="rg3 rg0"/>
+    </vehicle>
+    <vehicle id="car5" type="car" depart="280.71">
+        <route edges="rg3 rg0 rg1"/>
+    </vehicle>
+    <vehicle id="car14" type="car" depart="288.57">
+        <route edges="rg3 rg0 rg1 S_out"/>
+    </vehicle>
+    <vehicle id="car36" type="car" depart="297.00">
+        <route edges="E_in rg1 S_out"/>
+    </vehicle>
+    <vehicle id="mat6" type="matatu" depart="302.26">
+        <route edges="W_in rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+    <vehicle id="mat7" type="matatu" depart="346.61">
+        <route edges="S_in rg2 rg3 rg0 E_out"/>
+        <stop busStop="bs_e" duration="20"/>
+    </vehicle>
+</routes>
