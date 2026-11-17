@@ -545,7 +545,7 @@ impl LaneArea {
         // shortcut: C++ dynamic_cast<MSE2Collector*> cannot be checked at runtime; a non-MSE2Collector typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
         let e2 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(detID).copied();
         match e2 {
-            Some(d) => d.cast::<MSE2Collector>(),
+            Some(d) => crate::microsim::output::mse2_collector::mse2_collector_of(d),
             None => {
                 let msg = format!("Lane area detector '{}' is not known", detID);
                 panic!("{}", msg);
