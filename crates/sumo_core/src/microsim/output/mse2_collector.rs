@@ -188,6 +188,10 @@ static MSE2_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
 fn mse2_of(d: *mut MSDetectorFileOutput) -> *mut MSE2Collector {
     (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector
 }
+/// C++ static_cast from the MSDetectorFileOutput base to MSE2Collector: `base2` is not the first field, so undo its offset.
+pub fn mse2_collector_of(d: Ptr<MSDetectorFileOutput>) -> Ptr<MSE2Collector> {
+    Ptr::from_raw(mse2_of(d.as_raw()))
+}
 fn mse2_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
     unsafe { (*mse2_of(d)).write_xml_output(dev, startTime, stopTime) }
 }

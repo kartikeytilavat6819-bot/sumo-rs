@@ -1971,7 +1971,10 @@ impl NIImporter_OpenDrive {
         // -------------------------
         // clean up
         // -------------------------
-        // shortcut: C++ deletes every OpenDriveEdge here; their ownership is not defined by the port yet, so they are not freed
+        // C++ `delete (*i).second` for every OpenDriveEdge; each was allocated with Box::into_raw on insert
+        for (_, edge) in std::mem::take(&mut edges) {
+            drop(unsafe { Box::from_raw(edge.as_raw()) });
+        }
         Ok(())
     }
 
@@ -3801,7 +3804,7 @@ impl NIImporter_OpenDrive {
                             ));
                             cn.shape.clear();
                         }
-                        if cn.toCP == CP::OPENDRIVE_CP_END {
+                        if c.toCP == CP::OPENDRIVE_CP_END {
                             cn.shape = cn.shape.reverse();
                         }
                     }
