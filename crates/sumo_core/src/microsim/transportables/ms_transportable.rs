@@ -1497,6 +1497,7 @@ impl MSTransportable {
     // }
     #[allow(unused_variables)]
     pub fn replace_route(&mut self, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+        if std::env::var_os("CD01").is_some() && self.get_id() == "pwL10" { eprintln!("CD01 RR info={} onInit={} off={} bt={}", info, onInit, offset, std::backtrace::Backtrace::force_capture()); }
         if self.is_person() {
             Ptr::from_mut(self).cast::<MSPerson>().m().replace_walk(route.get_edges(), self.get_position_on_lane(), 0, 1);
             return true;
