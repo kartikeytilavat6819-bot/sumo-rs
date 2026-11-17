@@ -19,7 +19,7 @@ export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOB
 cd "$SRC"
 cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 # a stale incremental cache can crash rustc (ICE): drop it and build once more
-if [ $rc -ne 0 ] && grep -aq 'internal compiler error' /tmp/build$slot.log; then
+if [ $rc -ne 0 ] && grep -aqE 'internal compiler error|incremental' /tmp/build$slot.log; then
   echo "ICE: clearing slot $slot incremental cache"; rm -rf "$CARGO_TARGET_DIR/debug/incremental"
   cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 fi
