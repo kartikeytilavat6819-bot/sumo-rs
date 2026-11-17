@@ -94,10 +94,10 @@ impl NIVissimSingleTypeParser_Fahrzeugklassendefinition {
         // id
         let id: i32 = self.my_read(from).parse::<i32>().unwrap_or(0); // type-checking is missing!
         // name
-        let mut tag = self.my_read(from);
+        let mut tag = vissim_read_token(from);
         let name = self.read_name(from);
         // color
-        tag = self.my_read(from);
+        tag = vissim_read_token(from);
         let colorName = self.my_read(from);
         let color: RGBColor;
         let known = self.myColorMap.m().get(&colorName).cloned();
@@ -113,18 +113,17 @@ impl NIVissimSingleTypeParser_Fahrzeugklassendefinition {
             color = RGBColor::new(r as u8, g as u8, b as u8, 255);
         }
         // types
-        tag = self.my_read(from);
+        tag = vissim_read_token(from);
         if tag == "ANM_ID" {
             self.read_name(from);
-            tag = self.my_read(from);
+            tag = vissim_read_token(from);
         }
         let mut types: Vec<i32> = Vec::new();
-        tag = self.my_read(from);
+        tag = vissim_read_token(from);
         loop {
             types.push(utils::common::string_utils::to_int(&tag).unwrap_or_else(|e| std::panic::panic_any(e)));
             tag = self.read_end_secure(from, "");
-            // shortcut: C++ loops forever when DATAEND never comes; here an empty token at end of stream ends the loop
-            if tag == "DATAEND" || (from.position() as usize) >= from.get_ref().len() {
+            if tag == "DATAEND" {
                 break;
             }
         }

@@ -71,7 +71,7 @@ impl NIVissimSingleTypeParser_Simdauer {
             while i < data.len() && !is_space(data[i]) {
                 i += 1;
             }
-            let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+            let tok = vissim_bytes_to_string(&data[start..i]);
             from.set_position(i as u64);
             tok
         };
