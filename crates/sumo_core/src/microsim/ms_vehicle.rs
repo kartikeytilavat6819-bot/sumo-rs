@@ -5320,10 +5320,6 @@ impl MSVehicle {
                 p2 = self.myLane.geometry_position_at_offset(0.0, posLat);
             }
         }
-        if std::env::var("CB01_TRACE").is_ok() && format!("{}", self.get_id()) == "3" && (397000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
-            let further: Vec<String> = self.myFurtherLanes.iter().map(|l| l.m().get_id().to_string()).collect();
-            eprintln!("TRACE t={} veh=3 lane={} pos={} posLat={} p1=({},{}) p2=({},{}) further={:?} furPosLat={:?} laneLen={}", MSNet::get_instance().get_current_time_step(), self.myLane.m().get_id(), self.myState.myPos, self.myState.myPosLat, p1.x(), p1.y(), p2.x(), p2.y(), further, self.myFurtherLanesPosLat, self.myLane.m().get_length());
-        }
         let mut result = if p1 != p2 {
             p2.angle_to2d(&p1)
         } else {
@@ -11997,9 +11993,6 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn compute_further_lanes(&mut self, enteredLane: Ptr<MSLane>, pos: f64, collision: bool) {
-        if format!("{}", self.get_id()) == "3" && (395000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
-            eprintln!("CF t={} veh=3 entered={} pos={} coll={} opp={} furBefore={}", MSNet::get_instance().get_current_time_step(), enteredLane.m().get_id(), pos, collision, self.myLaneChangeModel.m().is_opposite(), self.myFurtherLanes.len());
-        }
         // build the list of lanes the vehicle is lapping into
         if !self.myLaneChangeModel.m().is_opposite() {
             let mut leftLength = self.get_vehicle_type().get_length() - pos;
@@ -12020,9 +12013,6 @@ impl MSVehicle {
                     }
                 } else {
                     clane = clane.get_logical_predecessor_lane();
-                }
-                if format!("{}", self.get_id()) == "3" && (397000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
-                    eprintln!("CFL t={} clane={} rp={} leftLen={}", MSNet::get_instance().get_current_time_step(), if clane.is_null() { "null".to_string() } else { clane.m().get_id().to_string() }, routeIndex, leftLength);
                 }
                 if clane.is_null()
                     || clane == self.myLane
