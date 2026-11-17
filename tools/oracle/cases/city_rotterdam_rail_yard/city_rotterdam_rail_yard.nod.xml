@@ -1,0 +1,8 @@
+<nodes>
+    <node id="W" x="-400.00" y="0.00"/>
+    <node id="E" x="400.00" y="0.00"/>
+    <node id="J1" x="-100.00" y="0.00" type="rail_signal"/>
+    <node id="J2" x="100.00" y="0.00" type="rail_signal"/>
+    <node id="Y1" x="-100.00" y="60.00" type="rail_signal"/>
+    <node id="Y2" x="100.00" y="60.00" type="rail_signal"/>
+</nodes>
