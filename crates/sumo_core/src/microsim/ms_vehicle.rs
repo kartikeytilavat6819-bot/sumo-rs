@@ -14064,6 +14064,7 @@ impl MSVehicle {
             };
             seen += lane.get_length();
             vLinkPass = min2(cfModel.estimate_speed_after_distance(lane.get_length(), v, cfModel.get_max_accel()), laneMaxV); // upper bound
+            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 nxt t={} lane={} laneMaxV={:x} v={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), lane.get_id(), laneMaxV.to_bits(), v.to_bits(), vLinkPass.to_bits()); }
             lastLink = Ptr::from_mut(lfLinks.last_mut().unwrap());
         }
     }

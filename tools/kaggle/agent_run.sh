@@ -49,6 +49,10 @@ s = s.replace(c, c + r'''    if (getenv("RX01") != nullptr && getID() == "train3
 ''')
 d = 'const SUMOTime arrivalTime = getArrivalTime(t, seen, v, vLinkPass);\n'
 assert s.count(d) == 1, 'fin anchor'
+g = 'vLinkPass = MIN2(cfModel.estimateSpeedAfterDistance(lane->getLength(), v, cfModel.getMaxAccel()), laneMaxV); // upper bound\n'
+assert s.count(g) == 1, 'nxt anchor'
+s = s.replace(g, g + r'''        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = laneMaxV; unsigned long long a3 = cvt.u; cvt.d = v; unsigned long long vv = cvt.u; cvt.d = vLinkPass; unsigned long long vl = cvt.u; fprintf(stderr, "RX01 nxt t=%lld lane=%s laneMaxV=%llx v=%llx vLinkPass=%llx\n", (long long)SIMSTEP, lane->getID().c_str(), a3, vv, vl); }
+''')
 i0 = s.index('lastLink->adaptLeaveSpeed(futureVSafe);')
 j = s.index('        v = MIN2(v, vsafeLeader);\n', i0)
 s = s[:j] + r'''        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = leaderInfo.second; unsigned long long ld = cvt.u; cvt.d = vsafeLeader; unsigned long long vs = cvt.u; cvt.d = vLinkPass; unsigned long long vl = cvt.u; cvt.d = v; unsigned long long vv = cvt.u; fprintf(stderr, "RX01 adL t=%lld leaderDist=%llx vsafeLeader=%llx vLinkPass=%llx v=%llx\n", (long long)SIMSTEP, ld, vs, vl, vv); }
