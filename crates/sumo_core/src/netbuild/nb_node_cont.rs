@@ -5269,7 +5269,7 @@ impl NBNodeCont {
             .unwrap_or_else(|e| std::panic::panic_any(e));
         // collect edges (std::set<NBEdge*, ComparatorIdLess>: keyed by id, first insertion wins)
         let mut allEdges: BTreeMap<String, Ptr<NBEdge>> = BTreeMap::new();
-        for n in nodes_by_id(cluster) {
+        for n in nodes_by_id(&cluster) {
             for e in n.m().get_edges().clone() {
                 allEdges.entry(e.m().get_id().to_string()).or_insert(e);
             }
@@ -5432,7 +5432,7 @@ impl NBNodeCont {
                 }
             }
             if e.m().get_turn_sign_target() != "" {
-                for n in nodes_by_id(cluster) {
+                for n in nodes_by_id(&cluster) {
                     if e.m().get_turn_sign_target() == n.m().get_id() {
                         let toID = to.m().get_id().to_string();
                         e.m().set_turn_sign_target(&toID);
@@ -5483,7 +5483,7 @@ impl NBNodeCont {
 
         // remove original nodes
         self.register_joined_cluster(&cluster);
-        for n in nodes_by_id(cluster) {
+        for n in nodes_by_id(&cluster) {
             self.erase(n);
         }
     }
