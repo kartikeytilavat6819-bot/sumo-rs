@@ -12,6 +12,9 @@ s = open(p).read()
 a = '            const double relativePos = lane->getLength() - seen;\n'
 assert s.count(a) == 1, ("anchor a", s.count(a))
 s = s.replace(a, '            if (getID() == "L1f.0") std::cerr << "PT03 t=" << SIMTIME << " lane=" << lane->getID() << " persons=" << lane->getEdge().getPersons().size() << " hasPed=" << lane->hasPedestrians() << " seen=" << seen << " pos=" << getPositionOnLane() << "\\n";\n' + a)
+c = '        // adapt to pedestrians on the same lane\n'
+assert s.count(c) == 1, ("anchor c", s.count(c))
+s = s.replace(c, '        if (getID() == "L1f.0") std::cerr << "PT03 pre t=" << SIMTIME << " lane=" << lane->getID() << " persons=" << lane->getEdge().getPersons().size() << " speed=" << getSpeed() << "\\n";\n' + c)
 b = '            if (leader.first != 0) {\n                const double stopSpeed = cfModel.stopSpeed(this, getSpeed(), leader.second - getVehicleType().getMinGap());\n'
 assert s.count(b) == 1, ("anchor b", s.count(b))
 s = s.replace(b, '            if (getID() == "L1f.0") std::cerr << "PT03 leader_null=" << (leader.first == 0) << " dist=" << leader.second << "\\n";\n' + b)
@@ -33,5 +36,6 @@ done
 echo "FCD first diff ref vs rs:"; diff $T/ref/bus.txt $T/rs/bus.txt | head -4 | cut -c1-200
 echo "C++ trace lines: $(grep -c PT03 $T/cpp/trace.txt)"; grep PT03 $T/cpp/trace.txt | head -14
 echo "RS trace lines: $(grep -c PT03 $T/rs/trace.txt) hasPed=true: $(grep -c 'hasPed=true' $T/rs/trace.txt) leader rows: $(grep -c leader_null $T/rs/trace.txt)"
-grep 'lane=E1_0' $T/rs/trace.txt | sed -n '/t=10000 /,/t=31000 /p' | head -30 | cut -c1-200
+sed -n '/t=26000 /,/t=30000 /p' $T/rs/trace.txt | cut -c1-200 | head -30
+echo "C++ pre rows: $(grep -c 'PT03 pre' $T/cpp/trace.txt)"; grep 'PT03' $T/cpp/trace.txt | sed -n '1,4p;/t=26\.00/,/t=30\.00/p' | cut -c1-200 | head -30
 echo "personinfo rows ref=$(grep -c '<personinfo' $T/ref/personinfo.xml 2>/dev/null) rs=$(grep -c '<personinfo' $T/rs/personinfo.xml 2>/dev/null)"
