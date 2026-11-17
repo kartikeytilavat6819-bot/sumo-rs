@@ -67,7 +67,7 @@ const STOP_EXPECTED_SET: i32 = 2 << 6;
 const STOP_EXPECTED_CONTAINERS_SET: i32 = 2 << 8;
 const STOP_TRIP_ID_SET: i32 = 2 << 9;
 const STOP_LINE_SET: i32 = 2 << 10;
-const STOP_SPEED_SET: i32 = 2 << 11;
+pub const STOP_SPEED_SET: i32 = 2 << 11;
 const STOP_SPLIT_SET: i32 = 2 << 12;
 const STOP_JOIN_SET: i32 = 2 << 13;
 const STOP_ARRIVAL_SET: i32 = 2 << 14;
@@ -76,7 +76,7 @@ const STOP_ENDED_SET: i32 = 2 << 16;
 const STOP_STARTED_SET: i32 = 2 << 17;
 const STOP_POSLAT_SET: i32 = 2 << 18;
 const STOP_ONDEMAND_SET: i32 = 2 << 19;
-const STOP_JUMP_SET: i32 = 2 << 20;
+pub const STOP_JUMP_SET: i32 = 2 << 20;
 const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
 const STOP_PRIORITY_SET: i32 = 2 << 22;
 
