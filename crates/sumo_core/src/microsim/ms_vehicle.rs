@@ -13464,6 +13464,7 @@ impl MSVehicle {
         let mut seenNonInternal = 0.0;
         let mut seenInternal = if self.myLane.is_internal() { seen } else { 0.0 };
         let mut vLinkPass = min2(cfModel.estimate_speed_after_distance(seen, v, cfModel.get_max_accel()), laneMaxV); // upper bound
+        if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 init t={} seen={:x} v={:x} laneMaxV={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), seen.to_bits(), v.to_bits(), laneMaxV.to_bits(), vLinkPass.to_bits()); }
         let mut view: usize = 0;
         let mut lastLink: Ptr<MSVehicle_DriveProcessItem> = Ptr::null();
         let mut slowedDownForMinor = false; // whether the vehicle already had to slow down on approach to a minor link
@@ -13922,6 +13923,7 @@ impl MSVehicle {
                     self.check_link_leader_current_and_parallel(linkP, lane, seen, lastLink, &mut v, &mut vLinkPass, &mut vLinkWait, &mut setRequest);
                 }
                 // arrivalSpeed / arrivalTime when braking for red light is only relevent for rail signal switching
+                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 fin t={} seen={:x} v={:x} vLinkPass={:x}", MSNet::get_instance().get_current_time_step(), seen.to_bits(), v.to_bits(), vLinkPass.to_bits()); }
                 let arrivalTime = self.get_arrival_time(t, seen, v, vLinkPass);
                 // the vehicle is able to brake in front of a yellow/red traffic light
                 lfLinks.push(MSVehicle_DriveProcessItem::new(linkP, v, vLinkWait, false, arrivalTime, vLinkWait, 0.0, seen, -1.0));

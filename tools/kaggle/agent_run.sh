@@ -43,6 +43,14 @@ assert s.count(b) == 1, 'jl anchor'
 u = r'''        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = leaderInfo.second; unsigned long long ld = cvt.u; cvt.d = distToCrossing; unsigned long long dc = cvt.u; cvt.d = vsafeLeader; unsigned long long vs = cvt.u; cvt.d = vLinkPass; unsigned long long vl = cvt.u; cvt.d = v; unsigned long long vv = cvt.u; fprintf(stderr, "RX01 jl t=%lld leaderIsMe=%d leaderDist=%llx distCP=%llx vsafeLeader=%llx vLinkPass=%llx v=%llx\n", (long long)SIMSTEP, (int)(leaderInfo.first == this), ld, dc, vs, vl, vv); }
 '''
 s = s.replace(b, u + b)
+c = '    double vLinkPass = MIN2(cfModel.estimateSpeedAfterDistance(seen, v, cfModel.getMaxAccel()), laneMaxV); // upper bound\n'
+assert s.count(c) == 1, 'init anchor'
+s = s.replace(c, c + r'''    if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = seen; unsigned long long a1 = cvt.u; cvt.d = v; unsigned long long a2 = cvt.u; cvt.d = laneMaxV; unsigned long long a3 = cvt.u; cvt.d = vLinkPass; unsigned long long a4 = cvt.u; fprintf(stderr, "RX01 init t=%lld seen=%llx v=%llx laneMaxV=%llx vLinkPass=%llx\n", (long long)SIMSTEP, a1, a2, a3, a4); }
+''')
+d = 'const SUMOTime arrivalTime = getArrivalTime(t, seen, v, vLinkPass);\n'
+assert s.count(d) == 1, 'fin anchor'
+s = s.replace(d, r'''if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = seen; unsigned long long a1 = cvt.u; cvt.d = v; unsigned long long a2 = cvt.u; cvt.d = vLinkPass; unsigned long long a4 = cvt.u; fprintf(stderr, "RX01 fin t=%lld seen=%llx v=%llx vLinkPass=%llx\n", (long long)SIMSTEP, a1, a2, a4); }
+        ''' + d)
 open(p, 'wb').write(s.encode())
 print('patched MSVehicle')
 EOF
