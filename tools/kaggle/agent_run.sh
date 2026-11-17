@@ -15,6 +15,7 @@ for spec in "sl2015_lat04 m5" "sl2015_lat08 c2"; do
   echo "$c ours exit $? panic: $(grep -m1 -E 'panicked' "$O/$c.ours.out" | cut -c1-160)"
   LCTRACE_ID=$id "$CPP" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") --fcd-output "$O/$c.cpp.fcd.xml" --no-step-log true >"$O/$c.cpp.out" 2>"$O/$c.cpp.trace"
   echo "$c cpp exit $?"
+  echo "$c cpp ver: $("$CPP" --version 2>&1 | head -1 | cut -c1-100) fcd-bytes=$(wc -c < "$O/$c.cpp.fcd.xml" 2>/dev/null) cppstderr=$(head -c 300 "$O/$c.cpp.trace" | tr '\n' ' ')"
   echo "$c cpp diag: strings=$(strings "$CPP" | grep -c 'LCT-CONT') trace-bytes=$(wc -c < "$O/$c.cpp.trace") fcd-diff-lines=$(diff "$d/ref.fcd.xml" "$O/$c.cpp.fcd.xml" | wc -l) out=$(head -c 300 "$O/$c.cpp.out" | tr '\n' ' ')"
   cmp -s "$d/ref.fcd.xml" "$O/$c.cpp.fcd.xml" && echo "$c cpp fcd == ref" || echo "$c cpp fcd != ref"
   cmp -s "$d/ref.fcd.xml" "$O/$c.ours.fcd.xml" && echo "$c ours fcd == ref" || echo "$c ours fcd != ref"
