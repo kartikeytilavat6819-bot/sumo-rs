@@ -79,12 +79,11 @@ impl NIVissimSingleTypeParser_Kantensperrung {
         //
         tag = vissim_raw_token(from);
         tag = vissim_raw_token(from);
-        // shortcut: C++ `>>` into int stops at the first character that does not fit, here the whole token is parsed
-        let from_node: i32 = vissim_raw_token(from).parse::<i32>().unwrap_or(0);
+        let from_node: i32 = crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, false).parse::<i32>().unwrap_or(0);
         //
         tag = vissim_raw_token(from);
         tag = vissim_raw_token(from);
-        let to_node: i32 = vissim_raw_token(from).parse::<i32>().unwrap_or(0);
+        let to_node: i32 = crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, false).parse::<i32>().unwrap_or(0);
         //
         tag = vissim_raw_token(from);
         tag = vissim_raw_token(from);

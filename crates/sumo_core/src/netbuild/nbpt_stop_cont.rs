@@ -2,16 +2,21 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::msg_handler::{write_message, write_warning};
+use crate::utils::named_rtree::NamedRTree;
+use utils::common::named::{Named, NamedStoringVisitor};
 
 thread_local! {
     // C++ static member NBPTStopCont::myIgnoredStops
     static MY_IGNORED_STOPS: std::cell::RefCell<BTreeSet<String>> = std::cell::RefCell::new(BTreeSet::new());
 }
 
-/// C++ NamedRTree is RTree<Named*, Named, float, 2, ...>; here data is the edge pointer.
-/// shortcut: NamedRTree overrides RectSphericalVolume; that only shapes the tree, and the
-/// search result set (collected in an ordered set) is the same, so the generic RTree is used.
-type StopEdgeTree = RTree<Ptr<NBEdge>, f32, 2, f32, 8, 4>;
+/// C++ `NamedRTree::Search` into a `std::set<const Named*>` of NBEdges, cast back to NBEdge*
+fn search_stop_edges(r: &NamedRTree, min: &[f32; 2], max: &[f32; 2]) -> BTreeSet<Ptr<NBEdge>> {
+    let mut named: BTreeSet<Ptr<Named>> = BTreeSet::new();
+    let visitor = NamedStoringVisitor::new(&mut named);
+    r.search(min, max, &visitor, |d, c| d.add_to(c));
+    named.iter().map(|n| n.cast::<NBEdge>()).collect()
+}
 
 /// C++ std::sort by distance of lane 0 shape to pos
 fn sort_by_lane0_distance(edges: &mut Vec<Ptr<NBEdge>>, pos: &Position) {
@@ -424,7 +429,7 @@ impl NBPTStopCont {
     #[allow(unused_variables)]
     pub fn assign_edge_for_floating_stops(&mut self, cont: &mut NBEdgeCont, maxRadius: f64) {
                 let publicPermissions: SVCPermissions = SVC_BUS | SVC_TRAM | SVC_RAIL | SVC_RAIL_URBAN | SVC_TAXI;
-        let mut r: StopEdgeTree = RTree::default();
+        let mut r = NamedRTree::new();
         for edgeItem in cont.myEdges.values() {
             let edge = *edgeItem;
             if (edge.get_permissions(-1) & publicPermissions) == 0 {
@@ -433,17 +438,14 @@ impl NBPTStopCont {
             let bound = edge.get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            r.insert(&min, &max, &edge);
+            r.insert(&min, &max, &edge.cast::<Named>());
         }
         let floatingStops: Vec<Rc<NBPTStop>> = self.myFloatingStops.clone();
         for ptStop in floatingStops {
-            let mut edges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
             let pos = ptStop.get_position().clone();
             let min = [(pos.x() - maxRadius) as f32, (pos.y() - maxRadius) as f32];
             let max = [(pos.x() + maxRadius) as f32, (pos.y() + maxRadius) as f32];
-            r.search(&min, &max, &(), |d, _| {
-                edges.insert(*d);
-            });
+            let edges = search_stop_edges(&r, &min, &max);
             let mut nearby: Vec<Ptr<NBEdge>> = Vec::new();
             for e in &edges {
                 if (e.get_permissions(-1) & ptStop.get_permissions()) != 0 {
@@ -518,26 +520,23 @@ impl NBPTStopCont {
     // }
     #[allow(unused_variables)]
     pub fn find_access_edges_for_rail_stops(&mut self, cont: &mut NBEdgeCont, maxRadius: f64, maxCount: i32, accessFactor: f64) {
-                let mut r: StopEdgeTree = RTree::default();
+        let mut r = NamedRTree::new();
         for edgeItem in cont.myEdges.values() {
             let edge = *edgeItem;
             let bound = edge.get_geometry().get_box_boundary();
             let min = [bound.xmin() as f32, bound.ymin() as f32];
             let max = [bound.xmax() as f32, bound.ymax() as f32];
-            r.insert(&min, &max, &edge);
+            r.insert(&min, &max, &edge.cast::<Named>());
         }
         let stops: Vec<Rc<NBPTStop>> = self.myPTStops.values().cloned().collect();
         for ptStop in stops {
             let stopEdgeID = ptStop.get_edge_id().to_string();
             let stopEdge = cont.get_by_id(&stopEdgeID);
             if !stopEdge.is_null() && (stopEdge.get_permissions(-1) & SVC_PEDESTRIAN) == 0 {
-                let mut edges: BTreeSet<Ptr<NBEdge>> = BTreeSet::new();
                 let pos = ptStop.get_position().clone();
                 let min = [(pos.x() - maxRadius) as f32, (pos.y() - maxRadius) as f32];
                 let max = [(pos.x() + maxRadius) as f32, (pos.y() + maxRadius) as f32];
-                r.search(&min, &max, &(), |d, _| {
-                    edges.insert(*d);
-                });
+                let edges = search_stop_edges(&r, &min, &max);
                 let mut edgCants: Vec<Ptr<NBEdge>> = edges.into_iter().collect();
                 sort_by_lane0_distance(&mut edgCants, &pos);
                 let mut cnt = 0;
