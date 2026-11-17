@@ -1097,7 +1097,7 @@ impl MSStateHandler {
             base.m().myParameter.m().unset_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES);
             let attrs: &SUMOSAXAttributes = &*self.myAttrs;
             base.m().set_chosen_speed_factor(attrs.get_float(SUMO_ATTR_SPEEDFACTOR).unwrap_or_else(|e| panic!("{e}")));
-            v.cast::<MSVehicle>().m().load_state(attrs, self.myOffset);
+            v.m().load_state(attrs, self.myOffset);
             if base.has_departed() {
                 // shortcut: the MSDevice_Routing notifyEnter call is skipped, device lookup by type_info is not ported
                 MSNet::get_instance().m().get_insertion_control().already_departed(v);
