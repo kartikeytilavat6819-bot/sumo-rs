@@ -1,0 +1,30 @@
+diff --git a/src/utils/router/IntermodalRouter.h b/src/utils/router/IntermodalRouter.h
+index d50f7b6..7949218 100644
+--- a/src/utils/router/IntermodalRouter.h
++++ b/src/utils/router/IntermodalRouter.h
+@@ -22,6 +22,9 @@
+ #include <config.h>
+ 
+ #include <string>
++#include <iomanip>
++#include <cstdlib>
++#include <iostream>
+ #include <vector>
+ #include <algorithm>
+ #include <assert.h>
+@@ -126,6 +129,7 @@ public:
+         const _IntermodalEdge* iFrom = originStopID != "" ? myIntermodalNet->getStopEdge(originStopID) : myIntermodalNet->getDepartEdge(from, trip.departPos);
+         const _IntermodalEdge* iTo = stopID != "" ? myIntermodalNet->getStopEdge(stopID) : myIntermodalNet->getArrivalEdge(to, trip.arrivalPos);
+         const bool success = myInternalRouter->compute(iFrom, iTo, &trip, msTime, intoEdges, true);
++        if (getenv("GR01_TRACE") != nullptr) { std::cerr << std::setprecision(17) << "GR01 compute from=" << from->getID() << " to=" << (to != nullptr ? to->getID() : "") << " dPos=" << trip.departPos << " aPos=" << trip.arrivalPos << " iFrom=" << iFrom->getID() << " iTo=" << iTo->getID() << " ok=" << success << " n=" << intoEdges.size() << " speed=" << speed << std::endl; }
+         if (success) {
+             std::string lastLine = "";
+             const _IntermodalEdge* lastLineEdge = nullptr;
+@@ -180,6 +184,7 @@ public:
+                 const double prevEffort = effort;
+                 const double prevLength = length;
+                 myInternalRouter->updateViaCost(prev, iEdge, &trip, time, effort, length);
++                if (getenv("GR01_TRACE") != nullptr) { std::cerr << std::setprecision(17) << "GR01 e=" << iEdge->getID() << " line=" << iEdge->getLine() << " num=" << iEdge->getNumericalID() << " t=" << time << " eff=" << effort << " len=" << length << std::endl; }
+                 // correct intermodal length:
+                 length += iEdge->getPartialLength(&trip) - iEdge->getLength();
+                 prev = iEdge;
