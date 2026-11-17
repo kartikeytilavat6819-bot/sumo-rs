@@ -811,7 +811,8 @@ impl MSInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_delay(&self) -> f64 {
-        let vc = MSNet::get_instance().m().get_vehicle_control();
+        let mut net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
         let mut result = -INVALID_DOUBLE;
         for item in self.collect_vehicles_on_det(sim_step() - delta_t(), false, false, false, false) {
             let v = vc.get_vehicle(&item.idM);
