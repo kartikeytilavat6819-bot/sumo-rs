@@ -3800,7 +3800,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the too-short-stop warning needs getParkingLength per stop type and MSNet::warnOnce, not ported yet, upgrade with those
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3837,18 +3836,23 @@ impl MSBaseVehicle {
         }
         let mut stopType = "stop".to_string();
         let mut stopID = String::new();
+        let mut parkingLength = stop.pars.endPos - stop.pars.startPos;
         if !stop.busstop.is_null() {
             stopType = if stop.busstop.get_element() == SUMO_TAG_TRAIN_STOP { "trainStop".to_string() } else { "busStop".to_string() };
             stopID = stop.busstop.get_id().to_string();
+            parkingLength = stop.busstop.get_parking_length();
         } else if !stop.containerstop.is_null() {
             stopType = "containerStop".to_string();
             stopID = stop.containerstop.get_id().to_string();
+            parkingLength = stop.containerstop.get_parking_length();
         } else if !stop.chargingStation.is_null() {
             stopType = "chargingStation".to_string();
             stopID = stop.chargingStation.get_id().to_string();
+            parkingLength = stop.chargingStation.get_parking_length();
         } else if !stop.overheadWireSegment.is_null() {
             stopType = "overheadWireSegment".to_string();
             stopID = stop.overheadWireSegment.get_id().to_string();
+            parkingLength = stop.overheadWireSegment.get_parking_length();
         } else if !stop.parkingarea.is_null() {
             stopType = "parkingArea".to_string();
             stopID = stop.parkingarea.get_id().to_string();
@@ -3858,6 +3862,14 @@ impl MSBaseVehicle {
         if stop.pars.startPos < 0.0 || stop.pars.endPos > stop.lane.get_length() {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
+        }
+        if stopType != "stop" && stopType != "parkingArea" && self.myType.get_length() / 2. > parkingLength
+            // do not warn for stops that fill the whole lane
+            && parkingLength < stop.lane.get_length()
+            // do not warn twice for the same stop
+            && MSNet::get_instance().m().warn_once(&format!("{}:{}", stopType, stopID))
+        {
+            *errorMsg = format!("{} on lane '{}' is too short for vehicle '{}'.", errorMsgStart, stop.lane.get_id(), self.myParameter.id);
         }
         if stopType == "parkingArea" && !stop.parkingarea.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
             // forbid access in case the parking requests other badges
