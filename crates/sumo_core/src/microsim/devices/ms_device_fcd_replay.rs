@@ -955,7 +955,7 @@ impl MSDevice_FCDReplay {
                 for handler in hs.borrow_mut().iter_mut() {
                     let trajs = handler.get_trajectories();
                     if let Some(t) = trajs.get(&holderID) {
-                        found = Ptr::from_raw(t as *const MSDevice_FCDReplay_Trajectory as *mut MSDevice_FCDReplay_Trajectory);
+                        found = Ptr::new(t);
                         break;
                     }
                 }

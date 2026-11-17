@@ -126,6 +126,10 @@ impl utils::xml::generic_sax_handler::SaxHandler for RORouteHandler {
 }
 
 // C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
+/// C++ virtual `RORouteHandler::myStartElement`, reached from SUMORouteLoader through the base handler
+fn ro_my_start_element(d: &mut SUMORouteHandler, element: i32, attrs: &SUMOSAXAttributes) {
+    Ptr::from_mut(d).cast::<RORouteHandler>().m().my_start_element(element, attrs)
+}
 fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
     Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)
 }
@@ -267,7 +271,7 @@ impl RORouteHandler {
         let mut myActiveRoute: ConstROEdgeVector = Vec::new();
         myActiveRoute.reserve(100);
         RORouteHandler {
-            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
+            base: SUMORouteHandler { vt: &RO_ROUTE_HANDLER_VT, start_element_override: Some(ro_my_start_element), ..SUMORouteHandler::new(file, if checkSchema { "routes" } else { "" }, true) },
             base2: (),
             myNet: Ptr::from_mut(net),
             myActiveRoute,

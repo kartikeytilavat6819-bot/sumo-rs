@@ -74,6 +74,10 @@ static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic:
     get_requested_drive_way: super::ms_traffic_light_logic::MSTrafficLightLogic::get_requested_drive_way_base,
     get_detector_state: delay_get_detector_state_ext,
     get_tl_queue_length: delay_get_tl_queue_length_ext,
+    get_parameter: super::ms_simple_traffic_light_logic::simple_ext_get_parameter,
+    set_parameter: super::ms_simple_traffic_light_logic::simple_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
 };
 
 static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {

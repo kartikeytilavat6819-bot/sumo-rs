@@ -403,7 +403,7 @@ impl MSStopOut {
             dev.m().write_attr(SUMO_ATTR_ACTTYPE, &pars.actType);
         }
         if stop.pars.speed > 0. {
-            if stop.waypointWithStop {
+            if stop.waypointWithStop.get() {
                 dev.m().write_attr(SUMO_ATTR_STATE, "waypointStopped");
             } else {
                 dev.m().write_attr(SUMO_ATTR_STATE, "waypoint");

@@ -24,8 +24,9 @@ mkdir -p "$OUT"
 : > "$RESULTS"
 printf 'case\tverdict\tref_rc\tcand_rc\tdetail\n' >> "$RESULTS"
 
-# the generation timestamp differs between runs by design, every other byte must match
-normalize() { grep -v 'generated on' "$1"; }
+# the generation timestamp differs between runs by design, and the embedded configuration names the per-side
+# output dir (ref/ or cand/); every other byte must match
+normalize() { grep -v 'generated on' "$1" | sed -E 's#/(ref|cand)/#/SIDE/#g'; }
 
 run_case() {
   local c=$1 cdir=tools/oracle/cases/$1

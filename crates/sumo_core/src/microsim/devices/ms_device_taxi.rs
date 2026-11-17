@@ -259,14 +259,14 @@ impl MSDevice_Taxi {
             if v.get_parameter().line.is_empty() {
                 // automatically set the line so that persons are willing to enter
                 // (see MSStageDriving::isWaitingFor)
-                // const_cast on the vehicle parameter, as in C++
-                let p = v.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-                unsafe { (*p).line = TAXI_SERVICE.to_string(); }
+                v.get_parameter_mutable().line = TAXI_SERVICE.to_string();
             }
             let personCapacity = v.get_vehicle_type().get_person_capacity();
             let containerCapacity = v.get_vehicle_type().get_container_capacity();
-            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), personCapacity));
-            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = std::cmp::max(*c.borrow(), containerCapacity));
+            let maxCap = std::cmp::max(MY_MAX_CAPACITY.with(|c| *c.borrow()), personCapacity);
+            MY_MAX_CAPACITY.with(|c| *c.borrow_mut() = maxCap);
+            let maxContainerCap = std::cmp::max(MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow()), containerCapacity);
+            MY_MAX_CONTAINER_CAPACITY.with(|c| *c.borrow_mut() = maxContainerCap);
             let vclass = v.get_v_class();
             let needType = MY_TAXI_TYPES.with(|t| t.borrow().get(&vclass).map_or(true, |s| s.is_empty()));
             if needType {
@@ -355,7 +355,7 @@ impl MSDevice_Taxi {
             panic!("{}", ProcessError::new(format!("Cannot add taxi reservation for {} '{}' because origin edge '{}' does not permit taxi access", kind, pid, from.get_id())));
         }
         if MY_DISPATCH_COMMAND.with(|c| c.borrow().is_null()) {
-            Self::init_dispatch(0);
+            Self::init_dispatch(-1);
         }
         // pickup position should be at the stop-endPos
         let fromPos = if !fromStop.is_null() && Ptr::new(fromStop.get_lane().get_edge()) == from {

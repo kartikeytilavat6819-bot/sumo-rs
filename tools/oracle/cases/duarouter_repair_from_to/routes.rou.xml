@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <!-- the edges are not connected, so the route has to be repaired; repair.from/repair.to are on -->
+  <vehicle id="v1" depart="0" type="DEFAULT_VEHTYPE">
+    <route edges="-103224#0 -103227#2"/>
+  </vehicle>
+  <vehicle id="v2" depart="3" type="DEFAULT_VEHTYPE">
+    <route edges="-103227#0 -103224#3"/>
+  </vehicle>
+</routes>

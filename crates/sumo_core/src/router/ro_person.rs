@@ -644,6 +644,22 @@ impl std::ops::DerefMut for ROPerson {
 // C++ static members of ROPerson (port as module-level statics, see AGENTS.md):
 //   static bool ROPerson::myHaveWarnedPTMissing;
 
+fn ro_person_compute_route(r: &mut RORoutable, provider: &RORouterProvider, removeLoops: bool, errorHandler: Ptr<MsgHandler>) {
+    Ptr::from_mut(r).cast::<ROPerson>().m().compute_route(provider, removeLoops, errorHandler)
+}
+fn ro_person_get_depart_edge(r: &RORoutable) -> Ptr<ROEdge> {
+    Ptr::from_raw(r as *const _ as *mut RORoutable).cast::<ROPerson>().m().get_depart_edge()
+}
+fn ro_person_save_as_xml(r: &RORoutable, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont, cloneIndex: i32) {
+    Ptr::from_raw(r as *const _ as *mut RORoutable).cast::<ROPerson>().m().save_as_xml(os, typeos, asAlternatives, options, cloneIndex)
+}
+/// C++ ROPerson overrides of the RORoutable virtual methods
+static RO_PERSON_ROUTABLE_VT: crate::router::ro_routable::RORoutableVt = crate::router::ro_routable::RORoutableVt {
+    compute_route: ro_person_compute_route,
+    get_depart_edge: ro_person_get_depart_edge,
+    save_as_xml: ro_person_save_as_xml,
+};
+
 impl ROPerson {
     /// C++: `void ROPerson::ROPerson(const SUMOVehicleParameter &, const SUMOVTypeParameter *)`
     /// Constructor
@@ -652,8 +668,10 @@ impl ROPerson {
     // }
     #[allow(unused_variables)]
     pub fn new(pars: &SUMOVehicleParameter, type_: Ptr<SUMOVTypeParameter>) -> Self {
+        let mut base = RORoutable::new(pars, type_);
+        base.vt = &RO_PERSON_ROUTABLE_VT;
         ROPerson {
-            base: RORoutable::new(pars, type_),
+            base,
             myPlan: Vec::new(),
         }
     }

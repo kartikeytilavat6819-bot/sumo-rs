@@ -173,6 +173,7 @@ static ME_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_stops: me_sv_get_stops,
     get_next_stop: me_sv_get_next_stop,
     get_next_stop_mutable: me_sv_get_next_stop_mutable,
+    get_parameter_mutable: me_sv_get_parameter_mutable,
     unregister_waiting: me_sv_unregister_waiting,
     get_next_stop_parameter: me_sv_get_next_stop_parameter,
     get_stop_duration: me_sv_get_stop_duration,
@@ -389,6 +390,9 @@ fn me_sv_get_next_stop(v: &SUMOVehicle) -> &MSStop {
 }
 fn me_sv_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
     me_sv_ref_mut(v).get_next_stop_mutable()
+}
+fn me_sv_get_parameter_mutable(v: &mut SUMOVehicle) -> &mut SUMOVehicleParameter {
+    me_sv_ref_mut(v).get_parameter_mutable()
 }
 fn me_sv_unregister_waiting(v: &mut SUMOVehicle) {
     me_sv_ref_mut(v).unregister_waiting()
@@ -2018,9 +2022,6 @@ impl MEVehicle {
             self.myBlockTime,
             self.is_stopped() as SUMOTime,
             self.myPastStops.len() as SUMOTime,
-            self.myWasJammed as SUMOTime,
-            self.myEventIndex,
-            self.myUnqueuedEventTime,
         ];
         let state = internals.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(" ");
         out.write_attr(SUMO_ATTR_STATE, &state);
@@ -2161,9 +2162,6 @@ impl MEVehicle {
         self.myBlockTime = next_token(&mut bis);
         let stopped = next_token::<i32>(&mut bis) != 0;
         let mut pastStops: i32 = next_token(&mut bis);
-        self.myWasJammed = next_token::<i32>(&mut bis) != 0;
-        self.myEventIndex = next_token(&mut bis);
-        self.myUnqueuedEventTime = next_token(&mut bis);
         self.myDepartPos /= 1000.; // was stored as mm
 
         if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS_RANDOMIZED) {

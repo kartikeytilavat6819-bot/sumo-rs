@@ -4,6 +4,29 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
+/// Traffic-object vtable of an MSBaseVehicle under construction (C++ dynamic type MSBaseVehicle, before MSVehicle's table is installed):
+/// getMaxSpeed is the MSBaseVehicle implementation, the other entries are the SUMOTrafficObject defaults
+fn base_vehicle_ctor_base(o: &SUMOTrafficObject) -> &MSBaseVehicle {
+    unsafe { &*(o as *const SUMOTrafficObject as *const MSBaseVehicle) }
+}
+fn base_vehicle_ctor_get_max_speed(o: &SUMOTrafficObject) -> f64 {
+    base_vehicle_ctor_base(o).get_max_speed()
+}
+fn base_vehicle_ctor_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    base_vehicle_ctor_base(o).get_v_class()
+}
+fn base_vehicle_ctor_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    base_vehicle_ctor_base(o).get_chosen_speed_factor()
+}
+thread_local! {
+    static BASE_VEHICLE_CTOR_VT: &'static SUMOTrafficObjectVt = Box::leak(Box::new(SUMOTrafficObjectVt {
+        get_max_speed: base_vehicle_ctor_get_max_speed,
+        get_v_class: base_vehicle_ctor_get_v_class,
+        get_chosen_speed_factor: base_vehicle_ctor_get_chosen_speed_factor,
+        ..crate::utils::vehicle::sumo_traffic_object::DEFAULT_SUMO_TRAFFIC_OBJECT_VT
+    }));
+}
+
 /// C++ `WrappingCommand<MSBaseVehicle>` wrapping `MSBaseVehicle::activateRemindersOnReroute`
 pub struct MSBaseVehicle_ActivateRemindersCommand {
     pub vehicle: Ptr<MSBaseVehicle>,
@@ -320,6 +343,7 @@ impl MSBaseVehicle {
         if (this.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) == 0 {
             this.set_depart_and_arrival_edge();
         }
+        this.base.base.vt = BASE_VEHICLE_CTOR_VT.with(|v| *v);
         this.calculate_arrival_params(true);
         this.init_transient_model_params();
         this
@@ -408,6 +432,11 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     pub fn get_parameter(&self) -> &SUMOVehicleParameter {
         self.myParameter.get().unwrap()
+    }
+
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this owner-based `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
     }
 
     /// C++: `std::string MSBaseVehicle::getPrefixedParameter(const std::string &, std::string &) const` [const]
@@ -512,7 +541,7 @@ impl MSBaseVehicle {
                 return String::new();
             };
             let attrName = &key[16..];
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.m().get_lane_change_model().get_parameter(attrName)));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.get_lane_change_model_2().get_parameter(attrName)));
             match result {
                 Ok(v) => return v,
                 Err(payload) => {
@@ -4156,8 +4185,25 @@ impl MSBaseVehicle {
                     }
                     ok = false;
                 }
-                Some(it) => {
-                    start = it;
+                Some(_) => {
+                    // C++ also validates the stop's own route index (stop.edge) against the route
+                    let it2 = stop.edge;
+                    if it2 >= edges.len() {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid route index for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), self.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else if it2 < start {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid (relative) route index {} expected after {} for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), it2 as i32 - self.myCurrEdge as i32, start as i32 - self.myCurrEdge as i32, self.get_id(),
+                                utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else {
+                        start = it2;
+                    }
                 }
             }
             i += 1;
@@ -5052,8 +5098,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn update_best_lanes(&mut self, forceRebuild: bool, startLane: Ptr<MSLane>) {
-        // no-op in the base class; MSVehicle overrides it
-        let _ = (forceRebuild, startLane);
+        // virtual dispatch: MSVehicle overrides it; the base body is empty
+        if let Some(mut v) = self.as_micro_vehicle() {
+            v.m().update_best_lanes(forceRebuild, startLane);
+        }
     }
 
     /// C++: `int MSBaseVehicle::getRNGIndex() const` [const, virtual]
