@@ -57,6 +57,7 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 | setParameter (same keys, PUSHYGAP = 1 - v/minGapLat, initDerivedParameters at end) | OK | |
 | wantsChange, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, saveBlockerLength, outsideEdge | OK | |
 | wantsChangeSublane (definition at C++ 182, not only the pasted comment) | OK | |
+| OPEN (lc03): stress cases sl2015_lat04 / sl2015_lat08 diverge from pristine. First FCD diff: lat04 t=47 m5 angle 90.00 vs 90.01 (x diverges t=48); lat08 t=44 c2 y 3.30 vs 3.90 (0.6 m lateral jump). Cause not isolated (needs instrumented C++ trace). Not fixed. | OPEN | |
 | getLca, overlap, getLowestBit, decideDirection, hasBidiLeader, getLongest/getSlowest/getStopped | NOT AUDITED | |
 | updateExpectedSublaneSpeeds, computeSublaneShift, forecastAverageSpeed, computeSpeedGain | NOT AUDITED | |
 | remaining helpers (getWidth, getSublaneWidth, getPosLat, getLateralDrift, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, isBidi, emergencySpeedLat, saveState/loadState) | NOT AUDITED | |
