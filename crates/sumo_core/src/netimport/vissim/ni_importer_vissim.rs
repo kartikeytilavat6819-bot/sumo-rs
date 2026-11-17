@@ -150,15 +150,83 @@ fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     tok
 }
 
-/// C++ `from >> double`: a token that does not parse gives 0 (C++11 behaviour)
-// shortcut: numbers are read as whitespace-delimited tokens, C++ `>>` stops at the first character that does not fit
+/// C++ `from >> int` / `from >> double` (libstdc++ num_get): skips whitespace, then consumes the longest
+/// prefix that can be part of a number, so "12m" gives "12" and "m" stays in the stream. Returns the consumed text.
+pub fn vissim_read_number(from: &mut std::io::Cursor<Vec<u8>>, is_float: bool) -> String {
+    let data = from.get_ref();
+    let mut i = from.position() as usize;
+    while i < data.len() && vissim_is_space(data[i]) {
+        i += 1;
+    }
+    let start = i;
+    if i < data.len() && (data[i] == b'+' || data[i] == b'-') {
+        i += 1;
+    }
+    while i < data.len() && data[i].is_ascii_digit() {
+        i += 1;
+    }
+    if is_float {
+        if i < data.len() && data[i] == b'.' {
+            i += 1;
+            while i < data.len() && data[i].is_ascii_digit() {
+                i += 1;
+            }
+        }
+        if i < data.len() && (data[i] == b'e' || data[i] == b'E') {
+            i += 1;
+            if i < data.len() && (data[i] == b'+' || data[i] == b'-') {
+                i += 1;
+            }
+            while i < data.len() && data[i].is_ascii_digit() {
+                i += 1;
+            }
+        }
+    }
+    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    from.set_position(i as u64);
+    tok
+}
+
+/// C++ `from >> double`: text that does not parse gives 0 (C++11 behaviour)
 fn vissim_read_f64(from: &mut std::io::Cursor<Vec<u8>>) -> f64 {
-    vissim_read_token(from).parse::<f64>().unwrap_or(0.0)
+    vissim_read_number(from, true).parse::<f64>().unwrap_or(0.0)
 }
 
 /// C++ `from >> int` (see vissim_read_f64)
 fn vissim_read_i32(from: &mut std::io::Cursor<Vec<u8>>) -> i32 {
-    vissim_read_token(from).parse::<i32>().unwrap_or(0)
+    vissim_read_number(from, false).parse::<i32>().unwrap_or(0)
+}
+
+#[cfg(test)]
+mod vissim_read_number_tests {
+    use super::*;
+
+    fn cursor(s: &str) -> std::io::Cursor<Vec<u8>> {
+        std::io::Cursor::new(s.as_bytes().to_vec())
+    }
+
+    #[test]
+    fn int_stops_at_first_non_digit() {
+        let mut c = cursor("  12m 7");
+        assert_eq!(vissim_read_i32(&mut c), 12);
+        assert_eq!(vissim_read_token(&mut c), "m");
+        assert_eq!(vissim_read_i32(&mut c), 7);
+    }
+
+    #[test]
+    fn float_takes_exponent_and_stops_at_letter() {
+        let mut c = cursor("1.5e2x -3.25");
+        assert_eq!(vissim_read_f64(&mut c), 150.0);
+        assert_eq!(vissim_read_token(&mut c), "x");
+        assert_eq!(vissim_read_f64(&mut c), -3.25);
+    }
+
+    #[test]
+    fn bad_number_gives_zero_and_skips_only_its_prefix() {
+        let mut c = cursor("abc");
+        assert_eq!(vissim_read_i32(&mut c), 0);
+        assert_eq!(vissim_read_token(&mut c), "abc");
+    }
 }
 
 /// C++ `std::getline(strm, line)`: reads up to and including the newline, which is not returned

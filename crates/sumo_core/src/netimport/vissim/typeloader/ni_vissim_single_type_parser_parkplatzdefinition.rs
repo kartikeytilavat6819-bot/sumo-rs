@@ -19,15 +19,14 @@ fn read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     tok
 }
 
-/// C++ `from >> int` (token parse; a token that does not parse gives 0)
-// shortcut: numbers are read as whitespace-delimited tokens, C++ `>>` stops at the first character that does not fit
+/// C++ `from >> int` (a number that does not parse gives 0)
 fn read_i32(from: &mut std::io::Cursor<Vec<u8>>) -> i32 {
-    read_token(from).parse::<i32>().unwrap_or(0)
+    crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, false).parse::<i32>().unwrap_or(0)
 }
 
 /// C++ `from >> double` (see read_i32)
 fn read_f64(from: &mut std::io::Cursor<Vec<u8>>) -> f64 {
-    read_token(from).parse::<f64>().unwrap_or(0.0)
+    crate::netimport::vissim::ni_importer_vissim::vissim_read_number(from, true).parse::<f64>().unwrap_or(0.0)
 }
 
 /// C++ class `NIVissimSingleTypeParser_Parkplatzdefinition` (netimport/vissim/typeloader/NIVissimSingleTypeParser_Parkplatzdefinition.h)

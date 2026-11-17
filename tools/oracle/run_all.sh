@@ -7,9 +7,10 @@ cd "$(dirname "$0")/../.." || exit 1
 export PATH="/c/Users/karti/.cargo/bin:$PATH"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target-main}
 export CARGO_BUILD_JOBS=${CARGO_BUILD_JOBS:-8}
-BIN="$CARGO_TARGET_DIR/debug"
+PROFILE=${PROFILE:-debug}   # PROFILE=release runs the release binaries
+BIN="$CARGO_TARGET_DIR/$PROFILE"
 if [ "${1:-}" = "--build" ]; then
-  cargo build -q -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
+  cargo build -q $([ "$PROFILE" = release ] && echo --release) -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
 else
   # Refuse to print a scoreboard from binaries older than the sources: it looks authoritative and is
   # not. This has produced false readings for the lead and for several agents.
