@@ -8,6 +8,17 @@ use crate::utils::router::intermodal_router::IntermodalRouter_TripItem;
 /// C++ typedef `std::map<const MSEdge *, RouterProhibition> MSTriggeredRerouter::Prohibitions`
 pub type MSTriggeredRerouter_Prohibitions = BTreeMap<Ptr<MSEdge>, RouterProhibition>;
 
+/// C++ `WrappingCommand<MSTriggeredRerouter>(this, &MSTriggeredRerouter::setPermissions)`
+pub struct MSTriggeredRerouter_SetPermissionsCommand {
+    pub rerouter: Ptr<MSTriggeredRerouter>,
+}
+
+impl Command for MSTriggeredRerouter_SetPermissionsCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        self.rerouter.m().set_permissions(currentTime)
+    }
+}
+
 // C++ static members of MSTriggeredRerouter (see the comment block below the struct)
 /// C++ `MSTriggeredRerouter::DEFAULT_MAXDELAY`
 pub const MSTriggeredRerouter_DEFAULT_MAXDELAY: f64 = 7200.0;
@@ -733,8 +744,8 @@ impl MSTriggeredRerouter {
                 };
                 let end = mainStart + oloc.main.len();
                 // exit main within
-                // shortcut: C++ also skips when v.getNextStop().edge lies within main (stop in main); MSStop::edge is an Unmapped route iterator, upgrade when MSRouteIterator is ported
-                if oldEdges.get(mainStart..end) != Some(&oloc.cMain[..]) {
+                // stop in main
+                if oldEdges.get(mainStart..end) != Some(&oloc.cMain[..]) || (v.has_stops() && v.get_next_stop().edge < end) {
                     continue;
                 }
                 // negated iterator distance for descending order
@@ -1054,6 +1065,7 @@ impl MSTriggeredRerouter {
     #[allow(unused_variables)]
     pub fn set_permissions(&mut self, currentTime: SUMOTime) -> SUMOTime {
         let mut updateVehicles = false;
+        let this: Ptr<MSTriggeredRerouter> = Ptr::from_mut(self);
         for i in &self.myIntervals {
             if i.begin == currentTime && !(i.closed.is_empty() && i.closedLanes.is_empty()) {
                 for (edge, settings) in &i.closed {
@@ -1070,7 +1082,8 @@ impl MSTriggeredRerouter {
                     lane.get_edge().rebuild_allowed_lanes(false, false);
                     updateVehicles = true;
                 }
-                // shortcut: C++ schedules WrappingCommand<MSTriggeredRerouter>(this, setPermissions) at i.end to reopen the lanes; WrappingCommand is not ported, so the closure is never reverted, upgrade when WrappingCommand is ported
+                let cmd: *mut dyn Command = Box::into_raw(Box::new(MSTriggeredRerouter_SetPermissionsCommand { rerouter: this }));
+                MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd), i.end);
             }
             if i.end == currentTime && !(i.closed.is_empty() && i.closedLanes.is_empty()) {
                 for (edge, settings) in &i.closed {
@@ -2166,7 +2179,7 @@ impl MSTriggeredRerouter {
             if attrs.has_attribute(SUMO_ATTR_ALLOW) || attrs.has_attribute(SUMO_ATTR_DISALLOW) {
                 let allow = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, &rid, &mut ok, String::new(), false);
                 let disallow = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, &rid, &mut ok, String::new(), true);
-                permissions = parse_vehicle_classes_allow_disallow(&allow, &disallow, (-1, -1.0)); // shortcut: C++ parseVehicleClasses(allow, disallow) uses the global network version, not passed here
+                permissions = parse_vehicle_classes_allow_disallow(&allow, &disallow, utils::common::std_defs::NETWORK_VERSION);
             }
             let until = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_UNTIL, "", &mut ok, time2steps(-1.0), true);
             self.myParsedRerouteInterval.closed.insert(closedEdge, (permissions, steps2time(until)));
@@ -2185,7 +2198,7 @@ impl MSTriggeredRerouter {
                 let mut ok = true;
                 let allow = attrs.get_opt::<String>(SUMO_ATTR_ALLOW, &rid, &mut ok, String::new(), false);
                 let disallow = attrs.get_opt::<String>(SUMO_ATTR_DISALLOW, &rid, &mut ok, String::new(), true);
-                permissions = parse_vehicle_classes_allow_disallow(&allow, &disallow, (-1, -1.0)); // shortcut: see closingReroute above
+                permissions = parse_vehicle_classes_allow_disallow(&allow, &disallow, utils::common::std_defs::NETWORK_VERSION);
             }
             self.myParsedRerouteInterval.closedLanes.insert(closedLane, permissions);
         }
@@ -2197,7 +2210,11 @@ impl MSTriggeredRerouter {
             if routeStr == "" {
                 panic!("{}", ProcessError::new(format!("rerouter '{}': routeProbReroute has no alternative route id.", rid)));
             }
-            // shortcut: C++ MSRoute::dictionary(routeStr) must throw when the route is unknown and then add it to routeProbs; the route getter needs the rng-keyed MSRoute::dictionary_3, so the existence check and the routeProbs entry are skipped, upgrade with the route dictionary getter
+            // C++ MSRoute::dictionary(id) returns nullptr for an unknown route; the null route stands for it (empty id)
+            let route: ConstMSRoutePtr = MSRoute::dictionary_3(&routeStr, Ptr::null());
+            if route.get_id().is_empty() {
+                panic!("{}", ProcessError::new(format!("rerouter '{}': Alternative route '{}' does not exist.", rid, routeStr)));
+            }
             // get the probability to reroute
             let mut ok = true;
             let prob = attrs.get_opt::<f64>(SUMO_ATTR_PROB, &rid, &mut ok, 1.0, true);
@@ -2207,6 +2224,7 @@ impl MSTriggeredRerouter {
             if prob < 0.0 {
                 panic!("{}", ProcessError::new(format!("rerouter '{}': Attribute 'probability' for alternative route '{}' is negative (must not).", rid, routeStr)));
             }
+            self.myParsedRerouteInterval.routeProbs.add(route, prob, true);
         }
 
         if element == SUMO_TAG_PARKING_AREA_REROUTE {
@@ -2396,7 +2414,12 @@ impl MSTriggeredRerouter {
             let last = self.myIntervals.len() - 1;
             // C++: id = (long long int)&myIntervals.back(), the address of the interval
             self.myIntervals[last].id = &self.myIntervals[last] as *const MSTriggeredRerouter_RerouteInterval as i64;
-            // shortcut: C++ schedules WrappingCommand<MSTriggeredRerouter>(this, setPermissions) at begin when lanes or edges are closed; WrappingCommand is not ported, so the closure is not scheduled, upgrade when it is ported
+            if !(self.myParsedRerouteInterval.closed.is_empty() && self.myParsedRerouteInterval.closedLanes.is_empty()) {
+                let this: Ptr<MSTriggeredRerouter> = Ptr::from_mut(self);
+                let begin = self.myParsedRerouteInterval.begin;
+                let cmd: *mut dyn Command = Box::into_raw(Box::new(MSTriggeredRerouter_SetPermissionsCommand { rerouter: this }));
+                MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd), begin);
+            }
         }
     }
 
