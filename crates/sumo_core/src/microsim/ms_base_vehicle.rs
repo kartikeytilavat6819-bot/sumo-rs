@@ -5307,9 +5307,9 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
         if MSGlobals::use_meso_sim() {
-            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().get_base_influencer()
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get_mut().unwrap().get_base_influencer()
         } else {
-            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().get_base_influencer()
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get_mut().unwrap().get_base_influencer()
         }
     }
 
