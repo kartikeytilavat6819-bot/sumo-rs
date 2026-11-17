@@ -1607,7 +1607,18 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn already_planned_charging(&mut self) -> bool {
         if self.myChargingStation.is_null() {
-            // shortcut: iterating the vehicle's stops (MSStop.chargingStation / edge) is not wired, so no planned charging stop is adopted
+            let holderPtr = self.myHolder;
+            let holder = holderPtr.m();
+            for stop in holder.get_stops().iter() {
+                if !stop.chargingStation.is_null() {
+                    // compare whether we'll make it there without intermediate charging
+                    let expectedConsumption = self.estimate_consumption(holder.get_route().index_op(stop.edge as i32), true, 0.);
+                    if self.myBattery.m().get_actual_battery_capacity() < expectedConsumption {
+                        self.myChargingStation = stop.chargingStation;
+                        return true;
+                    }
+                }
+            }
         }
         false
     }
