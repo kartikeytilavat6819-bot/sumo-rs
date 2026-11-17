@@ -18,6 +18,11 @@ export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOB
        SUMO_HOME=/home/gate/sumo_pkg/sumo SUMO_PRISTINE_BIN=/home/gate/sumo_pkg/sumo/bin
 cd "$SRC"
 cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+# a stale incremental cache can crash rustc (ICE): drop it and build once more
+if [ $rc -ne 0 ] && grep -aq 'internal compiler error' /tmp/build$slot.log; then
+  echo "ICE: clearing slot $slot incremental cache"; rm -rf "$CARGO_TARGET_DIR/debug/incremental"
+  cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+fi
 grep -aE ': error|^error' /tmp/build$slot.log | head -40
 # a failed build leaves the previous snapshot's binary behind: never test it
 if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
