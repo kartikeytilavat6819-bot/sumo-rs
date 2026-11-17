@@ -5656,9 +5656,14 @@ impl MSVehicle {
             self.myLastBestLanesEdge = Ptr::null();
             self.myLastBestLanesInternalLane = Ptr::null();
             self.myLaneChangeModel.m().reset_state();
-            // shortcut: MSStop::edge is an Unmapped route iterator (ms_route.rs), so the C++ while-loop that pops stops passed by the teleport cannot be evaluated; upgrade when MSRouteIterator is mapped
-            if !self.myStops.is_empty() {
-                panic!("enterLaneAtInsertion: teleport with pending stops needs MSRouteIterator, which is not ported yet");
+            while !self.myStops.is_empty()
+                && self.myStops[0].edge == self.myCurrEdge
+                && Ptr::new(self.myStops[0].lane.get_edge()) == Ptr::new(self.myLane.get_edge())
+                && self.myStops[0].pars.endPos < pos
+            {
+                utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' skips stop on lane '%' time=%.", self.get_id(), self.myStops[0].lane.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                self.cleanup_parking_reservation();
+                self.myStops.pop_front();
             }
             // avoid startup-effects after teleport
             self.myTimeSinceStartup = self.get_car_follow_model().get_startup_delay() + delta_t();
@@ -11220,9 +11225,7 @@ impl MSVehicle {
                             approachedLane = Ptr::null();
                             break;
                         }
-                        // shortcut: MSStop.edge is still an unmapped route iterator, so the rail double-stop check against myCurrEdge is skipped until MSRouteIterator is mapped
-                        let nextStopIsCurrEdge = false;
-                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && nextStopIsCurrEdge {
+                        if utils::common::sumo_vehicle_class::is_railway(self.get_v_class()) && self.myState.myPos < self.myLane.get_length() + utils::geom::NUMERICAL_EPS && self.has_stops() && self.get_next_stop().edge == self.myCurrEdge {
                             // avoid skipping stop due to numerical instability
                             // this is a special case for rail vehicles because they
                             // continue myLFLinkLanes past stops
