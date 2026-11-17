@@ -4076,8 +4076,16 @@ impl NBEdge {
         let this = Ptr::from_mut(&mut *self);
         let myTo = self.myTo;
         let outgoing = myTo.get_outgoing_edges().clone();
+        let jt = std::env::var_os("NC_JTRACE").is_some() && myTo.get_id().contains("#29more");
+        if jt {
+            let td = this.myTurnDestination;
+            eprintln!("JTRACE e2e-start {} turn={}", this.get_id(), if td.is_null() { "null".to_string() } else { td.m().get_id().to_string() });
+        }
         for out in outgoing {
             if noLeftMovers && myTo.is_left_mover(this, out) {
+                if jt {
+                    eprintln!("JTRACE e2e {} {} leftmover", this.get_id(), out.get_id());
+                }
                 continue;
             }
             // avoid sharp railway turns
@@ -4099,11 +4107,20 @@ impl NBEdge {
             }
             if out == this.myTurnDestination {
                 // will be added by appendTurnaround
+                if jt {
+                    eprintln!("JTRACE e2e {} {} turndest", this.get_id(), out.get_id());
+                }
                 continue;
             }
             if (this.get_permissions(-1) & out.get_permissions(-1) & !SVC_PEDESTRIAN) == 0 {
                 // no common permissions
+                if jt {
+                    eprintln!("JTRACE e2e {} {} perm {} {}", this.get_id(), out.get_id(), this.get_permissions(-1), out.get_permissions(-1));
+                }
                 continue;
+            }
+            if jt {
+                eprintln!("JTRACE e2e {} {} add", this.get_id(), out.get_id());
             }
             this.m().myConnections.push(NBEdge_Connection::new(-1, out, -1, false));
         }

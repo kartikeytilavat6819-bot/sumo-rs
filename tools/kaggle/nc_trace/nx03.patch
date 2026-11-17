@@ -1,3 +1,53 @@
+diff --git a/src/netbuild/NBEdge.cpp b/src/netbuild/NBEdge.cpp
+index 03cb4fa..85a0d94 100644
+--- a/src/netbuild/NBEdge.cpp
++++ b/src/netbuild/NBEdge.cpp
+@@ -23,6 +23,7 @@
+ // Methods for the representation of a single edge
+ /****************************************************************************/
+ #include <config.h>
++#include <iostream>
+ 
+ #include <vector>
+ #include <string>
+@@ -2618,8 +2619,15 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+         return true;
+     }
+     const bool fromRail = isRailway(getPermissions());
++    const bool jt = getenv("NC_JTRACE") != nullptr && myTo->getID().find("#29more") != std::string::npos;
++    if (jt) {
++        std::cerr << "JTRACE e2e-start " << getID() << " turn=" << (myTurnDestination != nullptr ? myTurnDestination->getID() : std::string("null")) << "\n";
++    }
+     for (NBEdge* out : myTo->getOutgoingEdges()) {
+         if (noLeftMovers && myTo->isLeftMover(this, out)) {
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " leftmover\n";
++            }
+             continue;
+         }
+         // avoid sharp railway turns
+@@ -2642,12 +2650,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+         }
+         if (out == myTurnDestination) {
+             // will be added by appendTurnaround
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " turndest\n";
++            }
+             continue;
+         }
+         if ((getPermissions() & out->getPermissions() & ~SVC_PEDESTRIAN) == 0) {
+             // no common permissions
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " perm " << getPermissions() << " " << out->getPermissions() << "\n";
++            }
+             continue;
+         }
++        if (jt) {
++            std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " add\n";
++        }
+         myConnections.push_back(Connection(-1, out, -1));
+     }
+     myStep = EdgeBuildingStep::EDGE2EDGES;
 diff --git a/src/netbuild/NBNetBuilder.cpp b/src/netbuild/NBNetBuilder.cpp
 index dc52035..484d5b3 100644
 --- a/src/netbuild/NBNetBuilder.cpp
