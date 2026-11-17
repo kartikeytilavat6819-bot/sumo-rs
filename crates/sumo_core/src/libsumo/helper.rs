@@ -100,7 +100,7 @@ fn edge_dictionary(id: &str) -> Ptr<MSEdge> {
 }
 
 /// C++ `checkTimeBounds(time)` returns false where it throws TimeFormatException
-fn check_time_bounds(time: f64) -> bool {
+pub fn check_time_bounds(time: f64) -> bool {
     !(time > steps2time(SUMOTIME_MAX))
 }
 
