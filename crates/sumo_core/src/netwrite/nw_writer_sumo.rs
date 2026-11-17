@@ -1774,7 +1774,7 @@ impl NWWriter_SUMO {
             // write right-of-way logics
             n.write_logic(into);
         }
-        // shortcut: C++ NBNode also derives from Parameterised (n.writeParams); NBNode has no parameter map in the Rust port yet
+        n.base2.write_params(into);
         into.close_tag("");
     }
 

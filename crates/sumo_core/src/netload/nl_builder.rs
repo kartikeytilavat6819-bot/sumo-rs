@@ -907,8 +907,8 @@ impl NLBuilder {
         // shortcut: the C++ try/catch (cleanup of edges/junctions/loaders/tlc, then rethrow) is not replicated; a ProcessError here unwinds the run instead
         // ensure streams are ready for output during building
         MSFrame::build_streams();
-        // shortcut: NLEdgeControlBuilder::build and closeBuilding take the Unmapped MMVersion, so the network version is passed as unit until that type is ported
-        let edges = self.myEdgeBuilder.m().build(&(0, 0.0));
+        let networkVersion = self.myXMLHandler.network_version();
+        let edges = self.myEdgeBuilder.m().build(&networkVersion);
         let junctions = self.myJunctionBuilder.m().build();
         junctions.m().postload_init_container();
         for e in edges.m().get_edges().iter().copied() {
