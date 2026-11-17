@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" length="5" maxSpeed="13.89"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <route id="rwe" edges="WC CE"/>
+  <route id="rns" edges="NC CS"/>
+  <flow id="cwe" type="car" route="rwe" begin="0" end="200" period="9"/>
+  <flow id="cns" type="car" route="rns" begin="4" end="200" period="11"/>
+  <person id="pa0" type="ped" depart="0" departPos="5">
+    <walk edges="WC CE" arrivalPos="50"/>
+  </person>
+  <person id="pa1" type="ped" depart="3">
+    <walk edges="WC CE" speed="0.9"/>
+  </person>
+  <person id="pa2" type="ped" depart="7">
+    <walk edges="WC CS"/>
+  </person>
+  <person id="pb0" type="ped" depart="5" departPos="20">
+    <walk edges="NC CS" arrivalPos="30"/>
+  </person>
+  <person id="pb1" type="ped" depart="12">
+    <walk edges="SC CN"/>
+  </person>
+  <person id="pb2" type="ped" depart="15">
+    <walk edges="SC CE" speed="1.2"/>
+  </person>
+  <person id="pc0" type="ped" depart="20">
+    <walk edges="EC CW"/>
+  </person>
+  <person id="pc1" type="ped" depart="40">
+    <walk edges="EC CW" arrivalPos="10"/>
+  </person>
+  <person id="pc2" type="ped" depart="60" departPos="0">
+    <walk edges="CE EC"/>
+  </person>
+  <person id="pc3" type="ped" depart="75">
+    <walk edges="NC CS"/>
+  </person>
+  <person id="pc4" type="ped" depart="90">
+    <walk edges="WC CE"/>
+  </person>
+</routes>

@@ -1,0 +1,1 @@
+-n tools/oracle/cases/ped_tls_crossing/n.nod.xml -e tools/oracle/cases/ped_tls_crossing/e.edg.xml --sidewalks.guess --crossings.guess --walkingareas
