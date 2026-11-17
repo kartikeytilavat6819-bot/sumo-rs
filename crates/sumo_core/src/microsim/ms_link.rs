@@ -1974,6 +1974,9 @@ impl MSLink {
             };
             for (&person, it) in self.myApproachingPersons.iter() {
                 let personObj = person_to_traffic_object(person);
+                if std::env::var("FP01_DBG").is_ok() && !ego.is_null() && ego.get_id() == "car12" {
+                    eprintln!("FP01 AP t={} person={} arr={} leave={} myArr={} myLeave={} dist={} la={}", MSNet::get_instance().get_current_time_step(), person.get_id(), it.arrivalTime, it.leavingTime, arrivalTime, leaveTime, dist, lookAhead);
+                }
                 if (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < person.get_speed()
