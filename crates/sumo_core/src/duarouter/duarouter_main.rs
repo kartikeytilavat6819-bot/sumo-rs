@@ -226,9 +226,13 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         net.open_output(oc);
         loader.process_routes(begin, end, string2time(&oc.get_string("route-steps").unwrap()).unwrap_or_else(|e| panic!("{e}")), net, &provider);
+        eprintln!("DU02 process_routes done");
         net.write_intermodal(oc);
+        eprintln!("DU02 write_intermodal done");
     }));
+    eprintln!("DU02 before cleanup");
     net.cleanup();
+    eprintln!("DU02 after cleanup");
     if let Err(payload) = result {
         std::panic::resume_unwind(payload);
     }

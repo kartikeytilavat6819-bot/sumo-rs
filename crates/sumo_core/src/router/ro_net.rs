@@ -1557,7 +1557,9 @@ impl RONet {
                     if r.get_routing_success() {
                         // write the route
                         let quota = utils::common::std_defs::get_scaling_quota(scale, self.myWrittenRouteNo as i64);
+                        eprintln!("DU02 write begin {}", r.myParameter.id);
                         r.write(self.myRoutesOutput, self.myRouteAlternativesOutput, self.myTypesOutput, options, quota);
+                        eprintln!("DU02 write end");
                         self.myWrittenRouteNo += 1;
                     } else {
                         self.myDiscardedRouteNo += 1;
