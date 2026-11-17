@@ -72,6 +72,13 @@ edits = {
     if (MSNet::getInstance()->getCurrentTimeStep() >= 150000 && myHolder.getID() == "taxi0") {
         std::cerr << "TX02 tr t=" << MSNet::getInstance()->getCurrentTimeStep() << " myStopped=" << (myStopped ? "true" : "false") << " holderStopped=" << (myHolder.isStopped() ? "true" : "false") << " n=" << myTransportables.size() << "\\n";
     }
+"""), (
+"""                    SUMOTime& timeForNext = myAmContainer ? stop.timeToLoadNextContainer : stop.timeToBoardNextPerson;
+""",
+"""                    SUMOTime& timeForNext = myAmContainer ? stop.timeToLoadNextContainer : stop.timeToBoardNextPerson;
+                    if (MSNet::getInstance()->getCurrentTimeStep() >= 150000 && myHolder.getID() == "taxi0") {
+                        std::cerr << "TX02 leave t=" << MSNet::getInstance()->getCurrentTimeStep() << " endPos=" << std::to_string(stop.pars.endPos) << " started=" << stop.pars.started << " duration=" << stop.pars.duration << " timeForNext=" << timeForNext << "\\n";
+                    }
 """)],
  'src/microsim/devices/MSDevice_Taxi.cpp': [(
 """MSDevice_Taxi::updateMove(const SUMOTime traveltime, const double travelledDist) {
