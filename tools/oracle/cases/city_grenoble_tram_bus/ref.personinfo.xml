@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T03:16:54.827910-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/city_grenoble_tram_bus/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/city_grenoble_tram_bus/routes.rou"/>
+        <additional-files value="tools/oracle/cases/city_grenoble_tram_bus/ptstops.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pwL10" depart="30.00" type="DEFAULT_PEDTYPE" speedFactor="1.06" duration="87.00" waitingTime="37.00" timeLoss="15.86" traveltime="50.00">
+        <walk depart="30.00" departPos="0.00" arrival="32.00" arrivalPos="1.46" duration="2.00" routeLength="1.46" timeLoss="1.01" maxSpeed="1.47" waitingTime="0.00"/>
+        <access stop="4788103942" depart="32.00" arrival="42.00" duration="10.00" routeLength="15.88"/>
+        <ride waitingTime="37.00" vehicle="L1f.0" depart="79.00" arrival="117.00" arrivalPos="24.72" duration="38.00" routeLength="155.04" timeLoss="14.86"/>
+    </personinfo>
+    <personinfo id="pwL11" depart="120.00" type="DEFAULT_PEDTYPE" speedFactor="0.94" duration="165.00" waitingTime="104.00" timeLoss="8.71" traveltime="61.00">
+        <walk depart="120.00" departPos="0.00" arrival="135.00" arrivalPos="17.88" duration="15.00" routeLength="17.88" timeLoss="1.28" maxSpeed="1.30" waitingTime="0.00"/>
+        <access stop="9905349792" depart="135.00" arrival="142.00" duration="7.00" routeLength="9.39"/>
+        <ride waitingTime="104.00" vehicle="L1f.1" depart="246.00" arrival="285.00" arrivalPos="25.96" duration="39.00" routeLength="214.34" timeLoss="7.43"/>
+    </personinfo>
+    <personinfo id="pwL13" depart="300.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="50.00" waitingTime="8.00" timeLoss="6.73" traveltime="42.00">
+        <walk depart="300.00" departPos="0.00" arrival="302.00" arrivalPos="1.46" duration="2.00" routeLength="1.46" timeLoss="1.03" maxSpeed="1.50" waitingTime="0.00"/>
+        <access stop="4788103942" depart="302.00" arrival="312.00" duration="10.00" routeLength="15.88"/>
+        <ride waitingTime="8.00" vehicle="L1f.2" depart="320.00" arrival="350.00" arrivalPos="24.72" duration="30.00" routeLength="155.04" timeLoss="5.70"/>
+    </personinfo>
+    <personinfo id="pwL12" depart="210.00" type="DEFAULT_PEDTYPE" speedFactor="1.01" duration="159.00" waitingTime="77.00" timeLoss="30.16" traveltime="82.00">
+        <walk depart="210.00" departPos="0.00" arrival="212.00" arrivalPos="1.46" duration="2.00" routeLength="1.46" timeLoss="0.96" maxSpeed="1.40" waitingTime="0.00"/>
+        <access stop="-4788103942" depart="212.00" arrival="223.00" duration="11.00" routeLength="15.88"/>
+        <ride waitingTime="77.00" vehicle="L1f.1" depart="300.00" arrival="369.00" arrivalPos="40.46" duration="69.00" routeLength="287.96" timeLoss="29.20"/>
+    </personinfo>
+</tripinfos>
