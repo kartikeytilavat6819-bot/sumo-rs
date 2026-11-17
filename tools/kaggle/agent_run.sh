@@ -65,6 +65,14 @@ edits = {
                 std::cerr << "TX02 idle addstop pos=" << std::to_string(stopPos.second) << " err=" << errorOut << "\\n";
             }
 """)],
+ 'src/microsim/devices/MSDevice_Transportable.cpp': [(
+"""MSDevice_Transportable::notifyMove(SUMOTrafficObject& /*tObject*/, double /*oldPos*/, double newPos, double newSpeed) {
+""",
+"""MSDevice_Transportable::notifyMove(SUMOTrafficObject& /*tObject*/, double /*oldPos*/, double newPos, double newSpeed) {
+    if (MSNet::getInstance()->getCurrentTimeStep() >= 150000 && myHolder.getID() == "taxi0") {
+        std::cerr << "TX02 tr t=" << MSNet::getInstance()->getCurrentTimeStep() << " myStopped=" << (myStopped ? "true" : "false") << " holderStopped=" << (myHolder.isStopped() ? "true" : "false") << " n=" << myTransportables.size() << "\\n";
+    }
+""")],
  'src/microsim/devices/MSDevice_Taxi.cpp': [(
 """MSDevice_Taxi::updateMove(const SUMOTime traveltime, const double travelledDist) {
 """,
@@ -106,6 +114,7 @@ TX02_TRACE=1 "$BIN" -n ref_simple.net.xml -r routes.rou --tripinfo-output "$OUT/
 echo "== ours exit=$?"
 [ -n "$CPP" ] && "$CPP" -n ref_simple.net.xml -r routes.rou --tripinfo-output "$OUT/cpp.ti.xml" --no-step-log true $ARGS >"$OUT/cpp.log" 2>&1
 echo "== cpp exit=$?"
+echo "-- cpp log head"; head -n 5 "$OUT/cpp.log" 2>/dev/null; ls -l --time-style=+%T "$D/bin/sumo" "$D/src/microsim/MSLane.cpp" 2>/dev/null
 echo "-- warnings (ours)"
 grep -i 'warning\|error' "$OUT/ours.log" | head -n 20
 echo "-- TX02 line counts (ours cpp)"

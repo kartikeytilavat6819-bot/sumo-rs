@@ -209,6 +209,9 @@ impl MSDevice_Transportable {
         let holder = self.myHolder;
         let net = MSNet::get_instance();
         let currentTime = net.get_current_time_step();
+        if std::env::var_os("TX02_TRACE").is_some() && currentTime >= 150000 && holder.m().get_id() == "taxi0" {
+            eprintln!("TX02 tr t={} myStopped={} holderStopped={} n={}", currentTime, self.myStopped, holder.is_stopped(), self.myTransportables.len());
+        }
         if self.myStopped {
             if !holder.is_stopped() {
                 let freeFlowTimeCorrection = if crate::microsim::ms_globals::use_meso_sim() { time2steps(newPos / newSpeed) } else { 0 };
