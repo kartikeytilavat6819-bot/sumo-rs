@@ -190,7 +190,7 @@ where
             return cached;
         }
         // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
-        let me: &mut ReversedEdge<E, V> = Ptr::new(self).get_mut().unwrap();
+        let me: &mut ReversedEdge<E, V> = unsafe { &mut *(self as *const ReversedEdge<E, V> as *mut ReversedEdge<E, V>) };
         let mut result: ReversedEdge_ConstEdgePairVector<E, V> = Vec::new();
         for viaPair in self.myViaSuccessors.iter() {
             if viaPair.0.myOriginal.is_taz_connector() || viaPair.0.myOriginal.is_connected_to(&self.myOriginal, vClass, false) {

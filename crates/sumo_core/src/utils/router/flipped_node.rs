@@ -86,7 +86,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     {
         if self.myIncoming.is_empty() {
             // C++ mutable cache: the const method fills myIncoming in place
-            let me: &mut FlippedNode<E, N, V> = Ptr::new(self).get_mut().unwrap();
+            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *(self as *const FlippedNode<E, N, V> as *mut FlippedNode<E, N, V>) };
             for edge in self.myOriginalNode.outgoing().iter() {
                 me.myIncoming.push(edge.flipped_routing_edge());
             }
@@ -113,7 +113,7 @@ impl<E, N, V> FlippedNode<E, N, V> {
     {
         if self.myOutgoing.is_empty() {
             // C++ mutable cache: the const method fills myOutgoing in place
-            let me: &mut FlippedNode<E, N, V> = Ptr::new(self).get_mut().unwrap();
+            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *(self as *const FlippedNode<E, N, V> as *mut FlippedNode<E, N, V>) };
             for edge in self.myOriginalNode.incoming().iter() {
                 me.myOutgoing.push(edge.flipped_routing_edge());
             }
