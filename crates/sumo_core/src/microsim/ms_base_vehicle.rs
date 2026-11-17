@@ -517,7 +517,22 @@ impl MSBaseVehicle {
                 return String::new();
             };
             let attrName = &key[16..];
-            return microVeh.m().get_lane_change_model().get_parameter(attrName);
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.m().get_lane_change_model().get_parameter(attrName)));
+            match result {
+                Ok(v) => return v,
+                Err(payload) => {
+                    // C++ catches InvalidArgument; the port throws it as a panic whose payload is its what() text
+                    let what = if let Some(s) = payload.downcast_ref::<String>() {
+                        s.clone()
+                    } else if let Some(s) = payload.downcast_ref::<&str>() {
+                        s.to_string()
+                    } else {
+                        std::panic::resume_unwind(payload)
+                    };
+                    *error = utils::tlf!("Vehicle '%' does not support laneChangeModel parameter '%' (%).", self.get_id(), key, what);
+                    return String::new();
+                }
+            }
         } else if utils::common::string_utils::starts_with(key, "carFollowModel.") {
             let Some(microVeh) = micro_veh else {
                 *error = utils::tlf!("Mesoscopic vehicle '%' does not support carFollowModel parameters.", self.get_id());
