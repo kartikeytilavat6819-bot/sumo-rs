@@ -62,6 +62,8 @@ pub struct MSMoveReminder {
     pub myLane: Ptr<MSLane>,
     /// a description of this moveReminder
     pub myDescription: String,
+    /// C++ dynamic_cast target key: the most derived class name, set by each subclass constructor
+    pub kind: &'static str,
     pub myLastVehicleUpdateValues: BTreeMap<i64, (SUMOTime, f64)>, // C++: std::map<long long, std::pair<SUMOTime, double>>
     /// Virtual dispatch table; installed by the most derived constructor
     pub vt: &'static MSMoveReminderVt,
@@ -99,6 +101,7 @@ impl MSMoveReminder {
         Self {
             myLane: lane,
             myDescription: description.to_string(),
+            kind: "MSMoveReminder",
             myLastVehicleUpdateValues: BTreeMap::new(),
             vt: &DEFAULT_MSMOVE_REMINDER_VT,
             idle_vt: &DEFAULT_MSMOVE_REMINDER_IDLE_VT,

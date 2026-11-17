@@ -178,6 +178,7 @@ impl MSTriggeredRerouter {
             myBlockedStoppingPlaces: BTreeSet::new(),
         });
         b.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        b.base2.kind = "MSTriggeredRerouter";
         // C++ `myInstances[id] = this` and `lane->addMoveReminder(this)`; the box keeps the address stable
         let this_ptr = Ptr::from_box(&b);
         MY_INSTANCES.with(|m| m.borrow_mut().insert(b.base.get_id().to_string(), this_ptr));
@@ -2620,7 +2621,7 @@ impl MSTriggeredRerouter_RerouteInterval {
 }
 
 
-fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
+pub fn rerouter_of(mr: &mut MSMoveReminder) -> &mut MSTriggeredRerouter {
     // base2 is not the first field: step back from the embedded MSMoveReminder to the enclosing rerouter
     let p = (mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter;
     unsafe { &mut *p }
