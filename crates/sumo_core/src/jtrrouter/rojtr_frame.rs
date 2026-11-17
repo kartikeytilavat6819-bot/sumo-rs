@@ -67,7 +67,7 @@ impl ROJTRFrame {
             oc.add_call_example("-c <CONFIGURATION>", "run with routing options defined in file");
 
             // insert options sub-topics
-            // shortcut: SystemFrame::addConfigurationOptions is not ported yet, its configuration options are missing, upgrade when system_frame is ported
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Processing");
@@ -110,7 +110,7 @@ impl ROJTRFrame {
             oc.add_description("discount-sources", "Processing", "Subtract upstream flow when inserting a new flow. When option --sources-are-sinks is set, the upstream flow is limited to the value of the source flow and the remaining part terminates.");
 
             // add rand options
-            // shortcut: RandHelper::insertRandOptions is not ported yet, the random options are missing, upgrade when rand_helper registers them
+            utils::common::rand_helper::insert_rand_options(oc);
         });
     }
 

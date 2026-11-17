@@ -10264,11 +10264,16 @@ impl MSVehicle {
         // save parameters and device states
         self.myParameter.write_params(out);
         for dev in self.myDevices.iter() {
-            // shortcut: no device vtable yet, the concrete type is recovered from the id prefix assigned by its constructor; other device types still only run the base MSDevice::saveState (warning)
-            if dev.m().base2.get_id().starts_with("tripinfo_") {
-                dev.cast::<MSDevice_Tripinfo>().m().save_state(out);
-            } else {
-                dev.m().base2.save_state(out);
+            // C++ dev->saveState() is virtual: dispatch by deviceName() as in get_parameter_of
+            match dev.base2.device_name().as_str() {
+                "battery" => dev.cast::<MSDevice_Battery>().m().save_state(out),
+                "rerouting" => dev.cast::<MSDevice_Routing>().m().save_state(out),
+                "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().save_state(out),
+                "taxi" => dev.cast::<MSDevice_Taxi>().m().save_state(out),
+                "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().save_state(out),
+                "person" | "container" => dev.cast::<MSDevice_Transportable>().m().save_state(out),
+                "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().save_state(out),
+                _ => dev.m().base2.save_state(out),
             }
         }
         if !self.myCFVariables.is_null() {

@@ -371,11 +371,6 @@ impl MSBaseVehicle {
         let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
         let mut devices: Vec<Ptr<MSVehicleDevice>> = Vec::new();
         MSDevice::build_vehicle_devices(v, &mut devices);
-        if !MSDevice::get_device_by_name(&devices, "rerouting").is_null() {
-            // C++ records this in createDevice; the rerouter uses it to tell a vehicle with a routing device
-            // from one without (see has_rerouting_device).
-            self.myParameter.m().set_parameter("has.rerouting.device", "true");
-        }
         self.myMoveReminders = devices.iter().map(|dev| (dev.cast::<MSMoveReminder>(), 0.0)).collect();
         self.myDevices = devices;
         if MSGlobals::have_emissions() {
@@ -615,10 +610,8 @@ impl MSBaseVehicle {
     // }
     /// C++: `tObject.getDevice(typeid(MSDevice_Routing)) != nullptr`.
     ///
-    /// The port has no type-keyed device lookup and `MSDevice::device_name` is pure virtual with no vtable,
-    /// so ask the parameter that `createDevice` records for exactly this purpose (`has.rerouting.device`).
     pub fn has_rerouting_device(&self) -> bool {
-        self.myParameter.get_parameter("has.rerouting.device", "false") == "true"
+        self.has_device("rerouting")
     }
 
     #[allow(unused_variables)]

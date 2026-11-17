@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/lc_oppo/road.nod.xml --edge-files tools/oracle/cases/lc_oppo/road.edg.xml
