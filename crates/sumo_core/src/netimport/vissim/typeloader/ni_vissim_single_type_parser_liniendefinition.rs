@@ -32,7 +32,7 @@ fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && !matches!(data[i], b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c) {
         i += 1;
     }
-    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let tok = vissim_bytes_to_string(&data[start..i]);
     from.set_position(i as u64);
     tok
 }
@@ -48,7 +48,7 @@ fn vissim_getline(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && data[i] != b'\n' {
         i += 1;
     }
-    let line = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let line = vissim_bytes_to_string(&data[start..i]);
     let next = if i < data.len() { i + 1 } else { i };
     from.set_position(next as u64);
     line

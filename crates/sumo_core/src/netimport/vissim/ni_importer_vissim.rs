@@ -134,6 +134,15 @@ fn vissim_is_space(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c)
 }
 
+/// bytes of a VISSIM token as text; C++ keeps raw bytes, so Latin-1 umlauts (e.g. 0xE4) are mapped per byte
+/// shortcut: a token mixing UTF-8 and non-UTF-8 bytes is decoded entirely as Latin-1, upgrade with byte-preserving strings
+pub fn vissim_bytes_to_string(b: &[u8]) -> String {
+    match std::str::from_utf8(b) {
+        Ok(s) => s.to_string(),
+        Err(_) => utils::common::string_utils::latin1_to_utf8(b),
+    }
+}
+
 /// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token ("" at end of stream)
 fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     let data = from.get_ref();
@@ -145,7 +154,7 @@ fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && !vissim_is_space(data[i]) {
         i += 1;
     }
-    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let tok = vissim_bytes_to_string(&data[start..i]);
     from.set_position(i as u64);
     tok
 }
@@ -182,7 +191,7 @@ pub fn vissim_read_number(from: &mut std::io::Cursor<Vec<u8>>, is_float: bool) -
             }
         }
     }
-    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let tok = vissim_bytes_to_string(&data[start..i]);
     from.set_position(i as u64);
     tok
 }
@@ -240,7 +249,7 @@ fn vissim_getline(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && data[i] != b'\n' {
         i += 1;
     }
-    let line = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let line = vissim_bytes_to_string(&data[start..i]);
     let next = if i < data.len() { i + 1 } else { i };
     from.set_position(next as u64);
     line
