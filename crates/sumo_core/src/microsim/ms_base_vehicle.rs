@@ -3785,8 +3785,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the parking-area access, too-short-stop warning, departPos-before-stop check and
-        // stopPar.tripId registration are not ported, upgrade with the parking area and departPos port
+        // shortcut: the too-short-stop warning needs getParkingLength per stop type and MSNet::warnOnce, not ported yet, upgrade with those
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3950,7 +3949,6 @@ impl MSBaseVehicle {
             let mut next: usize = stop.edge + 1;
             return self.add_stop(stopPar, errorMsg, untilOffset, Ptr::from_mut(&mut next));
         }
-        // shortcut: the departPos check for a stop on the current edge before departure is not ported
         let endPosOffset = if stop.lane.get_edge().is_internal() { edges[stop.edge].get_length() } else { 0.0 };
         let distToStop = stop.pars.endPos + endPosOffset - self.get_position_on_lane();
         if stop.pars.collision {
@@ -3961,6 +3959,29 @@ impl MSBaseVehicle {
                 Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().handle_collision_stop(&mut stop, distToStop)
             };
             if !handled {
+                return false;
+            }
+        }
+        if !self.has_departed() && self.myCurrEdge == stop.edge {
+            let mut pos: f64 = -1.0;
+            if self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
+                pos = self.myParameter.departPos;
+                if pos < 0.0 {
+                    pos += self.myRoute.get_edges()[self.myCurrEdge].get_length();
+                }
+            }
+            if self.myParameter.departPosProcedure == DepartPosDefinition::BASE || self.myParameter.departPosProcedure == DepartPosDefinition::DEFAULT {
+                let basePos = self.base_pos(self.myRoute.get_edges()[self.myCurrEdge]);
+                let a = stop.pars.endPos + endPosOffset;
+                pos = if a < basePos { a } else { basePos }; // MIN2
+            }
+            if pos > stop.pars.endPos + endPosOffset {
+                if stop.edge != self.myRoute.get_edges().len() {
+                    // check if the edge occurs again later in the route
+                    let mut next: usize = stop.edge + 1;
+                    return self.add_stop(stopPar, errorMsg, untilOffset, Ptr::from_mut(&mut next));
+                }
+                *errorMsg = format!("{} for vehicle '{}' on lane '{}' is before departPos.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
                 return false;
             }
         }
@@ -3985,6 +4006,9 @@ impl MSBaseVehicle {
         }
         self.set_skips(&mut stop, nStops as i32);
         self.myStops.insert(iter, stop);
+        if stopPar.tripId != "" {
+            crate::microsim::traffic_lights::ms_rail_signal_constraint::MSRailSignalConstraint::store_trip_id(&stopPar.tripId, self.get_id());
+        }
         true
     }
 
