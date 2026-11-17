@@ -3,18 +3,13 @@
 use crate::prelude::*;
 use super::ms_simple_traffic_light_logic::MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
 
-/// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`: MSDetectorFileOutput
-/// is the MSE2Collector base2 field, not its first base, so step back by the field offset.
+/// C++ `dynamic_cast<MSE2Collector*>(getTypedDetectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id))`.
 // shortcut: no runtime type check; the lane-area detector map holds only MSE2Collector, upgrade with a type flag check
 fn lookup_e2_detector_by_id(id: &str) -> Ptr<MSE2Collector> {
-    let det: Ptr<MSDetectorFileOutput> = match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
-        Some(d) => *d,
-        None => return Ptr::null(),
-    };
-    if det.is_null() {
-        return Ptr::null();
+    match MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(id) {
+        Some(d) if !d.is_null() => crate::microsim::output::mse2_collector::mse2_collector_of(*d),
+        _ => Ptr::null(),
     }
-    Ptr::from_raw((det.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector)
 }
 
 /// C++ enum `LightState`
@@ -606,7 +601,7 @@ impl NEMALogic {
                         let _built = nb.build_e2_detector(
                             &id,                                  // detectorID
                             lane,                                 // lane to build this detector
-                            -1000000., // INVALID_POSITION: set the detector location by end point and length
+                            f64::MAX, // INVALID_POSITION (std::numeric_limits<double>::max() in NEMAController.cpp): set the detector location by end point and length
                             lane.get_length(),                    // set the end position of the detector at the end of the lane
                             detector_length,                      // detector length
                             &self.myFile,                         // detector information output file

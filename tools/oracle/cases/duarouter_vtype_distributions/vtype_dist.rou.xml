@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vTypeDistribution id="dist1">
+    <vType id="carA" accel="2.0" length="4"/>
+    <vType id="carB" accel="1.0" length="6"/>
+  </vTypeDistribution>
+  <vehicle id="v1" type="dist1" depart="0">
+    <route edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  </vehicle>
+  <vehicle id="v2" type="dist1" depart="2">
+    <route edges="-103227#0 -103227#1"/>
+  </vehicle>
+</routes>

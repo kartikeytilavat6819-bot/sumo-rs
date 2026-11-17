@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <!-- v1 leaves -103224#0, turns back into -103226#1 and returns via its reverse edge: a loop that must be removed -->
+  <vehicle id="v1" depart="0" type="DEFAULT_VEHTYPE">
+    <route edges="-103224#0 -103226#1 --103226#1 -103224#1 -103224#2 -103224#3"/>
+  </vehicle>
+  <vehicle id="v2" depart="3" type="DEFAULT_VEHTYPE">
+    <route edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  </vehicle>
+  <!-- v3 starts with a turnaround (-103226#1 then its reverse): removed at the start of the route -->
+  <vehicle id="v3" depart="5" type="DEFAULT_VEHTYPE">
+    <route edges="-103226#1 --103226#1 -103224#1 -103224#2 -103224#3"/>
+  </vehicle>
+</routes>
