@@ -2,7 +2,7 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
 
 # Night run 2026-11-17 (lead loop, 20 Haiku agents, VM gate only) — read this first
 
-- `main` went 151/5 → **424/8** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 8
+- `main` went 151/5 → **429/7** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 7
   FAILs are NEW cases with owners (see tools/lead/agent_preamble.md). Every original city row passes (London/Kansas/
   Karlsruhe/Tokyo: isLeader→MSBitSetLogic dispatch, in01; Paris: computeFurtherLanes break, cb01). Release build gives
   identical verdicts and runs ~0.6x the C++ wall time (tools/oracle/PERF.md). New binary crate: duarouter (18/18 oracle
