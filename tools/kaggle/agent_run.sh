@@ -38,7 +38,7 @@ for n in rerouter_parking containers; do
     echo "-- panics:"; grep -m3 -E 'panicked|msp_model' $OUT/$n.ours.log | cut -c1-200
   fi
   if [ "$n" = rerouter_parking ]; then
-    echo "-- RC01 rr:"; grep 'RC01 rr' $OUT/$n.ours.log | head -20
+    echo "-- RC01 rr:"; grep 'RC01 rr' $OUT/$n.ours.log | head -20; grep -i 'reroute to new\|could not' $OUT/$n.ours.log | cut -c1-300 | head -5
     grep -E 'id="v[012]"' $OUT/$n.ours.ti.xml | cut -c1-330
     grep -E 'id="v[012]"' $C/ref.tripinfo.xml | cut -c1-330
     grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
