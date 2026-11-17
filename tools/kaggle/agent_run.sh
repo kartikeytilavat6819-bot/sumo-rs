@@ -34,7 +34,9 @@ run_case() {
   fi
 }
 
+grep -c NULLJ "$OUT/jt_traffic_light_unregulated.ref.sumo.log" >/dev/null 2>&1; grep NULLJ "$OUT/jt_traffic_light_unregulated.ref.sumo.log" 2>/dev/null | head -8
 run_case jt_traffic_light_unregulated ref
+grep NULLJ "$OUT/jt_traffic_light_unregulated.ref.sumo.log" | head -8
 run_case city_plano ref
 run_case city_bengaluru_blr ref
 
