@@ -1,23 +1,21 @@
 #!/bin/bash
-# pt02 diagnostics (removed before merge): busride ours vs pristine C++, outputs compared against ref_sim_out.
+# pt02 diagnostics (removed before merge): busride ours vs pristine C++, bus L1f.0 trajectory.
 C=tools/oracle/cases/busride
 OURS=${OURS:-/tmp/target/debug/sumo}
 OUT=${OUT:-/tmp/agent_pt02}
 for side in ours pristine; do
   mkdir -p $OUT/$side
   if [ $side = ours ]; then BIN=$OURS; else BIN=$SUMO_PRISTINE_BIN/sumo; fi
-  $BIN -n $C/ref_simple.net.xml -r $C/routes.rou --end 400 --additional-files $C/busride.add.xml \
-    --tripinfo-output $OUT/$side/ti.xml --personinfo-output $OUT/$side/personinfo.xml \
-    --stop-output $OUT/$side/stop.xml --no-step-log true > $OUT/$side/log.txt 2>&1
-  echo "== $side exit=$? lines=$(wc -l < $OUT/$side/log.txt) tripinfo=$(grep -c '<tripinfo ' $OUT/$side/ti.xml)"
-  grep -m5 -E 'Error|panicked|Warning' $OUT/$side/log.txt | cut -c1-200
-  grep -o 'tripinfo id="[^"]*"' $OUT/$side/ti.xml | tr '\n' ' '; echo
+  $BIN -n $C/ref_simple.net.xml -r $C/routes.rou --end 130 --additional-files $C/busride.add.xml \
+    --fcd-output $OUT/$side/fcd.xml --no-step-log true > $OUT/$side/log.txt 2>&1
+  echo "== $side exit=$?"
+  python3 - "$OUT/$side/fcd.xml" <<'EOF'
+import sys, xml.etree.ElementTree as ET
+prev = None
+for ts in ET.parse(sys.argv[1]).getroot():
+    t = float(ts.get('time'))
+    for v in ts:
+        if v.get('id') == 'L1f.0' and t <= 130 and (int(t) % 3 == 0 or 14 <= t <= 17 or 40 <= t <= 46 or 108 <= t <= 113):
+            print(f"t={t:.0f} x={float(v.get('x')):.2f} y={float(v.get('y')):.2f} v={float(v.get('speed')):.2f}")
+EOF
 done
-echo "== ref tripinfo=$(grep -c '<tripinfo ' $C/ref.tripinfo.xml)"
-echo "== ours personinfo"; head -c 1500 $OUT/ours/personinfo.xml; echo
-echo "== ref personinfo"; head -c 1500 $C/ref_sim_out/personinfo.xml; echo
-echo "== ours stop"; head -c 1200 $OUT/ours/stop.xml; echo
-echo "== ref stop"; head -c 1200 $C/ref_sim_out/stop.xml; echo
-python tools/oracle/compare_sim.py --tripinfo $C/ref.tripinfo.xml $OUT/ours/ti.xml 2>&1 | head -5
-python tools/oracle/compare_xml.py $C/ref_sim_out/personinfo.xml $OUT/ours/personinfo.xml 2>&1 | head -5
-python tools/oracle/compare_xml.py $C/ref_sim_out/stop.xml $OUT/ours/stop.xml 2>&1 | head -5
