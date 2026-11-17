@@ -90,6 +90,11 @@ static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTran
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
     save_state: pstate_save_state,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
 };
 
 /// C++ CState overrides (getPosition, getAngle) on top of the PState table
@@ -109,6 +114,11 @@ static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTran
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
     save_state: pstate_save_state,
+    get_id: adapter_default_get_id,
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
 };
 
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
