@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T05:21:26.056823-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/elechybrid_overhead/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/elechybrid_overhead/routes.rou"/>
+        <additional-files value="tools/oracle/cases/elechybrid_overhead/overhead.add.xml"/>
+    </input>
+
+    <output>
+        <elechybrid-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.elechybrid.xml"/>
+        <elechybrid-output.precision value="4"/>
+        <elechybrid-output.aggregated value="true"/>
+        <overheadwiresegments-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.overheadwires.xml"/>
+        <substations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.substations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <elechybrid_device>
+        <device.elechybrid.explicit value="test1,test2,test3"/>
+    </elechybrid_device>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="test1" x="0.00" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="0.00" lane="w2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="test1" x="13.89" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="13.89" lane="w2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="test1" x="27.78" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="27.78" lane="w2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="test1" x="41.67" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="41.67" lane="w2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="test1" x="55.56" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="55.56" lane="w2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="test1" x="69.45" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="69.45" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="500.00" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="0.00" lane="e2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="test1" x="83.34" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="83.34" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="486.11" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="13.89" lane="e2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="test1" x="97.23" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="97.23" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="472.22" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="27.78" lane="e2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="test1" x="111.12" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="111.12" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="458.33" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="41.67" lane="e2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="test1" x="125.01" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="125.01" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="444.44" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="55.56" lane="e2m_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="test1" x="138.90" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="138.90" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="430.55" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="69.45" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="0.00" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="0.00" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="test1" x="152.79" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="152.79" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="416.66" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="83.34" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="13.89" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="13.89" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="test1" x="166.68" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="166.68" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="402.77" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="97.23" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="27.78" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="27.78" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="test1" x="180.57" y="-4.80" angle="90.00" type="trolleybus" speed="13.89" pos="180.57" lane="w2m_0" slope="0.00"/>
+        <vehicle id="test2" x="388.88" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="111.12" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="41.67" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="41.67" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="test1" x="194.46" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="194.46" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="374.99" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="125.01" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="55.56" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="55.56" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="test1" x="208.35" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="208.35" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="361.10" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="138.90" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="69.45" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="69.45" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="test1" x="222.24" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="222.24" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="347.21" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="152.79" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="83.34" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="83.34" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="test1" x="236.13" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="236.13" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="333.32" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="166.68" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="97.23" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="97.23" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="test1" x="250.02" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="250.02" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="319.43" y="4.80" angle="270.00" type="trolleybus" speed="13.89" pos="180.57" lane="e2m_0" slope="0.00"/>
+        <vehicle id="test3" x="111.12" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="111.12" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="test1" x="263.91" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="263.91" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="305.54" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="194.46" lane="e2m_1" slope="0.00"/>
+        <vehicle id="test3" x="125.01" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="125.01" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="test1" x="277.80" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="277.80" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="291.75" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="8.25" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="138.90" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="138.90" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="test1" x="291.69" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="291.69" lane="w2m_1" slope="0.00"/>
+        <vehicle id="test2" x="277.86" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="22.14" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="152.79" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="152.79" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="test1" x="305.48" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="5.48" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="263.97" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="36.03" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="166.68" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="166.68" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="test1" x="319.37" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="19.37" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="250.08" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="49.92" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="180.57" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="180.57" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="test1" x="333.26" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="33.26" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="236.19" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="63.81" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="194.46" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="194.46" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="test1" x="347.15" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="47.15" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="222.30" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="77.70" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="208.35" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="208.35" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="test1" x="361.04" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="61.04" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="208.41" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="91.59" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="222.24" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="222.24" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="test1" x="374.93" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="74.93" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="194.52" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="105.48" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="236.13" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="236.13" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="test1" x="388.82" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="88.82" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="180.63" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="119.37" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="250.02" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="250.02" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="test1" x="402.71" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="102.71" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="166.74" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="133.26" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="263.91" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="263.91" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="test1" x="416.60" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="116.60" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="152.85" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="147.15" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="277.80" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="277.80" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="test1" x="430.49" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="130.49" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="138.96" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="161.04" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="291.69" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="291.69" lane="w2m_1" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="test1" x="444.38" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="144.38" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="125.07" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="174.93" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="305.48" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="5.48" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="test1" x="458.27" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="158.27" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="111.18" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="188.82" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="319.37" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="19.37" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="test1" x="472.16" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="172.16" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="97.29" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="202.71" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="333.26" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="33.26" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="test1" x="486.05" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="186.05" lane="m2e_1" slope="0.00"/>
+        <vehicle id="test2" x="83.40" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="216.60" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="347.15" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="47.15" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="test2" x="69.51" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="230.49" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="361.04" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="61.04" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="test2" x="55.62" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="244.38" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="374.93" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="74.93" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="test2" x="41.73" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="258.27" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="388.82" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="88.82" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="test2" x="27.84" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="272.16" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="402.71" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="102.71" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="test2" x="13.95" y="1.60" angle="270.00" type="trolleybus" speed="13.89" pos="286.05" lane="m2w_1" slope="0.00"/>
+        <vehicle id="test3" x="416.60" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="116.60" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="test3" x="430.49" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="130.49" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="test3" x="444.38" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="144.38" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="test3" x="458.27" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="158.27" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="test3" x="472.16" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="172.16" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="test3" x="486.05" y="-1.60" angle="90.00" type="trolleybus" speed="13.89" pos="186.05" lane="m2e_1" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00"/>
+    <timestep time="47.00"/>
+    <timestep time="48.00"/>
+    <timestep time="49.00"/>
+    <timestep time="50.00"/>
+    <timestep time="51.00"/>
+    <timestep time="52.00"/>
+    <timestep time="53.00"/>
+    <timestep time="54.00"/>
+    <timestep time="55.00"/>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+    <timestep time="100.00"/>
+    <timestep time="101.00"/>
+    <timestep time="102.00"/>
+    <timestep time="103.00"/>
+    <timestep time="104.00"/>
+    <timestep time="105.00"/>
+    <timestep time="106.00"/>
+    <timestep time="107.00"/>
+    <timestep time="108.00"/>
+    <timestep time="109.00"/>
+    <timestep time="110.00"/>
+    <timestep time="111.00"/>
+    <timestep time="112.00"/>
+    <timestep time="113.00"/>
+    <timestep time="114.00"/>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+</fcd-export>

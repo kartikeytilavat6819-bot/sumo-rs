@@ -4730,17 +4730,8 @@ impl NIImporter_OpenDrive {
             }
             if !sorted {
                 write_warningf!("The sections of edge '%' are not sorted properly.", e.id.clone());
-                // determinism: C++ std::sort is unstable; ties on s may be ordered differently
-                let mut sorter = NIImporter_OpenDrive_sections_by_s_sorter::new();
-                e.laneSections.sort_by(|a, b| {
-                    if sorter.call_op(a, b) != 0 {
-                        std::cmp::Ordering::Less
-                    } else if sorter.call_op(b, a) != 0 {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                // determinism: libstdc++ std::sort order (ties on s)
+                utils::common::std_sort::std_sort_vec(&mut e.laneSections, |a, b| NIImporter_OpenDrive_sections_by_s_sorter::new().call_op(a, b) != 0);
             }
             // check whether duplicate s-values occur
             // but keep all lane sections for connecting roads because they are

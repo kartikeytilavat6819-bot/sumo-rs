@@ -62,18 +62,9 @@ fn sub_set_exists_i32(v1: &Vec<i32>, v2: &Vec<i32>) -> bool {
 
 /// C++ `std::sort(v.begin(), v.end(), same_direction_sorter(angle))`; callers only use the first element
 fn sort_by_same_direction(v: &mut Vec<Ptr<NIVissimConnection>>, angle: f64) {
-    // determinism: std::sort is introsort (unstable above 16 elements); up to 16 elements it is an
-    // insertion sort, which keeps equal elements in input order like slice::sort_by does
+    // determinism: libstdc++ std::sort order (introsort above 16 elements, insertion sort below)
     let sorter = NIVissimConnectionCluster_same_direction_sorter::new(angle);
-    v.sort_by(|a, b| {
-        if sorter.call_op(*a, *b) != 0 {
-            std::cmp::Ordering::Less
-        } else if sorter.call_op(*b, *a) != 0 {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
+    utils::common::std_sort::std_sort(v, |a, b| sorter.call_op(a, b) != 0);
 }
 
 /// This class holds a list of connections either all outgoing or all incoming within an edge, which do lies close together. This shall be the connections which belong to a single node. It still are not all of the node's connections, as other edges may participate to this node, too.
