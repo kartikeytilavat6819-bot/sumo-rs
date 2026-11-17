@@ -1100,7 +1100,6 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn receive(&mut self, veh: Ptr<MEVehicle>, qIdx: i32, time: SUMOTime, isDepart: bool, isTeleport: bool, newEdge: bool) {
-        if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE receive {} depart={} time={} q={} teleport={} newEdge={} edge={}", veh.get_id(), isDepart, time, qIdx, isTeleport, newEdge, self.myEdge.get_id()); }
         let speed = if isDepart { -1. } else { max2(veh.get_speed(), MESO_MIN_SPEED) }; // on the previous segment
         veh.m().set_segment(Ptr::from_mut(self), 0); // for arrival checking
         veh.m().set_last_entry_time(time);

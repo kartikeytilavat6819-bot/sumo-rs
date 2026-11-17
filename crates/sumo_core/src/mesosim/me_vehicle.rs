@@ -542,7 +542,6 @@ fn me_vehicle_get_lane(o: &SUMOTrafficObject) -> Ptr<MSLane> {
     me_vehicle_ref(o).get_lane()
 }
 fn me_vehicle_get_speed(o: &SUMOTrafficObject) -> f64 {
-    if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE me_vehicle_get_speed fn={:x} obj={:x}", me_vehicle_get_speed as usize, o as *const SUMOTrafficObject as usize); }
     me_vehicle_ref(o).get_speed()
 }
 fn me_vehicle_get_position(o: &SUMOTrafficObject, offset: f64) -> Position {
@@ -787,7 +786,6 @@ impl MEVehicle {
         let w = self.get_waiting_time(false);
         let st = self.is_stopped();
         let avg = self.get_average_speed();
-        if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE get_speed {} seg_null={} que={} w={} stopped={} avg={} ev={} le={}", self.get_id(), self.mySegment.is_null(), self.myQueIndex, w, st, avg, self.myEventTime, self.myLastEntryTime); }
         if w > 0 || st {
             0.
         } else {

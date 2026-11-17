@@ -2854,7 +2854,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn activate_reminders(&mut self, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) {
-        if std::env::var("MESO_TRACE").is_ok() { eprintln!("TRACE activate {} departed={} n={}", self.get_id(), matches!(reason, MSMoveReminder_Notification::NOTIFICATION_DEPARTED), self.myMoveReminders.len()); }
         // notifyEnter may cause new reminders to be added so we cannot use an iterator
         let mut i = 0;
         while i < self.myMoveReminders.len() {
