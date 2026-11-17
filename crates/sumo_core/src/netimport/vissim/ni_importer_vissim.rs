@@ -73,7 +73,7 @@ pub type NIImporter_Vissim_ColorMap = BTreeMap<String, RGBColor>;
 pub type NIImporter_Vissim_ToElemIDMap = BTreeMap<String, NIVissimElement>;
 
 /// C++ typedef `std::map<NIVissimElement, VissimSingleTypeParser *> NIImporter_Vissim::ToParserMap`
-pub type NIImporter_Vissim_ToParserMap = BTreeMap<NIVissimElement, Ptr<NIImporter_Vissim_VissimSingleTypeParser>>;
+pub type NIImporter_Vissim_ToParserMap = BTreeMap<NIVissimElement, Box<dyn NIImporter_Vissim_VissimParserDispatch>>;
 
 /// C++ typedef `std::map<std::string, std::list<std::string>> NIImporter_Vissim::nodeMap`
 pub type NIImporter_Vissim_nodeMap = BTreeMap<String, VecDeque<String>>;
@@ -134,8 +134,17 @@ fn vissim_is_space(c: u8) -> bool {
     matches!(c, b' ' | b'\t' | b'\n' | b'\r' | 0x0b | 0x0c)
 }
 
+/// bytes of a VISSIM token as text; C++ keeps raw bytes, so Latin-1 umlauts (e.g. 0xE4) are mapped per byte
+/// shortcut: a token mixing UTF-8 and non-UTF-8 bytes is decoded entirely as Latin-1, upgrade with byte-preserving strings
+pub fn vissim_bytes_to_string(b: &[u8]) -> String {
+    match std::str::from_utf8(b) {
+        Ok(s) => s.to_string(),
+        Err(_) => utils::common::string_utils::latin1_to_utf8(b),
+    }
+}
+
 /// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token ("" at end of stream)
-fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+pub fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     let data = from.get_ref();
     let mut i = from.position() as usize;
     while i < data.len() && vissim_is_space(data[i]) {
@@ -145,7 +154,7 @@ fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && !vissim_is_space(data[i]) {
         i += 1;
     }
-    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let tok = vissim_bytes_to_string(&data[start..i]);
     from.set_position(i as u64);
     tok
 }
@@ -182,7 +191,7 @@ pub fn vissim_read_number(from: &mut std::io::Cursor<Vec<u8>>, is_float: bool) -
             }
         }
     }
-    let tok = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let tok = vissim_bytes_to_string(&data[start..i]);
     from.set_position(i as u64);
     tok
 }
@@ -240,7 +249,7 @@ fn vissim_getline(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     while i < data.len() && data[i] != b'\n' {
         i += 1;
     }
-    let line = String::from_utf8_lossy(&data[start..i]).into_owned();
+    let line = vissim_bytes_to_string(&data[start..i]);
     let next = if i < data.len() { i + 1 } else { i };
     from.set_position(next as u64);
     line
@@ -371,7 +380,6 @@ impl NIImporter_Vissim {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: the parsers are leaked (C++ deletes them here); freeing needs the concrete subclass type, so they are not freed
         NIVissimAbstractEdge::clear_dict();
         NIVissimClosures::clear_dict();
         NIVissimDistrictConnection::clear_dict();
@@ -620,9 +628,8 @@ impl NIImporter_Vissim {
             while !parsed && vissim_good(strm) && ok {
                 let elem = self.myKnownElements.get(&to_lower_case(&tag)).cloned();
                 if let Some(elem) = elem {
-                    if let Some(parser) = self.myParsers.get(&elem).cloned() {
-                        // shortcut: myParsers stores the base VissimSingleTypeParser, so the subclass parse() is not dispatched (needs a trait object in myParsers), and the base parse() is pure virtual
-                        ok = parser.m().parse(strm);
+                    if let Some(parser) = self.myParsers.get_mut(&elem) {
+                        ok = parser.parse_dyn(strm);
                         parsed = true;
                     }
                 }
@@ -1007,93 +1014,132 @@ impl NIImporter_Vissim {
     // }
     #[allow(unused_variables)]
     pub fn build_parsers(&mut self) {
-        // shortcut: parsers are leaked for the importer's lifetime (C++ deletes them in the destructor)
-        fn leak_parser<T>(p: T) -> Ptr<NIImporter_Vissim_VissimSingleTypeParser> {
-            Ptr::from_mut(Box::leak(Box::new(p))).cast()
+        fn box_parser<T: NIImporter_Vissim_VissimParserDispatch + 'static>(p: T) -> Box<dyn NIImporter_Vissim_VissimParserDispatch> {
+            Box::new(p)
         }
         // the parsers keep a reference to myColorMap, which lives inside *this, exactly as the C++ reference does
         let colorMap: *mut NIImporter_Vissim_ColorMap = &mut self.myColorMap;
         // SAFETY: the parser only dereferences the color map through its Ptr while the importer is alive
-        let p = leak_parser(NIVissimSingleTypeParser_Simdauer::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Simdauer::new(self));
         self.myParsers.insert(NIVissimElement::VE_Simdauer, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Startuhrzeit::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Startuhrzeit::new(self));
         self.myParsers.insert(NIVissimElement::VE_Startuhrzeit, p);
-        let p = leak_parser(NIVissimSingleTypeParser_DynUml::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_DynUml::new(self));
         self.myParsers.insert(NIVissimElement::VE_DynUml, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Streckendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Streckendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Streckendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Verbindungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Verbindungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Verbindungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Richtungsentscheidungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Richtungsentscheidungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Richtungsentscheidungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Routenentscheidungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Routenentscheidungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Routenentscheidungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_VWunschentscheidungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_VWunschentscheidungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_VWunschentscheidungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Langsamfahrbereichdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Langsamfahrbereichdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Langsamfahrbereichdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Zuflussdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Zuflussdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Zuflussdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Fahrzeugtypdefinition::new(self, unsafe { &mut *colorMap }));
+        let p = box_parser(NIVissimSingleTypeParser_Fahrzeugtypdefinition::new(self, unsafe { &mut *colorMap }));
         self.myParsers.insert(NIVissimElement::VE_Fahrzeugtypdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Fahrzeugklassendefinition::new(self, unsafe { &mut *colorMap }));
+        let p = box_parser(NIVissimSingleTypeParser_Fahrzeugklassendefinition::new(self, unsafe { &mut *colorMap }));
         self.myParsers.insert(NIVissimElement::VE_Fahrzeugklassendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Geschwindigkeitsverteilungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Laengenverteilungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Laengenverteilungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Laengenverteilungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Zeitenverteilungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Zeitenverteilungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Zeitenverteilungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Querverkehrsstoerungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Lichtsignalanlagendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Lichtsignalanlagendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Lichtsignalanlagendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Signalgruppendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Signalgruppendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Signalgruppendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Stopschilddefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Stopschilddefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Stopschilddefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Knotendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Knotendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Knotendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Signalgeberdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Signalgeberdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Signalgeberdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Detektordefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Detektordefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Detektorendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Haltestellendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Haltestellendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Haltestellendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Liniendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Liniendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Liniendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Reisezeitmessungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Reisezeitmessungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Reisezeitmessungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Querschnittsmessungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Querschnittsmessungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Querschnittsmessungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Messungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Messungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Messungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Verlustzeitmessungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Verlustzeitmessungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Verlustzeitmessungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Stauzaehlerdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Stauzaehlerdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Stauzaehlerdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Rautedefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Rautedefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Rautedefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Richtungspfeildefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Richtungspfeildefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Richtungspfeildefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Parkplatzdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Parkplatzdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Parkplatzdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Fahrverhaltendefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Fahrverhaltendefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Fahrverhaltendefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Streckentypdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Streckentypdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Streckentypdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Kennungszeile::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Kennungszeile::new(self));
         self.myParsers.insert(NIVissimElement::VE_Kennungszeile, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Fensterdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Fensterdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Fensterdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Auswertungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Auswertungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Auswertungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Zusammensetzungsdefinition::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Zusammensetzungsdefinition::new(self));
         self.myParsers.insert(NIVissimElement::VE_Verkehrszusammensetzungsdefinition, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Kantensperrung::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Kantensperrung::new(self));
         self.myParsers.insert(NIVissimElement::VE_Kantensperrung, p);
-        let p = leak_parser(NIVissimSingleTypeParser_Startzufallszahl::new(self));
+        let p = box_parser(NIVissimSingleTypeParser_Startzufallszahl::new(self));
         self.myParsers.insert(NIVissimElement::VE_Startzufallszahl, p);
+        let p = box_parser(NIVissimSingleTypeParser_SimRate::new(self));
+        self.myParsers.insert(NIVissimElement::VE_SimRate, p);
+        let p = box_parser(NIVissimSingleTypeParser_Zeitschrittfaktor::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Zeitschrittfaktor, p);
+        let p = box_parser(NIVissimSingleTypeParser_Linksverkehr::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Linksverkehr, p);
+        let p = box_parser(NIVissimSingleTypeParser_Stauparameterdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Stauparameterdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_Gelbverhaltendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Gelbverhaltendefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_LSAKopplungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_LSAKopplungdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_Gefahrwarnungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Gefahrenwarnsystemdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_TEAPACDefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_TEAPACdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_Netzobjektdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Netzobjektdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser_Fahrtverlaufdateien::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Fahrtverlaufdateien, p);
+        let p = box_parser(NIVissimSingleTypeParser_Emission::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Emission, p);
+        let p = box_parser(NIVissimSingleTypeParser_Einheitendefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Einheitendefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XVerteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Baujahrverteilungsdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XVerteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Laufleistungsverteilungsdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XVerteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Massenverteilungsdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XVerteilungsdefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Leistungsverteilungsdefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XKurvedefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Maxbeschleunigungskurvedefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XKurvedefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Wunschbeschleunigungskurvedefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XKurvedefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Maxverzoegerungskurvedefinition, p);
+        let p = box_parser(NIVissimSingleTypeParser__XKurvedefinition::new(self));
+        self.myParsers.insert(NIVissimElement::VE_Wunschverzoegerungskurvedefinition, p);
     }
 
     /// C++: `void NIImporter_Vissim::NIImporter_Vissim(const NIImporter_Vissim &)` [private]
@@ -2411,6 +2457,80 @@ impl SaxHandler for NIImporter_Vissim_NIVissimXMLHandler_Zuflussdefinition {
         Ok(())
     }
 }
+
+/// Virtual dispatch of `VissimSingleTypeParser::parse`: the parser map owns each concrete parser behind this trait (C++ vtable)
+pub trait NIImporter_Vissim_VissimParserDispatch {
+    fn parse_dyn(&mut self, from: &mut std::io::Cursor<Vec<u8>>) -> bool;
+}
+
+macro_rules! vissim_parser_dispatch {
+    ($($t:ident),* $(,)?) => {
+        $(
+            impl NIImporter_Vissim_VissimParserDispatch for $t {
+                fn parse_dyn(&mut self, from: &mut std::io::Cursor<Vec<u8>>) -> bool {
+                    $t::parse(self, from)
+                }
+            }
+        )*
+    };
+}
+
+vissim_parser_dispatch!(
+    NIVissimSingleTypeParser_Simdauer,
+    NIVissimSingleTypeParser_Startuhrzeit,
+    NIVissimSingleTypeParser_DynUml,
+    NIVissimSingleTypeParser_Streckendefinition,
+    NIVissimSingleTypeParser_Verbindungsdefinition,
+    NIVissimSingleTypeParser_Richtungsentscheidungsdefinition,
+    NIVissimSingleTypeParser_Routenentscheidungsdefinition,
+    NIVissimSingleTypeParser_VWunschentscheidungsdefinition,
+    NIVissimSingleTypeParser_Langsamfahrbereichdefinition,
+    NIVissimSingleTypeParser_Zuflussdefinition,
+    NIVissimSingleTypeParser_Fahrzeugtypdefinition,
+    NIVissimSingleTypeParser_Fahrzeugklassendefinition,
+    NIVissimSingleTypeParser_Geschwindigkeitsverteilungsdefinition,
+    NIVissimSingleTypeParser_Laengenverteilungsdefinition,
+    NIVissimSingleTypeParser_Zeitenverteilungsdefinition,
+    NIVissimSingleTypeParser_Querverkehrsstoerungsdefinition,
+    NIVissimSingleTypeParser_Lichtsignalanlagendefinition,
+    NIVissimSingleTypeParser_Signalgruppendefinition,
+    NIVissimSingleTypeParser_Stopschilddefinition,
+    NIVissimSingleTypeParser_Knotendefinition,
+    NIVissimSingleTypeParser_Signalgeberdefinition,
+    NIVissimSingleTypeParser_Detektordefinition,
+    NIVissimSingleTypeParser_Haltestellendefinition,
+    NIVissimSingleTypeParser_Liniendefinition,
+    NIVissimSingleTypeParser_Reisezeitmessungsdefinition,
+    NIVissimSingleTypeParser_Querschnittsmessungsdefinition,
+    NIVissimSingleTypeParser_Messungsdefinition,
+    NIVissimSingleTypeParser_Verlustzeitmessungsdefinition,
+    NIVissimSingleTypeParser_Stauzaehlerdefinition,
+    NIVissimSingleTypeParser_Rautedefinition,
+    NIVissimSingleTypeParser_Richtungspfeildefinition,
+    NIVissimSingleTypeParser_Parkplatzdefinition,
+    NIVissimSingleTypeParser_Fahrverhaltendefinition,
+    NIVissimSingleTypeParser_Streckentypdefinition,
+    NIVissimSingleTypeParser_Kennungszeile,
+    NIVissimSingleTypeParser_Fensterdefinition,
+    NIVissimSingleTypeParser_Auswertungsdefinition,
+    NIVissimSingleTypeParser_Zusammensetzungsdefinition,
+    NIVissimSingleTypeParser_Kantensperrung,
+    NIVissimSingleTypeParser_Startzufallszahl,
+    NIVissimSingleTypeParser_SimRate,
+    NIVissimSingleTypeParser_Zeitschrittfaktor,
+    NIVissimSingleTypeParser_Linksverkehr,
+    NIVissimSingleTypeParser_Stauparameterdefinition,
+    NIVissimSingleTypeParser_Gelbverhaltendefinition,
+    NIVissimSingleTypeParser_LSAKopplungsdefinition,
+    NIVissimSingleTypeParser_Gefahrwarnungsdefinition,
+    NIVissimSingleTypeParser_TEAPACDefinition,
+    NIVissimSingleTypeParser_Netzobjektdefinition,
+    NIVissimSingleTypeParser_Fahrtverlaufdateien,
+    NIVissimSingleTypeParser_Emission,
+    NIVissimSingleTypeParser_Einheitendefinition,
+    NIVissimSingleTypeParser__XVerteilungsdefinition,
+    NIVissimSingleTypeParser__XKurvedefinition,
+);
 
 /// C++ class `NIImporter_Vissim::VissimSingleTypeParser` (netimport/vissim/NIImporter_Vissim.h)
 pub struct NIImporter_Vissim_VissimSingleTypeParser {

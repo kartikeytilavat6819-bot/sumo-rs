@@ -62,6 +62,7 @@ impl NIVissimConnection {
             myAssignedVehicles: assignedVehicles.clone(),
             myClosedLanes: clv.clone(),
         });
+        b.base2.myKind = NIVissimAbstractEdgeKind::Connection;
         NIVissimAbstractEdge::dictionary(id, Ptr::from_mut(&mut b.base2));
         NIVissimBoundedClusterObject::register(Ptr::from_mut(&mut b.base), |o| Ptr::from_mut(o).cast::<NIVissimConnection>().m().compute_bounding());
         b

@@ -111,11 +111,11 @@ impl NIVissimSingleTypeParser_Fahrzeugtypdefinition {
         // id
         let id: i32 = self.my_read(from).parse::<i32>().unwrap_or(0); // type-checking is missing!
         // name
-        let mut tag = self.my_read(from);
+        let mut tag = vissim_read_token(from);
         let name = self.read_name(from);
         // category
-        tag = self.my_read(from);
-        let category = self.my_read(from);
+        tag = vissim_read_token(from);
+        let category = vissim_read_token(from);
         // color (optional) and length
         let mut color = RGBColor::default();
         tag = self.my_read(from);
