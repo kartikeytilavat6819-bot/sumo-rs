@@ -4,6 +4,17 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
+/// C++ `WrappingCommand<MSBaseVehicle>` wrapping `MSBaseVehicle::activateRemindersOnReroute`
+pub struct MSBaseVehicle_ActivateRemindersCommand {
+    pub vehicle: Ptr<MSBaseVehicle>,
+}
+
+impl Command for MSBaseVehicle_ActivateRemindersCommand {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        self.vehicle.m().activate_reminders_on_reroute(currentTime)
+    }
+}
+
 /// C++ enum `MSBaseVehicle::RouteValidity`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[repr(i64)]
@@ -1539,7 +1550,8 @@ impl MSBaseVehicle {
             }
         }
         if hasSkipped {
-            // shortcut: MSStopOptimizer::optimizeSkipped is not ported, skipped stops keep the edges computed above
+            let opti = MSStopOptimizer::new(Ptr::from_mut(self), router, t, maxDelay);
+            edges = opti.optimize_skipped(origSource, origSourcePos, &mut stops, edges);
             for stop in stops.iter() {
                 if stop.skipped || !stop.origEdge.is_null() {
                     let origEdge = if stop.origEdge.is_null() { stop.edge } else { stop.origEdge };
@@ -1585,7 +1597,7 @@ impl MSBaseVehicle {
                     std::panic::panic_any(ProcessError::new(utils::tlf!("Vehicle '%' has no valid route.", self.get_id())));
                 } else if source.is_taz_connector() {
                     utils::common::msg_handler::write_warning(&format!("Removing vehicle '{}' which has no valid route.", self.get_id()));
-                    // shortcut: MSNet::getInstance()->getInsertionControl().descheduleDeparture(this) not ported
+                    MSNet::get_instance().m().get_insertion_control().deschedule_departure(Ptr::from_mut(&mut self.base));
                     return false;
                 }
             }
@@ -1955,8 +1967,11 @@ impl MSBaseVehicle {
         // save information that the vehicle was rerouted
         self.myNumberReroutes += 1;
         self.myStopUntilOffset += self.myRoute.get_period();
-        // shortcut: MSNet::informVehicleStateListener(NEWROUTE) is not ported
-        // shortcut: MSRailSignalControl driveway update event (activateRemindersOnReroute) is not ported
+        MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut self.base), MSNet_VehicleState::NEWROUTE, info);
+        if !onInit && self.is_rail() && MSRailSignalControl::has_instance() {
+            let cmd: &mut MSBaseVehicle_ActivateRemindersCommand = Box::leak(Box::new(MSBaseVehicle_ActivateRemindersCommand { vehicle: Ptr::from_mut(self) }));
+            MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd as &mut dyn Command), MSNet::get_instance().get_current_time_step());
+        }
         // remove past stops which are not on the route anymore
         let route = &self.myRoute;
         self.myPastStops.retain(|it| {
