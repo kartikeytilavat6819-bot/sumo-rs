@@ -310,7 +310,33 @@ impl NIXMLEdgesHandler {
                 }
             }
             SUMO_TAG_STOPOFFSET => {
-                // shortcut: C++ StopOffset(attrs, ok) constructor is not ported (utils StopOffset has no attribute ctor), add the STOPOFFSET branch body (parse, duplicate/invalid warnings, setEdgeStopOffset) when it is
+                let mut ok = true;
+                let stopOffset = StopOffset::from_attrs(attrs, &mut ok);
+                if !ok {
+                    let ss = format!("(Error encountered at lane {} of edge '{}' while parsing stopOffsets.)", self.myCurrentLaneIndex, self.myCurrentID);
+                    write_error(&ss);
+                } else if self.myCurrentEdge.m().get_lane_stop_offset(self.myCurrentLaneIndex).is_defined() {
+                    let mut ss = String::from("Duplicate definition of stopOffset for ");
+                    if self.myCurrentLaneIndex != -1 {
+                        ss += &format!("lane {} on ", self.myCurrentLaneIndex);
+                    }
+                    ss += &format!("edge {}. Ignoring duplicate specification.", self.myCurrentEdge.m().get_id());
+                    write_warning(&ss);
+                } else if stopOffset.get_offset() > self.myCurrentEdge.m().get_length() || stopOffset.get_offset() < 0. {
+                    let mut ss = String::from("Ignoring invalid stopOffset for ");
+                    if self.myCurrentLaneIndex != -1 {
+                        ss += &format!("lane {} on ", self.myCurrentLaneIndex);
+                    }
+                    ss += &format!("edge {}", self.myCurrentEdge.m().get_id());
+                    if stopOffset.get_offset() > self.myCurrentEdge.m().get_length() {
+                        ss += " (offset larger than the edge length).";
+                    } else {
+                        ss += " (negative offset).";
+                    }
+                    write_warning(&ss);
+                } else {
+                    self.myCurrentEdge.m().set_edge_stop_offset(self.myCurrentLaneIndex, &stopOffset, false);
+                }
             }
             _ => {}
         }
