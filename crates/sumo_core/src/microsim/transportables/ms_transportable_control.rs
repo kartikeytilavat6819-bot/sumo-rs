@@ -694,8 +694,7 @@ impl MSTransportableControl {
             for p in list {
                 edge.remove_transportable(p);
                 let stage = p.get_current_stage();
-                // shortcut: C++ dynamic_cast<MSStageDriving*> is an unchecked cast here; only MSStageDriving leaves transportables waiting for a vehicle
-                let waitDescription = if stage.is_null() { "waiting".to_string() } else { stage.cast::<MSStageDriving>().get_waiting_description() };
+                let waitDescription = if stage.is_null() || stage.get_stage_type() != crate::microsim::transportables::ms_stage::MSStageType::DRIVING { "waiting".to_string() } else { stage.cast::<MSStageDriving>().get_waiting_description() };
                 write_warning(&format!("{} '{}' aborted {}.", p.m().get_object_type(), p.get_id(), waitDescription));
                 if self.myAbortWaitingTimeout >= 0 {
                     p.m().set_abort_waiting(-1);
@@ -825,7 +824,10 @@ impl MSTransportableControl {
     //     }
     #[allow(unused_variables)]
     pub fn loaded_end(&self) -> MSTransportableControl_constVehIt<'_> {
-        panic!("shortcut: MSTransportableControl::loadedEnd needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
+        // shortcut: Rust iterators have no end value, so end() is an exhausted iterator; no caller compares against it yet, upgrade with a sentinel-based iterator when one is needed
+        let mut it = self.myTransportables.iter();
+        it.by_ref().for_each(drop);
+        it
     }
 
     /// C++: `int MSTransportableControl::size() const` [const]

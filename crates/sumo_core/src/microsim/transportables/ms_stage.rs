@@ -266,8 +266,7 @@ impl MSStage {
             MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_direction(),
             MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_direction(),
             MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_direction(),
-            // shortcut: MSPModel::UNDEFINED_DIRECTION (=0) not ported as a constant yet
-            _ => 0,
+            _ => crate::microsim::transportables::msp_model::MSPMODEL_UNDEFINED_DIRECTION,
         }
     }
 

@@ -406,14 +406,22 @@ impl MSAbstractLaneChangeModel {
         }
         if attrs.has_attribute(SUMO_ATTR_LCSTATE) {
             let s = attrs.get_string(SUMO_ATTR_LCSTATE);
+            // istringstream >> semantics: a token that fails to parse sets its value to 0 and ends the stream
             let mut toks = s.split_whitespace();
+            let mut ok = true;
             if let Some(t) = toks.next() {
                 self.mySpeedLat = t.parse::<f64>().unwrap_or(0.0);
+                ok = t.parse::<f64>().is_ok();
+            }
+            if ok {
                 if let Some(t) = toks.next() {
                     self.myLaneChangeCompletion = t.parse::<f64>().unwrap_or(0.0);
-                    if let Some(t) = toks.next() {
-                        self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
-                    }
+                    ok = t.parse::<f64>().is_ok();
+                }
+            }
+            if ok {
+                if let Some(t) = toks.next() {
+                    self.myLaneChangeDirection = t.parse::<i32>().unwrap_or(0);
                 }
             }
         }

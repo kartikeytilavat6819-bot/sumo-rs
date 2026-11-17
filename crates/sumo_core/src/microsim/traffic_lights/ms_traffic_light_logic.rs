@@ -844,7 +844,6 @@ impl MSTrafficLightLogic {
         let mut shortEdges: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
         // SHORT_EDGE = (default SUMOVTypeParameter length 5 + minGap 2.5) * 2
         let shortEdgeLength: f64 = (5.0 + 2.5) * 2.0;
-        // shortcut: MESegment::OVERRIDE_TLS_PENALTIES ("meso.tls.control") is read from the logic parameters, which are not stored yet, so it is always off
         let overridePenalty = utils::common::string_utils::to_bool(&self.base2.get_parameter("meso.tls.control", "0")).unwrap_or_else(|e| panic!("{}", e));
         for j in 0..numLinks {
             for k in 0..self.myLinks[j].len() {
@@ -871,7 +870,9 @@ impl MSTrafficLightLogic {
                         utils::write_warningf!("Edge '%' is shorter than %m (%m) and will cause incorrect flow reduction with option --meso-tls-penalty", edge.get_id(), shortEdgeLength, edge.get_length());
                     }
                     if overridePenalty {
-                        // shortcut: MESegment::overrideTLSPenalty needs MSGlobals::gMesoNet, which is not reachable from this port yet; upgrade when MSGlobals statics are ported
+                        let mut last = crate::microsim::ms_globals::meso_net();
+                        let lastSeg = last.m().get_segment_for_edge(edge.m(), f64::MAX);
+                        lastSeg.m().override_tls_penalty();
                     }
                 }
                 link.m().set_meso_tls_penalty(time2steps(tlsPenalty * penalty[j] / durationSeconds));
@@ -1727,6 +1728,9 @@ impl crate::microsim::ms_event_control::Command for MSTrafficLightLogic_SwitchCo
     fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
         MSTrafficLightLogic_SwitchCommand::execute(self, currentTime)
     }
+    fn priority(&self) -> i32 {
+        i32::MAX
+    }
 }
 
 impl MSTrafficLightLogic_SwitchCommand {
@@ -1741,7 +1745,6 @@ impl MSTrafficLightLogic_SwitchCommand {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, tlLogic: Ptr<MSTrafficLightLogic>, nextSwitch: SUMOTime) -> Self {
-        // shortcut: C++ sets `priority = max` on the Command base, which is still Unmapped; the event queue therefore orders switch commands by time only, upgrade when Command is ported
         MSTrafficLightLogic_SwitchCommand {
             base: (),
             myTLControl: Ptr::from_mut(tlcontrol),
