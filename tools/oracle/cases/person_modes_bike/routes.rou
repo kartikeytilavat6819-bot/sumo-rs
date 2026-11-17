@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="bike" vClass="bicycle" length="1.80" maxSpeed="5.50"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <person id="pb0" type="ped" depart="5">
+    <personTrip from="AB" to="BC" modes="bicycle"/>
+  </person>
+  <person id="pb1" type="ped" depart="17">
+    <personTrip from="BC" to="AB" modes="bicycle car"/>
+  </person>
+  <person id="pb2" type="ped" depart="29">
+    <personTrip from="AB" to="CB" modes="taxi"/>
+  </person>
+  <person id="pb3" type="ped" depart="41">
+    <personTrip from="CB" to="AB"/>
+  </person>
+  <person id="pb4" type="ped" depart="53">
+    <personTrip from="AB" to="BC" modes="bicycle"/>
+  </person>
+  <person id="pb5" type="ped" depart="65">
+    <personTrip from="BC" to="AB" modes="bicycle car"/>
+  </person>
+  <person id="pb6" type="ped" depart="77">
+    <personTrip from="AB" to="CB" modes="taxi"/>
+  </person>
+  <person id="pb7" type="ped" depart="89">
+    <personTrip from="CB" to="AB"/>
+  </person>
+</routes>
