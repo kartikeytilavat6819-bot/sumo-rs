@@ -54,9 +54,9 @@ pub struct MSEdge {
     pub myFromJunction: Ptr<MSJunction>,
     pub myToJunction: Ptr<MSJunction>,
     /// Persons on the edge for drawing and pushbutton
-    pub myPersons: BTreeSet<Ptr<MSTransportable>>, // C++: std::set<MSTransportable *, ComparatorNumericalIdLess>
+    pub myPersons: std::cell::RefCell<BTreeSet<Ptr<MSTransportable>>>, // C++: std::set<MSTransportable *, ComparatorNumericalIdLess>
     /// Containers on the edge
-    pub myContainers: BTreeSet<Ptr<MSTransportable>>, // C++: std::set<MSTransportable *, ComparatorNumericalIdLess>
+    pub myContainers: std::cell::RefCell<BTreeSet<Ptr<MSTransportable>>>, // C++: std::set<MSTransportable *, ComparatorNumericalIdLess>
     /// Associative container from vehicle class to allowed-lanes.
     pub myAllowed: MSEdge_AllowedLanesCont,
     pub myOrigAllowed: MSEdge_AllowedLanesCont,
@@ -111,9 +111,9 @@ pub struct MSEdge {
     /// List of waiting vehicles
     pub myWaiting: std::cell::RefCell<Vec<Ptr<SUMOVehicle>>>,
     /// Mesoscopic vehicle positions
-    pub myCachedMesoPos: BTreeMap<Ptr<MEVehicle>, (f64, i32)>, // C++: std::map<const MEVehicle *, std::pair<double, int>>
+    pub myCachedMesoPos: std::cell::RefCell<Rc<BTreeMap<Ptr<MEVehicle>, (f64, i32)>>>, // C++: std::map<const MEVehicle *, std::pair<double, int>>
     /// time stamp of mesoscopic vehicle positions
-    pub myLastCacheUpdate: SUMOTime,
+    pub myLastCacheUpdate: std::cell::Cell<SUMOTime>,
     /// the oppositing superposable edge
     pub myBidiEdge: Ptr<MSEdge>,
     /// a reversed version for backward routing
@@ -341,8 +341,8 @@ impl MSEdge {
             myPredecessors: Vec::new(),
             myFromJunction: Ptr::null(),
             myToJunction: Ptr::null(),
-            myPersons: BTreeSet::new(),
-            myContainers: BTreeSet::new(),
+            myPersons: std::cell::RefCell::new(BTreeSet::new()),
+            myContainers: std::cell::RefCell::new(BTreeSet::new()),
             myAllowed: Vec::new(),
             myOrigAllowed: Vec::new(),
             myAllowedTargets: BTreeMap::new(),
@@ -371,8 +371,8 @@ impl MSEdge {
             myOrigClassesViaSuccessorMap: StableCache::new(),
             myBoundary: Boundary::default(),
             myWaiting: std::cell::RefCell::new(Vec::new()),
-            myCachedMesoPos: BTreeMap::new(),
-            myLastCacheUpdate: -1,
+            myCachedMesoPos: std::cell::RefCell::new(Rc::new(BTreeMap::new())),
+            myLastCacheUpdate: std::cell::Cell::new(-1),
             myBidiEdge: Ptr::null(),
             myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
             myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
@@ -1083,8 +1083,8 @@ impl MSEdge {
     //         return myPersons;
     //     }
     #[allow(unused_variables)]
-    pub fn get_persons(&self) -> &BTreeSet<Ptr<MSTransportable>> {
-        &self.myPersons
+    pub fn get_persons(&self) -> std::cell::Ref<'_, BTreeSet<Ptr<MSTransportable>>> {
+        self.myPersons.borrow()
     }
 
     /// C++: `std::vector<MSTransportable *> MSEdge::getSortedPersons(SUMOTime, bool) const` [const]
@@ -1107,7 +1107,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_sorted_persons(&self, timestep: SUMOTime, includeRiding: bool) -> Vec<Ptr<MSTransportable>> {
-        let mut result: Vec<Ptr<MSTransportable>> = self.myPersons.iter().copied().collect();
+        let mut result: Vec<Ptr<MSTransportable>> = self.myPersons.borrow().iter().copied().collect();
         if includeRiding {
             for lane in self.myLanes.iter() {
                 for veh in lane.get_vehicles_secure().iter() {
@@ -1132,7 +1132,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn get_sorted_containers(&self, timestep: SUMOTime, includeRiding: bool) -> Vec<Ptr<MSTransportable>> {
-        let mut result: Vec<Ptr<MSTransportable>> = self.myContainers.iter().copied().collect();
+        let mut result: Vec<Ptr<MSTransportable>> = self.myContainers.borrow().iter().copied().collect();
         // determinism: transportable ids are unique, so the position/id order is total
         let sorter = MSEdge_transportable_by_position_sorter::new(timestep);
         result.sort_by(|a, b| sort_by_sorter(|x, y| sorter.call_op(x, y), *a, *b));
@@ -3299,9 +3299,9 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn add_transportable(&self, t: Ptr<MSTransportable>) {
         if t.is_person() {
-            Ptr::new(self).m().myPersons.insert(t);
+            self.myPersons.borrow_mut().insert(t);
         } else {
-            Ptr::new(self).m().myContainers.insert(t);
+            self.myContainers.borrow_mut().insert(t);
         }
     }
 
@@ -3316,8 +3316,7 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn remove_transportable(&self, t: Ptr<MSTransportable>) {
-        let meP = Ptr::new(self); let me = meP.m();
-        let tc = if t.is_person() { &mut me.myPersons } else { &mut me.myContainers };
+        let mut tc = if t.is_person() { self.myPersons.borrow_mut() } else { self.myContainers.borrow_mut() };
         tc.remove(&t);
     }
 
@@ -3756,8 +3755,8 @@ impl MSEdge {
     // }
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        self.myPersons.clear();
-        self.myContainers.clear();
+        self.myPersons.borrow_mut().clear();
+        self.myContainers.borrow_mut().clear();
         self.myWaiting.get_mut().clear();
     }
 
@@ -4075,12 +4074,12 @@ impl MSEdge {
     //     return myCachedMesoPos;
     // }
     #[allow(unused_variables)]
-    pub fn get_meso_positions(&self) -> &BTreeMap<Ptr<MEVehicle>, (f64, i32)> {
-        let me = Ptr::new(self);
+    pub fn get_meso_positions(&self) -> Rc<BTreeMap<Ptr<MEVehicle>, (f64, i32)>> {
         let simStep = MSNet::get_instance().get_current_time_step();
-        if self.myLastCacheUpdate < simStep {
-            me.m().myLastCacheUpdate = simStep;
-            let old = std::mem::take(&mut me.m().myCachedMesoPos);
+        if self.myLastCacheUpdate.get() < simStep {
+            self.myLastCacheUpdate.set(simStep);
+            let old = self.myCachedMesoPos.borrow().clone();
+            let mut cached: BTreeMap<Ptr<MEVehicle>, (f64, i32)> = BTreeMap::new();
             let now = steps2time(simStep);
             for laneIndex in 0..self.myLanes.len() as i32 {
                 // go through the vehicles
@@ -4115,7 +4114,7 @@ impl MSEdge {
                             } else {
                                 overlap = 0;
                             }
-                            me.m().myCachedMesoPos.insert(veh, (pos, overlap));
+                            cached.insert(veh, (pos, overlap));
                             prevPos = pos;
                         }
                     }
@@ -4123,8 +4122,9 @@ impl MSEdge {
                     segment = segment.m().get_next_segment();
                 }
             }
+            *self.myCachedMesoPos.borrow_mut() = Rc::new(cached);
         }
-        &self.myCachedMesoPos
+        Rc::clone(&self.myCachedMesoPos.borrow())
     }
 
     /// C++: `void MSEdge::invalidateMesoCache() const` [const]
@@ -4134,7 +4134,7 @@ impl MSEdge {
     #[allow(unused_variables)]
     pub fn invalidate_meso_cache(&self) {
         // C++ field is mutable; the invalidation is const
-        Ptr::new(self).m().myLastCacheUpdate = -1;
+        self.myLastCacheUpdate.set(-1);
     }
 
     /// C++: `double MSEdge::getDepartPosBound(const MSVehicle &, bool) const` [const, protected]

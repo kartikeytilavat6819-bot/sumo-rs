@@ -698,7 +698,7 @@ pub struct NBNode {
     /// number of crossings loaded from a sumo net
     pub myCrossingsLoadedFromSumoNet: i32,
     /// geometry error after computation of internal lane shapes
-    pub myDisplacementError: f64,
+    pub myDisplacementError: std::cell::Cell<f64>,
     pub myIsBentPriority: bool,
     /// whether the node type was guessed rather than loaded
     pub myTypeWasGuessed: bool,
@@ -786,7 +786,7 @@ impl NBNode {
             myName: String::new(),
             myDiscardAllCrossings: false,
             myCrossingsLoadedFromSumoNet: 0,
-            myDisplacementError: 0.,
+            myDisplacementError: std::cell::Cell::new(0.),
             myIsBentPriority: false,
             myTypeWasGuessed: false,
         };
@@ -4293,8 +4293,8 @@ impl NBNode {
                     // (a linear dependency is to restrictive at low displacementAngles and too permisive at high angles)
                     *ok = false;
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
-                        let v = recordError.myDisplacementError.max((displacementAngle.sin() * dist).abs());
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max((displacementAngle.sin() * dist).abs());
+                        recordError.myDisplacementError.set(v);
                     }
                     return PositionVector::default();
                 } else {
@@ -4315,8 +4315,8 @@ impl NBNode {
                     *ok = false;
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
                         // it's unclear if this error can be solved via stretching the intersection.
-                        let v = recordError.myDisplacementError.max(1.0);
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max(1.0);
+                        recordError.myDisplacementError.set(v);
                     }
                     return PositionVector::default();
                 }
@@ -4330,8 +4330,8 @@ impl NBNode {
                 if lengthenBeg && lengthenEnd {
                     // This should be fixable with minor stretching
                     if !recordError.is_null() && (shapeFlag & NBNODE_SCURVE_IGNORE) == 0 {
-                        let v = recordError.myDisplacementError.max(1.0);
-                        recordError.m().myDisplacementError = v;
+                        let v = recordError.myDisplacementError.get().max(1.0);
+                        recordError.myDisplacementError.set(v);
                     }
                     *ok = false;
                     return PositionVector::default();
@@ -4443,7 +4443,7 @@ impl NBNode {
     //     }
     #[allow(unused_variables)]
     pub fn get_displacement_error(&self) -> f64 {
-        self.myDisplacementError
+        self.myDisplacementError.get()
     }
 
     /// C++: `void NBNode::replaceIncoming(NBEdge *, NBEdge *, int)`
@@ -5002,7 +5002,7 @@ impl NBNode {
     #[allow(unused_variables)]
     pub fn build_inner_edges(&mut self) -> f64 {
         // myDisplacementError is computed during this operation. reset first
-        self.myDisplacementError = 0.;
+        self.myDisplacementError.set(0.);
         // build inner edges for vehicle movements across the junction
         let mut noInternalNoSplits: i32 = 0;
         for edge in self.myIncomingEdges.iter() {
