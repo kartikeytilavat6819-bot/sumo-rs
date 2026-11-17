@@ -23,6 +23,8 @@ printf '<osm version="0.6"/>\njunk\n' > $P/text_after_root.osm
 printf '<osm version="0.6"/><osm/>\n' > $P/two_roots.osm
 printf 'not xml at all\n' > $P/garbage.osm
 printf '<osm version="0.6"><node id="1" lat="48" lon="11" foo="&bar;"/></osm>\n' > $P/bad_entity.osm
+printf '<osm version="0.6">\n  &bar;\n</osm>\n' > $P/bad_entity_text.osm
+printf '<osm version="0.6">\n  <node id="1" lat="48" lon="11"/>\n</osm>\n' > $P/ok_small.osm
 for f in $P/*.osm; do
   b=$(basename $f .osm)
   timeout 300 $R --simple-projection true --osm-files $f -o $P/$b.rust.net.xml > $P/$b.rust.log 2>&1; r=$?
