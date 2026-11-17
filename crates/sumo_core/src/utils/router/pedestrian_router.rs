@@ -43,9 +43,10 @@ impl<E, L, N, V> std::ops::DerefMut for PedestrianRouter<E, L, N, V> {
 
 impl<E, L, N, V> PedestrianRouter<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    N: RouterNode<Edge = E>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    N: RouterNode<Edge = E> + 'static,
+    V: RouterVehicle + 'static,
+    L: 'static,
 {
     /// C++: `void PedestrianRouter::PedestrianRouter<E, L, N, V>()`
     /// Constructor
