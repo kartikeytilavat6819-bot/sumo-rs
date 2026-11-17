@@ -40,15 +40,17 @@ run_case() {
     sumo_run ours "$v.save_ours" $EXTRA --save-state.times "$mid" --save-state.files "$v.ours.state.xml"
     sumo_run pristine "$v.save_pristine" $EXTRA --save-state.times "$mid" --save-state.files "$v.pristine.state.xml"
     st=PASS; ld=SKIP; why=""
-    if [ ! -f "$v.ours.state.xml" ] || [ ! -f "$v.pristine.state.xml" ]; then
+    if [ ! -f "$v.ours.state.xml" ] && [ ! -f "$v.pristine.state.xml" ]; then
+      st=NONE; why=$(grep -m1 -hE 'panicked at|Error' "$v.save_ours.log" "$v.save_pristine.log" 2>/dev/null | cut -c1-90)
+    elif [ ! -f "$v.ours.state.xml" ] || [ ! -f "$v.pristine.state.xml" ]; then
       st=NOSTATE
       why=$(grep -m1 -hE 'panicked at|Error' "$v.save_ours.log" "$v.save_pristine.log" 2>/dev/null | cut -c1-90)
     else
       python3 tools/oracle/compare_state.py "$v.ours.state.xml" "$v.pristine.state.xml" >"$v.state.txt" 2>&1 || st=FAIL
-      [ $st = FAIL ] && why=$(sed -n 2p "$v.state.txt" | cut -c1-90)
+      [ $st = FAIL ] && why=$(grep -E '^[-+][^-+]' "$v.state.txt" | head -2 | tr '\n' ' ' | cut -c1-200)
     fi
     veh=$(grep -c '<vehicle ' "$v.ours.state.xml" 2>/dev/null)
-    if [ "$st" != NOSTATE ]; then
+    if [ "$st" = PASS ] || [ "$st" = FAIL ]; then
       sumo_run ours "$v.load_ours" $EXTRA --load-state "$v.ours.state.xml" --tripinfo-output "$v.load_ours.ti.xml"
       sumo_run pristine "$v.load_pristine" $EXTRA --load-state "$v.pristine.state.xml" --tripinfo-output "$v.load_pristine.ti.xml"
       if [ -f "$v.load_ours.ti.xml" ] && [ -f "$v.load_pristine.ti.xml" ]; then
