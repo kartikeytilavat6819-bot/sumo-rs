@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T22:54:34.237664-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/parking_stop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/parking_stop/routes.rou"/>
+        <additional-files value="tools/oracle/cases/parking_stop/parking_stop.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/parking_stop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/parking_stop/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ft02/tools/oracle/cases/parking_stop/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="c0" depart="10.00" departLane="E0_0" departPos="5.10" departSpeed="14.03" departDelay="0.00" arrival="70.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="12.87" duration="60.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.94" rerouteNo="0" devices="tripinfo_c0 fcd_c0" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="c1" depart="30.00" departLane="E0_0" departPos="5.10" departSpeed="14.31" departDelay="0.00" arrival="88.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="14.02" duration="58.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.34" rerouteNo="0" devices="tripinfo_c1 fcd_c1" vType="DEFAULT_VEHTYPE" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="pk0" depart="0.00" departLane="E0_0" departPos="5.10" departSpeed="14.72" departDelay="0.00" arrival="103.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="13.93" duration="103.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="40.00" timeLoss="5.18" rerouteNo="0" devices="tripinfo_pk0 fcd_pk0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="pk2" depart="20.00" departLane="E0_0" departPos="5.10" departSpeed="15.04" departDelay="0.00" arrival="111.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="13.99" duration="91.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="30.00" timeLoss="4.03" rerouteNo="0" devices="tripinfo_pk2 fcd_pk2" vType="DEFAULT_VEHTYPE" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="c2" depart="60.00" departLane="E0_0" departPos="5.10" departSpeed="14.53" departDelay="0.00" arrival="118.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="14.33" duration="58.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.27" rerouteNo="0" devices="tripinfo_c2 fcd_c2" vType="DEFAULT_VEHTYPE" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="pk3" depart="40.00" departLane="E0_0" departPos="5.10" departSpeed="11.54" departDelay="0.00" arrival="129.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="11.03" duration="89.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="10.00" timeLoss="6.43" rerouteNo="0" devices="tripinfo_pk3 fcd_pk3" vType="DEFAULT_VEHTYPE" speedFactor="0.83" vaporized=""/>
+    <tripinfo id="pk1" depart="5.00" departLane="E0_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="134.00" arrivalLane="E1_0" arrivalPos="396.00" arrivalSpeed="11.79" duration="129.00" routeLength="795.30" waitingTime="0.00" waitingCount="0" stopTime="60.00" timeLoss="4.53" rerouteNo="0" devices="tripinfo_pk1 fcd_pk1" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+</tripinfos>
