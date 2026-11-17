@@ -717,6 +717,7 @@ def probes(lane, tl_id):
         "vehicle.rerouteTraveltime(v0) between stops + getRoute": reroute_between_stops,
     }
     base.update(domain_probes(lane, edge, tl, run_n, summary))
+    base.update(infra_probes(run_n))
     return base
 
 
@@ -923,6 +924,220 @@ def domain_probes(lane, edge, tl, run_n, summary):
     return P
 
 
+def infra_probes(run_n):
+    """Person, POI, Polygon, detector, stop/area, route, meandata, rerouter and subscription probes on the junction net.
+    Labels start with 'infra '; their runs load infra.add.xml (run_side). Filter with --filter "infra "."""
+    L1, L2 = "-103224#1_0", "-103224#2_0"
+    E1, E2, E3 = "-103224#1", "-103224#2", "-103224#3"
+    SHAPE = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0)]
+    P = {}
+
+    def add(label, fn):
+        P["infra " + label] = fn
+
+    def person(t):
+        t.person.add("p0", E1, 5.0)
+        t.person.appendWalkingStage("p0", [E1, E2], 20.0)
+
+    def poi(t):
+        t.poi.add("p1", 1.0, 2.0, (1, 2, 3, 255), poiType="ty", width=2.5, height=3.5, angle=45.0)
+
+    def polygon(t):
+        t.polygon.add("pg1", SHAPE, (255, 0, 0, 255), fill=True, polygonType="ty", lineWidth=2)
+
+    # person
+    add("person.getIDList() none", lambda t: t.person.getIDList())
+    add("person.add+walk+step: position/road/lane/speed", lambda t: (person(t), run_n(t, 1), (
+        t.person.getPosition("p0"), t.person.getRoadID("p0"), t.person.getLaneID("p0"),
+        t.person.getLanePosition("p0"), t.person.getSpeed("p0")))[2])
+    add("person.getEdges/getNextEdge/getRemainingStages/getArrivalPos/getWaitingTime", lambda t: (person(t), run_n(t, 1), (
+        t.person.getEdges("p0"), t.person.getNextEdge("p0"), t.person.getRemainingStages("p0"),
+        t.person.getArrivalPos("p0"), t.person.getWaitingTime("p0")))[2])
+    add("person.getTypeID/getVehicle/getAngle/getSlope", lambda t: (person(t), run_n(t, 1), (
+        t.person.getTypeID("p0"), t.person.getVehicle("p0"), t.person.getAngle("p0"), t.person.getSlope("p0")))[2])
+    add("person.getWalkingDistance(E2,5)", lambda t: (person(t), run_n(t, 1), t.person.getWalkingDistance("p0", E2, 5.0))[2])
+    add("person.appendDrivingStage + getRemainingStages/getEdges", lambda t: (person(t), t.person.appendDrivingStage("p0", E3, "bus"), (
+        t.person.getRemainingStages("p0"), t.person.getEdges("p0")))[2])
+    add("person.appendWaitingStage(5) + getRemainingStages", lambda t: (person(t), t.person.appendWaitingStage("p0", 5.0), t.person.getRemainingStages("p0"))[2])
+    add("person.removeStage(0) + getRemainingStages", lambda t: (person(t), t.person.removeStage("p0", 0), t.person.getRemainingStages("p0"))[2])
+    add("person.removeStages + getRemainingStages", lambda t: (person(t), t.person.removeStages("p0"), t.person.getRemainingStages("p0"))[2])
+    add("person.setSpeed(2)+step+getSpeed", lambda t: (person(t), t.person.setSpeed("p0", 2.0), run_n(t, 1), t.person.getSpeed("p0"))[3])
+    add("person.moveTo(L2,3)+step+getLaneID", lambda t: (person(t), run_n(t, 1), t.person.moveTo("p0", L2, 3.0), run_n(t, 1), (
+        t.person.getLaneID("p0"), t.person.getLanePosition("p0")))[4])
+    add("person.moveToXY(E2,x+1,y)+getRoadID", lambda t: (person(t), run_n(t, 1), (lambda xy: (
+        t.person.moveToXY("p0", E2, xy[0] + 1.0, xy[1]), run_n(t, 1), t.person.getRoadID("p0"), t.person.getPosition("p0")))(
+        t.person.getPosition("p0")))[2])
+    add("person.setType(DEFAULT_PEDTYPE)+getTypeID", lambda t: (person(t), t.person.setType("p0", "DEFAULT_PEDTYPE"), t.person.getTypeID("p0"))[2])
+    add("person.remove+step+getIDList", lambda t: (person(t), run_n(t, 1), t.person.remove("p0"), run_n(t, 1), t.person.getIDList())[4])
+    add("person.subscribe(p0)+step+results", lambda t: (person(t), t.person.subscribe("p0", [tc.VAR_POSITION, tc.VAR_ROAD_ID]), run_n(t, 1),
+                                                     t.person.getSubscriptionResults("p0"))[3])
+    add("person.getPosition(nope)", lambda t: t.person.getPosition("nope"))
+    add("person.add(bad edge)", lambda t: t.person.add("pz", "nope", 5.0))
+
+    # POI
+    add("poi.add + getters", lambda t: (poi(t), (t.poi.getType("p1"), t.poi.getColor("p1"), t.poi.getWidth("p1"),
+                                                  t.poi.getHeight("p1"), t.poi.getAngle("p1"), t.poi.getImageFile("p1"),
+                                                  t.poi.getPosition("p1"), t.poi.getIDList()))[1])
+    add("poi.setType/setPosition/setColor + getters", lambda t: (poi(t), t.poi.setType("p1", "ty2"), t.poi.setPosition("p1", 3.0, 4.0),
+                                                              t.poi.setColor("p1", (9, 8, 7, 255)), (t.poi.getType("p1"), t.poi.getPosition("p1"),
+                                                                                                     t.poi.getColor("p1")))[4])
+    add("poi.setWidth/setHeight/setAngle/setImageFile + getters", lambda t: (poi(t), t.poi.setWidth("p1", 4.0), t.poi.setHeight("p1", 5.0),
+                                                                          t.poi.setAngle("p1", 10.0), t.poi.setImageFile("p1", ""),
+                                                                          (t.poi.getWidth("p1"), t.poi.getHeight("p1"), t.poi.getAngle("p1"),
+                                                                           t.poi.getImageFile("p1")))[5])
+    add("poi.remove+getIDList", lambda t: (poi(t), t.poi.remove("p1"), t.poi.getIDList())[2])
+    add("poi.subscribe(p1)+step+results", lambda t: (poi(t), t.poi.subscribe("p1", [tc.VAR_POSITION, tc.VAR_COLOR]), run_n(t, 1),
+                                                  t.poi.getSubscriptionResults("p1"))[3])
+    add("poi.getType(nope)", lambda t: t.poi.getType("nope"))
+    add("poi.setPosition(nope)", lambda t: t.poi.setPosition("nope", 1.0, 1.0))
+
+    # polygon
+    add("polygon.add + getters", lambda t: (polygon(t), (t.polygon.getType("pg1"), t.polygon.getShape("pg1"), t.polygon.getColor("pg1"),
+                                                          t.polygon.getFilled("pg1"), t.polygon.getLineWidth("pg1"), t.polygon.getIDList()))[1])
+    add("polygon.setShape/setColor/setFilled/setType/setLineWidth + getters", lambda t: (polygon(t),
+        t.polygon.setShape("pg1", [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]), t.polygon.setColor("pg1", (0, 255, 0, 255)),
+        t.polygon.setFilled("pg1", False), t.polygon.setType("pg1", "ty2"), t.polygon.setLineWidth("pg1", 3),
+        (t.polygon.getShape("pg1"), t.polygon.getColor("pg1"), t.polygon.getFilled("pg1"), t.polygon.getType("pg1"),
+         t.polygon.getLineWidth("pg1")))[6])
+    add("polygon.addDynamics(v0)+3 steps+getShape/getColor", lambda t: (polygon(t), t.polygon.addDynamics("pg1", "v0", (0.0, 10.0), (255.0, 0.0)),
+        run_n(t, 3), (t.polygon.getShape("pg1"), t.polygon.getColor("pg1")))[3])
+    add("polygon.remove+getIDList", lambda t: (polygon(t), t.polygon.remove("pg1"), t.polygon.getIDList())[2])
+    add("polygon.subscribe(pg1)+step+results", lambda t: (polygon(t), t.polygon.subscribe("pg1", [tc.VAR_SHAPE, tc.VAR_COLOR]), run_n(t, 1),
+                                                       t.polygon.getSubscriptionResults("pg1"))[3])
+    add("polygon.getShape(nope)", lambda t: t.polygon.getShape("nope"))
+
+    # induction loop, lane area, multi-entry-exit (detectors from infra.add.xml)
+    add("inductionloop.getters after 20 steps", lambda t: (run_n(t, 20), (
+        t.inductionloop.getPosition("il0"), t.inductionloop.getLaneID("il0"), t.inductionloop.getLastStepVehicleNumber("il0"),
+        t.inductionloop.getLastStepMeanSpeed("il0"), t.inductionloop.getLastStepVehicleIDs("il0"),
+        t.inductionloop.getLastStepOccupancy("il0"), t.inductionloop.getLastStepMeanLength("il0"),
+        t.inductionloop.getTimeSinceDetection("il0"), t.inductionloop.getVehicleData("il0")))[1])
+    add("inductionloop.interval getters after 30 steps", lambda t: (run_n(t, 30), (
+        t.inductionloop.getIntervalOccupancy("il0"), t.inductionloop.getIntervalMeanSpeed("il0"),
+        t.inductionloop.getIntervalVehicleNumber("il0"), t.inductionloop.getIntervalVehicleIDs("il0"),
+        t.inductionloop.getLastIntervalOccupancy("il0"), t.inductionloop.getLastIntervalMeanSpeed("il0"),
+        t.inductionloop.getLastIntervalVehicleNumber("il0"), t.inductionloop.getLastIntervalVehicleIDs("il0")))[1])
+    add("inductionloop.overrideTimeSinceDetection(5)+get", lambda t: (t.inductionloop.overrideTimeSinceDetection("il0", 5.0),
+                                                                    t.inductionloop.getTimeSinceDetection("il0"))[1])
+    add("inductionloop.subscribe(il0)+step+results", lambda t: (t.inductionloop.subscribe("il0", [tc.LAST_STEP_VEHICLE_NUMBER]),
+                                                             run_n(t, 3), t.inductionloop.getSubscriptionResults("il0"))[2])
+    add("inductionloop.getPosition(nope)", lambda t: t.inductionloop.getPosition("nope"))
+    add("lanearea.getters after 20 steps", lambda t: (run_n(t, 20), (
+        t.lanearea.getPosition("la0"), t.lanearea.getLaneID("la0"), t.lanearea.getLength("la0"),
+        t.lanearea.getLastStepVehicleNumber("la0"), t.lanearea.getLastStepMeanSpeed("la0"),
+        t.lanearea.getLastStepHaltingNumber("la0"), t.lanearea.getLastStepOccupancy("la0"),
+        t.lanearea.getLastStepVehicleIDs("la0"), t.lanearea.getJamLengthVehicle("la0"),
+        t.lanearea.getJamLengthMeters("la0")))[1])
+    add("lanearea.interval getters after 30 steps", lambda t: (run_n(t, 30), (
+        t.lanearea.getIntervalOccupancy("la0"), t.lanearea.getIntervalMeanSpeed("la0"),
+        t.lanearea.getIntervalMeanTimeLoss("la0"), t.lanearea.getIntervalMaxJamLengthInMeters("la0"),
+        t.lanearea.getIntervalVehicleNumber("la0"), t.lanearea.getLastIntervalOccupancy("la0"),
+        t.lanearea.getLastIntervalMeanSpeed("la0"), t.lanearea.getLastIntervalMeanTimeLoss("la0"),
+        t.lanearea.getLastIntervalMaxJamLengthInMeters("la0"), t.lanearea.getLastIntervalVehicleNumber("la0")))[1])
+    add("lanearea.overrideVehicleNumber(3)+get", lambda t: (t.lanearea.overrideVehicleNumber("la0", 3),
+                                                          t.lanearea.getIntervalVehicleNumber("la0"))[1])
+    add("lanearea.getPosition(nope)", lambda t: t.lanearea.getPosition("nope"))
+    add("multientryexit.entry/exit lanes+positions", lambda t: (run_n(t, 5), (
+        t.multientryexit.getEntryLanes("me0"), t.multientryexit.getExitLanes("me0"),
+        t.multientryexit.getEntryPositions("me0"), t.multientryexit.getExitPositions("me0")))[1])
+    add("multientryexit.last step after 30 steps", lambda t: (run_n(t, 30), (
+        t.multientryexit.getLastStepVehicleNumber("me0"), t.multientryexit.getLastStepMeanSpeed("me0"),
+        t.multientryexit.getLastStepVehicleIDs("me0"), t.multientryexit.getLastStepHaltingNumber("me0")))[1])
+    add("multientryexit.last interval after 30 steps", lambda t: (run_n(t, 30), (
+        t.multientryexit.getLastIntervalMeanTravelTime("me0"), t.multientryexit.getLastIntervalMeanHaltsPerVehicle("me0"),
+        t.multientryexit.getLastIntervalMeanTimeLoss("me0"), t.multientryexit.getLastIntervalVehicleSum("me0")))[1])
+    add("multientryexit.getEntryLanes(nope)", lambda t: t.multientryexit.getEntryLanes("nope"))
+
+    # calibrator, bus stop, charging station, parking area, overhead wire, VSS, route probe, meandata, rerouter
+    add("calibrator.getters after 10 steps", lambda t: (run_n(t, 10), (
+        t.calibrator.getEdgeID("cal0"), t.calibrator.getLaneID("cal0"), t.calibrator.getVehsPerHour("cal0"),
+        t.calibrator.getSpeed("cal0"), t.calibrator.getTypeID("cal0"), t.calibrator.getBegin("cal0"),
+        t.calibrator.getEnd("cal0"), t.calibrator.getVTypes("cal0"), t.calibrator.getPassed("cal0"),
+        t.calibrator.getInserted("cal0"), t.calibrator.getRemoved("cal0")))[1])
+    add("calibrator.getRouteID after 10 steps", lambda t: (run_n(t, 10), t.calibrator.getRouteID("cal0"))[1])
+    add("calibrator.getRouteProbeID after 10 steps", lambda t: (run_n(t, 10), t.calibrator.getRouteProbeID("cal0"))[1])
+    add("calibrator.setFlow(r0,120/h)+getVehsPerHour", lambda t: (t.calibrator.setFlow("cal0", 0.0, 1000.0, 120.0, 10.0, "DEFAULT_VEHTYPE",
+                                                                                    "r0"),
+                                                                 t.calibrator.getVehsPerHour("cal0"))[1])
+    add("calibrator.getEdgeID(nope)", lambda t: t.calibrator.getEdgeID("nope"))
+    add("busstop.getters after 5 steps", lambda t: (run_n(t, 5), (
+        t.busstop.getLaneID("bs0"), t.busstop.getStartPos("bs0"), t.busstop.getEndPos("bs0"), t.busstop.getName("bs0"),
+        t.busstop.getVehicleCount("bs0"), t.busstop.getVehicleIDs("bs0"), t.busstop.getPersonCount("bs0"),
+        t.busstop.getPersonIDs("bs0")))[1])
+    add("busstop.getLaneID(nope)", lambda t: t.busstop.getLaneID("nope"))
+    add("chargingstation.getters after 5 steps", lambda t: (run_n(t, 5), (
+        t.chargingstation.getLaneID("cs0"), t.chargingstation.getStartPos("cs0"), t.chargingstation.getEndPos("cs0"),
+        t.chargingstation.getName("cs0"), t.chargingstation.getVehicleCount("cs0"), t.chargingstation.getVehicleIDs("cs0"),
+        t.chargingstation.getChargingPower("cs0"), t.chargingstation.getEfficiency("cs0"),
+        t.chargingstation.getChargeDelay("cs0"), t.chargingstation.getChargeInTransit("cs0"),
+        t.chargingstation.getTotalPower("cs0")))[1])
+    add("chargingstation.setChargingPower(1000)+get", lambda t: (t.chargingstation.setChargingPower("cs0", 1000.0),
+                                                              t.chargingstation.getChargingPower("cs0"))[1])
+    add("chargingstation.setEfficiency(0.5)+get", lambda t: (t.chargingstation.setEfficiency("cs0", 0.5),
+                                                          t.chargingstation.getEfficiency("cs0"))[1])
+    add("chargingstation.setChargeDelay(3)+get", lambda t: (t.chargingstation.setChargeDelay("cs0", 3.0),
+                                                         t.chargingstation.getChargeDelay("cs0"))[1])
+    add("chargingstation.setChargeInTransit(1)+get", lambda t: (t.chargingstation.setChargeInTransit("cs0", True),
+                                                             t.chargingstation.getChargeInTransit("cs0"))[1])
+    add("chargingstation.setTotalPower(100)+get", lambda t: (t.chargingstation.setTotalPower("cs0", 100.0),
+                                                          t.chargingstation.getTotalPower("cs0"))[1])
+    add("parkingarea.getters after 5 steps", lambda t: (run_n(t, 5), (
+        t.parkingarea.getLaneID("pa0"), t.parkingarea.getStartPos("pa0"), t.parkingarea.getEndPos("pa0"),
+        t.parkingarea.getName("pa0"), t.parkingarea.getVehicleCount("pa0"), t.parkingarea.getVehicleIDs("pa0"),
+        t.parkingarea.getAcceptedBadges("pa0")))[1])
+    add("parkingarea.setAcceptedBadges(x)+get", lambda t: (t.parkingarea.setAcceptedBadges("pa0", ["x"]),
+                                                        t.parkingarea.getAcceptedBadges("pa0"))[1])
+    add("overheadwire.getters after 5 steps", lambda t: (run_n(t, 5), (
+        t.overheadwire.getLaneID("ow0"), t.overheadwire.getStartPos("ow0"), t.overheadwire.getEndPos("ow0"),
+        t.overheadwire.getName("ow0"), t.overheadwire.getVehicleCount("ow0"), t.overheadwire.getVehicleIDs("ow0")))[1])
+    add("variablespeedsign.getLanes", lambda t: (run_n(t, 3), t.variablespeedsign.getLanes("vss0"))[1])
+    add("variablespeedsign.getLanes(nope)", lambda t: t.variablespeedsign.getLanes("nope"))
+    add("routeprobe.getters after 20 steps", lambda t: (run_n(t, 20), (
+        t.routeprobe.getEdgeID("rp0"), t.routeprobe.sampleLastRouteID("rp0"), t.routeprobe.sampleCurrentRouteID("rp0")))[1])
+    add("meandata.getIDs+getAttributeValues(nVehEntered) after 20 steps", lambda t: (run_n(t, 20), (
+        t.meandata.getIDs("ld0"), t.meandata.getAttributeValues("ld0", "nVehEntered")))[1])
+    add("meandata.getAttributeValue(ld0,L1,nVehEntered) after 20 steps", lambda t: (run_n(t, 20),
+                                                                                 t.meandata.getAttributeValue("ld0", L1, "nVehEntered"))[1])
+    add("meandata.getIDs(nope)", lambda t: t.meandata.getIDs("nope"))
+    add("rerouter.setParameter(k,v)+getParameter", lambda t: (t.rerouter.setParameter("rr0", "k", "v"),
+                                                           t.rerouter.getParameter("rr0", "k"))[1])
+    add("rerouter.getParameter(nope)", lambda t: t.rerouter.getParameter("nope", "k"))
+    add("rerouter.setParameter(nope)", lambda t: t.rerouter.setParameter("nope", "k", "v"))
+
+    # subscriptions and context subscriptions with filters
+    VCTX = tc.CMD_GET_VEHICLE_VARIABLE
+    add("vehicle.subscribeContext+LANES filter+3 steps", lambda t: (t.vehicle.addSubscriptionFilterLanes([0]),
+        t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
+        t.vehicle.getContextSubscriptionResults("v0"))[3])
+    add("vehicle.subscribeContext+NOOPPOSITE+DOWNSTREAM 50+3 steps", lambda t: (t.vehicle.addSubscriptionFilterNoOpposite(),
+        t.vehicle.addSubscriptionFilterDownstreamDistance(50.0), t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]),
+        run_n(t, 3), t.vehicle.getContextSubscriptionResults("v0"))[4])
+    add("vehicle.subscribeContext+UPSTREAM 50+VCLASS passenger+3 steps", lambda t: (
+        t.vehicle.addSubscriptionFilterUpstreamDistance(50.0), t.vehicle.addSubscriptionFilterVClass(["passenger"]),
+        t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
+        t.vehicle.getContextSubscriptionResults("v0"))[4])
+    add("vehicle.subscribeContext+VTYPE filter+3 steps", lambda t: (t.vehicle.addSubscriptionFilterVType(["DEFAULT_VEHTYPE"]),
+        t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
+        t.vehicle.getContextSubscriptionResults("v0"))[3])
+    add("vehicle.subscribeContext+LEAD_FOLLOW+3 steps", lambda t: (t.vehicle.addSubscriptionFilterLeadFollow([0]),
+        t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
+        t.vehicle.getContextSubscriptionResults("v0"))[3])
+    add("vehicle.subscribeContext+TURN 50/10+3 steps", lambda t: (t.vehicle.addSubscriptionFilterTurn(50.0, 10.0),
+        t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
+        t.vehicle.getContextSubscriptionResults("v0"))[3])
+    add("vehicle.subscribe(v0) begin/end 0..12 + 3 steps", lambda t: (t.vehicle.subscribe("v0", [tc.VAR_SPEED], 0, 12), run_n(t, 3),
+                                                                  t.vehicle.getSubscriptionResults("v0"))[2])
+    add("simulation.subscribe(loaded) begin/end 0..12 + 3 steps", lambda t: (
+        t.simulation.subscribe([tc.VAR_LOADED_VEHICLES_NUMBER], 0, 12), run_n(t, 3), t.simulation.getSubscriptionResults())[2])
+    add("lane.subscribe(L1, lastStepVehicleNumber) + step", lambda t: (t.lane.subscribe(L1, [tc.LAST_STEP_VEHICLE_NUMBER]), run_n(t, 3),
+                                                                    t.lane.getSubscriptionResults(L1))[2])
+    add("lane.subscribeContext(L1, speed) + step", lambda t: (t.lane.subscribeContext(L1, VCTX, 100.0, [tc.VAR_SPEED]), run_n(t, 3),
+                                                           t.lane.getContextSubscriptionResults(L1))[2])
+    add("edge.getAllSubscriptionResults after subscribe", lambda t: (t.edge.subscribe(E1, [tc.LAST_STEP_MEAN_SPEED]), run_n(t, 3),
+                                                                  t.edge.getAllSubscriptionResults())[2])
+    return P
+
+
 def run_probe(side, port, net, rou, ours, fn, extra=()):
     """One fresh server for one probe. Returns {"type", "value"}."""
     log = Path(os.environ.get("TEMP", ".")) / f"traci_{side}_{net.parent.name}.log"
@@ -973,6 +1188,9 @@ def run_side(side, port, ours, case, flt=(), skip=()):
     for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
         extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
+        if label.startswith("infra "):
+            infra = str(CASE / "infra.add.xml")
+            extra = ("--additional-files", wsl_path(infra) if side == "cpp" and not PRISTINE_BIN else infra)
         out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
             kill_cpp(port + i)
