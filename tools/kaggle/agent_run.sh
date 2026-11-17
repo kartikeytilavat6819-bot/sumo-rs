@@ -12,9 +12,11 @@ echo "== build release"
 CARGO_TARGET_DIR=$CT-rel cargo build --release -p sumo -p netconvert > /tmp/ub03_br.txt 2>&1; echo "rc=$?"; grep -E '^error' /tmp/ub03_br.txt | head -3; tail -1 /tmp/ub03_br.txt
 for b in sumo netconvert; do ln -sf $b "$CT-rel/release/$b.exe"; done
 ls -l --time-style=+%T "$CT"/debug/sumo* "$CT"-rel/release/sumo* 2>&1 | head -6
-PROFILE=debug bash tools/oracle/run_all.sh > /tmp/ub03_debug.txt 2>&1
-CARGO_TARGET_DIR=$CT-rel PROFILE=release bash tools/oracle/run_all.sh > /tmp/ub03_rel.txt 2>&1
+echo "start debug run_all $(date +%T)"
+PROFILE=debug timeout 1500 bash tools/oracle/run_all.sh > /tmp/ub03_debug.txt 2>&1; echo "debug rc=$? $(date +%T)"
 echo "debug:   $(tail -1 /tmp/ub03_debug.txt)"
+echo "start release run_all $(date +%T)"
+CARGO_TARGET_DIR=$CT-rel PROFILE=release timeout 1500 bash tools/oracle/run_all.sh > /tmp/ub03_rel.txt 2>&1; echo "release rc=$? $(date +%T)"
 echo "release: $(tail -1 /tmp/ub03_rel.txt)"
 VF='$2 ~ /^(net|net-.*|sim|sim-PANIC|variants)$/'
 awk "$VF"'{print $1,$2,$3}' /tmp/ub03_debug.txt > /tmp/ub03_dv.txt
