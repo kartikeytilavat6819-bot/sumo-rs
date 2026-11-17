@@ -94,8 +94,6 @@ pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
 
 /// C++ `libsumo::Helper::getEdge` lookup by id (MSEdge::dictionary)
 fn edge_dictionary(id: &str) -> Ptr<MSEdge> {
-    // shortcut: MSEdge::dictionary_2 still takes an Unmapped (string_view) argument, pass the id once ms_edge.rs maps it to &str
-    let _ = id;
     MSEdge::dictionary_2(id)
 }
 

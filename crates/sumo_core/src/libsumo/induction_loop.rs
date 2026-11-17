@@ -344,9 +344,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(loopID: &str, key: &str) -> String {
-        // shortcut: MSInductLoop has no ported getParameter (MSDetectorFileOutput parameter accessors missing), upgrade when they are ported
-        let _ = (loopID, key);
-        panic!("InductionLoop::getParameter: detector parameters not ported")
+        Self::get_detector(loopID).base2.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> InductionLoop::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -363,9 +361,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(loopID: &str, key: &str, value: &str) {
-        // shortcut: MSInductLoop has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (loopID, key, value);
-        panic!("InductionLoop::setParameter: detector parameters not ported")
+        Self::get_detector(loopID).m().base2.base2.set_parameter(key, value);
     }
 
     /// C++: `void InductionLoop::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]

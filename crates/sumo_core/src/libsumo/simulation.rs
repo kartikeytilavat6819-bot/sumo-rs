@@ -89,6 +89,12 @@ pub struct Simulation {
 //   static SubscriptionResults Simulation::mySubscriptionResults;
 //   static ContextSubscriptionResults Simulation::myContextSubscriptionResults;
 
+/// C++ `toString(SumoXMLAttr)`: the canonical name of an attribute
+// shortcut: scans the ATTRS table instead of the SumoXMLAttrs bijection, upgrade when sumo_xml_definitions exposes toString
+fn attr_to_string(attr: i32) -> String {
+    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, v)| *v == attr).map(|(s, _)| s.to_string()).unwrap_or_default()
+}
+
 /// wall-clock milliseconds for the progress messages (C++ PROGRESS_BEGIN_TIME_MESSAGE)
 fn current_millis() -> i64 {
     std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
@@ -277,8 +283,11 @@ impl Simulation {
     pub fn close(reason: &str) {
         Helper::clear_subscriptions();
         if MSNet::has_instance() {
-            MSNet::get_instance().m().close_simulation(0, reason);
-            // shortcut: C++ then deletes the MSNet instance and calls SystemFrame::close(), not ported yet
+            let net = MSNet::get_instance();
+            net.m().close_simulation(0, reason);
+            // C++ `delete MSNet::getInstance()`; the instance pointer is cleared by closeSimulation, so it is taken first
+            unsafe { drop(Box::from_raw(net.as_raw())) };
+            utils::common::system_frame::close();
         }
     }
 
@@ -1063,11 +1072,151 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(objectID: &str, key: &str) -> String {
-        // shortcut: only the generic network parameters (empty objectID, no prefix) are ported; the prefixed chargingStation./overheadWire./net./stats./parkingArea./busStop./device.tripinfo./buildConfig. branches need their owning classes
-        if objectID == "" && !key.starts_with("chargingStation.") && !key.starts_with("overheadWire.") && !key.starts_with("net.") && !key.starts_with("stats.") && !key.starts_with("parkingArea.") && !key.starts_with("busStop.") && !key.starts_with("device.tripinfo.") && !key.starts_with("buildConfig.") {
-            return panic!("shortcut: MSNet generic parameters not ported, upgrade when MSNet is Parameterised");
+        use utils::common::msg_handler::write_warning;
+        use utils::common::to_string::to_string;
+        if key.starts_with("chargingStation.") {
+            write_warning("Retrieving chargingStation parameters via the simulation API is deprecated, please use traci.chargingstation.");
+            let attrName = &key[16..];
+            let cs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_CHARGING_STATION).cast::<MSChargingStation>();
+            if cs.is_null() {
+                panic!("{}", format!("Invalid chargingStation '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_TOTALENERGYCHARGED) {
+                to_string(&cs.get_total_charged())
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                cs.base.get_my_name().to_string()
+            } else if attrName == "lane" {
+                cs.base.get_lane().get_id().to_string()
+            } else if cs.base.base2.has_parameter(attrName) {
+                cs.base.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid chargingStation parameter '{}'", attrName));
+            }
+        } else if key.starts_with("overheadWire.") {
+            write_warning("Retrieving overheadWire parameters via the simulation API is deprecated, please use traci.overheadwire.");
+            let attrName = &key[16..];
+            let cs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_OVERHEAD_WIRE_SEGMENT).cast::<MSOverheadWire>();
+            if cs.is_null() {
+                panic!("{}", format!("Invalid overhead wire '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_TOTALENERGYCHARGED) {
+                to_string(&cs.get_total_charged())
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                cs.base.get_my_name().to_string()
+            } else {
+                panic!("{}", format!("Invalid overhead wire parameter '{}'", attrName));
+            }
+        } else if key.starts_with("net.") {
+            let attrName = &key[4..];
+            if attrName == attr_to_string(SUMO_ATTR_NET_OFFSET) {
+                utils::geom::geo_conv_helper::GeoConvHelper::with_final(|h| to_string(&h.get_offset_base()))
+            } else {
+                panic!("{}", format!("Invalid net parameter '{}'", attrName));
+            }
+        } else if key.starts_with("stats.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for stats", key, objectID));
+            }
+            let attrName = &key[6..];
+            let net = MSNet::get_instance();
+            if attrName == "vehicles.loaded" {
+                net.m().get_vehicle_control().get_loaded_vehicle_no().to_string()
+            } else if attrName == "vehicles.inserted" {
+                net.m().get_vehicle_control().get_departed_vehicle_no().to_string()
+            } else if attrName == "vehicles.running" {
+                net.m().get_vehicle_control().get_running_vehicle_no().to_string()
+            } else if attrName == "vehicles.waiting" {
+                net.m().get_insertion_control().get_waiting_vehicle_no().to_string()
+            } else if attrName == "teleports.total" {
+                net.m().get_vehicle_control().get_teleport_count().to_string()
+            } else if attrName == "teleports.jam" {
+                net.m().get_vehicle_control().get_teleports_jam().to_string()
+            } else if attrName == "teleports.yield" {
+                net.m().get_vehicle_control().get_teleports_yield().to_string()
+            } else if attrName == "teleports.wrongLane" {
+                net.m().get_vehicle_control().get_teleports_wrong_lane().to_string()
+            } else if attrName == "safety.collisions" {
+                net.m().get_vehicle_control().get_collision_count().to_string()
+            } else if attrName == "safety.emergencyStops" {
+                net.m().get_vehicle_control().get_emergency_stops().to_string()
+            } else if attrName == "safety.emergencyBraking" {
+                net.m().get_vehicle_control().get_emergency_braking_count().to_string()
+            } else if attrName == "persons.loaded" {
+                if net.has_persons() { net.m().get_person_control().get_loaded_number().to_string() } else { "0".to_string() }
+            } else if attrName == "persons.running" {
+                if net.has_persons() { net.m().get_person_control().get_running_number().to_string() } else { "0".to_string() }
+            } else if attrName == "persons.jammed" {
+                if net.has_persons() { net.m().get_person_control().get_jammed_number().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.total" {
+                if net.has_persons() { net.m().get_person_control().get_teleport_count().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.abortWait" {
+                if net.has_persons() { net.m().get_person_control().get_teleports_abort_wait().to_string() } else { "0".to_string() }
+            } else if attrName == "personTeleports.wrongDest" {
+                if net.has_persons() { net.m().get_person_control().get_teleports_wrong_dest().to_string() } else { "0".to_string() }
+            } else {
+                panic!("{}", format!("Invalid stats parameter '{}'", attrName));
+            }
+        } else if key.starts_with("parkingArea.") {
+            write_warning("Retrieving parkingArea parameters via the simulation API is deprecated, please use traci.parkingarea.");
+            let attrName = &key[12..];
+            let pa = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_PARKING_AREA).cast::<MSParkingArea>();
+            if pa.is_null() {
+                panic!("{}", format!("Invalid parkingArea '{}'", objectID));
+            }
+            if attrName == "capacity" {
+                pa.get_capacity().to_string()
+            } else if attrName == "occupancy" {
+                pa.get_occupancy_including_blocked().to_string()
+            } else if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                pa.base.get_my_name().to_string()
+            } else if attrName == "lane" {
+                pa.base.get_lane().get_id().to_string()
+            } else if pa.base.base2.has_parameter(attrName) {
+                pa.base.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid parkingArea parameter '{}'", attrName));
+            }
+        } else if key.starts_with("busStop.") {
+            write_warning("Retrieving busStop parameters via the simulation API is deprecated, please use traci.busstop.");
+            let attrName = &key[8..];
+            let bs = MSNet::get_instance().get_stopping_place(objectID, SUMO_TAG_BUS_STOP);
+            if bs.is_null() {
+                panic!("{}", format!("Invalid busStop '{}'", objectID));
+            }
+            if attrName == attr_to_string(SUMO_ATTR_NAME) {
+                bs.get_my_name().to_string()
+            } else if attrName == "lane" {
+                bs.get_lane().get_id().to_string()
+            } else if bs.base2.has_parameter(attrName) {
+                bs.base2.get_parameter(attrName, "")
+            } else {
+                panic!("{}", format!("Invalid busStop parameter '{}'", attrName));
+            }
+        } else if key.starts_with("device.tripinfo.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for global device parameters or vehicle domain for vehicle specific parameters", key, objectID));
+            }
+            let attrName = &key[16..];
+            MSDevice_Tripinfo::get_global_parameter(attrName)
+        } else if key.starts_with("buildConfig.") {
+            if objectID != "" {
+                panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use an empty id for buildConfig parameters", key, objectID));
+            }
+            // this build has no Parquet or JuPedSim, so their versions are empty as in the C++ #else branches
+            if key == "buildConfig.ARROW_SO_VERSION" {
+                String::new()
+            } else if key == "buildConfig.JPS_VERSION" {
+                String::new()
+            } else if key == "buildConfig.ENABLED" {
+                utils::options::options_cont::HAVE_ENABLED.to_string()
+            } else {
+                panic!("{}", format!("Unknown parameter '{}'", key));
+            }
+        } else if objectID == "" {
+            MSNet::get_instance().get_parameter(key, "")
+        } else {
+            panic!("{}", format!("Simulation parameter '{}' is not supported for object id '{}'. Use empty id for generic network parameters", key, objectID));
         }
-        panic!("shortcut: Simulation::getParameter branch for '{}' is not ported yet", key);
     }
 
     /// C++: `const std::pair<std::string, std::string> Simulation::getParameterWithKey(const std::string &, const std::string &)` [static]
