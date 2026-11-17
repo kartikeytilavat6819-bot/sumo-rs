@@ -20,7 +20,7 @@ use utils::geom::geom_helper::navi_degree;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::time::{delta_t, speed2dist, SUMOTIME_MAX};
 use crate::libsumo::helper::check_time_bounds;
-use utils::common::to_string::to_string;
+use utils::common::to_string::{format_g, to_string};
 use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
 use utils::common::msg_handler::write_warning;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
@@ -68,9 +68,7 @@ const STOP_ONDEMAND_SET: i32 = 2 << 19;
 const STOP_JUMP_SET: i32 = 2 << 20;
 const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
 // shortcut: dynamic_cast<MSVehicle*> / dynamic_cast<MEVehicle*> cannot be checked at runtime (no type tag on
-// MSBaseVehicle, MSGlobals::gUseMesoSim not ported), so every vehicle is treated as micro. A MEVehicle would be
-// misread. Upgrade when a vehicle type tag or gUseMesoSim exists. The casts also need #[repr(C)] with `base`
-// first on MSBaseVehicle and MSVehicle (not yet present on those structs).
+// MSBaseVehicle), so every vehicle is treated as micro. A MEVehicle would be misread. Upgrade when a vehicle type tag exists.
 fn micro_veh(veh: Ptr<MSBaseVehicle>) -> Ptr<MSVehicle> {
     veh.cast::<MSVehicle>()
 }
@@ -2659,8 +2657,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         }
         if !veh.m().resume_from_stopping() {
             let sto = veh.get_next_stop();
-            // shortcut: MSStop.edge is not typed yet (Unmapped), the stop's parameter edge is used instead
-            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached, sto.duration, sto.pars.edge, sto.pars.startPos);
+            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached as i32, sto.duration, veh.get_route().get_edges()[sto.edge].get_id(), format_g(sto.pars.startPos, 6));
             panic!("{}", format!("Failed to resume from stopping for vehicle '{}', {}", veh.get_id(), posStr));
         }
     }

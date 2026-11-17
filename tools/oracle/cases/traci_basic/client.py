@@ -603,6 +603,7 @@ def probes(lane, tl_id):
         "vehicle.setBoardingDuration(v0, 1e30) range": lambda t: t.vehicle.setBoardingDuration("v0", 1e30),
         "vehicletype.setBoardingDuration(DEFAULT, 1e30) range": lambda t: t.vehicletype.setBoardingDuration("DEFAULT_VEHTYPE", 1e30),
         "vehicle.setRouteID(v0, nope)": lambda t: t.vehicle.setRouteID("v0", "nope"),
+        "vehicle.resume(v0) without stops": lambda t: t.vehicle.resume("v0"),
         "vehicle.changeLane(v0) + step + getLaneID": change_lane_effect,
         "vehicle.subscribe(v0) 3 steps + results": veh_subscribe_3,
         "vehicle.subscribeContext(v0, speed) + step": veh_subscribe_context,

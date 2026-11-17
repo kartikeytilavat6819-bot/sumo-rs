@@ -160,9 +160,20 @@ impl Simulation {
     pub fn load(args: &Vec<String>) {
         // the GUI branch is not compiled into this build (HAVE_LIBSUMOGUI is off)
         Simulation::close("Libsumo issued load command.");
-        // shortcut: XMLSubSys::init, OptionsIO::setArgs and NLBuilder::init are not wired into libsumo yet, so no simulation can be built here
-        let _ = args;
-        panic!("shortcut: Simulation::load needs NLBuilder::init (XMLSubSys, OptionsIO) which is not ported yet");
+        // C++ try/catch rethrowing ProcessError as TraCIException(e.what()): the errors below unwind with the same text
+        const VERSION_STRING: &str = "v1.28.0-0000000000";
+        utils::options::options_cont::with_options(|oc| oc.set_application_name("libsumo", &format!("Eclipse SUMO libsumo {VERSION_STRING}")));
+        utils::common::std_defs::set_g_simulation(true);
+        utils::xml::xml_sub_sys::init();
+        utils::options::options_io::set_args(args);
+        if !crate::netload::nl_builder::NLBuilder::init(true).is_null() {
+            let begin = match utils::common::time::string2time(&utils::options::options_cont::get_string("begin")) {
+                Ok(b) => b,
+                Err(e) => panic!("{}", e),
+            };
+            MSNet::get_instance().m().set_current_time_step(begin);
+            utils::common::msg_handler::write_message(&format!("Simulation version {} started via libsumo with time: {}.", VERSION_STRING, utils::common::time::time2string(begin)));
+        }
     }
 
     /// C++: `bool Simulation::hasGUI()` [static]
