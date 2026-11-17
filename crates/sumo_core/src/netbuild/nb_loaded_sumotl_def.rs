@@ -37,7 +37,7 @@ fn sumo_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) ->
 fn sumo_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
     sumo_tl_def_of_mut(d).get_max_index()
 }
-static NB_LOADED_SUMOTL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
+pub static NB_LOADED_SUMOTL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
     collect_links: sumo_tl_def_collect_links,
     set_tl_controlling_information: sumo_tl_def_set_tl_controlling_information,
     remap_removed: sumo_tl_def_remap_removed,
