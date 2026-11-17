@@ -1,0 +1,24 @@
+<routes>
+    <vType id="car" maxSpeed="20.00" speedDev="0.2"/>
+    <vehicle id="a0" type="car" depart="0.00" departSpeed="desired" arrivalLane="current" arrivalPos="max" arrivalSpeed="current">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a1" type="car" depart="2.00" departSpeed="speedLimit" arrivalPos="100.00">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a2" type="car" depart="4.00" departSpeed="avg" arrivalLane="0" arrivalPos="random">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a3" type="car" depart="6.00" departSpeed="max" arrivalLane="2" arrivalPos="center" arrivalSpeed="5.00">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a4" type="car" depart="8.00" departSpeed="random" arrivalPos="max" arrivalSpeed="10.00">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a5" type="car" depart="10.00" departSpeed="desired" arrivalLane="1" arrivalPos="random">
+        <route edges="P0 P1"/>
+    </vehicle>
+    <vehicle id="a6" type="car" depart="12.00" departSpeed="speedLimit" arrivalSpeed="current">
+        <route edges="P0 P1"/>
+    </vehicle>
+</routes>

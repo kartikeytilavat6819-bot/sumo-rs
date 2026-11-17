@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/lc_opposite/lc_opposite.nod.xml --edge-files tools/oracle/cases/lc_opposite/lc_opposite.edg.xml --opposites.guess true

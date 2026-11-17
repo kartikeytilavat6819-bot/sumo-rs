@@ -1,0 +1,4 @@
+<additional>
+    <e1Detector id="det_W0" lane="W0_0" pos="150.00" freq="30.00" file="det_out.xml"/>
+    <e1Detector id="det_S0" lane="S0_0" pos="150.00" freq="30.00" file="det_out.xml"/>
+</additional>
