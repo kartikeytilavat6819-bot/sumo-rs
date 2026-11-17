@@ -11999,7 +11999,6 @@ impl MSVehicle {
             let mut clane = enteredLane;
             let mut routeIndex = self.get_route_position();
             while leftLength > 0. {
-                let mut guessed = false;
                 if routeIndex > 0 && clane.get_edge().is_normal() {
                     // get predecessor lane that corresponds to prior route
                     routeIndex -= 1;
@@ -12013,15 +12012,12 @@ impl MSVehicle {
                         }
                     }
                 } else {
-                    // only the predecessor of a normal lane is a guess
-                    guessed = clane.get_edge().is_normal();
                     clane = clane.get_logical_predecessor_lane();
                 }
                 if clane.is_null()
                     || clane == self.myLane
                     || clane == self.myLane.get_bidi_lane()
-                    || (guessed
-                        && clane.is_internal()
+                    || (clane.is_internal()
                         && matches!(clane.get_link_cont()[0].get_direction(), LinkDirection::TURN | LinkDirection::TURN_LEFTHAND))
                 {
                     break;
