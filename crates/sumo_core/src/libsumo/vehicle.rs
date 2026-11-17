@@ -4218,11 +4218,103 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     }
 
     /// C++: `void Vehicle::highlight(const std::string &, const libsumo::TraCIColor &, double, const int, const double, const int)` [static]
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
+    // void
+    // Vehicle::highlight(const std::string& vehID, const TraCIColor& col, double size, const int alphaMax, const double duration, const int type) {
+    //
+    //     // NOTE: Code is duplicated in large parts in POI.cpp
+    //     MSBaseVehicle* veh = Helper::getVehicle(vehID);
+    //
+    //     // Center of the highlight circle
+    //     Position center = veh->getPosition();
+    //     const double l2 = veh->getLength() * 0.5;
+    //     center.sub(cos(veh->getAngle())*l2, sin(veh->getAngle())*l2);
+    //     // Size of the highlight circle
+    //     if (size <= 0) {
+    //         size = veh->getLength() * 0.7;
+    //     }
+    //     // Make polygon shape
+    //     const unsigned int nPoints = 34;
+    //     const PositionVector circlePV = GeomHelper::makeRing(size, size + 1., center, nPoints);
+    //     TraCIPositionVector circle = Helper::makeTraCIPositionVector(circlePV);
+    //
+    //     // Find a free polygon id
+    //     int i = 0;
+    //     std::string polyID = veh->getID() + "_hl" + toString(i);
+    //     while (Polygon::exists(polyID)) {
+    //         polyID = veh->getID() + "_hl" + toString(++i);
+    //     }
+    //     // Line width
+    //     double lw = 0.;
+    //     // Layer
+    //     double lyr = 0.;
+    //     if (MSNet::getInstance()->isGUINet()) {
+    //         lyr = (double)GLO_VEHICLE + 0.01;
+    //         lyr += (type + 1) / 257.;
+    //     }
+    //     // Make Polygon
+    //     Polygon::addHighlightPolygon(vehID, type, polyID, circle, col, true, "highlight", (int)lyr, lw);
+    //
+    //     // Animation time line
+    //     double maxAttack = 1.0; // maximal fade-in time
+    //     std::vector<double> timeSpan;
+    //     if (duration > 0.) {
+    //         timeSpan = {0, MIN2(maxAttack, duration / 3.), 2.*duration / 3., duration};
+    //     }
+    //     // Alpha time line
+    //     std::vector<double> alphaSpan;
+    //     if (alphaMax > 0.) {
+    //         alphaSpan = {0., (double) alphaMax, (double)(alphaMax) / 3., 0.};
+    //     }
+    //     // Attach dynamics
+    //     Polygon::addDynamics(polyID, vehID, timeSpan, alphaSpan, false, true);
+    // }
     #[allow(unused_variables)]
     pub fn highlight(vehID: &str, col: &TraCIColor, size: f64, alphaMax: i32, duration: f64, type_: i32) {
-        // shortcut: Polygon::exists / Polygon::addHighlightPolygon / Polygon::addDynamics (libsumo/Polygon, GUI highlight) are not ported in this pass; upgrade when polygon.rs is filled
-        panic!("Vehicle::highlight not yet ported: depends on Polygon highlight helpers")
+        let veh = Helper::get_vehicle(vehID);
+        // Center of the highlight circle
+        let mut center: Position = veh.get_position(0.);
+        let l2 = veh.get_length() * 0.5;
+        center.sub_xy(veh.get_angle().cos() * l2, veh.get_angle().sin() * l2);
+        // Size of the highlight circle
+        let mut size = size;
+        if size <= 0.0 {
+            size = veh.get_length() * 0.7;
+        }
+        // Make polygon shape
+        let nPoints: u32 = 34;
+        let circlePV = utils::geom::geom_helper::make_ring(size, size + 1.0, &center, nPoints);
+        let circle = Helper::make_tra_ci_position_vector(&circlePV);
+        // Find a free polygon id
+        let mut i: i32 = 0;
+        let mut polyID = format!("{}_hl{}", veh.get_id(), i);
+        while Polygon::exists(polyID.clone()) {
+            i += 1;
+            polyID = format!("{}_hl{}", veh.get_id(), i);
+        }
+        // Line width
+        let lw: f64 = 0.0;
+        // Layer
+        let mut lyr: f64 = 0.0;
+        if MSNet::get_instance().m().is_gui_net() {
+            lyr = 340.0 + 0.01; // GLO_VEHICLE (utils/gui/globjects/GUIGlObjectTypes.h)
+            lyr += (type_ + 1) as f64 / 257.0;
+        }
+        // Make Polygon
+        Polygon::add_highlight_polygon(vehID, type_, &polyID, &circle, col, true, "highlight", lyr as i32, lw);
+        // Animation time line
+        let maxAttack: f64 = 1.0;
+        let mut timeSpan: Vec<f64> = Vec::new();
+        if duration > 0.0 {
+            let fade_in = duration / 3.0;
+            timeSpan = vec![0.0, if maxAttack < fade_in { maxAttack } else { fade_in }, 2.0 * duration / 3.0, duration];
+        }
+        // Alpha time line
+        let mut alphaSpan: Vec<f64> = Vec::new();
+        if alphaMax > 0 {
+            alphaSpan = vec![0.0, alphaMax as f64, (alphaMax as f64) / 3.0, 0.0];
+        }
+        // Attach dynamics
+        Polygon::add_dynamics(&polyID, vehID, &timeSpan, &alphaSpan, false, true);
     }
 
     /// C++: `void Vehicle::dispatchTaxi(const std::string &, const std::vector<std::string> &)` [static]

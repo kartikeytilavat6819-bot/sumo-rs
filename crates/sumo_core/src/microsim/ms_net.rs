@@ -2986,12 +2986,15 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn inform_vehicle_state_listener(&mut self, vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
+        let dsu = self.get_dynamic_shape_updater();
         for listener in self.myVehicleStateListeners.iter() {
             // shortcut: no vtable on MSNet_VehicleStateListener, so the Helper and TraCIServer overrides are reached by identity; other overrides still hit the base no-op, upgrade when listeners are trait objects
             if crate::libsumo::helper::Helper::is_vehicle_state_listener(listener.as_raw()) {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
                 TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
+            } else if !dsu.is_null() && listener.as_raw() == &mut dsu.m().base as *mut MSNet_VehicleStateListener {
+                dsu.m().vehicle_state_changed(vehicle, to, info);
             } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
                 crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
             } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {

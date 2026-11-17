@@ -145,6 +145,15 @@ def probes(lane, tl_id):
         t.simulationStep(11)
         return t.vehicle.getIDList()
 
+    def veh_highlight_fade(t):
+        t.vehicle.highlight("v0", (0, 255, 0, 255), 5.0, 200, 3.0)
+        t.simulationStep(11)
+        return (sorted(i for i in t.polygon.getIDList() if "_hl" in i), t.polygon.getShape("v0_hl0"), t.polygon.getColor("v0_hl0"))
+
+    def veh_highlight_default(t):
+        t.vehicle.highlight("v0")
+        return (sorted(i for i in t.polygon.getIDList() if "_hl" in i), t.polygon.getShape("v0_hl0"), t.polygon.getColor("v0_hl0"))
+
     edge = lane.rsplit("_", 1)[0]
     tl = tl_id or "none"
 
@@ -492,7 +501,7 @@ def probes(lane, tl_id):
         run_n(t, 30)
         return summary(t)
 
-    return {
+    base = {
         "effect: lane.setDisallowed(all) +30 + summary": lane_close,
         "effect: lane.setDisallowed(all) +15, reopen +30": lane_close_reopen,
         "effect: lane.setDisallowed(passenger) +30": lane_disallow_passenger,
@@ -603,6 +612,9 @@ def probes(lane, tl_id):
         "vehicle.getLeader(v0, 200)": lambda t: t.vehicle.getLeader("v0", 200.0),
         "vehicle.getDistance(v0)": lambda t: t.vehicle.getDistance("v0"),
         "vehicle.getTypeID(v0)": lambda t: t.vehicle.getTypeID("v0"),
+        "vehicle.highlight(v0, fade) + step + polygons": veh_highlight_fade,
+        "vehicle.highlight(v0, default) + polygons": veh_highlight_default,
+        "vehicle.highlight(nope)": lambda t: t.vehicle.highlight("nope"),
         "vehicle.getLaneID(nope)": lambda t: t.vehicle.getLaneID("nope"),
         "vehicle.getLanePosition(nope)": lambda t: t.vehicle.getLanePosition("nope"),
         "vehicle.getAngle(nope)": lambda t: t.vehicle.getAngle("nope"),
@@ -657,6 +669,124 @@ def probes(lane, tl_id):
         "poi.add(p0) + getPosition": poi_add,
         "poi.getPosition(nope)": lambda t: t.poi.getPosition("nope"),
     }
+    base.update(domain_probes(lane, edge, tl, run_n, summary))
+    return base
+
+
+VTYPE_PAIRS = [
+    ("Accel", 2.5), ("Decel", 4.5), ("EmergencyDecel", 8.0), ("ApparentDecel", 5.0), ("Imperfection", 0.4),
+    ("Tau", 1.2), ("MinGap", 3.0), ("Width", 2.0), ("Height", 1.8), ("Length", 6.0), ("Mass", 1500.0),
+    ("Color", (10, 20, 30, 255)), ("VehicleClass", "bus"), ("EmissionClass", "HBEFA3/PC_G_EU4"),
+    ("ShapeClass", "bus"), ("SpeedFactor", 1.2), ("SpeedDeviation", 0.1), ("ActionStepLength", 0.5),
+    ("Impatience", 0.5), ("BoardingDuration", 1.0), ("Scale", 1.5), ("LateralAlignment", "center"),
+    ("MinGapLat", 0.8), ("MaxSpeedLat", 2.0), ("MaxSpeed", 20.0),
+]
+
+SIM_GETTERS = [
+    "getTime", "getEndTime", "getCurrentTime", "getLoadedNumber", "getLoadedIDList", "getDepartedNumber",
+    "getDepartedIDList", "getArrivedNumber", "getArrivedIDList", "getDepartedPersonNumber", "getDepartedPersonIDList",
+    "getArrivedPersonNumber", "getArrivedPersonIDList", "getParkingStartingVehiclesNumber",
+    "getParkingStartingVehiclesIDList", "getParkingEndingVehiclesNumber", "getParkingEndingVehiclesIDList",
+    "getStopStartingVehiclesNumber", "getStopStartingVehiclesIDList", "getStopEndingVehiclesNumber",
+    "getStopEndingVehiclesIDList", "getCollidingVehiclesNumber", "getCollidingVehiclesIDList",
+    "getEmergencyStoppingVehiclesNumber", "getEmergencyStoppingVehiclesIDList", "getMinExpectedNumber",
+    "getBusStopIDList", "getStartingTeleportNumber", "getStartingTeleportIDList", "getEndingTeleportNumber",
+    "getEndingTeleportIDList", "getCollisions", "getPendingVehicles", "getScale", "getDeltaT", "getNetBoundary",
+]
+
+
+def domain_probes(lane, edge, tl, run_n, summary):
+    """Setter/getter probes for Lane, Edge, Junction, Route, TrafficLight, VehicleType, Simulation.
+    Labels start with 'dom ' so --filter "dom " selects only these."""
+    P = {}
+
+    def read_after(setter, getter):
+        return lambda t: (setter(t), getter(t))[1]
+
+    # lane
+    P["dom lane.setAllowed(passenger) + getAllowed"] = read_after(lambda t: t.lane.setAllowed(lane, ["passenger"]), lambda t: t.lane.getAllowed(lane))
+    P["dom lane.setDisallowed(bicycle) + getDisallowed"] = read_after(lambda t: t.lane.setDisallowed(lane, ["bicycle"]), lambda t: t.lane.getDisallowed(lane))
+    P["dom lane.setChangePermissions(passenger,1) + get"] = read_after(lambda t: t.lane.setChangePermissions(lane, ["passenger"], 1), lambda t: t.lane.getChangePermissions(lane, 1))
+    P["dom lane.setFriction(0.5) + getFriction"] = read_after(lambda t: t.lane.setFriction(lane, 0.5), lambda t: t.lane.getFriction(lane))
+    P["dom lane.setLength(50) + getLength"] = read_after(lambda t: t.lane.setLength(lane, 50.0), lambda t: t.lane.getLength(lane))
+    P["dom lane.setAllowed(passenger) +30 summary"] = lambda t: (t.lane.setAllowed(lane, ["passenger"]), run_n(t, 30), summary(t))[2]
+    for name, fn in [
+        ("getShape", lambda t: t.lane.getShape(lane)), ("getLinks", lambda t: t.lane.getLinks(lane)),
+        ("getLinkNumber", lambda t: t.lane.getLinkNumber(lane)), ("getFoes", lambda t: t.lane.getFoes(lane, lane)),
+        ("getInternalFoes", lambda t: t.lane.getInternalFoes(lane)), ("getPendingVehicles", lambda t: t.lane.getPendingVehicles(lane)),
+        ("getBidiLane", lambda t: t.lane.getBidiLane(lane)), ("getEdgeID", lambda t: t.lane.getEdgeID(lane)),
+        ("getLastStepOccupancy", lambda t: t.lane.getLastStepOccupancy(lane)), ("getLastStepLength", lambda t: t.lane.getLastStepLength(lane)),
+        ("getWaitingTime", lambda t: t.lane.getWaitingTime(lane)), ("getTraveltime", lambda t: t.lane.getTraveltime(lane)),
+        ("getLastStepMeanSpeed", lambda t: t.lane.getLastStepMeanSpeed(lane)), ("getLastStepHaltingNumber", lambda t: t.lane.getLastStepHaltingNumber(lane)),
+        ("getAllowed", lambda t: t.lane.getAllowed(lane)), ("getDisallowed", lambda t: t.lane.getDisallowed(lane)),
+        ("getChangePermissions", lambda t: t.lane.getChangePermissions(lane, 1)), ("getAngle", lambda t: t.lane.getAngle(lane, 0.0)),
+        ("getWidth", lambda t: t.lane.getWidth(lane)), ("getCO2Emission", lambda t: t.lane.getCO2Emission(lane)),
+        ("getFuelConsumption", lambda t: t.lane.getFuelConsumption(lane)), ("getNoiseEmission", lambda t: t.lane.getNoiseEmission(lane)),
+        ("getElectricityConsumption", lambda t: t.lane.getElectricityConsumption(lane)),
+    ]:
+        P[f"dom lane.{name}(lane)"] = fn
+    for name, fn in [
+        ("getShape(nope)", lambda t: t.lane.getShape("nope")), ("getFriction(nope)", lambda t: t.lane.getFriction("nope")),
+        ("getAllowed(nope)", lambda t: t.lane.getAllowed("nope")), ("setAllowed(nope)", lambda t: t.lane.setAllowed("nope", ["all"])),
+        ("setFriction(lane, 2.0)", lambda t: t.lane.setFriction(lane, 2.0)), ("setLength(lane, -1)", lambda t: t.lane.setLength(lane, -1.0)),
+    ]:
+        P[f"dom lane.{name}"] = fn
+
+    # edge
+    P["dom edge.setAllowed(bus) +30 summary"] = lambda t: (t.edge.setAllowed(edge, ["bus"]), run_n(t, 30), summary(t))[2]
+    P["dom edge.setDisallowed(passenger) +30 summary"] = lambda t: (t.edge.setDisallowed(edge, ["passenger"]), run_n(t, 30), summary(t))[2]
+    P["dom edge.setEffort(5) + getEffort(0)"] = read_after(lambda t: t.edge.setEffort(edge, 5.0), lambda t: t.edge.getEffort(edge, 0.0))
+    P["dom edge.adaptTraveltime(100) + getAdaptedTraveltime"] = read_after(lambda t: t.edge.adaptTraveltime(edge, 100.0), lambda t: t.edge.getAdaptedTraveltime(edge, 0.0))
+    P["dom edge.setFriction(0.5) + getMeanFriction"] = read_after(lambda t: t.edge.setFriction(edge, 0.5), lambda t: t.edge.getMeanFriction(edge))
+    P["dom edge.setMaxSpeed(5) + getTraveltime"] = read_after(lambda t: t.edge.setMaxSpeed(edge, 5.0), lambda t: t.edge.getTraveltime(edge))
+    for name, fn in [
+        ("getLaneNumber", lambda t: t.edge.getLaneNumber(edge)), ("getStreetName", lambda t: t.edge.getStreetName(edge)),
+        ("getMeanFriction", lambda t: t.edge.getMeanFriction(edge)), ("getLastStepOccupancy", lambda t: t.edge.getLastStepOccupancy(edge)),
+        ("getLastStepLength", lambda t: t.edge.getLastStepLength(edge)), ("getFromJunction", lambda t: t.edge.getFromJunction(edge)),
+        ("getToJunction", lambda t: t.edge.getToJunction(edge)), ("getBidiEdge", lambda t: t.edge.getBidiEdge(edge)),
+        ("getLastStepPersonIDs", lambda t: t.edge.getLastStepPersonIDs(edge)), ("getPendingVehicles", lambda t: t.edge.getPendingVehicles(edge)),
+        ("getWaitingTime", lambda t: t.edge.getWaitingTime(edge)), ("getEffort(0)", lambda t: t.edge.getEffort(edge, 0.0)),
+        ("getAdaptedTraveltime(0)", lambda t: t.edge.getAdaptedTraveltime(edge, 0.0)), ("getLastStepHaltingNumber", lambda t: t.edge.getLastStepHaltingNumber(edge)),
+        ("getAngle(0)", lambda t: t.edge.getAngle(edge, 0.0)), ("getCO2Emission", lambda t: t.edge.getCO2Emission(edge)),
+        ("getFuelConsumption", lambda t: t.edge.getFuelConsumption(edge)), ("getNoiseEmission", lambda t: t.edge.getNoiseEmission(edge)),
+    ]:
+        P[f"dom edge.{name}(edge)"] = fn
+
+    # junction and route
+    j = lambda t: t.junction.getIDList()[0]
+    P["dom junction.getShape(first)"] = lambda t: t.junction.getShape(j(t))
+    P["dom junction.getIncomingEdges(first)"] = lambda t: t.junction.getIncomingEdges(j(t))
+    P["dom junction.getOutgoingEdges(first)"] = lambda t: t.junction.getOutgoingEdges(j(t))
+    P["dom route.getEdges(first)"] = lambda t: t.route.getEdges(t.route.getIDList()[0])
+    P["dom route.add(rnew, v0 route) + getEdges"] = lambda t: (t.route.add("rnew", t.vehicle.getRoute("v0")), t.route.getEdges("rnew"))[1]
+    P["dom route.add(rdup) twice"] = lambda t: (t.route.add("rdup", t.vehicle.getRoute("v0")), t.route.add("rdup", t.vehicle.getRoute("v0")))
+    P["dom route.getEdges(nope)"] = lambda t: t.route.getEdges("nope")
+    P["dom route.remove(first)"] = lambda t: (t.route.remove(t.route.getIDList()[0]), t.route.getIDList())[1]
+
+    # traffic light getters
+    for name in ["getSubID", "getType", "getProgram", "getPhase", "getNextSwitch", "getSpentDuration", "getPhaseDuration",
+                 "getControlledLanes", "getControlledLinks", "getAllProgramLogics", "getPhases", "getServedPersonCount"]:
+        P[f"dom trafficlight.{name}(tl)"] = (lambda n: lambda t: getattr(t.trafficlight, n)(tl))(name)
+    P["dom trafficlight.getProgram(nope)"] = lambda t: t.trafficlight.getProgram("nope")
+    P["dom trafficlight.getControlledLanes(nope)"] = lambda t: t.trafficlight.getControlledLanes("nope")
+
+    # vehicle type: each setter followed by its getter
+    for suffix, val in VTYPE_PAIRS:
+        P[f"dom vehicletype.set{suffix}(DEFAULT,{val}) + get"] = read_after(
+            (lambda s, v: lambda t: getattr(t.vehicletype, "set" + s)("DEFAULT_VEHTYPE", v))(suffix, val),
+            (lambda s: lambda t: getattr(t.vehicletype, "get" + s)("DEFAULT_VEHTYPE"))(suffix))
+    for suffix, _ in VTYPE_PAIRS:
+        if suffix in ("MaxSpeed",):
+            continue
+        P[f"dom vehicletype.get{suffix}(DEFAULT)"] = (lambda s: lambda t: getattr(t.vehicletype, "get" + s)("DEFAULT_VEHTYPE"))(suffix)
+    P["dom vehicletype.copy(DEFAULT, cp) + getMaxSpeed"] = read_after(
+        lambda t: t.vehicletype.copy("DEFAULT_VEHTYPE", "cp"), lambda t: t.vehicletype.getMaxSpeed("cp"))
+    P["dom vehicletype.getAccel(nope)"] = lambda t: t.vehicletype.getAccel("nope")
+
+    # simulation: zero-argument getters
+    for name in SIM_GETTERS:
+        P[f"dom simulation.{name}()"] = (lambda n: lambda t: getattr(t.simulation, n)())(name)
+    return P
 
 
 def run_probe(side, port, net, rou, ours, fn, extra=()):
