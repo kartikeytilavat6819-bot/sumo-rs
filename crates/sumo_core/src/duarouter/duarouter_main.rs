@@ -173,6 +173,7 @@ use crate::router::ro_net::ROMapMatcher;
 use crate::utils::router::a_star_lookup_table::{AStarLookupTableKind, FullLookupTable, LandmarkLookupTable};
 use crate::utils::router::reversed_edge::ReversedEdge;
 use crate::router::ro_vehicle::ROVehicle;
+use crate::utils::emissions::pollutants_interface::PollutantsInterface_EmissionType;
 use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
 use crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter;
 use crate::utils::router::a_star_router::AStarRouter;
@@ -181,6 +182,29 @@ use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+
+// C++ `&ROEdge::getEmissionEffort<PollutantsInterface::X>`: one fn item per template instantiation
+fn effort_co(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO, edge, veh, time)
+}
+fn effort_co2(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO2, edge, veh, time)
+}
+fn effort_pm_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::PM_X, edge, veh, time)
+}
+fn effort_hc(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::HC, edge, veh, time)
+}
+fn effort_no_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::NO_X, edge, veh, time)
+}
+fn effort_fuel(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::FUEL, edge, veh, time)
+}
+fn effort_elec(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::ELEC, edge, veh, time)
+}
 
 /// C++ `new` of a router, held as its SUMOAbstractRouter base (the routers live until the process exits)
 fn leak_router<R>(r: R) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
@@ -238,9 +262,14 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         }
     } else {
         op = match measure.as_str() {
+            "CO" => effort_co,
+            "CO2" => effort_co2,
+            "PMx" => effort_pm_x,
+            "HC" => effort_hc,
+            "NOx" => effort_no_x,
+            "fuel" => effort_fuel,
+            "electricity" => effort_elec,
             "noise" => ROEdge::get_noise_effort,
-            // shortcut: the emission efforts take the PollutantsInterface type as a template argument, a plain fn pointer cannot carry it, upgrade when the effort is a closure or typed per pollutant
-            "CO" | "CO2" | "PMx" | "HC" | "NOx" | "fuel" | "electricity" => panic!("shortcut: emission effort '{}' is not wired in duarouter yet", measure),
             _ => ROEdge::get_stored_effort,
         };
         if !net.has_loaded_effort() {
