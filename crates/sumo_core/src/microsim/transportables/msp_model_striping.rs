@@ -2153,6 +2153,29 @@ impl MSPModel_Striping {
                     }
                 }
             }
+            if hasCrossingVehObs {
+                // check whether the crossing is fully blocked
+                let reserved = Self::get_reserved(crossingVehs.len() as i32, reserve_for_oncoming_factor_junctions());
+                let mut allBlocked = true;
+                for i in 0..crossingVehs.len() as i32 {
+                    let o = &crossingVehs[i as usize];
+                    if o.type_ != MSPModel_Striping_ObstacleType::OBSTACLE_VEHICLE
+                        && ((dir == MSPMODEL_FORWARD && i >= reserved) || (dir == MSPMODEL_BACKWARD && i < crossingVehs.len() as i32 - reserved))
+                    {
+                        allBlocked = false;
+                        break;
+                    }
+                }
+                if allBlocked {
+                    for o in crossingVehs.iter_mut() {
+                        if dir == MSPMODEL_FORWARD {
+                            o.xBack = utils::geom::NUMERICAL_EPS;
+                        } else {
+                            o.xFwd = crossing.get_length() - utils::geom::NUMERICAL_EPS;
+                        }
+                    }
+                }
+            }
         }
         hasCrossingVehObs
     }
@@ -4121,13 +4144,6 @@ impl MSPModel_Striping_PState {
             }
             self.myAmJammed = true; // ignore pedestrian-pedestrian collisions
             ySpeed = stepAsideDir as f64 * vMax;
-        }
-        let dc01_t = MSNet::get_instance().get_current_time_step();
-        if std::env::var_os("DC01").is_some() && self.myPerson.get_id().to_string() == "person173" && dc01_t >= 528000 && dc01_t <= 531000 {
-            println!("DC01 WALK t={:.2} lane={} x={:.6} y={:.6} d={} pvx={:.6} cur={} cho={} oth={} nxt={} vx={:.6} dawdle={:.6} vy={:.6} xd={:.6} vMax={:.6} wt={} wte={} jam={}", dc01_t as f64 / 1000., self.myLane.get_id(), self.myEdgePos, self.myPosLat, self.myDir, self.mySpeed, current, chosen, other, next, xSpeed, dawdle, ySpeed, xDist, vMax, self.myWaitingTime, self.myWaitingToEnter as i32, self.myAmJammed as i32);
-            for i in 0..stripes as usize {
-                println!("DC01 WS t={:.2} i={} util={:.6} dist={:.6} o={} xF={:.6} xB={:.6} v={:.6} type={}", dc01_t as f64 / 1000., i, utility[i], distance[i], obs[i].description, obs[i].xFwd, obs[i].xBack, obs[i].speed, obs[i].type_ as i32);
-            }
         }
         self.myEdgePos += utils::common::time::speed2dist(xSpeed * self.myDir as f64);
         self.myPosLat += utils::common::time::speed2dist(ySpeed);
