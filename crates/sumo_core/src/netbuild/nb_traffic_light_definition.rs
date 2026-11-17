@@ -129,6 +129,18 @@ pub(crate) static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefiniti
     get_layout: default_get_layout,
 };
 
+/// Runtime type tag standing in for the C++ dynamic_cast checks on traffic light definitions.
+/// Set by each subclass constructor, read where C++ tests `dynamic_cast<NBLoadedSUMOTLDef*>` / `<NBOwnTLDef*>`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NBTrafficLightDefinitionKind {
+    /// Any other definition (the base class and NBLoadedTLDef)
+    Other,
+    /// C++ NBLoadedSUMOTLDef
+    LoadedSUMOTL,
+    /// C++ NBOwnTLDef
+    OwnTL,
+}
+
 /// The base class for traffic light logic definitions
 /// C++ class `NBTrafficLightDefinition` (netbuild/NBTrafficLightDefinition.h)
 #[repr(C)]
@@ -159,6 +171,8 @@ pub struct NBTrafficLightDefinition {
     pub myNeedsContRelationReady: std::cell::Cell<bool>,
     pub myExtraConflicts: std::cell::RefCell<NBTrafficLightDefinition_ExtraConflicts>,
     pub myExtraConflictsReady: std::cell::Cell<bool>,
+    /// Runtime type tag (see NBTrafficLightDefinitionKind)
+    pub myKind: NBTrafficLightDefinitionKind,
 }
 
 impl std::ops::Deref for NBTrafficLightDefinition {
@@ -249,6 +263,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -283,6 +298,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -315,6 +331,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 

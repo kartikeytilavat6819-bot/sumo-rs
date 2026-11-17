@@ -113,17 +113,6 @@ impl DistributionParameterized {
         }
     }
 
-    /// Returns the maximum value of this distribution
-    pub fn get_max(&self) -> f64 {
-        if self.my_parameter.is_empty() {
-            return f64::INFINITY;
-        }
-        if self.my_parameter[1] <= 0. {
-            return self.my_parameter[0];
-        }
-        if self.my_parameter.len() > 3 { self.my_parameter[3] } else { f64::INFINITY }
-    }
-
     /// Returns the nth parameter of this distribution
     pub fn get_parameter(&self, index: usize) -> f64 {
         self.my_parameter[index]
