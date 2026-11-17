@@ -317,9 +317,16 @@ impl MSDevice_StationFinder {
             notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
             notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
         };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_StationFinder>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
         let mut this = Self::new_device(holder);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
         this
     }
 
@@ -1196,8 +1203,7 @@ impl MSDevice_StationFinder {
         let holderPtr = self.myHolder;
         let stoppingPlaceMemory = time2steps(self.base2.get_weight(holderPtr.m(), "memory".to_string(), 600., true));
         let now = MSNet::get_instance().m().get_current_time_step();
-                // shortcut: MSNet::get_stopping_places returns an unmapped container, so no candidates are collected until it is ported
-        let stopping_places: Vec<Ptr<MSStoppingPlace>> = Vec::new();
+        let stopping_places: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().m().get_stopping_places(SUMO_TAG_CHARGING_STATION).values().copied().collect();
         for cs in stopping_places.iter() {
             let cs = as_charging_station(*cs);
             if cs.get_efficency() < utils::geom::NUMERICAL_EPS || cs.get_charging_power(false) < utils::geom::NUMERICAL_EPS {
@@ -1608,7 +1614,18 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn already_planned_charging(&mut self) -> bool {
         if self.myChargingStation.is_null() {
-            // shortcut: iterating the vehicle's stops (MSStop.chargingStation / edge) is not wired, so no planned charging stop is adopted
+            let holderPtr = self.myHolder;
+            let holder = holderPtr.m();
+            for stop in holder.get_stops().iter() {
+                if !stop.chargingStation.is_null() {
+                    // compare whether we'll make it there without intermediate charging
+                    let expectedConsumption = self.estimate_consumption(holder.get_route().index_op(stop.edge as i32), true, 0.);
+                    if self.myBattery.m().get_actual_battery_capacity() < expectedConsumption {
+                        self.myChargingStation = stop.chargingStation;
+                        return true;
+                    }
+                }
+            }
         }
         false
     }

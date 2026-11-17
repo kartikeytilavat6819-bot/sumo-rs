@@ -22,6 +22,17 @@ impl std::ops::DerefMut for MEVehicleControl {
     }
 }
 
+use crate::microsim::ms_vehicle_control::MSVehicleControlVt;
+
+/// Virtual method table of MEVehicleControl: overrides `buildVehicle`
+static ME_VEHICLE_CONTROL_VT: MSVehicleControlVt = MSVehicleControlVt {
+    build_vehicle: me_vehicle_control_build_vehicle,
+};
+
+fn me_vehicle_control_build_vehicle(vc: &mut MSVehicleControl, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
+    Ptr::from_mut(vc).cast::<MEVehicleControl>().m().build_vehicle(defs, route, type_, ignoreStopErrors, source, addRouteStops)
+}
+
 impl MEVehicleControl {
     /// C++: `void MEVehicleControl::MEVehicleControl()`
     /// Constructor
@@ -29,7 +40,9 @@ impl MEVehicleControl {
     //     : MSVehicleControl() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        MEVehicleControl { base: MSVehicleControl::new() }
+        let mut s = MEVehicleControl { base: MSVehicleControl::new() };
+        s.base.vt = &ME_VEHICLE_CONTROL_VT;
+        s
     }
 
     /// C++: `void MEVehicleControl::~MEVehicleControl() noexcept` [virtual]

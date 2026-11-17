@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::options::options_cont;
+use utils::options::options_cont::with_options;
 
 /// C++ MIN2(a, b) = a < b ? a : b
 fn min2(a: f64, b: f64) -> f64 {
@@ -602,7 +603,13 @@ impl MSEdgeControl {
     // }
     #[allow(unused_variables)]
     pub fn build_meso_segments(&mut self) {
-        // shortcut: MSGlobals::gMesoNet (MELoop::buildSegmentsFor) is not ported, meso segments are not built, upgrade when mesosim lands
+        with_options(|oc| {
+            for edge in self.myEdges.iter() {
+                if !edge.get_lanes().is_empty() {
+                    crate::microsim::ms_globals::meso_net().m().build_segments_for(edge, oc);
+                }
+            }
+        });
     }
 
     /// C++: `void MSEdgeControl::saveState(OutputDevice &)`

@@ -1,0 +1,301 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T22:56:43.652731-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_mmpevem/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev/chargingstation.add.xml"/>
+    </input>
+
+    <output>
+        <precision value="6"/>
+        <emission-output value="tools/oracle/cases/ev_mmpevem/ref.emission.xml"/>
+        <battery-output value="tools/oracle/cases/ev_mmpevem/ref.battery.xml"/>
+        <chargingstations-output value="tools/oracle/cases/ev_mmpevem/ref.chargingstations.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<battery-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/battery_file.xsd">
+    <timestep time="0.000">
+        <vehicle id="ev_charge" energyConsumed="0.000000" totalEnergyConsumed="0.000000" totalEnergyRegenerated="0.000000" actualBatteryCapacity="10000.000000" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="20.000000" acceleration="0.000000" x="4.090000" y="148.754752" lane="-103224#0_0" posOnLane="4.100000" timeStopped="0"/>
+    </timestep>
+    <timestep time="1.000">
+        <vehicle id="ev_charge" energyConsumed="-0.861699" totalEnergyConsumed="0.000000" totalEnergyRegenerated="0.861699" actualBatteryCapacity="10000.861699" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.761558" acceleration="-0.238442" x="23.851558" y="148.633059" lane="-103224#0_0" posOnLane="23.861558" timeStopped="0"/>
+    </timestep>
+    <timestep time="2.000">
+        <vehicle id="ev_charge" energyConsumed="-8.087831" totalEnergyConsumed="0.000000" totalEnergyRegenerated="8.949530" actualBatteryCapacity="10008.949530" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="18.763410" acceleration="-0.998148" x="42.614967" y="148.517513" lane="-103224#0_0" posOnLane="42.624967" timeStopped="0"/>
+    </timestep>
+    <timestep time="3.000">
+        <vehicle id="ev_charge" energyConsumed="4.182462" totalEnergyConsumed="4.182462" totalEnergyRegenerated="8.949530" actualBatteryCapacity="10004.767068" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.019073" acceleration="0.255664" x="61.631834" y="148.402348" lane=":-137720_7_0" posOnLane="3.184041" timeStopped="0"/>
+    </timestep>
+    <timestep time="4.000">
+        <vehicle id="ev_charge" energyConsumed="8.033259" totalEnergyConsumed="12.215721" totalEnergyRegenerated="8.949530" actualBatteryCapacity="9996.733809" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.615581" acceleration="0.596507" x="81.239621" y="148.288490" lane="-103224#1_0" posOnLane="8.369621" timeStopped="0"/>
+    </timestep>
+    <timestep time="5.000">
+        <vehicle id="ev_charge" energyConsumed="-1.514839" totalEnergyConsumed="12.215721" totalEnergyRegenerated="10.464369" actualBatteryCapacity="9998.248648" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.311327" acceleration="-0.304254" x="100.550948" y="148.169642" lane="-103224#1_0" posOnLane="27.680948" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="0.000000" totalEnergyConsumed="0.000000" totalEnergyRegenerated="0.000000" actualBatteryCapacity="10000.000000" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="20.000000" acceleration="0.000000" x="139.555407" y="308.540000" lane="-103227#0_0" posOnLane="4.100000" timeStopped="0"/>
+    </timestep>
+    <timestep time="6.000">
+        <vehicle id="ev_charge" energyConsumed="-11.445454" totalEnergyConsumed="12.215721" totalEnergyRegenerated="21.909823" actualBatteryCapacity="10009.694102" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="14.811327" acceleration="-4.500000" x="115.362275" y="148.078487" lane="-103224#1_0" posOnLane="42.492275" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-10.753850" totalEnergyConsumed="0.000000" totalEnergyRegenerated="10.753850" actualBatteryCapacity="10010.753850" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="18.718862" acceleration="-1.281138" x="139.443126" y="289.821138" lane="-103227#0_0" posOnLane="22.818862" timeStopped="0"/>
+    </timestep>
+    <timestep time="7.000">
+        <vehicle id="ev_charge" energyConsumed="-8.975960" totalEnergyConsumed="12.215721" totalEnergyRegenerated="30.885782" actualBatteryCapacity="10018.670061" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="10.311327" acceleration="-4.500000" x="125.673602" y="148.015028" lane="-103224#1_0" posOnLane="52.803602" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="14.597148" totalEnergyConsumed="14.597148" totalEnergyRegenerated="10.753850" actualBatteryCapacity="9996.156702" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.900097" acceleration="1.181235" x="139.320082" y="269.921041" lane="-103227#1_0" posOnLane="4.978959" timeStopped="0"/>
+    </timestep>
+    <timestep time="8.000">
+        <vehicle id="ev_charge" energyConsumed="-5.781165" totalEnergyConsumed="12.215721" totalEnergyRegenerated="36.666947" actualBatteryCapacity="10024.451226" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="5.834770" acceleration="-4.476557" x="131.508372" y="147.979118" lane="-103224#1_0" posOnLane="58.638372" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-5.784160" totalEnergyConsumed="14.597148" totalEnergyRegenerated="16.538010" actualBatteryCapacity="10001.940863" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.154051" acceleration="-0.746047" x="139.204990" y="250.766990" lane="-103227#1_0" posOnLane="24.133010" timeStopped="0"/>
+    </timestep>
+    <timestep time="9.000">
+        <vehicle id="ev_charge" energyConsumed="9.103894" totalEnergyConsumed="21.319615" totalEnergyRegenerated="36.666947" actualBatteryCapacity="10015.347332" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="8.069883" acceleration="2.235113" x="139.578255" y="147.931991" lane=":-137721_9_0" posOnLane="6.588255" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="6.580959" totalEnergyConsumed="21.178106" totalEnergyRegenerated="16.538010" actualBatteryCapacity="9995.359904" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.615816" acceleration="0.461765" x="139.087122" y="231.151175" lane="-103227#1_0" posOnLane="43.748825" timeStopped="0"/>
+    </timestep>
+    <timestep time="10.000">
+        <vehicle id="ev_charge" energyConsumed="13.550551" totalEnergyConsumed="34.870166" totalEnergyRegenerated="36.666947" actualBatteryCapacity="10001.796781" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="10.535628" acceleration="2.465745" x="150.113883" y="147.871208" lane=":-137721_9_0" posOnLane="17.123883" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-3.737509" totalEnergyConsumed="21.178106" totalEnergyRegenerated="20.275520" actualBatteryCapacity="9999.097413" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.080515" acceleration="-0.535300" x="138.972471" y="212.070659" lane="-103227#1_0" posOnLane="62.829341" timeStopped="0"/>
+    </timestep>
+    <timestep time="11.000">
+        <vehicle id="ev_charge" energyConsumed="10.353202" totalEnergyConsumed="45.223369" totalEnergyRegenerated="36.666947" actualBatteryCapacity="9991.443578" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="12.058747" acceleration="1.523119" x="162.172629" y="147.798938" lane="-103224#2_0" posOnLane="8.382629" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="5.608901" totalEnergyConsumed="26.787007" totalEnergyRegenerated="20.275520" actualBatteryCapacity="9993.488513" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.457521" acceleration="0.377006" x="138.855555" y="192.613138" lane="-103227#1_0" posOnLane="82.286862" timeStopped="0"/>
+    </timestep>
+    <timestep time="12.000">
+        <vehicle id="ev_charge" energyConsumed="16.571932" totalEnergyConsumed="61.795301" totalEnergyRegenerated="36.666947" actualBatteryCapacity="9974.871646" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="14.156276" acceleration="2.097529" x="176.328905" y="147.712705" lane="-103224#2_0" posOnLane="22.538905" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-1.160782" totalEnergyConsumed="26.787007" totalEnergyRegenerated="21.436302" actualBatteryCapacity="9994.649295" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.189719" acceleration="-0.267802" x="138.740247" y="173.423419" lane="-103227#1_0" posOnLane="101.476581" timeStopped="0"/>
+    </timestep>
+    <timestep time="13.000">
+        <vehicle id="ev_charge" energyConsumed="8.965372" totalEnergyConsumed="70.760673" totalEnergyRegenerated="36.666947" actualBatteryCapacity="9965.906274" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="15.129422" acceleration="0.973146" x="191.458327" y="147.620545" lane="-103224#2_0" posOnLane="37.668327" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-1.701030" totalEnergyConsumed="26.787007" totalEnergyRegenerated="23.137331" actualBatteryCapacity="9996.350324" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="18.865392" acceleration="-0.324327" x="138.627878" y="154.558027" lane=":-137721_0_0" posOnLane="2.181973" timeStopped="0"/>
+    </timestep>
+    <timestep time="14.000">
+        <vehicle id="ev_charge" energyConsumed="-9.575173" totalEnergyConsumed="70.760673" totalEnergyRegenerated="46.242120" actualBatteryCapacity="9975.481447" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="11.692990" acceleration="-3.436432" x="203.151318" y="147.549317" lane="-103224#2_0" posOnLane="49.361318" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="4.671347" totalEnergyConsumed="31.458354" totalEnergyRegenerated="23.137331" actualBatteryCapacity="9991.678978" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.163510" acceleration="0.298118" x="138.518027" y="135.394516" lane="-103227#2_0" posOnLane="6.945484" timeStopped="0"/>
+    </timestep>
+    <timestep time="15.000">
+        <vehicle id="ev_charge" energyConsumed="-6.776020" totalEnergyConsumed="70.760673" totalEnergyRegenerated="53.018139" actualBatteryCapacity="9982.257467" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="7.232873" acceleration="-4.460117" x="210.384191" y="147.505259" lane="-103224#2_0" posOnLane="56.594191" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="-1.676638" totalEnergyConsumed="31.458354" totalEnergyRegenerated="24.813969" actualBatteryCapacity="9993.355616" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="18.841689" acceleration="-0.321822" x="138.404164" y="116.552828" lane="-103227#2_0" posOnLane="25.787172" timeStopped="0"/>
+    </timestep>
+    <timestep time="16.000">
+        <vehicle id="ev_charge" energyConsumed="-3.551015" totalEnergyConsumed="70.760673" totalEnergyRegenerated="56.569154" actualBatteryCapacity="9985.808481" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="2.732873" acceleration="-4.500000" x="213.117064" y="147.488611" lane="-103224#2_0" posOnLane="59.327064" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="3.952102" totalEnergyConsumed="35.410455" totalEnergyRegenerated="24.813969" actualBatteryCapacity="9989.403514" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.073759" acceleration="0.232070" x="138.288899" y="97.479069" lane="-103227#2_0" posOnLane="44.860931" timeStopped="0"/>
+    </timestep>
+    <timestep time="17.000">
+        <vehicle id="ev_charge" energyConsumed="-1.145391" totalEnergyConsumed="70.760673" totalEnergyRegenerated="57.714545" actualBatteryCapacity="9986.953872" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="0.645324" acceleration="-2.087549" x="213.762387" y="147.484680" lane="-103224#2_0" posOnLane="59.972387" timeStopped="0"/>
+        <vehicle id="ev_drive" energyConsumed="11.171580" totalEnergyConsumed="46.582035" totalEnergyRegenerated="24.813969" actualBatteryCapacity="9978.231934" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.940877" acceleration="0.867118" x="138.168393" y="77.538192" lane="-103227#2_0" posOnLane="64.801808" timeStopped="0"/>
+    </timestep>
+    <timestep time="18.000">
+        <vehicle id="ev_charge" energyConsumed="0.005902" totalEnergyConsumed="70.766575" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10000.142414" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.015156" acceleration="-0.630168" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="1"/>
+        <vehicle id="ev_drive" energyConsumed="-4.206074" totalEnergyConsumed="46.582035" totalEnergyRegenerated="29.020043" actualBatteryCapacity="9982.438008" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.361121" acceleration="-0.579756" x="138.051391" y="58.177071" lane="-103227#2_0" posOnLane="84.162929" timeStopped="0"/>
+    </timestep>
+    <timestep time="19.000">
+        <vehicle id="ev_charge" energyConsumed="0.100234" totalEnergyConsumed="70.866808" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10013.236625" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="-0.015156" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="2"/>
+        <vehicle id="ev_drive" energyConsumed="0.203545" totalEnergyConsumed="46.785581" totalEnergyRegenerated="29.020043" actualBatteryCapacity="9982.234462" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.233059" acceleration="-0.128062" x="137.935163" y="38.944012" lane="-103227#2_0" posOnLane="103.395988" timeStopped="0"/>
+    </timestep>
+    <timestep time="20.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="70.966835" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10026.331043" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="3"/>
+        <vehicle id="ev_drive" energyConsumed="9.448136" totalEnergyConsumed="56.233716" totalEnergyRegenerated="29.020043" actualBatteryCapacity="9972.786327" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="19.943305" acceleration="0.710246" x="137.814643" y="19.000708" lane="-103227#2_0" posOnLane="123.339292" timeStopped="0"/>
+    </timestep>
+    <timestep time="21.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.066861" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10039.425461" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="4"/>
+    </timestep>
+    <timestep time="22.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.166887" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10052.519880" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="5"/>
+    </timestep>
+    <timestep time="23.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.266913" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10065.614298" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="6"/>
+    </timestep>
+    <timestep time="24.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.366940" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10078.708716" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="7"/>
+    </timestep>
+    <timestep time="25.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.466966" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10091.803134" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="8"/>
+    </timestep>
+    <timestep time="26.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.566992" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10104.897552" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="9"/>
+    </timestep>
+    <timestep time="27.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.667018" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10117.991971" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="10"/>
+    </timestep>
+    <timestep time="28.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.767045" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10131.086389" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="11"/>
+    </timestep>
+    <timestep time="29.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.867071" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10144.180807" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="12"/>
+    </timestep>
+    <timestep time="30.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="71.967097" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10157.275225" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="13"/>
+    </timestep>
+    <timestep time="31.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.067123" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10170.369644" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="14"/>
+    </timestep>
+    <timestep time="32.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.167149" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10183.464062" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="15"/>
+    </timestep>
+    <timestep time="33.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.267176" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10196.558480" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="16"/>
+    </timestep>
+    <timestep time="34.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.367202" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10209.652898" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="17"/>
+    </timestep>
+    <timestep time="35.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.467228" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10222.747316" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="18"/>
+    </timestep>
+    <timestep time="36.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.567254" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10235.841735" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="19"/>
+    </timestep>
+    <timestep time="37.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.667281" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10248.936153" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="20"/>
+    </timestep>
+    <timestep time="38.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.767307" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10262.030571" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="21"/>
+    </timestep>
+    <timestep time="39.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.867333" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10275.124989" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="22"/>
+    </timestep>
+    <timestep time="40.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="72.967359" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10288.219407" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="23"/>
+    </timestep>
+    <timestep time="41.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.067386" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10301.313826" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="24"/>
+    </timestep>
+    <timestep time="42.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.167412" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10314.408244" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="25"/>
+    </timestep>
+    <timestep time="43.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.267438" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10327.502662" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="26"/>
+    </timestep>
+    <timestep time="44.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.367464" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10340.597080" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="27"/>
+    </timestep>
+    <timestep time="45.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.467490" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10353.691499" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="28"/>
+    </timestep>
+    <timestep time="46.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.567517" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10366.785917" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="29"/>
+    </timestep>
+    <timestep time="47.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.667543" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10379.880335" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="30"/>
+    </timestep>
+    <timestep time="48.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.767569" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10392.974753" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="31"/>
+    </timestep>
+    <timestep time="49.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.867595" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10406.069171" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="32"/>
+    </timestep>
+    <timestep time="50.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="73.967622" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10419.163590" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="33"/>
+    </timestep>
+    <timestep time="51.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.067648" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10432.258008" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="34"/>
+    </timestep>
+    <timestep time="52.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.167674" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10445.352426" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="35"/>
+    </timestep>
+    <timestep time="53.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.267700" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10458.446844" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="36"/>
+    </timestep>
+    <timestep time="54.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.367727" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10471.541262" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="37"/>
+    </timestep>
+    <timestep time="55.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.467753" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10484.635681" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="38"/>
+    </timestep>
+    <timestep time="56.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.567779" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10497.730099" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="39"/>
+    </timestep>
+    <timestep time="57.000">
+        <vehicle id="ev_charge" energyConsumed="0.100026" totalEnergyConsumed="74.667805" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10510.824517" maximumBatteryCapacity="35000.000000" chargingStationId="cs0" energyCharged="13.194444" energyChargedInTransit="0.000000" energyChargedStopped="13.194444" speed="0.000000" acceleration="0.000000" x="213.777543" y="147.484588" lane="-103224#2_0" posOnLane="59.987543" timeStopped="40"/>
+    </timestep>
+    <timestep time="58.000">
+        <vehicle id="ev_charge" energyConsumed="1.038361" totalEnergyConsumed="75.706166" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10509.786156" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="1.816808" acceleration="1.816808" x="215.594351" y="147.473521" lane="-103224#2_0" posOnLane="61.804351" timeStopped="0"/>
+    </timestep>
+    <timestep time="59.000">
+        <vehicle id="ev_charge" energyConsumed="3.376839" totalEnergyConsumed="79.083005" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10506.409317" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="3.845882" acceleration="2.029074" x="219.440234" y="147.450094" lane="-103224#2_0" posOnLane="65.650234" timeStopped="0"/>
+    </timestep>
+    <timestep time="60.000">
+        <vehicle id="ev_charge" energyConsumed="7.432193" totalEnergyConsumed="86.515199" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10498.977124" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="6.351768" acceleration="2.505886" x="225.792002" y="147.411402" lane="-103224#2_0" posOnLane="72.002002" timeStopped="0"/>
+    </timestep>
+    <timestep time="61.000">
+        <vehicle id="ev_charge" energyConsumed="6.249870" totalEnergyConsumed="92.765069" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10492.727253" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="7.834876" acceleration="1.483108" x="233.626878" y="147.363677" lane="-103224#2_0" posOnLane="79.836878" timeStopped="0"/>
+    </timestep>
+    <timestep time="62.000">
+        <vehicle id="ev_charge" energyConsumed="12.372316" totalEnergyConsumed="105.137385" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10480.354938" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="10.164505" acceleration="2.329628" x="243.791383" y="147.301760" lane="-103224#2_0" posOnLane="90.001383" timeStopped="0"/>
+    </timestep>
+    <timestep time="63.000">
+        <vehicle id="ev_charge" energyConsumed="17.465975" totalEnergyConsumed="122.603360" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10462.888962" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="12.719729" acceleration="2.555225" x="256.511112" y="147.224278" lane="-103224#2_0" posOnLane="102.721112" timeStopped="0"/>
+    </timestep>
+    <timestep time="64.000">
+        <vehicle id="ev_charge" energyConsumed="17.879842" totalEnergyConsumed="140.483202" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10445.009120" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="14.862469" acceleration="2.142739" x="271.366746" y="147.138991" lane=":-137719_1_0" posOnLane="7.593581" timeStopped="0"/>
+    </timestep>
+    <timestep time="65.000">
+        <vehicle id="ev_charge" energyConsumed="19.021810" totalEnergyConsumed="159.505012" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10425.987310" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="16.821680" acceleration="1.959211" x="288.185261" y="147.038099" lane="-103224#3_0" posOnLane="13.305261" timeStopped="0"/>
+    </timestep>
+    <timestep time="66.000">
+        <vehicle id="ev_charge" energyConsumed="23.611239" totalEnergyConsumed="183.116251" totalEnergyRegenerated="57.714545" actualBatteryCapacity="10402.376071" maximumBatteryCapacity="35000.000000" chargingStationId="NULL" energyCharged="0.000000" energyChargedInTransit="0.000000" energyChargedStopped="0.000000" speed="18.947214" acceleration="2.125534" x="307.132474" y="146.921468" lane="-103224#3_0" posOnLane="32.252474" timeStopped="0"/>
+    </timestep>
+    <timestep time="67.000"/>
+    <timestep time="68.000"/>
+    <timestep time="69.000"/>
+    <timestep time="70.000"/>
+    <timestep time="71.000"/>
+    <timestep time="72.000"/>
+    <timestep time="73.000"/>
+    <timestep time="74.000"/>
+    <timestep time="75.000"/>
+    <timestep time="76.000"/>
+    <timestep time="77.000"/>
+    <timestep time="78.000"/>
+    <timestep time="79.000"/>
+    <timestep time="80.000"/>
+    <timestep time="81.000"/>
+    <timestep time="82.000"/>
+    <timestep time="83.000"/>
+    <timestep time="84.000"/>
+    <timestep time="85.000"/>
+    <timestep time="86.000"/>
+    <timestep time="87.000"/>
+    <timestep time="88.000"/>
+    <timestep time="89.000"/>
+    <timestep time="90.000"/>
+    <timestep time="91.000"/>
+    <timestep time="92.000"/>
+    <timestep time="93.000"/>
+    <timestep time="94.000"/>
+    <timestep time="95.000"/>
+    <timestep time="96.000"/>
+    <timestep time="97.000"/>
+    <timestep time="98.000"/>
+    <timestep time="99.000"/>
+    <timestep time="100.000"/>
+    <timestep time="101.000"/>
+    <timestep time="102.000"/>
+    <timestep time="103.000"/>
+    <timestep time="104.000"/>
+    <timestep time="105.000"/>
+    <timestep time="106.000"/>
+    <timestep time="107.000"/>
+    <timestep time="108.000"/>
+    <timestep time="109.000"/>
+    <timestep time="110.000"/>
+    <timestep time="111.000"/>
+    <timestep time="112.000"/>
+    <timestep time="113.000"/>
+    <timestep time="114.000"/>
+    <timestep time="115.000"/>
+    <timestep time="116.000"/>
+    <timestep time="117.000"/>
+    <timestep time="118.000"/>
+    <timestep time="119.000"/>
+</battery-export>

@@ -33,9 +33,6 @@ fn attr_name(a: i32) -> &'static str {
 const NBEDGE_UNSPECIFIED_WIDTH: f64 = -1.0;
 const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.0;
 const NBEDGE_UNSPECIFIED_OFFSET: f64 = 0.0;
-// shortcut: NBTrafficLightDefinition::OSM_SIGNAL_DIRECTION is not ported as a const yet (nb_traffic_light_definition.rs keeps it as a comment); mirrors NBTrafficLightDefinition.cpp:49, switch to the ported constant when it lands
-const OSM_SIGNAL_DIRECTION: &str = "railway:signal:direction";
-
 /// C++ static `NBNode::FORWARD` (netbuild/NBNode.cpp); NBNode statics are not ported as consts yet.
 const NBNODE_FORWARD: i32 = 1;
 /// C++ static `NBNode::BACKWARD` (netbuild/NBNode.cpp).
@@ -117,15 +114,6 @@ pub enum RelationHandler_RestrictionType {
     ONLY = 0,
     NO = 1,
     UNKNOWN = 2,
-}
-
-/// C++ enum `NIImporter_OpenStreetMap::SignalType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(i64)]
-pub enum NIImporter_OpenStreetMap_SignalType {
-    SIGNAL_NONE = 0,
-    SIGNAL_MAIN = 1,
-    SIGNAL_ETCS_BLOCK = 2,
 }
 
 /// C++ enum `NIImporter_OpenStreetMap::WayType`
@@ -2080,8 +2068,6 @@ pub struct NIImporter_OpenStreetMap {
     pub myImportTurnSigns: bool,
     /// whether edges should carry information on the use of typemap defaults
     pub myAnnotateDefaults: bool,
-    /// whether ETCS signals default to moving block
-    pub myETCS_movingBlock: bool,
     /// number of placement skips due to non-explicit oneway
     pub myPlacementSkippedNonExplicitOneWay: i32,
     /// number of placement skips due to generated opposite-direction auxiliary edges
@@ -2200,7 +2186,6 @@ impl NIImporter_OpenStreetMap {
             myImportCrossings: false,
             myImportTurnSigns: false,
             myAnnotateDefaults: false,
-            myETCS_movingBlock: false,
             myPlacementSkippedNonExplicitOneWay: 0,
             myPlacementSkippedAuxOppositeDirection: 0,
         }
@@ -2537,7 +2522,6 @@ impl NIImporter_OpenStreetMap {
         self.myImportCrossings = oc.get_bool("osm.crossings").unwrap();
         self.myOnewayDualSidewalk = oc.get_bool("osm.oneway-reverse-sidewalk").unwrap();
         self.myAnnotateDefaults = oc.get_bool("osm.annotate-defaults").unwrap();
-        self.myETCS_movingBlock = oc.get_bool("osm.etcs-moving-block").unwrap();
         self.myPlacementSkippedNonExplicitOneWay = 0;
         self.myPlacementSkippedAuxOppositeDirection = 0;
 
@@ -2638,7 +2622,7 @@ impl NIImporter_OpenStreetMap {
         }
         // Mark which nodes are used by traffic lights or are pedestrian crossings
         for (id, nodesIt) in &self.myOSMNodes {
-            if nodesIt.tlsControlled || nodesIt.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 || (nodesIt.pedestrianCrossing && self.myImportCrossings) {
+            if nodesIt.tlsControlled || nodesIt.railwaySignal || (nodesIt.pedestrianCrossing && self.myImportCrossings) {
                 // If the key is not found in the map, the value is automatically initialized with 0.
                 *nodeUsage.entry(*id).or_insert(0) += 1;
             }
@@ -2916,14 +2900,8 @@ impl NIImporter_OpenStreetMap {
                 if n.get_parameter("crossing:barrier", "no") != "no" || n.get_parameter("crossing.light", "") == "yes" || n.tlsControlled {
                     node.m().reinit(&pos, SumoXMLNodeType::RAIL_CROSSING, false);
                 }
-            } else if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            } else if n.railwaySignal {
                 node.m().reinit(&pos, SumoXMLNodeType::RAIL_SIGNAL, false);
-                if (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32) == 0 {
-                    node.m().base2.set_parameter("virtual", "true");
-                }
-                if self.myETCS_movingBlock && (n.railwaySignal & NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32) != 0 {
-                    node.m().base2.set_parameter("moving-block", "true");
-                }
             } else if n.tlsControlled {
                 // ok, this node is a traffic light node where no other nodes
                 //  participate
@@ -2942,11 +2920,11 @@ impl NIImporter_OpenStreetMap {
                 node.m().base2.set_parameter("buffer_stop", "true");
                 node.m().set_fringe_type(FringeType::INNER);
             }
-            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            if n.railwaySignal {
                 if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_FORWARD as i32 {
-                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "forward");
+                    node.m().base2.set_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION, "forward");
                 } else if n.myRailDirection == NIImporter_OpenStreetMap_WayType::WAY_BACKWARD as i32 {
-                    node.m().base2.set_parameter(OSM_SIGNAL_DIRECTION, "backward");
+                    node.m().base2.set_parameter(NBTrafficLightDefinition_OSM_SIGNAL_DIRECTION, "backward");
                 }
             }
             let params = n.get_parameters_map().clone();
@@ -3651,10 +3629,10 @@ impl NIImporter_OpenStreetMap {
         let mut nodeDirection: i64 = WAY_UNKNOWN;
         let fromOSM = self.myOSMNodes[&to_long(from.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
         let toOSM = self.myOSMNodes[&to_long(to.base.get_id()).unwrap_or_else(|err| panic!("{err}"))];
-        if fromOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+        if fromOSM.railwaySignal {
             nodeDirection |= fromOSM.myRailDirection as i64;
         }
-        if toOSM.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+        if toOSM.railwaySignal {
             nodeDirection |= toOSM.myRailDirection as i64;
         }
 
@@ -3680,7 +3658,7 @@ impl NIImporter_OpenStreetMap {
                     sc.m().insert(stop, false);
                 }
             }
-            if n.railwaySignal != NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
+            if n.railwaySignal {
                 nodeDirection |= n.myRailDirection as i64;
             }
             let pos = Position::new3(n.lon, n.lat, n.ele);
@@ -3956,7 +3934,7 @@ impl NIImporter_OpenStreetMap {
             }
         }
         if applyPlacement && placementOffset.abs() > utils::geom::POSITION_EPS {
-            // shortcut: C++ catches InvalidArgument from move2side and skips placement; the Rust move2side has no Result, so a failure here is not caught, upgrade when move2side returns Result
+            // C++ catch (InvalidArgument&) is unreachable: PositionVector::move2side(double) throws nothing
             shape.move2side(placementOffset, 100.0);
         }
 
@@ -4059,8 +4037,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '{id}'.")));
             }
         }
         if addBackward {
@@ -4125,8 +4102,7 @@ impl NIImporter_OpenStreetMap {
             if !ec.m().insert(nbe, false) {
                 // SAFETY: the edge was rejected by the container, so nothing else holds it.
                 drop(unsafe { Box::from_raw(nbe.as_raw()) });
-                // shortcut: C++ throws ProcessError here; this fn returns i32, so panic with the same text instead
-                panic!("{}", ProcessError::new(format!("Could not add edge '-{id}'.")));
+                std::panic::panic_any(ProcessError::new(format!("Could not add edge '-{id}'.")));
             }
         }
         if (e.myParkingType & PARKING_BOTH) != 0 && utils::options::options_cont::is_set("parking-output") {
@@ -4889,7 +4865,7 @@ pub struct NIImporter_OpenStreetMap_NIOSMNode {
     /// Whether this is a railway crossing
     pub railwayCrossing: bool,
     /// Whether this is a railway (main) signal
-    pub railwaySignal: i32,
+    pub railwaySignal: bool,
     /// Whether this is a railway buffer stop
     pub railwayBufferStop: bool,
     /// Whether this is a public transport stop position
@@ -4948,7 +4924,7 @@ impl NIImporter_OpenStreetMap_NIOSMNode {
             tlsControlled: false,
             pedestrianCrossing: false,
             railwayCrossing: false,
-            railwaySignal: NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32,
+            railwaySignal: false,
             railwayBufferStop: false,
             ptStopPosition: false,
             ptStopLength: 0.0,
@@ -5318,12 +5294,8 @@ impl NIImporter_OpenStreetMap_NodesHandler {
                 } else if starts_with(&key, "railway:signal") || (key == "railway" && value == "signal") {
                     let kv = format!("{key}={value}");
                     let kglob = format!("{key}=");
-                    if key == "railway:signal:train_protection" && value == "DE-ESO:ne14" {
-                        node.m().railwaySignal |= NIImporter_OpenStreetMap_SignalType::SIGNAL_ETCS_BLOCK as i32;
-                    } else if node.railwaySignal == NIImporter_OpenStreetMap_SignalType::SIGNAL_NONE as i32 {
-                        if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
-                            node.m().railwaySignal = NIImporter_OpenStreetMap_SignalType::SIGNAL_MAIN as i32;
-                        }
+                    if self.myRailSignalRules.contains(&kv) || self.myRailSignalRules.contains(&kglob) {
+                        node.m().railwaySignal = true;
                     }
                 } else if starts_with(&key, "railway:position") && value.len() > node.position.len() {
                     // use the entry with the highest precision (more digits)

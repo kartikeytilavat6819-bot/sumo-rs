@@ -935,8 +935,9 @@ impl MSDevice_SSM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
-        // shortcut: equippedByDefaultAssignmentOptions needs the holder's Parameterised and vType parameters, which SUMOVehicle does not expose yet; until then no SSM device is equipped (only runs requesting device.ssm.* are affected), upgrade when SUMOVehicle exposes getParameter()/getVehicleType()
-        let equipped = false;
+        let equipped = utils::options::options_cont::with_options(|oc| {
+            MSDevice::equipped_by_default_assignment_options(oc, "ssm", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false)
+        });
         if equipped {
             if MSGlobals::use_meso_sim() {
                 write_warningf!("SSM Device for vehicle '%' will not be built. (SSMs not supported in MESO)", v.get_id());

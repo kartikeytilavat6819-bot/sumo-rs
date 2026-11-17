@@ -72,29 +72,7 @@ fn st(s: &str) -> utils::common::time::SUMOTime {
     or_panic(utils::common::time::string2time(s))
 }
 
-/// C++ checkStepLengthMultiple (utils/common/SUMOTime.cpp); only emits warnings, its C++ return value is always false
-// shortcut: this function lives in utils/common/SUMOTime.cpp and is not ported there yet, so it is local to MSFrame
-fn check_step_length_multiple(t: utils::common::time::SUMOTime, error: &str, delta_t: utils::common::time::SUMOTime, begin: utils::common::time::SUMOTime) {
-    use utils::common::time::time2string;
-    if begin % delta_t == 0 {
-        if t % delta_t != 0 {
-            utils::common::msg_handler::write_warning(&format!(
-                "The given time value {} is not a multiple of the step length {}{}.",
-                time2string(t),
-                time2string(delta_t),
-                error
-            ));
-        }
-    } else if (t - begin) % delta_t != 0 {
-        utils::common::msg_handler::write_warning(&format!(
-            "The given time value {} is not reached with step length {} and begin time {}{}.",
-            time2string(t),
-            time2string(delta_t),
-            time2string(begin),
-            error
-        ));
-    }
-}
+use utils::common::time::check_step_length_multiple;
 
 impl MSFrame {
     /// C++: `void MSFrame::fillOptions()` [static]
@@ -942,7 +920,6 @@ impl MSFrame {
             oc.add_option_sub_topic("Time");
             oc.add_option_sub_topic("Processing");
             oc.add_option_sub_topic("Routing");
-            oc.add_option_sub_topic("Persons");
             oc.do_register_abbr("net-file", 'n', SumoOption::file_name());
             oc.add_synonyme("net-file", "net", false);
             oc.add_description("net-file", "Input", "Load road network description from FILE");
@@ -1213,7 +1190,7 @@ impl MSFrame {
             oc.do_register("max-num-vehicles", SumoOption::integer(-1));
             oc.add_description("max-num-vehicles", "Processing", "Delay vehicle insertion to stay within the given maximum number");
             oc.do_register("max-num-persons", SumoOption::integer(-1));
-            oc.add_description("max-num-persons", "Persons", "Delay person insertion to stay within the given maximum number");
+            oc.add_description("max-num-persons", "Processing", "Delay person insertion to stay within the given maximum number");
             oc.do_register("max-num-teleports", SumoOption::integer(-1));
             oc.add_description("max-num-teleports", "Processing", "Abort the simulation if the given maximum number of teleports is exceeded");
             oc.do_register("scale", SumoOption::float(1.0));
@@ -1233,7 +1210,7 @@ impl MSFrame {
             oc.do_register("time-to-teleport.remove-constraint", SumoOption::bool(false));
             oc.add_description("time-to-teleport.remove-constraint", "Processing", "Whether rail-signal-constraint based deadlocks shall be cleared by removing a constraint");
             oc.do_register("time-to-teleport.ride", SumoOption::string_typed("-1", "TIME"));
-            oc.add_description("time-to-teleport.ride", "Persons", "The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting");
+            oc.add_description("time-to-teleport.ride", "Processing", "The waiting time after which persons / containers waiting for a pickup are teleported. Negative values disable teleporting");
             oc.do_register("time-to-teleport.bidi", SumoOption::string_typed("-1", "TIME"));
             oc.add_description("time-to-teleport.bidi", "Processing", "The waiting time after which vehicles on bidirectional edges are teleported");
             oc.do_register("time-to-teleport.railsignal-deadlock", SumoOption::string_typed("-1", "TIME"));
@@ -1313,35 +1290,55 @@ impl MSFrame {
             oc.do_register("use-stop-started", SumoOption::bool(false));
             oc.add_description("use-stop-started", "Processing", "Override stop arrival times with stop started times when given");
             oc.do_register("pedestrian.model", SumoOption::string_with("striping"));
-            oc.add_description("pedestrian.model", "Persons", "Select among pedestrian models ['nonInteracting', 'striping', 'jupedsim']");
+            oc.add_description("pedestrian.model", "Processing", "Select among pedestrian models ['nonInteracting', 'striping', 'jupedsim', 'remote']");
             oc.do_register("pedestrian.timegap-crossing", SumoOption::float(2.0));
-            oc.add_description("pedestrian.timegap-crossing", "Persons", "Minimal acceptable gap (in seconds) between two vehicles before starting to cross");
+            oc.add_description("pedestrian.timegap-crossing", "Processing", "Minimal acceptable gap (in seconds) between two vehicles before starting to cross");
             oc.do_register("pedestrian.striping.stripe-width", SumoOption::float(0.64));
-            oc.add_description("pedestrian.striping.stripe-width", "Persons", "Width of parallel stripes for segmenting a sidewalk (meters) for use with model 'striping'");
+            oc.add_description("pedestrian.striping.stripe-width", "Processing", "Width of parallel stripes for segmenting a sidewalk (meters) for use with model 'striping'");
             oc.do_register("pedestrian.striping.dawdling", SumoOption::float(0.2));
-            oc.add_description("pedestrian.striping.dawdling", "Persons", "Factor for random slow-downs [0,1] for use with model 'striping'");
+            oc.add_description("pedestrian.striping.dawdling", "Processing", "Factor for random slow-downs [0,1] for use with model 'striping'");
             oc.do_register("pedestrian.striping.mingap-to-vehicle", SumoOption::float(0.25));
-            oc.add_description("pedestrian.striping.mingap-to-vehicle", "Persons", "Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model 'striping'");
+            oc.add_description("pedestrian.striping.mingap-to-vehicle", "Processing", "Minimal gap / safety buffer (in meters) from a pedestrian to another vehicle for use with model 'striping'");
             oc.do_register("pedestrian.striping.jamtime", SumoOption::string_typed("300", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime", "Persons", "Time in seconds after which pedestrians start squeezing through a jam when using model 'striping' (non-positive values disable squeezing)");
+            oc.add_description("pedestrian.striping.jamtime", "Processing", "Time in seconds after which pedestrians start squeezing through a jam when using model 'striping' (non-positive values disable squeezing)");
             oc.do_register("pedestrian.striping.jamtime.crossing", SumoOption::string_typed("10", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime.crossing", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model 'striping' (non-positive values disable squeezing)");
+            oc.add_description("pedestrian.striping.jamtime.crossing", "Processing", "Time in seconds after which pedestrians start squeezing through a jam while on a pedestrian crossing when using model 'striping' (non-positive values disable squeezing)");
             oc.do_register("pedestrian.striping.jamtime.narrow", SumoOption::string_typed("1", "TIME"));
-            oc.add_description("pedestrian.striping.jamtime.narrow", "Persons", "Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model 'striping'");
+            oc.add_description("pedestrian.striping.jamtime.narrow", "Processing", "Time in seconds after which pedestrians start squeezing through a jam while on a narrow lane when using model 'striping'");
             oc.do_register("pedestrian.striping.jamfactor", SumoOption::float(0.25));
-            oc.add_description("pedestrian.striping.jamfactor", "Persons", "Factor for reducing speed of pedestrian in jammed state");
+            oc.add_description("pedestrian.striping.jamfactor", "Processing", "Factor for reducing speed of pedestrian in jammed state");
             oc.do_register("pedestrian.striping.reserve-oncoming", SumoOption::float(0.0));
-            oc.add_description("pedestrian.striping.reserve-oncoming", "Persons", "Fraction of stripes to reserve for oncoming pedestrians");
+            oc.add_description("pedestrian.striping.reserve-oncoming", "Processing", "Fraction of stripes to reserve for oncoming pedestrians");
             oc.do_register("pedestrian.striping.reserve-oncoming.junctions", SumoOption::float(0.34));
-            oc.add_description("pedestrian.striping.reserve-oncoming.junctions", "Persons", "Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas");
+            oc.add_description("pedestrian.striping.reserve-oncoming.junctions", "Processing", "Fraction of stripes to reserve for oncoming pedestrians on crossings and walkingareas");
             oc.do_register("pedestrian.striping.reserve-oncoming.max", SumoOption::float(1.28));
-            oc.add_description("pedestrian.striping.reserve-oncoming.max", "Persons", "Maximum width in m to reserve for oncoming pedestrians");
+            oc.add_description("pedestrian.striping.reserve-oncoming.max", "Processing", "Maximum width in m to reserve for oncoming pedestrians");
             oc.do_register("pedestrian.striping.legacy-departposlat", SumoOption::bool(false));
-            oc.add_description("pedestrian.striping.legacy-departposlat", "Persons", "Interpret departPosLat for walks in legacy style");
+            oc.add_description("pedestrian.striping.legacy-departposlat", "Processing", "Interpret departPosLat for walks in legacy style");
             oc.do_register("pedestrian.striping.walkingarea-detail", SumoOption::integer(4));
-            oc.add_description("pedestrian.striping.walkingarea-detail", "Persons", "Generate INT intermediate points to smooth out lanes within the walkingarea");
+            oc.add_description("pedestrian.striping.walkingarea-detail", "Processing", "Generate INT intermediate points to smooth out lanes within the walkingarea");
+            oc.do_register("pedestrian.jupedsim.step-length", SumoOption::string_typed("0.01", "TIME"));
+            oc.add_description("pedestrian.jupedsim.step-length", "Processing", "The update interval of the JuPedSim simulation (in seconds)");
+            oc.do_register("pedestrian.jupedsim.exit-tolerance", SumoOption::float(1.0));
+            oc.add_description("pedestrian.jupedsim.exit-tolerance", "Processing", "The distance to accept the JuPedSim arrival point (in meters)");
+            oc.do_register("pedestrian.jupedsim.model", SumoOption::string_with("CollisionFreeSpeed"));
+            oc.add_description("pedestrian.jupedsim.model", "Processing", "The submodel to use in JuPedSim ('CollisionFreeSpeed', 'CollisionFreeSpeedV2', 'GeneralizedCentrifugalForce', 'SocialForce')");
+            oc.do_register("pedestrian.jupedsim.strength-neighbor-repulsion", SumoOption::float(8.0));
+            oc.add_description("pedestrian.jupedsim.strength-neighbor-repulsion", "Processing", "The neighbor repulsion strength of the JuPedSim model");
+            oc.do_register("pedestrian.jupedsim.range-neighbor-repulsion", SumoOption::float(0.1));
+            oc.add_description("pedestrian.jupedsim.range-neighbor-repulsion", "Processing", "The neighbor repulsion range of the JuPedSim model (in meters)");
+            oc.do_register("pedestrian.jupedsim.strength-geometry-repulsion", SumoOption::float(5.0));
+            oc.add_description("pedestrian.jupedsim.strength-geometry-repulsion", "Processing", "The geometry repulsion strength of the JuPedSim model");
+            oc.do_register("pedestrian.jupedsim.range-geometry-repulsion", SumoOption::float(0.02));
+            oc.add_description("pedestrian.jupedsim.range-geometry-repulsion", "Processing", "The geometry repulsion range of the JuPedSim model (in meters)");
+            oc.do_register("pedestrian.jupedsim.wkt", SumoOption::file_name());
+            oc.add_description("pedestrian.jupedsim.wkt", "Output", "The filename to output the JuPedSim network as WKT");
+            oc.do_register("pedestrian.jupedsim.wkt.geo", SumoOption::bool(false));
+            oc.add_description("pedestrian.jupedsim.wkt.geo", "Output", "Whether to output JuPedSim network as WKT using geo-coordinates (lon/lat)");
+            oc.do_register("pedestrian.jupedsim.py", SumoOption::file_name());
+            oc.add_description("pedestrian.jupedsim.py", "Output", "The filename to output the JuPedSim setup as Python script");
             oc.do_register("ride.stop-tolerance", SumoOption::float(10.0));
-            oc.add_description("ride.stop-tolerance", "Persons", "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops");
+            oc.add_description("ride.stop-tolerance", "Processing", "Tolerance to apply when matching pedestrian and vehicle positions on boarding at individual stops");
             oc.do_register("mapmatch.distance", SumoOption::float(100.0));
             oc.add_description("mapmatch.distance", "Processing", "Maximum distance when mapping input coordinates (fromXY etc.) to the road network");
             oc.do_register("mapmatch.junctions", SumoOption::bool(false));
@@ -1371,21 +1368,21 @@ impl MSFrame {
             oc.do_register("astar.landmark-distances", SumoOption::file_name());
             oc.add_description("astar.landmark-distances", "Routing", "Initialize lookup table for astar ALT-variant from the given file");
             oc.do_register("persontrip.walkfactor", SumoOption::float(0.75));
-            oc.add_description("persontrip.walkfactor", "Persons", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
+            oc.add_description("persontrip.walkfactor", "Routing", "Use FLOAT as a factor on pedestrian maximum speed during intermodal routing");
             oc.do_register("persontrip.walk-opposite-factor", SumoOption::float(1.0));
-            oc.add_description("persontrip.walk-opposite-factor", "Persons", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
+            oc.add_description("persontrip.walk-opposite-factor", "Processing", "Use FLOAT as a factor on walking speed against vehicle traffic direction");
             oc.do_register("persontrip.transfer.car-walk", SumoOption::string_vector_with(vec!["parkingAreas".to_string()]));
-            oc.add_description("persontrip.transfer.car-walk", "Persons", "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
+            oc.add_description("persontrip.transfer.car-walk", "Routing", "Where are mode changes from car to walking allowed (possible values: 'parkingAreas', 'ptStops', 'allJunctions' and combinations)");
             oc.do_register("persontrip.transfer.taxi-walk", SumoOption::string_vector());
-            oc.add_description("persontrip.transfer.taxi-walk", "Persons", "Where taxis can drop off customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.add_description("persontrip.transfer.taxi-walk", "Routing", "Where taxis can drop off customers ('allJunctions, 'ptStops', 'parkingAreas')");
             oc.do_register("persontrip.transfer.walk-taxi", SumoOption::string_vector());
-            oc.add_description("persontrip.transfer.walk-taxi", "Persons", "Where taxis can pick up customers ('allJunctions, 'ptStops', 'parkingAreas')");
+            oc.add_description("persontrip.transfer.walk-taxi", "Routing", "Where taxis can pick up customers ('allJunctions, 'ptStops', 'parkingAreas')");
             oc.do_register("persontrip.default.group", SumoOption::string());
-            oc.add_description("persontrip.default.group", "Persons", "When set, trips between the same origin and destination will share a taxi by default");
+            oc.add_description("persontrip.default.group", "Routing", "When set, trips between the same origin and destination will share a taxi by default");
             oc.do_register("persontrip.taxi.waiting-time", SumoOption::string_typed("300", "TIME"));
-            oc.add_description("persontrip.taxi.waiting-time", "Persons", "Estimated time for taxi pickup");
+            oc.add_description("persontrip.taxi.waiting-time", "Routing", "Estimated time for taxi pickup");
             oc.do_register("persontrip.ride-public-line", SumoOption::bool(false));
-            oc.add_description("persontrip.ride-public-line", "Persons", "Only use the intended public transport line rather than any alternative line that stops at the destination");
+            oc.add_description("persontrip.ride-public-line", "Routing", "Only use the intended public transport line rather than any alternative line that stops at the destination");
             oc.do_register("railway.max-train-length", SumoOption::float(1000.0));
             oc.add_description("railway.max-train-length", "Routing", "Use FLOAT as a maximum train length when initializing the railway router");
             oc.do_register("replay-rerouting", SumoOption::bool(false));

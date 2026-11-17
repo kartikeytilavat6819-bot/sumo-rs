@@ -1,0 +1,5 @@
+<additional>
+    <calibrator id="cal0" edge="E1" pos="50.00">
+        <flow begin="0.00" end="200.00" vehsPerHour="720" speed="10.00" route="r0"/>
+    </calibrator>
+</additional>
