@@ -183,7 +183,19 @@ pub struct MSVehicleControl {
     /// List of vehicles which belong to public transport
     pub myPTVehicles: Vec<Ptr<SUMOVehicle>>,
     pub myPendingRemovals: Vec<Ptr<SUMOVehicle>>,
+    /// virtual dispatch for `buildVehicle` (overridden by MEVehicleControl)
+    pub vt: &'static MSVehicleControlVt,
 }
+
+/// Virtual method table of `MSVehicleControl` (C++ virtual `buildVehicle`)
+pub struct MSVehicleControlVt {
+    pub build_vehicle: fn(&mut MSVehicleControl, Ptr<SUMOVehicleParameter>, ConstMSRoutePtr, Ptr<MSVehicleType>, bool, MSVehicleControl_VehicleDefinitionSource, bool) -> Ptr<SUMOVehicle>,
+}
+
+/// Default `MSVehicleControl` vtable: the base class implementations
+pub static DEFAULT_MS_VEHICLE_CONTROL_VT: MSVehicleControlVt = MSVehicleControlVt {
+    build_vehicle: default_build_vehicle,
+};
 
 impl MSVehicleControl {
     /// C++: `void MSVehicleControl::MSVehicleControl()`
@@ -246,6 +258,7 @@ impl MSVehicleControl {
             // shortcut: C++ myPendingRemovals(gNumSimThreads > 1) is a locking container flag; a plain Vec is used
             myPTVehicles: Vec::new(),
             myPendingRemovals: Vec::new(),
+            vt: &DEFAULT_MS_VEHICLE_CONTROL_VT,
         };
 
         s.init_default_types();
@@ -275,6 +288,13 @@ impl MSVehicleControl {
     // }
     #[allow(unused_variables)]
     pub fn build_vehicle(&mut self, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
+        (self.vt.build_vehicle)(self, defs, route, type_, ignoreStopErrors, source, addRouteStops)
+    }
+}
+
+/// C++ body of `MSVehicleControl::buildVehicle` (the base implementation of the virtual)
+#[allow(unused_variables)]
+fn default_build_vehicle(vc: &mut MSVehicleControl, defs: Ptr<SUMOVehicleParameter>, route: ConstMSRoutePtr, type_: Ptr<MSVehicleType>, ignoreStopErrors: bool, source: MSVehicleControl_VehicleDefinitionSource, addRouteStops: bool) -> Ptr<SUMOVehicle> {
         let rng = if source == MSVehicleControl_VehicleDefinitionSource::ROUTEFILE {
             SUMORouteHandler::get_parsing_rng()
         } else {
@@ -282,7 +302,7 @@ impl MSVehicleControl {
         };
         let speedFactor = type_.compute_chosen_speed_deviation(defs.speedFactor, rng, -1.);
         let built: Ptr<MSVehicle> = Ptr::from_mut(Box::leak(Box::new(MSVehicle::new(defs, route, type_, speedFactor))));
-        self.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
+        vc.init_vehicle(Ptr::from_mut(&mut built.m().base), ignoreStopErrors, addRouteStops, source);
         // C++ MSDevice_Routing ctor schedules preInsertionReroute for trips (VEHPARS_FORCE_REROUTE); it runs before insertion
         // shortcut: the event is run directly here instead of through MSEventControl, periodic pre-insertion rescheduling is not done
         let forceReroute = built.m().base.get_parameter().was_set(crate::microsim::ms_base_vehicle::VEHPARS_FORCE_REROUTE);
@@ -296,8 +316,9 @@ impl MSVehicleControl {
             }
         }
         Ptr::from_mut(&mut built.m().base.base)
-    }
+}
 
+impl MSVehicleControl {
     /// C++: `bool MSVehicleControl::addVehicle(const std::string &, SUMOVehicle *)` [virtual]
     /// Tries to insert the vehicle into the internal vehicle container
     // bool
