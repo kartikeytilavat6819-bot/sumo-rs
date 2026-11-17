@@ -47,6 +47,15 @@ impl std::ops::DerefMut for MSPModel_Interacting {
 // C++ static members of MSPModel_Interacting (port as module-level statics, see AGENTS.md):
 //   static Pedestrians MSPModel_Interacting::noPedestrians;
 
+fn msp_model_interacting_get_active_number(m: &mut MSPModel) -> i32 {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().get_active_number()
+}
+
+/// Dispatch table for the Interacting family (Striping and JuPedSim inherit getActiveNumber from here)
+pub static MSPMODEL_INTERACTING_VT: MSPModelVt = MSPModelVt {
+    get_active_number: msp_model_interacting_get_active_number,
+};
+
 impl MSPModel_Interacting {
     /// C++: `void MSPModel_Interacting::~MSPModel_Interacting() noexcept` [virtual]
     // MSPModel_Interacting::~MSPModel_Interacting() {

@@ -163,6 +163,15 @@ impl std::ops::DerefMut for MSPModel_NonInteracting {
     }
 }
 
+fn msp_model_non_interacting_get_active_number(m: &mut MSPModel) -> i32 {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().get_active_number()
+}
+
+/// Dispatch table for MSPModel_NonInteracting
+pub static MSPMODEL_NON_INTERACTING_VT: MSPModelVt = MSPModelVt {
+    get_active_number: msp_model_non_interacting_get_active_number,
+};
+
 impl MSPModel_NonInteracting {
     /// C++: `void MSPModel_NonInteracting::MSPModel_NonInteracting(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
@@ -175,7 +184,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
         Self {
-            base: MSPModel {},
+            base: MSPModel { vt: &MSPMODEL_NON_INTERACTING_VT },
             myNet: net,
             myNumActivePedestrians: 0,
         }

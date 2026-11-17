@@ -12,7 +12,22 @@ const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)
 pub struct MSPModel {
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MSPModelVt,
 }
+
+/// Virtual dispatch table for the polymorphic methods of MSPModel.
+pub struct MSPModelVt {
+    pub get_active_number: fn(&mut MSPModel) -> i32,
+}
+
+fn default_get_active_number(_: &mut MSPModel) -> i32 {
+    panic!("MSPModel::getActiveNumber is pure virtual; call it on a concrete pedestrian model")
+}
+
+pub static DEFAULT_MSPMODEL_VT: MSPModelVt = MSPModelVt {
+    get_active_number: default_get_active_number,
+};
 
 // C++ static members of MSPModel (port as module-level statics, see AGENTS.md):
 //   static const int MSPModel::FORWARD;
@@ -148,8 +163,7 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_active_number(&mut self) -> i32 {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSPModel::getActiveNumber is pure virtual; call it on a concrete pedestrian model")
+        (self.vt.get_active_number)(self)
     }
 
     /// C++: `int MSPModel::canTraverse(int, const ConstMSEdgeVector &, int &)` [static]

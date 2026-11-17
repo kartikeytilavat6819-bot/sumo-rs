@@ -250,7 +250,7 @@ impl MSPModel_Striping {
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
         let s = MSPModel_Striping {
             base: MSPModel_Interacting {
-                base: MSPModel {},
+                base: MSPModel { vt: &MSPMODEL_INTERACTING_VT },
                 myNumActivePedestrians: 0,
                 myActiveLanes: BTreeMap::new(),
                 myAmActive: false,
