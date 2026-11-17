@@ -1115,9 +1115,11 @@ impl MSStateHandler {
                 }
             }
             if !self.myCFMAttrs.is_null() {
-                let vars = v.cast::<MSVehicle>().m().get_car_follow_variables();
+                let veh = v.cast::<MSVehicle>();
+                let vars = veh.m().get_car_follow_variables();
                 if !vars.is_null() {
-                    vars.m().load_state(&*self.myCFMAttrs);
+                    let cfm = veh.m().get_car_follow_model();
+                    cfm.load_vehicle_variables(vars.m(), &*self.myCFMAttrs);
                 }
                 self.myCFMAttrs = Ptr::null();
             }

@@ -17,6 +17,12 @@ fn eidm_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>,
 fn eidm_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64, maxSpeedLane: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).maximum_lane_speed_cf(veh, maxSpeed, maxSpeedLane) }
 fn eidm_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_EIDM>(m).get_model_id() }
 fn eidm_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_EIDM>(m).duplicate(vtype) }
+fn eidm_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_EIDM_VehicleVariables) }.save_state(out, m)
+}
+fn eidm_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_EIDM_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn eidm_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_EIDM>(m).create_vehicle_variables() }
 
 /// Virtual table of MSCFModel_EIDM: its overrides on top of the MSCFModel default table
@@ -35,6 +41,8 @@ pub const EIDM_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: eidm_get_model_id,
     duplicate: eidm_duplicate,
     create_vehicle_variables: eidm_create_vehicle_variables,
+    save_vehicle_variables: eidm_save_vehicle_variables,
+    load_vehicle_variables: eidm_load_vehicle_variables,
     ..DEFAULT_MSCF_MODEL_VT
 };
 use utils::geom::NUMERICAL_EPS;

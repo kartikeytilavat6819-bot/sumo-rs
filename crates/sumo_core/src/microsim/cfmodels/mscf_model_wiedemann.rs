@@ -12,6 +12,12 @@ fn wiedemann_interaction_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, vL: f64) -> f64
 fn wiedemann_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).get_secure_gap(veh, pred, speed, leaderSpeed, leaderMaxDecel) }
 fn wiedemann_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_Wiedemann>(m).get_model_id() }
 fn wiedemann_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_Wiedemann>(m).duplicate(vtype) }
+fn wiedemann_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Wiedemann_VehicleVariables) }.save_state(out, m)
+}
+fn wiedemann_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Wiedemann_VehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn wiedemann_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_Wiedemann>(m).create_vehicle_variables() }
 
 /// Virtual table of MSCFModel_Wiedemann: its overrides on top of the MSCFModel default table
@@ -24,6 +30,8 @@ pub const WIEDEMANN_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: wiedemann_get_model_id,
     duplicate: wiedemann_duplicate,
     create_vehicle_variables: wiedemann_create_vehicle_variables,
+    save_vehicle_variables: wiedemann_save_vehicle_variables,
+    load_vehicle_variables: wiedemann_load_vehicle_variables,
     ..DEFAULT_MSCF_MODEL_VT
 };
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
