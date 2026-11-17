@@ -670,7 +670,6 @@ impl MSTriggeredRerouter {
             let mut newRoute: ConstMSEdgeVector = Vec::new();
             let oldParkingArea = v.get_next_parking_area();
             let newParkingArea = self.reroute_parking_area(rerouteDef, v, &mut newDestination, &mut newRoute);
-            eprintln!("RC01 rr veh={} t={} newPA={} newDest={} nextPA={}", v.get_id(), now, if newParkingArea.is_null() { "null".to_string() } else { newParkingArea.get_id().to_string() }, newDestination, if oldParkingArea.is_null() { "null".to_string() } else { oldParkingArea.get_id().to_string() }); // RC01 TRACE
             if !newParkingArea.is_null() {
                 // adapt plans of any riders
                 let persons: Vec<Ptr<MSTransportable>> = v.get_persons().clone();

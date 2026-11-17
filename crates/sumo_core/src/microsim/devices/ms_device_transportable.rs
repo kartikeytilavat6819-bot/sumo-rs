@@ -212,7 +212,6 @@ impl MSDevice_Transportable {
         let holder = self.myHolder;
         let net = MSNet::get_instance();
         let currentTime = net.get_current_time_step();
-        if self.myAmContainer { eprintln!("RC01 nm t={} myStopped={} hs={} n={}", currentTime, self.myStopped, holder.is_stopped(), self.myTransportables.len()); } // RC01 TRACE
         if self.myStopped {
             if !holder.is_stopped() {
                 let freeFlowTimeCorrection = if crate::microsim::ms_globals::use_meso_sim() { time2steps(newPos / newSpeed) } else { 0 };
@@ -233,7 +232,6 @@ impl MSDevice_Transportable {
                     let transportable = self.myTransportables[i];
                     let stage = stage_driving(transportable.get_current_stage());
                     let canLeave = stage.is_some_and(|s| s.m().can_leave_vehicle(transportable, &*holder, &*stop));
-                    eprintln!("RC01 canLeave t={} can={} stage={} dest={} stopEdge={} tid={}", currentTime, canLeave, stage.is_some(), transportable.get_destination().get_id(), stop.get_edge().get_id(), transportable.get_id()); // RC01 TRACE
                     if canLeave && !Self::will_transfer_at_join(transportable, joinVeh) {
                         let timeForNext: &mut SUMOTime = if self.myAmContainer { &mut stop.timeToLoadNextContainer } else { &mut stop.timeToBoardNextPerson };
                         let taxiDevice = taxi_device_of(holder);
