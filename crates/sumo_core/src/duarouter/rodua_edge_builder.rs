@@ -4,7 +4,9 @@ use crate::prelude::*;
 
 /// C++ `RODUAEdgeBuilder::buildEdge` body, the target of the virtual dispatch in ROAbstractEdgeBuilder
 fn rodua_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-    Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType))))
+    let edge = Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType))));
+    ROEdge::register_in_all_edges(edge);
+    edge
 }
 
 /// Interface for building instances of duarouter-edges
