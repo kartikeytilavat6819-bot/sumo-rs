@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="noisy" sigma="0.5" speedFactor="normc(1,0.1,0.5,1.5)" maxSpeed="20"/>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <vehicle id="f0" type="noisy" route="r0" depart="0"/>
+  <vehicle id="f1" type="noisy" route="r1" depart="1"/>
+  <vehicle id="f2" type="noisy" route="r0" depart="3">
+    <stop lane="-103224#1_0" endPos="20" duration="5"/>
+  </vehicle>
+  <vehicle id="f3" type="noisy" route="r1" depart="4"/>
+</routes>

@@ -1,0 +1,373 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:51.052802-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_stationfinder/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_stationfinder/routes.rou"/>
+        <additional-files value="tools/oracle/cases/device_stationfinder/chargingstation.add.xml"/>
+    </input>
+
+    <output>
+        <precision value="6"/>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.battery.xml"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.stationfinder.probability value="1"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.000">
+        <vehicle id="sf_low" x="4.090000" y="148.754752" angle="90.352826" type="EV" speed="20.000000" pos="4.100000" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="1.000">
+        <vehicle id="sf_low" x="23.851558" y="148.633059" angle="90.352826" type="EV" speed="19.761558" pos="23.861558" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="2.000">
+        <vehicle id="sf_low" x="42.614967" y="148.517513" angle="90.352826" type="EV" speed="18.763410" pos="42.624967" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="3.000">
+        <vehicle id="sf_low" x="61.631834" y="148.402348" angle="90.325001" type="EV" speed="19.019073" pos="3.184041" lane=":-137720_7_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="4.000">
+        <vehicle id="sf_low" x="81.239621" y="148.288490" angle="90.352614" type="EV" speed="19.615581" pos="8.369621" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="5.000">
+        <vehicle id="sf_low" x="100.550948" y="148.169642" angle="90.352614" type="EV" speed="19.311327" pos="27.680948" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="139.555407" y="308.540000" angle="180.343672" type="EV" speed="20.000000" pos="4.100000" lane="-103227#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="6.000">
+        <vehicle id="sf_low" x="115.362275" y="148.078487" angle="90.352614" type="EV" speed="14.811327" pos="42.492275" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="139.443126" y="289.821138" angle="180.343672" type="EV" speed="18.718862" pos="22.818862" lane="-103227#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="7.000">
+        <vehicle id="sf_low" x="125.673602" y="148.015028" angle="90.352614" type="EV" speed="10.311327" pos="52.803602" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="139.320082" y="269.921041" angle="180.344275" type="EV" speed="19.900097" pos="4.978959" lane="-103227#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="8.000">
+        <vehicle id="sf_low" x="131.508372" y="147.979118" angle="90.352614" type="EV" speed="5.834770" pos="58.638372" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="139.204990" y="250.766990" angle="180.344275" type="EV" speed="19.154051" pos="24.133010" lane="-103227#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="9.000">
+        <vehicle id="sf_low" x="139.578255" y="147.931991" angle="90.330549" type="EV" speed="8.069883" pos="6.588255" lane=":-137721_9_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="139.087122" y="231.151175" angle="180.344275" type="EV" speed="19.615816" pos="43.748825" lane="-103227#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="10.000">
+        <vehicle id="sf_full" x="4.090000" y="148.754752" angle="90.352826" type="EVfull" speed="20.000000" pos="4.100000" lane="-103224#0_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="150.113883" y="147.871208" angle="90.330549" type="EV" speed="10.535628" pos="17.123883" lane=":-137721_9_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.972471" y="212.070659" angle="180.344275" type="EV" speed="19.080515" pos="62.829341" lane="-103227#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="11.000">
+        <vehicle id="sf_full" x="23.216896" y="148.636967" angle="90.352826" type="EVfull" speed="19.126896" pos="23.226896" lane="-103224#0_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="162.172629" y="147.798938" angle="90.349011" type="EV" speed="12.058747" pos="8.382629" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.855555" y="192.613138" angle="180.344275" type="EV" speed="19.457521" pos="82.286862" lane="-103227#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="12.000">
+        <vehicle id="sf_full" x="42.351657" y="148.519135" angle="90.352826" type="EVfull" speed="19.134761" pos="42.361657" lane="-103224#0_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="176.328905" y="147.712705" angle="90.349011" type="EV" speed="14.156276" pos="22.538905" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.740247" y="173.423419" angle="180.344275" type="EV" speed="19.189719" pos="101.476581" lane="-103227#1_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="4.090000" y="148.754752" angle="90.352826" type="EV" speed="19.134761" pos="4.100000" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="13.000">
+        <vehicle id="sf_full" x="62.018930" y="148.400200" angle="90.321614" type="EVfull" speed="19.669748" pos="3.571405" lane=":-137720_7_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="192.099330" y="147.616640" angle="90.349011" type="EV" speed="15.770424" pos="38.309330" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.627878" y="154.558027" angle="180.330109" type="EV" speed="18.865392" pos="2.181973" lane=":-137721_0_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="23.544557" y="148.634950" angle="90.352826" type="EV" speed="19.454557" pos="23.554557" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="14.000">
+        <vehicle id="sf_full" x="81.925830" y="148.284267" angle="90.352614" type="EVfull" speed="19.914425" pos="9.055830" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="210.218854" y="147.506266" angle="90.349011" type="EV" speed="18.119524" pos="56.428854" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.518027" y="135.394516" angle="180.346243" type="EV" speed="19.163510" pos="6.945484" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="43.263190" y="148.513521" angle="90.352826" type="EV" speed="19.718632" pos="43.273190" lane="-103224#0_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="15.000">
+        <vehicle id="sf_full" x="100.050549" y="148.172721" angle="90.352614" type="EVfull" speed="18.124719" pos="27.180549" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="229.882385" y="147.386486" angle="90.349011" type="EV" speed="19.663532" pos="76.092385" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.404164" y="116.552828" angle="180.346243" type="EV" speed="18.841689" pos="25.787172" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="63.106441" y="148.394167" angle="90.317865" type="EV" speed="19.846481" pos="4.659670" lane=":-137720_7_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="16.000">
+        <vehicle id="sf_full" x="114.072159" y="148.086427" angle="90.352614" type="EVfull" speed="14.021610" pos="41.202159" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="249.109539" y="147.269365" angle="90.349011" type="EV" speed="19.227154" pos="95.319539" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.288899" y="97.479069" angle="180.346243" type="EV" speed="19.073759" pos="44.860931" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="82.839247" y="148.278646" angle="90.352614" type="EV" speed="19.739576" pos="9.969247" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="17.000">
+        <vehicle id="sf_full" x="123.825348" y="148.026403" angle="90.352614" type="EVfull" speed="9.753189" pos="50.955348" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="268.998152" y="147.151794" angle="90.309704" type="EV" speed="19.893314" pos="5.222853" lane=":-137719_1_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.168393" y="77.538192" angle="180.346243" type="EV" speed="19.940877" pos="64.801808" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="99.152972" y="148.178245" angle="90.352614" type="EV" speed="16.313726" pos="26.282972" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="18.000">
+        <vehicle id="sf_full" x="130.430204" y="147.985754" angle="90.352614" type="EVfull" speed="6.604856" pos="57.560204" lane="-103224#1_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="288.352064" y="147.037072" angle="90.352684" type="EV" speed="19.359211" pos="13.472064" lane="-103224#3_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="138.051391" y="58.177071" angle="180.346243" type="EV" speed="19.361121" pos="84.162929" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="110.966698" y="148.105539" angle="90.352614" type="EV" speed="11.813726" pos="38.096698" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="19.000">
+        <vehicle id="sf_full" x="139.182302" y="147.934275" angle="90.330549" type="EVfull" speed="8.752098" pos="6.192302" lane=":-137721_9_0" slope="0.000000"/>
+        <vehicle id="sf_low" x="307.877598" y="146.916881" angle="90.352684" type="EV" speed="19.525534" pos="32.997598" lane="-103224#3_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="137.935163" y="38.944012" angle="180.346243" type="EV" speed="19.233059" pos="103.395988" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="119.314141" y="148.054166" angle="90.352614" type="EV" speed="8.347443" pos="46.444141" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="20.000">
+        <vehicle id="sf_full" x="149.987208" y="147.871939" angle="90.330549" type="EVfull" speed="10.804906" pos="16.997208" lane=":-137721_9_0" slope="0.000000"/>
+        <vehicle id="sf_low2" x="137.814643" y="19.000708" angle="180.346243" type="EV" speed="19.943305" pos="123.339292" lane="-103227#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="127.277858" y="148.005155" angle="90.352614" type="EV" speed="7.963717" pos="54.407858" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="21.000">
+        <vehicle id="sf_full" x="162.750210" y="147.795419" angle="90.349011" type="EVfull" speed="12.763002" pos="8.960210" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="132.035706" y="147.975873" angle="90.352614" type="EV" speed="4.757848" pos="59.165706" lane="-103224#1_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="22.000">
+        <vehicle id="sf_full" x="176.940306" y="147.708981" angle="90.349011" type="EVfull" speed="14.190096" pos="23.150306" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="138.566120" y="147.937830" angle="90.330549" type="EV" speed="6.530414" pos="5.576120" lane=":-137721_9_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="23.000">
+        <vehicle id="sf_full" x="193.318186" y="147.609216" angle="90.349011" type="EVfull" speed="16.377879" pos="39.528186" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="147.137396" y="147.888380" angle="90.330549" type="EV" speed="8.571277" pos="14.147396" lane=":-137721_9_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="24.000">
+        <vehicle id="sf_full" x="211.517871" y="147.498353" angle="90.349011" type="EVfull" speed="18.199685" pos="57.727871" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="157.406844" y="147.827968" angle="90.347242" type="EV" speed="10.269447" pos="3.616844" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="25.000">
+        <vehicle id="sf_full" x="231.244903" y="147.378186" angle="90.349011" type="EVfull" speed="19.727032" pos="77.454903" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="169.448297" y="147.754618" angle="90.349011" type="EV" speed="12.041453" pos="15.658297" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="26.000">
+        <vehicle id="sf_full" x="250.778068" y="147.259201" angle="90.349011" type="EVfull" speed="19.533164" pos="96.988068" lane="-103224#2_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="184.087838" y="147.665442" angle="90.349011" type="EV" speed="14.639541" pos="30.297838" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="27.000">
+        <vehicle id="sf_full" x="269.567679" y="147.148715" angle="90.309704" type="EVfull" speed="18.794826" pos="5.792894" lane=":-137719_1_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="197.440454" y="147.584105" angle="90.349011" type="EV" speed="13.352616" pos="43.650454" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="28.000">
+        <vehicle id="sf_full" x="289.447177" y="147.030331" angle="90.352684" type="EVfull" speed="19.884283" pos="14.567177" lane="-103224#3_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="206.293070" y="147.530179" angle="90.349011" type="EV" speed="8.852616" pos="52.503070" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="29.000">
+        <vehicle id="sf_full" x="309.180184" y="146.908863" angle="90.352684" type="EVfull" speed="19.733007" pos="34.300184" lane="-103224#3_0" slope="0.000000"/>
+        <vehicle id="sf_stop" x="211.345509" y="147.499403" angle="90.349011" type="EV" speed="5.052439" pos="57.555509" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="30.000">
+        <vehicle id="sf_stop" x="212.848167" y="147.490249" angle="90.349011" type="EV" speed="1.502658" pos="59.058167" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="31.000">
+        <vehicle id="sf_stop" x="213.391774" y="147.486938" angle="90.349011" type="EV" speed="0.543607" pos="59.601774" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="32.000">
+        <vehicle id="sf_stop" x="213.706682" y="147.485020" angle="90.349011" type="EV" speed="0.314908" pos="59.916682" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="33.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.079346" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="34.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="35.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="36.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="37.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="38.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="39.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="40.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="41.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="42.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="43.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="44.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="45.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="46.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="47.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="48.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="49.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="50.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="51.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="52.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="53.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="54.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="55.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="56.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="57.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="58.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="59.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="60.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="61.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="62.000">
+        <vehicle id="sf_stop" x="213.786027" y="147.484536" angle="90.349011" type="EV" speed="0.000000" pos="59.996027" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="63.000">
+        <vehicle id="sf_stop" x="216.115656" y="147.470346" angle="90.349011" type="EV" speed="2.329628" pos="62.325656" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="64.000">
+        <vehicle id="sf_stop" x="221.000509" y="147.440590" angle="90.349011" type="EV" speed="4.884853" pos="67.210509" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="65.000">
+        <vehicle id="sf_stop" x="228.028101" y="147.397781" angle="90.349011" type="EV" speed="7.027593" pos="74.238101" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="66.000">
+        <vehicle id="sf_stop" x="237.037578" y="147.342900" angle="90.349011" type="EV" speed="9.009477" pos="83.247578" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="67.000">
+        <vehicle id="sf_stop" x="247.929621" y="147.276552" angle="90.349011" type="EV" speed="10.892043" pos="94.139621" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="68.000">
+        <vehicle id="sf_stop" x="261.263393" y="147.195330" angle="90.349011" type="EV" speed="13.333772" pos="107.473393" lane="-103224#2_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="69.000">
+        <vehicle id="sf_stop" x="275.967755" y="147.113304" angle="90.321399" type="EV" speed="14.714361" pos="1.087755" lane="-103224#3_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="70.000">
+        <vehicle id="sf_stop" x="292.503533" y="147.011517" angle="90.352684" type="EV" speed="16.535778" pos="17.623533" lane="-103224#3_0" slope="0.000000"/>
+    </timestep>
+    <timestep time="71.000"/>
+    <timestep time="72.000"/>
+    <timestep time="73.000"/>
+    <timestep time="74.000"/>
+    <timestep time="75.000"/>
+    <timestep time="76.000"/>
+    <timestep time="77.000"/>
+    <timestep time="78.000"/>
+    <timestep time="79.000"/>
+    <timestep time="80.000"/>
+    <timestep time="81.000"/>
+    <timestep time="82.000"/>
+    <timestep time="83.000"/>
+    <timestep time="84.000"/>
+    <timestep time="85.000"/>
+    <timestep time="86.000"/>
+    <timestep time="87.000"/>
+    <timestep time="88.000"/>
+    <timestep time="89.000"/>
+    <timestep time="90.000"/>
+    <timestep time="91.000"/>
+    <timestep time="92.000"/>
+    <timestep time="93.000"/>
+    <timestep time="94.000"/>
+    <timestep time="95.000"/>
+    <timestep time="96.000"/>
+    <timestep time="97.000"/>
+    <timestep time="98.000"/>
+    <timestep time="99.000"/>
+    <timestep time="100.000"/>
+    <timestep time="101.000"/>
+    <timestep time="102.000"/>
+    <timestep time="103.000"/>
+    <timestep time="104.000"/>
+    <timestep time="105.000"/>
+    <timestep time="106.000"/>
+    <timestep time="107.000"/>
+    <timestep time="108.000"/>
+    <timestep time="109.000"/>
+    <timestep time="110.000"/>
+    <timestep time="111.000"/>
+    <timestep time="112.000"/>
+    <timestep time="113.000"/>
+    <timestep time="114.000"/>
+    <timestep time="115.000"/>
+    <timestep time="116.000"/>
+    <timestep time="117.000"/>
+    <timestep time="118.000"/>
+    <timestep time="119.000"/>
+    <timestep time="120.000"/>
+    <timestep time="121.000"/>
+    <timestep time="122.000"/>
+    <timestep time="123.000"/>
+    <timestep time="124.000"/>
+    <timestep time="125.000"/>
+    <timestep time="126.000"/>
+    <timestep time="127.000"/>
+    <timestep time="128.000"/>
+    <timestep time="129.000"/>
+    <timestep time="130.000"/>
+    <timestep time="131.000"/>
+    <timestep time="132.000"/>
+    <timestep time="133.000"/>
+    <timestep time="134.000"/>
+    <timestep time="135.000"/>
+    <timestep time="136.000"/>
+    <timestep time="137.000"/>
+    <timestep time="138.000"/>
+    <timestep time="139.000"/>
+    <timestep time="140.000"/>
+    <timestep time="141.000"/>
+    <timestep time="142.000"/>
+    <timestep time="143.000"/>
+    <timestep time="144.000"/>
+    <timestep time="145.000"/>
+    <timestep time="146.000"/>
+    <timestep time="147.000"/>
+    <timestep time="148.000"/>
+    <timestep time="149.000"/>
+</fcd-export>

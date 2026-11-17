@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additionalFiles>
+  <chargingStation id="cs0" lane="-103224#2_0" startPos="20" endPos="60" power="50000" efficiency="0.95" chargeInTransit="false" chargeDelay="0"/>
+</additionalFiles>

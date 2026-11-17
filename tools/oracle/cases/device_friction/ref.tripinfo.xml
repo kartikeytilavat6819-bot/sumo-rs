@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:53.039582-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_friction/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_friction/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_friction/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_friction/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_friction/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <friction_device>
+        <device.friction.probability value="1"/>
+    </friction_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="f1" depart="1.00" departLane="-103227#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="18.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="18.75" duration="17.00" routeLength="307.51" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.72" rerouteNo="0" devices="tripinfo_f1 fcd_f1 friction_f1" vType="noisy" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="f3" depart="4.00" departLane="-103227#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="21.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="18.78" duration="17.00" routeLength="307.51" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.70" rerouteNo="0" devices="tripinfo_f3 fcd_f3 friction_f3" vType="noisy" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="f0" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="26.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="19.33" duration="26.00" routeLength="305.55" waitingTime="2.00" waitingCount="1" stopTime="0.00" timeLoss="10.58" rerouteNo="0" devices="tripinfo_f0 fcd_f0 friction_f0" vType="noisy" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="f2" depart="3.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="34.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="19.96" duration="31.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="5.00" timeLoss="4.55" rerouteNo="0" devices="tripinfo_f2 fcd_f2 friction_f2" vType="noisy" speedFactor="1.01" vaporized=""/>
+</tripinfos>

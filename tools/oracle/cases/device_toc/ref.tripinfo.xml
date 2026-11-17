@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:49.783444-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_toc/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_toc/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_toc/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_toc/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_toc/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <toc_device>
+        <device.toc.probability value="1"/>
+        <device.toc.manualType value="manual"/>
+        <device.toc.automatedType value="automated"/>
+        <device.toc.file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_toc/ref.toc.xml"/>
+    </toc_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="toc_free" depart="3.00" departLane="-103227#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="19.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="20.00" duration="16.00" routeLength="307.51" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_toc_free toc_toc_free driverstatetoc_free fcd_toc_free" vType="automated" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="toc_dyn" depart="1.00" departLane="-103224#0_1" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="24.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="20.00" duration="23.00" routeLength="305.55" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="7.33" rerouteNo="0" devices="tripinfo_toc_dyn toc_toc_dyn driverstatetoc_dyn fcd_toc_dyn" vType="automated" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="toc_manual" depart="5.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="26.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="19.80" duration="21.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.56" rerouteNo="0" devices="tripinfo_toc_manual toc_toc_manual driverstatetoc_manual fcd_toc_manual" vType="manual" speedFactor="0.98" vaporized=""/>
+    <tripinfo id="blocker" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="91.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="19.53" duration="91.00" routeLength="305.55" waitingTime="2.00" waitingCount="1" stopTime="60.00" timeLoss="11.02" rerouteNo="0" devices="tripinfo_blocker toc_blocker driverstateblocker fcd_blocker" vType="manual" speedFactor="0.96" vaporized=""/>
+</tripinfos>

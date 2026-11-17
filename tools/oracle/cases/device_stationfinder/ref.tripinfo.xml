@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:52:51.048191-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/device_stationfinder/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/device_stationfinder/routes.rou"/>
+        <additional-files value="tools/oracle/cases/device_stationfinder/chargingstation.add.xml"/>
+    </input>
+
+    <output>
+        <precision value="6"/>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.battery.xml"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-dv01/tools/oracle/cases/device_stationfinder/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.stationfinder.probability value="1"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="sf_low" depart="0.000" departLane="-103224#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="20.000" arrivalLane="-103224#3_0" arrivalPos="35.740000" arrivalSpeed="19.166211" duration="20.000" routeLength="306.550000" waitingTime="0.000" waitingCount="0" stopTime="0.000" timeLoss="3.851" rerouteNo="0" devices="tripinfo_sf_low stationfinder_sf_low battery_sf_low fcd_sf_low" vType="EV" speedFactor="1.060000" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="9969.775669" totalEnergyConsumed="128.341106" totalEnergyRegenerated="98.116776"/>
+    </tripinfo>
+    <tripinfo id="sf_low2" depart="5.000" departLane="-103227#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="21.000" arrivalLane="-103227#2_0" arrivalPos="142.310000" arrivalSpeed="19.033765" duration="16.000" routeLength="308.510000" waitingTime="0.000" waitingCount="0" stopTime="0.000" timeLoss="0.571" rerouteNo="0" devices="tripinfo_sf_low2 stationfinder_sf_low2 battery_sf_low2 fcd_sf_low2" vType="EV" speedFactor="0.938300" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="9973.943609" totalEnergyConsumed="58.510020" totalEnergyRegenerated="32.453628"/>
+    </tripinfo>
+    <tripinfo id="sf_full" depart="10.000" departLane="-103224#0_0" departPos="4.100000" departSpeed="20.000000" departDelay="0.000" arrival="30.000" arrivalLane="-103224#3_0" arrivalPos="35.740000" arrivalSpeed="19.973895" duration="20.000" routeLength="306.550000" waitingTime="0.000" waitingCount="0" stopTime="0.000" timeLoss="3.746" rerouteNo="0" devices="tripinfo_sf_full stationfinder_sf_full battery_sf_full fcd_sf_full" vType="EVfull" speedFactor="1.010400" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="29961.278999" totalEnergyConsumed="134.551799" totalEnergyRegenerated="95.830798"/>
+    </tripinfo>
+    <tripinfo id="sf_stop" depart="12.000" departLane="-103224#0_0" departPos="4.100000" departSpeed="19.134761" departDelay="0.000" arrival="71.000" arrivalLane="-103224#3_0" arrivalPos="35.740000" arrivalSpeed="18.735881" duration="59.000" routeLength="306.550000" waitingTime="0.000" waitingCount="0" stopTime="30.000" timeLoss="7.476" rerouteNo="0" devices="tripinfo_sf_stop stationfinder_sf_stop battery_sf_stop fcd_sf_stop" vType="EV" speedFactor="1.082700" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="10363.371102" totalEnergyConsumed="171.784185" totalEnergyRegenerated="139.321953"/>
+    </tripinfo>
+</tripinfos>
