@@ -5782,12 +5782,44 @@ impl MSBaseVehicle {
     //     }
     //     return true;
     // }
-    #[allow(unused_variables)]
     pub fn insert_jump(&mut self, nextStopIndex: i32, itStart: MSRouteIterator, errorMsg: &mut String) -> bool {
-        // shortcut: jump-stop insertion needs route-iterator arithmetic (MSRouteIterator is Unmapped); not ported yet
-        let _ = (nextStopIndex, itStart);
-        *errorMsg = "insertJump is not ported yet".to_string();
-        false
+        let mut needJump = true;
+        if nextStopIndex > 0 {
+            let priorStop = &self.myStops[nextStopIndex as usize - 1];
+            if priorStop.pars.jump >= 0 {
+                needJump = false;
+            }
+        }
+        if needJump {
+            let startEdge: Ptr<MSEdge> = self.myRoute.get_edges()[itStart];
+            let mut jumpStopPars = SUMOVehicleParameter_Stop::default();
+            jumpStopPars.endPos = startEdge.get_length();
+            jumpStopPars.speed = 1000.0;
+            jumpStopPars.jump = 0;
+            jumpStopPars.edge = startEdge.get_id().to_string();
+            jumpStopPars.parametersSet = STOP_SPEED_SET | STOP_JUMP_SET;
+            let mut jumpStopLane: Ptr<MSLane> = Ptr::null();
+            for cand in startEdge.get_lanes() {
+                if cand.allows_vehicle_class(self.get_v_class()) {
+                    jumpStopLane = *cand;
+                    break;
+                }
+            }
+            if jumpStopLane.is_null() {
+                *errorMsg = "unable to replace stop with teleporting".to_string();
+                return false;
+            }
+            let mut jumpStop = MSStop::new(&jumpStopPars);
+            jumpStop.init_pars(&jumpStopPars);
+            jumpStop.lane = jumpStopLane;
+            jumpStop.edge = self.myRoute.get_edges().len(); // will be patched in replaceRoute
+            self.myStops.insert(nextStopIndex as usize, jumpStop);
+            if !self.has_departed() && self.myParameter.stops.len() as i32 > nextStopIndex {
+                // stops will be rebuilt from scratch so we must patch the stops in myParameter
+                self.myParameter.m().stops.insert(nextStopIndex as usize, jumpStopPars);
+            }
+        }
+        true
     }
 
     /// C++: `void MSBaseVehicle::setSkips(MSStop &, int)` [private]
