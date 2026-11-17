@@ -4156,8 +4156,25 @@ impl MSBaseVehicle {
                     }
                     ok = false;
                 }
-                Some(it) => {
-                    start = it;
+                Some(_) => {
+                    // C++ also validates the stop's own route index (stop.edge) against the route
+                    let it2 = stop.edge;
+                    if it2 >= edges.len() {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid route index for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), self.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else if it2 < start {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid (relative) route index {} expected after {} for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), it2 as i32 - self.myCurrEdge as i32, start as i32 - self.myCurrEdge as i32, self.get_id(),
+                                utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else {
+                        start = it2;
+                    }
                 }
             }
             i += 1;
@@ -5052,8 +5069,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn update_best_lanes(&mut self, forceRebuild: bool, startLane: Ptr<MSLane>) {
-        // no-op in the base class; MSVehicle overrides it
-        let _ = (forceRebuild, startLane);
+        // virtual dispatch: MSVehicle overrides it; the base body is empty
+        if let Some(mut v) = self.as_micro_vehicle() {
+            v.m().update_best_lanes(forceRebuild, startLane);
+        }
     }
 
     /// C++: `int MSBaseVehicle::getRNGIndex() const` [const, virtual]
