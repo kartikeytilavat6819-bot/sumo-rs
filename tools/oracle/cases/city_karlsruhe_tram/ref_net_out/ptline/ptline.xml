@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:19:58.872964-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="tools/oracle/cases/city_karlsruhe_tram/input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/net.net.xml"/>
+        <ptstop-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/ptstop.xml"/>
+        <ptline-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_karlsruhe_tram.ptline/ptline.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<ptLines xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/ptlines_file.xsd">
+    <ptLine id="1343602" name="Stadtbahn S51: Germersheim =&gt; Söllingen" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="29" missingAfter="14">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104960" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="15090241" name="Stadtbahn S1: Ettlingen Albgaubad =&gt; KIT-Campus Nord" line="S1" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.05" missingBefore="16" missingAfter="20">
+        <route edges="1226629401 1011457787#0 1011457787#1 304548198#0 304548198#1 304548198#2 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534369" name="Marktplatz (Pyramide U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="1607109" name="Stadtbahn S52: Germersheim =&gt; Karlsruhe West =&gt; Karlsruhe Marktplatz" line="S52" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.00" missingBefore="25">
+        <route edges="1226629402#0 1226629402#1"/>
+    </ptLine>
+    <ptLine id="1622732" name="Stadtbahn S52: Karlsruhe Marktplatz =&gt; Germersheim" line="S52" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.00" missingAfter="18">
+        <route edges="1226629402#0 1226629402#1"/>
+    </ptLine>
+    <ptLine id="169136" name="Stadtbahn S1: Hochstetten =&gt; Bad Herrenalb" line="S1" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.04" missingBefore="26" missingAfter="25">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 304548197 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="2640942878" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="169137" name="Stadtbahn S1: Bad Herrenalb =&gt; Hochstetten" line="S1" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.04" missingBefore="25" missingAfter="26">
+        <route edges="1226629401 1011457787#0 1011457787#1 304548198#0 304548198#1 304548198#2 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534369" name="Marktplatz (Pyramide U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="173172" name="Stadtbahn S11: Ittersbach =&gt; Hochstetten" line="S11" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.02" missingBefore="27" missingAfter="26">
+        <route edges="1226629401 1011457787#0 1011457787#1 304548198#0 304548198#1 304548198#2 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="173173" name="Stadtbahn S11: Hochstetten =&gt; Ittersbach" line="S11" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.04" missingBefore="26" missingAfter="27">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 304548197 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="2640942878" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="177452" name="Straßenbahn S2: Spöck =&gt; Rheinstetten" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.04" missingBefore="23" missingAfter="23">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534374" name="Kronenplatz (U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="177453" name="Straßenbahn S2: Rheinstetten =&gt; Spöck" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.04" missingBefore="22" missingAfter="23">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="181184" name="Stadtbahn S5: Söllingen =&gt; Wörth" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.05" missingBefore="15" missingAfter="23">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="3234308913" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="181190" name="Stadtbahn S5 Wörth =&gt; Söllingen" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.05" missingBefore="23" missingAfter="15">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104960" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="182368" name="Stadtbahn S7: Achern → Karlsruhe Tullastraße" line="S7" type="light_rail" vClass="rail_urban" color="255,249,10" completeness="0.08" missingBefore="19" missingAfter="3">
+        <route edges="1226629401 1011457787#0 1011457787#1 258768292 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104958" name="Marktplatz (Pyramide U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="182369" name="Stadtbahn S4 Eilzug: Bretten =&gt; Albtalbahnhof" line="S4" type="light_rail" vClass="rail_urban" period="86400" color="159,24,76" completeness="0.12" missingBefore="9" missingAfter="6">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="182371" name="Stadtbahn S7: Karlsruhe Tullastr → Achern" line="S7" type="light_rail" vClass="rail_urban" color="255,249,10" completeness="0.08" missingBefore="3" missingAfter="19">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="183505" name="NL1 Heide =&gt; Hirtenweg" line="NL1" type="tram" vClass="tram" color="red" completeness="0.13" missingBefore="8" missingAfter="5">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="189816" name="Stadtbahn S8: Karlsruhe Tullastraße → Forbach (Schwarzwald)" line="S8" type="light_rail" vClass="rail_urban" color="109,104,42" completeness="0.06" missingBefore="3" missingAfter="31">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="190111" name="Stadtbahn S8: Karlsruhe Tullastraße → Bondorf (b Herrenberg)" line="S8" type="light_rail" vClass="rail_urban" color="109,104,42" completeness="0.03" missingBefore="3" missingAfter="56">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="190112" name="Stadtbahn S8: Bondorf → Karlsruhe Tullastraße" line="S8" type="light_rail" vClass="rail_urban" color="109,104,42" completeness="0.03" missingBefore="56" missingAfter="3">
+        <route edges="1226629401 1011457787#0 1011457787#1 258768292 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104958" name="Marktplatz (Pyramide U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="2083867" name="Stadtbahn S5 Wörth Badepark =&gt; Pforzheim" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="23" missingAfter="24">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104960" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="21164490" name="Straßenbahn 1: Durlach Bahnhof =&gt; Heide" line="1" type="tram" vClass="tram" period="600" color="red" completeness="0.12" missingBefore="6" missingAfter="8">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534374" name="Kronenplatz (U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="21164491" name="Straßenbahn 1: Heide =&gt; Durlach Bahnhof" line="1" type="tram" vClass="tram" period="600" color="red" completeness="0.12" missingBefore="8" missingAfter="6">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="2395144" name="Stadtbahn S4: Öhringen-Cappel =&gt; Albtalbahnhof" line="S4" type="light_rail" vClass="rail_urban" period="3600" color="159,24,76" completeness="0.03" missingBefore="67" missingAfter="6">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="2400967" name="Stadtbahn S4: Albtalbahnhof=&gt; Öhringen-Cappel" line="S4" type="light_rail" vClass="rail_urban" period="3600" color="159,24,76" completeness="0.03" missingBefore="6" missingAfter="67">
+        <route edges="1226629401 1011457787#0 1011457787#1 258768292 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104958" name="Marktplatz (Pyramide U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="4292645" name="Stadtbahn S5 Pforzheim Hbf =&gt; Wörth-Badepark" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="24" missingAfter="23">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="3234308913" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="4543406" name="Stadtbahn S5 Eilzug Pforzheim Hauptbahnhof =&gt; Karlsruhe Albtalbahnhof" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.10" missingBefore="13" missingAfter="6">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 258768293#0 258768293#1 258768293#2 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="2640942878" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="4543407" name="Stadtbahn S5 Eilzug: Karlsruhe Albtalbahnhof =&gt; Pforzheim Hauptbahnhof" line="S5" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.10" missingBefore="5" missingAfter="14">
+        <route edges="1226629401 1011457787#0 1011457787#1 258768292 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104958" name="Marktplatz (Pyramide U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="5976209" name="Straßenbahn S2: Reitschulschlag =&gt; Rheinstetten" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.05" missingBefore="13" missingAfter="24">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534374" name="Kronenplatz (U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="5976210" name="Straßenbahn S2: Reitschulschlag =&gt; Rheinstrandsiedlung" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.08" missingBefore="13" missingAfter="11">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534374" name="Kronenplatz (U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="5976216" name="Straßenbahn S2: Rheinstetten =&gt; Reitschulschlag" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.05" missingBefore="22" missingAfter="13">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="5976219" name="Straßenbahn S2: Rheinstrandsiedlung =&gt; Reitschulschlag" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.08" missingBefore="10" missingAfter="13">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="5976220" name="Straßenbahn S2: Rheinstrandsiedlung =&gt; Spöck" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.06" missingBefore="11" missingAfter="23">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="9332240334" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="5976223" name="Straßenbahn S2: Spöck =&gt; Rheinstrandsiedlung" line="S2" type="tram" vClass="tram" color="147,19,186" completeness="0.06" missingBefore="23" missingAfter="11">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534374" name="Kronenplatz (U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="5977152" name="Stadtbahn S11: Ittersbach =&gt; KIT-Campus Nord" line="S11" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.04" missingBefore="27" missingAfter="20">
+        <route edges="1226629401 1011457787#0 1011457787#1 304548198#0 304548198#1 304548198#2 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="12529534369" name="Marktplatz (Pyramide U)"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="5977154" name="Stadtbahn S1: KIT-Campus Nord =&gt; Bad Herrenalb" line="S1" type="light_rail" vClass="rail_urban" color="0,128,0" completeness="0.04" missingBefore="20" missingAfter="25">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 304548197 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9458813716" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="2640942878" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="6063256" name="Stadtbahn S52 Eilzug: Germersheim =&gt; Karlsruhe Marktplatz" line="S52" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.00" missingBefore="14">
+        <route edges="1226629402#0 1226629402#1"/>
+    </ptLine>
+    <ptLine id="6063258" name="Stadtbahn S51: Germersheim =&gt; Maxau =&gt; Karlsruhe Albtalbahnhof" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.05" missingBefore="30" missingAfter="6">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 304548197 1011457785#0 1011457785#1 917686496"/>
+        <busStop id="9332104960" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="12529534370" name="Marktplatz (Pyramide U)"/>
+    </ptLine>
+    <ptLine id="6063261" name="Stadtbahn S51: Germersheim =&gt; Maxau =&gt; Söllingen" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="30" missingAfter="14">
+        <route edges="317190019#0 317190019#1 317190019#2 1374086602 1112558722 1012233329#0 1012233329#1 1012233329#2 1011837439#0 1011837439#1 1011837439#2 1011837439#3"/>
+        <busStop id="9332104960" name="Marktplatz (Kaiserstraße U)"/>
+        <busStop id="12529534373" name="Kronenplatz (U)"/>
+    </ptLine>
+    <ptLine id="6063262" name="Stadtbahn S52: Karlsruhe Marktplatz =&gt; Germersheim (weniger Halte)" line="S52" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.00" missingAfter="14">
+        <route edges="1226629402#0 1226629402#1"/>
+    </ptLine>
+    <ptLine id="6063264" name="Stadtbahn S51: Karlsruhe Albtalbahnhof =&gt; Karlsruhe Kongresszentrum =&gt; Germersheim" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.05" missingBefore="6" missingAfter="30">
+        <route edges="1226629401 1011457787#0 1011457787#1 304548198#0 304548198#1 304548198#2 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9332104958" name="Marktplatz (Pyramide U)"/>
+        <busStop id="3234308913" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="6063265" name="Stadtbahn S51: Pforzheim Hbf =&gt; Germersheim" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="24" missingAfter="30">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="3234308913" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="6063266" name="Stadtbahn S51: Pforzheim =&gt; Germersheim" line="S51" type="light_rail" vClass="rail_urban" color="244,150,148" completeness="0.04" missingBefore="22" missingAfter="29">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9332240335" name="Kronenplatz (U)"/>
+        <busStop id="3234308913" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+    <ptLine id="75609" name="NL1 Hirtenweg =&gt; Heide" line="NL1" type="tram" vClass="tram" nightService="only" completeness="0.08" missingBefore="4" missingAfter="8">
+        <route edges="317190010#0 317190010#1 317190010#2 317190010#3 1012233324#0 1012233324#1 1011837440 1374086603 1100934188#0 1100934188#1 1100934188#2 1100934188#3"/>
+        <busStop id="9458813662" name="Marktplatz (Kaiserstraße U)"/>
+    </ptLine>
+</ptLines>

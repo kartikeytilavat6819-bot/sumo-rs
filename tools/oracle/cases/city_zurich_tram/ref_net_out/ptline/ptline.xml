@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:19:56.875383-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="tools/oracle/cases/city_zurich_tram/input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/net.net.xml"/>
+        <ptstop-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/ptstop.xml"/>
+        <ptline-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/ptline.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<ptLines xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/ptlines_file.xsd">
+    <ptLine id="10533916" name="Bus N91: Küsnacht ZH → Zürich, Bahnhofstrasse/HB" line="N91" type="bus" vClass="bus" nightService="only" color="black" completeness="0.07" missingBefore="24" missingAfter="2">
+        <route edges="15677510#0 15677510#1 15677510#2 15677510#3 15677510#4 500735195#0 500735195#1 374541271#0 374541271#1 374541271#2 661763473 1121941325 -248669680 -248669678#2 -248669678#1 -248669678#0"/>
+        <busStop id="10261446647" name="Kantonalbank"/>
+        <busStop id="3779191044" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="10533917" name="Bus N91: Zürich, Bahnhofstrasse/HB → Itschnach" line="N91" type="bus" vClass="bus" nightService="only" color="black" completeness="0.07" missingBefore="2" missingAfter="24">
+        <route edges="248669678#0 248669678#1 248669678#2 248669680 -1121941325 -661763473 -374541271#2 -374541271#1 -374541271#0 -500735195#1 -500735195#0 -15677510#4 -15677510#3 -15677510#2 -15677510#1 -15677510#0"/>
+        <busStop id="-7108387803" name="Paradeplatz"/>
+        <busStop id="-10261446646" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="15004505" name="Bus N4: Zollikon, Bahnhof → Zürich, Balgrist → Bahnhofplatz/HB" line="N4" type="bus" vClass="bus" nightService="only" color="black" completeness="0.05" missingBefore="14" missingAfter="4">
+        <route edges="722646198 -29077447#2 -29077447#1 -29077447#0 208809259#0 208809259#1 208809259#2 208809259#3 332455379 147759323#0 147759323#1 147759323#2 147759323#3 147759323#4 147759323#5"/>
+        <busStop id="13405563643" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="15004506" name="Bus N4: Zürich, Bahnhofplatz/HB → Balgrist → Zollikon, Bahnhof" line="N4" type="bus" vClass="bus" nightService="only" color="black" completeness="0.05" missingBefore="4" missingAfter="17">
+        <route edges="-147759323#5 -147759323#4 -147759323#3 -147759323#2 -147759323#1 -147759323#0 -332455379 -208809259#3 -208809259#2 -208809259#1 -208809259#0 29077447#0 29077447#1 29077447#2 -722646198"/>
+        <busStop id="-6778578970" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="15004508" name="Bus N91: Itschnach → Zürich, Bahnhofstrasse/HB" line="N91" type="bus" vClass="bus" nightService="only" color="black" completeness="0.07" missingBefore="24" missingAfter="2">
+        <route edges="15677510#0 15677510#1 15677510#2 15677510#3 15677510#4 500735195#0 500735195#1 374541271#0 374541271#1 374541271#2 661763473 1121941325 -248669680 -248669678#2 -248669678#1 -248669678#0"/>
+        <busStop id="10261446647" name="Kantonalbank"/>
+        <busStop id="3779191044" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="15004509" name="Bus N91: Zürich, Bahnhofstrasse/HB → Küsnacht ZH" line="N91" type="bus" vClass="bus" nightService="only" color="black" completeness="0.07" missingBefore="2" missingAfter="25">
+        <route edges="248669678#0 248669678#1 248669678#2 248669680 -1121941325 -661763473 -374541271#2 -374541271#1 -374541271#0 -500735195#1 -500735195#0 -15677510#4 -15677510#3 -15677510#2 -15677510#1 -15677510#0"/>
+        <busStop id="-7108387803" name="Paradeplatz"/>
+        <busStop id="-10261446646" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="20004373" name="Bus N5: Zürich, Sihlcity → Bahnhofplatz/HB" line="N5" type="bus" vClass="bus" nightService="only" color="black" completeness="0.08" missingBefore="8" missingAfter="4">
+        <route edges="722646198 -29077447#2 -29077447#1 -29077447#0 208809259#0 208809259#1 208809259#2 208809259#3 332455379 147759323#0 147759323#1 147759323#2 147759323#3 147759323#4 147759323#5"/>
+        <busStop id="13405563643" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="20004374" name="Bus N5: Zürich, Bahnhofplatz/HB → Sihlcity" line="N5" type="bus" vClass="bus" nightService="only" color="black" completeness="0.08" missingBefore="4" missingAfter="8">
+        <route edges="-147759323#5 -147759323#4 -147759323#3 -147759323#2 -147759323#1 -147759323#0 -332455379 -208809259#3 -208809259#2 -208809259#1 -208809259#0 29077447#0 29077447#1 29077447#2 -722646198"/>
+        <busStop id="-6778578970" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="2807015" name="Tram 5: Bahnhof Stadelhofen → Laubegg" line="5" type="tram" vClass="tram" color="112,73,44" completeness="0.17" missingBefore="3" missingAfter="7">
+        <route edges="27429787 220427542#0 220427542#1 220427542#2 220427542#3 27405360#0 27405360#1 27405360#2 27405360#3 220428404"/>
+        <busStop id="2554297467" name="Kantonalbank"/>
+        <busStop id="300835690" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="2807016" name="Tram 5: Laubegg → Bahnhof Stadelhofen" line="5" type="tram" vClass="tram" color="112,73,44" completeness="0.17" missingBefore="7" missingAfter="3">
+        <route edges="218290151 220428403#0 220428403#1 218290153#0 218290153#1 220427535"/>
+        <busStop id="2275569884" name="Paradeplatz"/>
+        <busStop id="2295502445" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="2807029" name="Tram 7: Wollishoferplatz → Bahnhof Stettbach" line="7" type="tram" vClass="tram" color="black" completeness="0.06" missingBefore="11" missingAfter="19">
+        <route edges="218290151 218290150#0 218290150#1 218290150#2 218290150#3 218290150#4 218290150#5 218290150#6 218290150#7 217400104"/>
+        <busStop id="2275569902" name="Paradeplatz"/>
+        <busStop id="2266734164" name="Rennweg"/>
+    </ptLine>
+    <ptLine id="2807032" name="Tram 9: Triemli → Hirzenbach" line="9" type="tram" vClass="tram" color="50,46,113" completeness="0.09" missingBefore="9" missingAfter="22">
+        <route edges="218316342#0 218316342#1 218316342#2 218316342#3 218316342#4 218316342#5 218316342#6 218290153#0 218290153#1 220427535"/>
+        <busStop id="2275623065" name="Sihlstrasse"/>
+        <busStop id="2275569884" name="Paradeplatz"/>
+        <busStop id="2295502445" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="2807065" name="Tram 11: Bahnhof Tiefenbrunnen → Bahnhofstrasse/HB" line="11" type="tram" vClass="tram" color="0,146,60" completeness="0.23" missingBefore="9" missingAfter="1">
+        <route edges="27429787 220427540#0 220427540#1 220427540#2 220427540#3 217400104"/>
+        <busStop id="2554297467" name="Kantonalbank"/>
+        <busStop id="300835765" name="Paradeplatz"/>
+        <busStop id="2266734164" name="Rennweg"/>
+    </ptLine>
+    <ptLine id="2807066" name="Tram 13: Albisgütli → Bahnhofstrasse/HB" line="13" type="tram" vClass="tram" color="246,200,40" completeness="0.15" missingBefore="10" missingAfter="1">
+        <route edges="218290151 218290150#0 218290150#1 218290150#2 218290150#3 218290150#4 218290150#5 218290150#6 218290150#7 217400104"/>
+        <busStop id="2275569902" name="Paradeplatz"/>
+        <busStop id="2266734164" name="Rennweg"/>
+    </ptLine>
+    <ptLine id="2807088" name="Tram 4: Rehalp → Bahnhofstrasse/HB" line="4" type="tram" vClass="tram" color="50,46,113" completeness="0.25" missingBefore="10" missingAfter="2">
+        <route edges="373181617"/>
+        <busStop id="4883794024" name="Bellevue"/>
+        <busStop id="2295038214" name="Helmhaus"/>
+        <busStop id="2295038232" name="Rathaus"/>
+        <busStop id="2275466607" name="Rudolf-Brun-Brücke"/>
+    </ptLine>
+    <ptLine id="2807094" name="Tram 2: Klusplatz → Schlieren Geissweid" line="2" type="tram" vClass="tram" color="203,10,37" completeness="0.10" missingBefore="8" missingAfter="19">
+        <route edges="27429787 220427542#0 220427542#1 220427542#2 220427542#3 218298740#0 218298740#1 218298740#2 218298740#3 218298740#4"/>
+        <busStop id="2554297467" name="Kantonalbank"/>
+        <busStop id="300835690" name="Paradeplatz"/>
+        <busStop id="2275623062" name="Sihlstrasse"/>
+    </ptLine>
+    <ptLine id="2807115" name="Tram 15: Bahnhof Tiefenbrunnen → Central" line="15" type="tram" vClass="tram" color="203,10,37" completeness="0.33" missingBefore="7" missingAfter="1">
+        <route edges="373181617"/>
+        <busStop id="4883794024" name="Bellevue"/>
+        <busStop id="2295038214" name="Helmhaus"/>
+        <busStop id="2295038232" name="Rathaus"/>
+        <busStop id="2275466607" name="Rudolf-Brun-Brücke"/>
+    </ptLine>
+    <ptLine id="34913" name="Tram 13: Bahnhofstrasse/HB → Albisgütli" line="13" type="tram" vClass="tram" color="246,200,40" completeness="0.15" missingBefore="1" missingAfter="10">
+        <route edges="49991796 98873372#0 98873372#1 98873372#2 98873372#3 98873372#4 98873372#5 10679057 220428404"/>
+        <busStop id="81058533" name="Rennweg"/>
+        <busStop id="370305299" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="36293" name="Tram 9: Hirzenbach → Triemli" line="9" type="tram" vClass="tram" color="50,46,113" completeness="0.09" missingBefore="22" missingAfter="9">
+        <route edges="27429787 220427542#0 220427542#1 220427542#2 220427542#3 218298740#0 218298740#1 218298740#2 218298740#3 218298740#4"/>
+        <busStop id="2554297467" name="Kantonalbank"/>
+        <busStop id="300835690" name="Paradeplatz"/>
+        <busStop id="2275623062" name="Sihlstrasse"/>
+    </ptLine>
+    <ptLine id="48677" name="Tram 4: Bahnhofstrasse/HB → Rehalp" line="4" type="tram" vClass="tram" color="50,46,113" completeness="0.19" missingBefore="2" missingAfter="11">
+        <route edges="217408192"/>
+        <busStop id="2275466608" name="Rudolf-Brun-Brücke"/>
+        <busStop id="2295038229" name="Rathaus"/>
+        <busStop id="2295038207" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="48679" name="Tram 15: Bahnhofstrasse/HB → Bahnhof Tiefenbrunnen" line="15" type="tram" vClass="tram" color="203,10,37" completeness="0.23" missingBefore="2" missingAfter="8">
+        <route edges="217408192"/>
+        <busStop id="2275466608" name="Rudolf-Brun-Brücke"/>
+        <busStop id="2295038229" name="Rathaus"/>
+        <busStop id="2295038207" name="Helmhaus"/>
+    </ptLine>
+    <ptLine id="49150" name="Tram 7: Bahnhof Stettbach → Wollishoferplatz" line="7" type="tram" vClass="tram" color="black" completeness="0.06" missingBefore="18" missingAfter="11">
+        <route edges="49991796 98873372#0 98873372#1 98873372#2 98873372#3 98873372#4 98873372#5 10679057 220428404"/>
+        <busStop id="81058533" name="Rennweg"/>
+        <busStop id="370305299" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="49167" name="Tram 11: Central → Bahnhof Tiefenbrunnen" line="11" type="tram" vClass="tram" color="0,146,60" completeness="0.21" missingBefore="2" missingAfter="9">
+        <route edges="49991796 218290149#0 218290149#1 218290149#2 218290149#3 218290149#4 220427535"/>
+        <busStop id="81058533" name="Rennweg"/>
+        <busStop id="2275569897" name="Paradeplatz"/>
+        <busStop id="2295502445" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="51190" line="Limmatschiff" type="ferry" vClass="ignoring" completeness="0.17" missingAfter="2">
+        <busStop id="3881804859" name="Zürich Storchen"/>
+    </ptLine>
+    <ptLine id="53911" name="Tram 2: Schlieren Geissweid → Klusplatz" line="2" type="tram" vClass="tram" color="203,10,37" completeness="0.10" missingBefore="20" missingAfter="8">
+        <route edges="218316342#0 218316342#1 218316342#2 218316342#3 218316342#4 218316342#5 218316342#6 218290153#0 218290153#1 220427535"/>
+        <busStop id="2275623065" name="Sihlstrasse"/>
+        <busStop id="2275569884" name="Paradeplatz"/>
+        <busStop id="2295502445" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="5571622" name="Bus N9: Wallisellen, Glatt → Zürich, Bellevue" line="N9" type="bus" vClass="bus" nightService="only" color="black" completeness="0.06" missingBefore="29" missingAfter="2">
+        <route edges="374546587 218294238 -374541270#3 -374541270#2 -374541270#1 -374541270#0 -15677510#4 -15677510#3 -15677510#2 -15677510#1 -15677510#0"/>
+        <busStop id="-4917184470" name="Paradeplatz"/>
+        <busStop id="-10261446646" name="Kantonalbank"/>
+    </ptLine>
+    <ptLine id="5571658" name="Bus N9: Zürich, Bellevue → Wallisellen, Glatt" line="N9" type="bus" vClass="bus" nightService="only" color="black" completeness="0.06" missingBefore="2" missingAfter="30">
+        <route edges="15677510#0 15677510#1 15677510#2 15677510#3 15677510#4 374541270#0 374541270#1 374541270#2 374541270#3 -218294238 -374546587"/>
+        <busStop id="10261446647" name="Kantonalbank"/>
+        <busStop id="3779369879" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="5571765" name="Bus N16: Zürich, Bahnhofstrasse/HB → Thalwil" line="N16" type="bus" vClass="bus" nightService="only" color="black" completeness="0.03" missingBefore="2" missingAfter="33">
+        <route edges="248669678#0 248669678#1 248669678#2 248669680 -1121941325 -1021065358#3 -1021065358#2 -1021065358#1 -1021065358#0 374541269 218294235#0 218294235#1 218294235#2 149233866#0 149233866#1"/>
+        <busStop id="-10261446651" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="5571804" name="Bus N16: Thalwil → Zürich, Bahnhofstrasse/HB" line="N16" type="bus" vClass="bus" nightService="only" color="black" completeness="0.05" missingBefore="18" missingAfter="2">
+        <route edges="-149233866#1 -149233866#0 -218294235#2 -218294235#1 -218294235#0 -374541269 1021065358#0 1021065358#1 1021065358#2 1021065358#3 1121941325 -248669680 -248669678#2 -248669678#1 -248669678#0"/>
+        <busStop id="9417487049" name="Paradeplatz"/>
+    </ptLine>
+    <ptLine id="7295273" name="Tram 9: Hirzenbach → Heuried" line="9" type="tram" vClass="tram" color="50,46,113" completeness="0.09" missingBefore="22" missingAfter="7">
+        <route edges="27429787 220427542#0 220427542#1 220427542#2 220427542#3 218298740#0 218298740#1 218298740#2 218298740#3 218298740#4"/>
+        <busStop id="2554297467" name="Kantonalbank"/>
+        <busStop id="300835690" name="Paradeplatz"/>
+        <busStop id="2275623062" name="Sihlstrasse"/>
+    </ptLine>
+    <ptLine id="7295274" name="Tram 9: Heuried → Hirzenbach" line="9" type="tram" vClass="tram" color="50,46,113" completeness="0.09" missingBefore="7" missingAfter="22">
+        <route edges="218316342#0 218316342#1 218316342#2 218316342#3 218316342#4 218316342#5 218316342#6 218290153#0 218290153#1 220427535"/>
+        <busStop id="2275623065" name="Sihlstrasse"/>
+        <busStop id="2275569884" name="Paradeplatz"/>
+        <busStop id="2295502445" name="Kantonalbank"/>
+    </ptLine>
+</ptLines>

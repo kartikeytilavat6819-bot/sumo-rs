@@ -1,0 +1,190 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:19:56.862575-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="tools/oracle/cases/city_zurich_tram/input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/net.net.xml"/>
+        <ptstop-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/ptstop.xml"/>
+        <ptline-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/ptrefs/city_zurich_tram.ptline/ptline.xml"/>
+        <ptline-clean-up value="true"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
+    <busStop id="-10261446646" name="Kantonalbank" lane="-15677510#1_0" startPos="81.40" endPos="96.40" friendlyPos="true" lines="N91 N9">
+        <access lane="1046985602#0_0" pos="141.93" length="13.67" friendlyPos="1"/>
+        <access lane="1046986064#2_0" pos="0.20" length="15.52" friendlyPos="1"/>
+        <access lane="1047606146#7_0" pos="87.40" length="11.45" friendlyPos="1"/>
+        <access lane="1047606146#8_0" pos="0.00" length="15.24" friendlyPos="1"/>
+        <access lane="43583464#6_0" pos="2.04" length="16.95" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-10261446651" name="Paradeplatz" lane="-1021065358#1_0" startPos="22.44" endPos="37.44" friendlyPos="true" lines="N16">
+        <access lane="1056324203_0" pos="0.00" length="16.27" friendlyPos="1"/>
+        <access lane="1056324205#1_0" pos="5.95" length="13.02" friendlyPos="1"/>
+        <access lane="1056324210#1_0" pos="0.72" length="19.79" friendlyPos="1"/>
+        <access lane="1056324214#0_0" pos="23.31" length="20.93" friendlyPos="1"/>
+        <access lane="1056324214#1_0" pos="0.00" length="20.16" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-4917184470" name="Paradeplatz" lane="-374541270#2_0" startPos="24.77" endPos="39.77" friendlyPos="true" lines="N9">
+        <access lane="1047304825#3_0" pos="34.16" length="13.04" friendlyPos="1"/>
+        <access lane="1047604818_0" pos="15.11" length="16.40" friendlyPos="1"/>
+        <access lane="1056324209#0_0" pos="0.00" length="13.87" friendlyPos="1"/>
+        <access lane="1056324215#1_0" pos="0.20" length="17.63" friendlyPos="1"/>
+        <access lane="1056324215#2_0" pos="0.00" length="17.47" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-6778578970" name="Helmhaus" lane="-208809259#2_0" startPos="0.00" endPos="11.36" friendlyPos="true" lines="N4 N5">
+        <access lane="1061545881#0_0" pos="0.00" length="17.60" friendlyPos="1"/>
+        <access lane="4596504_0" pos="0.00" length="15.99" friendlyPos="1"/>
+        <access lane="623571871_0" pos="8.21" length="8.54" friendlyPos="1"/>
+        <access lane="623574798_0" pos="0.00" length="7.97" friendlyPos="1"/>
+        <access lane="88877121#2_0" pos="0.20" length="19.18" friendlyPos="1"/>
+    </busStop>
+    <busStop id="-7108387803" name="Paradeplatz" lane="-374541271#1_0" startPos="24.29" endPos="39.29" friendlyPos="true" lines="N91"/>
+    <busStop id="10261446647" name="Kantonalbank" lane="15677510#1_0" startPos="40.90" endPos="55.90" friendlyPos="true" lines="N91 N9">
+        <access lane="1046985602#0_0" pos="99.76" length="13.46" friendlyPos="1"/>
+        <access lane="1047606146#7_0" pos="45.24" length="11.57" friendlyPos="1"/>
+        <access lane="43583464#3_0" pos="19.06" length="17.78" friendlyPos="1"/>
+        <access lane="43583464#6_0" pos="42.81" length="17.31" friendlyPos="1"/>
+        <access lane="43583464#7_0" pos="0.00" length="17.96" friendlyPos="1"/>
+    </busStop>
+    <busStop id="13405563643" name="Helmhaus" lane="208809259#3_0" startPos="15.59" endPos="30.59" friendlyPos="true" lines="N4 N5">
+        <access lane="623570419_0" pos="7.40" length="11.57" friendlyPos="1"/>
+        <access lane="623570421#0_0" pos="8.88" length="7.20" friendlyPos="1"/>
+        <access lane="623570423#1_0" pos="0.00" length="11.59" friendlyPos="1"/>
+        <access lane="623570424#0_0" pos="0.20" length="10.34" friendlyPos="1"/>
+        <access lane="623570424#1_0" pos="0.42" length="7.98" friendlyPos="1"/>
+    </busStop>
+    <trainStop id="2266734164" name="Rennweg" lane="217400104_0" startPos="315.15" endPos="340.15" friendlyPos="true" lines="7 11 13">
+        <access lane="1046352526#0_0" pos="0.00" length="173.75" friendlyPos="1"/>
+        <access lane="1230928875#8_0" pos="378.24" length="6.13" friendlyPos="1"/>
+        <access lane="27405455#3_0" pos="256.18" length="2.07" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2275466607" name="Rudolf-Brun-Brücke" lane="373181617_0" startPos="822.96" endPos="847.96" friendlyPos="true" lines="4 15"/>
+    <trainStop id="2275466608" name="Rudolf-Brun-Brücke" lane="217408192_0" startPos="238.79" endPos="263.79" friendlyPos="true" lines="4 15"/>
+    <trainStop id="2275569884" name="Paradeplatz" lane="218290153#0_0" startPos="7.81" endPos="32.81" friendlyPos="true" lines="5 9 2">
+        <access lane="1047304825#3_0" pos="37.87" length="7.19" friendlyPos="1"/>
+        <access lane="1056324209#0_0" pos="0.00" length="9.76" friendlyPos="1"/>
+        <access lane="1056324215#2_0" pos="0.00" length="8.55" friendlyPos="1"/>
+        <access lane="1056324215#3_0" pos="0.00" length="9.69" friendlyPos="1"/>
+        <access lane="1350955991_0" pos="0.00" length="9.05" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2275569897" name="Paradeplatz" lane="218290149#2_0" startPos="16.13" endPos="41.13" friendlyPos="true" lines="11">
+        <access lane="-374541271#1_0" pos="38.80" length="0.38" friendlyPos="1"/>
+        <access lane="1056324209#1_0" pos="0.20" length="2.57" friendlyPos="1"/>
+        <access lane="1056324216#1_0" pos="0.20" length="4.99" friendlyPos="1"/>
+        <access lane="1350955993_0" pos="0.20" length="5.09" friendlyPos="1"/>
+        <access lane="374541271#1_0" pos="0.49" length="4.42" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2275569902" name="Paradeplatz" lane="218290150#4_0" startPos="21.31" endPos="46.31" friendlyPos="true" lines="7 13">
+        <access lane="1047604818_0" pos="0.00" length="11.94" friendlyPos="1"/>
+        <access lane="1056324204_0" pos="3.73" length="10.38" friendlyPos="1"/>
+        <access lane="1056324206#0_0" pos="0.00" length="4.43" friendlyPos="1"/>
+        <access lane="1056324213#2_0" pos="0.20" length="9.81" friendlyPos="1"/>
+        <access lane="1056324213#3_0" pos="0.00" length="9.57" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2275623062" name="Sihlstrasse" lane="218298740#4_0" startPos="438.20" endPos="463.20" friendlyPos="true" lines="2 9"/>
+    <trainStop id="2275623065" name="Sihlstrasse" lane="218316342#0_0" startPos="113.38" endPos="138.38" friendlyPos="true" lines="9 2"/>
+    <trainStop id="2295038207" name="Helmhaus" lane="217408192_0" startPos="722.03" endPos="747.03" friendlyPos="true" lines="4 15">
+        <access lane="1061545881#0_0" pos="0.00" length="18.34" friendlyPos="1"/>
+        <access lane="4596504_0" pos="0.00" length="17.12" friendlyPos="1"/>
+        <access lane="623571871_0" pos="7.81" length="11.50" friendlyPos="1"/>
+        <access lane="623574798_0" pos="0.00" length="6.21" friendlyPos="1"/>
+        <access lane="88877121#2_0" pos="0.20" length="20.50" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2295038214" name="Helmhaus" lane="373181617_0" startPos="347.51" endPos="372.51" friendlyPos="true" lines="4 15">
+        <access lane="1273787438_0" pos="0.00" length="8.70" friendlyPos="1"/>
+        <access lane="1273787442_0" pos="0.00" length="8.55" friendlyPos="1"/>
+        <access lane="623570424#0_0" pos="0.20" length="7.78" friendlyPos="1"/>
+        <access lane="623570424#1_0" pos="0.09" length="4.83" friendlyPos="1"/>
+        <access lane="624098528#0_0" pos="0.00" length="8.55" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2295038229" name="Rathaus" lane="217408192_0" startPos="450.31" endPos="475.31" friendlyPos="true" lines="4 15">
+        <access lane="282685245_0" pos="37.62" length="62.18" friendlyPos="1"/>
+        <access lane="623566545_0" pos="0.00" length="47.10" friendlyPos="1"/>
+        <access lane="623570409#0_0" pos="0.00" length="31.56" friendlyPos="1"/>
+        <access lane="8147286#0_0" pos="0.00" length="68.86" friendlyPos="1"/>
+        <access lane="8147286#3_0" pos="123.51" length="33.01" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2295038232" name="Rathaus" lane="373181617_0" startPos="613.34" endPos="638.34" friendlyPos="true" lines="4 15">
+        <access lane="282685245_0" pos="37.62" length="118.70" friendlyPos="1"/>
+        <access lane="623566545_0" pos="0.00" length="104.77" friendlyPos="1"/>
+        <access lane="623570409#0_0" pos="0.00" length="90.45" friendlyPos="1"/>
+        <access lane="8147286#0_0" pos="0.00" length="119.59" friendlyPos="1"/>
+        <access lane="8147286#3_0" pos="109.91" length="51.25" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2295502445" name="Kantonalbank" lane="220427535_0" startPos="144.60" endPos="169.60" friendlyPos="true" lines="5 9 11 2">
+        <access lane="1046985602#0_0" pos="141.79" length="11.10" friendlyPos="1"/>
+        <access lane="1047303253#3_0" pos="0.20" length="17.89" friendlyPos="1"/>
+        <access lane="1047606146#7_0" pos="87.26" length="14.02" friendlyPos="1"/>
+        <access lane="1047606146#8_0" pos="0.00" length="17.36" friendlyPos="1"/>
+        <access lane="43583464#3_0" pos="61.09" length="15.50" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="2554297467" name="Kantonalbank" lane="27429787_0" startPos="189.97" endPos="214.97" friendlyPos="true" lines="5 11 2 9">
+        <access lane="1046985602#0_0" pos="99.89" length="16.52" friendlyPos="1"/>
+        <access lane="1047606146#7_0" pos="45.37" length="8.51" friendlyPos="1"/>
+        <access lane="43583464#6_0" pos="42.81" length="14.25" friendlyPos="1"/>
+        <access lane="43583464#7_0" pos="0.00" length="15.14" friendlyPos="1"/>
+        <access lane="43583651_0" pos="0.00" length="18.07" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="300835690" name="Paradeplatz" lane="220427542#3_0" startPos="13.37" endPos="38.37" friendlyPos="true" lines="5 2 9">
+        <access lane="1051693200#2_0" pos="0.20" length="12.91" friendlyPos="1"/>
+        <access lane="1051693200#3_0" pos="0.20" length="10.77" friendlyPos="1"/>
+        <access lane="1051693200#4_0" pos="0.20" length="10.91" friendlyPos="1"/>
+        <access lane="1051693200#5_0" pos="0.00" length="10.82" friendlyPos="1"/>
+        <access lane="1056324210#0_0" pos="0.00" length="6.78" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="300835765" name="Paradeplatz" lane="220427540#1_0" startPos="14.04" endPos="39.04" friendlyPos="true" lines="11">
+        <access lane="1246185807#2_0" pos="0.00" length="1.29" friendlyPos="1"/>
+        <access lane="1246185807#3_0" pos="0.00" length="3.51" friendlyPos="1"/>
+        <access lane="1246185807#4_0" pos="0.00" length="1.86" friendlyPos="1"/>
+        <access lane="27405455#8_0" pos="0.20" length="4.15" friendlyPos="1"/>
+        <access lane="374541271#1_0" pos="39.50" length="3.53" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="370305299" name="Paradeplatz" lane="98873372#2_0" startPos="21.99" endPos="46.99" friendlyPos="true" lines="13 7">
+        <access lane="1056324203_0" pos="0.00" length="2.12" friendlyPos="1"/>
+        <access lane="1056324205#0_0" pos="4.45" length="6.14" friendlyPos="1"/>
+        <access lane="1056324205#1_0" pos="0.00" length="6.27" friendlyPos="1"/>
+        <access lane="1056324210#1_0" pos="0.72" length="11.57" friendlyPos="1"/>
+        <access lane="1056324211#2_0" pos="0.00" length="13.58" friendlyPos="1"/>
+    </trainStop>
+    <busStop id="3779191044" name="Paradeplatz" lane="374541271#1_0" startPos="24.50" endPos="39.50" friendlyPos="true" lines="N91"/>
+    <busStop id="3779369879" name="Paradeplatz" lane="374541270#2_0" startPos="27.88" endPos="42.88" friendlyPos="true" lines="N9">
+        <access lane="1051693200#2_0" pos="0.20" length="11.76" friendlyPos="1"/>
+        <access lane="1051693200#3_0" pos="0.00" length="10.81" friendlyPos="1"/>
+        <access lane="1051693200#4_0" pos="0.00" length="10.78" friendlyPos="1"/>
+        <access lane="1051693200#5_0" pos="0.00" length="11.53" friendlyPos="1"/>
+        <access lane="1056324210#0_0" pos="0.00" length="7.93" friendlyPos="1"/>
+    </busStop>
+    <busStop id="3881804859" name="Zürich Storchen" lane="705524917_0" startPos="0.00" endPos="7.80" friendlyPos="true"/>
+    <trainStop id="4883794024" name="Bellevue" lane="373181617_0" startPos="0.00" endPos="25.00" friendlyPos="true" lines="4 15">
+        <access lane="38099291_0" pos="7.16" length="259.89" friendlyPos="1"/>
+        <access lane="623571855#1_0" pos="28.62" length="261.01" friendlyPos="1"/>
+        <access lane="623571855#2_0" pos="119.73" length="124.27" friendlyPos="1"/>
+        <access lane="775544000#0_0" pos="0.00" length="289.19" friendlyPos="1"/>
+        <access lane="775544000#1_0" pos="76.06" length="182.90" friendlyPos="1"/>
+    </trainStop>
+    <trainStop id="81058533" name="Rennweg" lane="49991796_0" startPos="217.69" endPos="242.69" friendlyPos="true" lines="13 7 11">
+        <access lane="1046352526#0_0" pos="0.00" length="114.08" friendlyPos="1"/>
+        <access lane="1230928875#8_0" pos="417.93" length="2.16" friendlyPos="1"/>
+        <access lane="27405455#3_0" pos="216.49" length="6.01" friendlyPos="1"/>
+        <access lane="28774803#0_0" pos="29.45" length="271.69" friendlyPos="1"/>
+    </trainStop>
+    <busStop id="9417487049" name="Paradeplatz" lane="1021065358#1_0" startPos="26.40" endPos="41.40" friendlyPos="true" lines="N16">
+        <access lane="1056324204_0" pos="3.73" length="14.64" friendlyPos="1"/>
+        <access lane="1056324206#0_0" pos="0.00" length="18.37" friendlyPos="1"/>
+        <access lane="1056324213#1_0" pos="0.20" length="22.99" friendlyPos="1"/>
+        <access lane="1056324213#2_0" pos="0.00" length="22.65" friendlyPos="1"/>
+        <access lane="1056324214#0_0" pos="7.80" length="18.72" friendlyPos="1"/>
+    </busStop>
+</additional>
