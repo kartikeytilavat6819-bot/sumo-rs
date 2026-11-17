@@ -758,12 +758,12 @@ impl MSActuatedTrafficLightLogic {
                     // Build the induct loop and set it into the container
                     let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
                     let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
-                    loop_ = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true).cast::<MSInductLoop>();
-                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, loop_.cast::<MSDetectorFileOutput>(), &self.myFile, self.myFreq, 0);
+                    loop_ = crate::microsim::output::ms_induct_loop::induct_loop_of(nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true));
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, crate::microsim::output::ms_induct_loop::detector_of(loop_), &self.myFile, self.myFreq, 0);
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| d.cast::<MSInductLoop>()).unwrap_or(Ptr::null());
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| crate::microsim::output::ms_induct_loop::induct_loop_of(d.cast::<crate::microsim::output::ms_detector_file_output::MSDetectorFileOutput>())).unwrap_or(Ptr::null());
                     if loop_.is_null() {
                         panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
                     }
