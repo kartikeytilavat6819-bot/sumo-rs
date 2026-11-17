@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T03:12:48.809473-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/real/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/real/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/tmp/op01score/real/fcd_attributes/ref/fcd.xml"/>
+        <fcd-output.attributes value="speed,angle,pos,lane"/>
+    </output>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v0" angle="231.38" speed="11.85" pos="2.26" lane="397795464#0_0"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v0" angle="234.07" speed="11.85" pos="5.72" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v0" angle="234.07" speed="10.68" pos="16.40" lane="397795464#1_0"/>
+        <vehicle id="v1" angle="135.16" speed="13.03" pos="0.20" lane="1117867028_0"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v0" angle="234.07" speed="11.85" pos="28.25" lane="397795464#1_0"/>
+        <vehicle id="v1" angle="136.08" speed="11.82" pos="1.05" lane=":6598535230_0_0"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v0" angle="234.07" speed="11.42" pos="39.68" lane="397795464#1_0"/>
+        <vehicle id="v2" angle="235.47" speed="11.30" pos="4.42" lane="682360554#0_3"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v0" angle="234.07" speed="11.68" pos="51.35" lane="397795464#1_0"/>
+        <vehicle id="v2" angle="235.00" speed="10.82" pos="4.19" lane="682360554#1_3"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="v0" angle="234.07" speed="11.29" pos="62.64" lane="397795464#1_0"/>
+        <vehicle id="v2" angle="235.00" speed="10.02" pos="14.21" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="315.92" speed="30.08" pos="5.10" lane="46522008#0_0"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="v0" angle="234.07" speed="11.67" pos="74.31" lane="397795464#1_0"/>
+        <vehicle id="v2" angle="235.00" speed="11.20" pos="25.40" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="315.86" speed="29.98" pos="7.69" lane=":5522182777_2_0"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="v0" angle="234.09" speed="10.73" pos="5.68" lane="397795464#2_0"/>
+        <vehicle id="v2" angle="235.00" speed="10.96" pos="36.37" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="315.88" speed="29.97" pos="2.96" lane=":42432697_0_0"/>
+        <vehicle id="v4" angle="317.22" speed="28.62" pos="0.20" lane="1117867039#0_0"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="v0" angle="234.07" speed="11.76" pos="8.03" lane="397795464#3_0"/>
+        <vehicle id="v2" angle="235.00" speed="10.49" pos="46.85" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="316.22" speed="29.36" pos="27.31" lane="46522008#2_0"/>
+        <vehicle id="v4" angle="315.92" speed="28.23" pos="22.69" lane="46522008#0_0"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="v2" angle="235.00" speed="10.93" pos="57.79" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="316.22" speed="30.00" pos="57.31" lane="46522008#2_0"/>
+        <vehicle id="v4" angle="315.75" speed="28.14" pos="13.98" lane="46522008#1_0"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="v2" angle="235.00" speed="11.28" pos="69.07" lane="682360554#1_3"/>
+        <vehicle id="v3" angle="316.22" speed="29.11" pos="86.42" lane="46522008#2_0"/>
+        <vehicle id="v4" angle="316.22" speed="28.44" pos="12.16" lane="46522008#2_0"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="v2" angle="235.00" speed="11.01" pos="80.09" lane="682360554#1_3"/>
+        <vehicle id="v4" angle="316.22" speed="28.55" pos="40.71" lane="46522008#2_0"/>
+        <vehicle id="v5" angle="231.38" speed="9.29" pos="2.26" lane="397795464#0_0"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="v2" angle="235.01" speed="9.89" pos="6.01" lane=":3974095829_0_3"/>
+        <vehicle id="v4" angle="316.22" speed="27.63" pos="68.35" lane="46522008#2_0"/>
+        <vehicle id="v5" angle="234.07" speed="8.89" pos="2.76" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="v2" angle="235.00" speed="5.80" pos="3.27" lane="682360554#2_3"/>
+        <vehicle id="v5" angle="234.07" speed="8.05" pos="10.80" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="v2" angle="225.46" speed="4.63" pos="4.02" lane=":42439984_4_0"/>
+        <vehicle id="v5" angle="234.07" speed="8.67" pos="19.47" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="v2" angle="192.60" speed="5.74" pos="1.92" lane=":10224024816_0_0"/>
+        <vehicle id="v5" angle="234.07" speed="8.04" pos="27.51" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="v5" angle="234.07" speed="9.12" pos="36.63" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="v5" angle="234.07" speed="8.65" pos="45.28" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="v5" angle="234.07" speed="8.64" pos="53.93" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="v5" angle="234.07" speed="8.46" pos="62.38" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="v5" angle="234.07" speed="8.37" pos="70.75" lane="397795464#1_0"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="v5" angle="234.17" speed="9.25" pos="0.64" lane="397795464#2_0"/>
+    </timestep>
+    <timestep time="23.00"/>
+</fcd-export>
