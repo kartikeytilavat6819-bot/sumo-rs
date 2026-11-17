@@ -391,7 +391,7 @@ impl MSPModel_Striping {
             }
         }
         let ped: Ptr<MSPModel_InteractingState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_Striping_PState::new(person, stage, lane)))).cast::<MSPModel_InteractingState>();
-        self.myActiveLanes.entry(lane).or_default().push(ped);
+        self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(lane)).or_default().push(ped);
         self.myNumActivePedestrians += 1;
         ped.cast::<MSTransportableStateAdapter>()
     }
@@ -585,32 +585,19 @@ impl MSPModel_Striping {
     pub fn move_in_direction(&mut self, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32) {
         // shortcut: DEBUGCOND (person/lane isSelected, GUI-only) debug output is not ported; debugPath stays null
         // shortcut: the C++ holds a reference into myActiveLanes; here a lane's vector is taken out while it is advanced and put back afterwards
-        // determinism: C++ ActiveLanes is ordered by ComparatorNumericalIdLess and iterated live, so lanes added by arriveAndAdvance are visited when their id is larger than the current one; walk numerical-id order with a cursor
-        let mut pending: BTreeMap<i32, Ptr<MSLane>> = BTreeMap::new();
-        let mut cursor: Option<i32> = None;
-        let mut known = 0usize;
+        // C++ iterates the live std::map: lanes inserted by arriveAndAdvance are visited when their key is larger than the current one
+        let mut cursor: Option<MSPModel_Interacting_LaneKey> = None;
         loop {
-            if self.myActiveLanes.len() != known {
-                known = self.myActiveLanes.len();
-                for l in self.myActiveLanes.keys() {
-                    if cursor.map_or(true, |c| l.get_numerical_id() > c) {
-                        pending.insert(l.get_numerical_id(), *l);
-                    }
-                }
-            }
             let from = match cursor {
                 Some(c) => std::ops::Bound::Excluded(c),
                 None => std::ops::Bound::Unbounded,
             };
-            let (id, lane) = match pending.range((from, std::ops::Bound::Unbounded)).next() {
-                Some((id, lane)) => (*id, *lane),
+            let (key, lane) = match self.myActiveLanes.range((from, std::ops::Bound::Unbounded)).next() {
+                Some((k, _)) => (*k, k.0),
                 None => break,
             };
-            cursor = Some(id);
-            let mut pedestrians = match self.myActiveLanes.get_mut(&lane) {
-                Some(v) => std::mem::take(v),
-                None => continue,
-            };
+            cursor = Some(key);
+            let mut pedestrians = std::mem::take(self.myActiveLanes.get_mut(&key).unwrap());
             if pedestrians.len() == 0 {
                 self.put_back_lane(lane, pedestrians);
                 continue;
@@ -741,8 +728,9 @@ impl MSPModel_Striping {
 
     /// Returns a lane's pedestrian vector to myActiveLanes (see the shortcut in moveInDirection)
     fn put_back_lane(&mut self, lane: Ptr<MSLane>, pedestrians: MSPModel_Interacting_Pedestrians) {
-        let extra = std::mem::replace(self.myActiveLanes.entry(lane).or_default(), pedestrians);
-        self.myActiveLanes.get_mut(&lane).unwrap().extend(extra);
+        let key = MSPModel_Interacting_LaneKey(lane);
+        let extra = std::mem::replace(self.myActiveLanes.entry(key).or_default(), pedestrians);
+        self.myActiveLanes.get_mut(&key).unwrap().extend(extra);
     }
 
     /// C++: `void MSPModel_Striping::moveInDirectionOnLane(Pedestrians &, const MSLane *, SUMOTime, std::set<MSPerson *> &, int, bool)` [protected]
@@ -1117,7 +1105,7 @@ impl MSPModel_Striping {
                 p.m().move_to_next_lane(currentTime);
                 if !p.get_lane().is_null() {
                     changedLane.insert(p.get_person());
-                    self.myActiveLanes.entry(p.get_lane()).or_default().push(p.cast::<MSPModel_InteractingState>());
+                    self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(p.get_lane())).or_default().push(p.cast::<MSPModel_InteractingState>());
                     p.get_stage().m().activate_entry_reminders(p.get_person().cast::<MSTransportable>(), false);
                 } else {
                     // end walking stage and destroy PState
@@ -1780,8 +1768,7 @@ impl MSPModel_Striping {
                     }
                 }
             }
-            // C++ getPedestrians(nextLane) returns myActiveLanes[nextLane]
-            let pedestrians: &mut MSPModel_Interacting_Pedestrians = self.myActiveLanes.entry(nextLane).or_default();
+            let pedestrians: &mut MSPModel_Interacting_Pedestrians = self.get_pedestrians(nextLane);
             if nextLane.is_walking_area() {
                 Self::transform_to_current_lane_positions(&mut obs, currentDir, nextDir, currentLength, nextLength);
                 // complex transformation into the coordinate system of the current lane
@@ -3164,7 +3151,7 @@ impl MSPModel_Striping_PState {
             let old = self.myStage.get_edge();
             let oldLane = self.myLane;
             if lane != self.myLane {
-                pm.m().myActiveLanes.entry(lane).or_default().push(Ptr::from_mut(self).cast::<MSPModel_InteractingState>());
+                pm.m().myActiveLanes.entry(MSPModel_Interacting_LaneKey(lane)).or_default().push(Ptr::from_mut(self).cast::<MSPModel_InteractingState>());
             }
             if edges.is_empty() {
                 self.myStage.m().set_route_index(p.cast::<MSTransportable>(), routeOffset);

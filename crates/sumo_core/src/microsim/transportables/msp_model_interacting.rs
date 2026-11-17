@@ -2,8 +2,29 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+/// C++ `ComparatorNumericalIdLess` key of ActiveLanes: lanes are ordered by numerical ID, not by address
+// determinism: C++ ActiveLanes iterates in numerical-ID order; Ptr's own Ord is by address
+#[derive(Clone, Copy)]
+pub struct MSPModel_Interacting_LaneKey(pub Ptr<MSLane>);
+impl PartialEq for MSPModel_Interacting_LaneKey {
+    fn eq(&self, o: &Self) -> bool {
+        self.0.get_numerical_id() == o.0.get_numerical_id()
+    }
+}
+impl Eq for MSPModel_Interacting_LaneKey {}
+impl PartialOrd for MSPModel_Interacting_LaneKey {
+    fn partial_cmp(&self, o: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(o))
+    }
+}
+impl Ord for MSPModel_Interacting_LaneKey {
+    fn cmp(&self, o: &Self) -> std::cmp::Ordering {
+        self.0.get_numerical_id().cmp(&o.0.get_numerical_id())
+    }
+}
+
 /// C++ typedef `std::map<const MSLane *, Pedestrians, ComparatorNumericalIdLess> MSPModel_Interacting::ActiveLanes`
-pub type MSPModel_Interacting_ActiveLanes = BTreeMap<Ptr<MSLane>, MSPModel_Interacting_Pedestrians>;
+pub type MSPModel_Interacting_ActiveLanes = BTreeMap<MSPModel_Interacting_LaneKey, MSPModel_Interacting_Pedestrians>;
 
 /// C++ typedef `std::vector<MSPModel_InteractingState *> MSPModel_Interacting::Pedestrians`
 pub type MSPModel_Interacting_Pedestrians = Vec<Ptr<MSPModel_InteractingState>>;
@@ -90,7 +111,7 @@ impl MSPModel_Interacting {
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
         let p: Ptr<MSPModel_InteractingState> = state.cast::<MSPModel_InteractingState>();
-        let pedestrians = self.myActiveLanes.entry(state.get_lane()).or_default();
+        let pedestrians = self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(state.get_lane())).or_default();
         if let Some(idx) = pedestrians.iter().position(|x| *x == p) {
             if !p.get_next_crossing().is_null() {
                 MSPModel_Interacting::unregister_crossing_approach(&*p, p.get_next_crossing());
@@ -296,7 +317,7 @@ impl MSPModel_Interacting {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_pedestrians(&mut self, lane: Ptr<MSLane>) -> &mut MSPModel_Interacting_Pedestrians {
-        if let Some(v) = self.myActiveLanes.get_mut(&lane) {
+        if let Some(v) = self.myActiveLanes.get_mut(&MSPModel_Interacting_LaneKey(lane)) {
             return v;
         }
         NO_PEDESTRIANS.with(|p| *p).get_mut().unwrap()
