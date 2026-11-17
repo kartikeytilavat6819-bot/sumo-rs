@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T14:23:41.571322-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T15:44:54.284693-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,9 @@
     </input>
 
     <output>
-        <fcd-output value="/tmp/f_city_atlanta_motorway.xml"/>
-        <tripinfo-output value="/tmp/t_city_atlanta_motorway.xml"/>
-        <statistic-output value="/tmp/s_city_atlanta_motorway.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.stat.xml"/>
     </output>
 
     <time>
@@ -26,7 +26,7 @@
 -->
 
 <statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
-    <performance clockBegin="1794857021.61" clockEnd="1794857021.86" clockDuration="0.24" traciDuration="0.00" realTimeFactor="2459.02" vehicleUpdatesPerSecond="80438.52" personUpdatesPerSecond="0.00" begin="0.00" end="600.00" duration="600.00"/>
+    <performance clockBegin="1794861894.35" clockEnd="1794861895.44" clockDuration="1.09" traciDuration="0.00" realTimeFactor="550.96" vehicleUpdatesPerSecond="18022.96" personUpdatesPerSecond="0.00" begin="0.00" end="600.00" duration="600.00"/>
     <vehicles loaded="150" inserted="150" running="1" waiting="0"/>
     <teleports total="0" jam="0" yield="0" wrongLane="0"/>
     <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>

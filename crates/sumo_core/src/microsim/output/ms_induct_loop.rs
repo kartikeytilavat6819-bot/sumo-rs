@@ -701,6 +701,16 @@ impl MSInductLoop {
         sim_time() - self.myLastLeaveTime
     }
 
+    /// C++: `void MSInductLoop::loadTimeSinceLastDetection(double)`
+    // void
+    // MSInductLoop::loadTimeSinceLastDetection(double time) {
+    //     myLastLeaveTime = SIMTIME - time;
+    // }
+    #[allow(unused_variables)]
+    pub fn load_time_since_last_detection(&mut self, time: f64) {
+        self.myLastLeaveTime = sim_time() - time;
+    }
+
     /// C++: `double MSInductLoop::getOccupancyTime() const` [const]
     /// Returns the time of continous occupation by the same vehicle in seconds or 0 if there is no vehicle on the detector
     // double
@@ -852,66 +862,6 @@ impl MSInductLoop {
             } else {
                 self.myOverrideEntryTime = entryTime;
             }
-        }
-    }
-
-    /// C++: `void MSInductLoop::saveState(OutputDevice &) const` [const, virtual]
-    /// Saves the time of the last detection and the pending meso detections
-    // void
-    // MSInductLoop::saveState(OutputDevice& out) const {
-    //     out.openTag(SUMO_TAG_INDUCTION_LOOP);
-    //     out.writeAttr(SUMO_ATTR_ID, getID());
-    //     out.writeAttr(SUMO_ATTR_TIME, myLastLeaveTime);
-    //     if (mySegment != nullptr) {
-    //         out.writeAttr(SUMO_ATTR_NEXT, getTimes(myNextMesoLeaveTimes, SIMSTEP));
-    //         out.writeAttr(SUMO_ATTR_LAST, getTimes(myLastMesoLeaveTimes, SIMSTEP));
-    //         // used for the next detection when a vehicle leaves the segment
-    //         out.writeAttr(SUMO_ATTR_HEADWAY, toString<SUMOTime>(mySegment->getLastHeadway()));
-    //     }
-    //     out.closeTag();
-    // }
-    #[allow(unused_variables)]
-    pub fn save_state(&self, out: &mut OutputDevice) {
-        out.open_tag_id(SUMO_TAG_INDUCTION_LOOP);
-        out.write_attr(SUMO_ATTR_ID, self.base2.base.get_id());
-        out.write_attr(SUMO_ATTR_TIME, &self.myLastLeaveTime);
-        if !self.mySegment.is_null() {
-            out.write_attr(SUMO_ATTR_NEXT, &MSInductLoop::get_times(self.myNextMesoLeaveTimes.clone(), sim_step()));
-            out.write_attr(SUMO_ATTR_LAST, &MSInductLoop::get_times(self.myLastMesoLeaveTimes.clone(), sim_step()));
-            // used for the next detection when a vehicle leaves the segment
-            out.write_attr(SUMO_ATTR_HEADWAY, &self.mySegment.get_last_headway().to_string());
-        }
-        out.close_tag("");
-    }
-
-    /// C++: `void MSInductLoop::loadState(const SUMOSAXAttributes &, const SUMOTime)` [virtual]
-    /// Loads the detection state, shifting all times by the given offset
-    // void
-    // MSInductLoop::loadState(const SUMOSAXAttributes& attrs, const SUMOTime offset) {
-    //     bool ok = true;
-    //     myLastLeaveTime = attrs.get<double>(SUMO_ATTR_TIME, getID().c_str(), ok) - STEPS2TIME(offset);
-    //     if (mySegment != nullptr) {
-    //         for (const std::string& t : StringTokenizer(attrs.getString(SUMO_ATTR_NEXT)).getVector()) {
-    //             myNextMesoLeaveTimes.push(StringUtils::toLong(t) - offset);
-    //         }
-    //         for (const std::string& t : StringTokenizer(attrs.getString(SUMO_ATTR_LAST)).getVector()) {
-    //             myLastMesoLeaveTimes.push(StringUtils::toLong(t) - offset);
-    //         }
-    //         mySegment->setLastHeadway(StringUtils::toLong(attrs.getString(SUMO_ATTR_HEADWAY)));
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
-        let mut ok = true;
-        self.myLastLeaveTime = attrs.get::<f64>(SUMO_ATTR_TIME, self.base2.base.get_id(), &mut ok, true) - steps2time(offset);
-        if !self.mySegment.is_null() {
-            for t in StringTokenizer::new(&attrs.get_string(SUMO_ATTR_NEXT)).get_vector() {
-                self.myNextMesoLeaveTimes.push(Reverse(string_utils::to_long(&t).unwrap() - offset));
-            }
-            for t in StringTokenizer::new(&attrs.get_string(SUMO_ATTR_LAST)).get_vector() {
-                self.myLastMesoLeaveTimes.push(Reverse(string_utils::to_long(&t).unwrap() - offset));
-            }
-            self.mySegment.m().set_last_headway(string_utils::to_long(&attrs.get_string(SUMO_ATTR_HEADWAY)).unwrap());
         }
     }
 
@@ -1193,32 +1143,6 @@ impl MSInductLoop {
         }
     }
 
-    /// C++: `std::vector<SUMOTime> MSInductLoop::getTimes(TimeQueue, SUMOTime)` [static, protected]
-    // std::vector<SUMOTime>
-    // MSInductLoop::getTimes(TimeQueue tq, SUMOTime now) {
-    //     std::vector<SUMOTime> result;
-    //     if (!tq.empty()) {
-    //         // the next query discards them anyway
-    //         discardOldTimes(tq, now);
-    //     }
-    //     while (!tq.empty()) {
-    //         result.push_back(tq.top());
-    //         tq.pop();
-    //     }
-    //     return result;
-    // }
-    #[allow(unused_variables)]
-    pub fn get_times(mut tq: MSInductLoop_TimeQueue, now: SUMOTime) -> Vec<SUMOTime> {
-        let mut result = Vec::new();
-        if !tq.is_empty() {
-            // the next query discards them anyway
-            MSInductLoop::discard_old_times(&mut tq, now);
-        }
-        while let Some(Reverse(x)) = tq.pop() {
-            result.push(x);
-        }
-        result
-    }
 
     /// C++: `void MSInductLoop::MSInductLoop(const MSInductLoop &)` [private]
     /// Invalidated copy constructor.

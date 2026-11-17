@@ -46,8 +46,6 @@ pub struct MSStateHandler {
     pub myVehiclesToRemove: BTreeSet<String>,
     /// vehicles that were removed when loading state
     pub myRemoved: i32,
-    /// the loaded counter of meso leader events (-1 if not given)
-    pub myMesoEventCounter: i64,
     /// index of the currently parse flowState
     pub myFlowIndex: i32,
     /// rail signal for which constraints are being loaded
@@ -93,7 +91,6 @@ impl MSStateHandler {
     //     myCFMAttrs(nullptr),
     //     myLastParameterised(nullptr),
     //     myRemoved(0),
-    //     myMesoEventCounter(-1),
     //     myFlowIndex(-1),
     //     myConstrainedSignal(nullptr) {
     //     myAmLoadingState = true;
@@ -121,7 +118,6 @@ impl MSStateHandler {
                 .into_iter()
                 .collect(),
             myRemoved: 0,
-            myMesoEventCounter: -1,
             myFlowIndex: -1,
             myConstrainedSignal: Ptr::null(),
             myArrived: Vec::new(),
@@ -203,7 +199,6 @@ impl MSStateHandler {
     //         }
     //     }
     //     MSNet::getInstance()->getTLSControl().saveState(out);
-    //     MSNet::getInstance()->getDetectorControl().saveState(out);
     //     MSRoutingEngine::saveState(out);
     //     out.close();
     //     gPrecision = defaultPrecision;
@@ -268,7 +263,6 @@ impl MSStateHandler {
             }
         }
         MSNet::get_instance().m().get_tls_control().save_state(&mut out);
-        MSNet::get_instance().m().get_detector_control().save_state(&mut out);
         MSRoutingEngine::save_state(&mut out);
         out.close().unwrap_or_else(|e| panic!("{e}"));
         set_g_precision(defaultPrecision);
@@ -305,7 +299,6 @@ impl MSStateHandler {
     //                 // init before loading any vehicles to ensure that driveways are built early
     //                 MSRailSignalControl::getInstance();
     //             }
-    //             myMesoEventCounter = attrs.getOpt<long long int>(SUMO_ATTR_COUNT, nullptr, ok, -1);
     //             break;
     //         }
     //         case SUMO_TAG_RNGSTATE: {
@@ -582,14 +575,6 @@ impl MSStateHandler {
     //             tl->loadState(tlc, myTime, phase, spentDuration, nextSwitch, timeInCycle, active);
     //             break;
     //         }
-    //         case SUMO_TAG_INDUCTION_LOOP: {
-    //             MSDetectorFileOutput* const det = MSNet::getInstance()->getDetectorControl().getTypedDetectors(SUMO_TAG_INDUCTION_LOOP).get(attrs.getString(SUMO_ATTR_ID));
-    //             // the detector may belong to an output which is not loaded
-    //             if (det != nullptr) {
-    //                 det->loadState(attrs, myOffset);
-    //             }
-    //             break;
-    //         }
     //         case SUMO_TAG_DISPATCHER: {
     //             bool ok = true;
     //             SUMOTime next = attrs.get<SUMOTime>(SUMO_ATTR_NEXT, "dispatcher", ok);
@@ -620,7 +605,6 @@ impl MSStateHandler {
                     // init before loading any vehicles to ensure that driveways are built early
                     MSRailSignalControl::get_instance();
                 }
-                self.myMesoEventCounter = attrs.get_opt::<i64>(SUMO_ATTR_COUNT, "", &mut ok, -1, false);
             }
             SUMO_TAG_RNGSTATE => {
                 if attrs.has_attribute(SUMO_ATTR_DEFAULT) {
@@ -670,9 +654,12 @@ impl MSStateHandler {
                     MSRoutingEngine::init_weight_update(lastAdaptation);
                 }
                 MSRoutingEngine::init_edge_weights(SVC_PASSENGER, lastAdaptation, index);
-                if utils::options::options_cont::get_bool("device.rerouting.bike-speeds") || use_meso_sim() {
-                    // shortcut: bicycle edge weights and meso segment speed reset are not ported
-                    panic!("shortcut: bike-speed routing init and meso cached speeds are not ported");
+                if utils::options::options_cont::get_bool("device.rerouting.bike-speeds") {
+                    MSRoutingEngine::init_edge_weights(SVC_BICYCLE, -1, -1);
+                }
+                if use_meso_sim() {
+                    // shortcut: meso segment cached-speed reset (MESegment::resetCachedSpeeds) is not ported, meso is ported separately
+                    panic!("shortcut: meso cached speeds are not ported");
                 }
             }
             SUMO_TAG_EDGE => {
@@ -825,16 +812,10 @@ impl MSStateHandler {
             SUMO_TAG_PERSON | SUMO_TAG_CONTAINER => {
                 self.myAttrs = leak_attrs(attrs);
             }
-            SUMO_TAG_INDUCTION_LOOP => {
-                let id = attrs.get_string(SUMO_ATTR_ID);
-                // the detector may belong to an output which is not loaded
-                if let Some(det) = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&id) {
-                    det.m().load_state(attrs, self.myOffset);
-                }
-            }
             SUMO_TAG_DISPATCHER => {
-                // shortcut: MSDevice_Taxi::initDispatch is not ported under a verified name
-                panic!("shortcut: taxi dispatcher state is not ported");
+                let next = attrs.get::<i64>(SUMO_ATTR_NEXT, "dispatcher", &mut ok, true);
+                MSDevice_Taxi::init_dispatch(next);
+                MSDevice_Taxi::get_dispatch_algorithm().m().load_state(attrs);
             }
             _ => {}
         }
@@ -890,9 +871,6 @@ impl MSStateHandler {
     //                     }
     //                 }
     //             }
-    //             if (use_meso_sim() && myMesoEventCounter >= 0) {
-    //                 MELoop::setEventCounter(myMesoEventCounter);
-    //             }
     //             MSDevice_Taxi::finalizeLoadState();
     //             break;
     //         }
@@ -911,9 +889,9 @@ impl MSStateHandler {
                 let net = MSNet::get_instance();
                 let tc = if element == SUMO_TAG_PERSON { net.m().get_person_control() } else { net.m().get_container_control() };
                 let transportable = tc.get(&self.myAttrs.get_string(SUMO_ATTR_ID));
-                // shortcut: MSTransportable::loadState and fixLoadCount are not wired here, loaded transportable state is refused
-                let _ = transportable;
-                panic!("shortcut: transportable (person/container) state loading is not ported");
+                transportable.m().load_state(&self.myAttrs.get_string(SUMO_ATTR_STATE));
+                tc.fix_load_count(transportable);
+                self.myAttrs = Ptr::null();
             }
             SUMO_TAG_FLOWSTATE => {
                 MSNet::get_instance().m().get_insertion_control().add_flow(self.myVehicleParameter, self.myFlowIndex);
@@ -951,9 +929,6 @@ impl MSStateHandler {
                             microVeh.m().update_best_lanes(false, Ptr::null());
                         }
                     }
-                }
-                if use_meso_sim() && self.myMesoEventCounter >= 0 {
-                    MELoop::set_event_counter(self.myMesoEventCounter);
                 }
                 MSDevice_Taxi::finalize_load_state();
             }
@@ -1088,7 +1063,7 @@ impl MSStateHandler {
                 panic!("{}", ProcessError::new(format!("Could not load vehicle '{}' from state", vehID)));
             }
             if deviceNames.iter().any(|d| d == "person" || d == "container") {
-                // shortcut: initTransportableDevice for loaded persons and containers is not ported
+                // shortcut: MSBaseVehicle::initTransportableDevice is a stub (buildVehicleDevices not wired in ms_base_vehicle.rs), upgrade when it creates myPersonDevice/myContainerDevice
                 panic!("shortcut: transportable devices in loaded state are not ported");
             }
             let base: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
@@ -1109,11 +1084,16 @@ impl MSStateHandler {
                 let attrID = attrs.get_string(SUMO_ATTR_ID);
                 for dev in base.m().get_devices().clone() {
                     if dev.m().base2.get_id() == attrID {
-                        if attrID.starts_with("tripinfo_") {
-                            dev.cast::<MSDevice_Tripinfo>().m().load_state(&attrs);
-                        } else {
-                            // shortcut: only tripinfo device states are restored, other device types need a device vtable
-                            panic!("shortcut: device '{}' state restore is not ported", attrID);
+                        // C++ dev->loadState() is virtual; dispatch by deviceName() as in get_parameter_of. MSDevice::loadState is empty.
+                        match dev.base2.device_name().as_str() {
+                            "battery" => dev.cast::<MSDevice_Battery>().m().load_state(&attrs),
+                            "rerouting" => dev.cast::<MSDevice_Routing>().m().load_state(&attrs),
+                            "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().load_state(&attrs),
+                            "taxi" => dev.cast::<MSDevice_Taxi>().m().load_state(&attrs),
+                            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().load_state(&attrs),
+                            "person" | "container" => dev.cast::<MSDevice_Transportable>().m().load_state(&attrs),
+                            "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().load_state(&attrs),
+                            _ => {}
                         }
                     }
                 }

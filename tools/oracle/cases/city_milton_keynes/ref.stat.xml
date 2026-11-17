@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T14:23:42.181324-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T15:45:22.120791-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,9 @@
     </input>
 
     <output>
-        <fcd-output value="/tmp/f_city_milton_keynes.xml"/>
-        <tripinfo-output value="/tmp/t_city_milton_keynes.xml"/>
-        <statistic-output value="/tmp/s_city_milton_keynes.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.stat.xml"/>
     </output>
 
     <time>
@@ -26,7 +26,7 @@
 -->
 
 <statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
-    <performance clockBegin="1794857022.21" clockEnd="1794857022.46" clockDuration="0.25" traciDuration="0.00" realTimeFactor="2439.02" vehicleUpdatesPerSecond="91646.34" personUpdatesPerSecond="0.00" begin="0.00" end="600.00" duration="600.00"/>
+    <performance clockBegin="1794861922.17" clockEnd="1794861923.05" clockDuration="0.88" traciDuration="0.00" realTimeFactor="679.50" vehicleUpdatesPerSecond="25532.28" personUpdatesPerSecond="0.00" begin="0.00" end="600.00" duration="600.00"/>
     <vehicles loaded="150" inserted="146" running="33" waiting="4"/>
     <teleports total="4" jam="2" yield="2" wrongLane="0"/>
     <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>

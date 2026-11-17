@@ -107,26 +107,16 @@ impl NBPTStopCont {
                 &self.myPTStops
     }
 
-    /// C++: `int NBPTStopCont::cleanupDeleted(NBEdgeCont &, bool)`
+    /// C++: `int NBPTStopCont::cleanupDeleted(NBEdgeCont &)`
     /// remove stops on non existing (removed) edges
     // int
-    // NBPTStopCont::cleanupDeleted(NBEdgeCont& cont, bool reAssign) {
+    // NBPTStopCont::cleanupDeleted(NBEdgeCont& cont) {
     //     int numDeleted = 0;
     //     for (auto i = myPTStops.begin(); i != myPTStops.end();) {
-    //         auto stop = i->second;
-    //         if (cont.getByID(stop->getEdgeId()) == nullptr) {
-    //             NBEdge* reverse = nullptr;
-    //             if (reAssign) {
-    //                 reverse = cont.getByID("-" + stop->getEdgeId());
-    //             }
-    //             if (reverse == nullptr) {
-    //                 WRITE_WARNINGF(TL("Removing pt stop '%' on non existing edge '%'."), i->first, i->second->getEdgeId());
-    //                 i = myPTStops.erase(i);
-    //                 numDeleted++;
-    //             } else {
-    //                 stop->replaceEdge(stop->getEdgeId(), {reverse});
-    //                 i++;
-    //             }
+    //         if (cont.getByID(i->second->getEdgeId()) == nullptr) {
+    //             WRITE_WARNINGF(TL("Removing pt stop '%' on non existing edge '%'."), i->first, i->second->getEdgeId());
+    //             i = myPTStops.erase(i);
+    //             numDeleted++;
     //         } else {
     //             i++;
     //         }
@@ -134,24 +124,15 @@ impl NBPTStopCont {
     //     return numDeleted;
     // }
     #[allow(unused_variables)]
-    pub fn cleanup_deleted(&mut self, cont: &mut NBEdgeCont, reAssign: bool) -> i32 {
-                let mut numDeleted = 0;
+    pub fn cleanup_deleted(&mut self, cont: &mut NBEdgeCont) -> i32 {
+        let mut numDeleted = 0;
         let keys: Vec<String> = self.myPTStops.keys().cloned().collect();
         for key in keys {
-            let stop = self.myPTStops[&key].clone();
-            let edgeId = stop.get_edge_id().to_string();
+            let edgeId = self.myPTStops[&key].get_edge_id().to_string();
             if cont.get_by_id(&edgeId).is_null() {
-                let mut reverse: Ptr<NBEdge> = Ptr::null();
-                if reAssign {
-                    reverse = cont.get_by_id(&format!("-{}", edgeId));
-                }
-                if reverse.is_null() {
-                    write_warning(&format!("Removing pt stop '{}' on non existing edge '{}'.", key, edgeId));
-                    self.myPTStops.remove(&key);
-                    numDeleted += 1;
-                } else {
-                    stop_m(&stop).replace_edge(&edgeId, &vec![reverse]);
-                }
+                write_warning(&format!("Removing pt stop '{}' on non existing edge '{}'.", key, edgeId));
+                self.myPTStops.remove(&key);
+                numDeleted += 1;
             }
         }
         numDeleted

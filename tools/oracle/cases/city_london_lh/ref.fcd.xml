@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T14:23:27.791904-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T15:45:20.317024-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,9 @@
     </input>
 
     <output>
-        <fcd-output value="tools/oracle/cases/city_london_lh/ref.fcd.xml"/>
-        <tripinfo-output value="tools/oracle/cases/city_london_lh/ref.tripinfo.xml"/>
-        <statistic-output value="tools/oracle/cases/city_london_lh/ref.stat.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_london_lh/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_london_lh/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_london_lh/ref.stat.xml"/>
     </output>
 
     <time>

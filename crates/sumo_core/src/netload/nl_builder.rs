@@ -500,14 +500,14 @@ impl NLBuilder {
         // load meso edge types
         let mut haveSeenMesoEdgeType = false;
         if crate::microsim::ms_globals::use_meso_sim() {
-            if self.myOptions.is_set("additional-files", true).unwrap() && !self.myOptions.get_bool("ignore.additionalelements").unwrap() {
+            if self.myOptions.is_set("additional-files", true).unwrap() {
                 haveSeenMesoEdgeType = self.load_meso_edge_types("additional-files");
             }
             // meso segment building must be delayed until meso edge types have been read from additional files
             self.myNet.m().get_edge_control().build_meso_segments();
         }
         // load additional net elements (sources, detectors, ...)
-        if self.myOptions.is_set("additional-files", true).unwrap() && !self.myOptions.get_bool("ignore.additionalelements").unwrap() {
+        if self.myOptions.is_set("additional-files", true).unwrap() {
             if !self.load("additional-files", false) {
                 return false;
             }
@@ -564,7 +564,7 @@ impl NLBuilder {
         MSDevice_FCDReplay::init();
 
         // load routes
-        if self.myOptions.is_set("route-files", true).unwrap() && !self.myOptions.get_bool("ignore.routeelements").unwrap() {
+        if self.myOptions.is_set("route-files", true).unwrap() {
             if string2time(&self.myOptions.get_string("route-steps").unwrap()).unwrap() <= 0 {
                 // incremental loading is disabled. Load route files fully
                 if !self.load("route-files", false) {
@@ -770,7 +770,7 @@ impl NLBuilder {
         // build the loaders
         let loaders: Ptr<SUMORouteLoaderControl> = Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoaderControl::new(string2time(&oc.get_string("route-steps").unwrap()).unwrap()))));
         // check whether a list is existing
-        if oc.is_set("route-files", true).unwrap() && !oc.get_bool("ignore.routeelements").unwrap() && string2time(&oc.get_string("route-steps").unwrap()).unwrap() > 0 {
+        if oc.is_set("route-files", true).unwrap() && string2time(&oc.get_string("route-steps").unwrap()).unwrap() > 0 {
             let files = oc.get_string_vector("route-files").unwrap().clone();
             for file in files.iter() {
                 if !utils::common::file_helpers::is_readable(file) {

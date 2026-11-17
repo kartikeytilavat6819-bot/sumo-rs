@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T14:23:41.571179-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T15:44:54.280390-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,9 @@
     </input>
 
     <output>
-        <fcd-output value="/tmp/f_city_atlanta_motorway.xml"/>
-        <tripinfo-output value="/tmp/t_city_atlanta_motorway.xml"/>
-        <statistic-output value="/tmp/s_city_atlanta_motorway.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_atlanta_motorway/ref.stat.xml"/>
     </output>
 
     <time>

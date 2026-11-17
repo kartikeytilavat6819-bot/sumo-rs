@@ -4,9 +4,10 @@
 # run batch_kernel.py on a free worker (account x index), and turn finished outputs into <id>.result files.
 param(
     [string[]]$TokenFiles = @("$HOME\.kaggle\gate_token", "$HOME\.kaggle\gate_token_acct3"),
-    # leave 2 of each account's 5 sessions free for agents' own diagnostic kernels
-    [int]$WorkersPerAccount = 3,
-    [int]$PerBatch = 5
+    # leave 1 of each account's 5 sessions free for agents' own diagnostic kernels
+    [int]$WorkersPerAccount = 4,
+    # small batches: snapshots run serially in a notebook and agent_run.sh can take minutes each
+    [int]$PerBatch = 3
 )
 $ErrorActionPreference = "Continue"
 $q = "$HOME\.kaggle\gateq"
@@ -21,6 +22,12 @@ $users = @{}
 foreach ($tf in $TokenFiles) { $users[$tf] = UseToken $tf }
 # worker state: key "tokenfile|index" -> @{ ids = @(...); kernel = "user/name" }
 $busy = @{}
+# in-flight batches survive a dispatcher restart (otherwise their .req.taken files are orphaned forever)
+$state = "$q\_busy.json"
+function SaveBusy { $busy | ConvertTo-Json -Depth 4 | Set-Content $state }
+if (Test-Path $state) {
+    (Get-Content $state -Raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $busy[$_.Name] = @{ ids = @($_.Value.ids); kernel = $_.Value.kernel } }
+}
 "dispatcher started: accounts $($users.Values -join ', '), $WorkersPerAccount workers each, $PerBatch per batch"
 
 while ($true) {
@@ -38,7 +45,7 @@ while ($true) {
             else { Rename-Item "$q\$id.req.taken" "$id.req" -ErrorAction SilentlyContinue }   # not reached: requeue
         }
         "$(Get-Date -Format HH:mm) $($w.kernel) $($st.Trim() -replace '.*status ','') -> $($w.ids.Count) results"
-        $busy.Remove($key)
+        $busy.Remove($key); SaveBusy
     }
     # 2. pending requests -> free workers
     $pending = @(Get-ChildItem $q -Filter *.req | Sort-Object LastWriteTime)
@@ -79,7 +86,7 @@ while ($true) {
                 foreach ($id in $ids) { Rename-Item "$q\$id.req.taken" "$id.req" -ErrorAction SilentlyContinue }
                 continue
             }
-            $busy[$key] = @{ ids = $ids; kernel = $kernel }
+            $busy[$key] = @{ ids = $ids; kernel = $kernel }; SaveBusy
             "$(Get-Date -Format HH:mm) $kernel <- $($ids -join ', ')"
             Start-Sleep 20   # a fresh push reports the previous run's status for a few seconds
         }

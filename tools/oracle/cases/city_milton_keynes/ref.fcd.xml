@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T14:23:42.181112-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-16T15:45:22.116757-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -9,9 +9,9 @@
     </input>
 
     <output>
-        <fcd-output value="/tmp/f_city_milton_keynes.xml"/>
-        <tripinfo-output value="/tmp/t_city_milton_keynes.xml"/>
-        <statistic-output value="/tmp/s_city_milton_keynes.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-bc01/tools/oracle/cases/city_milton_keynes/ref.stat.xml"/>
     </output>
 
     <time>
