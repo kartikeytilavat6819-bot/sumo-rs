@@ -317,9 +317,16 @@ impl MSDevice_StationFinder {
             notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
             notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
         };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_StationFinder>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
         let mut this = Self::new_device(holder);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
         this
     }
 

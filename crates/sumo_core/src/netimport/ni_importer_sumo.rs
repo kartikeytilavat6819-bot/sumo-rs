@@ -1393,7 +1393,9 @@ impl NIImporter_SUMO {
                         c.changeRight,
                         false,
                     );
-                    // shortcut: CHBuilder_Connection has no Parameterised base, so connection parameters are not copied yet; upgrade when NBEdge::Connection is mapped
+                    if c.base.get_parameters_map().len() > 0 {
+                        nbe.m().get_connection_ref(fromLaneIndex, toEdge, c.toLaneIdx).base.update_parameters(c.base.get_parameters_map());
+                    }
                     // maybe we have a tls-controlled connection
                     if !c.tlID.is_empty() && !self.myRailSignals.contains(&c.tlID) {
                         let programs: BTreeMap<String, Ptr<NBTrafficLightDefinition>> = self.myTLLCont.m().get_programs(&c.tlID).clone();
