@@ -2986,14 +2986,26 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn replace_vehicle_type(&mut self, type_: Ptr<MSVehicleType>) {
-        // shortcut: the speedFactor distribution (getSpeedFactor()) is Unmapped, so the speed factor
-        // remapping onto the new type's distribution is not applied; the chosen factor is kept
+        let oldMu = self.myType.get_speed_factor().get_parameter(0);
+        let oldDev = self.myType.get_speed_factor().get_parameter(1);
         if self.myType.is_vehicle_specific() && type_ != self.myType {
-            // shortcut: MSNet::getVehicleControl().removeVType(myType) is not ported
+            MSNet::get_instance().m().get_vehicle_control().remove_v_type(self.myType);
+        }
+        if oldDev == 0. {
+            self.myChosenSpeedFactor = type_.compute_chosen_speed_deviation(self.get_parameter().speedFactor, self.get_rng(), -1.);
+        } else {
+            let distPoint = (self.myChosenSpeedFactor - oldMu) / oldDev;
+            let newMu = type_.get_speed_factor().get_parameter(0);
+            let newDev = type_.get_speed_factor().get_parameter(1);
+            self.myChosenSpeedFactor = newMu + distPoint * newDev;
+            let max = type_.get_speed_factor().get_max();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor < max { self.myChosenSpeedFactor } else { max };
+            let min = type_.get_speed_factor().get_min();
+            self.myChosenSpeedFactor = if self.myChosenSpeedFactor > min { self.myChosenSpeedFactor } else { min };
         }
         self.myType = type_;
         if !self.myEnergyParams.is_null() {
-            // shortcut: EnergyParams::setSecondary(type->getEmissionParameters()) is not ported
+            self.myEnergyParams.m().set_secondary(type_.get_emission_parameters());
         }
     }
 
