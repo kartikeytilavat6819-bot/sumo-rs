@@ -530,7 +530,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn loaded_veh_begin(&self) -> usize {
-        // shortcut: C++ map const_iterator is modeled as an index into myVehicleDict (BTreeMap has no begin/end iterator pair here), upgrade when callers take real iterators
+        // C++ map const_iterator is an index into myVehicleDict (id order, like the std::map), as for route iterators (AGENTS.md)
         0
     }
 
@@ -541,7 +541,7 @@ impl MSVehicleControl {
     //     }
     #[allow(unused_variables)]
     pub fn loaded_veh_end(&self) -> usize {
-        // shortcut: see loadedVehBegin; the end position is the number of loaded vehicles
+        // see loadedVehBegin; the end position is the number of loaded vehicles
         self.myVehicleDict.len()
     }
 
@@ -1581,8 +1581,8 @@ impl MSVehicleControl {
             let bv = as_base(*veh);
             let pars = bv.get_parameter();
             let route: ConstMSRoutePtr = MSRoute::dictionary_3(&pars.routeid, Ptr::null());
-            // shortcut: ConstMSRoutePtr is an Rc, so a null route cannot be represented and the nullptr branch is dropped, upgrade when dictionary returns Option
-            let stops: Ptr<StopParVector> = Ptr::new(route.get_stops());
+            // an unknown route id yields MSRoute's null-route sentinel (C++ nullptr)
+            let stops: Ptr<StopParVector> = if crate::microsim::ms_route::is_null_route(&route) { Ptr::null() } else { Ptr::new(route.get_stops()) };
             router.get_network().m().add_schedule(pars, stops);
         }
     }
@@ -1738,15 +1738,21 @@ impl MSVehicleControl {
     #[allow(unused_variables)]
     pub fn init_vehicle(&mut self, built: Ptr<MSBaseVehicle>, ignoreStopErrors: bool, addRouteStops: bool, source: MSVehicleControl_VehicleDefinitionSource) {
         self.myLoadedVehNo += 1;
-        // shortcut: C++ catches ProcessError here only to delete `built` and rethrow; the error propagates unchanged and `built` is leaked
-        // C++ calls the virtual initDevices(); MEVehicle does not override it, so meso vehicles get MSBaseVehicle's
-        if crate::microsim::ms_globals::use_meso_sim() {
-            built.m().init_devices();
-        } else {
-            built.cast::<MSVehicle>().m().init_devices();
-        }
-        if source != MSVehicleControl_VehicleDefinitionSource::STATE {
-            built.m().add_stops(ignoreStopErrors, Ptr::null(), addRouteStops);
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            // C++ calls the virtual initDevices(); MEVehicle does not override it, so meso vehicles get MSBaseVehicle's
+            if crate::microsim::ms_globals::use_meso_sim() {
+                built.m().init_devices();
+            } else {
+                built.cast::<MSVehicle>().m().init_devices();
+            }
+            if source != MSVehicleControl_VehicleDefinitionSource::STATE {
+                built.m().add_stops(ignoreStopErrors, Ptr::null(), addRouteStops);
+            }
+        }));
+        if let Err(e) = res {
+            // C++ catches ProcessError to `delete built` (destructor side effects; the memory stays leaked) and rethrows
+            delete_vehicle_object(Ptr::from_mut(&mut built.m().base));
+            std::panic::resume_unwind(e);
         }
         MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut built.m().base), MSNet_VehicleState::BUILT, "");
     }
