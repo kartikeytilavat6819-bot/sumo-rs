@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Infrastructure for the TraCI 'infra ' probes, loaded only by those runs (client.py run_side) on the junction net. -->
 <additional xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/additional_file.xsd">
-    <inductionLoop id="il0" lane="-103224#1_0" pos="10" freq="1"/>
-    <laneAreaDetector id="la0" lane="-103224#1_0" pos="5" endPos="40" freq="1"/>
-    <e3Detector id="me0" freq="1">
+    <inductionLoop id="il0" lane="-103224#1_0" pos="10" freq="1" file="infra_il0.out.xml"/>
+    <laneAreaDetector id="la0" lane="-103224#1_0" pos="5" endPos="40" freq="1" file="infra_la0.out.xml"/>
+    <e3Detector id="me0" freq="1" file="infra_me0.out.xml">
         <detEntry lane="-103224#0_0" pos="5"/>
         <detExit lane="-103224#3_0" pos="5"/>
     </e3Detector>
@@ -15,7 +15,7 @@
     <variableSpeedSign id="vss0" lanes="-103224#1_0">
         <step time="0" speed="5"/>
     </variableSpeedSign>
-    <routeProbe id="rp0" edge="-103224#1" freq="1" begin="0"/>
+    <routeProbe id="rp0" edge="-103224#1" freq="1" begin="0" file="infra_rp0.out.xml"/>
     <laneData id="ld0" freq="1" file="infra_ld0.out.xml"/>
     <rerouter id="rr0" edges="-103227#1">
         <interval begin="0" end="100000">
