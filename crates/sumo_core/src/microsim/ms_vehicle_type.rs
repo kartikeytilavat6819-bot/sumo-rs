@@ -299,6 +299,7 @@ impl MSVehicleType {
     // }
     #[allow(unused_variables)]
     pub fn compute_chosen_speed_deviation(&self, speedFactorOverride: f64, rng: Ptr<SumoRNG>, minDev: f64) -> f64 {
+        eprintln!("SFDBG csd id={} ovr={} minDev={} dev={}", self.get_id(), speedFactorOverride, minDev, self.myParameter.speedFactor.get_parameter(1));
         if speedFactorOverride < 0. {
             // C++ passes a possibly-null SumoRNG* here (vehicle.add from TraCI did); sample() treats null as
             // "use the default generator". Dereferencing the null Ptr instead panicked with
