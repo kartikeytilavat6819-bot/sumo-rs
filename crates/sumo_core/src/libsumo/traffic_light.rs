@@ -1224,7 +1224,7 @@ impl TrafficLight {
         } else {
             c.signalId = tlsID.to_string();
             c.foeId = pc.myTripId.clone();
-            c.foeSignal = pc.myFoeSignal.get_id();
+            c.foeSignal = pc.myFoeSignal.get_id().to_string();
             c.limit = pc.myLimit;
             c.type_ = pc.get_type() as i32;
             c.mustWait = !pc.cleared() && pc.is_active();

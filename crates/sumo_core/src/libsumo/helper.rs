@@ -662,7 +662,7 @@ impl Helper {
         }
         let from = Ptr::from_mut(roadPos1.0.m().get_edge());
         let to = Ptr::from_mut(roadPos2.0.m().get_edge());
-        // shortcut: the prohibitions map is Unmapped (), an empty map is passed
+        // C++ `getRouterTT(0)` default argument `prohibited = {}`: an empty prohibitions map
         let now = MSNet::get_instance().get_current_time_step();
         MSNet::get_instance().get_router_tt(0, &Default::default()).compute(from, to, Ptr::null(), now, &mut newRoute, true);
         if newRoute.is_empty() {

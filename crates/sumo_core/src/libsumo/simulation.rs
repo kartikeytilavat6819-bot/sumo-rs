@@ -89,6 +89,11 @@ pub struct Simulation {
 //   static SubscriptionResults Simulation::mySubscriptionResults;
 //   static ContextSubscriptionResults Simulation::myContextSubscriptionResults;
 
+/// wall-clock milliseconds for the progress messages (C++ PROGRESS_BEGIN_TIME_MESSAGE)
+fn current_millis() -> i64 {
+    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
+}
+
 impl Simulation {
     /// C++: `std::pair<int, std::string> Simulation::init(int, int, const std::string &, const std::string &, FILE *const)` [static]
     // std::pair<int, std::string>
@@ -1139,9 +1144,16 @@ impl Simulation {
     // }
     #[allow(unused_variables)]
     pub fn load_state(fileName: &str) -> f64 {
-        // shortcut: MSNet::loadState and the IOError/ProcessError rethrow are not ported yet
-        let _ = fileName;
-        panic!("shortcut: MSNet::loadState is not ported yet");
+        let before = {
+            utils::common::msg_handler::progress_begin_message(&format!("Loading state from '{}'", fileName));
+            current_millis()
+        };
+        // shortcut: C++ catches IOError and ProcessError and rethrows TraCIException with the "Loading state from ... failed" text; errors from MSNet::load_state unwind unchanged, upgrade with the Result-based libsumo error convention
+        let newTime = MSNet::get_instance().m().load_state(fileName, false);
+        Helper::clear_state_changes();
+        Helper::clear_subscriptions();
+        utils::common::msg_handler::progress_time_message(current_millis() - before);
+        steps2time(newTime)
     }
 
     /// C++: `void Simulation::writeMessage(const std::string &)` [static]
