@@ -14,24 +14,8 @@ const MSPMODEL_SIDEWALK_OFFSET: f64 = 3.0;
 const CSTATE_LATERAL_OFFSET: f64 = 0.0;
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge) with the default svc = SVC_PEDESTRIAN (utils/router/IntermodalEdge.h)
-// shortcut: local copy of the pedestrian-only path, because the generic intermodal_edge.rs getSidewalk is still a stub, upgrade when it is ported
 fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    let lanes = edge.get_lanes();
-    // prefer lanes that are exclusive to pedestrians
-    for lane in lanes.iter() {
-        if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-            return *lane;
-        }
-    }
-    Ptr::null()
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, SVC_PEDESTRIAN)
 }
 
 // Virtual dispatch for the PState/CState overrides: the adapter base is the first field of both repr(C) structs.
