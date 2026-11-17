@@ -1507,6 +1507,13 @@ impl MSLink {
         &self.myApproachingVehicles
     }
 
+    /// C++ ApproachInfos iterates in ComparatorNumericalIdLess order; the map here is keyed by address, so sort by numerical id.
+    pub fn approach_iter_by_id(&self) -> Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> {
+        let mut v: Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (veh, it)).collect();
+        v.sort_by_key(|(veh, _)| veh.get_numerical_id());
+        v
+    }
+
     /// C++: `const PersonApproachInfos * MSLink::getApproachingPersons() const` [const]
     /// return all approaching vehicles
     // const PersonApproachInfos* getApproachingPersons() const {
@@ -1729,7 +1736,7 @@ impl MSLink {
         if g_lateral_resolution() > 0. {
             for &foeLink in self.mySublaneFoeLinks.iter() {
                 debug_assert!(self.myLane != foeLink.get_lane());
-                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                for (foe, info) in foeLink.approach_iter_by_id() {
                     let foeLat = foe.get_lateral_position_on_lane();
                     if ((posLat < foeLat + info.latOffset && self.myLane.get_index() > foeLink.myLane.get_index())
                         || (posLat > foeLat + info.latOffset && self.myLane.get_index() < foeLink.myLane.get_index()))
@@ -1748,7 +1755,7 @@ impl MSLink {
             let lhSign = if g_lefthand() { -1. } else { 1. };
             for &foeLink in self.mySublaneFoeLinks2.iter() {
                 debug_assert!(self.myDirection != LinkDirection::STRAIGHT);
-                for (&foe, info) in foeLink.myApproachingVehicles.iter() {
+                for (foe, info) in foeLink.approach_iter_by_id() {
                     let egoWidth = if ego.is_null() { 1.8 } else { ego.get_vehicle_type().get_width() };
                     let foeLat = foe.get_lateral_position_on_lane() + info.latOffset;
                     if !MSLink::lateral_overlap(posLat, egoWidth, foeLat, foe.get_vehicle_type().get_width())
@@ -1939,7 +1946,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn blocked_at_time(&self, arrivalTime: SUMOTime, leaveTime: SUMOTime, arrivalSpeed: f64, leaveSpeed: f64, sameTargetLane: bool, impatience: f64, decel: f64, waitingTime: SUMOTime, collectFoes: Ptr<MSLink_BlockingFoes>, ego: Ptr<SUMOTrafficObject>, lastWasContRed: bool, dist: f64) -> bool {
-        for (&veh, it) in self.myApproachingVehicles.iter() {
+        for (veh, it) in self.approach_iter_by_id() {
             let vehObj = veh_to_traffic_object(veh);
             if vehObj != ego
                 && (ego.is_null()
@@ -2053,7 +2060,7 @@ impl MSLink {
         let mut closest: Ptr<SUMOVehicle> = Ptr::null();
         let mut foeLink: Ptr<MSLink> = Ptr::null();
         for &link in self.myFoeLinks.iter() {
-            for (&veh, it) in link.myApproachingVehicles.iter() {
+            for (veh, it) in link.approach_iter_by_id() {
                 if link.get_lane_before() == wrapAround.get_lane_before() {
                     return (Ptr::null(), wrapAround);
                 } else if it.dist < closetDist {
@@ -3166,7 +3173,7 @@ impl MSLink {
                 od.write_attr("arrivalSpeed", &f64_to_string(avi.arrivalSpeed));
                 od.write_attr("arrivalSpeedBraking", &f64_to_string(avi.arrivalSpeedBraking));
                 od.write_attr("leaveSpeed", &f64_to_string(avi.leaveSpeed));
-                od.write_attr("willPass", &avi.willPass.to_string());
+                od.write_attr("willPass", &avi.willPass);
                 od.close_tag("");
             }
             od.close_tag("");

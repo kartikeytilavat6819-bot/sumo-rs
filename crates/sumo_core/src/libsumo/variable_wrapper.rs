@@ -5,7 +5,6 @@ use crate::traci_server::tra_ci_server::TraCIServer;
 
 // shortcut: C++ VariableWrapper is abstract and its derived objects are the TraCI server and Helper::SubscriptionWrapper;
 // the sink is a raw pointer to the derived object, which its owner must keep alive and set with set_sink().
-// Helper::SubscriptionWrapper is not ported yet (subscriptions stay unsupported), upgrade when it is.
 
 /// Macro list of the C++ `VariableWrapper::wrap*` virtuals: (name, extra params, C++ name). Used to define the
 /// trait, the dispatching methods on VariableWrapper and the TraCIServer implementation from one list.

@@ -5571,11 +5571,11 @@ impl MSLCM_SL2015 {
                     let rightVehSide = self.myVehicle.get_right_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let leftVehSide = self.myVehicle.get_left_side_on_lane() + link.get_lateral_shift() - hwDiff;
                     let res = if MSGlobals::lateral_resolution() > 0. { MSGlobals::lateral_resolution() } else { next.get_width() };
-                    if rightVehSide < -res && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    if rightVehSide < -res && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -rightVehSide;
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
-                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(self.myVehicle.get_v_class())) {
+                    } else if leftVehSide > next.get_width() + res && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(self.myVehicle.get_v_class())) {
                         *latDist = -(leftVehSide - next.get_width());
                         self.myLeftSpace = distOnLane;
                         ret |= LCA_STRATEGIC | LCA_URGENT;
@@ -5775,7 +5775,7 @@ impl MSLCM_SL2015 {
         let mut leftmost: i32 = 0;
         let curHasStopped = !stoppedLeader.is_null();
         let dir = if latLaneDist < 0. { -1 } else { 1 };
-        let neighBeyond = neighLane.get_parallel_lane(dir, false);
+        let neighBeyond = neighLane.get_parallel_lane(dir, true);
         let hasLaneBeyond = checkCurrent && !neighBeyond.is_null() && neighBeyond.allows_vehicle_class(self.myVehicle.get_v_class());
         let _ = hasLaneBeyond; // UNUSED_PARAMETER in C++
         if curHasStopped || self.has_bidi_leader(leaders, conts) {
@@ -6402,8 +6402,6 @@ impl MSLCM_SL2015 {
     //             if (overlap(rightVehSide, leftVehSide, foeRight, foeLeft) && !outsideEdge()
     //                     // account for imprecise driving by some models
     //                     && (vehDist.second >= vehDist.first->getVehicleType().getMinGap() * (1 - vehDist.first->getCarFollowModel().getCollisionMinGapFactor())
-    //                         || (vehDist.second < 0 && myVehicle.getLane()->isNormal() && vehDist.first->getLane()->isNormal()
-    //                             && vehDist.second >= -myVehicle.getVehicleType().getMinGap() * (1 - myVehicle.getCarFollowModel().getCollisionMinGapFactor()))
     //                         // avoid deadlock due to #3729
     //                         || (!leaders
     //                             && myVehicle.getPositionOnLane() >= myVehicle.getVehicleType().getLength()
@@ -6447,8 +6445,6 @@ impl MSLCM_SL2015 {
                 let keep = Self::overlap(rightVehSide, leftVehSide, foeRight, foeLeft) && !self.outside_edge()
                     // account for imprecise driving by some models
                     && (vehDist.1 >= vehDist.0.get_vehicle_type().get_min_gap() * (1. - vehDist.0.get_car_follow_model().get_collision_min_gap_factor())
-                        || (vehDist.1 < 0. && self.myVehicle.get_lane().is_normal() && vehDist.0.get_lane().is_normal()
-                            && vehDist.1 >= -self.myVehicle.get_vehicle_type().get_min_gap() * (1. - self.myVehicle.get_car_follow_model().get_collision_min_gap_factor()))
                         // avoid deadlock due to #3729
                         || (!leaders
                             && self.myVehicle.get_position_on_lane() >= self.myVehicle.get_vehicle_type().get_length()
@@ -6750,9 +6746,9 @@ impl MSLCM_SL2015 {
         let side = i as f64 * MSGlobals::lateral_resolution() + shift;
         let vclass = self.myVehicle.get_vehicle_type().get_vehicle_class();
         (side < -utils::geom::NUMERICAL_EPS
-            && (next.get_parallel_lane(-1, false).is_null() || !next.get_parallel_lane(-1, false).allows_vehicle_class(vclass)))
+            && (next.get_parallel_lane(-1, true).is_null() || !next.get_parallel_lane(-1, true).allows_vehicle_class(vclass)))
             || (side + MSGlobals::lateral_resolution() > next.get_width()
-                && (next.get_parallel_lane(1, false).is_null() || !next.get_parallel_lane(1, false).allows_vehicle_class(vclass)))
+                && (next.get_parallel_lane(1, true).is_null() || !next.get_parallel_lane(1, true).allows_vehicle_class(vclass)))
     }
 
     /// C++: `double MSLCM_SL2015::forecastAverageSpeed(double, double, double, double) const` [const, protected]

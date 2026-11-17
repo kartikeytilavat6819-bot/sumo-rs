@@ -1321,7 +1321,7 @@ impl NBNetBuilder {
             let mut usedStops = self.myPTLineCont.get_served_pt_stops();
             self.myPTStopCont.postprocess(&mut usedStops);
         } else {
-            let numDeletedStops = self.myPTStopCont.cleanup_deleted(&mut self.myEdgeCont, false);
+            let numDeletedStops = self.myPTStopCont.cleanup_deleted(&mut self.myEdgeCont);
             if numDeletedStops > 0 {
                 write_warningf!("Removed % pt stops because they could not be assigned to the network", numDeletedStops);
             }

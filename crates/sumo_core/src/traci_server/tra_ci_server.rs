@@ -46,8 +46,8 @@ const TRANSPORTABLE_STATES: [MSNet_TransportableState; 4] = [
     MSNet_TransportableState::CONTAINER_ARRIVED,
 ];
 
-// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs, upgrade when version info is ported
-const TRACI_SERVER_VERSION_STRING: &str = "v1.28.0-0000000000";
+// official 1.28.0 reply, measured against the pristine binary (getVersion -> 'SUMO 1.28.0')
+const TRACI_SERVER_VERSION_STRING: &str = "1.28.0";
 
 impl crate::libsumo::simulation::SimVariableWrapper for TraCIServer {
     fn wrap_double(&mut self, objID: &str, variable: i32, value: f64) -> bool {
@@ -1821,7 +1821,7 @@ impl TraCIServer {
     pub fn new(begin: SUMOTime, port: i32, numClients: i32) -> Self {
         let mut s = TraCIServer {
             base: MSNet_VehicleStateListener::new(),
-            base2: VariableWrapper::new(()),
+            base2: VariableWrapper::new(None),
             base3: MSNet_TransportableStateListener::new(),
             mySockets: BTreeMap::new(),
             mySocketReorderRequests: BTreeMap::new(),
@@ -2084,7 +2084,11 @@ impl TraCIServer {
             let s = Ptr::from_mut(&mut self.mySubscriptions[i]);
             let mut into = Storage::new();
             let mut errors = String::new();
-            let ok = self.process_single_subscription(s.m(), &mut into, &mut errors);
+            // shortcut: C++ lets a TraCIException escape the step; here the failing subscription is dropped so the step still completes
+            let ok = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(s.m(), &mut into, &mut errors))) {
+                Ok(ok) => ok,
+                Err(_) => false,
+            };
             self.mySubscriptionCache.write_storage(&into);
             if ok {
                 i += 1;
@@ -2322,11 +2326,13 @@ impl TraCIServer {
         let outp = Ptr::from_mut(&mut self.myOutputStorage);
         let mut success = false;
         // dispatch commands
-        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here
+        // C++ `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd; libsumo reports those as panics here.
+        // A ProcessError is not caught by C++ and unwinds to main, so it is re-raised here too.
         if self.myExecutors.contains_key(&commandId) {
             let exec = self.myExecutors[&commandId];
             match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| exec(self, inp.m(), outp.m()))) {
                 Ok(s) => success = s,
+                Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
                 Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
             }
         } else if (commandId >= CMD_GET_INDUCTIONLOOP_VARIABLE && commandId <= CMD_GET_BUSSTOP_VARIABLE)
@@ -2337,6 +2343,7 @@ impl TraCIServer {
             } else {
                 match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_get(commandId, inp.m(), outp.m()))) {
                     Ok(s) => success = s,
+                    Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
                     Err(p) => success = self.write_error_status_cmd(commandId, &panic_text(p), outp.m()),
                 }
             }
@@ -3021,8 +3028,17 @@ impl TraCIServer {
         let mut writeInto = Storage::new();
         let mut errors = String::new();
         let mut modifiedSubscription: Ptr<Subscription> = Ptr::null();
-        // shortcut: C++ catches libsumo::TraCIException and answers with writeStatusCmd(RTYPE_ERR, e.what()); libsumo has no TraCIException mapping yet, so that catch is not reproduced
-        if self.process_single_subscription(s, &mut writeInto, &mut errors) {
+        // C++ `catch (libsumo::TraCIException& e)` -> writeStatusCmd(RTYPE_ERR, e.what()); a panic from libsumo unwinds to here
+        let sp = Ptr::from_mut(s);
+        let processed = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.process_single_subscription(sp.m(), &mut writeInto, &mut errors)));
+        let processed = match processed {
+            Ok(ok) => ok,
+            Err(p) => {
+                self.write_status_cmd_2(s.commandId, RTYPE_ERR, &panic_text(p));
+                return;
+            }
+        };
+        if processed {
             if s.endTime < MSNet::get_instance().get_current_time_step() {
                 self.write_status_cmd_2(s.commandId, RTYPE_ERR, "Subscription has ended.");
             } else {

@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T11:09:27.667479-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/real/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/real/routes.rou"/>
+    </input>
+
+    <output>
+        <netstate-dump value="/mnt/c/Users/karti/Temp/score/outputs-ou02/real/netstate/ref/netstate.xml"/>
+    </output>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<netstate xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netstate_file.xsd">
+    <timestep time="0.00">
+        <edge id="397795464#0">
+            <lane id="397795464#0_0">
+                <vehicle id="v0" pos="2.26" speed="11.85"/>
+            </lane>
+            <lane id="397795464#0_1"/>
+            <lane id="397795464#0_2"/>
+            <lane id="397795464#0_3"/>
+        </edge>
+    </timestep>
+    <timestep time="1.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="5.72" speed="11.85"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="2.00">
+        <edge id="1117867028">
+            <lane id="1117867028_0">
+                <vehicle id="v1" pos="0.20" speed="13.03"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="16.40" speed="10.68"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="3.00">
+        <edge id=":6598535230_0">
+            <lane id=":6598535230_0_0">
+                <vehicle id="v1" pos="1.05" speed="11.82"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="28.25" speed="11.85"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="4.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="39.68" speed="11.42"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="682360554#0">
+            <lane id="682360554#0_0"/>
+            <lane id="682360554#0_1"/>
+            <lane id="682360554#0_2"/>
+            <lane id="682360554#0_3">
+                <vehicle id="v2" pos="4.42" speed="11.30"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="5.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="51.35" speed="11.68"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="4.19" speed="10.82"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="6.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="62.64" speed="11.29"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="46522008#0">
+            <lane id="46522008#0_0">
+                <vehicle id="v3" pos="5.10" speed="30.08"/>
+            </lane>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="14.21" speed="10.02"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="7.00">
+        <edge id=":5522182777_2">
+            <lane id=":5522182777_2_0">
+                <vehicle id="v3" pos="7.69" speed="29.98"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v0" pos="74.31" speed="11.67"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="25.40" speed="11.20"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="8.00">
+        <edge id=":42432697_0">
+            <lane id=":42432697_0_0">
+                <vehicle id="v3" pos="2.96" speed="29.97"/>
+            </lane>
+        </edge>
+        <edge id="1117867039#0">
+            <lane id="1117867039#0_0">
+                <vehicle id="v4" pos="0.20" speed="28.62"/>
+            </lane>
+        </edge>
+        <edge id="397795464#2">
+            <lane id="397795464#2_0">
+                <vehicle id="v0" pos="5.68" speed="10.73"/>
+            </lane>
+            <lane id="397795464#2_1"/>
+            <lane id="397795464#2_2"/>
+            <lane id="397795464#2_3"/>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="36.37" speed="10.96"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="9.00">
+        <edge id="397795464#3">
+            <lane id="397795464#3_0">
+                <vehicle id="v0" pos="8.03" speed="11.76"/>
+            </lane>
+            <lane id="397795464#3_1"/>
+            <lane id="397795464#3_2"/>
+            <lane id="397795464#3_3"/>
+        </edge>
+        <edge id="46522008#0">
+            <lane id="46522008#0_0">
+                <vehicle id="v4" pos="22.69" speed="28.23"/>
+            </lane>
+        </edge>
+        <edge id="46522008#2">
+            <lane id="46522008#2_0">
+                <vehicle id="v3" pos="27.31" speed="29.36"/>
+            </lane>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="46.85" speed="10.49"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="10.00">
+        <edge id="46522008#1">
+            <lane id="46522008#1_0">
+                <vehicle id="v4" pos="13.98" speed="28.14"/>
+            </lane>
+        </edge>
+        <edge id="46522008#2">
+            <lane id="46522008#2_0">
+                <vehicle id="v3" pos="57.31" speed="30.00"/>
+            </lane>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="57.79" speed="10.93"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="11.00">
+        <edge id="46522008#2">
+            <lane id="46522008#2_0">
+                <vehicle id="v4" pos="12.16" speed="28.44"/>
+                <vehicle id="v3" pos="86.42" speed="29.11"/>
+            </lane>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="69.07" speed="11.28"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="12.00">
+        <edge id="397795464#0">
+            <lane id="397795464#0_0">
+                <vehicle id="v5" pos="2.26" speed="9.29"/>
+            </lane>
+            <lane id="397795464#0_1"/>
+            <lane id="397795464#0_2"/>
+            <lane id="397795464#0_3"/>
+        </edge>
+        <edge id="46522008#2">
+            <lane id="46522008#2_0">
+                <vehicle id="v4" pos="40.71" speed="28.55"/>
+            </lane>
+        </edge>
+        <edge id="682360554#1">
+            <lane id="682360554#1_0"/>
+            <lane id="682360554#1_1"/>
+            <lane id="682360554#1_2"/>
+            <lane id="682360554#1_3">
+                <vehicle id="v2" pos="80.09" speed="11.01"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="13.00">
+        <edge id=":3974095829_0">
+            <lane id=":3974095829_0_0"/>
+            <lane id=":3974095829_0_1"/>
+            <lane id=":3974095829_0_2"/>
+            <lane id=":3974095829_0_3">
+                <vehicle id="v2" pos="6.01" speed="9.89"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="2.76" speed="8.89"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="46522008#2">
+            <lane id="46522008#2_0">
+                <vehicle id="v4" pos="68.35" speed="27.63"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="14.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="10.80" speed="8.05"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+        <edge id="682360554#2">
+            <lane id="682360554#2_0"/>
+            <lane id="682360554#2_1"/>
+            <lane id="682360554#2_2"/>
+            <lane id="682360554#2_3">
+                <vehicle id="v2" pos="3.27" speed="5.80"/>
+            </lane>
+        </edge>
+    </timestep>
+    <timestep time="15.00">
+        <edge id=":42439984_4">
+            <lane id=":42439984_4_0">
+                <vehicle id="v2" pos="4.02" speed="4.63"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="19.47" speed="8.67"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="16.00">
+        <edge id=":10224024816_0">
+            <lane id=":10224024816_0_0">
+                <vehicle id="v2" pos="1.92" speed="5.74"/>
+            </lane>
+        </edge>
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="27.51" speed="8.04"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="17.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="36.63" speed="9.12"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="18.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="45.28" speed="8.65"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="19.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="53.93" speed="8.64"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="20.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="62.38" speed="8.46"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="21.00">
+        <edge id="397795464#1">
+            <lane id="397795464#1_0">
+                <vehicle id="v5" pos="70.75" speed="8.37"/>
+            </lane>
+            <lane id="397795464#1_1"/>
+            <lane id="397795464#1_2"/>
+            <lane id="397795464#1_3"/>
+        </edge>
+    </timestep>
+    <timestep time="22.00">
+        <edge id="397795464#2">
+            <lane id="397795464#2_0">
+                <vehicle id="v5" pos="0.64" speed="9.25"/>
+            </lane>
+            <lane id="397795464#2_1"/>
+            <lane id="397795464#2_2"/>
+            <lane id="397795464#2_3"/>
+        </edge>
+    </timestep>
+    <timestep time="23.00"/>
+</netstate>

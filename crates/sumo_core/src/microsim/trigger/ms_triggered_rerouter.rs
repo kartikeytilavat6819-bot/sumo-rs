@@ -837,9 +837,6 @@ impl MSTriggeredRerouter {
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
-                if std::env::var_os("SUMO_TRACE_RR").is_some() {
-                    eprintln!("RR rerouter.closing t={} veh={} nProh={} edges={:?} device={} newEdge={}", now, v.get_id(), prohibited.len(), prohibited.keys().map(|e| e.get_id().to_string()).collect::<Vec<_>>(), hasReroutingDevice as i32, if newEdge.is_null() { "null".to_string() } else { newEdge.get_id().to_string() });
-                }
                 let routerProhibited: SUMOAbstractRouter_Prohibitions = prohibited.iter().map(|(e, p)| (e.cast(), p.clone())).collect();
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
                     MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)

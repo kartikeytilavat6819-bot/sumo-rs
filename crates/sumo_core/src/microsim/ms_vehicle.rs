@@ -1,6 +1,8 @@
 //! Port of microsim/MSVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_bit_set_logic::MSBitSetLogic;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 use utils::common::to_string::to_string;
 use utils::geom::POSITION_EPS;
 
@@ -8729,7 +8731,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_time_gap_on_lane(&self) -> f64 {
         // calling getLeader with 0 would induce a dist calculation but we only want to look for the leaders on the current lane
-        let leaderInfo = self.get_leader(-1.0, false);
+        let leaderInfo = self.get_leader(-1.0, true);
         if leaderInfo.0.is_null() || self.get_speed() == 0.0 {
             return -1.0;
         }
@@ -9185,7 +9187,7 @@ impl MSVehicle {
     pub fn handle_collision_stop(&mut self, stop: &mut MSStop, distToStop: f64) -> bool {
         if self.myCurrEdge == stop.edge && distToStop + POSITION_EPS < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_max_decel(), 0.0) {
             if distToStop < self.get_car_follow_model().brake_gap_2(self.myState.mySpeed, self.get_car_follow_model().get_emergency_decel(), 0.0) {
-                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, false);
+                let vNew = self.get_car_follow_model().maximum_safe_stop_speed(distToStop, self.get_car_follow_model().get_max_decel(), self.get_speed(), false, 0.0, true);
                 self.myState.mySpeed = min2(self.myState.mySpeed, vNew + accel2speed(self.get_car_follow_model().get_emergency_decel()));
                 self.myState.myPos = min2(self.myState.myPos, stop.pars.endPos);
                 self.myCachedPosition.set(Position::INVALID);
@@ -9988,9 +9990,9 @@ impl MSVehicle {
                         response2 = self.get_speed() >= veh.get_speed();
                     } else {
                         // fallback if pedestrian crossings are involved
-                        // shortcut: needs logic->getResponseFor(i).test(j) on MSLogicJunction_LinkBits, which is not ported (Unmapped), so no response is assumed, upgrade when ms_logic_junction is ported
-                        response = false;
-                        response2 = false;
+                        let logic = link.get_junction().get_logic().cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
+                        response = logic.get_response_for(link.get_index()).test(foeLink.get_index());
+                        response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index());
                     }
                     if !response {
                         // if we have right of way over the foe, entryTime does not matter
@@ -11528,9 +11530,9 @@ impl MSVehicle {
     //         //if (isSelected()) std::cout << "   check1 passed\n";
     //
     //         // ensure that the vehicle is fully on bidi edges that allow reversal
-    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes && MSNet::getInstance()->hasInternalLinks()
-    //                                                 ? ceil((double)myFurtherLanes.size() / 2.0)
-    //                                                 : myFurtherLanes.size());
+    //         const int neededFutureRoute = 1 + (int)(MSGlobals::gUsingInternalLanes
+    //                                                 ? myFurtherLanes.size()
+    //                                                 : ceil((double)myFurtherLanes.size() / 2.0));
     //         const int remainingRoute = int(myRoute->end() - myCurrEdge) - 1;
     //         if (remainingRoute < neededFutureRoute) {
     // #ifdef DEBUG_REVERSE_BIDI
@@ -11660,10 +11662,10 @@ impl MSVehicle {
             && stopOk
         {
             // ensure that the vehicle is fully on bidi edges that allow reversal
-            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() && MSNet::get_instance().has_internal_links() {
-                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
-            } else {
+            let neededFutureRoute: i32 = 1 + (if crate::microsim::ms_globals::using_internal_lanes() {
                 self.myFurtherLanes.len() as f64
+            } else {
+                (self.myFurtherLanes.len() as f64 / 2.0).ceil()
             }) as i32;
             let remainingRoute = (self.myRoute.size() as i32 - self.myCurrEdge as i32) - 1;
             if remainingRoute < neededFutureRoute {
@@ -11871,7 +11873,7 @@ impl MSVehicle {
                 let front = self.myStops.front().unwrap();
                 let brakeGap = self.get_car_follow_model().brake_gap_2(self.myLane.get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>()), self.get_car_follow_model().get_max_decel(), 3.0);
                 let nearStop = front.reached || (self.myStopDist < (self.myLane.get_length() - self.get_position_on_lane()) && self.myStopDist < brakeGap);
-                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, false).allows_vehicle_class(self.get_v_class());
+                let notStoppingRight = front.lane.get_index() > 0 && front.lane.get_parallel_lane(-1, true).allows_vehicle_class(self.get_v_class());
                 (nearStop, notStoppingRight, !front.reached && front.pars.parking == ParkingType::OFFROAD)
             };
             if reached {
@@ -13142,7 +13144,7 @@ impl MSVehicle {
     //             // check for train direction reversal
     //             if (lane->getBidiLane() != nullptr
     //                     && (*link)->getLane()->getBidiLane() == lane) {
-    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - NUMERICAL_EPS);
+    //                 double vMustReverse = getCarFollowModel().stopSpeed(this, getSpeed(), seen - POSITION_EPS);
     //                 if (seen < 1) {
     //                     mustSeeBeforeReversal = 2 * seen + getLength();
     //                 }
@@ -13154,17 +13156,14 @@ impl MSVehicle {
     //                                 && seen > SPEED2DIST(v));
     //         }
     //
-    //         if (!planningToStop) {
-    //             // no need to slow down for reversal if we are alrady slowing down for a stop
-    //             bool canReverseEventually = false;
-    //             const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
-    //             v = MIN2(v, vReverse);
+    //         bool canReverseEventually = false;
+    //         const double vReverse = checkReversal(canReverseEventually, laneMaxV, seen);
+    //         v = MIN2(v, vReverse);
     // #ifdef DEBUG_PLAN_MOVE
-    //             if (DEBUG_COND) {
-    //                 std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
-    //             }
-    // #endif
+    //         if (DEBUG_COND) {
+    //             std::cout << SIMTIME << " veh=" << getID() << " canReverseEventually=" << canReverseEventually << " v=" << v << "\n";
     //         }
+    // #endif
     //
     //         // check whether we need to slow down in order to finish a continuous lane change
     //         if (myLaneChangeModel->isChangingLanes()) {
@@ -13877,7 +13876,7 @@ impl MSVehicle {
             if self.is_rail() && !lane.is_internal() {
                 // check for train direction reversal
                 if !lane.get_bidi_lane().is_null() && linkP.get_lane().get_bidi_lane() == lane {
-                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - utils::geom::NUMERICAL_EPS, MSCFModel_CalcReason::CURRENT);
+                    let vMustReverse = cfModel.stop_speed(me, self.get_speed(), seen - POSITION_EPS, MSCFModel_CalcReason::CURRENT);
                     if seen < 1.0 {
                         mustSeeBeforeReversal = 2.0 * seen + self.get_length();
                     }
@@ -13889,12 +13888,9 @@ impl MSVehicle {
                     && seen > speed2dist(v);
             }
 
-            if !planningToStop {
-                // no need to slow down for reversal if we are alrady slowing down for a stop
-                let mut canReverseEventually = false;
-                let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
-                v = min2(v, vReverse);
-            }
+            let mut canReverseEventually = false;
+            let vReverse = self.check_reversal(&mut canReverseEventually, laneMaxV, seen);
+            v = min2(v, vReverse);
 
             // check whether we need to slow down in order to finish a continuous lane change
             if self.myLaneChangeModel.is_changing_lanes() {
@@ -13904,7 +13900,7 @@ impl MSVehicle {
                     ||
                     // slow down to finish lane change before the shadow lane ends
                     (!self.myLaneChangeModel.get_shadow_lane().is_null()
-                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), false).is_null())
+                        && linkP.get_via_lane_or_lane().get_parallel_lane(self.myLaneChangeModel.get_shadow_direction(), true).is_null())
                 {
                     // XXX maybe this is too harsh. Vehicles could cut some corners here
                     let timeRemaining = steps2time(self.myLaneChangeModel.remaining_time());

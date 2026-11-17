@@ -1,0 +1,400 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T11:09:38.046623-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/stress/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/stress/routes.rou"/>
+    </input>
+
+    <output>
+        <vehroute-output value="/mnt/c/Users/karti/Temp/score/outputs-ou02/stress/vehroute_exit/ref/vehroute.xml"/>
+        <vehroute-output.exit-times value="true"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vehicle id="s0" depart="0.00" departSpeed="14.7234" speedFactor="1.0600" arrival="2.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="1.00 1.00 1.00 1.00 2.00"/>
+    </vehicle>
+
+    <vehicle id="s3" depart="3.00" departSpeed="15.0387" speedFactor="1.0827" arrival="4.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="4.00 4.00 4.00 4.00"/>
+    </vehicle>
+
+    <vehicle id="s4" depart="4.00" departSpeed="14.3109" speedFactor="1.0303" arrival="6.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="5.00 5.00 5.00 5.00 6.00"/>
+    </vehicle>
+
+    <vehicle id="s7" depart="7.00" departSpeed="12.3065" speedFactor="0.8860" arrival="8.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="8.00 8.00 8.00 8.00"/>
+    </vehicle>
+
+    <vehicle id="s8" depart="8.00" departSpeed="13.0274" speedFactor="0.9379" arrival="10.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="9.00 9.00 9.00 9.00 10.00"/>
+    </vehicle>
+
+    <vehicle id="s11" depart="11.00" departSpeed="14.2553" speedFactor="1.0263" arrival="12.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="12.00 12.00 12.00 12.00"/>
+    </vehicle>
+
+    <vehicle id="s12" depart="12.00" departSpeed="14.5442" speedFactor="1.0471" arrival="14.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="13.00 13.00 13.00 13.00 14.00"/>
+    </vehicle>
+
+    <vehicle id="s1" depart="1.00" departSpeed="10.4902" speedFactor="0.9383" arrival="15.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="2.00 11.00 13.00 14.00 15.00"/>
+    </vehicle>
+
+    <vehicle id="s15" depart="15.00" departSpeed="12.8733" speedFactor="0.9268" arrival="16.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="16.00 16.00 16.00 16.00"/>
+    </vehicle>
+
+    <vehicle id="s2" depart="2.00" departSpeed="6.7731" speedFactor="1.0104" arrival="19.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="3.00 13.00 15.00 17.00 17.00 18.00 18.00 19.00"/>
+    </vehicle>
+
+    <vehicle id="s5" depart="5.00" departSpeed="9.2906" speedFactor="0.8310" arrival="21.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="6.00 16.00 18.00 20.00 21.00"/>
+    </vehicle>
+
+    <vehicle id="s6" depart="6.00" departSpeed="5.2849" speedFactor="1.0458" arrival="25.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="7.00 18.00 21.00 23.00 23.00 24.00 24.00 25.00"/>
+    </vehicle>
+
+    <vehicle id="s9" depart="9.00" departSpeed="9.2736" speedFactor="0.8569" arrival="26.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="10.00 21.00 24.00 26.00 26.00"/>
+    </vehicle>
+
+    <vehicle id="s16" depart="26.00" departSpeed="12.201" speedFactor="0.8784" arrival="28.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="27.00 27.00 27.00 27.00 28.00"/>
+    </vehicle>
+
+    <vehicle id="s10" depart="10.00" departSpeed="4.7445" speedFactor="1.0907" arrival="30.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="11.00 24.00 27.00 28.00 28.00 29.00 30.00 30.00"/>
+    </vehicle>
+
+    <vehicle id="s13" depart="13.00" departSpeed="9.1615" speedFactor="1.1229" arrival="31.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="14.00 27.00 29.00 31.00 31.00"/>
+    </vehicle>
+
+    <vehicle id="s19" depart="31.00" departSpeed="16.0874" speedFactor="1.1582" arrival="32.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="32.00 32.00 32.00 32.00"/>
+    </vehicle>
+
+    <vehicle id="s14" depart="14.00" departSpeed="4.4591" speedFactor="0.9912" arrival="35.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="15.00 30.00 32.00 33.00 34.00 34.00 35.00 35.00"/>
+    </vehicle>
+
+    <vehicle id="s17" depart="17.00" departSpeed="7.1947" speedFactor="0.9414" arrival="37.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="18.00 32.00 35.00 36.00 37.00"/>
+    </vehicle>
+
+    <vehicle id="s20" depart="37.00" departSpeed="14.1414" speedFactor="1.0181" arrival="39.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="38.00 38.00 38.00 38.00 39.00"/>
+    </vehicle>
+
+    <vehicle id="s18" depart="19.00" departSpeed="9.1728" speedFactor="0.9362" arrival="42.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="20.00 35.00 38.00 39.00 40.00 40.00 41.00 42.00"/>
+    </vehicle>
+
+    <vehicle id="s21" depart="21.00" departSpeed="9.0469" speedFactor="1.0102" arrival="42.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="22.00 38.00 41.00 42.00 42.00"/>
+    </vehicle>
+
+    <vehicle id="s23" depart="42.00" departSpeed="12.3565" speedFactor="0.8896" arrival="43.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="43.00 43.00 43.00 43.00"/>
+    </vehicle>
+
+    <vehicle id="s24" depart="43.00" departSpeed="11.469" speedFactor="0.8257" arrival="45.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="44.00 44.00 44.00 44.00 45.00"/>
+    </vehicle>
+
+    <vehicle id="s27" depart="44.00" departSpeed="7.9841" speedFactor="0.9488" arrival="46.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="45.00 45.00 45.00 46.00"/>
+    </vehicle>
+
+    <vehicle id="s28" depart="46.00" departSpeed="15.7207" speedFactor="1.1318" arrival="48.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="47.00 47.00 47.00 47.00 48.00"/>
+    </vehicle>
+
+    <vehicle id="s31" depart="47.00" departSpeed="12.4245" speedFactor="1.1544" arrival="48.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="48.00 48.00 48.00 48.00"/>
+    </vehicle>
+
+    <vehicle id="s32" depart="48.00" departSpeed="13.9622" speedFactor="1.0052" arrival="50.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="49.00 49.00 49.00 49.00 50.00"/>
+    </vehicle>
+
+    <vehicle id="s35" depart="49.00" departSpeed="11.2499" speedFactor="1.0197" arrival="50.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="50.00 50.00 50.00 50.00"/>
+    </vehicle>
+
+    <vehicle id="s36" depart="50.00" departSpeed="13.5177" speedFactor="0.9732" arrival="52.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="51.00 51.00 51.00 51.00 52.00"/>
+    </vehicle>
+
+    <vehicle id="s39" depart="51.00" departSpeed="10.3521" speedFactor="0.9006" arrival="53.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="52.00 52.00 52.00 53.00"/>
+    </vehicle>
+
+    <vehicle id="s40" depart="52.00" departSpeed="6.9944" speedFactor="1.0304" arrival="55.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="53.00 53.00 53.00 54.00 55.00"/>
+    </vehicle>
+
+    <vehicle id="s43" depart="54.00" departSpeed="7.5315" speedFactor="1.0378" arrival="56.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="55.00 55.00 55.00 56.00"/>
+    </vehicle>
+
+    <vehicle id="s44" depart="56.00" departSpeed="14.4928" speedFactor="1.0434" arrival="58.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="57.00 57.00 57.00 57.00 58.00"/>
+    </vehicle>
+
+    <vehicle id="s47" depart="57.00" departSpeed="10.9187" speedFactor="0.9005" arrival="59.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="58.00 58.00 58.00 59.00"/>
+    </vehicle>
+
+    <vehicle id="s48" depart="58.00" departSpeed="6.9394" speedFactor="0.8769" arrival="61.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="59.00 59.00 59.00 60.00 61.00"/>
+    </vehicle>
+
+    <vehicle id="s51" depart="60.00" departSpeed="7.5988" speedFactor="1.1689" arrival="62.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="61.00 61.00 61.00 62.00"/>
+    </vehicle>
+
+    <vehicle id="s52" depart="62.00" departSpeed="14.1234" speedFactor="1.0168" arrival="64.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="63.00 63.00 63.00 63.00 64.00"/>
+    </vehicle>
+
+    <vehicle id="s55" depart="63.00" departSpeed="11.5076" speedFactor="0.9960" arrival="64.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="64.00 64.00 64.00 64.00"/>
+    </vehicle>
+
+    <vehicle id="s56" depart="64.00" departSpeed="12.4857" speedFactor="0.8989" arrival="66.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="65.00 65.00 65.00 65.00 66.00"/>
+    </vehicle>
+
+    <vehicle id="s59" depart="65.00" departSpeed="8.7317" speedFactor="0.9695" arrival="67.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="66.00 66.00 66.00 67.00"/>
+    </vehicle>
+
+    <vehicle id="s60" depart="66.00" departSpeed="4.887" speedFactor="1.0825" arrival="69.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="67.00 67.00 68.00 69.00 69.00"/>
+    </vehicle>
+
+    <vehicle id="s63" depart="68.00" departSpeed="4.8563" speedFactor="0.9870" arrival="71.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="69.00 69.00 70.00 71.00"/>
+    </vehicle>
+
+    <vehicle id="s64" depart="70.00" departSpeed="4.6917" speedFactor="0.9376" arrival="73.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="71.00 71.00 72.00 72.00 73.00"/>
+    </vehicle>
+
+    <vehicle id="s67" depart="72.00" departSpeed="5.431" speedFactor="0.9146" arrival="74.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="73.00 73.00 74.00 74.00"/>
+    </vehicle>
+
+    <vehicle id="s68" depart="74.00" departSpeed="14.4456" speedFactor="1.0400" arrival="76.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="75.00 75.00 75.00 75.00 76.00"/>
+    </vehicle>
+
+    <vehicle id="s71" depart="75.00" departSpeed="10.6539" speedFactor="0.9729" arrival="77.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="76.00 76.00 76.00 77.00"/>
+    </vehicle>
+
+    <vehicle id="s72" depart="76.00" departSpeed="5.8055" speedFactor="0.9401" arrival="79.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="77.00 77.00 77.00 78.00 79.00"/>
+    </vehicle>
+
+    <vehicle id="s75" depart="78.00" departSpeed="6.6396" speedFactor="0.9849" arrival="80.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="79.00 79.00 79.00 80.00"/>
+    </vehicle>
+
+    <vehicle id="s76" depart="80.00" departSpeed="14.3414" speedFactor="1.0325" arrival="82.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="81.00 81.00 81.00 81.00 82.00"/>
+    </vehicle>
+
+    <vehicle id="s79" depart="81.00" departSpeed="11.9395" speedFactor="1.0869" arrival="82.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="82.00 82.00 82.00 82.00"/>
+    </vehicle>
+
+    <vehicle id="s80" depart="82.00" departSpeed="2.219" speedFactor="1.0345" arrival="93.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="83.00 90.00 91.00 92.00 93.00"/>
+    </vehicle>
+
+    <vehicle id="s22" depart="22.00" departSpeed="4.6801" speedFactor="0.9750" arrival="95.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="23.00 41.00 91.00 93.00 93.00 94.00 95.00 95.00"/>
+    </vehicle>
+
+    <vehicle id="s25" depart="25.00" departSpeed="7.6152" speedFactor="0.8726" arrival="96.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="26.00 43.00 94.00 96.00 96.00"/>
+    </vehicle>
+
+    <vehicle id="s83" depart="96.00" departSpeed="13.4316" speedFactor="0.9670" arrival="97.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="97.00 97.00 97.00 97.00"/>
+    </vehicle>
+
+    <vehicle id="s26" depart="27.00" departSpeed="6.5285" speedFactor="0.9172" arrival="101.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="28.00 94.00 97.00 99.00 99.00 100.00 101.00 101.00"/>
+    </vehicle>
+
+    <vehicle id="s29" depart="29.00" departSpeed="2.6883" speedFactor="0.9313" arrival="102.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="30.00 97.00 100.00 101.00 102.00"/>
+    </vehicle>
+
+    <vehicle id="s30" depart="32.00" departSpeed="2.5117" speedFactor="1.1786" arrival="106.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="33.00 100.00 102.00 104.00 104.00 104.00 105.00 106.00"/>
+    </vehicle>
+
+    <vehicle id="s33" depart="35.00" departSpeed="3.4228" speedFactor="1.1718" arrival="106.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="36.00 103.00 105.00 106.00 106.00"/>
+    </vehicle>
+
+    <vehicle id="s84" depart="106.00" departSpeed="15.9429" speedFactor="1.1478" arrival="108.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="107.00 107.00 107.00 107.00 108.00"/>
+    </vehicle>
+
+    <vehicle id="s34" depart="38.00" departSpeed="4.5872" speedFactor="0.9948" arrival="111.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="39.00 105.00 107.00 109.00 109.00 110.00 111.00 111.00"/>
+    </vehicle>
+
+    <vehicle id="s37" depart="40.00" departSpeed="0.5613" speedFactor="1.1797" arrival="112.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="41.00 108.00 110.00 111.00 112.00"/>
+    </vehicle>
+
+    <vehicle id="s87" depart="112.00" departSpeed="14.4845" speedFactor="1.0428" arrival="113.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="113.00 113.00 113.00 113.00"/>
+    </vehicle>
+
+    <vehicle id="s38" depart="44.00" departSpeed="5.0576" speedFactor="1.1023" arrival="116.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="45.00 111.00 113.00 114.00 114.00 115.00 116.00 116.00"/>
+    </vehicle>
+
+    <vehicle id="s41" depart="46.00" departSpeed="2.4753" speedFactor="0.9571" arrival="117.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="47.00 113.00 115.00 117.00 117.00"/>
+    </vehicle>
+
+    <vehicle id="s88" depart="117.00" departSpeed="13.9886" speedFactor="1.0071" arrival="119.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="118.00 118.00 118.00 118.00 119.00"/>
+    </vehicle>
+
+    <vehicle id="s42" depart="49.00" departSpeed="4.8629" speedFactor="1.0919" arrival="121.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="50.00 116.00 118.00 119.00 120.00 120.00 121.00 121.00"/>
+    </vehicle>
+
+    <vehicle id="s45" depart="51.00" departSpeed="0.5662" speedFactor="1.0880" arrival="122.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="52.00 118.00 120.00 122.00 122.00"/>
+    </vehicle>
+
+    <vehicle id="s91" depart="122.00" departSpeed="12.3871" speedFactor="0.8918" arrival="123.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="123.00 123.00 123.00 123.00"/>
+    </vehicle>
+
+    <vehicle id="s46" depart="55.00" departSpeed="4.8574" speedFactor="0.9974" arrival="127.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="56.00 121.00 123.00 125.00 125.00 126.00 127.00 127.00"/>
+    </vehicle>
+
+    <vehicle id="s49" depart="57.00" departSpeed="0.0624" speedFactor="0.8504" arrival="129.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="58.00 124.00 126.00 128.00 129.00"/>
+    </vehicle>
+
+    <vehicle id="s50" depart="107.00" departSpeed="0.6026" speedFactor="0.8549" arrival="133.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="108.00 126.00 129.00 131.00 132.00 132.00 133.00 133.00"/>
+    </vehicle>
+
+    <vehicle id="s92" depart="133.00" departSpeed="11.5787" speedFactor="0.8336" arrival="135.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="134.00 134.00 134.00 135.00 135.00"/>
+    </vehicle>
+
+    <vehicle id="s95" depart="134.00" departSpeed="7.3823" speedFactor="1.0568" arrival="136.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="135.00 135.00 135.00 136.00"/>
+    </vehicle>
+
+    <vehicle id="s96" depart="136.00" departSpeed="14.0275" speedFactor="1.0099" arrival="138.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="137.00 137.00 137.00 137.00 138.00"/>
+    </vehicle>
+
+    <vehicle id="s99" depart="137.00" departSpeed="10.8247" speedFactor="1.0972" arrival="139.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="138.00 138.00 138.00 139.00"/>
+    </vehicle>
+
+    <vehicle id="s100" depart="138.00" departSpeed="6.0502" speedFactor="1.0650" arrival="141.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="139.00 139.00 140.00 140.00 141.00"/>
+    </vehicle>
+
+    <vehicle id="s103" depart="140.00" departSpeed="5.5658" speedFactor="0.9525" arrival="142.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="141.00 141.00 142.00 142.00"/>
+    </vehicle>
+
+    <vehicle id="s104" depart="142.00" departSpeed="12.4163" speedFactor="0.8939" arrival="144.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="143.00 143.00 143.00 143.00 144.00"/>
+    </vehicle>
+
+    <vehicle id="s107" depart="143.00" departSpeed="8.8813" speedFactor="1.0345" arrival="145.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="144.00 144.00 144.00 145.00"/>
+    </vehicle>
+
+    <vehicle id="s108" depart="144.00" departSpeed="3.8409" speedFactor="1.0648" arrival="148.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="145.00 145.00 146.00 147.00 148.00"/>
+    </vehicle>
+
+    <vehicle id="s111" depart="146.00" departSpeed="1.4655" speedFactor="0.8659" arrival="150.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="147.00 148.00 149.00 150.00"/>
+    </vehicle>
+
+    <vehicle id="s112" depart="149.00" departSpeed="1.1024" speedFactor="1.0985" arrival="154.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="150.00 151.00 152.00 153.00 154.00"/>
+    </vehicle>
+
+    <vehicle id="s115" depart="152.00" departSpeed="0.9812" speedFactor="0.9220" arrival="156.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="153.00 154.00 155.00 156.00"/>
+    </vehicle>
+
+    <vehicle id="s116" depart="155.00" departSpeed="1.7918" speedFactor="1.1771" arrival="160.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="156.00 157.00 158.00 159.00 160.00"/>
+    </vehicle>
+
+    <vehicle id="s119" depart="158.00" departSpeed="2.0809" speedFactor="1.0709" arrival="162.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2" exitTimes="159.00 160.00 161.00 162.00"/>
+    </vehicle>
+
+    <vehicle id="s53" depart="111.00" departSpeed="4.0448" speedFactor="1.0958" arrival="182.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="112.00 129.00 180.00 182.00 182.00"/>
+    </vehicle>
+
+    <vehicle id="s54" depart="113.00" departSpeed="2.4399" speedFactor="1.0032" arrival="187.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="114.00 132.00 183.00 184.00 185.00 185.00 186.00 187.00"/>
+    </vehicle>
+
+    <vehicle id="s57" depart="116.00" departSpeed="2.4422" speedFactor="1.1425" arrival="187.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="117.00 183.00 186.00 187.00 187.00"/>
+    </vehicle>
+
+    <vehicle id="s58" depart="119.00" departSpeed="3.073" speedFactor="1.0236" arrival="192.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="120.00 186.00 188.00 190.00 190.00 191.00 191.00 192.00"/>
+    </vehicle>
+
+    <vehicle id="s61" depart="122.00" departSpeed="6.0315" speedFactor="1.1193" arrival="193.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="123.00 189.00 191.00 192.00 193.00"/>
+    </vehicle>
+
+    <vehicle id="s62" depart="124.00" departSpeed="5.5164" speedFactor="1.0158" arrival="197.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3" exitTimes="125.00 191.00 194.00 195.00 196.00 196.00 197.00 197.00"/>
+    </vehicle>
+
+    <vehicle id="s65" depart="126.00" departSpeed="1.4627" speedFactor="0.8823" arrival="199.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0" exitTimes="127.00 194.00 197.00 198.00 199.00"/>
+    </vehicle>
+
+</routes>

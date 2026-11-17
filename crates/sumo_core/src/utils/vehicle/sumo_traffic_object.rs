@@ -53,7 +53,7 @@ pub struct SUMOTrafficObjectVt {
     pub get_device: fn(&SUMOTrafficObject, &Unmapped) -> Ptr<MSDevice>,
 }
 
-fn default_is_false(_: &SUMOTrafficObject) -> bool {
+pub(crate) fn default_is_false(_: &SUMOTrafficObject) -> bool {
     false
 }
 
@@ -167,7 +167,7 @@ pub(crate) fn default_get_device(_: &SUMOTrafficObject, _: &Unmapped) -> Ptr<MSD
     panic!("SUMOTrafficObject::getDevice is pure virtual")
 }
 
-static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
+pub(crate) static DEFAULT_SUMO_TRAFFIC_OBJECT_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: default_is_false,
     is_person: default_is_false,
     is_container: default_is_false,

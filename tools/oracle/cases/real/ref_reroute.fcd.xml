@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-16T02:59:25.101209-05:00 by Eclipse SUMO sumo v1.28.0-0000000000
+<!-- generated on 2026-11-16T11:16:51.659081-05:00 by Eclipse SUMO sumo 1.28.0
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
@@ -10,9 +10,9 @@
     </input>
 
     <output>
-        <fcd-output value="tools/oracle/cases/real/ref_reroute.fcd.xml"/>
-        <tripinfo-output value="tools/oracle/cases/real/ref_reroute.tripinfo.xml"/>
-        <statistic-output value="tools/oracle/cases/real/ref_reroute.stat.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/pristine/out/tools/oracle/cases/real/ref_reroute.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/pristine/out/tools/oracle/cases/real/ref_reroute.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/AppData/Local/Temp/opencode/pristine/out/tools/oracle/cases/real/ref_reroute.stat.xml"/>
     </output>
 
     <report>
@@ -56,11 +56,13 @@
         <vehicle id="v3" x="192.11" y="293.78" angle="315.86" type="DEFAULT_VEHTYPE" speed="29.98" pos="7.69" lane=":5522182777_2_0" slope="0.00"/>
     </timestep>
     <timestep time="8.00">
+        <vehicle id="v0" x="43.25" y="135.53" angle="234.09" type="DEFAULT_VEHTYPE" speed="10.73" pos="5.68" lane="397795464#2_0" slope="0.00"/>
         <vehicle id="v2" x="184.51" y="224.68" angle="235.00" type="DEFAULT_VEHTYPE" speed="10.96" pos="36.37" lane="682360554#1_3" slope="0.00"/>
         <vehicle id="v3" x="171.21" y="315.26" angle="315.88" type="DEFAULT_VEHTYPE" speed="29.97" pos="2.96" lane=":42432697_0_0" slope="0.00"/>
         <vehicle id="v4" x="220.37" y="264.59" angle="317.22" type="DEFAULT_VEHTYPE" speed="28.62" pos="0.20" lane="1117867039#0_0" slope="0.00"/>
     </timestep>
     <timestep time="9.00">
+        <vehicle id="v0" x="33.73" y="128.63" angle="234.07" type="DEFAULT_VEHTYPE" speed="11.76" pos="8.03" lane="397795464#3_0" slope="0.00"/>
         <vehicle id="v2" x="175.92" y="218.67" angle="235.00" type="DEFAULT_VEHTYPE" speed="10.49" pos="46.85" lane="682360554#1_3" slope="0.00"/>
         <vehicle id="v3" x="150.89" y="336.45" angle="316.22" type="DEFAULT_VEHTYPE" speed="29.36" pos="27.31" lane="46522008#2_0" slope="0.00"/>
         <vehicle id="v4" x="200.74" y="284.88" angle="315.92" type="DEFAULT_VEHTYPE" speed="28.23" pos="22.69" lane="46522008#0_0" slope="0.00"/>

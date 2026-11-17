@@ -258,9 +258,9 @@ impl MeanData {
     // LIBSUMO_SUBSCRIPTION_IMPLEMENTATION(MeanData, MEANDATA)
     #[allow(unused_variables)]
     pub fn subscribe_parameter_with_key(objectID: &str, key: &str, beginTime: f64, endTime: f64) {
-        // shortcut: TraCIResult is a payload-less base struct, so a TraCIString value cannot be stored in TraCIResults; upgrade with a TraCIResult enum/trait redesign in tra_ci_defs.rs
-        let _ = (objectID, key, beginTime, endTime);
-        throw_traci("MeanData::subscribeParameterWithKey: TraCIString payload not representable yet".to_string())
+        let mut params: TraCIResults = TraCIResults::new();
+        params.insert(VAR_PARAMETER_WITH_KEY, crate::libsumo::helper::as_traci_result(TraCIString { base: TraCIResult { result_type: TYPE_STRING }, value: key.to_string() }));
+        Helper::subscribe(CMD_SUBSCRIBE_MEANDATA_VARIABLE, objectID, &vec![VAR_PARAMETER_WITH_KEY], beginTime, endTime, &params, 0, 0.0);
     }
 
     /// C++: `int MeanData::domainID()` [static]
@@ -277,8 +277,7 @@ impl MeanData {
     // }
     #[allow(unused_variables)]
     pub fn make_wrapper() -> Rc<VariableWrapper> {
-        // shortcut: SubscriptionWrapper needs &mut access to the static result maps, which thread_local RefCells cannot lend to an Rc; upgrade with the subscription-storage redesign in helper.rs
-        throw_traci("MeanData::makeWrapper: subscription wrapper storage not ported".to_string())
+        Helper::make_subscription_wrapper(Some(Self::handle_variable), unsafe { &mut *MY_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) }, unsafe { &mut *MY_CONTEXT_SUBSCRIPTION_RESULTS.with(|r| r.as_ptr()) })
     }
 
     /// C++: `bool MeanData::handleVariable(const std::string &, const int, VariableWrapper *, tcpip::Storage *)` [static]

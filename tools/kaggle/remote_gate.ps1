@@ -47,8 +47,15 @@ Copy-Item (Join-Path $PSScriptRoot "gate_kernel.py") "$work\kernel\gate_kernel.p
 @{ id = $kernel; title = "srg-$Slot"; code_file = "gate_kernel.py"; language = "python";
    kernel_type = "script"; is_private = $true; enable_gpu = $false; enable_internet = $true;
    dataset_sources = @($ds); competition_sources = @(); kernel_sources = @() } | ConvertTo-Json | Set-Content "$work\kernel\kernel-metadata.json"
-python -m kaggle kernels push -p "$work\kernel" | Out-Null
 $deadline = (Get-Date).AddMinutes($TimeoutMin)
+# an account runs at most 5 notebooks at once; Kaggle refuses the push when all are busy, so wait and retry
+do {
+    $push = python -m kaggle kernels push -p "$work\kernel" 2>&1 | Out-String
+    if ($push -match 'successfully pushed') { break }
+    "kernel push refused, retrying in 60 s: $(($push -split "`n")[0].Trim())"
+    Start-Sleep 60
+} while ((Get-Date) -lt $deadline)
+if ($push -notmatch 'successfully pushed') { "NO RESULT - could not start the kernel before the timeout"; exit 1 }
 do { Start-Sleep 30; $st = python -m kaggle kernels status $kernel 2>&1 | Out-String }
 while ($st -notmatch 'COMPLETE|ERROR|CANCEL|denied' -and (Get-Date) -lt $deadline)
 

@@ -3,21 +3,6 @@
 use crate::prelude::*;
 use std::cell::RefCell;
 
-/// the option values of a device's default assignment (all callers pass the global options, which do not change during a run)
-/// C++ class `MSDevice::DefaultAssignment` (microsim/devices/MSDevice.h)
-pub struct MSDevice_DefaultAssignment {
-    pub prefix: String,
-    pub parameterKey: String,
-    pub probabilityKey: String,
-    pub deterministic: bool,
-    pub numberGiven: bool,
-    pub probability: f64,
-    pub nameGiven: bool,
-}
-
-impl MSDevice_DefaultAssignment {
-}
-
 /// Abstract in-vehicle / in-person device
 /// C++ class `MSDevice` (microsim/devices/MSDevice.h)
 #[repr(C)]
@@ -43,7 +28,6 @@ impl std::ops::DerefMut for MSDevice {
 // C++ static members of MSDevice (port as module-level statics, see AGENTS.md):
 //   static const std::string MSDevice::LOADSTATE_DEVICENAMES;
 //   static int MSDevice::myExplicitIDs;
-//   static int[2] MSDevice::myDefaultAssignments;
 //   static SumoRNG MSDevice::myEquipmentRNG;
 
 pub const LOADSTATE_DEVICENAMES: &str = "LOADSTATE_DEVICENAMES";
@@ -51,8 +35,6 @@ pub const LOADSTATE_DEVICENAMES: &str = "LOADSTATE_DEVICENAMES";
 thread_local! {
     /// C++ `MSDevice::myExplicitIDs`
     static MY_EXPLICIT_IDS: RefCell<BTreeMap<String, BTreeSet<String>>> = RefCell::new(BTreeMap::new());
-    /// C++ `MSDevice::myDefaultAssignments[2]`; entries are leaked so `get_default_assignment` can return `&'static`
-    static MY_DEFAULT_ASSIGNMENTS: RefCell<[BTreeMap<String, &'static MSDevice_DefaultAssignment>; 2]> = RefCell::new([BTreeMap::new(), BTreeMap::new()]);
     /// C++ `MSDevice::myEquipmentRNG` (seeded with "deviceEquipment")
     static MY_EQUIPMENT_RNG: Ptr<SumoRNG> = Ptr::from_raw(Box::into_raw(Box::new(SumoRNG::new("deviceEquipment"))));
 }
@@ -273,12 +255,70 @@ impl MSDevice {
         Ptr::default()
     }
 
+    /// C++: `std::string MSDevice::getParameter(const std::string &) const` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    pub fn get_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str) -> String {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().get_parameter(key),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().get_parameter(key),
+            "driverstate" => dev.cast::<MSDevice_DriverState>().get_parameter(key),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().get_parameter(key),
+            "example" => dev.cast::<MSDevice_Example>().get_parameter(key),
+            "friction" => dev.cast::<MSDevice_Friction>().get_parameter(key),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().get_parameter(key),
+            "rerouting" => dev.cast::<MSDevice_Routing>().get_parameter(key),
+            "ssm" => dev.cast::<MSDevice_SSM>().get_parameter(key),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().get_parameter(key),
+            "taxi" => dev.cast::<MSDevice_Taxi>().get_parameter(key),
+            "toc" => dev.cast::<MSDevice_ToC>().get_parameter(key),
+            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().get_parameter(key),
+            _ => dev.base2.get_parameter(key),
+        }
+    }
+
+    /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_device_by_name, upgrade when devices carry a type tag
+    pub fn set_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str, value: &str) {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().m().set_parameter(key, value),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().m().set_parameter(key, value),
+            "driverstate" => dev.cast::<MSDevice_DriverState>().m().set_parameter(key, value),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().m().set_parameter(key, value),
+            "example" => dev.cast::<MSDevice_Example>().m().set_parameter(key, value),
+            "friction" => dev.cast::<MSDevice_Friction>().m().set_parameter(key, value),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().m().set_parameter(key, value),
+            "rerouting" => dev.cast::<MSDevice_Routing>().m().set_parameter(key, value),
+            "ssm" => dev.cast::<MSDevice_SSM>().m().set_parameter(key, value),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().set_parameter(key, value),
+            "taxi" => dev.cast::<MSDevice_Taxi>().m().set_parameter(key, value),
+            "toc" => dev.cast::<MSDevice_ToC>().m().set_parameter(key, value),
+            _ => dev.m().base2.set_parameter(key, value),
+        }
+    }
+
+    /// C++: `void MSDevice::generateOutput(OutputDevice *) const` [virtual, run as the most derived override]
+    /// shortcut: dispatch by deviceName like get_parameter_of, upgrade when devices carry a type tag
+    pub fn generate_output_of(dev: Ptr<MSVehicleDevice>, tripinfoOut: Ptr<OutputDevice>) {
+        match dev.base2.device_name().as_str() {
+            "battery" => dev.cast::<MSDevice_Battery>().generate_output(tripinfoOut),
+            "bluelight" => dev.cast::<MSDevice_Bluelight>().generate_output(tripinfoOut),
+            "elecHybrid" => dev.cast::<MSDevice_ElecHybrid>().generate_output(tripinfoOut),
+            "emissions" => dev.cast::<MSDevice_Emissions>().generate_output(tripinfoOut),
+            "example" => dev.cast::<MSDevice_Example>().generate_output(tripinfoOut),
+            "glosa" => dev.cast::<MSDevice_GLOSA>().generate_output(tripinfoOut),
+            "ssm" => dev.cast::<MSDevice_SSM>().generate_output(tripinfoOut),
+            "stationfinder" => dev.cast::<MSDevice_StationFinder>().generate_output(tripinfoOut),
+            "taxi" => dev.cast::<MSDevice_Taxi>().generate_output(tripinfoOut),
+            "tripinfo" => dev.cast::<MSDevice_Tripinfo>().generate_output(tripinfoOut),
+            "vehroute" => dev.cast::<MSDevice_Vehroutes>().generate_output(tripinfoOut),
+            _ => dev.base2.generate_output(tripinfoOut),
+        }
+    }
+
     /// C++: `void MSDevice::cleanupAll()` [static]
     /// perform cleanup for all devices
     // void
     // MSDevice::cleanupAll() {
-    //     myDefaultAssignments[0].clear();
-    //     myDefaultAssignments[1].clear();
     //     MSRoutingEngine::cleanup();
     //     MSDevice_Tripinfo::cleanup();
     //     MSDevice_FCD::cleanup();
@@ -286,11 +326,6 @@ impl MSDevice {
     // }
     #[allow(unused_variables)]
     pub fn cleanup_all() {
-        MY_DEFAULT_ASSIGNMENTS.with(|cache| {
-            let mut cache = cache.borrow_mut();
-            cache[0].clear();
-            cache[1].clear();
-        });
         MSRoutingEngine::cleanup();
         MSDevice_Tripinfo::cleanup();
         MSDevice_FCD::cleanup();
@@ -474,14 +509,17 @@ impl MSDevice {
         outputOptionSet: bool,
         isPerson: bool,
     ) -> bool {
-        let defaults = Self::get_default_assignment(oc, deviceName, isPerson);
-        let prefix = &defaults.prefix;
+        let prefix = format!("{}{}", if isPerson { "person-device." } else { "device." }, deviceName);
+        let probabilityKey = format!("{}.probability", prefix);
+        let deterministicKey = format!("{}.deterministic", prefix);
+        let explicitKey = format!("{}.explicit", prefix);
         // assignment by number
-        let mut numberGiven = defaults.numberGiven;
-        let mut probability = defaults.probability;
+        let deterministic = oc.exists(&deterministicKey) && or_throw(oc.get_bool(&deterministicKey));
+        let mut numberGiven = deterministic || (oc.exists(&probabilityKey) && or_throw(oc.get_float(&probabilityKey)) >= 0.);
+        let mut probability = if numberGiven { or_throw(oc.get_float(&probabilityKey)) } else { 0. };
         // assignment by name
         let mut haveByName = false;
-        let nameGiven = defaults.nameGiven;
+        let nameGiven = oc.exists(&explicitKey) && or_throw(oc.is_set(&explicitKey, true));
         if nameGiven {
             if !MY_EXPLICIT_IDS.with(|m| m.borrow().contains_key(deviceName)) {
                 // C++ reads the global options here
@@ -494,24 +532,24 @@ impl MSDevice {
         // assignment by abstract parameters
         let mut haveByParameter = false;
         let mut parameterGiven = false;
-        let key = &defaults.parameterKey;
+        let key = &format!("has.{}.device", deviceName);
         if holderParameter.has_parameter(key) {
             parameterGiven = true;
             haveByParameter = or_throw(utils::common::string_utils::to_bool(&holderParameter.get_parameter(key, "false")));
         } else if vtypeParameter.has_parameter(key) {
             parameterGiven = true;
             haveByParameter = or_throw(utils::common::string_utils::to_bool(&vtypeParameter.get_parameter(key, "false")));
-        } else if vtypeParameter.has_parameter(&defaults.probabilityKey) {
+        } else if vtypeParameter.has_parameter(&probabilityKey) {
             // override global options
             numberGiven = true;
-            probability = or_throw(utils::common::string_utils::to_double(&vtypeParameter.get_parameter(&defaults.probabilityKey, "0")));
+            probability = or_throw(utils::common::string_utils::to_double(&vtypeParameter.get_parameter(&probabilityKey, "0")));
         }
         if haveByName {
             return true;
         } else if parameterGiven {
             return haveByParameter;
         } else if numberGiven {
-            if defaults.deterministic {
+            if deterministic {
                 return MSNet::get_instance().m().get_vehicle_control().get_quota(probability, -1) == 1;
             } else if probability > 0. {
                 if holderParameter.has_parameter(LOADSTATE_DEVICENAMES) {
@@ -528,53 +566,6 @@ impl MSDevice {
         } else {
             return !nameGiven && outputOptionSet;
         }
-    }
-
-    /// C++: `const DefaultAssignment & MSDevice::getDefaultAssignment(const OptionsCont &, const std::string &, const bool)` [static, private]
-    // const MSDevice::DefaultAssignment&
-    // MSDevice::getDefaultAssignment(const OptionsCont& oc, const std::string& deviceName, const bool isPerson) {
-    //     // the options do not change during a run, the cache is cleared in cleanupAll
-    //     std::map<std::string, DefaultAssignment>& cache = myDefaultAssignments[isPerson ? 1 : 0];
-    //     auto it = cache.find(deviceName);
-    //     if (it == cache.end()) {
-    //         DefaultAssignment d;
-    //         d.prefix = (isPerson ? "person-device." : "device.") + deviceName;
-    //         d.parameterKey = "has." + deviceName + ".device";
-    //         d.probabilityKey = d.prefix + ".probability";
-    //         d.deterministic = oc.exists(d.prefix + ".deterministic") && oc.getBool(d.prefix + ".deterministic");
-    //         d.numberGiven = d.deterministic || (oc.exists(d.probabilityKey) && oc.getFloat(d.probabilityKey) >= 0.);
-    //         d.probability = d.numberGiven ? oc.getFloat(d.probabilityKey) : 0;
-    //         d.nameGiven = oc.exists(d.prefix + ".explicit") && oc.isSet(d.prefix + ".explicit");
-    //         it = cache.emplace(deviceName, d).first;
-    //     }
-    //     return it->second;
-    // }
-    #[allow(unused_variables)]
-    pub fn get_default_assignment(oc: &OptionsCont, deviceName: &str, isPerson: bool) -> &'static MSDevice_DefaultAssignment {
-        // the options do not change during a run, the cache is cleared in cleanupAll
-        let slot = if isPerson { 1 } else { 0 };
-        if let Some(d) = MY_DEFAULT_ASSIGNMENTS.with(|cache| cache.borrow()[slot].get(deviceName).copied()) {
-            return d;
-        }
-        let prefix = format!("{}{}", if isPerson { "person-device." } else { "device." }, deviceName);
-        let probabilityKey = format!("{}.probability", prefix);
-        let deterministicKey = format!("{}.deterministic", prefix);
-        let explicitKey = format!("{}.explicit", prefix);
-        let deterministic = oc.exists(&deterministicKey) && or_throw(oc.get_bool(&deterministicKey));
-        let numberGiven = deterministic || (oc.exists(&probabilityKey) && or_throw(oc.get_float(&probabilityKey)) >= 0.);
-        let probability = if numberGiven { or_throw(oc.get_float(&probabilityKey)) } else { 0. };
-        let nameGiven = oc.exists(&explicitKey) && or_throw(oc.is_set(&explicitKey, true));
-        let d: &'static MSDevice_DefaultAssignment = Box::leak(Box::new(MSDevice_DefaultAssignment {
-            prefix: prefix.clone(),
-            parameterKey: format!("has.{}.device", deviceName),
-            probabilityKey,
-            deterministic,
-            numberGiven,
-            probability,
-            nameGiven,
-        }));
-        MY_DEFAULT_ASSIGNMENTS.with(|cache| cache.borrow_mut()[slot].insert(deviceName.to_string(), d));
-        d
     }
 
     /// C++: `void MSDevice::MSDevice(const MSDevice &)` [private]

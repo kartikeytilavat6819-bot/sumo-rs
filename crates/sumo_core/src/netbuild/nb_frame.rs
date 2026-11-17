@@ -995,7 +995,7 @@ impl NBFrame {
         oc.do_register("railway.signal.guess.by-stops.split", SumoOption::bool(false));
         oc.add_description("railway.signal.guess.by-stops.split", "Railway", "Split edges to improve positioning of guessed signals and prevent switches as rail_signals");
 
-        oc.do_register("railway.signal.permit-unsignalized", SumoOption::string_vector());
+        oc.do_register("railway.signal.permit-unsignalized", SumoOption::string_vector_with(vec!["tram".to_string(), "cable_car".to_string()]));
         oc.add_description("railway.signal.permit-unsignalized", "Railway", "List rail classes that may run without rail signals");
 
         oc.do_register("railway.access-distance", SumoOption::float(150.0));
@@ -1349,19 +1349,6 @@ impl NBFrame {
 
         oc.do_register("tls.rebuild", SumoOption::bool(false));
         oc.add_description("tls.rebuild", "TLS Building", "rebuild all traffic light plans in the network");
-
-        oc.do_register("tls.actuated.jam-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.jam-threshold", "Processing", "Sets default jam-threshold parameter for all actuation detectors");
-        oc.do_register("tls.actuated.show-detectors", SumoOption::bool(false));
-        oc.add_description("tls.actuated.show-detectors", "Processing", "Sets default show-detectors parameter for all actuation detectors");
-        oc.do_register("tls.actuated.passing-time", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.passing-time", "Processing", "Sets default passing-time parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-gap", SumoOption::float(0.));
-        oc.add_description("tls.actuated.detector-gap", "Processing", "Sets default detector-gap parameter for all actuation detectors");
-        oc.do_register("tls.actuated.detector-length", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.detector-length", "Processing", "Sets default detector-length parameter for all actuation detectors");
-        oc.do_register("tls.actuated.inactive-threshold", SumoOption::float(-1.));
-        oc.add_description("tls.actuated.inactive-threshold", "Processing", "Sets default inactive-threshold parameter for all actuation detectors");
 
         // edge pruning
         oc.do_register("keep-edges.min-speed", SumoOption::float(-1.0));

@@ -5,7 +5,7 @@ only loses its own row. Usage:
   python tools/oracle/cases/traci_basic/client.py                # both cases, both sides, one table each
   python tools/oracle/cases/traci_basic/client.py --case signal --only ours
 Options: --ours <sumo.exe> (default: $CARGO_TARGET_DIR/debug/sumo.exe)  --port <n> (default 8813)
-The C++ side runs in WSL: $HOME/sumo-src/bin/sumo with SUMO_HOME=$HOME/sumo-src.
+The C++ side runs in WSL: the untouched official SUMO 1.28.0 at $HOME/sumo-pristine.
 """
 import argparse
 import json
@@ -22,6 +22,8 @@ from traci.exceptions import TraCIException
 CASE = Path(__file__).resolve().parent
 CASES_DIR = CASE.parent
 DEFAULT_OURS = Path(os.environ.get("CARGO_TARGET_DIR", "C:/Users/karti/sumo-rs-target")) / "debug" / "sumo.exe"
+# Linux runner (Kaggle): official binary dir, run directly instead of through WSL
+PRISTINE_BIN = os.environ.get("SUMO_PRISTINE_BIN")
 
 
 def warn_if_stale(ours: Path) -> None:
@@ -59,13 +61,23 @@ def wsl_path(p):
     return "/mnt/" + p[0].lower() + p[2:]
 
 
-def sumo_command(side, port, net, rou, ours):
+def sumo_command(side, port, net, rou, ours, extra=()):
     if side == "ours":
         return [str(ours), "-n", str(net), "-r", str(rou), "--remote-port", str(port),
-                "--no-step-log", "true", "--no-warnings", "true"]
-    inner = (f"SUMO_HOME=$HOME/sumo-src $HOME/sumo-src/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
-             f"--remote-port {port} --no-step-log true --no-warnings true")
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
+    if PRISTINE_BIN:
+        return [f"{PRISTINE_BIN}/sumo", "-n", str(net), "-r", str(rou), "--remote-port", str(port),
+                "--no-step-log", "true", "--no-warnings", "true", *extra]
+    flags = "".join(f" {x}" for x in extra)
+    # reference = untouched official SUMO 1.28.0; ~/sumo-src is an instrumentation copy and must never be the oracle
+    inner = (f"SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo "
+             f"$HOME/sumo-pristine/bin/sumo -n {wsl_path(net)} -r {wsl_path(rou)} "
+             f"--remote-port {port} --no-step-log true --no-warnings true{flags}")
     return ["wsl", "-e", "bash", "-lc", inner]
+
+
+# the tripinfo device exists only when tripinfo-output or duration-log.statistics is set (C++ buildVehicleDevices)
+TRIPINFO_PROBE = "vehicle.getParameter(v0, device.tripinfo.waitingTime)"
 
 
 def probes(lane, tl_id):
@@ -120,7 +132,395 @@ def probes(lane, tl_id):
         t.simulationStep(11)
         return t.vehicle.getIDList()
 
+    edge = lane.rsplit("_", 1)[0]
+    tl = tl_id or "none"
+
+    def edge_set_max_speed(t):
+        t.edge.setMaxSpeed(edge, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def lane_set_max_speed(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        t.simulationStep(11)
+        return t.lane.getMaxSpeed(lane)
+
+    def lane_set_max_speed_effect(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def slow_down(t):
+        t.vehicle.slowDown("v0", 3.0, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getSpeed("v0")
+
+    def move_to_lane(t):
+        t.vehicle.moveTo("v0", lane, t.vehicle.getLanePosition("v0"))
+        t.simulationStep(11)
+        return t.vehicle.getLaneID("v0")
+
+    def set_color(t):
+        t.vehicle.setColor("v0", (255, 0, 0, 255))
+        return t.vehicle.getColor("v0")
+
+    def set_type(t):
+        t.vehicle.setType("v0", "DEFAULT_VEHTYPE")
+        return t.vehicle.getTypeID("v0")
+
+    def change_lane_effect(t):
+        t.vehicle.changeLane("v0", t.vehicle.getLaneIndex("v0") ^ 1, 5.0)
+        t.simulationStep(11)
+        return t.vehicle.getLaneID("v0")
+
+    def vtype_set_max_speed(t):
+        t.vehicletype.setMaxSpeed("DEFAULT_VEHTYPE", 20.0)
+        t.simulationStep(11)
+        return t.vehicletype.getMaxSpeed("DEFAULT_VEHTYPE")
+
+    def tl_set_phase(t):
+        t.trafficlight.setPhase(tl, 1)
+        return t.trafficlight.getPhase(tl)
+
+    def tl_set_phase_duration(t):
+        t.trafficlight.setPhaseDuration(tl, 7.0)
+        t.simulationStep(11)
+        return t.trafficlight.getPhaseDuration(tl)
+
+    def tl_set_state(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        t.trafficlight.setRedYellowGreenState(tl, "G" * len(s))
+        t.simulationStep(11)
+        return t.trafficlight.getRedYellowGreenState(tl)
+
+    def poi_add(t):
+        t.poi.add("p0", 1.0, 2.0, (255, 0, 0, 255))
+        return t.poi.getPosition("p0")
+
+    def sim_subscribe_departed_3(t):
+        t.simulation.subscribe([tc.VAR_DEPARTED_VEHICLES_IDS])
+        for s in (11, 12, 13):
+            t.simulationStep(s)
+        return t.simulation.getSubscriptionResults()
+
+    def veh_subscribe_3(t):
+        t.vehicle.subscribe("v0", [tc.VAR_SPEED, tc.VAR_POSITION])
+        for s in (11, 12, 13):
+            t.simulationStep(s)
+        return t.vehicle.getSubscriptionResults("v0")
+
+    def veh_subscribe_context(t):
+        t.vehicle.subscribeContext("v0", tc.CMD_GET_VEHICLE_VARIABLE, 0.0, [tc.VAR_SPEED])
+        t.simulationStep(11)
+        return t.vehicle.getContextSubscriptionResults("v0")
+
+    def edge_subscribe(t):
+        t.edge.subscribe(edge, [tc.LAST_STEP_VEHICLE_NUMBER])
+        t.simulationStep(11)
+        return t.edge.getSubscriptionResults(edge)
+
+    def sim_find_route(t):
+        return t.simulation.findRoute(edge, t.vehicle.getRoute("v0")[-1]).edges
+
+    def sim_convert_road(t):
+        x, y = t.vehicle.getPosition("v0")
+        return t.simulation.convertRoad(x, y)
+
+    def sim_distance_2d(t):
+        x, y = t.vehicle.getPosition("v0")
+        return t.simulation.getDistance2D(x, y, x + 3.0, y + 4.0)
+
+    def run_n(t, n):
+        t0 = int(t.simulation.getTime())
+        for s in range(t0 + 1, t0 + n + 1):
+            t.simulationStep(s)
+
+    def summary(t):
+        ids = sorted(t.vehicle.getIDList())
+        return ([(i, t.vehicle.getPosition(i), t.vehicle.getSpeed(i), t.vehicle.getLaneID(i)) for i in ids],
+                t.simulation.getArrivedNumber(), sorted(t.simulation.getArrivedIDList()))
+
+    def spawn(t):
+        t.vehicle.add("vfx", t.route.getIDList()[0])
+        run_n(t, 1)
+
+    def trace_tl(t, n):
+        out = []
+        for _ in range(n):
+            run_n(t, 1)
+            out.append((t.trafficlight.getRedYellowGreenState(tl), t.trafficlight.getPhase(tl),
+                        t.trafficlight.getNextSwitch(tl)))
+        return out
+
+    def lane_close(t):
+        t.lane.setDisallowed(lane, ["all"])
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_close_reopen(t):
+        t.lane.setDisallowed(lane, ["all"])
+        run_n(t, 15)
+        t.lane.setDisallowed(lane, [])
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_disallow_passenger(t):
+        t.lane.setDisallowed(lane, ["passenger"])
+        run_n(t, 30)
+        return summary(t)
+
+    def edge_max_speed_5_30(t):
+        t.edge.setMaxSpeed(edge, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def edge_max_speed_20_30(t):
+        t.edge.setMaxSpeed(edge, 20.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_max_speed_3_30(t):
+        t.lane.setMaxSpeed(lane, 3.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def lane_max_speed_reset(t):
+        t.lane.setMaxSpeed(lane, 5.0)
+        run_n(t, 10)
+        t.lane.setMaxSpeed(lane, 30.0)
+        run_n(t, 20)
+        return summary(t)
+
+    def tl_set_program_30(t):
+        t.trafficlight.setProgram(tl, "0")
+        return trace_tl(t, 30)
+
+    def tl_set_phase_held(t):
+        t.trafficlight.setPhase(tl, 1)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_then_duration(t):
+        t.trafficlight.setPhase(tl, 2)
+        t.trafficlight.setPhaseDuration(tl, 20.0)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_duration_7(t):
+        t.trafficlight.setPhaseDuration(tl, 7.0)
+        return trace_tl(t, 30)
+
+    def tl_set_phase_0_trace(t):
+        t.trafficlight.setPhase(tl, 0)
+        return trace_tl(t, 30)
+
+    def tl_set_state_all_g_held(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        out = []
+        for _ in range(30):
+            t.trafficlight.setRedYellowGreenState(tl, "G" * len(s))
+            run_n(t, 1)
+            out.append(t.trafficlight.getRedYellowGreenState(tl))
+        return out
+
+    def tl_set_state_all_r_held(t):
+        s = t.trafficlight.getRedYellowGreenState(tl)
+        out = []
+        for _ in range(30):
+            t.trafficlight.setRedYellowGreenState(tl, "r" * len(s))
+            run_n(t, 1)
+            out.append(t.trafficlight.getRedYellowGreenState(tl))
+        return out
+
+    def tl_set_state_wrong_len(t):
+        t.trafficlight.setRedYellowGreenState(tl, "G")
+        return trace_tl(t, 5)
+
+    def veh_speed_mode_30(t):
+        spawn(t)
+        t.vehicle.setSpeedMode("vfx", 0)
+        t.vehicle.setSpeed("vfx", 20.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_speed_release(t):
+        spawn(t)
+        t.vehicle.setSpeed("vfx", 0.0)
+        run_n(t, 10)
+        t.vehicle.setSpeed("vfx", -1.0)
+        run_n(t, 20)
+        return summary(t)
+
+    def veh_lane_change_mode_off(t):
+        spawn(t)
+        t.vehicle.setLaneChangeMode("vfx", 0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_change_lane_after_mode_off(t):
+        spawn(t)
+        t.vehicle.setLaneChangeMode("vfx", 0)
+        t.vehicle.changeLane("vfx", t.vehicle.getLaneIndex("vfx") ^ 1, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_slow_down_30(t):
+        spawn(t)
+        t.vehicle.slowDown("vfx", 3.0, 5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_change_target_30(t):
+        spawn(t)
+        t.vehicle.changeTarget("vfx", t.vehicle.getRoute("vfx")[-1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_set_route_prefix(t):
+        spawn(t)
+        t.vehicle.setRoute("vfx", t.vehicle.getRoute("vfx")[:1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_set_route_reversed(t):
+        spawn(t)
+        t.vehicle.setRoute("vfx", t.vehicle.getRoute("vfx")[::-1])
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_move_keep_route(keep):
+        def run(t):
+            spawn(t)
+            x, y = t.vehicle.getPosition("vfx")
+            t.vehicle.moveToXY("vfx", t.vehicle.getRoadID("vfx"), t.vehicle.getLaneIndex("vfx"), x + 1.0, y,
+                               keepRoute=keep)
+            run_n(t, 30)
+            return summary(t)
+        return run
+
+    def veh_add_depart_args(t):
+        t.vehicle.add("vnew", t.route.getIDList()[0], departLane=0, departSpeed=5.0)
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_add_depart_best_max(t):
+        t.vehicle.add("vnew", t.route.getIDList()[0], departLane="best", departSpeed="max")
+        run_n(t, 30)
+        return summary(t)
+
+    def veh_remove_in_crossing(t):
+        chosen = None
+        for _ in range(200):
+            run_n(t, 1)
+            cross = sorted(i for i in t.vehicle.getIDList() if t.vehicle.getRoadID(i).startswith(":"))
+            if cross:
+                chosen = cross[0]
+                t.vehicle.remove(chosen)
+                break
+        run_n(t, 30)
+        return (chosen, summary(t))
+
+    def veh_remove_v0_30(t):
+        t.vehicle.remove("v0")
+        run_n(t, 30)
+        return summary(t)
+
+    def sim_step_jump(t):
+        r = t.simulationStep(40)
+        return (r, t.simulation.getTime(), summary(t))
+
+    def sim_step_fraction(t):
+        t.simulationStep(25.25)
+        return (t.simulation.getTime(), summary(t))
+
+    def veh_subscribe_stream_50(t):
+        spawn(t)
+        t.vehicle.subscribe("vfx", [tc.VAR_SPEED, tc.VAR_POSITION, tc.VAR_LANE_ID, tc.VAR_ROAD_ID])
+        out = []
+        for _ in range(50):
+            run_n(t, 1)
+            out.append(t.vehicle.getSubscriptionResults("vfx"))
+        return out
+
+    def sim_subscribe_stream_50(t):
+        t.simulation.subscribe([tc.VAR_DEPARTED_VEHICLES_IDS, tc.VAR_ARRIVED_VEHICLES_IDS])
+        out = []
+        for _ in range(50):
+            run_n(t, 1)
+            out.append(t.simulation.getSubscriptionResults())
+        return out
+
+    def edge_subscribe_stream_30(t):
+        t.edge.subscribe(edge, [tc.LAST_STEP_VEHICLE_NUMBER, tc.LAST_STEP_MEAN_SPEED])
+        out = []
+        for _ in range(30):
+            run_n(t, 1)
+            out.append(t.edge.getSubscriptionResults(edge))
+        return out
+
+    def veh_context_stream_20(t):
+        spawn(t)
+        t.vehicle.subscribeContext("vfx", tc.CMD_GET_VEHICLE_VARIABLE, 50.0, [tc.VAR_SPEED])
+        out = []
+        for _ in range(20):
+            run_n(t, 1)
+            out.append(t.vehicle.getContextSubscriptionResults("vfx"))
+        return out
+
+    def veh_context_stream_20_wide(t):
+        spawn(t)
+        t.vehicle.subscribeContext("vfx", tc.CMD_GET_VEHICLE_VARIABLE, 100.0, [tc.VAR_POSITION, tc.VAR_SPEED])
+        out = []
+        for _ in range(20):
+            run_n(t, 1)
+            out.append(t.vehicle.getContextSubscriptionResults("vfx"))
+        return out
+
+    def vtype_max_speed_30(t):
+        t.vehicletype.setMaxSpeed("DEFAULT_VEHTYPE", 20.0)
+        run_n(t, 30)
+        return summary(t)
+
     return {
+        "effect: lane.setDisallowed(all) +30 + summary": lane_close,
+        "effect: lane.setDisallowed(all) +15, reopen +30": lane_close_reopen,
+        "effect: lane.setDisallowed(passenger) +30": lane_disallow_passenger,
+        "effect: lane.setDisallowed(nope, all)": lambda t: t.lane.setDisallowed("nope", ["all"]),
+        "effect: edge.setMaxSpeed(5) +30 + summary": edge_max_speed_5_30,
+        "effect: edge.setMaxSpeed(20) +30 + summary": edge_max_speed_20_30,
+        "effect: lane.setMaxSpeed(3) +30 + summary": lane_max_speed_3_30,
+        "effect: lane.setMaxSpeed(5)+10, (30)+20": lane_max_speed_reset,
+        "effect: trafficlight.setProgram(0) +30 trace": tl_set_program_30,
+        "effect: trafficlight.setProgram(nope)": lambda t: t.trafficlight.setProgram(tl, "nope"),
+        "effect: trafficlight.setPhase(1) held +30": tl_set_phase_held,
+        "effect: setPhase(2)+setPhaseDuration(20) +30": tl_set_phase_then_duration,
+        "effect: trafficlight.setPhaseDuration(7) +30": tl_set_phase_duration_7,
+        "effect: trafficlight.setPhase(0) +30 trace": tl_set_phase_0_trace,
+        "effect: setRedYellowGreenState(all G) held 30": tl_set_state_all_g_held,
+        "effect: setRedYellowGreenState(all r) held 30": tl_set_state_all_r_held,
+        "effect: setRedYellowGreenState(wrong len) +5": tl_set_state_wrong_len,
+        "effect: trafficlight.setPhase(tl, 99)": lambda t: t.trafficlight.setPhase(tl, 99),
+        "effect: vehicle.setSpeedMode(0)+setSpeed(20) +30": veh_speed_mode_30,
+        "effect: setSpeed(0)+10, setSpeed(-1)+20": veh_speed_release,
+        "effect: setLaneChangeMode(0) +30": veh_lane_change_mode_off,
+        "effect: setLaneChangeMode(0)+changeLane +30": veh_change_lane_after_mode_off,
+        "effect: vehicle.slowDown(3,5) +30": veh_slow_down_30,
+        "effect: vehicle.changeTarget(last) +30": veh_change_target_30,
+        "effect: vehicle.setRoute(prefix) +30": veh_set_route_prefix,
+        "effect: vehicle.setRoute(reversed) +30": veh_set_route_reversed,
+        "effect: moveToXY(keepRoute=0) +30": veh_move_keep_route(0),
+        "effect: moveToXY(keepRoute=1) +30": veh_move_keep_route(1),
+        "effect: moveToXY(keepRoute=2) +30": veh_move_keep_route(2),
+        "effect: vehicle.add(departLane=0,speed=5) +30": veh_add_depart_args,
+        "effect: vehicle.add(best, max) +30": veh_add_depart_best_max,
+        "effect: vehicle.remove in crossing +30": veh_remove_in_crossing,
+        "effect: vehicle.remove(v0) +30": veh_remove_v0_30,
+        "effect: simulationStep(40) jump": sim_step_jump,
+        "effect: simulationStep(25.25) fractional": sim_step_fraction,
+        "effect: vehicle.subscribe stream 50": veh_subscribe_stream_50,
+        "effect: simulation.subscribe stream 50": sim_subscribe_stream_50,
+        "effect: edge.subscribe stream 30": edge_subscribe_stream_30,
+        "effect: vehicle.subscribeContext(50) stream 20": veh_context_stream_20,
+        "effect: vehicle.subscribeContext(100) stream 20": veh_context_stream_20_wide,
+        "effect: vehicletype.setMaxSpeed(20) +30": vtype_max_speed_30,
         "getVersion": lambda t: t.getVersion(),
         "simulationStep(11) returns": lambda t: t.simulationStep(11),
         "simulation.getTime": lambda t: t.simulation.getTime(),
@@ -129,6 +529,7 @@ def probes(lane, tl_id):
         "vehicle.getIDList": lambda t: t.vehicle.getIDList(),
         "vehicle.getPosition(v0)": lambda t: t.vehicle.getPosition("v0"),
         "vehicle.getSpeed(v0)": lambda t: t.vehicle.getSpeed("v0"),
+        TRIPINFO_PROBE: lambda t: t.vehicle.getParameter("v0", "device.tripinfo.waitingTime"),
         "lane.getLastStepVehicleNumber": lambda t: t.lane.getLastStepVehicleNumber(lane),
         "lane.getLength": lambda t: t.lane.getLength(lane),
         "trafficlight.getIDList": lambda t: t.trafficlight.getIDList(),
@@ -152,14 +553,89 @@ def probes(lane, tl_id):
         "vehicle.remove(v0) + step + getIDList": remove_vehicle,
         "vehicle.remove(nope)": lambda t: t.vehicle.remove("nope"),
         "vehicle.getJunctionFoes(v0)": lambda t: t.vehicle.getJunctionFoes("v0"),
+        "edge.getIDList": lambda t: t.edge.getIDList(),
+        "edge.getLastStepVehicleNumber(edge)": lambda t: t.edge.getLastStepVehicleNumber(edge),
+        "edge.getLastStepMeanSpeed(edge)": lambda t: t.edge.getLastStepMeanSpeed(edge),
+        "edge.getLastStepVehicleIDs(edge)": lambda t: t.edge.getLastStepVehicleIDs(edge),
+        "edge.getTraveltime(edge)": lambda t: t.edge.getTraveltime(edge),
+        "edge.getWaitingTime(edge)": lambda t: t.edge.getWaitingTime(edge),
+        "edge.setMaxSpeed(edge,5) + step + getSpeed(v0)": edge_set_max_speed,
+        "edge.getLastStepVehicleNumber(nope)": lambda t: t.edge.getLastStepVehicleNumber("nope"),
+        "edge.getTraveltime(nope)": lambda t: t.edge.getTraveltime("nope"),
+        "edge.getWaitingTime(nope)": lambda t: t.edge.getWaitingTime("nope"),
+        "edge.setMaxSpeed(nope, 5)": lambda t: t.edge.setMaxSpeed("nope", 5.0),
+        "edge.subscribe(edge, lastStepVehicleNumber) + step": edge_subscribe,
+        "lane.setMaxSpeed(lane,5) + step + getMaxSpeed": lane_set_max_speed,
+        "lane.setMaxSpeed(lane,5) + step + getSpeed(v0)": lane_set_max_speed_effect,
+        "lane.getMaxSpeed(lane)": lambda t: t.lane.getMaxSpeed(lane),
+        "lane.getWidth(lane)": lambda t: t.lane.getWidth(lane),
+        "lane.getLastStepVehicleIDs(lane)": lambda t: t.lane.getLastStepVehicleIDs(lane),
+        "lane.setMaxSpeed(nope, 5)": lambda t: t.lane.setMaxSpeed("nope", 5.0),
+        "lane.getMaxSpeed(nope)": lambda t: t.lane.getMaxSpeed("nope"),
+        "vehicle.getLaneID(v0)": lambda t: t.vehicle.getLaneID("v0"),
+        "vehicle.getLanePosition(v0)": lambda t: t.vehicle.getLanePosition("v0"),
+        "vehicle.getAngle(v0)": lambda t: t.vehicle.getAngle("v0"),
+        "vehicle.getRoadID(v0)": lambda t: t.vehicle.getRoadID("v0"),
+        "vehicle.getRouteID(v0)": lambda t: t.vehicle.getRouteID("v0"),
+        "vehicle.getAcceleration(v0)": lambda t: t.vehicle.getAcceleration("v0"),
+        "vehicle.getSignals(v0)": lambda t: t.vehicle.getSignals("v0"),
+        "vehicle.getLeader(v0)": lambda t: t.vehicle.getLeader("v0"),
+        "vehicle.getLeader(v0, 200)": lambda t: t.vehicle.getLeader("v0", 200.0),
+        "vehicle.getDistance(v0)": lambda t: t.vehicle.getDistance("v0"),
+        "vehicle.getTypeID(v0)": lambda t: t.vehicle.getTypeID("v0"),
+        "vehicle.getLaneID(nope)": lambda t: t.vehicle.getLaneID("nope"),
+        "vehicle.getLanePosition(nope)": lambda t: t.vehicle.getLanePosition("nope"),
+        "vehicle.getAngle(nope)": lambda t: t.vehicle.getAngle("nope"),
+        "vehicle.getRouteID(nope)": lambda t: t.vehicle.getRouteID("nope"),
+        "vehicle.getLeader(nope)": lambda t: t.vehicle.getLeader("nope"),
+        "vehicle.slowDown(v0,3,5) + step + getSpeed": slow_down,
+        "vehicle.slowDown(nope,3,5)": lambda t: t.vehicle.slowDown("nope", 3.0, 5.0),
+        "vehicle.moveTo(v0, lane, pos) + step + getLaneID": move_to_lane,
+        "vehicle.moveTo(nope, lane, 0)": lambda t: t.vehicle.moveTo("nope", lane, 0.0),
+        "vehicle.setColor(v0) + getColor": set_color,
+        "vehicle.getColor(v0)": lambda t: t.vehicle.getColor("v0"),
+        "vehicle.getColor(nope)": lambda t: t.vehicle.getColor("nope"),
+        "vehicle.setType(v0, DEFAULT) + getTypeID": set_type,
+        "vehicle.setType(v0, nope)": lambda t: t.vehicle.setType("v0", "nope"),
+        "vehicle.changeLane(v0) + step + getLaneID": change_lane_effect,
+        "vehicle.subscribe(v0) 3 steps + results": veh_subscribe_3,
+        "vehicle.subscribeContext(v0, speed) + step": veh_subscribe_context,
+        "vehicletype.getIDList": lambda t: t.vehicletype.getIDList(),
+        "vehicletype.getMaxSpeed(DEFAULT)": lambda t: t.vehicletype.getMaxSpeed("DEFAULT_VEHTYPE"),
+        "vehicletype.setMaxSpeed(DEFAULT,20) + step + getMaxSpeed": vtype_set_max_speed,
+        "vehicletype.getLength(DEFAULT)": lambda t: t.vehicletype.getLength("DEFAULT_VEHTYPE"),
+        "vehicletype.getMaxSpeed(nope)": lambda t: t.vehicletype.getMaxSpeed("nope"),
+        "vehicletype.getLength(nope)": lambda t: t.vehicletype.getLength("nope"),
+        "simulation.getDepartedIDList": lambda t: t.simulation.getDepartedIDList(),
+        "simulation.getArrivedIDList": lambda t: t.simulation.getArrivedIDList(),
+        "simulation.getCollidingVehiclesIDList": lambda t: t.simulation.getCollidingVehiclesIDList(),
+        "simulation.subscribe(departedIDs) 3 steps": sim_subscribe_departed_3,
+        "simulation.convert2D(edge, 0)": lambda t: t.simulation.convert2D(edge, 0.0),
+        "simulation.convert2D(nope, 0)": lambda t: t.simulation.convert2D("nope", 0.0),
+        "simulation.convertRoad(v0 pos)": sim_convert_road,
+        "simulation.findRoute(edge, v0 last).edges": sim_find_route,
+        "simulation.findRoute(nope, edge)": lambda t: t.simulation.findRoute("nope", edge).edges,
+        "simulation.getDistance2D(3,4 offset)": sim_distance_2d,
+        "simulation.getDeltaT": lambda t: t.simulation.getDeltaT(),
+        "simulation.getCurrentTime": lambda t: t.simulation.getCurrentTime(),
+        "trafficlight.setPhase(tl,1) + getPhase": tl_set_phase,
+        "trafficlight.setPhaseDuration(tl,7) + step + get": tl_set_phase_duration,
+        "trafficlight.getNextSwitch(tl)": lambda t: t.trafficlight.getNextSwitch(tl),
+        "trafficlight.setRedYellowGreenState(all G) + step": tl_set_state,
+        "trafficlight.setPhase(nope, 0)": lambda t: t.trafficlight.setPhase("nope", 0),
+        "trafficlight.getNextSwitch(nope)": lambda t: t.trafficlight.getNextSwitch("nope"),
+        "junction.getPosition(first)": lambda t: t.junction.getPosition(t.junction.getIDList()[0]),
+        "junction.getPosition(nope)": lambda t: t.junction.getPosition("nope"),
+        "poi.add(p0) + getPosition": poi_add,
+        "poi.getPosition(nope)": lambda t: t.poi.getPosition("nope"),
     }
 
 
-def run_probe(side, port, net, rou, ours, fn):
+def run_probe(side, port, net, rou, ours, fn, extra=()):
     """One fresh server for one probe. Returns {"type", "value"}."""
     log = Path(os.environ.get("TEMP", ".")) / f"traci_{side}_{net.parent.name}.log"
     with open(log, "a") as fh:
-        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(sumo_command(side, port, net, rou, ours, extra), cwd=str(CASE), stdout=fh, stderr=subprocess.STDOUT)
         try:
             traci.init(port=port, numRetries=20, host="localhost")
             try:
@@ -183,15 +659,31 @@ def run_probe(side, port, net, rou, ours, fn):
                 proc.kill()
 
 
-def run_side(side, port, ours, case):
+SHARD = [0, 1]  # (index, count) set by --shard; the default runs every probe
+
+
+def kill_cpp(port):
+    # per-port only: other agents run harnesses concurrently and must not lose their sumo
+    cmd = f"pkill -f -- '--remote-port {port} ' || true"
+    if PRISTINE_BIN:
+        subprocess.run(["bash", "-c", cmd], capture_output=True)
+    else:
+        subprocess.run(["wsl", "-e", "bash", "-lc", cmd], capture_output=True)
+
+
+def run_side(side, port, ours, case, flt=(), skip=()):
     net, rou = CASES_DIR / case / "ref_simple.net.xml", CASES_DIR / case / "routes.rou"
     lane, tl_id = CASE_PARAMS[case]
     out = {}
-    for i, (label, fn) in enumerate(probes(lane, tl_id).items()):
+    picked = [(l, f) for l, f in probes(lane, tl_id).items()
+              if (not flt or any(s in l for s in flt)) and not any(s in l for s in skip)]
+    picked = [p for k, p in enumerate(picked) if k % SHARD[1] == SHARD[0]]
+    for i, (label, fn) in enumerate(picked):
         # fresh port per probe: a WSL sumo left behind by a previous probe would still hold the old one
-        out[label] = run_probe(side, port + i, net, rou, ours, fn)
+        extra = ("--duration-log.statistics", "true") if label == TRIPINFO_PROBE else ()
+        out[label] = run_probe(side, port + i, net, rou, ours, fn, extra)
         if side == "cpp":
-            subprocess.run(["wsl", "-e", "bash", "-lc", "pkill -f 'bin/sumo' || true"], capture_output=True)
+            kill_cpp(port + i)
         time.sleep(0.5)
     return out
 
@@ -202,17 +694,24 @@ def main():
     ap.add_argument("--case", default="all", choices=sorted(CASE_PARAMS) + ["all"])
     ap.add_argument("--ours", default=str(DEFAULT_OURS))
     ap.add_argument("--port", type=int, default=8813)
+    ap.add_argument("--filter", default="", help="comma-separated substrings; only probes whose label contains one run")
+    ap.add_argument("--skip", default="", help="comma-separated substrings; probes whose label contains one are not run")
+    ap.add_argument("--shard", default="0/1", help="i/n: run only every n-th probe, starting at i (parallel runs)")
     a = ap.parse_args()
     warn_if_stale(Path(a.ours))
+    flt = tuple(s for s in a.filter.split(",") if s)
+    skip = tuple(s for s in a.skip.split(",") if s)
+    shard, shards = (int(x) for x in a.shard.split("/"))
+    SHARD[:] = [shard, shards]
 
     if a.only:
-        print(json.dumps(run_side(a.only, a.port, a.ours, a.case), indent=2))
+        print(json.dumps(run_side(a.only, a.port, a.ours, a.case, flt, skip), indent=2))
         return 0
 
     total = bad_total = 0
     for case in ([a.case] if a.case != "all" else sorted(CASE_PARAMS)):
-        cpp = run_side("cpp", a.port, a.ours, case)
-        ours = run_side("ours", a.port, a.ours, case)
+        cpp = run_side("cpp", a.port, a.ours, case, flt, skip)
+        ours = run_side("ours", a.port, a.ours, case, flt, skip)
         print(f"[{case}] {'command':<42} {'C++':<38} {'ours':<38} verdict")
         bad = 0
         for label in cpp:

@@ -51,6 +51,24 @@ impl<E, V> std::ops::DerefMut for CHRouter<E, V> {
     }
 }
 
+/// The `CHRouter::compute` reached from the base router's compute slot (C++ virtual dispatch)
+pub fn ch_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, from: Ptr<E>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
+    Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
+}
+
+pub fn ch_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
+    Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().prohibit(toProhibit)
+}
+
+impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
+    /// Installs this router's compute and prohibit into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
+    pub fn with_compute(mut self) -> Self {
+        self.base.myCompute = Some(ch_compute::<E, V>);
+        self.base.myProhibit = Some(ch_prohibit::<E, V>);
+        self
+    }
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     /// C++: `void CHRouter::CHRouter<E, V>(const int &, bool, typename SUMOAbstractRouter<E, V>::Operation, const SUMOVehicleClass, SUMOTime, const bool, const bool)`
     /// Constructor

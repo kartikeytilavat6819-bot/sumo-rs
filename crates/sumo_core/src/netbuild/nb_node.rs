@@ -75,7 +75,6 @@ const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
 const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
 const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
 const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
-const NBEDGE_UNSPECIFIED_LOADED_LENGTH: f64 = -1.;
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
@@ -105,7 +104,7 @@ fn nbnode_set_connection_same_dest(incoming: Ptr<NBEdge>, lane: i32, dest: Ptr<N
         NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
         NBEDGE_UNSPECIFIED_SPEED,
         NBEDGE_UNSPECIFIED_FRICTION,
-        NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+        crate::netbuild::nb_edge::my_default_connection_length(),
         &PositionVector::default(),
         NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
         SVC_UNSPECIFIED,
@@ -394,7 +393,7 @@ impl NBNode_ApproachingDivider {
                 NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE,
                 NBEDGE_UNSPECIFIED_SPEED,
                 NBEDGE_UNSPECIFIED_FRICTION,
-                NBEDGE_UNSPECIFIED_LOADED_LENGTH, // shortcut: NBEdge::myDefaultConnectionLength is -1 until NBEdge::setDefaultConnectionLength is ported
+                crate::netbuild::nb_edge::my_default_connection_length(),
                 &PositionVector::default(),
                 NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED,
                 SVC_UNSPECIFIED,

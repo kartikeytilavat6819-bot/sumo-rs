@@ -102,6 +102,16 @@ thread_local! {
     static MY_ROUTE_INFOS: std::cell::Cell<Ptr<MSDevice_Vehroutes_SortedRouteInfo>> = std::cell::Cell::new(Ptr::default());
 }
 
+/// MSNet dispatches vehicle-state notifications by address (the base has no vtable): true for this listener
+pub fn is_state_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+    MY_STATE_LISTENER.with(|c| !c.get().is_null() && c.get().as_raw() as *mut MSNet_VehicleStateListener == listener)
+}
+
+/// the StateListener's vehicleStateChanged, reached from MSNet::informVehicleStateListener
+pub fn state_listener_vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+    my_state_listener().m().vehicle_state_changed(vehicle, to, info);
+}
+
 /// C++ static `myStateListener`
 fn my_state_listener() -> Ptr<MSDevice_Vehroutes_StateListener> {
     MY_STATE_LISTENER.with(|c| {
@@ -788,8 +798,17 @@ impl MSDevice_Vehroutes {
             notify_move: crate::microsim::ms_move_reminder::default_notify_move,
             notify_leave: mr_notify_leave,
         };
+        fn mr_notify_stop_ended(mr: &mut MSMoveReminder) {
+            Ptr::from_mut(mr).cast::<MSDevice_Vehroutes>().m().notify_stop_ended()
+        }
+        static MS_MOVE_REMINDER_IDLE_VT: MSMoveReminderIdleVt = MSMoveReminderIdleVt {
+            notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+            notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+            notify_stop_ended: mr_notify_stop_ended,
+        };
         let mut this = Self::new_device(holder, id, maxRoutes);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
+        this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
         this
     }
 

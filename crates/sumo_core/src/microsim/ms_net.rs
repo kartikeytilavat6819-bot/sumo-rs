@@ -26,6 +26,8 @@ const STAGE_INSERTIONS: &str = "insertion";
 const STAGE_REMOTECONTROL: &str = "remoteControl";
 // C++ libsumo ROUTING_MODE_AGGREGATED_CUSTOM (TraCIConstants.h), not in utils::traci yet
 const ROUTING_MODE_AGGREGATED_CUSTOM: i32 = 0x04;
+// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs
+const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// C++ `new` for a Ptr target that the net owns (freed with delete_ptr)
 fn leak_ptr<T>(v: T) -> Ptr<T> {
@@ -611,7 +613,7 @@ impl MSNet {
         self.myHasBidiEdges = self.check_bidi_edges();
         self.myVersion = *version;
         if (!MSGlobals::using_internal_lanes() || !self.myHasInternalLinks) && MSGlobals::weights_separate_turns() > 0.0 {
-            panic!("Option weights.separate-turns is only supported when simulating with internal lanes");
+            std::panic::panic_any(utils::common::util_exceptions::ProcessError::new("Option weights.separate-turns is only supported when simulating with internal lanes"));
         }
     }
 
@@ -787,7 +789,8 @@ impl MSNet {
                 minorPenalty: opt_time("meso-minor-penalty"),
                 overtaking: get_bool("meso-overtaking"),
                 edgeLength: get_float("meso-edgelength"),
-                lookahead: get_float("meso-lookahead"),
+                // shortcut: official 1.28 has no meso-lookahead option; 0 until the MESegment lookahead queue logic is removed
+                lookahead: 0.0,
             };
             self.myMesoEdgeTypes.insert(typeID.to_string(), edgeType);
         }
@@ -865,8 +868,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn simulate(&mut self, start: SUMOTime, stop: SUMOTime) -> MSNet_SimulationState {
-        // shortcut: VERSION_STRING is not ported yet, the version is reported as 'unknown'
-        write_messagef!("Simulation version % started with time: %.", "unknown", time2string(start));
+        write_messagef!("Simulation version % started with time: %.", VERSION_STRING, time2string(start));
         // the simulation loop
         let mut state = MSNet_SimulationState::SIMSTATE_RUNNING;
         // state loading may have changed the start time so we need to reinit it
@@ -1066,8 +1068,7 @@ impl MSNet {
             if self.myLogExecutionTime {
                 self.myTraCIStepDuration = current_millis() - self.myTraCIStepDuration;
             }
-            // shortcut: TraCI load arguments (TraCIServer::getLoadArgs) are not ported, so a load request does not end the step early
-            if TraCIServer::was_closed() {
+            if TraCIServer::was_closed() || !t.m().get_load_args().is_empty() {
                 return;
             }
         }
@@ -1789,7 +1790,9 @@ impl MSNet {
         if TraCIServer::was_closed() {
             return MSNet_SimulationState::SIMSTATE_CONNECTION_CLOSED;
         }
-        // shortcut: TraCI load arguments are not ported, so SIMSTATE_LOADING is never reported
+        if !TraCIServer::get_instance().is_null() && !TraCIServer::get_instance().m().get_load_args().is_empty() {
+            return MSNet_SimulationState::SIMSTATE_LOADING;
+        }
         if (stopTime < 0 || self.myStep > stopTime) && TraCIServer::get_instance().is_null() && (stopTime > 0 || self.myStep > self.myEdgeDataEndTime) {
             if self.myVehicleControl.get_active_vehicle_count() == 0
                 && self.myInserter.get_pending_flow_count() == 0
@@ -1818,7 +1821,10 @@ impl MSNet {
     #[allow(unused_variables)]
     pub fn adapt_to_state(&self, state: MSNet_SimulationState, isLibsumo: bool) -> MSNet_SimulationState {
         if state == MSNet_SimulationState::SIMSTATE_LOADING {
-            // shortcut: OptionsIO::setArgs with the TraCI load arguments is not ported yet
+            let t = TraCIServer::get_instance();
+            let args = t.m().get_load_args().clone();
+            utils::options::options_io::set_args(&args);
+            t.m().get_load_args().clear();
         } else if state != MSNet_SimulationState::SIMSTATE_RUNNING && ((!TraCIServer::get_instance().is_null() && !TraCIServer::was_closed()) || isLibsumo) {
             // overrides SIMSTATE_END_STEP_REACHED, e.g. (TraCI / Libsumo ignore SUMO's --end option)
             return MSNet_SimulationState::SIMSTATE_RUNNING;
@@ -2164,6 +2170,11 @@ impl MSNet {
         // update detector values
         self.myDetectorControl.m().update_detectors(self.myStep);
 
+        // check state dumps
+        if is_set("netstate-dump") {
+            MSXMLRawOut::write(&mut device_by_option("netstate-dump").borrow_mut(), &self.myEdges, self.myStep, get_int("netstate-dump.precision"));
+        }
+
         // check fcd dumps
         if is_set("fcd-output") {
             // init before borrowing the device: initOnce borrows it too
@@ -2176,7 +2187,31 @@ impl MSNet {
             }
         }
 
-        // shortcut: the netstate, emission, battery, chargingstations (aggregated), elechybrid, full, queue, amitran and vtk exports are not ported yet
+        // check emission dumps
+        if is_set("emission-output") {
+            MSEmissionExport::write(&mut device_by_option("emission-output").borrow_mut(), self.myStep);
+        }
+
+        // battery dumps
+        if is_set("battery-output") {
+            MSBatteryExport::write(&mut device_by_option("battery-output").borrow_mut(), self.myStep, get_int("battery-output.precision"));
+        }
+
+        // shortcut: the chargingstations (aggregated), elechybrid and vtk exports are not ported yet
+        // check full dumps
+        if is_set("full-output") {
+            MSGlobals::set_have_emissions(true);
+            MSFullExport::write(&mut device_by_option("full-output").borrow_mut(), self.myStep);
+        }
+
+        if is_set("queue-output") {
+            MSQueueExport::write(&mut device_by_option("queue-output").borrow_mut(), self.myStep);
+        }
+
+        if is_set("amitran-output") {
+            MSAmitranTrajectories::write(&mut device_by_option("amitran-output").borrow_mut(), self.myStep);
+        }
+
         self.write_summary_output(false);
 
         // write detector values
@@ -2643,8 +2678,7 @@ impl MSNet {
             let output = device_by_option("chargingstations-output");
             let mut output = output.borrow_mut();
             for (_, stop) in places.iter() {
-                // shortcut: MSChargingStation::writeChargingStationOutput is not ported yet, the static_cast is not safe until it is
-                let _ = (stop, &mut output);
+                stop.cast::<MSChargingStation>().m().write_charging_station_output(&mut output);
             }
         }
     }
@@ -2789,7 +2823,21 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, fileName: &str, catchExceptions: bool) -> SUMOTime {
-        panic!("shortcut: MSNet::loadState needs MSStateHandler, which is not ported yet ({})", fileName);
+        // load time only
+        let newTime = MSStateHandler_MSStateTimeHandler::get_time(fileName);
+        // clean up state
+        self.clear_state(newTime, false);
+        // load state
+        let mut h = MSStateHandler::new(fileName, 0);
+        let _ = utils::xml::xml_sub_sys::run_parser(&mut h, fileName, false, false, false, catchExceptions);
+        if utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Error, |m| m.was_informed()) {
+            panic!("{}", ProcessError::new(utils::tlf!("Loading state from '%' failed.", fileName)));
+        }
+        // shortcut: NLBuilder::buildRouteLoaderControl is not ported yet, the route loader control is kept
+        // prevent loading errors on rewound route file
+        crate::microsim::ms_globals::set_state_loaded(true);
+        self.update_gui();
+        newTime
     }
 
     /// C++: `void MSNet::quickReload()`
@@ -2875,6 +2923,10 @@ impl MSNet {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
                 TraCIServer::get_instance().m().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::devices::ms_device_vehroutes::is_state_listener(listener.as_raw()) {
+                crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {
+                crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::get_instance().vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }
@@ -3057,7 +3109,7 @@ impl MSNet {
     pub fn get_travel_time(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
@@ -3099,7 +3151,7 @@ impl MSNet {
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && false /* shortcut: per-vehicle weights storage (MSVehicle::getWeightsStorage) is not ported yet */ {
+        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, t, &mut value) {

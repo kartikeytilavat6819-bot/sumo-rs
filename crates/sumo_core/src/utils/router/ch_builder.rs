@@ -19,10 +19,9 @@ pub type CHBuilder_ConstEdgePair<E> = (Ptr<E>, Ptr<E>);
 /// C++ typedef `int CHBuilder::ShortcutVia`
 pub type CHBuilder_ShortcutVia<E> = std::collections::BTreeMap<CHBuilder_ConstEdgePair<E>, Ptr<E>>;
 
-// shortcut: E::getPermissions (edge-level permissions) is not in RouterEdge, add it to the trait to upgrade
 #[allow(unused_variables)]
-pub(crate) fn e_permissions<E>(e: Ptr<E>) -> SVCPermissions {
-    panic!("shortcut: CHBuilder needs E::getPermissions, not in RouterEdge")
+pub(crate) fn e_permissions<E: RouterEdgeInfo>(e: Ptr<E>) -> SVCPermissions {
+    e.edge_permissions()
 }
 
 /// C++ `&obj` taken as a pointer (the object is owned by a container that outlives the pointer)

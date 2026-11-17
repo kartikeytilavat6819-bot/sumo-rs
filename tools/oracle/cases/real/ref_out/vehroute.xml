@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T11:09:28.074172-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/real/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/real/routes.rou"/>
+    </input>
+
+    <output>
+        <vehroute-output value="/mnt/c/Users/karti/Temp/score/outputs-ou02/real/vehroute/ref/vehroute.xml"/>
+    </output>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vehicle id="v1" depart="2.00" departSpeed="13.033" speedFactor="0.9383" arrival="4.00">
+        <route edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    </vehicle>
+
+    <vehicle id="v0" depart="0.00" departSpeed="11.8508" speedFactor="1.0600" arrival="10.00">
+        <route edges="397795464#0 397795464#1 397795464#2 397795464#3"/>
+    </vehicle>
+
+    <vehicle id="v3" depart="6.00" departSpeed="30.0774" speedFactor="1.0827" arrival="12.00">
+        <route edges="46522008#0 46522008#1 46522008#2 46522008#3"/>
+    </vehicle>
+
+    <vehicle id="v4" depart="8.00" departSpeed="28.6217" speedFactor="1.0303" arrival="14.00">
+        <route edges="1117867039#0 1117867039#1 46522008#0 46522008#1 46522008#2"/>
+    </vehicle>
+
+    <vehicle id="v2" depart="4.00" departSpeed="11.2963" speedFactor="1.0104" arrival="17.00">
+        <route edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0"/>
+    </vehicle>
+
+    <vehicle id="v5" depart="12.00" departSpeed="9.2906" speedFactor="0.8310" arrival="23.00">
+        <route edges="397795464#0 397795464#1 397795464#2"/>
+    </vehicle>
+
+</routes>
