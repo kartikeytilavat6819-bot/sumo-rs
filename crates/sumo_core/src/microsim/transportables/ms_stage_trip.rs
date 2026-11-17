@@ -606,7 +606,7 @@ impl MSStageTrip {
                     let bs = MSNet::get_instance().m().get_stopping_place_2(&it.destStop);
                     let first = edges[0];
                     let last = edges[edges.len() - 1];
-                    let mut localArrivalPos = if !bs.is_null() { bs.get_access_pos(last, last.get_lanes()[0].get_rng()) } else { it.arrivalPos };
+                    let mut localArrivalPos = if !bs.is_null() { bs.get_access_pos(last, Ptr::null()) } else { it.arrivalPos };
                     let rideOrigin = if origin.is_taz_connector() && stages.is_empty() { first } else { Ptr::null() };
                     if idx + 1 == n && self.myHaveArrivalPos {
                         localArrivalPos = self.myArrivalPos;
