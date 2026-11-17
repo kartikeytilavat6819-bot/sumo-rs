@@ -1,10 +1,8 @@
 #!/bin/bash
-# Temporary (agent vs01): importer oracle run. Removed in the final commit.
+# Temporary (agent vs01): trace of OpenDRIVE geometry for opendrive_4arm. Removed in the final commit.
 set -u
-bash tools/oracle/run_importers.sh "$CARGO_TARGET_DIR/debug/netconvert" "$SUMO_PRISTINE_BIN/netconvert" /tmp/import_out
-for d in /tmp/import_out/*/; do
-  if [ -s "$d/diff.txt" ]; then
-    echo "== $(basename "$d")"
-    head -12 "$d/diff.txt"
-  fi
-done
+mkdir -p /tmp/dbg4 && cp tools/oracle/import_cases/opendrive_4arm/* /tmp/dbg4/
+cd /tmp/dbg4 && "$CARGO_TARGET_DIR/debug/netconvert" --opendrive opendrive.xodr --opendrive.position-ids -o dbg.net.xml > dbg.log 2>&1
+grep -c DBG dbg.log
+grep DBG dbg.log | head -60
+grep -v DBG dbg.log | head -5
