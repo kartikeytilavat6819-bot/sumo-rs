@@ -76,7 +76,7 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 | file | status | fix sha |
 |---|---|---|
 | MSLaneChanger.cpp | OK (per-function table below; one FIXED) | ea06e575 |
-| MSLaneChangerSublane.cpp | NOT AUDITED | |
+| MSLaneChangerSublane.cpp | OK (all 17 functions and constructor read against Rust; checkOpened block in checkChangeSublane present) | |
 
 MSLaneChanger.cpp, function status:
 
