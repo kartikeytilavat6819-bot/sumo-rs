@@ -54,8 +54,10 @@ impl<E, L, N, V> std::ops::DerefMut for IntermodalEdge<E, L, N, V> {
 
 impl<E, L, N, V> RouterEdgeInfo for IntermodalEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     fn edge_numerical_id(&self) -> i32 {
         <IntermodalEdge<E, L, N, V> as RouterEdge<IntermodalTrip<E, N, V>>>::numerical_id(self)
@@ -71,8 +73,10 @@ where
 
 impl<E, L, N, V> RouterEdge<IntermodalTrip<E, N, V>> for IntermodalEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     type Node = N;
     type Lane = L;
@@ -129,8 +133,10 @@ where
 
 impl<E, L, N, V> IntermodalEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void IntermodalEdge::IntermodalEdge<E, L, N, V>(const std::string, int, const E *, const std::string &, const double)`
     // IntermodalEdge(const std::string id, int numericalID, const E* edge, const std::string& line, const double length = -1) :

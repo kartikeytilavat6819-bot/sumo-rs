@@ -37,8 +37,10 @@ impl<E, L, N, V> std::ops::DerefMut for AccessEdge<E, L, N, V> {
 
 impl<E, L, N, V> AccessEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void AccessEdge::AccessEdge<E, L, N, V>(int, const _IntermodalEdge *, const _IntermodalEdge *, const double, SVCPermissions, SVCPermissions, double)`
     // AccessEdge(int numericalID, const _IntermodalEdge* inEdge, const _IntermodalEdge* outEdge, const double length,

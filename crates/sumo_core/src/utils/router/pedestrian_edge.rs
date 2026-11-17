@@ -40,8 +40,10 @@ impl<E, L, N, V> std::ops::DerefMut for PedestrianEdge<E, L, N, V> {
 
 impl<E, L, N, V> PedestrianEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void PedestrianEdge::PedestrianEdge<E, L, N, V>(int, const E *, const L *, bool, const double)`
     // PedestrianEdge(int numericalID, const E* edge, const L* lane, bool forward, const double pos = -1.) :

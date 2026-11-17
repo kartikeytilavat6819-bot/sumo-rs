@@ -29,8 +29,10 @@ impl<E, L, N, V> std::ops::DerefMut for PublicTransportEdge<E, L, N, V> {
 
 impl<E, L, N, V> PublicTransportEdge<E, L, N, V>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     /// C++: `void PublicTransportEdge::PublicTransportEdge<E, L, N, V>(const std::string, int, const IntermodalEdge<E, L, N, V> *, const E *, const std::string &, const double)`
     // PublicTransportEdge(const std::string id, int numericalID, const IntermodalEdge<E, L, N, V>* entryStop, const E* endEdge, const std::string& line, const double length) :
