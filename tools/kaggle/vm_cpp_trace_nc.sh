@@ -10,5 +10,8 @@ exec 8>/home/gate/cpp-$ID.lock; flock 8
 cd "$D"
 git checkout -q -- src
 cp "$FILE" src/netbuild/NBNodeCont.cpp
+touch src/netbuild/NBNodeCont.cpp
+find build -name 'NBNodeCont.cpp.o' -delete
 (cd build && make -j8 netconvert > /tmp/cppnc-$ID.log 2>&1) || { grep -a -B3 -E 'rror|undefined' /tmp/cppnc-$ID.log | head -60 >&2; exit 1; }
+grep -c JTRACE "$D/bin/netconvert" >&2 || { echo "vm_cpp_trace_nc: trace not compiled in" >&2; grep -a 'NBNodeCont' /tmp/cppnc-$ID.log | head -5 >&2; exit 1; }
 echo "$D/bin/netconvert"
