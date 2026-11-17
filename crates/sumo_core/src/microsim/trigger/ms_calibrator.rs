@@ -858,6 +858,9 @@ impl MSCalibrator {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_current_state_interval(&self) -> MSCalibrator_AspiredState {
+        if self.myCurrentStateInterval == self.myIntervals.len() {
+            panic!("Calibrator '{}' has no active or upcoming interval", self.base3.get_id());
+        }
         // C++ returns the aspired state by value
         let s = &self.myIntervals[self.myCurrentStateInterval];
         MSCalibrator_AspiredState {

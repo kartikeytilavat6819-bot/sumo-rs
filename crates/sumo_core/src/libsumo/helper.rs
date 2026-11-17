@@ -773,7 +773,7 @@ impl Helper {
     pub fn get_stopping_place(id: &str, type_: SumoXMLTag) -> Ptr<MSStoppingPlace> {
         let s = MSNet::get_instance().get_stopping_place(id, type_);
         if s.is_null() {
-            panic!("{} '{}' is not known", utils::common::to_string::to_string(&type_), id);
+            panic!("{} '{}' is not known", utils::xml::sumo_xml_definitions::Tags.get_string(type_), id);
         }
         s
     }
@@ -932,7 +932,7 @@ impl Helper {
         if stoppingPlaceType != SUMO_TAG_NOTHING {
             let bs = MSNet::get_instance().get_stopping_place(edgeOrStoppingPlaceID, stoppingPlaceType);
             if bs.is_null() {
-                panic!("The {} '{}' is not known", utils::common::to_string::to_string(&stoppingPlaceType), edgeOrStoppingPlaceID);
+                panic!("The {} '{}' is not known", utils::xml::sumo_xml_definitions::Tags.get_string(stoppingPlaceType), edgeOrStoppingPlaceID);
             }
             newStop.lane = bs.get_lane().get_id().to_string();
             newStop.edge = bs.get_lane().get_edge().get_id().to_string();
