@@ -1,6 +1,7 @@
 //! Port of microsim/lcmodels/MSLCM_DK2008.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_abstract_lane_change_model::DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT;
 
 /// C++ typedef `std::pair<double, int> MSLCM_DK2008::Info`
 pub type MSLCM_DK2008_Info = (f64, i32);
@@ -74,6 +75,32 @@ pub struct MSLCM_DK2008 {
     pub myDontBrake: bool,
 }
 
+fn dk2008_inform(lcm: &mut MSAbstractLaneChangeModel, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().inform(info, sender)
+}
+fn dk2008_patch_speed(lcm: &mut MSAbstractLaneChangeModel, min: f64, wanted: f64, max: f64, cfModel: &MSCFModel) -> f64 {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().patch_speed(min, wanted, max, cfModel)
+}
+fn dk2008_changed(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().changed()
+}
+fn dk2008_prepare_step(lcm: &mut MSAbstractLaneChangeModel) {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().prepare_step()
+}
+fn dk2008_wants_change(lcm: &mut MSAbstractLaneChangeModel, laneOffset: i32, msgPass: &mut MSAbstractLaneChangeModel_MSLCMessager, blocked: i32, leader: &(Ptr<MSVehicle>, f64), follower: &(Ptr<MSVehicle>, f64), neighLead: &(Ptr<MSVehicle>, f64), neighFollow: &(Ptr<MSVehicle>, f64), neighLane: &MSLane, preb: &Vec<MSVehicle_LaneQ>, lastBlocked: Ptr<Ptr<MSVehicle>>, firstBlocked: Ptr<Ptr<MSVehicle>>) -> i32 {
+    Ptr::from_mut(lcm).cast::<MSLCM_DK2008>().m().wants_change(laneOffset, msgPass, blocked, leader, follower, neighLead, neighFollow, neighLane, preb, lastBlocked, firstBlocked)
+}
+
+/// Virtual dispatch table of MSLCM_DK2008 (overrides wantsChange, inform, patchSpeed, changed, prepareStep)
+static MSLCM_DK2008_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+    inform: dk2008_inform,
+    patch_speed: dk2008_patch_speed,
+    changed: dk2008_changed,
+    wants_change: dk2008_wants_change,
+    prepare_step: dk2008_prepare_step,
+    ..DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT
+};
+
 impl std::ops::Deref for MSLCM_DK2008 {
     type Target = MSAbstractLaneChangeModel;
     fn deref(&self) -> &MSAbstractLaneChangeModel {
@@ -95,7 +122,8 @@ impl MSLCM_DK2008 {
     #[allow(unused_variables)]
     pub fn new(v: &mut MSVehicle) -> Self {
         // C++ base-class initializer runs first
-        let base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::DK2008);
+        let mut base = MSAbstractLaneChangeModel::new(v, LaneChangeModel::DK2008);
+        base.vt = &MSLCM_DK2008_VT;
         MSLCM_DK2008 {
             base,
             myChangeProbability: 0.,

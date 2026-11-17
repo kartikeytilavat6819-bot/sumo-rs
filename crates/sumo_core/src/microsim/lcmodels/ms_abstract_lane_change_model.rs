@@ -43,7 +43,7 @@ fn default_changed(_: &mut MSAbstractLaneChangeModel) {
     panic!("MSAbstractLaneChangeModel::changed is pure virtual")
 }
 
-static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
+pub(crate) static DEFAULT_MS_ABSTRACT_LANE_CHANGE_MODEL_VT: MSAbstractLaneChangeModelVt = MSAbstractLaneChangeModelVt {
     inform: default_inform,
     patch_speed: default_patch_speed,
     changed: default_changed,
