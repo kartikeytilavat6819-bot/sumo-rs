@@ -50,7 +50,7 @@ const MY_DEFAULT_PROPULSION_EFFICIENCY: f64 = 0.98;
 const MY_DEFAULT_RECUPERATION_EFFICIENCY: f64 = 0.96;
 const MY_DEFAULT_RECUPERATION_EFFICIENCY_BY_DECELERATION: f64 = 0.0;
 
-// shortcut: PolySolver (utils/common/PolySolver.cpp) has no batch or Rust module yet, so the cubic solver used by acceleration() is ported here, move it to a shared module when PolySolver is generated
+// C++ PolySolver (utils/common/PolySolver.cpp) is used only by HelpersEnergy::acceleration(), so its port lives here
 /// C++ `PolySolver::quadraticSolve`: returns only real roots
 fn quadratic_solve(a: f64, b: f64, c: f64) -> (i32, f64, f64) {
     // ax^2 + bx + c = 0

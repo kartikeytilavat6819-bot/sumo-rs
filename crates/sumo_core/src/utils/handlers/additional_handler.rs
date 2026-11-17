@@ -2954,8 +2954,8 @@ impl AdditionalHandler {
                         let flowId = flowParameter.id.clone();
                         let flowRouteId = flowParameter.routeid.clone();
                         self.myCommonXMLStructure.get_current_sumo_base_object().m().set_vehicle_parameter(Box::new((*flowParameter).clone()), &flowId, &flowRouteId);
-                        // C++ deletes flowParameter here (XMLStructure keeps a copy); the port keeps the original allocated
-                        // shortcut: flowParameter leaked instead of deleted, upgrade with parameter ownership
+                        // delete flow parameter (because in XMLStructure we have a copy)
+                        drop(unsafe { Box::from_raw(flowParameter.as_raw()) });
                     } else {
                         self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
                     }
