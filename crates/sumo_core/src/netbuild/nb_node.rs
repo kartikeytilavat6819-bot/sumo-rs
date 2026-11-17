@@ -1158,8 +1158,22 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn invalidate_tls(&mut self, tlCont: &mut NBTrafficLightLogicCont, addedConnections: bool, removedConnections: bool) {
-        // shortcut: the dynamic_cast checks (NBLoadedSUMOTLDef / NBOwnTLDef) need RTTI, and NBTrafficLightDefinition has no type tag yet; the TL-controlled node is left unchanged, upgrade when a type tag or downcast exists
-        let _ = (tlCont, addedConnections, removedConnections);
+        if self.is_tl_controlled() {
+            let oldDefs = self.myTrafficLights.clone();
+            for orig in oldDefs {
+                if orig.m().myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+                    orig.cast::<NBLoadedSUMOTLDef>().m().register_modifications(addedConnections, removedConnections);
+                } else if orig.m().myKind != NBTrafficLightDefinitionKind::OwnTL {
+                    let newDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new_3(orig.m().get_id(), orig.m().get_offset(), orig.m().get_type()))));
+                    while let Some(node) = orig.get_nodes().first().copied() {
+                        newDef.m().add_node(node);
+                        node.m().remove_traffic_light(orig);
+                    }
+                    tlCont.remove_fully(orig.m().get_id().to_string());
+                    tlCont.insert(newDef.cast::<NBTrafficLightDefinition>(), false);
+                }
+            }
+        }
     }
 
     /// C++: `void NBNode::shiftTLConnectionLaneIndex(NBEdge *, int, int)`
