@@ -5,27 +5,18 @@ B=${CARGO_TARGET_DIR:-/tmp/target}/debug
 P=${SUMO_PRISTINE_BIN:-$HOME/sumo-pristine/bin}
 D=/tmp/ptdiag; rm -rf $D; mkdir -p $D
 C=tools/oracle/cases
-echo "== busride ours"
-$B/sumo -n $C/busride/ref_simple.net.xml -r $C/busride/routes.rou $(cat $C/busride/sim.args) \
-  --tripinfo-output $D/bus.ti.xml --personinfo-output $D/bus.pi.xml --stop-output $D/bus.stop.xml \
-  --no-step-log true > $D/bus.log 2>&1; echo "rc=$?"
-grep -A3 -m1 panicked $D/bus.log | cut -c1-300
-for c in city_zurich_tram city_karlsruhe_tram; do
-  while read -r v args; do
-    [ -n "$v" ] || continue
-    o=$D/$c.$v; mkdir -p $o/r $o/c
-    echo "== $c $v"
-    $B/netconvert --osm-files $C/$c/input.osm --simple-projection ${args//@OUT@/$o/r} -o $o/r/net.net.xml > $o/r.log 2>&1 </dev/null
-    echo "ours rc=$? $(grep -m2 -iE 'error|panicked' $o/r.log | cut -c1-200 | tr '\n' ' ')"
-    SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo $P/netconvert --osm-files $C/$c/input.osm --simple-projection ${args//@OUT@/$o/c} -o $o/c/net.net.xml > $o/c.log 2>&1 </dev/null
-    echo "cpp rc=$?"
-    for f in $C/$c/ref_net_out/$v/*; do
-      n=$(basename $f)
-      if [ "$n" = net.net.xml ]; then
-        python3 tools/oracle/compare_net.py $f $o/r/$n | head -4
-      else
-        python3 tools/oracle/compare_xml.py $f $o/r/$n | head -2
-      fi
-    done
-  done < $C/$c/net_outputs.txt
+echo "P=$P B=$B"; ls $P | head -3
+c=city_zurich_tram
+for a in "--ptline-clean-up true" "--ptline-clean-up=true" "--ptline-clean-up" "--railway.topology.repair=true" "--railway.topology.repair"; do
+  o=$D/t$(echo "$a" | tr -dc 'a-z' | cut -c1-30); mkdir -p $o
+  echo "== ours: $a"
+  $B/netconvert --osm-files $C/$c/input.osm --simple-projection $a -o $o/net.xml > $o/log 2>&1 </dev/null
+  echo "rc=$?"; head -c 700 $o/log; echo
 done
+echo "== pristine ptline (full log)"
+mkdir -p $D/cpp
+SUMO_HOME=$HOME/sumo-pristine/lib/python3.12/site-packages/sumo $P/netconvert --osm-files $C/$c/input.osm --simple-projection --ptstop-output $D/cpp/ptstop.xml --ptline-output $D/cpp/ptline.xml --ptline-clean-up true -o $D/cpp/net.xml > $D/cpp/log 2>&1 </dev/null
+echo "rc=$?"; head -c 700 $D/cpp/log; echo
+echo "== ours ptline full log"
+$B/netconvert --osm-files $C/$c/input.osm --simple-projection --ptstop-output $D/cpp/o.ptstop.xml --ptline-output $D/cpp/o.ptline.xml --ptline-clean-up true -o $D/cpp/o.net.xml > $D/cpp/olog 2>&1 </dev/null
+echo "rc=$?"; head -c 900 $D/cpp/olog; echo
