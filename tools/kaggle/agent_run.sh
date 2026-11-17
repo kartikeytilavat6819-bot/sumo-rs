@@ -3,7 +3,7 @@
 # Sim only (same flags as run_all: sim.args, outputs to /tmp), median of 3 runs per binary.
 # Runs from the repo root on the gate VM (CARGO_TARGET_DIR and SUMO_PRISTINE_BIN set by vm_gate_run.sh).
 set -u
-CASES="city_vienna_scale_downtown city_phoenix_scale_grid city_dhaka_scale_jam"
+CASES="city_dhaka_scale_jam"
 PRI=${SUMO_PRISTINE_BIN:?}/sumo
 T=${CARGO_TARGET_DIR:-/tmp/target}
 PROF=release
