@@ -1,0 +1,24 @@
+<routes>
+<vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+<route id="we" edges="W_in E_out"/>
+<route id="ns" edges="N_in S_out"/>
+<vehicle id="blocker" depart="0.00" departSpeed="max" route="ns">
+    <stop lane="S_out_0" endPos="30" duration="100"/>
+</vehicle>
+    <vehicle id="w00" depart="2.00" route="we"/>
+    <vehicle id="w01" depart="4.00" route="we"/>
+    <vehicle id="w02" depart="6.00" route="we"/>
+    <vehicle id="w03" depart="8.00" route="we"/>
+    <vehicle id="w04" depart="10.00" route="we"/>
+    <vehicle id="w05" depart="12.00" route="we"/>
+    <vehicle id="w06" depart="14.00" route="we"/>
+    <vehicle id="w07" depart="16.00" route="we"/>
+    <vehicle id="n00" depart="3.00" route="ns"/>
+    <vehicle id="n01" depart="5.00" route="ns"/>
+    <vehicle id="n02" depart="7.00" route="ns"/>
+    <vehicle id="n03" depart="9.00" route="ns"/>
+    <vehicle id="n04" depart="11.00" route="ns"/>
+    <vehicle id="n05" depart="13.00" route="ns"/>
+    <vehicle id="n06" depart="15.00" route="ns"/>
+    <vehicle id="n07" depart="17.00" route="ns"/>
+</routes>

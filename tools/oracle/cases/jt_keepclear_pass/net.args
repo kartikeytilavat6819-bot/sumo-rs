@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_keepclear_pass/junction.nod.xml --edge-files tools/oracle/cases/jt_keepclear_pass/junction.edg.xml --connection-files tools/oracle/cases/jt_keepclear_pass/junction.con.xml
