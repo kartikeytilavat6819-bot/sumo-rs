@@ -8,7 +8,7 @@ CPP=$(bash tools/gcloud/vm_cpp_trace.sh lo01 tools/kaggle/lc05_trace.patch 2>"$O
 echo "cpp bin: $CPP build-log lines: $(wc -l < "$O/cppbuild.log")"; head -5 "$O/cppbuild.log" | cut -c1-300
 c=sublane_bikes
 d=tools/oracle/cases/$c
-export LCTRACE_ID=car2 LCTRACE_ID2=car2
+export LCTRACE_ID=car2 LCTRACE_ID2=car1
 RUST_BACKTRACE=1 "$B/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") --fcd-output "$O/ours.fcd.xml" --no-step-log true >"$O/ours.out" 2>"$O/ours.trace"
 echo "ours exit $? panic: $(grep -m1 -E 'panicked' "$O/ours.out" "$O/ours.trace" | cut -c1-160)"
 "$CPP" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") --fcd-output "$O/cpp.fcd.xml" --no-step-log true >"$O/cpp.out" 2>"$O/cpp.trace"
@@ -21,13 +21,14 @@ import sys
 def load(p): return [l.rstrip('\n') for l in open(p, errors='replace') if l.startswith('LCT')]
 a = load(sys.argv[1]); b = load(sys.argv[2])
 def toks(l): return l.replace(',', ' ').split()
+seen = {}
 for i, (x, y) in enumerate(zip(a, b)):
     xs = toks(x); ys = toks(y)
-    if xs != ys:
+    vid = xs[2] if len(xs) > 2 else '?'
+    if xs != ys and vid not in seen:
         j = next((k for k, (p, q) in enumerate(zip(xs, ys)) if p != q), min(len(xs), len(ys)))
-        print('first real diff line', i + 1, 'token', j, 'ours', xs[j] if j < len(xs) else '-', 'cpp', ys[j] if j < len(ys) else '-', 'ntok', len(xs), len(ys))
-        print('ours:', x[:300]); print('cpp :', y[:300])
-        break
-else:
-    print('no real diff in common prefix', len(a), len(b))
+        seen[vid] = i + 1
+        print('first diff', vid, 'line', i + 1, 'token', j, 'ours', xs[j] if j < len(xs) else '-', 'cpp', ys[j] if j < len(ys) else '-')
+        print('  ours:', x[:260]); print('  cpp :', y[:260])
+print('diverged ids', seen)
 EOF
