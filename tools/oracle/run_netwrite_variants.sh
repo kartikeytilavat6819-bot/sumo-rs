@@ -25,7 +25,7 @@ OPTS=(
   "--street-sign-output @D/signs.xml"
   "--ptstop-output @D/ptstops.xml"
 )
-norm() { sed -e "s#$REF#BASE#g" -e "s#$OUT#BASE#g" "$1" | grep -v -e 'generated on' -e 'date='; }
+norm() { sed -e "s#$REF#BASE#g" -e "s#$OUT#BASE#g" -e 's/\r$//' "$1" | grep -v -e 'generated on' -e 'date='; }
 fail=0
 for i in "${!NAMES[@]}"; do
   name=${NAMES[$i]}
@@ -37,7 +37,7 @@ for i in "${!NAMES[@]}"; do
   echo $? > "$BASE/$name.rc"
   if [ "$MODE" = ref ]; then continue; fi
   verdict=PASS; why=
-  if ! cmp -s "$REF/$name.rc" "$BASE/$name.rc"; then
+  if [ "$(tr -d '\r' < "$REF/$name.rc")" != "$(tr -d '\r' < "$BASE/$name.rc")" ]; then
     verdict=FAIL; why="exit code $(cat "$BASE/$name.rc") vs pristine $(cat "$REF/$name.rc")"
   else
     lr=$(cd "$REF/$name" && find . -type f ! -name net.xml | sort)
