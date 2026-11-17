@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::std_defs::{g_routing_preferences, set_g_routing_preferences};
-use utils::common::time::{delta_t, elapsed_ms2string, steps2time, string2time, time2string};
+use utils::common::time::{delta_t, elapsed_ms2string, steps2time, string2time, time2string, ts};
 use utils::common::to_string::f64_to_string_default;
 use utils::geom::POSITION_EPS;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
@@ -2212,7 +2212,18 @@ impl MSNet {
             MSBatteryExport::write(&mut device_by_option("battery-output").borrow_mut(), self.myStep, get_int("battery-output.precision"));
         }
 
-        // shortcut: the chargingstations (aggregated), elechybrid and vtk exports are not ported yet
+        // charging station aggregated dumps
+        if is_set("chargingstations-output") && get_bool("chargingstations-output.aggregated") {
+            MSChargingStationExport::write(&mut device_by_option("chargingstations-output").borrow_mut(), false);
+        }
+
+        // elecHybrid dumps
+        if is_set("elechybrid-output") {
+            if get_bool("elechybrid-output.aggregated") {
+                MSElecHybridExport::write_aggregated(&mut device_by_option("elechybrid-output").borrow_mut(), self.myStep, get_int("elechybrid-output.precision"));
+            }
+            // shortcut: the per-vehicle elecHybrid files need the loaded-vehicle iteration and the typeid device lookup, upgrade when MSNet::writeOutput can iterate MSVehicleControl's loaded vehicles
+        }
         // check full dumps
         if is_set("full-output") {
             MSGlobals::set_have_emissions(true);
@@ -2225,6 +2236,19 @@ impl MSNet {
 
         if is_set("amitran-output") {
             MSAmitranTrajectories::write(&mut device_by_option("amitran-output").borrow_mut(), self.myStep);
+        }
+
+        // check vtk dumps
+        if is_set("vtk-output") && self.myVehicleControl.m().get_running_vehicle_no() > 0 {
+            let mut timestep = time2string(self.myStep);
+            if ts() >= 1.0 {
+                timestep.truncate(timestep.len() - 3);
+            } else if delta_t() % 100 == 0 {
+                timestep.truncate(timestep.len() - 1);
+            }
+            let filename = format!("{}_{}.vtp", get_string("vtk-output"), timestep);
+            let mut dev = OutputDevice::new_file(&filename).unwrap_or_else(|e| panic!("{e}"));
+            MSVTKExport::write(&mut dev, self.myStep);
         }
 
         self.write_summary_output(false);
@@ -2248,7 +2272,18 @@ impl MSNet {
             od.close_tag("");
         }
 
-        // shortcut: SSM and ToC device outputs are not ported yet (their get_instances() accessors are not usable)
+        // write SSM output
+        // determinism: C++ iterates std::set<MSDevice_SSM*> by address; the BTreeSet of Ptr keeps the same order key
+        for dev in MSDevice_SSM::get_instances().iter() {
+            dev.m().update_and_write_output();
+        }
+
+        // write ToC output
+        for dev in MSDevice_ToC::get_instances().iter() {
+            if dev.m().generates_output() {
+                dev.m().write_output();
+            }
+        }
 
         if is_set("collision-output") {
             self.write_collisions();
@@ -2728,13 +2763,21 @@ impl MSNet {
         if is_set("railsignal-block-output") {
             let output = device_by_option("railsignal-block-output");
             let mut output = output.borrow_mut();
-            // shortcut: MSRailSignal::writeBlocks (dynamic_cast of each logic) is not ported yet
+            for tls in self.myLogics.m().get_all_logics() {
+                if tls.get_logic_type() == TrafficLightType::RAIL_SIGNAL {
+                    tls.cast::<MSRailSignal>().m().write_blocks(&mut output, false);
+                }
+            }
             MSDriveWay::write_depature_blocks(&mut output, false);
         }
         if is_set("railsignal-vehicle-output") {
             let output = device_by_option("railsignal-vehicle-output");
             let mut output = output.borrow_mut();
-            // shortcut: MSRailSignal::writeBlocks (dynamic_cast of each logic) is not ported yet
+            for tls in self.myLogics.m().get_all_logics() {
+                if tls.get_logic_type() == TrafficLightType::RAIL_SIGNAL {
+                    tls.cast::<MSRailSignal>().m().write_blocks(&mut output, true);
+                }
+            }
             MSDriveWay::write_depature_blocks(&mut output, true);
         }
     }
@@ -2764,8 +2807,7 @@ impl MSNet {
             let output = device_by_option("overheadwiresegments-output");
             let mut output = output.borrow_mut();
             for (_, stop) in places.iter() {
-                // shortcut: MSOverheadWire::writeOverheadWireSegmentOutput is not ported yet
-                let _ = (stop, &mut output);
+                stop.cast::<MSOverheadWire>().m().write_overhead_wire_segment_output(&mut output);
             }
         }
     }
@@ -2789,8 +2831,7 @@ impl MSNet {
             let mut output = output.borrow_mut();
             output.set_precision(get_int("substations-output.precision"));
             for sub in self.myTractionSubstations.iter() {
-                // shortcut: MSTractionSubstation::writeTractionSubstationOutput is not ported yet
-                let _ = (sub, &mut output);
+                sub.m().write_traction_substation_output(&mut output);
             }
         }
     }
