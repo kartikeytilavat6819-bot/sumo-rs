@@ -466,7 +466,7 @@ impl InductionLoop {
             MY_TREE.with(|t| t.set(tree));
             let net = MSNet::get_instance();
             for (_, i) in net.m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).iter() {
-                let il = i.cast::<MSInductLoop>();
+                let il = crate::microsim::output::ms_induct_loop::induct_loop_of(i.cast::<crate::microsim::output::ms_detector_file_output::MSDetectorFileOutput>());
                 let p = il.get_lane().get_shape_2().position_at_offset(il.get_position(), 0.0);
                 let cmin = [p.x() as f32, p.y() as f32];
                 let cmax = [p.x() as f32, p.y() as f32];
@@ -613,7 +613,7 @@ impl InductionLoop {
         // shortcut: C++ dynamic_cast<MSInductLoop*> cannot be checked at runtime; a non-MSInductLoop typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
         let il = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(loopID).copied();
         match il {
-            Some(d) => d.cast::<MSInductLoop>(),
+            Some(d) => crate::microsim::output::ms_induct_loop::induct_loop_of(d),
             None => {
                 let msg = format!("Induction loop '{}' is not known", loopID);
                 panic!("{}", msg);

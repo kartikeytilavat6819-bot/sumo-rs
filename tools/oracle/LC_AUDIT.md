@@ -54,10 +54,42 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 | function | status | fix sha |
 |---|---|---|
 | getParameter / setParameter base (error text) | OK | |
-| saveState / loadState (base, LCSTATE_BASE / LCSTATE gate) | OK | |
+| saveState / loadState (base, LCSTATE_BASE / LCSTATE gate) | FIXED (LCSTATE tokens follow istringstream failure semantics) | 8099493f |
 | getExtraReservation | OK | |
-| static constants (NO_NEIGHBOR, UNDEFINED_LOOKAHEAD, LC_ASSUMED_DECEL) | NOT AUDITED | |
-| all other functions (computeSpeedLat, getCooperativeHelpSpeed, ... ) | NOT AUDITED | |
+| static constants (NO_NEIGHBOR, UNDEFINED_LOOKAHEAD, LC_ASSUMED_DECEL, SUMO_const_haltingSpeed, NUMERICAL_EPS) | OK | |
+| build / constructor / initGlobalOptions / setOwnState / setManeuverDist | OK | |
+| startLaneChangeManeuver / primaryLaneChanged / laneChangeOutput (reason string, NO_NEIGHBOR "None") | OK | |
+| computeSpeedLat / getAssumedDecel / setSpeedLat / resetSpeedLat / updateCompletion | OK | |
+| endLaneChangeManeuver / getShadowLane (1- and 2-arg) / cleanupShadowLane / cleanupTargetLane | OK | |
+| updateShadowLane / updateTargetLane / determineTargetLane / getShadowDirection | OK | |
+| calcAngleOffset / estimateLCDuration / remainingTime | OK | |
+| checkTraCICommands / getForwardPos / getCooperativeHelpSpeed | OK | |
+| congested / avoidOvertakeRight / predInteraction / cancelRequest / canOvertakeRight / addLCSpeedAdvice | OK | |
+| set{Follower,Leader,OrigLeader}Gaps (both overloads) / prepareStep / changedToOpposite | OK | |
+| getMaxSpeedLat2 / initLastLaneChangeOffset / getNormalizedLaneIndex | OK | |
+
+## MSLCM_DK2008.cpp
+
+| function | status | fix sha |
+|---|---|---|
+| constructor / destructor / getModelID / inform / changed | OK | |
+| wantsChange / wantsChangeToRight / wantsChangeToLeft (rechtsfahrgebot, 5./2.6 and 5./3.6 constants) | OK | |
+| informBlocker / am* predicates / currentDist* | OK | |
+| patchSpeed / prepareStep (ceil(x*1e5)*1e-5 truncation) | OK | |
+| vtable overrides (virtuals declared in MSLCM_DK2008.h) | OK | |
+
+## MSVehicle.cpp (lane-change related)
+
+| function | status | fix sha |
+|---|---|---|
+| getLaneChangeModel (const / non-const) | OK | |
+| getBestLanes / updateBestLanes (internal-edge path, stop and arrival lane, lookahead, backtracking, elecHybrid) | OK | |
+| betterContinuation / nextLinkPriority / updateOccupancyAndCurrentBestLane | OK | |
+| getBestLaneOffset / getBestLaneDist / getBestLanesContinuation | OK | |
+| isOppositeLane | OK | |
+| influenceChangeDecision (MSVehicle wrapper and Influencer mode checks) | OK | |
+| lateralDistanceToLane / getLateralOverlap (all overloads) | OK | |
+| setTentativeLaneAndPosition / leaveLane / enterLaneAtLaneChange / updateFurtherLanes / fixPosition / updateDriveItems | OK | |
 
 ## MSLCHelper.cpp
 
