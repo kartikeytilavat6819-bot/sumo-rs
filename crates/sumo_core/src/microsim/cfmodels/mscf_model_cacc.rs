@@ -19,6 +19,8 @@ fn cacc_set_headway_time(m: &mut MSCFModel, headwayTime: f64) { cf_cast_mut::<MS
 fn cacc_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_CACC>(m).get_model_id() }
 fn cacc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_CACC>(m).duplicate(vtype) }
 fn cacc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_CACC>(m).create_vehicle_variables() }
+fn cacc_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String { cf_cast::<MSCFModel_CACC>(m).get_parameter(veh, key) }
+fn cacc_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> { cf_cast::<MSCFModel_CACC>(m).set_parameter(veh, key, value); Ok(()) }
 
 /// Virtual table of MSCFModel_CACC (C++ subclass of MSCFModel_ACC): its overrides on top of the MSCFModel default table
 pub const CACC_VT: MSCFModelVt = MSCFModelVt {
@@ -33,6 +35,8 @@ pub const CACC_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: cacc_get_model_id,
     duplicate: cacc_duplicate,
     create_vehicle_variables: cacc_create_vehicle_variables,
+    get_parameter: cacc_get_parameter,
+    set_parameter: cacc_set_parameter,
     ..DEFAULT_MSCF_MODEL_VT
 };
 

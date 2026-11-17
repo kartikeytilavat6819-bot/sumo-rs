@@ -313,10 +313,10 @@ impl METriggeredCalibrator {
                     let pars = self.myIntervals[idx].vehicleParameter;
                     let mut route: Option<ConstMSRoutePtr> = if !self.myProbe.is_null() { self.myProbe.sample_route(true) } else { None };
                     if route.is_none() {
-                        // shortcut: MSRoute::dictionary_3 returns a plain Rc (no null), so a missing route is not reported here, upgrade when it returns Option
+                        // C++ `route = MSRoute::dictionary(pars->routeid);`; an unknown id yields the null route
                         route = Some(MSRoute::dictionary_3(&pars.routeid, Ptr::null()));
                     }
-                    let Some(route) = route else {
+                    let Some(route) = route.filter(|r| !crate::microsim::ms_route::is_null_route(r)) else {
                         write_warningf!("No valid routes in calibrator '%'.", self.base3.get_id());
                         break;
                     };
