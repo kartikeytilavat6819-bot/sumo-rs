@@ -15,5 +15,5 @@ diff $O/cpp.all.txt $O/ours.all.txt > $O/all.diff
 echo "diff lines $(wc -l < $O/all.diff)"
 echo "first diffs:"; grep -E '^[<>]' $O/all.diff | head -16 | cut -c1-230
 for s in cpp ours; do echo "== $s p173/car43"; awk '$1>=528 && $1<=531 && ($2=="person173" || $2=="car43")' $O/$s.all.txt | cut -c1-200; done
-echo "== CPP trace"; grep -a '^DC01' $O/cpp.log | head -80
-echo "== OURS trace"; grep -a '^DC01' $O/ours.log | head -80
+echo "== CPP trace"; grep -a '^DC01' $O/cpp.log | head -120
+echo "== OURS trace"; grep -a '^DC01' $O/ours.log | head -120

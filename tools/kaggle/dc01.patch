@@ -1,5 +1,5 @@
 diff --git a/src/microsim/MSLink.cpp b/src/microsim/MSLink.cpp
-index 72e6ba2..6da4020 100644
+index 72e6ba2..b50df3a 100644
 --- a/src/microsim/MSLink.cpp
 +++ b/src/microsim/MSLink.cpp
 @@ -40,6 +40,8 @@
@@ -11,31 +11,6 @@ index 72e6ba2..6da4020 100644
  
  //#define MSLink_DEBUG_CROSSING_POINTS
  //#define MSLink_DEBUG_CROSSING_POINTS_DETAILS
-@@ -1597,6 +1599,8 @@ MSLink::isInternalJunctionLink() const {
- const MSLink::LinkLeaders
- MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPerson*>* collectBlockers, bool isShadowLink) const {
-     LinkLeaders result;
-+    const bool dc01b = getenv("DC01") != nullptr && ego == nullptr && myLaneBefore->getID() == ":1383026286_c0_0" && SIMSTEP >= 528000 && SIMSTEP <= 531000;
-+    if (dc01b) printf("DC01 GLIX t=%.2f dist=%.6f nFoe=%d\n", SIMTIME, dist, (int)myFoeLanes.size());
-     // this link needs to start at an internal lane (either an exit link or between two internal lanes)
-     // or it must be queried by the pedestrian model (ego == 0)
-     if (ego != nullptr && (!fromInternalLane() || ego->getLaneChangeModel().isOpposite())) {
-@@ -1646,6 +1650,7 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
-                       << " foeState=" << toString(foeExitLink->getState())
-                       << "\n";
-         }
-+        if (dc01b) printf("DC01 FOE t=%.2f foe=%s dtc=%.6f fdtc=%.6f cw=%.6f fcw=%.6f sT=%d sS=%d contLane=%d nVeh=%d\n", SIMTIME, foeLane->getID().c_str(), distToCrossing, foeDistToCrossing, crossingWidth, foeCrossingWidth, (int)sameTarget, (int)sameSource, (int)contLane, (int)foeLane->getVehicleNumberWithPartials());
-         if (distToCrossing + crossingWidth < 0 && !sameTarget
-                 && (ego == nullptr || !MSGlobals::gComputeLC || distToCrossing + crossingWidth + ego->getVehicleType().getLength() < 0)) {
-             if (gDebugFlag1) {
-@@ -1718,6 +1723,7 @@ MSLink::getLeaderInfo(const MSVehicle* ego, double dist, std::vector<const MSPer
-                           << " foeBikeTurn=" << foeIsBicycleTurn
-                           << " isOpposite=" << isOpposite << "\n";
-             }
-+            if (dc01b) printf("DC01 CAND t=%.2f foe=%s veh=%s lb=%.6f lbd=%.6f past=%d entered=%d inTheWay=%d willPass=%d aT=%lld front=%d spd=%.6f ignGC=%d stopped=%d willStop=%d\n", SIMTIME, foeLane->getID().c_str(), leader->getID().c_str(), leaderBack, leaderBackDist, (int)pastTheCrossingPoint, (int)enteredTheCrossingPoint, (int)inTheWay, (int)willPass, (long long)avi.arrivalTime, (int)leader->isFrontOnLane(foeLane), leader->getSpeed(), (int)ignoreGreenCont, (int)leader->isStopped(), (int)leader->willStop());
-             if (leader == ego) {
-                 continue;
-             }
 diff --git a/src/microsim/transportables/MSPModel_Interacting.cpp b/src/microsim/transportables/MSPModel_Interacting.cpp
 index f204d55..6a7ae04 100644
 --- a/src/microsim/transportables/MSPModel_Interacting.cpp
@@ -50,7 +25,7 @@ index f204d55..6a7ae04 100644
  //#define DEBUG_INTERACTING
  //#define DEBUG_CROSSING_APPROACH
 diff --git a/src/microsim/transportables/MSPModel_Striping.cpp b/src/microsim/transportables/MSPModel_Striping.cpp
-index ca74850..dfffed4 100644
+index ca74850..cdc9576 100644
 --- a/src/microsim/transportables/MSPModel_Striping.cpp
 +++ b/src/microsim/transportables/MSPModel_Striping.cpp
 @@ -38,6 +38,8 @@
@@ -62,20 +37,16 @@ index ca74850..dfffed4 100644
  
  
  // ===========================================================================
-@@ -1236,6 +1238,8 @@ MSPModel_Striping::addCrossingVehs(const MSLane* crossing, int stripes, double l
-     const MSLink* crossingExitLink = crossing->getLinkCont().front();
-     gDebugFlag1 = DEBUGCOND2(crossing);
-     const MSLink::LinkLeaders linkLeaders = crossingExitLink->getLeaderInfo(nullptr, crossing->getLength());
-+    const bool dc01 = getenv("DC01") != nullptr && crossing->getID() == ":1383026286_c0_0" && SIMSTEP >= 528000 && SIMSTEP <= 531000;
-+    if (dc01) printf("DC01 ACV t=%.2f n=%d dir=%d prio=%d stripes=%d latOff=%.6f flip=%d\n", SIMTIME, (int)linkLeaders.size(), dir, (int)prio, stripes, lateral_offset, (int)flipY);
-     gDebugFlag1 = false;
-     if (linkLeaders.size() > 0) {
-         for (MSLink::LinkLeaders::const_iterator it = linkLeaders.begin(); it != linkLeaders.end(); ++it) {
-@@ -1269,6 +1273,7 @@ MSPModel_Striping::addCrossingVehs(const MSLane* crossing, int stripes, double l
-                     vehYmax += minGapToVehicle;
+@@ -2109,6 +2111,12 @@ MSPModel_Striping::PState::walk(const Obstacles& obs) {
+         ySpeed = stepAsideDir * vMax;
+     }
  
-                 }
-+                if (dc01) printf("DC01 ACVV t=%.2f veh=%s gap=%.6f dtc=%.6f fromLeft=%d bGap=%.6f ymin=%.6f ymax=%.6f spd=%.6f\n", SIMTIME, veh->getID().c_str(), (*it).vehAndGap.second, (*it).distToCrossing, (int)(*it).fromLeft(), bGap, vehYmin, vehYmax, veh->getSpeed());
-                 for (int s = MAX2(0, PState::stripe(vehYmin)); s < MIN2(PState::stripe(vehYmax), stripes); ++s) {
-                     if ((dir == FORWARD && obs[s].xBack > vo.xBack)
-                             || (dir == BACKWARD && obs[s].xFwd < vo.xFwd)) {
++    if (getenv("DC01") != nullptr && myPerson->getID() == "person173" && SIMSTEP >= 528000 && SIMSTEP <= 531000) {
++        printf("DC01 WALK t=%.2f lane=%s x=%.6f y=%.6f d=%d pvx=%.6f cur=%d cho=%d oth=%d nxt=%d vx=%.6f dawdle=%.6f vy=%.6f xd=%.6f vMax=%.6f wt=%lld wte=%d jam=%d\n", SIMTIME, myLane->getID().c_str(), myEdgePos, myPosLat, myDir, mySpeed, current, chosen, other, next, xSpeed, dawdle, ySpeed, xDist, vMax, (long long)myWaitingTime, (int)myWaitingToEnter, (int)myAmJammed);
++        for (int i = 0; i < stripes; ++i) {
++            printf("DC01 WS t=%.2f i=%d util=%.6f dist=%.6f o=%s xF=%.6f xB=%.6f v=%.6f type=%d\n", SIMTIME, i, utility[i], distance[i], obs[i].description.c_str(), obs[i].xFwd, obs[i].xBack, obs[i].speed, (int)obs[i].type);
++        }
++    }
+     // DEBUG
+     if DEBUGCOND(*this) {
+         std::cout << SIMTIME
