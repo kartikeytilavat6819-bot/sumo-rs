@@ -209,25 +209,9 @@ fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
     if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, Ptr::null())) } else { None }
 }
 
-/// MSMoveReminder vtable of VehicleRemover (notifyMove is not overridden in C++)
-static VEHICLE_REMOVER_MSMOVE_VT: MSMoveReminderVt = MSMoveReminderVt {
-    notify_enter: vehicle_remover_reminder_enter,
-    notify_move: default_notify_move,
-    notify_leave: vehicle_remover_reminder_leave,
-};
-
-fn vehicle_remover_reminder_enter(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_mut(r).cast::<MSCalibrator_VehicleRemover>().m().notify_enter(veh, reason, enteredLane)
-}
-
-fn vehicle_remover_reminder_leave(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
-    Ptr::from_mut(r).cast::<MSCalibrator_VehicleRemover>().m().notify_leave(veh, lastPos, reason, enteredLane)
-}
-
 /// C++ `new VehicleRemover(lane, parent, undo)` kept alive in myLeftoverReminders; its MSMoveReminder ctor adds it to the lane
 fn new_vehicle_remover(lane: Ptr<MSLane>, parent: Ptr<MSCalibrator>, undo: bool) -> Ptr<MSCalibrator_VehicleRemover> {
     let remover: Ptr<MSCalibrator_VehicleRemover> = Ptr::from_raw(Box::into_raw(Box::new(MSCalibrator_VehicleRemover::new(lane, parent, undo))));
-    remover.m().base.vt = &VEHICLE_REMOVER_MSMOVE_VT;
     lane.m().add_move_reminder(remover.cast::<MSMoveReminder>(), false);
     my_leftover_reminders().push(remover.cast::<MSMoveReminder>());
     remover
