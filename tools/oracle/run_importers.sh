@@ -14,15 +14,18 @@ mkdir -p "$OUT"
 for dir in "$HERE"/import_cases/*/; do
   name=$(basename "$dir")
   opts=$(cat "$dir/options.netconvert")
+  extra=""
+  case "$opts" in *--output*|*" -o "*) ;; *) extra="-o net.net.xml" ;; esac
   for side in ref ours; do
     bin=$REF
     [ "$side" = ours ] && bin=$OURS
     mkdir -p "$OUT/$name/$side"
     cp "$dir"/* "$OUT/$name/$side/"
-    (cd "$OUT/$name/$side" && "$bin" $opts > netconvert.log 2>&1)
+    (cd "$OUT/$name/$side" && "$bin" $opts $extra > netconvert.log 2>&1)
   done
   if [ ! -f "$OUT/$name/ref/net.net.xml" ] || [ ! -f "$OUT/$name/ours/net.net.xml" ]; then
     echo "FAIL $name: no net.net.xml (ref: $(test -f "$OUT/$name/ref/net.net.xml" && echo ok || echo missing), ours: $(test -f "$OUT/$name/ours/net.net.xml" && echo ok || echo missing))"
+    tail -3 "$OUT/$name/ours/netconvert.log"
     fail=$((fail + 1))
     continue
   fi
