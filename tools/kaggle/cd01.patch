@@ -1,11 +1,7 @@
-diff --git a/src/microsim/transportables/MSStageTrip.cpp b/src/microsim/transportables/MSStageTrip.cpp
---- a/src/microsim/transportables/MSStageTrip.cpp
-+++ b/src/microsim/transportables/MSStageTrip.cpp
-@@ -213,2 +213,3 @@
-         }
-+        if (getenv("CD01") && transportable->getID() == "pwL10") std::cerr << "CD01 RC dst=" << (myDestinationStop == nullptr ? std::string("") : myDestinationStop->getID()) << " dep=" << departPos << " arr=" << myArrivalPos << "\n";
-         if (router.compute(origin, destination, departPos, prevStop == nullptr ? "" : prevStop->getID(),
-@@ -242,2 +243,3 @@
-     if (minCost != std::numeric_limits<double>::max()) {
-+        if (getenv("CD01") && transportable->getID() == "pwL10") for (const auto& it : minResult) std::cerr << "CD01 TI line=" << it.line << " dstop=" << it.destStop << " n=" << it.edges.size() << " cost=" << it.cost << "\n";
-         const bool isTaxi = minVehicle != nullptr && (myModeSet & SVC_TAXI) != 0 && minVehicle->getParameter().line == "taxi";
+diff --git a/src/utils/router/IntermodalRouter.h b/src/utils/router/IntermodalRouter.h
+--- a/src/utils/router/IntermodalRouter.h
++++ b/src/utils/router/IntermodalRouter.h
+@@ -137,2 +137,3 @@
+             for (const _IntermodalEdge* iEdge : intoEdges) {
++                if (getenv("CD01") && stopID == "4788103942") std::cerr << "CD01 IE " << iEdge->getID() << " " << iEdge->getLine() << " inc=" << iEdge->includeInRoute(false) << "\n";
+                 bool addedEdge = false;
