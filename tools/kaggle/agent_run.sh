@@ -24,4 +24,9 @@ if [ -f "$res" ]; then
 else
   tail -20 /tmp/sl07_state_run.txt | cut -c1-260
 fi
+d=tools/oracle/cases/city_vienna_scale_downtown
+EXTRA=$(cat "$d/sim.args")
+"${SUMO_PRISTINE_BIN}/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" --no-step-log true $EXTRA --load-state "$STATE_OUT/city_vienna_scale_downtown/sim.pristine.state.xml" --tripinfo-output /tmp/sl07_pl.ti.xml >/tmp/sl07_pl.log 2>&1
+echo "pristine load rc=$? ti_lines=$(wc -l < /tmp/sl07_pl.ti.xml 2>/dev/null) logbytes=$(wc -c < /tmp/sl07_pl.log)"
+tail -2 /tmp/sl07_pl.log | cut -c1-240
 echo "STATE SUMMARY DONE"
