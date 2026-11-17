@@ -4,7 +4,8 @@ cd "$(dirname "$0")/../.." || exit 1
 B=/tmp/target/debug
 O=/tmp/lc05_out
 mkdir -p "$O"
-CPP=$(bash tools/gcloud/vm_cpp_trace.sh lc05 tools/kaggle/lc05_trace.patch 2>"$O/cppbuild.log")
+tr -d '\r' < tools/kaggle/lc05_trace.patch > "$O/lc05_trace.patch"
+CPP=$(bash tools/gcloud/vm_cpp_trace.sh lc05 "$O/lc05_trace.patch" 2>"$O/cppbuild.log")
 echo "cpp bin: $CPP build-log lines: $(wc -l < "$O/cppbuild.log")"; head -5 "$O/cppbuild.log" | cut -c1-300
 for spec in "sl2015_lat04 m5" "sl2015_lat08 c2"; do
   set -- $spec
