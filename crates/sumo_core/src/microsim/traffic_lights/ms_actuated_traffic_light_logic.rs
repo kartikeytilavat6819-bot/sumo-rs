@@ -684,7 +684,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
         self.init_attribute_override();
         self.init_switching_rules();
         for i in 0..self.myPhases.len() {

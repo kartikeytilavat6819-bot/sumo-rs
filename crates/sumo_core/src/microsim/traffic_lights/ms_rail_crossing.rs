@@ -2,6 +2,45 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+fn rail_crossing_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().init(nb)
+}
+fn rail_crossing_add_link(l: &mut MSTrafficLightLogic, link: Ptr<MSLink>, lane: Ptr<MSLane>, pos: i32) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().add_link(link, lane, pos)
+}
+fn rail_crossing_adapt_link_information_from(l: &mut MSTrafficLightLogic, logic: &MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().adapt_link_information_from(logic)
+}
+fn rail_crossing_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().try_switch()
+}
+fn rail_crossing_get_phase_index_at_time(l: &MSTrafficLightLogic, simStep: SUMOTime) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_phase_index_at_time(simStep)
+}
+fn rail_crossing_get_offset_from_index(l: &MSTrafficLightLogic, index: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_offset_from_index(index)
+}
+fn rail_crossing_get_index_from_offset(l: &MSTrafficLightLogic, offset: SUMOTime) -> i32 {
+    Ptr::new(l).cast::<MSRailCrossing>().get().unwrap().get_index_from_offset(offset)
+}
+fn rail_crossing_change_step_and_duration(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicControl, simStep: SUMOTime, step: i32, stepDuration: SUMOTime) {
+    Ptr::from_mut(l).cast::<MSRailCrossing>().m().change_step_and_duration(tlcontrol, simStep, step, stepDuration)
+}
+
+/// Virtual table of MSRailCrossing (overrides init, addLink, adaptLinkInformationFrom, trySwitch,
+/// getPhaseIndexAtTime, getOffsetFromIndex, getIndexFromOffset, changeStepAndDuration)
+static MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: rail_crossing_try_switch,
+    get_phase_index_at_time: rail_crossing_get_phase_index_at_time,
+    get_offset_from_index: rail_crossing_get_offset_from_index,
+    get_index_from_offset: rail_crossing_get_index_from_offset,
+    change_step_and_duration: rail_crossing_change_step_and_duration,
+    add_link: rail_crossing_add_link,
+    init: rail_crossing_init,
+    adapt_link_information_from: rail_crossing_adapt_link_information_from,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 /// A signal for rails
 /// C++ class `MSRailCrossing` (microsim/traffic_lights/MSRailCrossing.h)
 #[repr(C)]
@@ -50,6 +89,7 @@ impl MSRailCrossing {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_CROSSING, &Vec::new(), 0, delay, parameters);
+        base.base.vt = &MS_RAIL_CROSSING_TRAFFIC_LIGHT_LOGIC_VT;
         // dummy phase, used to avoid crashing in MSTrafficLightLogic::setTrafficLightSignals()
         base.myPhases.push(Ptr::from_raw(Box::into_raw(Box::new(MSPhaseDefinition::new(1, &"X".repeat(utils::common::std_defs::SUMO_MAX_CONNECTIONS), "")))));
         base.myDefaultCycleTime = 1;

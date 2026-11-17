@@ -221,6 +221,16 @@ impl<T> CircularBuffer<T> {
 
 }
 
+fn swarm_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSSwarmTrafficLightLogic>().m().init(nb)
+}
+
+/// Virtual table of MSSwarmTrafficLightLogic (overrides init; trySwitch is inherited from SOTL)
+static MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    init: swarm_init,
+    ..MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 /// C++ class `MSSwarmTrafficLightLogic` (microsim/traffic_lights/MSSwarmTrafficLightLogic.h)
 #[repr(C)]
 pub struct MSSwarmTrafficLightLogic {
@@ -334,7 +344,11 @@ impl MSSwarmTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut this = Self {
-            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters),
+            base: {
+                let mut b = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::SWARM_BASED, phases, step, delay, parameters);
+                b.base.base.base.vt = &MS_SWARM_TRAFFIC_LIGHT_LOGIC_VT;
+                b
+            },
             pheromoneInputLanes: BTreeMap::new(),
             pheromoneOutputLanes: BTreeMap::new(),
             lastThetaSensitivityUpdate: 0,

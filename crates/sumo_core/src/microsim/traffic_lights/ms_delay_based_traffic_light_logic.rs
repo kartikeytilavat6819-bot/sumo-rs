@@ -12,6 +12,24 @@ fn e2_from_detector_file_output(det: Ptr<MSDetectorFileOutput>) -> Ptr<MSE2Colle
     Ptr::from_raw((det.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector)
 }
 
+fn delay_based_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSDelayBasedTrafficLightLogic>().m().try_switch()
+}
+fn delay_based_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSDelayBasedTrafficLightLogic>().m().init(nb)
+}
+fn delay_based_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
+    Ptr::new(l).cast::<MSDelayBasedTrafficLightLogic>().get().unwrap().get_detector_states()
+}
+
+/// Virtual table of MSDelayBasedTrafficLightLogic (overrides trySwitch, init, getDetectorStates)
+static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: delay_based_try_switch,
+    init: delay_based_init,
+    get_detector_states: delay_based_get_detector_states,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 /// An actuated traffic light logic based on time delay of approaching vehicles
 /// C++ class `MSDelayBasedTrafficLightLogic` (microsim/traffic_lights/MSDelayBasedTrafficLightLogic.h)
 #[repr(C)]
@@ -54,7 +72,8 @@ impl MSDelayBasedTrafficLightLogic {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &ParameterisedMap, basePath: &str) -> Self {
-        let base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
+        let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
+        base.base.vt = &MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT;
         let myShowDetectors = utils::common::string_utils::to_bool(&base.get_parameter("show-detectors", "false".to_string())).unwrap();
         let myDetectionRange = utils::common::string_utils::to_double(&base.get_parameter("detectorRange", utils::common::to_string::to_string(&utils::options::options_cont::get_float("tls.delay_based.detector-range")))).unwrap();
         let myTimeLossThreshold = utils::common::string_utils::to_double(&base.get_parameter("minTimeloss", "1.0".to_string())).unwrap();
@@ -129,7 +148,7 @@ impl MSDelayBasedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
         debug_assert!(self.base.base.myLanes.len() > 0);
         let myId = self.get_id().to_string();
         let myProgramID = self.get_program_id().to_string();

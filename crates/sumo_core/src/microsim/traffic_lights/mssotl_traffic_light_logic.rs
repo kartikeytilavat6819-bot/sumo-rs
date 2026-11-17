@@ -7,6 +7,20 @@ use utils::common::rand_helper;
 /// C++ typedef `std::map<const std::string, std::vector<MSPushButton *>> MSSOTLTrafficLightLogic::PhasePushButtons`
 pub type MSSOTLTrafficLightLogic_PhasePushButtons = BTreeMap<String, Vec<Ptr<MSPushButton>>>;
 
+fn sotl_try_switch(l: &mut MSTrafficLightLogic) -> SUMOTime {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().try_switch()
+}
+fn sotl_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSSOTLTrafficLightLogic>().m().init(nb)
+}
+
+/// Virtual table of MSSOTLTrafficLightLogic (overrides trySwitch, init); installed by its constructors
+pub(crate) static MSSOTL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    try_switch: sotl_try_switch,
+    init: sotl_init,
+    ..MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 /// A self-organizing traffic light logic
 /// C++ class `MSSOTLTrafficLightLogic` (microsim/traffic_lights/MSSOTLTrafficLightLogic.h)
 #[repr(C)]
@@ -58,7 +72,8 @@ impl MSSOTLTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     /// Shared C++ member initialisation for both constructors (member order follows the header).
-    fn with_base(base: MSSimpleTrafficLightLogic, mySensors: Ptr<MSSOTLSensors>, sensorsSelfBuilt: bool) -> Self {
+    fn with_base(mut base: MSSimpleTrafficLightLogic, mySensors: Ptr<MSSOTLSensors>, sensorsSelfBuilt: bool) -> Self {
+        base.base.vt = &MSSOTL_TRAFFIC_LIGHT_LOGIC_VT;
         Self {
             base,
             m_pushButtons: BTreeMap::new(),
@@ -234,7 +249,7 @@ impl MSSOTLTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
         // MSTrafficLightLogic::init(nb);
-        self.base.base.init(nb);
+        self.base.base.init_base(nb);
 
         if self.is_decay_threshold_activated() {
             self.decayThreshold = 1.0;

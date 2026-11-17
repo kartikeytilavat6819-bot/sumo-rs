@@ -34,6 +34,16 @@ fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
     }
 }
 
+fn deterministic_init(l: &mut MSTrafficLightLogic, nb: &mut NLDetectorBuilder) {
+    Ptr::from_mut(l).cast::<MSDeterministicHiLevelTrafficLightLogic>().m().init(nb)
+}
+
+/// Virtual table of MSDeterministicHiLevelTrafficLightLogic (overrides init; trySwitch is inherited from SOTL)
+static MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+    init: deterministic_init,
+    ..MSSOTL_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT
+};
+
 /// C++ class `MSDeterministicHiLevelTrafficLightLogic` (microsim/traffic_lights/MSDeterministicHiLevelTrafficLightLogic.h)
 #[repr(C)]
 pub struct MSDeterministicHiLevelTrafficLightLogic {
@@ -76,7 +86,11 @@ impl MSDeterministicHiLevelTrafficLightLogic {
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut this = Self {
-            base: MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters),
+            base: {
+                let mut b = MSSOTLHiLevelTrafficLightLogic::new(tlcontrol, id, programID, TrafficLightType::HILVL_DETERMINISTIC, phases, step, delay, parameters);
+                b.base.base.base.vt = &MS_DETERMINISTIC_HI_LEVEL_TRAFFIC_LIGHT_LOGIC_VT;
+                b
+            },
             inputLanes: BTreeSet::new(),
             outputLanes: BTreeSet::new(),
         };
