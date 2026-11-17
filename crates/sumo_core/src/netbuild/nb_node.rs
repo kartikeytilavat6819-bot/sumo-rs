@@ -34,17 +34,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
-/// C++ `std::sort(v, less)` on an EdgeVector. determinism: std::sort is unstable, sort_by is stable.
+/// C++ `std::sort(v, less)` on an EdgeVector. determinism: libstdc++ introsort, so ties keep C++ order
 fn sort_edges_by(v: &mut EdgeVector, less: impl Fn(Ptr<NBEdge>, Ptr<NBEdge>) -> bool) {
-    v.sort_by(|a, b| {
-        if less(*a, *b) {
-            std::cmp::Ordering::Less
-        } else if less(*b, *a) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    });
+    utils::common::std_sort::std_sort(v.as_mut_slice(), less);
 }
 
 /// C++ `rotate(begin, std::find(begin, end, first), end)`; a missing or absent element leaves the vector unchanged
@@ -7098,15 +7090,14 @@ impl NBNode {
         }
         // sort the crossings
         let crossingSorter = NBNodesEdgesSorter_crossing_by_junction_angle_sorter::new(me, &self.myAllEdges);
-        self.myCrossings.sort_by(|a, b| {
-            if crossingSorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if crossingSorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // sort positions with std::sort semantics, then move the boxes into that order
+        let mut order: Vec<usize> = (0..self.myCrossings.len()).collect();
+        {
+            let crossings = &self.myCrossings;
+            utils::common::std_sort::std_sort(&mut order, |i, j| crossingSorter.call_op(&crossings[i], &crossings[j]) != 0);
+        }
+        let mut slots: Vec<Option<Box<NBNode_Crossing>>> = std::mem::take(&mut self.myCrossings).into_iter().map(Some).collect();
+        self.myCrossings = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
 
         if useNodeShape && self.myAllEdges != allEdgesOriginal {
             // sorting order changed after node shape was computed.
