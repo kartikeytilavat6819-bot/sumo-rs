@@ -1,0 +1,1 @@
+--end 120 --additional-files tools/oracle/cases/elechybrid_overhead/overhead.add.xml --device.elechybrid.explicit test1,test2,test3 --elechybrid-output.aggregated true --elechybrid-output.precision 4
