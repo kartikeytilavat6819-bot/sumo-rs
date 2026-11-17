@@ -89,8 +89,12 @@ impl AGActivityGen {
     pub fn import_info_city(&mut self) {
         let mut handler = AGActivityGenHandler::new(&mut self.city, self.net);
         progress_begin_message("Reading input");
-        // shortcut: AGActivityGenHandler does not implement SaxHandler yet, so XMLSubSys::runParser cannot run it, upgrade once ag_activity_gen_handler.rs is ported
-        panic!("AGActivityGen::importInfoCity: XML parsing of '{}' needs AGActivityGenHandler as a SaxHandler", self.inputFile);
+        if !utils::xml::xml_sub_sys::run_parser(&mut handler, &self.inputFile, false, false, false, true).unwrap_or_else(|e| panic!("{e}")) {
+            utils::common::msg_handler::progress_failed_message();
+            panic!("{}", ProcessError::default_msg());
+        } else {
+            progress_done_message();
+        }
 
         progress_begin_message("Consolidating statistics");
         self.city.statData.m().consolidate_stat(); // some maps are still not
