@@ -7,7 +7,8 @@ $OURS $ARGS --tripinfo-output /tmp/pc_ours.ti.xml --fcd-output /tmp/pc_ours.fcd.
 echo "ours exit=$?"
 $SUMO_PRISTINE_BIN/sumo $ARGS --tripinfo-output /tmp/pc_ref.ti.xml --fcd-output /tmp/pc_ref.fcd.xml --statistic-output /tmp/pc_ref.stat.xml > /tmp/pc_ref.log 2>&1
 echo "pristine exit=$?"
-for f in fcd ti; do
-  echo "=== $f: $(diff /tmp/pc_ours.$f.xml /tmp/pc_ref.$f.xml | grep -c '^[<>]') changed lines"
-  diff /tmp/pc_ours.$f.xml /tmp/pc_ref.$f.xml | grep -v -E "generated on|output value" | head -30
+for f in stat; do
+  echo "=== $f: $(diff /tmp/pc_ours.$f.xml /tmp/pc_ref.$f.xml | grep -v -E 'generated on|output value|performance' | grep -c '^[<>]') changed lines"
+  diff /tmp/pc_ours.$f.xml /tmp/pc_ref.$f.xml | grep -v -E 'generated on|output value|performance' | head -40
 done
+echo "=== ref stat head"; head -30 /tmp/pc_ref.stat.xml | tail -22
