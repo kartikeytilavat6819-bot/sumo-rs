@@ -35,6 +35,10 @@ for dir in tools/oracle/cases/*/; do
   if [ "$c" = depart ]; then
     line "$c" variants SKIP "15 variants: cases/depart/run_all_variants.sh"; SKIP=$((SKIP+1)); continue
   fi
+  # a PENDING marker file holds the reason a case is parked (e.g. a missing port)
+  if [ -f "$dir/PENDING" ]; then
+    line "$c" pending SKIP "$(head -1 "$dir/PENDING" | cut -c1-80)"; SKIP=$((SKIP+1)); continue
+  fi
   # --- net stage: regenerate the net with netconvert and compare element by element.
   # Cases with an OSM input use --osm-files; cases built from plain XML put their full input arguments
   # (--node-files/--edge-files/--connection-files) in net.args and are run without --osm-files.
@@ -54,6 +58,14 @@ for dir in tools/oracle/cases/*/; do
       line "$c" net PASS; PASS=$((PASS+1))
     else
       line "$c" net FAIL "$(grep SUMMARY "$OUT/$c.net.log" | head -1)"; FAIL=$((FAIL+1))
+    fi
+  elif [ -f "$dir/ref_plain.net.xml" ] && [ -f "$dir/net_plain.args" ]; then
+    # plain-XML import: net_plain.args lists the exact node/edge/connection/type/tllogic files (make_plain_net_refs.sh)
+    "$BIN/netconvert.exe" $(cat "$dir/net_plain.args") -o "$OUT/$c.plain.net.xml" >/dev/null 2>&1
+    if python tools/oracle/compare_net.py "$dir/ref_plain.net.xml" "$OUT/$c.plain.net.xml" >"$OUT/$c.plain.net.log" 2>&1; then
+      line "$c" net-plain PASS; PASS=$((PASS+1))
+    else
+      line "$c" net-plain FAIL "$(grep SUMMARY "$OUT/$c.plain.net.log" | head -1)"; FAIL=$((FAIL+1))
     fi
   else
     line "$c" net SKIP "no input.osm and no net.args"; SKIP=$((SKIP+1))

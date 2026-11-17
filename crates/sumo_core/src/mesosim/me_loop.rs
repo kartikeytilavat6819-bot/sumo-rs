@@ -306,7 +306,7 @@ impl MELoop {
             let id = format!("{}:{}", e.get_id(), s);
             let speed = e.get_lanes()[0].get_speed_limit();
             // segments live for the whole run (C++ owns them with raw new); leaked here so the Ptr stays valid
-            // shortcut: segments are never freed, matching C++ (no delete in the MELoop destructor)
+            // C++ never deletes segments (no delete in the MELoop destructor), so they are not freed here either
             newSegment = if lift {
                 let seg: &mut MELSegment = Box::leak(Box::new(MELSegment::new(&id, e, nextSegment, slength, speed, s, multiQueue, edgeType)));
                 Ptr::from_mut(&mut seg.base)

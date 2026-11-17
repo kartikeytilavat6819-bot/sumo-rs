@@ -1,7 +1,8 @@
 //! Port of utils/router/IntermodalNetwork.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use crate::utils::router::intermodal_edge::get_sidewalk;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterNode, RouterVehicle};
 use utils::geom::POSITION_EPS;
 use utils::common::to_string::to_string;
 
@@ -10,78 +11,104 @@ fn leak_edge<T>(edge: T) -> Ptr<T> {
     Ptr::from_raw(Box::into_raw(Box::new(edge)))
 }
 
-// shortcut: RouterEdge has no isWalkingArea(), add it to the trait to port IntermodalNetwork
-fn e_is_walking_area<E>(_edge: Ptr<E>) -> bool {
-    panic!("shortcut: E::isWalkingArea() is not on RouterEdge")
+fn e_is_walking_area<E, V>(edge: Ptr<E>) -> bool
+where
+    E: RouterEdge<V>,
+{
+    edge.is_walking_area()
 }
 
-// shortcut: RouterEdge has no isNormal(), add it to the trait to port IntermodalNetwork
-fn e_is_normal<E>(_edge: Ptr<E>) -> bool {
-    panic!("shortcut: E::isNormal() is not on RouterEdge")
+fn e_is_normal<E, V>(edge: Ptr<E>) -> bool
+where
+    E: RouterEdge<V>,
+{
+    edge.is_normal()
 }
 
-// shortcut: RouterEdge has no getFunction(), add it to the trait to port IntermodalNetwork
-fn e_has_normal_function<E>(_edge: Ptr<E>) -> bool {
-    panic!("shortcut: E::getFunction() == NORMAL is not on RouterEdge")
+fn e_has_normal_function<E, V>(edge: Ptr<E>) -> bool
+where
+    E: RouterEdge<V>,
+{
+    edge.function() == SumoXMLEdgeFunc::NORMAL
 }
 
-// shortcut: RouterEdge has no getFunction(), add it to the trait to port IntermodalNetwork
-fn e_has_internal_function<E>(_edge: Ptr<E>) -> bool {
-    panic!("shortcut: E::getFunction() == INTERNAL is not on RouterEdge")
+fn e_has_internal_function<E, V>(edge: Ptr<E>) -> bool
+where
+    E: RouterEdge<V>,
+{
+    edge.function() == SumoXMLEdgeFunc::INTERNAL
 }
 
-// shortcut: RouterEdge has no getPermissions(), add it to the trait to port IntermodalNetwork
-fn e_permissions<E>(_edge: Ptr<E>) -> SVCPermissions {
-    panic!("shortcut: E::getPermissions() is not on RouterEdge")
+fn e_permissions<E>(edge: Ptr<E>) -> SVCPermissions
+where
+    E: RouterEdgeInfo,
+{
+    edge.edge_permissions()
 }
 
-// shortcut: RouterEdge has no getFromJunction()/getToJunction(), add them to the trait to port IntermodalNetwork
-fn e_from_junction<E, N>(_edge: Ptr<E>) -> Ptr<N> {
-    panic!("shortcut: E::getFromJunction() is not on RouterEdge")
+fn e_from_junction<E, V>(edge: Ptr<E>) -> Ptr<E::Node>
+where
+    E: RouterEdge<V>,
+{
+    edge.from_junction()
 }
 
-// shortcut: RouterEdge has no getFromJunction()/getToJunction(), add them to the trait to port IntermodalNetwork
-fn e_to_junction<E, N>(_edge: Ptr<E>) -> Ptr<N> {
-    panic!("shortcut: E::getToJunction() is not on RouterEdge")
+fn e_to_junction<E, V>(edge: Ptr<E>) -> Ptr<E::Node>
+where
+    E: RouterEdge<V>,
+{
+    edge.to_junction()
 }
 
-// shortcut: RouterEdge has no getOtherTazConnector(), add it to the trait to port IntermodalNetwork
-fn e_other_taz_connector<E>(_edge: Ptr<E>) -> Ptr<E> {
-    panic!("shortcut: E::getOtherTazConnector() is not on RouterEdge")
+fn e_other_taz_connector<E, V>(edge: Ptr<E>) -> Ptr<E>
+where
+    E: RouterEdge<V>,
+{
+    edge.other_taz_connector()
 }
 
 // shortcut: RouterEdge has no static getStopPosition(), add it to the trait to port IntermodalNetwork
-fn e_stop_position<E>(_stop: &SUMOVehicleParameter_Stop) -> Position {
-    panic!("shortcut: E::getStopPosition() is not on RouterEdge")
+fn e_stop_position<E, V>(stop: &SUMOVehicleParameter_Stop) -> Position
+where
+    E: RouterEdge<V>,
+{
+    E::stop_position(stop)
 }
 
-// shortcut: junction nodes have no getID()/getOutgoing()/getIncoming() on the router side, add them to RouterEdge::Node
-fn n_id<N>(_node: Ptr<N>) -> String {
-    panic!("shortcut: N::getID() is not available on the router node type")
+fn n_id<N: RouterNode>(node: Ptr<N>) -> String {
+    node.id().to_string()
 }
 
-// shortcut: junction nodes have no getOutgoing() on the router side, add it to RouterEdge::Node
-fn n_outgoing<E, N>(_node: Ptr<N>) -> Vec<Ptr<E>> {
-    panic!("shortcut: N::getOutgoing() is not available on the router node type")
+fn n_outgoing<E, N: RouterNode<Edge = E>>(node: Ptr<N>) -> Vec<Ptr<E>> {
+    node.outgoing().to_vec()
 }
 
-// shortcut: junction nodes have no getIncoming() on the router side, add it to RouterEdge::Node
-fn n_incoming<E, N>(_node: Ptr<N>) -> Vec<Ptr<E>> {
-    panic!("shortcut: N::getIncoming() is not available on the router node type")
+fn n_incoming<E, N: RouterNode<Edge = E>>(node: Ptr<N>) -> Vec<Ptr<E>> {
+    node.incoming().to_vec()
 }
 
-// shortcut: RouterEdge::Lane has no getOutgoingViaLanes()/getEdge(), add them to the lane type to port IntermodalNetwork
-fn l_outgoing_via_lanes<L, E>(_lane: Ptr<L>) -> Vec<(Ptr<L>, Ptr<E>)> {
-    panic!("shortcut: L::getOutgoingViaLanes() is not available on the router lane type")
+fn l_outgoing_via_lanes<L, E, V>(lane: Ptr<L>) -> Vec<(Ptr<L>, Ptr<E>)>
+where
+    E: RouterEdge<V, Lane = L>,
+{
+    E::lane_outgoing_via_lanes(lane)
 }
 
-// shortcut: RouterEdge::Lane has no getEdge(), add it to the lane type to port IntermodalNetwork
-fn l_edge<L, E>(_lane: Ptr<L>) -> Ptr<E> {
-    panic!("shortcut: L::getEdge() is not available on the router lane type")
+fn l_edge<L, E, V>(lane: Ptr<L>) -> Ptr<E>
+where
+    E: RouterEdge<V, Lane = L>,
+{
+    E::lane_edge(lane)
 }
 
 // shortcut: C++ dynamic_cast<_AccessEdge*> stand-in: both AccessEdge ctors tag the line "!access" and no other intermodal edge does, upgrade to a type flag when the edge kinds get one
-fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>> {
+fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
+{
     if edge.get_line() == "!access" { edge.cast() } else { Ptr::null() }
 }
 
@@ -116,8 +143,11 @@ pub type IntermodalNetwork_EdgePair<E, L, N, V> = (Ptr<AccessEdge__IntermodalEdg
 pub type BidiPair<E, L, N, V> = (Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>);
 
 // shortcut: the edge id is only needed for the error text and RouterEdge is not bounded on the unbounded callers (pedestrian_router), upgrade when callers bound E
-fn e_id_unbounded<E>(_edge: Ptr<E>) -> String {
-    panic!("shortcut: E::getID() needs the RouterEdge bound for the error message")
+fn e_id_unbounded<E, V>(edge: Ptr<E>) -> String
+where
+    E: RouterEdge<V>,
+{
+    edge.id().to_string()
 }
 
 /// C++ typedef `AccessEdge<E, L, N, V> IntermodalNetwork::_AccessEdge`
@@ -161,7 +191,13 @@ pub struct IntermodalNetwork<E, L, N, V> {
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
 
-impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
+impl<E, L, N, V> IntermodalNetwork<E, L, N, V>
+where
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: RouterNode<Edge = E> + 'static,
+    V: RouterVehicle + 'static,
+{
     /// Returns the next numerical ID (C++ `myNumericalID++`)
     fn next_id(&mut self) -> i32 {
         let id = self.myNumericalID;
@@ -353,7 +389,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn new(edges: &Vec<Ptr<E>>, pedestrianOnly: bool, carWalkTransfer: i32) -> Self where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let mut net = Self {
             myEdges: Vec::new(),
             myBidiLookup: BTreeMap::new(),
@@ -381,7 +417,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
                 net.myDepartLookup.entry(edge).or_default().push(access);
                 net.myArrivalLookup.entry(edge).or_default().push(access);
             } else {
-                let lane = get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN);
+                let lane = get_sidewalk::<E, L, V>(edge, SVC_PEDESTRIAN);
                 if !lane.is_null() {
                     if e_is_walking_area(edge) {
                         // only a single edge
@@ -421,7 +457,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
             }
             if haveSeenWalkingArea {
                 // connectivity needs to be ensured only in the real intermodal case, for simple pedestrian routing we don't have connectors if we have walking areas
-                if !pedestrianOnly && get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN).is_null() {
+                if !pedestrianOnly && get_sidewalk::<E, L, V>(edge, SVC_PEDESTRIAN).is_null() {
                     let node: Ptr<N> = e_to_junction(edge);
                     if !net.myWalkingConnectorLookup.contains_key(&node) {
                         let id = net.next_id();
@@ -467,7 +503,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
                 }
                 continue;
             }
-            let sidewalk = get_sidewalk::<E, L>(edge, SVC_PEDESTRIAN);
+            let sidewalk = get_sidewalk::<E, L, V>(edge, SVC_PEDESTRIAN);
             if sidewalk.is_null() {
                 continue;
             }
@@ -475,20 +511,20 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
             // connect the corresponding IntermodalEdges
             let pair = net.bidi(edge);
             if haveSeenWalkingArea {
-                let outgoing = l_outgoing_via_lanes::<L, E>(sidewalk);
+                let outgoing = l_outgoing_via_lanes::<L, E, V>(sidewalk);
                 // if one of the outgoing lanes is a walking area it must be used.
                 // All other connections shall be ignored
                 // if it has no outgoing walking area, it probably is a walking area itself
                 let mut hasWalkingArea = false;
                 for target in &outgoing {
-                    if e_is_walking_area(l_edge::<L, E>(target.0)) {
+                    if e_is_walking_area(l_edge::<L, E, V>(target.0)) {
                         hasWalkingArea = true;
                         break;
                     }
                 }
                 for target in &outgoing {
-                    let targetEdge = l_edge::<L, E>(target.0);
-                    let used = target.0 == get_sidewalk::<E, L>(targetEdge, SVC_PEDESTRIAN) && (!hasWalkingArea || e_is_walking_area(targetEdge));
+                    let targetEdge = l_edge::<L, E, V>(target.0);
+                    let used = target.0 == get_sidewalk::<E, L, V>(targetEdge, SVC_PEDESTRIAN) && (!hasWalkingArea || e_is_walking_area(targetEdge));
                     if used {
                         let targetPair = net.bidi(targetEdge);
                         pair.0.m().add_successor(targetPair.0, Ptr::null());
@@ -502,7 +538,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
             let toNodeConn = *net.myWalkingConnectorLookup.entry(e_to_junction(edge)).or_insert(Ptr::null());
             if !toNodeConn.is_null() {
                 // Check for the outgoing vias and use the shortest one as an approximation
-                let outgoing = l_outgoing_via_lanes::<L, E>(sidewalk);
+                let outgoing = l_outgoing_via_lanes::<L, E, V>(sidewalk);
                 let mut minViaLength = f64::MAX;
                 let mut minVia: Ptr<E> = Ptr::null();
                 for target in &outgoing {
@@ -656,7 +692,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_depart_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let splitList = match self.myDepartLookup.get(&e) {
             Some(list) => list,
             None => panic!("{}", ProcessError::new(format!("Depart edge '{}' not found in intermodal network.", e.id()))),
@@ -733,7 +769,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_arrival_edge(&self, e: Ptr<E>, pos: f64) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         let splitList = match self.myArrivalLookup.get(&e) {
             Some(list) => list,
             None => panic!("{}", ProcessError::new(format!("Arrival edge '{}' not found in intermodal network.", e.id()))),
@@ -780,17 +816,17 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         return it->second;
     //     }
     #[allow(unused_variables)]
-    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn get_walking_connector(&self, e: Ptr<E>) -> Ptr<IntermodalEdge<E, L, N, V>> where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         match self.myWalkingConnectorLookup.get(&e_to_junction(e)) {
             Some(conn) => *conn,
             None => {
-                let sidewalk = get_sidewalk::<E, L>(e, SVC_PEDESTRIAN);
+                let sidewalk = get_sidewalk::<E, L, V>(e, SVC_PEDESTRIAN);
                 if e.is_internal() || sidewalk.is_null() {
                     return Ptr::null();
                 }
-                for target in l_outgoing_via_lanes::<L, E>(sidewalk) {
-                    if e_is_walking_area(l_edge::<L, E>(target.0)) {
-                        return self.bidi(l_edge::<L, E>(target.0)).0;
+                for target in l_outgoing_via_lanes::<L, E, V>(sidewalk) {
+                    if e_is_walking_area(l_edge::<L, E, V>(target.0)) {
+                        return self.bidi(l_edge::<L, E, V>(target.0)).0;
                     }
                 }
                 Ptr::null()
@@ -880,7 +916,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn add_car_edges(&mut self, edges: &Vec<Ptr<E>>, taxiWait: f64) where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         for &edge in edges {
             if e_has_normal_function(edge) || e_has_internal_function(edge) {
                 let id = self.next_id();
@@ -912,13 +948,13 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
                 } else {
                     // we are on an edge where pedestrians are forbidden and want to continue on an arbitrary pedestrian edge
                     for out in n_outgoing::<E, N>(e_to_junction(edge)) {
-                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L>(out, SVC_PEDESTRIAN).is_null() {
+                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L, V>(out, SVC_PEDESTRIAN).is_null() {
                             let target = self.bidi(out).0;
                             carEdge.m().add_successor(target, Ptr::null());
                         }
                     }
                     for inc in n_incoming::<E, N>(e_to_junction(edge)) {
-                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L>(inc, SVC_PEDESTRIAN).is_null() {
+                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L, V>(inc, SVC_PEDESTRIAN).is_null() {
                             let target = self.bidi(inc).1;
                             carEdge.m().add_successor(target, Ptr::null());
                         }
@@ -933,13 +969,13 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
                 } else {
                     // we are on an edge where pedestrians are forbidden and want to continue on an arbitrary pedestrian edge
                     for out in n_outgoing::<E, N>(e_to_junction(edge)) {
-                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L>(out, SVC_PEDESTRIAN).is_null() {
+                        if !out.is_internal() && !out.is_taz_connector() && !get_sidewalk::<E, L, V>(out, SVC_PEDESTRIAN).is_null() {
                             let target = self.bidi(out).0;
                             self.add_restricted_car_exit(carEdge, target, taxiClasses);
                         }
                     }
                     for inc in n_incoming::<E, N>(e_to_junction(edge)) {
-                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L>(inc, SVC_PEDESTRIAN).is_null() {
+                        if !inc.is_internal() && !inc.is_taz_connector() && !get_sidewalk::<E, L, V>(inc, SVC_PEDESTRIAN).is_null() {
                             let target = self.bidi(inc).1;
                             self.add_restricted_car_exit(carEdge, target, taxiClasses);
                         }
@@ -1163,7 +1199,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) where E: RouterEdge<V, Node = N>, V: RouterVehicle {
+    pub fn add_access(&mut self, stopId: &str, stopEdge: Ptr<E>, startPos: f64, endPos: f64, length: f64, category: SumoXMLTag, isAccess: bool, taxiWait: f64) where E: RouterEdge<V, Node = N> + 'static, L: 'static, N: 'static, V: RouterVehicle + 'static {
         assert!(!stopEdge.is_null());
         let transferCarWalk = (category == SUMO_TAG_PARKING_AREA && (self.myCarWalkTransfer & ModeChangeOptions::PARKING_AREAS as i32) != 0)
             || (category == SUMO_TAG_BUS_STOP && (self.myCarWalkTransfer & ModeChangeOptions::PT_STOPS as i32) != 0);
@@ -1180,7 +1216,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
             self.add_edge(stop);
         }
         let stopConn = self.myStopConnections[stopId];
-        let lane = get_sidewalk::<E, L>(stopEdge, SVC_PEDESTRIAN);
+        let lane = get_sidewalk::<E, L, V>(stopEdge, SVC_PEDESTRIAN);
         if !lane.is_null() {
             let pair = self.bidi(stopEdge);
             let mut relPos = 0.;
@@ -1268,7 +1304,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
                     } else {
                         // check for restricted access
                         for out in carSplit.get_successors(SVC_IGNORING).clone() {
-                            let aOut = as_access_edge(out);
+                            let aOut = as_access_edge::<E, L, N, V>(out);
                             if !aOut.is_null() && out.m().remove_successor(prevArr) {
                                 out.m().add_successor(arrConn, Ptr::null());
                                 let carSplitBefore = self.myAccessSplits[&self.myCarLookup[&stopEdge]][splitIndex as usize];
@@ -1464,7 +1500,7 @@ impl<E, L, N, V> IntermodalNetwork<E, L, N, V> {
             let mut lastTime: SUMOTime = 0;
             for s in &validStops {
                 let currStop = self.myStopConnections[&s.busstop];
-                let stopPos = e_stop_position::<E>(s);
+                let stopPos = e_stop_position::<E, V>(s);
                 if !lastStop.is_null() {
                     let id = self.next_id();
                     let newEdge = leak_edge(PublicTransportEdge::<E, L, N, V>::new(s.busstop.clone(), id, lastStop, currStop.get_edge(), &pars.line, lastPos.distance_to(&stopPos)));

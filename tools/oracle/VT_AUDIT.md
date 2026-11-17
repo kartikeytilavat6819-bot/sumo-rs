@@ -17,9 +17,9 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 |---|---|---|
 | MSCFModel_ACC | followSpeed, stopSpeed, getSecureGap, insertionFollowSpeed, interactionGap, maximumLaneSpeedCF, getModelID, duplicate, createVehicleVariables | PASS |
 | MSCFModel_CACC | freeSpeed, followSpeed, stopSpeed, getSecureGap, insertionFollowSpeed, interactionGap, setHeadwayTime, maximumLaneSpeedCF, getModelID, duplicate, createVehicleVariables | PASS |
-| MSCFModel_CACC | getParameter, setParameter | OPEN (no vt slot; see MSBaseVehicle row) |
+| MSCFModel_CACC | getParameter, setParameter | FIXED (MSCFModelVt slots added; MSBaseVehicle delegates via as_micro_vehicle) |
 | MSCFModel_CC | stopSpeed, finalizeSpeed, freeSpeed, followSpeed, insertionFollowSpeed, interactionGap, getSecureGap, maxNextSpeed, minNextSpeed, getModelID, duplicate, createVehicleVariables | PASS |
-| MSCFModel_CC | getParameter, setParameter | OPEN (no vt slot) |
+| MSCFModel_CC | getParameter, setParameter | FIXED (same slots; CC setParameter already returned Result) |
 | MSCFModel_Daniel1 | followSpeed, stopSpeed, getModelID, getImperfection, setMaxDecel, setImperfection, setHeadwayTime, duplicate, finalizeSpeed | PASS |
 | MSCFModel_EIDM | insertionFollowSpeed, insertionStopSpeed, finalizeSpeed, followSpeed, stopSpeed, freeSpeed, interactionGap, getSecureGap, brakeGap, maxNextSafeMin, maximumLaneSpeedCF, getModelID, duplicate, createVehicleVariables | MAIN (brakeGap and maxNextSafeMin were missing; main wires them) |
 | MSCFModel_IDM | finalizeSpeed, freeSpeed, followSpeed, stopSpeed, interactionGap, insertionFollowSpeed, insertionStopSpeed, getSecureGap, minNextSpeed, getModelID, duplicate, createVehicleVariables | PASS |
@@ -79,12 +79,38 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MSLCM_SL2015 | own table | PASS |
 | MSLCM_DK2008 | wantsChange, inform, patchSpeed, changed, prepareStep | MAIN (the same five entries were missing on the pre-merge branch; I added them and main has its own) |
 
+## SUMOVehicle / SUMOTrafficObject (`SUMOTrafficObjectVt`, `SUMOVehicleVt`)
+
+| Table | Status |
+|---|---|
+| MS_VEHICLE_VT (MSVehicle) | PASS: every field of the struct is set; no default fallthrough, no panicking default |
+| MS_VEHICLE_SUMO_VEHICLE_VT (MSVehicle) | PASS: every field set |
+| ME_VEHICLE_VT (MEVehicle, owned by mc02) | GAP, report only: 17 entries fall through to `DEFAULT_SUMO_TRAFFIC_OBJECT_VT` panics: get_parameter, get_numerical_id, get_random_seed, get_vehicle_type, get_v_type_parameter, replace_vehicle_type, get_rng, get_rng_index, is_stopped, get_route_position, get_upcoming_edge_i_ds, replace_route, get_routing_mode, set_routing_mode, get_previous_speed, is_selected, get_device. C++ may inherit some non-virtually from MSBaseVehicle; mc02 to confirm each |
+| ME_SUMO_VEHICLE_VT (MEVehicle, owned by mc02) | Partial: 5 overrides; the rest default. Not compared (mc02) |
+| MSPerson (MS_PERSON_VT) | Not compared (ls07 owns it) |
+
+## Route handlers (`SUMORouteHandlerVt`)
+
+| Table | Status |
+|---|---|
+| MS_ROUTE_HANDLER_VT (MSRouteHandler) | PASS: all 25 slots set; closeVehicle/addTransportable/getVTypeParameter overrides present |
+| MS_STATE_HANDLER_VT (MSStateHandler) | PASS: its only override in C++ is closeVehicle; inherits the MS table |
+| RO_ROUTE_HANDLER_VT (RORouteHandler) | PASS: all 25 slots; addTransportable stays on the base no-op, which matches C++ `SUMORouteHandler::addTransportable` (empty body). checkLastDepart override is an inherent method, and no base-class code calls it, so no dispatch gap |
+
+## NBTrafficLightDefinition (`NBTrafficLightDefinitionVt`)
+
+| Class | Overrides | Status |
+|---|---|---|
+| NBOwnTLDef | remapRemoved, replaceRemoved, collectLinks, myCompute, initNeedsContRelation, getLayout | FIXED: initNeedsContRelation and getLayout added to the vt; the rest were already in it |
+| NBLoadedTLDef | remapRemoved, replaceRemoved, collectLinks, myCompute, initNeedsContRelation, setParticipantsInformation | FIXED: initNeedsContRelation and setParticipantsInformation added |
+| NBLoadedSUMOTLDef | setProgramID, remapRemoved, replaceRemoved, shiftTLConnectionLaneIndex, removeConnection, setType, extraConflict, usingSignalGroups, finalChecks, collectLinks, collectEdges, myCompute, amInvalid, initNeedsContRelation, getMaxValidIndex | FIXED: 11 non-pure virtuals added to the vt. Before this, base calls ignored these overrides (bug class 1) |
+
+The 13 new slots (`set_program_id`, `shift_tl_connection_lane_index`, `remove_connection`, `set_type`, `extra_conflict`, `using_signal_groups`, `final_checks`, `collect_edges`, `am_invalid`, `init_needs_cont_relation`, `get_max_valid_index`, `set_participants_information`, `get_layout`) default to the `*_base` bodies, so behaviour is unchanged for classes that do not override them. Subclass bodies that call the base explicitly now use the `*_base` names.
+
 ## Not audited in this pass (open)
 
 | Family | Note |
 |---|---|
-| MSCFModel getParameter / setParameter for CACC and CC | No vt slot. MSBaseVehicle::get/set carFollowModel parameters is a `shortcut:` because MSBaseVehicle cannot downcast to MSVehicle. Needs the downcast, then a vt slot. |
-| SUMORouteHandler / MSRouteHandler / MSStateHandler | Tables exist; overrides not compared. |
-| NBTrafficLightDefinition family | Tables exist; overrides not compared. |
-| SUMOVehicle / SUMOTrafficObject (MS_VEHICLE_VT, MS_VEHICLE_SUMO_VEHICLE_VT) | Present; overrides not compared. |
 | MSLaneChanger / MSDevice_* not built for vehicles | Only tripinfo and FCD are built in `init_devices`; the rest are unreachable until that shortcut is lifted. |
+| ms_base_vehicle `laneChangeModel.` get | Now delegates to the micro vehicle. The C++ try/catch that turns an InvalidArgument into an error message is not mirrored, because the Rust `get_parameter` has no error channel. |
+| CACC vtype TraCI probe | No case probes `getParameter(carFollowModel.*)` or `setParameter` on CACC/CC. `cases/vtypes` runs CACC but does not call them. A probe needs a new scenario plus reference regeneration from pristine. |

@@ -4,8 +4,9 @@
 
 | # | Case | Now |
 |---|------|-----|
-| 1 | truncated OSM | **MATCH on exit code** (1/1); no longer a panic. Message TEXT differs, see below. |
-| 2a | zero-byte file | **MATCH on exit code** (1/1); no longer a panic. Message TEXT differs, see below. |
+| 1 | truncated OSM | **MATCH**: exit 1/1, same text and position (`unexpected end of input`, 10/1). |
+| 2a | zero-byte file | **MATCH**: exit 1/1, same text and position (`invalid document structure`, 2/1). |
+| 2c | XML error probes in `xml_probes/` | **MATCH** on all 12 probes: exit codes and full error text, including positions. |
 | 2b, 3, 4a, 4b, 5a, 5b, 6 | | still MATCH |
 | 0 | default projection | still DIFFERS (no PROJ binding), documented `shortcut:` |
 | 7a/7b/7c | `real` variants | generated net now matches C++ line-for-line apart from the `generated on` stamp and the recorded input/output paths (verified on `base_ok`: 0 differing lines once those are excluded). The old "ours is 18 B larger" note was the version banner. |
@@ -17,17 +18,24 @@ Two things were fixed after this table was written:
    C++ writes `v1.28.0-0000000000` (from `version.h`), ours wrote `1.28.0`. Both binaries now use the
    exact reference string, so it matches in `--version`, in the net header and in every sim output.
 
-**Remaining, unfixed and real:** the malformed-XML *message text* differs, because our XML parser
-reports its own diagnostics instead of SUMO's SAX messages:
+3. **The malformed-XML messages now match C++** (`utils/xml/sumo_sax_reader.rs`). Our parser is quick-xml, so its
+   errors are mapped onto Xerces wording and positions in the SAX layer, for the states measured on the gate VM:
 
-| | C++ | ours |
-|---|---|---|
-| truncated | `Error: unexpected end of input` + `In file '...'` + `At line/column 10/1.` | `Error: syntax error: attribute value not closed: `"` not found before end of input` |
-| zero-byte | `Error: invalid document structure` + `In file '...'` + `At line/column 2/1.` | `Error: Unexpected end of file` |
+| probe | C++ (= ours now) |
+|---|---|
+| truncated, cut inside an attribute value | `unexpected end of input`, at end of input |
+| truncated after `lat=` / after a closed attribute | `attribute value expected` / `whitespace expected`, at end of input |
+| clean EOF with no root (`<?xml ...?>` only, or empty file) | `invalid document structure`, at end of input |
+| clean EOF inside an element | `input ended before all started tags were ended; last tag started is 'osm'`, at end of input |
+| text before the root (`not xml at all`) | `invalid document structure`, at the first non-space character |
+| text after the root, or a second root element | `comment or processing instruction expected`, at the start of the token |
+| mismatched end tag `</osm>` inside `<node>` | `expected end of tag 'node'`, at the element name |
+| undeclared entity `&bar;` in an attribute or in text | `entity 'bar' not found`, positioned after the `;` |
 
-Same exit code and same refusal to continue; different words, and ours omits the file and position.
-Fixing it means mapping parser errors onto SUMO's messages in the SAX layer — not string-patching the
-call sites — so it stays a documented difference for now.
+   Reproduce: `for f in xml_probes/*.osm; do netconvert --simple-projection true --osm-files $f -o /tmp/p.net.xml; done`
+   with ours and with C++ (`SUMO_HOME` set), then compare the `Error:` lines and the exit codes.
+   Not measured, so still quick-xml text: EOF inside a comment, PI, CDATA, DOCTYPE or in an unknown tag state
+   (`shortcut:` in `read_error`). Unit test `utils/xml/tests.rs::errors` was updated to the C++ position for the mismatched tag (3/6, was 3/4).
 
 <details>
 <summary>Original report (historical)</summary>

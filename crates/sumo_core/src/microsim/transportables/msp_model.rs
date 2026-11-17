@@ -12,22 +12,18 @@ const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)
 pub struct MSPModel {
-    /// Virtual dispatch table; installed by the most derived constructor
+    /// Virtual dispatch table for the pure-virtual methods; each concrete model installs its own
     pub vt: &'static MSPModelVt,
 }
 
-/// Virtual dispatch table for the polymorphic methods of MSPModel.
+/// Virtual dispatch table for the pure-virtual methods of MSPModel (same pattern as SUMOTrafficObjectVt)
 pub struct MSPModelVt {
+    pub add: fn(&mut MSPModel, Ptr<MSTransportable>, Ptr<MSStageMoving>, SUMOTime) -> Ptr<MSTransportableStateAdapter>,
+    pub clear_state: fn(&mut MSPModel),
+    pub remove: fn(&mut MSPModel, Ptr<MSTransportableStateAdapter>),
+    pub using_internal_lanes: fn(&mut MSPModel) -> bool,
     pub get_active_number: fn(&mut MSPModel) -> i32,
 }
-
-fn default_get_active_number(_: &mut MSPModel) -> i32 {
-    panic!("MSPModel::getActiveNumber is pure virtual; call it on a concrete pedestrian model")
-}
-
-pub static DEFAULT_MSPMODEL_VT: MSPModelVt = MSPModelVt {
-    get_active_number: default_get_active_number,
-};
 
 // C++ static members of MSPModel (port as module-level statics, see AGENTS.md):
 //   static const int MSPModel::FORWARD;
@@ -50,8 +46,7 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSPModel::add is pure virtual; call it on a concrete pedestrian model")
+        (self.vt.add)(self, transportable, stage, now)
     }
 
     /// C++: `MSTransportableStateAdapter * MSPModel::loadState(MSTransportable *, MSStageMoving *, std::istringstream &)` [virtual]
@@ -72,8 +67,7 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clear_state(&mut self) {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSPModel::clearState is pure virtual; call it on a concrete pedestrian model")
+        (self.vt.clear_state)(self)
     }
 
     /// C++: `void MSPModel::remove(MSTransportableStateAdapter *)` [virtual, pure virtual]
@@ -81,8 +75,7 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn remove(&mut self, state: Ptr<MSTransportableStateAdapter>) {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSPModel::remove is pure virtual; call it on a concrete pedestrian model")
+        (self.vt.remove)(self, state)
     }
 
     /// C++: `bool MSPModel::blockedAtDist(const SUMOTrafficObject *, const MSLane *, double, double, double, std::vector<const MSPerson *> *)` [virtual]
@@ -134,8 +127,7 @@ impl MSPModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn using_internal_lanes(&mut self) -> bool {
-        // (pure virtual in C++: no body; subclasses implement it)
-        panic!("MSPModel::usingInternalLanes is pure virtual; call it on a concrete pedestrian model")
+        (self.vt.using_internal_lanes)(self)
     }
 
     /// C++: `bool MSPModel::usingShortcuts()` [virtual]

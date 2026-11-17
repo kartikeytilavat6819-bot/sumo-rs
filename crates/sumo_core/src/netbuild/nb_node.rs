@@ -66,15 +66,9 @@ struct NBNodeWaLane {
     width: f64,
 }
 
-// C++ static constants of NBNode / NBEdge used as defaults below (ported locally until
-// nb_edge.rs / nb_node.rs expose them as statics).
-// shortcut: NBEdge statics (UNSPECIFIED_*, myDefaultConnectionLength) live here as consts, upgrade when NBEdge statics are ported.
+// C++ static constants of NBNode used as defaults below
 const NBNODE_UNSPECIFIED_RADIUS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_SPEED: f64 = -1.;
-const NBEDGE_UNSPECIFIED_FRICTION: f64 = 1.;
-const NBEDGE_UNSPECIFIED_CONTPOS: f64 = -1.;
-const NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE: f64 = -1.;
-const NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED: bool = false;
+use crate::netbuild::nb_edge::{UNSPECIFIED_SPEED as NBEDGE_UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION as NBEDGE_UNSPECIFIED_FRICTION, UNSPECIFIED_CONTPOS as NBEDGE_UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE as NBEDGE_UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_CONNECTION_UNCONTROLLED as NBEDGE_UNSPECIFIED_CONNECTION_UNCONTROLLED};
 
 /// C++ `NBNode` constructor checks (thrown as ProcessError in C++)
 const NBNODE_MIN_WEAVE_LENGTH: f64 = 20.0;
@@ -7455,7 +7449,7 @@ impl NBNode {
     // }
     #[allow(unused_variables)]
     pub fn init_rail_signal_classes(nc: &NBNodeCont) {
-        // toString(vector<string>) joins with spaces (shortcut: assumed separator, verify against ToString.h)
+        // toString(vector<string>) joins with spaces (ToString.h joinToString(v, " "))
         let permit = utils::options::options_cont::get_string_vector("railway.signal.permit-unsignalized").join(" ");
         MY_PERMIT_UNSIGNALIZED_CLASSES.with(|c| c.set(utils::common::sumo_vehicle_class::parse_vehicle_classes(&permit)));
         MY_HAVE_RAIL_SIGNAL_CLASSES.with(|c| c.set(0));
