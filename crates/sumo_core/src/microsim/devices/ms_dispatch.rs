@@ -618,8 +618,7 @@ impl MSDispatch {
         let mut edges: Vec<Ptr<MSEdge>> = Vec::new();
         let holder = Ptr::from_mut(taxi.get_holder());
         let fromPos = holder.get_position_on_lane() - NUMERICAL_EPS;
-        // shortcut: getRerouteOrigin() yields an Unmapped iterator, so the origin is taken as the current edge
-        let from = holder.get_edge();
+        let from = holder.get_route().index_op(holder.get_reroute_origin() as i32);
         let originDiffers = from != holder.get_edge();
         router.compute_2(from, if originDiffers { 0.0 } else { fromPos }, res.from, res.fromPos, holder, t, &mut edges, true);
         if edges.is_empty() {
