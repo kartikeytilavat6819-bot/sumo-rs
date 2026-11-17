@@ -5,11 +5,12 @@ use utils::common::msg_handler::write_warning;
 use utils::common::time::{delta_t, time2steps, time2string};
 
 /// C++ `dynamic_cast<MSStageDriving*>(stage)`
-// shortcut: the stage hierarchy has no runtime downcast yet (MSStage carries no subtype tag), so no stage is
-// treated as MSStageDriving; passenger boarding/unboarding through this path is inert until the downcast exists
+// C++ `dynamic_cast<MSStageDriving*>(stage)`: the stage type tag guarantees the cast
 fn stage_driving(stage: Ptr<MSStage>) -> Option<Ptr<MSStageDriving>> {
-    let _ = stage;
-    None
+    if stage.is_null() || stage.get_stage_type() != MSStageType::DRIVING {
+        return None;
+    }
+    Some(stage.cast::<MSStageDriving>())
 }
 
 /// C++ `dynamic_cast<MSBaseVehicle*>(...)` on a SUMOVehicle (the base is embedded, so this is an upcast of a container)
