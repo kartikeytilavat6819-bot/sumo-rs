@@ -48,3 +48,27 @@ index 4b1d130..82fd943 100644
                  MSNet::getInstance()->informVehicleStateListener(desc.myVeh, MSNet::VehicleState::ENDING_PARKING);
                  desc.myVeh->getMutableLane()->removeParking(desc.myVeh);
                  // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre
+diff --git a/src/microsim/devices/MSIdling.cpp b/src/microsim/devices/MSIdling.cpp
+index 6f0ebb4..cca96c8 100644
+--- a/src/microsim/devices/MSIdling.cpp
++++ b/src/microsim/devices/MSIdling.cpp
+@@ -45,6 +45,9 @@
+ 
+ void
+ MSIdling_Stop::idle(MSDevice_Taxi* taxi) {
++    if (taxi->getHolder().getID() == "taxi0") {
++        std::cerr << "TX02 idle t=" << MSNet::getInstance()->getCurrentTimeStep() << " hasStops=" << taxi->getHolder().hasStops() << "\n";
++    }
+     if (!taxi->getHolder().hasStops()) {
+ #ifdef DEBUG_IDLING
+         if (DEBUG_COND(taxi)) {
+@@ -98,6 +101,9 @@ MSIdling_Stop::idle(MSDevice_Taxi* taxi) {
+             }
+             stop.actType = "idling";
+             taxi->getHolder().addTraciStop(stop, errorOut);
++            if (taxi->getHolder().getID() == "taxi0") {
++                std::cerr << "TX02 idle addstop pos=" << std::to_string(stopPos.second) << " err=" << errorOut << "\n";
++            }
+             if (errorOut != "") {
+                 WRITE_WARNING(errorOut);
+             }
