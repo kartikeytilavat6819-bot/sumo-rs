@@ -218,16 +218,15 @@ impl MSDevice_Example {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "customValue1" {
-            to_string(&self.myCustomValue1)
+            Ok(to_string(&self.myCustomValue1))
         } else if key == "customValue2" {
-            to_string(&self.myCustomValue2)
+            Ok(to_string(&self.myCustomValue2))
         } else if key == "meaningOfLife" {
-            "42".to_string()
+            Ok("42".to_string())
         } else {
-            // shortcut: C++ throws InvalidArgument; this virtual returns String, so the same message is raised as a panic
-            panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0)
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -248,16 +247,16 @@ impl MSDevice_Example {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        // shortcut: C++ throws InvalidArgument; this virtual returns (), so the same messages are raised as panics
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())).0),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "customValue1" {
             self.myCustomValue1 = doubleValue;
+            Ok(())
         } else {
-            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())).0);
+            Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 

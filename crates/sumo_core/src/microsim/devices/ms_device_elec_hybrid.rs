@@ -1137,26 +1137,25 @@ impl MSDevice_ElecHybrid {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         // RICE_TODO: full traci support
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
-            to_string(&self.myActualBatteryCapacity)
+            Ok(to_string(&self.myActualBatteryCapacity))
         } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
-            to_string(&self.myConsum)
+            Ok(to_string(&self.myConsum))
         } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
-            to_string(&self.myEnergyCharged)
+            Ok(to_string(&self.myEnergyCharged))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) {
-            to_string(&self.myMaximumBatteryCapacity)
+            Ok(to_string(&self.myMaximumBatteryCapacity))
         } else if key == attr_str(SUMO_ATTR_OVERHEADWIREID) {
-            self.get_overhead_wire_segment_id()
+            Ok(self.get_overhead_wire_segment_id())
         } else if key == attr_str(SUMO_ATTR_SUBSTATIONID) {
-            self.get_traction_substation_id()
+            Ok(self.get_traction_substation_id())
         } else if key == attr_str(SUMO_ATTR_VEHICLEMASS) {
             write_warning("Getting the vehicle mass via parameters is deprecated, please use getMass for the vehicle or its type.");
-            to_string(&self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_MASS))
+            Ok(to_string(&self.myHolder.cast::<MSBaseVehicle>().m().get_emission_parameters().get_double(SUMO_ATTR_MASS)))
         } else {
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -1181,10 +1180,10 @@ impl MSDevice_ElecHybrid {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) {
             self.myActualBatteryCapacity = doubleValue;
@@ -1193,8 +1192,9 @@ impl MSDevice_ElecHybrid {
         } else if key == attr_str(SUMO_ATTR_OVERHEADWIRECHARGINGPOWER) {
             self.myOverheadWireChargingPower = doubleValue;
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_ElecHybrid::generateOutput(OutputDevice *) const` [const, virtual]
