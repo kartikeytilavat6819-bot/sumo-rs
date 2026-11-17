@@ -14,5 +14,7 @@ echo "cpp rc=$?"
 grep -a '^JTRACE' $W/ours.err > $W/ours.trace
 grep -a '^JTRACE' $W/cpp.err > $W/cpp.trace
 echo "trace lines: ours=$(wc -l < $W/ours.trace) cpp=$(wc -l < $W/cpp.trace)"
-diff $W/cpp.trace $W/ours.trace | head -80
+sed -i 's/ true/ 1/; s/ false/ 0/' $W/ours.trace; sed -i 's/ true/ 1/; s/ false/ 0/' $W/cpp.trace
+diff $W/cpp.trace $W/ours.trace | head -60
+echo "first diff stage: $(diff $W/cpp.trace $W/ours.trace | head -1)"
 echo "NX03 DIFF END"
