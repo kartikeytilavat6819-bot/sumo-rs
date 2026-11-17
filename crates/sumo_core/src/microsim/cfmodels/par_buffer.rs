@@ -223,10 +223,13 @@ impl ParBuffer {
             unescaped.extend_from_slice(&s[pos + 1..end]);
             last_pos = pos + 2;
         }
-        if last_pos < s.len() {
+        if last_pos != s.len() {
+            // C++ substr(last_pos) throws std::out_of_range when a trailing ESC pushes last_pos past the end
+            if last_pos > s.len() {
+                panic!("basic_string::substr: __pos (which is {}) > this->size() (which is {})", last_pos, s.len());
+            }
             unescaped.extend_from_slice(&s[last_pos..]);
         }
-        // shortcut: C++ throws std::out_of_range when a trailing ESC pushes last_pos past the end; here it is ignored
         // shortcut: bytes are rebuilt as UTF-8 lossily, only differs from C++ when ESC sits before a multi-byte character
         String::from_utf8_lossy(&unescaped).into_owned()
     }

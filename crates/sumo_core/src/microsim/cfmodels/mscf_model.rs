@@ -2489,7 +2489,7 @@ impl MSCFModel {
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::from_raw(pred.as_raw() as *mut ()));
         let perceivedSpeedDifference = ds_mut.get_perceived_speed_difference(*predSpeed - speed, *gap, Ptr::from_raw(pred.as_raw() as *mut ()));
-        // shortcut: the C++ accelError recomputation via followSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
         *predSpeed = speed + perceivedSpeedDifference;
     }
@@ -2537,7 +2537,7 @@ impl MSCFModel {
         let ds = veh.get_driver_state();
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::default());
-        // shortcut: the C++ accelError recomputation via stopSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
     }
 
