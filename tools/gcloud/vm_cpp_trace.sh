@@ -5,7 +5,9 @@
 # once, resets its sources, applies your patch (a `git diff` made against the official src/ tree, paths src/...),
 # and rebuilds only sumo (ccache keeps it fast). Never use it for references: those come only from the pristine wheel.
 set -e
-ID=$1 PATCH=$(realpath "$2")
+ID=$1
+# patches written on Windows carry CRLF; git apply would reject them against the LF source tree
+PATCH=$(mktemp); sed 's/\r$//' "$2" > "$PATCH"
 D=/home/gate/cpp-$ID
 [ -d /home/gate/sumo-cpp/bin ] || { echo "vm_cpp_trace: no C++ tree on this VM (Kaggle?)" >&2; exit 1; }
 exec 8>/home/gate/cpp-$ID.lock; flock 8
