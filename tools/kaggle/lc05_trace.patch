@@ -1,5 +1,5 @@
 diff --git a/src/microsim/MSLaneChangerSublane.cpp b/src/microsim/MSLaneChangerSublane.cpp
-index 41e69ee..2b9b9bb 100644
+index 41e69ee..71afe95 100644
 --- a/src/microsim/MSLaneChangerSublane.cpp
 +++ b/src/microsim/MSLaneChangerSublane.cpp
 @@ -34,6 +34,20 @@
@@ -46,7 +46,25 @@ index 41e69ee..2b9b9bb 100644
  #ifdef DEBUG_ACTIONSTEPS
      if (DEBUG_COND) {
          std::cout << "\n" << SIMTIME << " CHANGE veh=" << vehicle->getID() << " lane=" << vehicle->getLane()->getID() << "\n";
-@@ -303,6 +333,11 @@ MSLaneChangerSublane::checkChangeHelper(MSVehicle* vehicle, int laneOffset, Lane
+@@ -172,6 +202,17 @@ MSLaneChangerSublane::change() {
+     for (ChangerIt ce = myChanger.begin(); ce != myChanger.end(); ++ce) {
+         ce->aheadNext = getLeaders(ce, vehicle);
+     }
++    if (lcOn(vehicle)) {
++        std::cerr << "LCT-AN " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID() << " L=" << lcBits(vehicle->getLeftSideOnLane()) << " R=" << lcBits(vehicle->getRightSideOnLane());
++        for (ChangerIt ce = myChanger.begin(); ce != myChanger.end(); ++ce) {
++            std::cerr << " L" << ce->lane->getIndex() << ":";
++            for (int i = 0; i < ce->aheadNext.numSublanes(); ++i) {
++                const CLeaderDist ld = ce->aheadNext[i];
++                std::cerr << (ld.first == nullptr ? std::string("-") : ld.first->getID()) << "@" << lcBits(ld.second) << "/";
++            }
++        }
++        std::cerr << "\n";
++    }
+     // update expected speeds
+     int sublaneIndex = 0;
+     for (ChangerIt ce = myChanger.begin(); ce != myChanger.end(); ++ce) {
+@@ -303,6 +344,11 @@ MSLaneChangerSublane::checkChangeHelper(MSVehicle* vehicle, int laneOffset, Lane
                  ? getBestLanesOpposite(vehicle, nullptr, 1000)
                  : vehicle->getBestLanes());
          result.state = checkChangeSublane(laneOffset, alternatives, preb, result.latDist, result.maneuverDist);
@@ -58,7 +76,7 @@ index 41e69ee..2b9b9bb 100644
          result.dir = laneOffset;
          if ((result.state & LCA_WANTS_LANECHANGE) != 0 && (result.state & LCA_URGENT) != 0 && (result.state & LCA_BLOCKED) != 0) {
              (myCandi + laneOffset)->lastBlocked = vehicle;
-@@ -326,6 +361,10 @@ MSLaneChangerSublane::continueChangeSublane(MSVehicle* vehicle, ChangerIt& from)
+@@ -326,6 +372,10 @@ MSLaneChangerSublane::continueChangeSublane(MSVehicle* vehicle, ChangerIt& from)
      }
      const bool urgent = (vehicle->getLaneChangeModel().getOwnState() & LCA_URGENT) != 0;
      const double nextLatDist = SPEED2DIST(vehicle->getLaneChangeModel().computeSpeedLat(remLatDist, remLatDist, urgent));
@@ -69,7 +87,7 @@ index 41e69ee..2b9b9bb 100644
  #ifdef DEBUG_MANEUVER
      if (DEBUG_COND) {
          std::cout << SIMTIME << " vehicle '" << vehicle->getID() << "' continueChangeSublane()"
-@@ -344,6 +383,10 @@ MSLaneChangerSublane::startChangeSublane(MSVehicle* vehicle, ChangerIt& from, do
+@@ -344,6 +394,10 @@ MSLaneChangerSublane::startChangeSublane(MSVehicle* vehicle, ChangerIt& from, do
      if (vehicle->isRemoteControlled()) {
          return false;
      }

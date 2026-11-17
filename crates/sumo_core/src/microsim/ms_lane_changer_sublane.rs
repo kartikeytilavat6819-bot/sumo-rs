@@ -307,6 +307,17 @@ impl MSLaneChangerSublane {
             let leaders = self.get_leaders(&ce, vehicle);
             self.myChanger[ce].aheadNext = leaders;
         }
+        if lct_on(vehicle) {
+            let mut s = format!("LCT-AN {} {} L={} R={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(), lct_bits(vehicle.get_left_side_on_lane()), lct_bits(vehicle.get_right_side_on_lane()));
+            for ce in 0..self.myChanger.len() {
+                s += &format!(" L{}:", self.myChanger[ce].lane.get_index());
+                for i in 0..self.myChanger[ce].aheadNext.num_sublanes() {
+                    let ld = self.myChanger[ce].aheadNext.index_op(i);
+                    if ld.0.is_null() { s += "-/"; } else { s += &format!("{}@{}/", ld.0.get_id(), lct_bits(ld.1)); }
+                }
+            }
+            eprintln!("{}", s);
+        }
 
         let mut sublaneIndex: i32 = 0;
         for ce in 0..self.myChanger.len() {
