@@ -2102,6 +2102,10 @@ impl MSAbstractLaneChangeModel {
             self.myShadowLane.m().reset_partial_occupation(self.myVehicle);
         }
         self.myShadowLane = self.get_shadow_lane_2(self.myVehicle.get_lane());
+        if std::env::var_os("LC06_TRACE").is_some() && self.myVehicle.get_id().to_string() == "rgt0" {
+            let shadow = if self.myShadowLane.is_null() { "null".to_string() } else { self.myShadowLane.get_id().to_string() };
+            eprintln!("SH {} veh=rgt0 lat={:x} lane={} shadow={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_lateral_position_on_lane().to_bits(), self.myVehicle.get_lane().get_id(), shadow);
+        }
         let mut passed: Vec<Ptr<MSLane>> = Vec::new();
         if !self.myShadowLane.is_null() {
             self.myShadowLane.m().set_partial_occupation(self.myVehicle);
