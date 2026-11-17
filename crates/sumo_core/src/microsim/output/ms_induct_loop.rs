@@ -811,8 +811,19 @@ impl MSInductLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_arrival_delay(&self) -> f64 {
-        // shortcut: C++ looks each detected vehicle up in MSVehicleControl and dynamic_casts it to MSBaseVehicle to read getStopArrivalDelay(); no SUMOVehicle -> MSBaseVehicle downcast exists yet, so this returns -INVALID_DOUBLE. Upgrade when that downcast is ported
-        -INVALID_DOUBLE
+        let vc = MSNet::get_instance().m().get_vehicle_control();
+        let mut result = -INVALID_DOUBLE;
+        for item in self.collect_vehicles_on_det(sim_step() - delta_t(), false, false, false, false) {
+            let v = vc.get_vehicle(&item.idM);
+            if !v.is_null() {
+                let veh = v.cast::<MSBaseVehicle>();
+                let ad = veh.get_stop_arrival_delay();
+                if ad != INVALID_DOUBLE {
+                    result = max2(result, ad);
+                }
+            }
+        }
+        result
     }
 
     /// C++: `SUMOTime MSInductLoop::getLastDetectionTime() const` [const]
