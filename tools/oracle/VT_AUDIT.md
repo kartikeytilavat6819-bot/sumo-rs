@@ -117,6 +117,8 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MS_ROUTE_HANDLER_VT (MSRouteHandler) | PASS: all 25 slots set; closeVehicle/addTransportable/getVTypeParameter overrides present |
 | MS_STATE_HANDLER_VT (MSStateHandler) | PASS: its only override in C++ is closeVehicle; inherits the MS table |
 | RO_ROUTE_HANDLER_VT (RORouteHandler) | PASS: all 25 slots; addTransportable stays on the base no-op, which matches C++ `SUMORouteHandler::addTransportable` (empty body). checkLastDepart override is an inherent method, and no base-class code calls it, so no dispatch gap |
+| RORouteHandler myStartElement / myEndElement | GAP, not fixed: no `impl SaxHandler for RORouteHandler`, so the SAX path (SUMORouteHandler's trait impl) can never reach `RORouteHandler::my_start_element`. ro_loader.rs has the matching shortcut ("RORouteHandler is not a SaxHandler yet"). Upgrade with the ROLoader run path |
+| SUMORouteHandler `start_element_override` | PASS for MSRouteHandler (`ms_my_start_element`, set in its constructor). The field is an optional hook, so any subclass that needs `myStartElement` must set it or implement SaxHandler |
 
 ## NBTrafficLightDefinition (`NBTrafficLightDefinitionVt`)
 
