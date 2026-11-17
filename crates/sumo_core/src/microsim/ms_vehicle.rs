@@ -1,6 +1,8 @@
 //! Port of microsim/MSVehicle.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_bit_set_logic::MSBitSetLogic;
+use utils::common::std_defs::SUMO_MAX_CONNECTIONS;
 use utils::common::to_string::to_string;
 use utils::geom::POSITION_EPS;
 
@@ -9988,7 +9990,7 @@ impl MSVehicle {
                         response2 = self.get_speed() >= veh.get_speed();
                     } else {
                         // fallback if pedestrian crossings are involved
-                        let logic = link.get_junction().get_logic();
+                        let logic = link.get_junction().get_logic().cast::<MSBitSetLogic<SUMO_MAX_CONNECTIONS>>();
                         response = logic.get_response_for(link.get_index()).test(foeLink.get_index());
                         response2 = logic.get_response_for(foeLink.get_index()).test(link.get_index());
                     }
