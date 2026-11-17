@@ -27,6 +27,9 @@ L[j:j] = [t]
 open(p, 'wb').write('\n'.join(L).encode())
 print('patched', p)
 EOF
+echo "abs-path refs to shared tree: $(grep -rl /home/gate/sumo-cpp $D/build 2>/dev/null | wc -l)"
+grep -rl /home/gate/sumo-cpp $D/build 2>/dev/null | xargs -r sed -i "s#/home/gate/sumo-cpp#$D#g"
+touch $F
 (cd $D/build && make -j8 sumo > $O/cppbuild.log 2>&1); CPP=$D/bin/sumo
 echo "cpp bin: $CPP build-errors: $(grep -c -i ' error' $O/cppbuild.log)"; grep -i ' error' $O/cppbuild.log | head -c 1200
 echo "cpp src RX01: $(grep -c RX01 $F) binary RX01: $(grep -a -c RX01 $CPP) ; build tail:"; tail -3 $O/cppbuild.log | head -c 600; ls -la $CPP
