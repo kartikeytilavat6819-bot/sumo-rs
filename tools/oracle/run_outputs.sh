@@ -105,7 +105,12 @@ for c in $CASES; do
   row "$c" link link.xml --link-output @DIR@/link.xml
   row "$c" person person.xml --person-summary-output @DIR@/person.xml
   if [ "$c" = stress ]; then
-    row "$c" collision collision.xml --collision-output @DIR@/collision.xml --collision.action warn
+    row "$c" collision collision.xml --collision-output @DIR@/collision.xml --collision.action warn --collision.mingap-factor 10
+  fi
+  if [ "$c" = stops_transport ]; then
+    row "$c" stopout stopout.xml --stop-output @DIR@/stopout.xml
+    row "$c" stopout_unfinished stopout.xml --stop-output @DIR@/stopout.xml --stop-output.write-unfinished true
+    continue
   fi
 done
 echo "results: $RESULTS"
