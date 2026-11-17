@@ -229,10 +229,9 @@ impl VariableSpeedSign {
     // }
     #[allow(unused_variables)]
     pub fn get_variable_speed_sign(vssID: &str) -> Ptr<MSLaneSpeedTrigger> {
-        // shortcut: C++ throws TraCIException for an unknown id (here it panics), upgrade when libsumo functions return Result
         match MSLaneSpeedTrigger::get_instances().get(vssID) {
             Some(c) => *c,
-            None => panic!("shortcut: VariableSpeedSign '{vssID}' is not known (C++ TraCIException)"),
+            None => panic!("VariableSpeedSign '{vssID}' is not known"),
         }
     }
 

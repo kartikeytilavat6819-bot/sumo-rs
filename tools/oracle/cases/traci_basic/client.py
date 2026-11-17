@@ -950,11 +950,10 @@ def infra_probes(run_n):
     add("person.add+walk+step: position/road/lane/speed", lambda t: (person(t), run_n(t, 1), (
         t.person.getPosition("p0"), t.person.getRoadID("p0"), t.person.getLaneID("p0"),
         t.person.getLanePosition("p0"), t.person.getSpeed("p0")))[2])
-    add("person.getEdges/getNextEdge/getRemainingStages/getArrivalPos/getWaitingTime", lambda t: (person(t), run_n(t, 1), (
-        t.person.getEdges("p0"), t.person.getNextEdge("p0"), t.person.getRemainingStages("p0"),
-        t.person.getArrivalPos("p0"), t.person.getWaitingTime("p0")))[2])
-    add("person.getTypeID/getVehicle/getAngle/getSlope", lambda t: (person(t), run_n(t, 1), (
-        t.person.getTypeID("p0"), t.person.getVehicle("p0"), t.person.getAngle("p0"), t.person.getSlope("p0")))[2])
+    for name in ["getEdges", "getNextEdge", "getRemainingStages", "getArrivalPos", "getWaitingTime", "getTypeID",
+                 "getVehicle", "getAngle", "getSlope", "getLanePosition"]:
+        add(f"person.{name}(p0) after walk+step",
+            (lambda n: lambda t: (person(t), run_n(t, 1), getattr(t.person, n)("p0"))[2])(name))
     add("person.getWalkingDistance(E2,5)", lambda t: (person(t), run_n(t, 1), t.person.getWalkingDistance("p0", E2, 5.0))[2])
     add("person.appendDrivingStage + getRemainingStages/getEdges", lambda t: (person(t), t.person.appendDrivingStage("p0", E3, "bus"), (
         t.person.getRemainingStages("p0"), t.person.getEdges("p0")))[2])
@@ -1022,18 +1021,18 @@ def infra_probes(run_n):
     add("inductionloop.subscribe(il0)+step+results", lambda t: (t.inductionloop.subscribe("il0", [tc.LAST_STEP_VEHICLE_NUMBER]),
                                                              run_n(t, 3), t.inductionloop.getSubscriptionResults("il0"))[2])
     add("inductionloop.getPosition(nope)", lambda t: t.inductionloop.getPosition("nope"))
-    add("lanearea.getters after 20 steps", lambda t: (run_n(t, 20), (
-        t.lanearea.getPosition("la0"), t.lanearea.getLaneID("la0"), t.lanearea.getLength("la0"),
-        t.lanearea.getLastStepVehicleNumber("la0"), t.lanearea.getLastStepMeanSpeed("la0"),
-        t.lanearea.getLastStepHaltingNumber("la0"), t.lanearea.getLastStepOccupancy("la0"),
-        t.lanearea.getLastStepVehicleIDs("la0"), t.lanearea.getJamLengthVehicle("la0"),
-        t.lanearea.getJamLengthMeters("la0")))[1])
-    add("lanearea.interval getters after 30 steps", lambda t: (run_n(t, 30), (
-        t.lanearea.getIntervalOccupancy("la0"), t.lanearea.getIntervalMeanSpeed("la0"),
-        t.lanearea.getIntervalMeanTimeLoss("la0"), t.lanearea.getIntervalMaxJamLengthInMeters("la0"),
-        t.lanearea.getIntervalVehicleNumber("la0"), t.lanearea.getLastIntervalOccupancy("la0"),
-        t.lanearea.getLastIntervalMeanSpeed("la0"), t.lanearea.getLastIntervalMeanTimeLoss("la0"),
-        t.lanearea.getLastIntervalMaxJamLengthInMeters("la0"), t.lanearea.getLastIntervalVehicleNumber("la0")))[1])
+    for steps, names in [
+        (20, ["getPosition", "getLaneID", "getLength", "getLastStepVehicleNumber", "getLastStepMeanSpeed",
+              "getLastStepHaltingNumber", "getLastStepOccupancy", "getLastStepVehicleIDs", "getJamLengthVehicle",
+              "getJamLengthMeters"]),
+        (30, ["getIntervalOccupancy", "getIntervalMeanSpeed", "getIntervalMeanTimeLoss",
+              "getIntervalMaxJamLengthInMeters", "getIntervalVehicleNumber", "getLastIntervalOccupancy",
+              "getLastIntervalMeanSpeed", "getLastIntervalMeanTimeLoss", "getLastIntervalMaxJamLengthInMeters",
+              "getLastIntervalVehicleNumber"]),
+    ]:
+        for name in names:
+            add(f"lanearea.{name}(la0) after {steps} steps",
+                (lambda s, n: lambda t: (run_n(t, s), getattr(t.lanearea, n)("la0"))[1])(steps, name))
     add("lanearea.overrideVehicleNumber(3)+get", lambda t: (t.lanearea.overrideVehicleNumber("la0", 3),
                                                           t.lanearea.getIntervalVehicleNumber("la0"))[1])
     add("lanearea.getPosition(nope)", lambda t: t.lanearea.getPosition("nope"))
@@ -1106,6 +1105,8 @@ def infra_probes(run_n):
 
     # subscriptions and context subscriptions with filters
     VCTX = tc.CMD_GET_VEHICLE_VARIABLE
+    add("vehicle.subscribeContext plain (infra file)+3 steps", lambda t: (t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]),
+        run_n(t, 3), t.vehicle.getContextSubscriptionResults("v0"))[2])
     add("vehicle.subscribeContext+LANES filter+3 steps", lambda t: (t.vehicle.addSubscriptionFilterLanes([0]),
         t.vehicle.subscribeContext("v0", VCTX, 500.0, [tc.VAR_SPEED]), run_n(t, 3),
         t.vehicle.getContextSubscriptionResults("v0"))[3])
