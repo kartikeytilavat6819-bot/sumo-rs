@@ -6,12 +6,23 @@ use crate::microsim::ms_globals::MSGlobals;
 
 /// Traffic-object vtable of an MSBaseVehicle under construction (C++ dynamic type MSBaseVehicle, before MSVehicle's table is installed):
 /// getMaxSpeed is the MSBaseVehicle implementation, the other entries are the SUMOTrafficObject defaults
+fn base_vehicle_ctor_base(o: &SUMOTrafficObject) -> &MSBaseVehicle {
+    unsafe { &*(o as *const SUMOTrafficObject as *const MSBaseVehicle) }
+}
 fn base_vehicle_ctor_get_max_speed(o: &SUMOTrafficObject) -> f64 {
-    unsafe { &*(o as *const SUMOTrafficObject as *const MSBaseVehicle) }.get_max_speed()
+    base_vehicle_ctor_base(o).get_max_speed()
+}
+fn base_vehicle_ctor_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    base_vehicle_ctor_base(o).get_v_class()
+}
+fn base_vehicle_ctor_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    base_vehicle_ctor_base(o).get_chosen_speed_factor()
 }
 thread_local! {
     static BASE_VEHICLE_CTOR_VT: &'static SUMOTrafficObjectVt = Box::leak(Box::new(SUMOTrafficObjectVt {
         get_max_speed: base_vehicle_ctor_get_max_speed,
+        get_v_class: base_vehicle_ctor_get_v_class,
+        get_chosen_speed_factor: base_vehicle_ctor_get_chosen_speed_factor,
         ..crate::utils::vehicle::sumo_traffic_object::DEFAULT_SUMO_TRAFFIC_OBJECT_VT
     }));
 }
