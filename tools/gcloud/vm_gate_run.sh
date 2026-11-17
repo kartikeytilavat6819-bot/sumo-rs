@@ -19,11 +19,12 @@ export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOB
 cd "$SRC"
 # run_all writes a new run-$$ dir per run; the slot is locked, so its old results can go (they filled the disk)
 rm -rf "$SCORE_OUT"; find /tmp -maxdepth 1 -name '*.tgz' -mmin +60 -delete 2>/dev/null
-cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+PKGS="-p sumo -p netconvert"; [ -d crates/duarouter ] && PKGS="$PKGS -p duarouter"
+cargo build $PKGS --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 # a stale incremental cache can crash rustc (ICE): drop it and build once more
 if [ $rc -ne 0 ] && grep -aqE 'internal compiler error|incremental' /tmp/build$slot.log; then
   echo "ICE: clearing slot $slot incremental cache"; rm -rf "$CARGO_TARGET_DIR/debug/incremental"
-  cargo build -p sumo -p netconvert --message-format short > /tmp/build$slot.log 2>&1; rc=$?
+  cargo build $PKGS --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 fi
 grep -aE ': error|^error' /tmp/build$slot.log | head -40
 # a failed build leaves the previous snapshot's binary behind: never test it
@@ -31,6 +32,10 @@ if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
 (cd "$CARGO_TARGET_DIR/debug" && ln -sf sumo sumo.exe && ln -sf netconvert netconvert.exe)
 bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|PASS=|STALE|MISSING'
 bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
+if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
+  OUT=/tmp/dua$slot timeout 600 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
+  echo "duarouter oracle: PASS=$(grep -c $'\tPASS\t' /tmp/dua$slot/results.tsv) of $(($(wc -l < /tmp/dua$slot/results.tsv) - 1))"; grep -v $'\tPASS\t' /tmp/dua$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
+fi
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
