@@ -4,8 +4,7 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
 fn lct_on(v: Ptr<MSVehicle>) -> bool {
-    let s = v.get_id().to_string();
-    std::env::var("LCTRACE_ID").map(|t| t == s).unwrap_or(false) || std::env::var("LCTRACE_ID2").map(|t| t == s).unwrap_or(false)
+    std::env::var("LCTRACE_ID").map(|t| t == v.get_id().to_string()).unwrap_or(false)
 }
 fn lct_bits(d: f64) -> String {
     format!("{:016x}", d.to_bits())
@@ -263,15 +262,6 @@ impl MSLaneChangerSublane {
             let lcm = vehicle.get_lane_change_model_2();
             eprintln!("LCT {} {} posLat={} angle={} speedLat={} manDist={} own={} active={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(),
                 lct_bits(vehicle.get_lateral_position_on_lane()), lct_bits(vehicle.get_angle()), lct_bits(lcm.get_speed_lat()), lct_bits(lcm.get_maneuver_dist()), lcm.get_own_state(), vehicle.is_active() as i32);
-            let mut s = format!("LCT-AH {} {}", MSNet::get_instance().get_current_time_step(), vehicle.get_id());
-            for ce in self.myChanger.iter() {
-                s += &format!(" L{}:", ce.lane.get_index());
-                for i in 0..ce.ahead.num_sublanes() {
-                    let v = ce.ahead.index_op(i);
-                    if v.is_null() { s += "-/"; } else { s += &format!("{}/", v.get_id()); }
-                }
-            }
-            eprintln!("{}", s);
         }
 
         if vehicle.m().get_lane_change_model().already_changed() || vehicle.is_stopped_on_lane() {
@@ -306,17 +296,6 @@ impl MSLaneChangerSublane {
         for ce in 0..self.myChanger.len() {
             let leaders = self.get_leaders(&ce, vehicle);
             self.myChanger[ce].aheadNext = leaders;
-        }
-        if lct_on(vehicle) {
-            let mut s = format!("LCT-AN {} {} L={} R={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(), lct_bits(vehicle.get_left_side_on_lane()), lct_bits(vehicle.get_right_side_on_lane()));
-            for ce in 0..self.myChanger.len() {
-                s += &format!(" L{}:", self.myChanger[ce].lane.get_index());
-                for i in 0..self.myChanger[ce].aheadNext.num_sublanes() {
-                    let ld = self.myChanger[ce].aheadNext.index_op(i);
-                    if ld.0.is_null() { s += &format!("-@{}/", lct_bits(ld.1)); } else { s += &format!("{}@{}/", ld.0.get_id(), lct_bits(ld.1)); }
-                }
-            }
-            eprintln!("{}", s);
         }
 
         let mut sublaneIndex: i32 = 0;
@@ -1353,9 +1332,6 @@ impl MSLaneChangerSublane {
             let veh = self.myChanger[t].ahead.index_op(i);
             if !veh.is_null() {
                 let gap = veh.get_back_position_on_lane(tlane) - ego.get_position_on_lane() - ego.get_vehicle_type().get_min_gap();
-                if lct_on(ego) {
-                    eprintln!("LCT-GL {} {} L{} i={} veh={} gap={} shift={} nsub={}", MSNet::get_instance().get_current_time_step(), ego.get_id(), tlane.get_index(), i, veh.get_id(), lct_bits(gap), sublaneShift, result.num_sublanes());
-                }
                 if i + sublaneShift >= 0 && i + sublaneShift < result.num_sublanes() {
                     result.add_leader(veh, gap, 0.0, i + sublaneShift);
                 }
