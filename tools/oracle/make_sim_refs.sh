@@ -42,7 +42,7 @@ run_ref() {  # run_ref <log> <wsl-cmd> <end or empty> <outdir> <tag>
   [ $rc -eq 0 ] || { echo "FAILED $tag: C++ exit $rc (see $log)" >&2; exit 1; }
   # add_outputs.txt: files the case's additional file writes next to itself become <tag>.<suffix>.xml
   [ -f "$src/add_outputs.txt" ] && while read -r af suf; do
-    af=${af%$''}; suf=${suf%$''}
+    af=${af%$'\r'}; suf=${suf%$'\r'}
     mv "$src/$af" "$od/$tag.$suf.xml" || { echo "FAILED $tag: no $src/$af" >&2; exit 1; }
   done < "$src/add_outputs.txt"
   local chk=(--tripinfo "$od/$tag.tripinfo.xml")
