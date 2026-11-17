@@ -2175,8 +2175,10 @@ fn ms_vehicle_has_influencer(o: &SUMOTrafficObject) -> bool {
 fn ms_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
     ms_vehicle_ref(o).is_selected()
 }
-fn ms_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
-    ms_vehicle_ref(o).get_device(type_)
+fn ms_vehicle_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    let dev = ms_vehicle_ref(o).get_device(kind);
+    // C++ implicit upcast MSVehicleDevice* -> MSDevice*: MSDevice is the second base, so offset it
+    if dev.is_null() { Ptr::default() } else { Ptr::from_raw(&dev.base2 as *const MSDevice as *mut MSDevice) }
 }
 
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
