@@ -10,7 +10,7 @@ const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
 /// C++ template getSidewalk<MSEdge, MSLane>() (utils/router/IntermodalEdge.h), specialised here
 /// because the generic intermodal_edge.rs version is still a stub.
-fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+pub(crate) fn get_sidewalk_lane(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
     if edge.is_null() {
         return Ptr::null();
     }
