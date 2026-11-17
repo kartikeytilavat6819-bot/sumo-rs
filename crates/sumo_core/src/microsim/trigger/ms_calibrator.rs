@@ -4,6 +4,29 @@ use crate::prelude::*;
 use utils::common::msg_handler::write_warning;
 use utils::common::time::{delta_t, steps2time, time2string, SUMOTIME_MAX};
 use utils::common::to_string::f64_to_string_prec;
+use crate::microsim::output::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
+
+// the MSDetectorFileOutput base is base3, not the first field: step back to the enclosing calibrator
+fn ms_calibrator_of(d: *mut MSDetectorFileOutput) -> *mut MSCalibrator {
+    (d as *mut u8).wrapping_sub(std::mem::offset_of!(MSCalibrator, base3)) as *mut MSCalibrator
+}
+fn ms_calibrator_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    unsafe { (*ms_calibrator_of(d)).write_xml_output(dev, startTime, stopTime) }
+}
+fn ms_calibrator_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    unsafe { (*ms_calibrator_of(d as *const MSDetectorFileOutput as *mut MSDetectorFileOutput)).write_xml_detector_prolog(dev) }
+}
+fn ms_calibrator_reset(d: &mut MSDetectorFileOutput) {
+    unsafe { (*ms_calibrator_of(d)).reset() }
+}
+
+/// Virtual table of MSCalibrator as MSDetectorFileOutput (overrides writeXMLOutput, writeXMLDetectorProlog and reset)
+static MS_CALIBRATOR_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_calibrator_write_xml_output,
+    write_xml_detector_prolog: ms_calibrator_write_xml_detector_prolog,
+    reset: ms_calibrator_reset,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 /// C++ class `MSCalibrator::AspiredState` (microsim/trigger/MSCalibrator.h)
 pub struct MSCalibrator_AspiredState {
@@ -350,6 +373,7 @@ impl MSCalibrator {
         });
         // myEdgeMeanData's parent is myMeanDataParent inside the box, so its address is only final now
         b.myEdgeMeanData = MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::null(), length, false, Ptr::from_mut(&mut b.myMeanDataParent));
+        b.base3.vt = &MS_CALIBRATOR_DETECTOR_FILE_OUTPUT_VT;
         let this: Ptr<MSCalibrator> = Ptr::from_box(&b);
         let parent: Ptr<MSMeanData_Net> = Ptr::from_mut(&mut b.myMeanDataParent);
         if !outputFilename.is_empty() {
