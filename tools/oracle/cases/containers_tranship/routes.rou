@@ -1,0 +1,22 @@
+<routes>
+    <vType id="truck" vClass="truck" length="10.00" maxSpeed="13.89" accel="1.30" decel="4.00" containerCapacity="2"/>
+    <route id="AB" edges="A B"/>
+    <vehicle id="truck0" type="truck" line="truckline" depart="0" route="AB">
+        <stop containerStop="cs0" duration="10" triggered="container"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" line="truckline" depart="120" route="AB">
+        <stop containerStop="cs0" duration="10"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <!-- c0 tranships with explicit positions; c1 transported by truck0; c2 transhipped with a different speed -->
+    <container id="c0" depart="5">
+        <tranship from="A" to="B" departPos="20" arrivalPos="60" speed="8"/>
+    </container>
+    <container id="c1" depart="15" departPos="110">
+        <transport from="A" to="B" lines="truckline" arrivalPos="110"/>
+    </container>
+    <container id="c2" depart="40">
+        <tranship from="A" to="B" departPos="50" arrivalPos="90" speed="12"/>
+    </container>
+</routes>

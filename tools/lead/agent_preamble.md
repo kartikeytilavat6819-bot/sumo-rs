@@ -27,10 +27,9 @@
     result arrives, because its completion is what wakes you. Rerunning it for the same commit reattaches; it never re-queues.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
   * Instrumented C++ traces: build in WSL (~/sumo-<ID>, make -j2, only the target you need) - that is C++, allowed.
-- Do NOT run gates on `main`. Main's numbers (2d25e432 or later): run_all PASS=271 FAIL=9 SKIP=26, depart 15/15, unit
-  tests ok. Known FAILs (new cases, each has an owner): containers (PANIC msp_model) + rerouter_parking [rc01],
-  taxi/ref + taxi/ref_closest [tx01], tls_actuated_loops + tls_waut + city_portland_actuated [tl01], busride [pt02],
-  city_paris_etoile [rb02].
+- Do NOT run gates on `main`. Main's numbers (28f9932d or later): run_all PASS=314 FAIL=7 SKIP=43, depart 15/15, unit
+  tests ok. Known FAILs (new cases, each has an owner): rerouter_parking [rc02], taxi/ref + taxi/ref_closest [tx02],
+  busride [pt03], city_german_level_crossing [rx01], city_florence_pedestrians PANIC [fp01], person_public_car [pc02].
   These are NOT your regressions: never investigate them unless they are your target.
 - New case references: put an empty NEW_CASE file in the case dir, run tools/oracle/make_sim_refs.sh <case> (it then
   writes tripinfo+fcd+stat, all outputs run_all compares), delete NEW_CASE before committing. If you merged main before 6c696d3d and see calibrator

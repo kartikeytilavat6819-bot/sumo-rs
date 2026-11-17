@@ -916,8 +916,8 @@ impl MSDevice_StationFinder {
     //     throw InvalidArgument(TLF("Parameter '%' is not supported for device of type '%'", key, deviceName()));
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == "chargingStation" {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == "chargingStation" {
             // eventually abstract with enum
             if self.myChargingStation.is_null() { String::new() } else { self.myChargingStation.get_id().to_string() }
         } else if key == "batteryNeed" {
@@ -935,9 +935,8 @@ impl MSDevice_StationFinder {
         } else if key == "reserveFactor" {
             to_string(&self.myReserveFactor)
         } else {
-            // C++ throws InvalidArgument
-            panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `void MSDevice_StationFinder::setParameter(const std::string &, const std::string &)` [virtual]
@@ -967,11 +966,10 @@ impl MSDevice_StationFinder {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue: f64 = match value.parse::<f64>() {
             Ok(v) => v,
-            // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "needToChargeLevel" {
             self.mySearchSoC = doubleValue.min(1.).max(0.);
@@ -986,8 +984,9 @@ impl MSDevice_StationFinder {
         } else if key == "reserveFactor" {
             self.myReserveFactor = doubleValue.max(1.);
         } else {
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `bool MSDevice_StationFinder::evaluateCustomComponents(SUMOVehicle &, double, bool, MSStoppingPlace *, double, double, SUMOAbstractRouter<MSEdge, SUMOVehicle> &, StoppingPlaceParamMap_t &, ConstMSEdgeVector &, ConstMSEdgeVector &, StoppingPlaceParamMap_t &, StoppingPlaceParamMap_t &)` [virtual]

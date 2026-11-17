@@ -563,12 +563,11 @@ impl MSDevice_Bluelight {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "reactiondist" {
-            return utils::common::to_string::f64_to_string(self.myReactionDist);
+            return Ok(utils::common::to_string::f64_to_string(self.myReactionDist));
         }
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text because overrides return String, upgrade when device getParameter returns Result
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Bluelight::setParameter(const std::string &, const std::string &)` [virtual]
@@ -588,16 +587,16 @@ impl MSDevice_Bluelight {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            // shortcut: C++ throws InvalidArgument; the port panics with the same text, upgrade when device setParameter returns Result
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == "reactiondist" {
             self.myReactionDist = doubleValue;
+            Ok(())
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 

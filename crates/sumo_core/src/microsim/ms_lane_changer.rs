@@ -374,7 +374,7 @@ impl MSLaneChanger {
                             && link.get_lane() != link2.get_lane()
                             && (lane.get_permissions() & lane2.get_permissions() & link.get_lane().get_permissions() & link2.get_lane().get_permissions()
                                 & link.get_via_lane_or_lane().get_permissions() & link2.get_via_lane_or_lane().get_permissions() & !(SVC_PEDESTRIAN | SVC_BICYCLE)) != 0
-                            && !std::ptr::eq(link.get_foe_links(), link2.get_foe_links())
+                            && *link.get_foe_links() != *link2.get_foe_links()
                         {
                             self.checkOpened = true;
                             return;
@@ -2384,7 +2384,24 @@ impl MSLaneChanger {
                 }
             }
         }
-        // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) reverted: the faithful port regressed city_plano and city_bengaluru_blr, and the first differing opened() decision is not measured yet; upgrade after tracing MSLink::opened on both sides
+        if self.checkOpened && (state & LCA_BLOCKED) == 0 && (state & LCA_WANTS_LANECHANGE) != 0
+            && vehicle.get_lane().is_normal()
+            && vehicle.get_best_lanes_continuation().len() > 1 {
+            let link = vehicle.get_lane().get_link_to(vehicle.get_best_lanes_continuation()[1]);
+            if !link.is_null() && link.is_entry_link() {
+                let link2 = link.get_parallel_link(laneOffset);
+                if !link2.is_null() {
+                    let api = link.get_approaching_ptr(vehicle.cast::<SUMOVehicle>());
+                    if !api.is_null() {
+                        if !link2.opened(api.arrivalTime, api.arrivalSpeed, api.leaveSpeed, vehicle.get_vehicle_type().get_length(),
+                            vehicle.get_impatience(), vehicle.get_car_follow_model().get_max_decel(), vehicle.get_waiting_time(false), vehicle.get_lateral_position_on_lane(),
+                            Ptr::null(), false, vehicle.cast::<SUMOTrafficObject>(), api.dist) {
+                            state |= LCA_BLOCKED;
+                        }
+                    }
+                }
+            }
+        }
         let oldstate = state;
         // let TraCI influence the wish to change lanes and the security to take
         state = vehicle.m().influence_change_decision(state);
