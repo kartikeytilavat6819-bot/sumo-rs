@@ -30,7 +30,7 @@ def first_diff(name, a, b):
     for i, (x, y) in enumerate(zip(a, b)):
         if x != y:
             print(f'[{name}] first diff at row {i}:')
-            for j in range(max(0, i - 12), min(len(a), i + 3)):
+            for j in range(max(0, i - 3), min(len(a), i + 3)):
                 print(f'  {j} ours: {a[j]}\n  {j} cpp : {b[j]}')
             return
     print(f'[{name}] identical')
