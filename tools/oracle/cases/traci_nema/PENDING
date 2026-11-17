@@ -1,0 +1,1 @@
+traci_basic-only NEMA scenario (tlLogic type NEMA on signal_nema's net); no sim/net refs, probed live by traci_basic/client.py
