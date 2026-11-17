@@ -164,7 +164,14 @@ impl MSDevice_Example {
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
         println!("device '{}' notifyMove: newSpeed={}", self.base.base2.get_id(), f64_to_string_default(newSpeed));
-        // shortcut: the C++ isVehicle() branch needs a static_cast to SUMOVehicle and MSDevice_Tripinfo lookup via getDevice(typeid(...)), which takes an Unmapped std::type_info, so only the speed line is printed; upgrade when SUMOTrafficObject can be downcast and getDevice takes a device name
+        if veh.is_vehicle() {
+            let v = Ptr::from_mut(veh).cast::<SUMOVehicle>();
+            // check whether another device is present on the vehicle:
+            let otherDevice = MSDevice::get_device_by_name(v.get_devices(), "tripinfo");
+            if !otherDevice.is_null() {
+                println!("  veh '{} has device '{}'", v.get_id(), otherDevice.base2.get_id());
+            }
+        }
         true // keep the device
     }
 

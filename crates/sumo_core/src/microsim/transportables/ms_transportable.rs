@@ -28,7 +28,7 @@ pub struct MSTransportable {
     pub myAmPerson: bool,
     pub myNumericalID: SUMOTrafficObject_NumericalID,
     pub myRandomSeed: i64,
-    pub myAbortCommand: Ptr<Unmapped /* WrappingCommand<MSTransportable> */>,
+    pub myAbortCommand: Ptr<crate::utils::wrapping_command::WrappingCommand<MSTransportable>>,
 }
 
 impl std::ops::Deref for MSTransportable {
@@ -542,7 +542,6 @@ impl MSTransportable {
             accessToStop = self.check_access(prior, true);
         } else if prior.get_stage_type() == MSStageType::WAITING_FOR_DEPART {
             for dev in self.myDevices.clone() {
-                // shortcut: calls the MSMoveReminder base notifyEnter (no virtual dispatch); MSTransportableDevice_FCD override returns false but the result is discarded, upgrade when devices are trait objects
                 dev.m().base2.notify_enter(&mut self.base, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
             }
         }
@@ -1188,11 +1187,13 @@ impl MSTransportable {
     #[allow(unused_variables)]
     pub fn set_abort_waiting(&mut self, timeout: SUMOTime) {
         if timeout < 0 && !self.myAbortCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the scheduled abort command cannot be descheduled, upgrade when WrappingCommand lands
+            self.myAbortCommand.m().deschedule();
             self.myAbortCommand = Ptr::null();
             return;
         }
-        // shortcut: WrappingCommand<MSTransportable> is not ported, so the abort timeout is not scheduled, upgrade when WrappingCommand lands
+        let cmd = Box::into_raw(Box::new(crate::utils::wrapping_command::WrappingCommand::new(Ptr::from_mut(self), MSTransportable::abort_stage)));
+        self.myAbortCommand = Ptr::from_raw(cmd);
+        MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd as *mut dyn crate::microsim::ms_event_control::Command), MSNet::get_instance().get_current_time_step() + timeout);
     }
 
     /// C++: `SUMOTime MSTransportable::abortStage(SUMOTime)`
@@ -1460,8 +1461,19 @@ impl MSTransportable {
                 stages.pop();
                 tripEndOffset -= 1;
             }
-            // shortcut: the identical-future-route check for walks needs MSStageMoving's route index, which is Unmapped; it is skipped here
-            let abortCurrent = true;
+            let mut abortCurrent = true;
+            // check whether the future route of the current stage is identical to the route
+            if !stages.is_empty() && stages.first().unwrap().is_walk() && self.get_current_stage().is_walk() {
+                let s: Ptr<MSStageMoving> = self.get_current_stage().cast::<MSStageMoving>();
+                let routeIndex = s.get_route_step();
+                let mut oldEdges = s.get_edges();
+                oldEdges.drain(0..routeIndex);
+                let newEdges = stages.first().unwrap().get_edges();
+                if newEdges == oldEdges {
+                    stages.remove(0);
+                    abortCurrent = false;
+                }
+            }
             if stages.is_empty() {
                 return false;
             }
@@ -1791,7 +1803,7 @@ impl MSTransportable {
     pub fn set_junction_model_parameter(&mut self, key: &str, value: &str) {
         if key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_IDS) || key == utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_JM_IGNORE_TYPES) {
             self.myParameter.m().parametersSet |= VEHPARS_JUNCTIONMODEL_PARAMS_SET;
-            // shortcut: SUMOVehicleParameter::setParameter is not ported yet, so the value is not stored; upgrade when it lands
+            self.myParameter.m().base.set_parameter(key, value);
         } else {
             panic!("{}", InvalidArgument(format!("{} '{}' does not support junctionModel parameter '{}'", self.get_object_type(), self.get_id(), key)).0);
         }

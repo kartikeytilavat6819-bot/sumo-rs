@@ -7467,15 +7467,6 @@ impl NBNode {
         }
     }
 
-    /// C++: `void NBNode::setPriorityJunctionPriorities()` [private]
-    /// sets the priorites in case of a priority junction
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn set_priority_junction_priorities(&mut self) {
-        // shortcut: NBNode::setPriorityJunctionPriorities has no C++ definition (declared only, never called); delegating to NBEdgePriorityComputer::setPriorityJunctionPriorities (NBAlgorithms.cpp) with forceStraight=false, upgrade if a real NBNode body turns up
-        NBEdgePriorityComputer::set_priority_junction_priorities(self, false);
-    }
-
     /// C++: `void NBNode::getEdgesThatApproach(NBEdge *, EdgeVector &)` [private]
     /// returns a list of edges which are connected to the given outgoing edge
     // void

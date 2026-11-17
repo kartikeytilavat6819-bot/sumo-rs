@@ -118,9 +118,19 @@ impl MSTransportableDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut MSTransportable, id: &str) -> Self {
-        MSTransportableDevice_FCD {
-            base: MSTransportableDevice::new(holder, id),
+        fn mr_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+            false
         }
+        static MS_MOVE_REMINDER_VT: crate::microsim::ms_move_reminder::MSMoveReminderVt = crate::microsim::ms_move_reminder::MSMoveReminderVt {
+            notify_enter: mr_notify_enter,
+            notify_move: crate::microsim::ms_move_reminder::default_notify_move,
+            notify_leave: crate::microsim::ms_move_reminder::default_notify_leave,
+        };
+        let mut this = MSTransportableDevice_FCD {
+            base: MSTransportableDevice::new(holder, id),
+        };
+        this.base.base2.vt = &MS_MOVE_REMINDER_VT;
+        this
     }
 
     /// C++: `void MSTransportableDevice_FCD::MSTransportableDevice_FCD(const MSTransportableDevice_FCD &)` [private]

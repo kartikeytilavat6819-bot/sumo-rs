@@ -1,0 +1,11 @@
+<routes>
+    <!-- vehicles and flows carry color and line; two lanes so the FCD lane attribute varies -->
+    <vType id="vRed" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="vBlue" length="8.00" maxSpeed="11.11" accel="1.50" decel="3.00"/>
+    <route id="r0" edges="A"/>
+    <vehicle id="v0" type="vRed" route="r0" depart="0.00" departLane="0" departSpeed="max" color="1,0,0" line="L1"/>
+    <vehicle id="v1" type="vRed" route="r0" depart="2.00" departLane="1" departSpeed="max" color="0,1,0" line="L2"/>
+    <vehicle id="v2" type="vBlue" route="r0" depart="4.00" departLane="0" departSpeed="max" color="0,0,1"/>
+    <flow id="fLine" type="vBlue" route="r0" begin="6.00" end="80.00" period="5.00" departLane="1" departSpeed="max" line="bus7" color="0.5,0.5,0.5"/>
+    <flow id="fPlain" type="vRed" route="r0" begin="8.00" end="80.00" period="6.00" departSpeed="max"/>
+</routes>

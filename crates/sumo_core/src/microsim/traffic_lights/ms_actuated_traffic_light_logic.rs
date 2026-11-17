@@ -204,6 +204,9 @@ fn actuated_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicCon
     Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
 }
 
+fn actuated_load_extra_state(l: &mut MSTrafficLightLogic, state: &str) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_extra_state(state)
+}
 fn actuated_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
     Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().get_parameter(key, defaultValue.to_string())
 }
@@ -224,6 +227,7 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MS
     get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
     get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
     get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: actuated_load_extra_state,
     get_parameter: actuated_ext_get_parameter,
     set_parameter: actuated_ext_set_parameter,
     activate_program: actuated_ext_activate_program,
@@ -1646,7 +1650,6 @@ impl MSActuatedTrafficLightLogic {
     //         i++;
     //     }
     // }
-    // shortcut: no load_extra_state vtable hook exists in MSTrafficLightLogic yet, so nothing calls this; upgrade when the MSTLLogicControl loadState path dispatches extra state
     #[allow(unused_variables)]
     pub fn load_extra_state(&mut self, state: &str) {
         let timeGaps: Vec<String> = StringTokenizer::new(state).get_vector();
