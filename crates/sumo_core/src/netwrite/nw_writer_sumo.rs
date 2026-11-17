@@ -677,7 +677,6 @@ impl NWWriter_SUMO {
         into.write_attr(SUMO_ATTR_OFFSET, offsetStr.as_str());
         if style == NWWriter_SUMO_ConnectionStyle::PLAIN_NAVTEQ {
             let nodeIDs: Vec<String> = def.get_nodes().iter().map(|n| n.get_id().to_string()).collect();
-            // shortcut: toString(vector<NBNode*>) assumed to be the node ids joined by spaces
             into.write_attr(SUMO_ATTR_NODES, nodeIDs.join(" ").as_str());
             let mut nodePos = PositionVector::default();
             for n in def.get_nodes().iter() {

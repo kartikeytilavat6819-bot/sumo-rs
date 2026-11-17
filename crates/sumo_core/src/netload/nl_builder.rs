@@ -661,10 +661,10 @@ impl NLBuilder {
             MSFrame::fill_options();
             utils::options::options_io::get_options(false).unwrap();
             if oc.process_meta_options(utils::options::options_io::get_arg_c() < 2).unwrap() {
-                // shortcut: SystemFrame::close() is not ported yet
+                utils::common::system_frame::close();
                 return Ptr::default();
             }
-            // shortcut: SystemFrame::checkOptions(oc) is not ported yet
+            utils::common::system_frame::check_options(oc);
             let mut validation = oc.get_string("xml-validation").unwrap();
             let mut routeValidation = oc.get_string("xml-validation.routes").unwrap();
             if isLibsumo {
@@ -738,7 +738,7 @@ impl NLBuilder {
         utils::common::rand_helper::init_rand(None, utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *SUMORouteHandler::get_parsing_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice::get_equipment_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
-        // shortcut: OUProcess::getRNG() is not ported yet, so its RNG is not re-initialised here
+        utils::common::rand_helper::init_rand(Some(unsafe { &mut *OUProcess::get_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_ToC::get_response_time_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::common::rand_helper::init_rand(Some(unsafe { &mut *MSDevice_BTreceiver::get_recognition_rng().as_raw() }), utils::options::options_cont::get_bool("random"), utils::options::options_cont::get_int("seed"));
         utils::options::options_cont::with_options(|oc| MSLane::init_rn_gs(oc));

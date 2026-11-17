@@ -1,6 +1,7 @@
 //! Port of netwrite/NWWriter_MATSim.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::to_string::format_g;
 
 /// C++ `OptionsCont` getters throw ProcessError; the options used here are always registered
 fn or_panic<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
@@ -59,9 +60,9 @@ impl NWWriter_MATSim {
         if !or_panic(oc.is_set("matsim-output", true)) {
             return;
         }
-        // shortcut: device << double uses the stream's %g-style precision (gPrecision = 2) which needs utils::common::to_string::f64_to_string_prec; Rust Display is used until that port is in this worktree
         let device = or_panic(OutputDevice::get_device(&or_panic(oc.get_string("matsim-output")), true));
         let mut dev = device.borrow_mut();
+        let prec = dev.get_precision() as usize;
         dev.write("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n");
         dev.write("<!DOCTYPE network SYSTEM \"http://www.matsim.org/files/dtd/network_v1.dtd\">\n\n");
         dev.write("<network name=\"NAME\">\n"); // !!! name
@@ -70,8 +71,8 @@ impl NWWriter_MATSim {
         let nc = nb.get_node_cont();
         for (id, node) in nc.begin() {
             dev.write("      <node id=\"").write(id.as_str())
-                .write("\" x=\"").write(&format!("{}", node.get_position().x()))
-                .write("\" y=\"").write(&format!("{}", node.get_position().y()))
+                .write("\" x=\"").write(&format_g(node.get_position().x(), prec))
+                .write("\" y=\"").write(&format_g(node.get_position().y(), prec))
                 .write("\"/>\n");
         }
         dev.write("   </nodes>\n");
@@ -82,9 +83,9 @@ impl NWWriter_MATSim {
             dev.write("      <link id=\"").write(id.as_str())
                 .write("\" from=\"").write(edge.get_from_node().get_id())
                 .write("\" to=\"").write(edge.get_to_node().get_id())
-                .write("\" length=\"").write(&format!("{}", edge.get_loaded_length()))
-                .write("\" capacity=\"").write(&format!("{}", or_panic(oc.get_float("lanes-from-capacity.norm")) * edge.get_num_lanes() as f64))
-                .write("\" freespeed=\"").write(&format!("{}", edge.get_speed()))
+                .write("\" length=\"").write(&format_g(edge.get_loaded_length(), prec))
+                .write("\" capacity=\"").write(&format_g(or_panic(oc.get_float("lanes-from-capacity.norm")) * edge.get_num_lanes() as f64, prec))
+                .write("\" freespeed=\"").write(&format_g(edge.get_speed(), prec))
                 .write("\" permlanes=\"").write(&format!("{}", edge.get_num_lanes()))
                 .write("\"/>\n");
         }
