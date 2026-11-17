@@ -176,16 +176,60 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     let measure = oc.get_string("weight-attribute").unwrap();
     let routingAlgorithm = oc.get_string("routing-algorithm").unwrap();
     let priorityFactor = oc.get_float("weights.priority-factor").unwrap();
+    let randomFactor = oc.get_float("weights.random-factor").unwrap();
     let begin = string2time(&oc.get_string("begin").unwrap()).unwrap_or_else(|e| panic!("{e}"));
     let end = if oc.is_default("end") { SUMOTIME_MAX } else { string2time(&oc.get_string("end").unwrap()).unwrap_or_else(|e| panic!("{e}")) };
+    let ttFunction: crate::utils::router::sumo_abstract_router::SUMOAbstractRouter_TypedOperation<ROEdge, ROVehicle> = if randomFactor > 1. { ROEdge::get_travel_time_static_randomized } else { ROEdge::get_travel_time_static };
+    let mut op = ttFunction;
+    if measure == "traveltime" && priorityFactor != 0. && ROEdge::init_priority_factor(priorityFactor) {
+        op = if randomFactor > 0. { ROEdge::get_travel_time_static_priority_factor_randomized } else { ROEdge::get_travel_time_static_priority_factor };
+    }
     if oc.is_set("restriction-params", true).unwrap() && (routingAlgorithm == "CH" || routingAlgorithm == "CHWrapper") {
         panic!("{}", ProcessError::Process(format!("Routing algorithm '{}' does not support restriction-params", routingAlgorithm)));
     }
-    if measure == "traveltime" && priorityFactor != 0. {
-        ROEdge::init_priority_factor(priorityFactor);
+    let ignoreErrors = oc.get_bool("ignore-errors").unwrap();
+    let restrictionParams = oc.is_set("restriction-params", true).unwrap();
+    // C++ `new`: the routers live until the process exits
+    let router: &mut crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = if measure == "traveltime" {
+        if routingAlgorithm == "dijkstra" {
+            Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams)))
+        } else {
+            // shortcut: AStarRouter, CHRouter, CHRouterWrapper, CCHRouter and AFRouter are not wired in duarouter yet (their lookup tables and map matcher are not ported), upgrade when computeRoutes can construct them
+            panic!("shortcut: routing algorithm '{}' is not wired in duarouter yet", routingAlgorithm);
+        }
+    } else {
+        op = match measure.as_str() {
+            "noise" => ROEdge::get_noise_effort,
+            // shortcut: the emission efforts take the PollutantsInterface type as a template argument, a plain fn pointer cannot carry it, upgrade when the effort is a closure or typed per pollutant
+            "CO" | "CO2" | "PMx" | "HC" | "NOx" | "fuel" | "electricity" => panic!("shortcut: emission effort '{}' is not wired in duarouter yet", measure),
+            _ => ROEdge::get_stored_effort,
+        };
+        if !net.has_loaded_effort() {
+            write_warningf!("No weight data was loaded for attribute '%'.", measure);
+        }
+        Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttFunction), false, Ptr::null(), net.has_permissions(), restrictionParams)))
+    };
+    let carWalk = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_car_walk_transfer(oc, true);
+    let taxiWait = utils::common::time::steps2time(string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
+    // shortcut: the RailwayRouter is not wired in duarouter yet (its effort operation is not a typed fn pointer), upgrade when railway routing is ported here
+    let mut railRouter: Ptr<crate::utils::router::railway_router::RailwayRouter<ROEdge, ROVehicle>> = Ptr::null();
+    if net.has_bidi_edges() {
+        panic!("shortcut: the railway router is not wired in duarouter yet");
     }
-    // shortcut: router construction (the DijkstraRouter/AStar/CH/CCH/arcflag/railway instances, the operation selection and the RORouterProvider) needs SUMOAbstractRouter_Operation, which is Unmapped () in sumo_abstract_router.rs, so the rest of computeRoutes is not ported; upgrade once the operation alias is a typed function pointer
-    let _ = (net, measure, begin, end);
+    // shortcut: ROIntermodalRouter is not ported, so the intermodal router is null and net.write_intermodal writes nothing
+    let _ = (carWalk, taxiWait);
+    let pedRouter: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));
+    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(Ptr::from_mut(&mut *router).cast::<crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle>>(), pedRouter, Ptr::null(), railRouter);
+    // process route definitions
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        net.open_output(oc);
+        loader.process_routes(begin, end, string2time(&oc.get_string("route-steps").unwrap()).unwrap_or_else(|e| panic!("{e}")), net, &provider);
+        net.write_intermodal(oc);
+    }));
+    net.cleanup();
+    if let Err(payload) = result {
+        std::panic::resume_unwind(payload);
+    }
 }
 
 /// C++: `void (RONet &, ROLoader &, OptionsCont &) initNet`

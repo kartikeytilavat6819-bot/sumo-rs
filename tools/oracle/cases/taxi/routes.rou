@@ -1,0 +1,19 @@
+<routes>
+    <!-- taxi device on the vType; the dispatch algorithm is a global option (sim*.args).
+         Persons ride between positions on edge A and B so the taxi can stop next to them. -->
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50">
+        <param key="has.taxi.device" value="true"/>
+    </vType>
+    <route id="AB" edges="A B"/>
+    <vehicle id="taxi0" type="taxi" depart="0" route="AB"/>
+    <vehicle id="taxi1" type="taxi" depart="0" route="AB"/>
+    <person id="p0" depart="0" departPos="100">
+        <ride from="A" to="B" lines="taxi"/>
+    </person>
+    <person id="p1" depart="5" departPos="120">
+        <ride from="A" to="B" lines="taxi"/>
+    </person>
+    <person id="p2" depart="30" departPos="140">
+        <ride from="A" to="B" lines="taxi"/>
+    </person>
+</routes>

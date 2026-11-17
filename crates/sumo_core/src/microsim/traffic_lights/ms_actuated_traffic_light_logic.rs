@@ -33,6 +33,11 @@ fn default_bike_length_with_gap() -> f64 {
     get_default_vehicle_length(SVC_BICYCLE) + 0.5
 }
 
+// the MSDetectorFileOutput of a loop is its base2 field, not the first one: step back to the enclosing MSInductLoop
+fn induct_loop_of_detector(d: Ptr<MSDetectorFileOutput>) -> Ptr<MSInductLoop> {
+    Ptr::from_raw((d.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2)) as *mut MSInductLoop)
+}
+
 /// C++ typedef `std::map<std::string, Function> MSActuatedTrafficLightLogic::FunctionMap`
 pub type MSActuatedTrafficLightLogic_FunctionMap = BTreeMap<String, MSActuatedTrafficLightLogic_Function>;
 
@@ -758,13 +763,18 @@ impl MSActuatedTrafficLightLogic {
                     // Build the induct loop and set it into the container
                     let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
                     let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
-                    loop_ = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true).cast::<MSInductLoop>();
-                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, loop_.cast::<MSDetectorFileOutput>(), &self.myFile, self.myFreq, 0);
+                    let det = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true);
+                    loop_ = induct_loop_of_detector(det);
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, det, &self.myFile, self.myFreq, 0);
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so custom induction loops cannot be looked up; upgrade when that container is mapped
-                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| induct_loop_of_detector(*d)).unwrap_or(Ptr::null());
+                    if loop_.is_null() {
+                        panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    }
+                    ilpos = loop_.get_position();
+                    inductLoopPosition = length - ilpos;
                 }
                 let maxGap: f64 = self.base2.get_double(&format!("max-gap:{}", lane.get_id()), self.myMaxGap);
                 let jamThreshold: f64 = self.base2.get_double(&format!("jam-threshold:{}", lane.get_id()), self.myJamThreshold);
@@ -1648,7 +1658,7 @@ impl MSActuatedTrafficLightLogic {
         for loopInfo in self.myInductLoops.iter() {
             state.push(loopInfo.loop_.get().unwrap().get_time_since_last_detection());
         }
-        out.write_attr(SUMO_ATTR_STATE, &state.iter().map(|v| utils::common::to_string::f64_to_string_default(*v)).collect::<Vec<_>>().join(" "));
+        out.write_attr(SUMO_ATTR_STATE, &state);
         out.close_tag("");
     }
 
@@ -2955,9 +2965,7 @@ impl MSActuatedTrafficLightLogic {
                         let foeIndex: i32 = foe.get_index();
                         let junction2: Ptr<MSJunction> = foe.get_junction();
                         if junction == junction2 {
-                            // shortcut: MSJunctionLogic::getFoesFor(linkIndex).test(foeIndex) is not usable yet (bitset Unmapped), so the junction foe relation is approximated by the MSLink foe links; upgrade when the junction logic bitsets are mapped
-                            let _ = (link.get_index(), foeIndex);
-                            if link.get_foe_links().contains(&foe)
+                            if junction.get_logic().get_foes_for(link.get_index()).test(foeIndex)
                                 && (foe.get_permissions() & !SVC_VULNERABLE) != 0 // check1e
                                 && Ptr::from_mut(foe.get_lane_before().get_edge()) != Ptr::from_mut(link.get_lane_before().get_edge()) { // check1f
                                 return false;

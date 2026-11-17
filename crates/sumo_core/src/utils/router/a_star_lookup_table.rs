@@ -425,8 +425,10 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
                 numericID.insert(e_id::<E, V>(*e), e_numerical_id::<E, V>(*e) - s.myFirstNonInternal);
             }
         }
-        // shortcut: zstr (zlib) input for compressed landmark files is not ported; plain text only
-        let text = match std::fs::read_to_string(filename) {
+        let text = match utils::iodevices::zstr::open_read(filename).and_then(|mut r| {
+            let mut t = String::new();
+            std::io::Read::read_to_string(&mut r, &mut t).map(|_| t)
+        }) {
             Ok(t) => t,
             Err(_) => panic!("{}", ProcessError::new(format!("Could not load landmark-lookup-table from '{}'.", filename))),
         };
@@ -586,8 +588,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
             }
         }
         if !outfile.is_empty() {
-            // shortcut: zstr gzip output for '.gz' outfiles is not ported; the table is written uncompressed
-            let mut ostrm = match std::fs::File::create(outfile) {
+            let mut ostrm = match utils::iodevices::zstr::create_write(outfile) {
                 Ok(f) => f,
                 Err(_) => panic!("{}", ProcessError::new(format!("Could not open file '{}' for writing.", outfile))),
             };

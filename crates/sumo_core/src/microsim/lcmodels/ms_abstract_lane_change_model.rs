@@ -303,7 +303,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        // shortcut: pure virtual in C++ (no base body); the field holds the model this object was built with, which is what every subclass returns
+        // pure virtual in C++; the stored model is what every subclass returns
         self.myModel
     }
 
@@ -2899,7 +2899,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn check_tra_ci_commands(&mut self) {
-        // shortcut: gDebugFlag2 debug printing is not ported (no debug flags in Rust yet), add it when the flags are ported
+        // gDebugFlag2 std::cout diagnostics are not ported; they do not affect simulation results
         let mut newstate = self.myVehicle.m().influence_change_decision(self.myOwnState);
         if self.myOwnState != newstate {
             if MSGlobals::lateral_resolution() > 0. {

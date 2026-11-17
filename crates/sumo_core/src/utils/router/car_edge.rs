@@ -4,6 +4,7 @@ use crate::prelude::*;
 use crate::utils::router::intermodal_edge::{IntermodalEdge, IntermodalEdgeKind};
 use crate::utils::router::intermodal_trip::IntermodalTrip;
 use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
+use utils::common::stable_cache::StableCache;
 use utils::common::to_string::to_string;
 
 /// C++ typedef `IntermodalEdge<E, L, N, V> CarEdge::_IntermodalEdge`
@@ -18,10 +19,10 @@ pub struct CarEdge<E, L, N, V> {
     /// the starting position for split edges
     pub myStartPos: f64,
     /// The successors available for a given vClass
-    pub myClassesSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
+    pub myClassesSuccessorMap: StableCache<SUMOVehicleClass, Vec<Ptr<IntermodalEdge<E, L, N, V>>>>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
-    pub myOrigClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
+    pub myOrigClassesViaSuccessorMap: StableCache<SUMOVehicleClass, Vec<(Ptr<IntermodalEdge<E, L, N, V>>, Ptr<IntermodalEdge<E, L, N, V>>)>>, // C++: std::map<SUMOVehicleClass, std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>>>
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
 
@@ -54,9 +55,9 @@ where
         Self {
             base: IntermodalEdge::new(id, numericalID, edge, "!car", -1.).with_kind(IntermodalEdgeKind::Car),
             myStartPos: if pos >= 0. { pos } else { 0. },
-            myClassesSuccessorMap: BTreeMap::new(),
-            myClassesViaSuccessorMap: BTreeMap::new(),
-            myOrigClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesSuccessorMap: StableCache::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myOrigClassesViaSuccessorMap: StableCache::new(),
             _p: std::marker::PhantomData,
         }
     }
@@ -98,23 +99,18 @@ where
         if vClass == SVC_IGNORING {
             return &self.myFollowingEdges;
         }
-        if let Some(cached) = self.myClassesSuccessorMap.get(&vClass) {
-            // can use cached value
-            return cached;
-        }
-        // this vClass is requested for the first time. rebuild all successors
-        // determinism: BTreeSet is only queried for membership, never iterated
-        let classedCarFollowers: BTreeSet<Ptr<E>> = self.get_edge().successors(vClass).iter().copied().collect();
-        let mut list = Vec::new();
-        for &e in self.myFollowingEdges.iter() {
-            if !e.include_in_route(false) || e.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.get_edge()) {
-                list.push(e);
+        // C++ `mutable` cache: this vClass is requested for the first time, so rebuild all successors
+        self.myClassesSuccessorMap.get_or_insert_with(vClass, || {
+            // determinism: BTreeSet is only queried for membership, never iterated
+            let classedCarFollowers: BTreeSet<Ptr<E>> = self.get_edge().successors(vClass).iter().copied().collect();
+            let mut list = Vec::new();
+            for &e in self.myFollowingEdges.iter() {
+                if !e.include_in_route(false) || e.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.get_edge()) {
+                    list.push(e);
+                }
             }
-        }
-        // C++ fills the mutable per-vClass cache from a const method
-        let me = Ptr::new(self).get_mut().unwrap();
-        me.myClassesSuccessorMap.entry(vClass).or_default().extend(list);
-        me.myClassesSuccessorMap.get(&vClass).unwrap()
+            list
+        })
     }
 
     /// C++: `const std::vector<std::pair<const _IntermodalEdge *, const _IntermodalEdge *>> & CarEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const, virtual]
@@ -150,27 +146,21 @@ where
             return &self.myFollowingViaEdges;
         }
         let viaMap = if ignoreTransientPermissions { &self.myOrigClassesViaSuccessorMap } else { &self.myClassesViaSuccessorMap };
-        if let Some(cached) = viaMap.get(&vClass) {
-            // can use cached value
-            return cached;
-        }
-        // this vClass is requested for the first time. rebuild all successors
-        // determinism: BTreeSet is only queried for membership, never iterated
-        let mut classedCarFollowers: BTreeSet<Ptr<E>> = BTreeSet::new();
-        for pair in self.get_edge().via_successors(vClass, false) {
-            classedCarFollowers.insert(pair.0);
-        }
-        let mut list = Vec::new();
-        for &e in self.myFollowingViaEdges.iter() {
-            if !e.0.include_in_route(false) || e.0.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.0.get_edge()) {
-                list.push(e);
+        // C++ `mutable` cache: this vClass is requested for the first time, so rebuild all successors
+        viaMap.get_or_insert_with(vClass, || {
+            // determinism: BTreeSet is only queried for membership, never iterated
+            let mut classedCarFollowers: BTreeSet<Ptr<E>> = BTreeSet::new();
+            for pair in self.get_edge().via_successors(vClass, false) {
+                classedCarFollowers.insert(pair.0);
             }
-        }
-        // C++ fills the mutable per-vClass cache from a const method
-        let me = Ptr::new(self).get_mut().unwrap();
-        let viaMap = if ignoreTransientPermissions { &mut me.myOrigClassesViaSuccessorMap } else { &mut me.myClassesViaSuccessorMap };
-        viaMap.entry(vClass).or_default().extend(list);
-        viaMap.get(&vClass).unwrap()
+            let mut list = Vec::new();
+            for &e in self.myFollowingViaEdges.iter() {
+                if !e.0.include_in_route(false) || e.0.get_edge() == self.get_edge() || classedCarFollowers.contains(&e.0.get_edge()) {
+                    list.push(e);
+                }
+            }
+            list
+        })
     }
 
     /// C++: `bool CarEdge::prohibits(const IntermodalTrip<E, N, V> *const) const` [const]

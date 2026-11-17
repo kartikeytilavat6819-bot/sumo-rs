@@ -1,5 +1,4 @@
 //! Port of utils/common/StringTokenizer.{h,cpp}
-// shortcut: the templated tokenizeAndLookup is not ported, add it when a caller needs it
 use super::util_exceptions::ProcessError;
 use std::collections::BTreeSet;
 

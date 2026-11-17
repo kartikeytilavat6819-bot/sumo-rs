@@ -1,0 +1,41 @@
+# Format matches Extraction version: V6.5 
+# <?xml version="1.0" encoding="UTF-8"?>
+# 
+# <!-- generated on 2026-11-16T23:33:24.614110-05:00 by Eclipse SUMO netconvert 1.28.0
+# -->
+# 
+# <netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+# 
+#     <input>
+#         <node-files value="tools/oracle/cases/vtypes/plain/net.nod.xml"/>
+#         <edge-files value="tools/oracle/cases/vtypes/plain/net.edg.xml"/>
+#         <connection-files value="tools/oracle/cases/vtypes/plain/net.con.xml"/>
+#         <tllogic-files value="tools/oracle/cases/vtypes/plain/net.tll.xml"/>
+#         <type-files value="tools/oracle/cases/vtypes/plain/net.typ.xml"/>
+#     </input>
+# 
+#     <output>
+#         <output-file value="tools/oracle/cases/netwrite_variants/ref/dlr/net.xml"/>
+#         <dlr-navteq-output value="tools/oracle/cases/netwrite_variants/ref/dlr/dlr"/>
+#     </output>
+# 
+# </netconvertConfiguration>
+# 
+#
+# LINK_ID	NODE_ID_FROM	NODE_ID_TO	BETWEEN_NODE_ID	LENGTH	VEHICLE_TYPE	FORM_OF_WAY	BRUNNEL_TYPE	FUNCTIONAL_ROAD_CLASS	SPEED_CATEGORY	NUMBER_OF_LANES	SPEED_LIMIT	SPEED_RESTRICTION	NAME_ID1_REGIONAL	NAME_ID2_LOCAL	HOUSENUMBERS_RIGHT	HOUSENUMBERS_LEFT	ZIP_CODE	AREA_ID	SUBAREA_ID	THROUGH_TRAFFIC	SPECIAL_RESTRICTIONS	EXTENDED_NUMBER_OF_LANES	ISRAMP	CONNECTION
+--103226#0	-137720	-137712	-1	57.80	011111111111	3	-1	4	6	11	50	50	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+--103226#1	-137713	-137720	-1	65.74	011111111111	3	-1	4	6	11	50	50	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+--103227#0	-137717	-137714	-1	30.58	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+--103227#1	-137721	-137717	-1	132.52	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+--103227#2	-137715	-137721	-1	149.51	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103224#0	-137709	-137720	-1	65.67	011111111111	3	-1	3	4	22	90	80	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103224#1	-137720	-137721	-1	77.73	011111111111	3	-1	3	4	22	90	80	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103224#2	-137721	-137719	-1	125.98	011111111111	3	-1	3	4	22	90	80	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103224#3	-137719	-137711	-1	41.25	011111111111	3	-1	3	4	22	90	80	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103226#0	-137712	-137720	-1	57.80	011111111111	3	-1	4	6	11	50	50	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103226#1	-137720	-137713	-1	65.74	011111111111	3	-1	4	6	11	50	50	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103227#0	-137714	-137717	-1	30.58	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103227#1	-137717	-137721	-1	132.52	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103227#2	-137721	-137715	-1	149.51	011111111111	3	-1	2	3	22	100	100	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103228	-137716	-137717	-1	79.56	011111111111	3	-1	3	4	22	90	80	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0
+-103230	-137718	-137719	-103230	69.52	011111111111	3	-1	4	6	11	50	50	-1	-1	-1	-1	-1	-1	-1	1	-1	-1	-1	0

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="automated" sigma="0" speedFactor="1" maxSpeed="20"/>
+  <vType id="manual" sigma="0.5" speedFactor="normc(0.9,0.1,0.5,1.5)" maxSpeed="20"/>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <!-- obstacle that forces a dynamic ToC on the automated vehicle behind it -->
+  <vehicle id="blocker" type="manual" route="r0" depart="0">
+    <stop lane="-103224#2_0" endPos="30" duration="60"/>
+  </vehicle>
+  <vehicle id="toc_dyn" type="automated" route="r0" depart="1">
+    <param key="device.toc.manualType" value="manual"/>
+    <param key="device.toc.automatedType" value="automated"/>
+    <param key="device.toc.responseTime" value="6"/>
+    <param key="device.toc.recoveryRate" value="0.1"/>
+    <param key="device.toc.initialAwareness" value="0.25"/>
+    <param key="device.toc.mrmDecel" value="1.2"/>
+    <param key="device.toc.dynamicToCThreshold" value="3"/>
+    <param key="device.toc.dynamicMRMProbability" value="0.5"/>
+  </vehicle>
+  <vehicle id="toc_free" type="automated" route="r1" depart="3">
+    <param key="device.toc.manualType" value="manual"/>
+    <param key="device.toc.automatedType" value="automated"/>
+    <param key="device.toc.responseTime" value="10"/>
+    <param key="device.toc.recoveryRate" value="0.1"/>
+    <param key="device.toc.initialAwareness" value="0.25"/>
+    <param key="device.toc.mrmDecel" value="1.2"/>
+  </vehicle>
+  <vehicle id="toc_manual" type="manual" route="r0" depart="5">
+    <param key="device.toc.manualType" value="manual"/>
+    <param key="device.toc.automatedType" value="automated"/>
+    <param key="device.toc.responseTime" value="8"/>
+    <param key="device.toc.recoveryRate" value="0.1"/>
+    <param key="device.toc.initialAwareness" value="0.25"/>
+    <param key="device.toc.mrmDecel" value="1.2"/>
+  </vehicle>
+</routes>

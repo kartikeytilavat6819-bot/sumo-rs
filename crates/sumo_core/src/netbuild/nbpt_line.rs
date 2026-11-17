@@ -9,7 +9,7 @@ use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
 pub struct NBPTLine {
     pub myName: String,
     pub myType: String,
-    pub myPTStops: Vec<Rc<NBPTStop>>,
+    pub myPTStops: Vec<Ptr<NBPTStop>>,
     pub myStopsRevised: Vec<bool>,
     pub myWayNodes: BTreeMap<String, Vec<i64>>,
     pub myWays: Vec<String>,
@@ -79,7 +79,7 @@ impl NBPTLine {
     //     myPTStops.push_back(pStop);
     // }
     #[allow(unused_variables)]
-    pub fn add_pt_stop(&mut self, pStop: Rc<NBPTStop>) {
+    pub fn add_pt_stop(&mut self, pStop: Ptr<NBPTStop>) {
         if !self.myPTStops.is_empty() && pStop.get_name() != "" && self.myPTStops[self.myPTStops.len() - 1].get_name() == pStop.get_name() {
             // avoid duplicate stop when both platform and stop_position are given as nodes
             if self.myPTStops[self.myPTStops.len() - 1].is_platform() && !pStop.is_platform() {
@@ -124,7 +124,7 @@ impl NBPTLine {
     //     return myPTStops;
     // }
     #[allow(unused_variables)]
-    pub fn get_stops(&mut self) -> &Vec<Rc<NBPTStop>> {
+    pub fn get_stops(&mut self) -> &Vec<Ptr<NBPTStop>> {
         &self.myPTStops
     }
 
@@ -269,7 +269,7 @@ impl NBPTLine {
     //         myPTStops = stops;
     //     }
     #[allow(unused_variables)]
-    pub fn replace_stops(&mut self, stops: Vec<Rc<NBPTStop>>) {
+    pub fn replace_stops(&mut self, stops: Vec<Ptr<NBPTStop>>) {
         self.myPTStops = stops;
     }
 
@@ -486,9 +486,9 @@ impl NBPTLine {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn replace_stop(&mut self, oldStop: Rc<NBPTStop>, newStop: Rc<NBPTStop>) {
+    pub fn replace_stop(&mut self, oldStop: Ptr<NBPTStop>, newStop: Ptr<NBPTStop>) {
         for i in 0..self.myPTStops.len() {
-            if Rc::ptr_eq(&self.myPTStops[i], &oldStop) {
+            if self.myPTStops[i] == oldStop {
                 self.myPTStops[i] = newStop.clone();
             }
         }

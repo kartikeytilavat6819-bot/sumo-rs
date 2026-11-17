@@ -1,0 +1,26 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="car" length="5.00" maxSpeed="13.89"/>
+    <route id="rL" edges="E0 E1 E2"/>
+    <flow id="L1f" type="bus" route="rL" line="L1" begin="0.00" end="300.00" period="100.00" departSpeed="max">
+        <stop busStop="bs0" until="30.00" duration="15.00"/>
+        <stop busStop="bs1" until="200.00"/>
+    </flow>
+    <person id="pr0" depart="0.00">
+        <ride from="E1" busStop="bs1" lines="L1"/>
+    </person>
+    <flow id="cars" type="car" route="rL" begin="5.00" end="200.00" period="40.00" departSpeed="max"/>
+    <person id="pw0" depart="10.00">
+        <walk from="E1" busStop="bs0"/>
+        <ride busStop="bs1" lines="L1"/>
+    </person>
+    <person id="pw1" depart="30.00">
+        <walk from="E1" busStop="bs0"/>
+        <ride busStop="bs1" lines="L1"/>
+        <walk edges="E2"/>
+    </person>
+    <person id="pw2" depart="150.00">
+        <walk from="E1" busStop="bs0"/>
+        <ride busStop="bs1" lines="L1"/>
+    </person>
+</routes>
