@@ -246,7 +246,7 @@ impl MSCFModel_Daniel1 {
     // }
     #[allow(unused_variables)]
     pub fn duplicate(&self, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
-        // shortcut: returns the MSCFModel base of a leaked Daniel1; virtual calls through it do not reach Daniel1 overrides, upgrade when car-following models get enum dispatch
+        // shortcut: duplicate() boxes the copy like C++ `new`; the owner must free it once model ownership is ported
         let p: *mut MSCFModel_Daniel1 = Box::into_raw(Box::new(MSCFModel_Daniel1::new(vtype)));
         Ptr::from_raw(unsafe { &mut (*p).base as *mut MSCFModel })
     }

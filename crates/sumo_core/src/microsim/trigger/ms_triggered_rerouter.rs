@@ -141,8 +141,9 @@ impl MSTriggeredRerouter {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, edges: &MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Self {
-        let mut this = MSTriggeredRerouter {
+    pub fn new(id: &str, edges: &MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Box<Self> {
+        // Boxed because the constructor registers `this` (myInstances, the lanes' move reminders).
+        let mut b = Box::new(MSTriggeredRerouter {
             base: Named::new(id),
             base2: MSMoveReminder::new(id, Ptr::default(), true),
             base3: utils::xml::sumo_sax_handler::new("", ""), // C++ default-constructs SUMOSAXHandler
@@ -175,32 +176,28 @@ impl MSTriggeredRerouter {
             myHaveParkProbs: false,
             myHaveClosingUntil: false,
             myBlockedStoppingPlaces: BTreeSet::new(),
-        };
-        // shortcut: C++ registers `this` in myInstances, with each lane (MSLane::addMoveReminder) and with the meso segment of each edge; these need the final address of the rerouter, but new() returns by value, so the caller must register it after placing it
-        if off {
-            this.set_user_mode(true);
-            this.set_user_usage_probability(0.0);
-        }
-        this.myVehicleTypes.extend(StringTokenizer::new(vTypes).get_vector());
-        if this.myPosition == Position::INVALID {
-            this.myPosition = edges[0].get_lanes()[0].get_shape_2()[0];
-        }
-        this
-    }
-
-    /// The `this`-registering half of the C++ constructor (myInstances[id] = this; lane->addMoveReminder(this)),
-    /// run once the rerouter has its final address. Also installs the MSMoveReminder overrides.
-    pub fn register_at(&mut self, this_ptr: Ptr<MSTriggeredRerouter>) {
-        self.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
-        self.base4.vt = &MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT;
-        MY_INSTANCES.with(|m| m.borrow_mut().insert(self.base.get_id().to_string(), this_ptr));
+        });
+        b.base2.vt = &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT;
+        b.base4.vt = &MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT;
+        // C++ `myInstances[id] = this` and `lane->addMoveReminder(this)`; the box keeps the address stable
+        let this_ptr = Ptr::from_box(&b);
+        MY_INSTANCES.with(|m| m.borrow_mut().insert(b.base.get_id().to_string(), this_ptr));
         // shortcut: the meso segment registration (gUseMesoSim) is skipped, meso is not ported
-        let rem = Ptr::from_mut(&mut self.base2);
-        for e in self.myEdges.iter() {
+        let rem = Ptr::from_mut(&mut b.base2);
+        for e in b.myEdges.iter() {
             for lane in e.get_lanes().iter() {
                 lane.m().add_move_reminder(rem, true);
             }
         }
+        if off {
+            b.set_user_mode(true);
+            b.set_user_usage_probability(0.0);
+        }
+        b.myVehicleTypes.extend(StringTokenizer::new(vTypes).get_vector());
+        if b.myPosition == Position::INVALID {
+            b.myPosition = edges[0].get_lanes()[0].get_shape_2()[0];
+        }
+        b
     }
 
     /// C++: `void MSTriggeredRerouter::~MSTriggeredRerouter() noexcept` [virtual]

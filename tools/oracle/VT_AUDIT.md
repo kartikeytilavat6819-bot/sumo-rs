@@ -107,6 +107,21 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 
 The 13 new slots (`set_program_id`, `shift_tl_connection_lane_index`, `remove_connection`, `set_type`, `extra_conflict`, `using_signal_groups`, `final_checks`, `collect_edges`, `am_invalid`, `init_needs_cont_relation`, `get_max_valid_index`, `set_participants_information`, `get_layout`) default to the `*_base` bodies, so behaviour is unchanged for classes that do not override them. Subclass bodies that call the base explicitly now use the `*_base` names.
 
+## Pass 2 (pv01): detector outputs, stopping places, devices, router hooks
+
+| Family | Overrides checked | Status |
+|---|---|---|
+| MSDetectorFileOutput | clearState: MSE2, MSE3, MSInductLoop, MSRouteProbe | FIXED: `clear_state` slot added to MSDetectorFileOutputVt. MSDetectorControl::clearState reached only the base no-op before |
+| MSMeanData | detectorUpdate: MSMeanData_Harmonoise | FIXED: `detector_update` slot in MSMeanDataVt; base body is `detector_update_base`. Harmonoise was unreachable from both MSDetectorControl::updateDetectors and the detector vt |
+| MSMeanData | resetOnly, Net, Amitran | NOTE: C++ resetOnly is non-virtual and Net/Amitran declare it without a definition. The table entry is base-only, which matches the C++ call path |
+| MSStoppingPlace | enter, leaveFrom, getLastFreePos, accepts: MSParkingArea | FIXED: MSStoppingPlaceVt; MSParkingArea installs its own table. get_stopping_position and the rerouters (alternative.get_last_free_pos, cand.accepts) now dispatch |
+| MSStoppingPlace | finishedLoading, addAccess | GAP (report only): C++ overrides exist only in GUIBusStop (GUI, not ported). The base body is the port of the non-GUI behaviour |
+| MSStoppingPlace | MSChargingStation, MSOverheadWire | PASS: no C++ override, so the base table is correct |
+| MSDevice | getParameter / setParameter / generateOutput | PASS: dispatch by deviceName covers every C++ override (13 get, 12 set, 11 generateOutput). deviceName literals match the match arms |
+| MSDevice | saveState / loadState | GAP (sl02 owns state save): dispatched as inherent methods, not by name. Not changed here |
+| SUMOAbstractRouter | supportsProhibitions: CHRouter, CHRouterWrapper return false; CCHRouter returns true | FIXED: `mySupportsProhibitions` hook. The base returned true for every router, so ro_route_def took the prohibition path for CH |
+| SUMOAbstractRouter | reset, clone, compute, prohibit, setBulkMode | NOT RE-AUDITED in this pass: they dispatch through the myCompute / myProhibit / myOperation hooks; per-router coverage was not checked |
+
 ## Not audited in this pass (open)
 
 | Family | Note |

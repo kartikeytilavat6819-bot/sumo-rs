@@ -495,11 +495,22 @@ impl MSRoutingEngine {
             let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), None, false, Ptr::null(), true, false).with_compute();
             Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
         } else if routingAlgorithm == "astar" {
-            // shortcut: the astar.all-distances and astar.landmark-distances lookup tables are not ported, a run that sets them panics instead of routing without them
-            if is_set("astar.all-distances") || is_set("astar.landmark-distances") {
-                panic!("shortcut: astar lookup tables (astar.all-distances, astar.landmark-distances) are not ported")
+            // shortcut: the astar.all-distances lookup table (FullLookupTable) is not wired here, a run that sets it panics instead of routing without it
+            if is_set("astar.all-distances") {
+                panic!("shortcut: astar.all-distances lookup table is not ported")
             }
-            let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(edges, true, Some(effort), None, true, false).with_compute();
+            let lookup = if is_set("astar.landmark-distances") && !vehicle.is_null() {
+                let speedFactor = vehicle.m().base.get_chosen_speed_factor();
+                // we need an exemplary vehicle with speedFactor 1
+                vehicle.m().set_chosen_speed_factor(1.);
+                let chrouter = Box::new(CHRouterWrapper::<MSEdge, SUMOVehicle>::new(edges, true, Some(MSNet::get_travel_time), string2time(&get_string("begin")).unwrap_or_else(|e| std::panic::panic_any(e)), string2time(&get_string("end")).unwrap_or_else(|e| std::panic::panic_any(e)), utils::common::time::SUMOTIME_MAX, hasPermissions, 1).with_compute());
+                let lm = crate::utils::router::a_star_lookup_table::LandmarkLookupTable::<MSEdge, SUMOVehicle, MSMapMatcher>::new(&get_string("astar.landmark-distances"), edges, Ptr::from_box(&chrouter).cast(), Ptr::null(), vehicle, "", get_int("device.rerouting.threads"), MSNet::get_instance().m().get_map_matcher());
+                vehicle.m().set_chosen_speed_factor(speedFactor);
+                Some(std::rc::Rc::new(crate::utils::router::a_star_lookup_table::AStarLookupTableKind::Landmark(lm)))
+            } else {
+                None
+            };
+            let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(edges, true, Some(effort), lookup, true, false).with_compute();
             Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
         } else if routingAlgorithm == "CH" && !hasPermissions {
             let weightPeriod = if state().myAdaptationInterval > 0 { state().myAdaptationInterval } else { utils::common::time::SUMOTIME_MAX };

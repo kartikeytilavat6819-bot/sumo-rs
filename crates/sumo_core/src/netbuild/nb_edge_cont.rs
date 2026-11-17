@@ -58,11 +58,6 @@ impl EdgeIDSupplier {
     }
 }
 
-/// Mutable access to a shared stop (same pattern as nbpt_line_cont; C++ shared_ptr<NBPTStop> is mutated through copies)
-fn stop_mut_local(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 // C++ NBEdge::UNSPECIFIED_* defaults (NBEdge.cpp)
 const UNSPECIFIED_SPEED: f64 = -1.;
 const UNSPECIFIED_FRICTION: f64 = 1.;
@@ -3415,7 +3410,7 @@ impl NBEdgeCont {
             toChange.retain(|k, _| !keep.contains(k));
         }
 
-        let mut stopsOnEdge: BTreeMap<String, Vec<Rc<NBPTStop>>> = BTreeMap::new();
+        let mut stopsOnEdge: BTreeMap<String, Vec<Ptr<NBPTStop>>> = BTreeMap::new();
         for (_, item) in sc.get_stops().iter() {
             stopsOnEdge.entry(item.get_edge_id().to_string()).or_default().push(item.clone());
         }
@@ -3435,7 +3430,7 @@ impl NBEdgeCont {
             self.myEdges.insert(edge.m().get_id().to_string(), edge);
             if let Some(stops) = stopsOnEdge.get(&origID) {
                 for stop in stops.iter() {
-                    stop_mut_local(stop).set_edge_id(format!("{}{}", prefix, edge.m().get_id()), &*self);
+                    stop.m().set_edge_id(format!("{}{}", prefix, edge.m().get_id()), &*self);
                 }
             }
         }
