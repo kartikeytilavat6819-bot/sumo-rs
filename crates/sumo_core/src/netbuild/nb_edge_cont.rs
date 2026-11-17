@@ -1852,17 +1852,9 @@ impl NBEdgeCont {
         let mut priority: i32 = -1;
         let mut joinEdges = true;
         let mut id = String::new();
-        // determinism: C++ std::sort is unstable; sort_by with the same strict-weak comparator gives the same order for distinct keys
+        // determinism: libstdc++ std::sort order
         let sorter = NBContHelper_same_connection_edge_sorter::new();
-        edges.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(&mut edges, |a, b| sorter.call_op(a, b) != 0);
         // retrieve the connected nodes
         let tpledge = edges[0];
         let from = tpledge.m().get_from_node();

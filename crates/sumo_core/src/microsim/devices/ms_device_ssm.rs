@@ -13,6 +13,7 @@ use utils::options::options_cont::{get_bool, get_float, get_string, is_default, 
 use MSDevice_SSM_SSMParameterWarning::*;
 use MSDevice_SSM_EncounterType::*;
 use utils::tlf;
+use crate::utils::router::ch_builder::{std_pop_heap, std_push_heap};
 
 /// C++ `#define DEFAULT_EXTRA_TIME 5.` (MSDevice_SSM.cpp)
 const DEFAULT_EXTRA_TIME: f64 = 5.;
@@ -101,38 +102,8 @@ impl MSDevice_SSM_SSMParameterWarning {
 
 /// C++ typedef `int MSDevice_SSM::EncounterQueue`
 /// C++ typedef `priority_queue<Encounter*, vector<Encounter*>, Encounter::compare> MSDevice_SSM::EncounterQueue`
-/// determinism: C++ std::priority_queue and Rust BinaryHeap use the same sift-up/sift-down scheme, but ties are not guaranteed to pop in the same order
-pub type MSDevice_SSM_EncounterQueue = BinaryHeap<MSDevice_SSM_EncounterQueueEntry>;
-
-/// Heap entry ordered like C++ `Encounter::compare`: the top of the queue is the encounter with the earliest begin
-#[derive(Clone, Copy)]
-pub struct MSDevice_SSM_EncounterQueueEntry(pub Ptr<MSDevice_SSM_Encounter>);
-
-impl PartialEq for MSDevice_SSM_EncounterQueueEntry {
-    fn eq(&self, other: &Self) -> bool {
-        self.cmp(other) == std::cmp::Ordering::Equal
-    }
-}
-impl Eq for MSDevice_SSM_EncounterQueueEntry {}
-impl PartialOrd for MSDevice_SSM_EncounterQueueEntry {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-impl Ord for MSDevice_SSM_EncounterQueueEntry {
-    // std::priority_queue keeps the element for which comp(x, others) is false; BinaryHeap keeps the greatest,
-    // so an entry is greater when comp(other, self) holds, i.e. when it has the higher priority
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let mut comp = Encounter_compare {};
-        if comp.call_op(self.0, other.0) {
-            std::cmp::Ordering::Less
-        } else if comp.call_op(other.0, self.0) {
-            std::cmp::Ordering::Greater
-        } else {
-            std::cmp::Ordering::Equal
-        }
-    }
-}
+/// Kept as a plain vector ordered by the libstdc++ push_heap/pop_heap (ch_builder), so ties pop in C++ order
+pub type MSDevice_SSM_EncounterQueue = Vec<Ptr<MSDevice_SSM_Encounter>>;
 
 /// C++ typedef `std::vector<Encounter*> MSDevice_SSM::EncounterVector`
 pub type MSDevice_SSM_EncounterVector = Vec<Ptr<MSDevice_SSM_Encounter>>;
@@ -2358,7 +2329,7 @@ impl MSDevice_SSM {
             myFilterConflictTypes,
             myHolderMS: Ptr::default(),
             myActiveEncounters: Vec::new(),
-            myPastConflicts: BinaryHeap::new(),
+            myPastConflicts: Vec::new(),
             myGlobalMeasuresTimeSpan: Vec::new(),
             myGlobalMeasuresPositions: PositionVector(Vec::new()),
             myGlobalMeasuresLaneIDs: Vec::new(),
@@ -2761,7 +2732,7 @@ impl MSDevice_SSM {
     // }
     #[allow(unused_variables)]
     pub fn flush_conflicts(&mut self, all: bool) {
-        while let Some(top) = self.myPastConflicts.peek().map(|entry| entry.0) {
+        while let Some(top) = self.myPastConflicts.first().copied() {
             if all || top.begin <= self.myOldestActiveEncounterBegin {
                 let mut write = true;
                 if self.myFilterConflictTypes {
@@ -2773,6 +2744,7 @@ impl MSDevice_SSM {
                 if write {
                     self.write_out_conflict(top);
                 }
+                std_pop_heap(&mut self.myPastConflicts, &|a, b| Encounter_compare {}.call_op(a, b));
                 self.myPastConflicts.pop();
                 delete_encounter(top);
             } else {
@@ -4513,7 +4485,8 @@ impl MSDevice_SSM {
         em.end = *em.timeSpan.last().unwrap();
         let wasConflict = self.qualifies_as_conflict(e);
         if wasConflict {
-            self.myPastConflicts.push(MSDevice_SSM_EncounterQueueEntry(e));
+            self.myPastConflicts.push(e);
+            std_push_heap(&mut self.myPastConflicts, &|a, b| Encounter_compare {}.call_op(a, b));
         } else {
             delete_encounter(e);
         }
