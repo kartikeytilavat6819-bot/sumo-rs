@@ -72,6 +72,38 @@ Harness notes:
 - Still open in `MSNet::closeSimulation`: `MSChargingStationExport::write(..., true)` is now called, but no case
   covers `chargingstations-output.aggregated`.
 
+## Round om01: city scale (VM gate, branch worktree-agent-om01)
+
+Runner: `tools/oracle/run_outputs_city.sh` (sibling of run_outputs.sh). No committed references: on the VM both the
+official C++ sumo (`$SUMO_PRISTINE_BIN/sumo`) and ours run live with the case's `sim.args`, then `compare_xml.py`
+(exact). Each PASS row prints the reference element count, so an empty-output PASS would show up.
+
+Cases: the six largest by vehicle count (reference tripinfo): kumbakonam_mixed (366), autobahn_interchange (282),
+zurich_tram (278), karlsruhe_tram (269), cairo_priority (267), hongkong_lefthand_grid (265). Named-city cases in the
+113–150 vehicle range (atlanta, paris_dense, milton_keynes, la_interchange, tokyo_lefthand, manhattan_midtown) are
+not the largest and were not used.
+
+| output | window | flags |
+|---|---|---|
+| summary | full | `--summary-output` |
+| queue | full | `--queue-output` |
+| vehroute / vehroute_exit | full | `--vehroute-output` (+ `--vehroute-output.exit-times true`) |
+| edgedata | full | additional `<edgeData freq="60">` file |
+| lanechange | full | `--lanechange-output` |
+| statistic | full | `--statistic-output --duration-log.statistics true` |
+| netstate | 120 s | `--netstate-dump` |
+| emission | 120 s | `--emission-output` |
+| collision | full | `--collision-output --collision.action warn --collision.mingap-factor 10` (forces collisions) |
+
+Result: **60 rows, PASS 60, FAIL 0, PANIC 0**. Reference element counts (min–max over the six cities): summary
+611, queue 1301–6295, vehroute 541–743, edgedata 1110–9580, lanechange 12–216 (kumbakonam 130; zurich 12),
+netstate 5167–14411, emission 1898–4970, collision 78–551. Each run took 0–5 s on the VM.
+
+No DIFF was found, so no fix was needed in `src/microsim/output` or devices. Gate counts were unchanged from
+main: run_all PASS=301 FAIL=6 SKIP=41 (the known six FAILs), depart 15/15, unit tests ok.
+
+Not covered: the other output types (full, amitran, link, person, stop, chargingstations) at city scale.
+
 ## Not measured
 
 - **emission-output / edgeData emissions**: owned by em02.
