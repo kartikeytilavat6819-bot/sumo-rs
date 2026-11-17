@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// The definition of a single phase of a tls logic
 /// C++ class `MSPhaseDefinition` (microsim/traffic_lights/MSPhaseDefinition.h)
+#[derive(Clone)]
 pub struct MSPhaseDefinition {
     /// The duration of the phase
     pub duration: SUMOTime,
