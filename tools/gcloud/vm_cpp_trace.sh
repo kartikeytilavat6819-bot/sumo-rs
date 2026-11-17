@@ -8,7 +8,10 @@
 set -e
 ID=$1 TARGET=${3:-sumo}
 # patches written on Windows carry CRLF; git apply would reject them against the LF source tree
-PATCH=$(mktemp); sed 's/\r$//' "$2" > "$PATCH"
+PATCH=$(mktemp)
+# PowerShell `>` writes UTF-16 with a BOM: convert it, otherwise git apply finds "No valid patches"
+if head -c2 "$2" | od -An -tx1 | grep -qE 'ff fe|fe ff'; then iconv -f UTF-16 -t UTF-8 "$2" | sed 's/\r$//' > "$PATCH"
+else sed 's/\r$//' "$2" > "$PATCH"; fi
 D=/home/gate/cpp-$ID
 [ -d /home/gate/sumo-cpp/bin ] || { echo "vm_cpp_trace: no C++ tree on this VM" >&2; exit 1; }
 exec 8>/home/gate/cpp-$ID.lock; flock 8
