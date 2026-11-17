@@ -2,7 +2,7 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
 
 # Night run 2026-11-17 (lead loop, 20 Haiku agents, VM gate only) — read this first
 
-- `main` went 151/5 → **429/7** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 7
+- `main` went 151/5 → **430/6** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 6
   FAILs are NEW cases with owners (see tools/lead/agent_preamble.md). Every original city row passes (London/Kansas/
   Karlsruhe/Tokyo: isLeader→MSBitSetLogic dispatch, in01; Paris: computeFurtherLanes break, cb01). Release build gives
   identical verdicts and runs ~0.6x the C++ wall time (tools/oracle/PERF.md). New binary crate: duarouter (18/18 oracle
@@ -20,7 +20,7 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
 Everything is on GitHub: `main`, `wave2` (integration branch) and every `worktree-agent-*` branch (unfinished
 work included). Nothing lives only on the laptop.
 
-**Merged at the end (main 430/6 after lo01+bo01+vs04; sl07+tr05 in the final gate):** lo01 `16add678` (lc_opposite fixed: checkChange shadowed its targetLane parameter), bo01
+**Merged at the end (main 430/6 after lo01+bo01+vs04; sl07+tr05 confirmed by the final gate, 430/6):** lo01 `16add678` (lc_opposite fixed: checkChange shadowed its targetLane parameter), bo01
 `60f0e73d` (2 base-offset casts), vs04 `c141cd39` (importers 26/26: OpenDRIVE internal-lane reversal used the wrong
 connection's toCP), sl07 `273dd4ea` (state roundtrip: taxi format, rerouter router, drive-way foe order, routeDist
 ids), tr05 `43b843ed` (106 new TraCI infra probes MATCH; error texts, LaneArea offset). Also removed: leftover
