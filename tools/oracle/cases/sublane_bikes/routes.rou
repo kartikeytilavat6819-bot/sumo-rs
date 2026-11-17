@@ -1,0 +1,39 @@
+<routes>
+    <vType id="car" vClass="passenger" maxSpeed="13.89" width="1.80" length="4.50"/>
+    <vType id="slow" vClass="passenger" maxSpeed="4.00" width="1.80" length="4.50"/>
+    <vType id="bike" vClass="bicycle" maxSpeed="5.00" width="0.60" length="1.80"/>
+    <vType id="bike_fast" vClass="bicycle" maxSpeed="4.50" width="0.80" length="1.80"/>
+    <vehicle id="bike0" type="bike" depart="0.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="car0" type="car" depart="1.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="bike1" type="bike_fast" depart="2.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="slow0" type="slow" depart="4.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="car1" type="car" depart="6.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="bike2" type="bike" depart="8.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="car2" type="car" depart="10.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="slow1" type="slow" depart="15.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="car3" type="car" depart="20.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="bike3" type="bike" depart="25.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="car4" type="car" depart="30.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+</routes>
