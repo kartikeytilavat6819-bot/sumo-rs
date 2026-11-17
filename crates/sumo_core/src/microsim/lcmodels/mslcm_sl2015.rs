@@ -3022,6 +3022,9 @@ impl MSLCM_SL2015 {
 
         ret = self.check_strategic_change(ret, neighLane, laneOffset, leaders, neighLeaders, &curr, &neigh, &best, bestLaneOffset, changeToBest, &mut currentDist, neighDist, laDist, roundaboutBonus, latLaneDist, checkOpposite, latDist);
 
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-SC {} {} lo={} ret={} latDist={} laDist={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, ret, lctw_bits(*latDist), lctw_bits(laDist));
+        }
         if (ret & LCA_STAY) != 0 && *latDist == 0. {
             // ensure that mySafeLatDistLeft / mySafeLatDistRight are up to date for the
             // subsquent check with laneOffset = 0
