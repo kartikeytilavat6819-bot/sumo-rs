@@ -8,8 +8,8 @@ use super::sumo_sax_attributes::SUMOSAXAttributes;
 use super::sumo_xml_definitions::Tags;
 use quick_xml::events::Event;
 use quick_xml::{Reader, XmlVersion};
-use std::fs::File;
-use std::io::{BufRead, BufReader, Read};
+use crate::iodevices::zstr::open_read as open_input;
+use std::io::{BufRead, Read};
 
 pub struct SUMOSAXReader {
     my_validation_scheme: String,
@@ -30,21 +30,6 @@ struct XmlStream {
     pending: Option<Event<'static>>,
     depth: usize,
     root_seen: bool,
-}
-
-/// opens a plain, gzip or zlib file like zstr::ifstream
-fn open_input(path: &str) -> std::io::Result<Box<dyn BufRead>> {
-    let mut f = BufReader::new(File::open(path)?);
-    let head = f.fill_buf()?;
-    let gz = head.starts_with(&[0x1f, 0x8b]);
-    let zlib = head.len() >= 2 && head[0] == 0x78 && matches!(head[1], 0x01 | 0x9c | 0xda);
-    Ok(if gz {
-        Box::new(BufReader::new(flate2::bufread::MultiGzDecoder::new(f)))
-    } else if zlib {
-        Box::new(BufReader::new(flate2::bufread::ZlibDecoder::new(f)))
-    } else {
-        Box::new(f)
-    })
 }
 
 impl XmlStream {

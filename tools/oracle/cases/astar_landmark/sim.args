@@ -1,0 +1,1 @@
+--end 200 --additional-files tools/oracle/cases/astar_landmark/closing.add.xml --routing-algorithm astar --astar.landmark-distances tools/oracle/cases/astar_landmark/table.txt
