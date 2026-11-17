@@ -33,6 +33,12 @@ python - "$D/src/microsim/MSVehicle.cpp" <<'EOF'
 import sys
 p = sys.argv[1]
 s = open(p, 'rb').read().decode().replace('\r\n', '\n')
+L = s.split('\n')
+tmpl = '        if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = v; fprintf(stderr, "RX01 vLNNN t=%lld v=%llx\\n", (long long)SIMSTEP, cvt.u); }'
+for n in sorted([2373, 2532, 2556, 2573, 2668, 2758, 2777, 2864, 2874, 2904, 2952, 3090], reverse=True):
+    assert 'v = ' in L[n-1], (n, L[n-1])
+    L[n:n] = [tmpl.replace('NNN', str(n))]
+s = '\n'.join(L)
 a = 'const bool ignoreRedLink = ignoreRed(link, canBrake) || beyondStopLine;\n'
 assert s.count(a) == 1, a
 t = r'''            if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = dpi.myDistance; unsigned long long dist = cvt.u; cvt.d = dpi.myVLinkWait; unsigned long long vW = cvt.u; cvt.d = dpi.myVLinkPass; unsigned long long vP = cvt.u; cvt.d = myState.mySpeed; unsigned long long sp = cvt.u; fprintf(stderr, "RX01 lnk t=%lld link=%s ls=%d yel=%d cb=%d ign=%d beyond=%d dist=%llx vW=%llx vP=%llx req=%d spd=%llx\n", (long long)SIMSTEP, link->getLaneBefore()->getID().c_str(), (int)ls, (int)yellow, (int)canBrake, (int)ignoreRedLink, (int)beyondStopLine, dist, vW, vP, (int)dpi.mySetRequest, sp); }
@@ -78,5 +84,5 @@ run /tmp/target/debug/sumo ours
 run "$CPP" cpp
 grep RX01 $O/cpp.trace > $O/cpp.rx; grep RX01 $O/ours.trace > $O/ours.rx
 echo "first diff line: $(diff $O/cpp.rx $O/ours.rx | head -1)"
-echo "--- cpp t=185 all"; grep 'RX01 [a-z]* t=185000' $O/cpp.rx | head -20
-echo "--- ours t=185 all"; grep 'RX01 [a-z]* t=185000' $O/ours.rx | head -20
+echo "--- cpp t=185 all"; grep 'RX01 [A-Za-z0-9]* t=185000' $O/cpp.rx | head -40
+echo "--- ours t=185 all"; grep 'RX01 [A-Za-z0-9]* t=185000' $O/ours.rx | head -40
