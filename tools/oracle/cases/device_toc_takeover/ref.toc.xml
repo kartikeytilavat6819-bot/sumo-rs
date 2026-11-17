@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:20:49.944258-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="ref.fcd.xml"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <toc_device>
+        <device.toc.probability value="1"/>
+        <device.toc.manualType value="manual"/>
+        <device.toc.automatedType value="automated"/>
+        <device.toc.file value="ref.toc.xml"/>
+    </toc_device>
+
+</sumoConfiguration>
+-->
+
+<ToCDeviceLog>
+    <DYNTOR id="toc_dyn" t="5.00" lane="e0_1" lanePos="85.10" x="85.10" y="148.40"/>
+    <MRM id="toc_dyn" t="7.00" lane="e0_1" lanePos="105.10" x="105.10" y="148.40"/>
+    <ToCdown id="toc_dyn" t="7.00" lane="e0_1" lanePos="105.10" x="105.10" y="148.40"/>
+    <DYNTOR id="toc_mrm" t="9.00" lane="e0_1" lanePos="98.93" x="98.93" y="148.40"/>
+    <ToCdown id="toc_mrm" t="10.00" lane="e0_1" lanePos="98.93" x="98.93" y="148.40"/>
+</ToCDeviceLog>

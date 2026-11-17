@@ -258,7 +258,7 @@ impl MSDevice {
 
     /// C++: `std::string MSDevice::getParameter(const std::string &) const` [virtual, run as the most derived override]
     /// (dispatch by deviceName, the exact-class key, as in get_device_by_name)
-    pub fn get_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str) -> String {
+    pub fn get_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str) -> Result<String, ProcessError> {
         match dev.base2.device_name().as_str() {
             "battery" => dev.cast::<MSDevice_Battery>().get_parameter(key),
             "bluelight" => dev.cast::<MSDevice_Bluelight>().get_parameter(key),
@@ -279,7 +279,7 @@ impl MSDevice {
 
     /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual, run as the most derived override]
     /// (dispatch by deviceName, the exact-class key, as in get_device_by_name)
-    pub fn set_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str, value: &str) {
+    pub fn set_parameter_of(dev: Ptr<MSVehicleDevice>, key: &str, value: &str) -> Result<(), ProcessError> {
         match dev.base2.device_name().as_str() {
             "battery" => dev.cast::<MSDevice_Battery>().m().set_parameter(key, value),
             "bluelight" => dev.cast::<MSDevice_Bluelight>().m().set_parameter(key, value),
@@ -386,10 +386,9 @@ impl MSDevice {
     // virtual std::string getParameter(const std::string& key) const {
     //         throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     //     }
-    // shortcut: C++ throws InvalidArgument; the port panics with the same text because the overrides return String, upgrade when device getParameter returns Result
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice::setParameter(const std::string &, const std::string &)` [virtual]
@@ -398,10 +397,9 @@ impl MSDevice {
     //         UNUSED_PARAMETER(value);
     //         throw InvalidArgument("Setting parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     //     }
-    // shortcut: C++ throws InvalidArgument; the port panics with the same text because the overrides return (), upgrade when device setParameter returns Result
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
+        Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice::insertDefaultAssignmentOptions(const std::string &, const std::string &, OptionsCont &, const bool)` [static, protected]

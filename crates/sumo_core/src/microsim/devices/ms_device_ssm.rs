@@ -1097,21 +1097,21 @@ impl MSDevice_SSM {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'.");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == "minTTC" && !self.myComputeTTC {
-            panic!("{}", InvalidArgument("Measure TTC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure TTC is not tracked by ssm device".to_string()));
         }
         if key == "maxDRAC" && !self.myComputeDRAC {
-            panic!("{}", InvalidArgument("Measure DRAC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure DRAC is not tracked by ssm device".to_string()));
         }
         if key == "maxMDRAC" && !self.myComputeMDRAC {
-            panic!("{}", InvalidArgument("Measure MDRAC is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure MDRAC is not tracked by ssm device".to_string()));
         }
         if key == "minPET" && !self.myComputePET {
-            panic!("{}", InvalidArgument("Measure PET is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure PET is not tracked by ssm device".to_string()));
         }
         if key == "minPPET" && !self.myComputePPET {
-            panic!("{}", InvalidArgument("Measure PPET is not tracked by ssm device".to_string()).0);
+            return Err(ProcessError::InvalidArgument("Measure PPET is not tracked by ssm device".to_string()));
         }
         if key == "minTTC" || key == "maxDRAC" || key == "maxMDRAC" || key == "minPET" || key == "minPPET" {
             let mut value = INVALID_DOUBLE;
@@ -1140,12 +1140,12 @@ impl MSDevice_SSM {
                 value = minPPET;
             }
             if value.abs() == INVALID_DOUBLE {
-                return String::new();
+                return Ok(String::new());
             } else {
-                return utils::common::to_string::to_string(&value);
+                return Ok(utils::common::to_string::to_string(&value));
             }
         }
-        panic!("{}", InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'.", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_SSM::setParameter(const std::string &, const std::string &)` [virtual]
@@ -1165,16 +1165,17 @@ impl MSDevice_SSM {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match utils::common::string_utils::to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("{}", InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'.", key, self.device_name())).0),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'.", key, self.device_name()))),
         };
         if false || key == "foo" {
             let _ = doubleValue;
         } else {
-            panic!("{}", InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'.", key, self.device_name())).0);
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'.", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_SSM::update()` [private]

@@ -606,19 +606,17 @@ impl MSDevice_Routing {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if let Some(edgeID) = key.strip_prefix("edge:") {
             let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
-                // C++ throws InvalidArgument
-                panic!("{}", format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.device_name()));
+                return Err(ProcessError::InvalidArgument(format!("Edge '{}' is invalid for parameter retrieval of '{}'", edgeID, self.device_name())));
             }
-            return to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.));
+            return Ok(to_string(&MSRoutingEngine::get_effort(edge, self.myHolder, 0.)));
         } else if key == "period" {
-            return time2string(self.myPeriod);
+            return Ok(time2string(self.myPeriod));
         }
-        // C++ throws InvalidArgument
-        panic!("{}", format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+        Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
     }
 
     /// C++: `void MSDevice_Routing::setParameter(const std::string &, const std::string &)` [virtual]
@@ -647,16 +645,15 @@ impl MSDevice_Routing {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue: f64 = match value.parse::<f64>() {
             Ok(v) => v,
-            // C++ throws InvalidArgument on NumberFormatException
-            Err(_) => panic!("{}", format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name())),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if let Some(edgeID) = key.strip_prefix("edge:") {
             let edge = MSEdge::dictionary_2(edgeID);
             if edge.is_null() {
-                panic!("{}", format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.device_name()));
+                return Err(ProcessError::InvalidArgument(format!("Edge '{}' is invalid for parameter setting of '{}'", edgeID, self.device_name())));
             }
             MSRoutingEngine::set_edge_travel_time(edge, doubleValue);
         } else if key == "period" {
@@ -665,8 +662,9 @@ impl MSDevice_Routing {
             let now = MSNet::get_instance().m().get_current_time_step();
             self.rebuild_reroute_command(now + self.myPeriod);
         } else {
-            panic!("{}", format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name()));
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Routing::setActive(bool)`

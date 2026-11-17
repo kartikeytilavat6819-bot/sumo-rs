@@ -603,8 +603,7 @@ impl MSStageTrip {
             for (idx, it) in minResult.iter().enumerate() {
                 if !it.edges.is_empty() {
                     let edges: ConstMSEdgeVector = it.edges.iter().map(|e| e.cast::<MSEdge>()).collect();
-                    // shortcut: MSNet::getStoppingPlace(id) without a category is only ported for the bus-stop category
-                    let bs = MSNet::get_instance().m().get_stopping_place(&it.destStop, SUMO_TAG_BUS_STOP);
+                    let bs = MSNet::get_instance().m().get_stopping_place_2(&it.destStop);
                     let first = edges[0];
                     let last = edges[edges.len() - 1];
                     let mut localArrivalPos = if !bs.is_null() { bs.get_access_pos(last, last.get_lanes()[0].get_rng()) } else { it.arrivalPos };
@@ -675,7 +674,8 @@ impl MSStageTrip {
                         let mut edgesMut = edges.clone();
                         minVehicle.m().replace_route_edges(&mut edgesMut, -1., 0., &format!("person:{}", transportable.get_id()), true, false, true, Ptr::null());
                         minVehicle.m().set_arrival_pos(localArrivalPos);
-                        // shortcut: SUMOVehicle has no mutable parameter accessor yet, so the vehicle's parameter arrivalPos is not updated
+                        // C++ const_cast<SUMOVehicleParameter&>(minVehicle->getParameter()).arrivalPos = localArrivalPos;
+                        unsafe { (*(minVehicle.m().get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter)).arrivalPos = localArrivalPos; }
                         // defer addVehicle to main thread (called from setArrived after parallel routing completes)
                         self.myVehicleToAdd = minVehicle;
                         carUsed = true;

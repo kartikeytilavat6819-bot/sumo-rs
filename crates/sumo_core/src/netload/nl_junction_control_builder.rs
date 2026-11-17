@@ -789,7 +789,7 @@ impl NLJunctionControlBuilder {
             let offLogic = leak_box(MSOffTrafficLightLogic::new(self.get_tl_logic_control_to_use(), &self.myActiveKey));
             offLogic.m().base.schedule_switch_command(self.get_tl_logic_control_to_use(), 0);
             let off = offLogic.cast::<MSTrafficLightLogic>();
-            if !self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, off, false) {
+            if !self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, off, true) {
                 throw_invalid_argument(format!("Another logic with id '{}' and programID '{}' exists.", self.myActiveKey, self.myActiveProgram));
             }
             return;
@@ -983,7 +983,7 @@ impl NLJunctionControlBuilder {
         }
         self.myActivePhases.clear();
         if !tlLogic.is_null() {
-            if self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, tlLogic, false) {
+            if self.get_tl_logic_control_to_use().add(&self.myActiveKey, &self.myActiveProgram, tlLogic, true) {
                 if self.myNetIsLoaded {
                     self.myAdditionalLogics.push(tlLogic);
                 } else if matches!(self.myLogicType, TrafficLightType::RAIL_SIGNAL) {

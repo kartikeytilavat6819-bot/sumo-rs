@@ -57,7 +57,7 @@ impl MELoop_LeaderEvent {
     pub fn new(v: Ptr<MEVehicle>) -> Self {
         MELoop_LeaderEvent {
             time: v.get_event_time(),
-            eventIndex: v.get_event_index(),
+            eventIndex: LEADER_EVENT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed),
             nid: v.get_numerical_id(),
             veh: v,
         }
@@ -184,9 +184,6 @@ impl MELoop {
     // }
     #[allow(unused_variables)]
     pub fn add_leader_car(&mut self, veh: Ptr<MEVehicle>, link: Ptr<MSLink>, fromState: bool) {
-        if !fromState {
-            veh.m().set_event_index(LEADER_EVENT_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed));
-        }
         self.myLeaderCars.push(MELoop_LeaderEvent::new(veh));
         veh.m().set_approaching(link);
     }

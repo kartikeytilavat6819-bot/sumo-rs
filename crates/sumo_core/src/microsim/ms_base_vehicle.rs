@@ -4,6 +4,29 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 use crate::microsim::ms_globals::MSGlobals;
 
+/// Traffic-object vtable of an MSBaseVehicle under construction (C++ dynamic type MSBaseVehicle, before MSVehicle's table is installed):
+/// getMaxSpeed is the MSBaseVehicle implementation, the other entries are the SUMOTrafficObject defaults
+fn base_vehicle_ctor_base(o: &SUMOTrafficObject) -> &MSBaseVehicle {
+    unsafe { &*(o as *const SUMOTrafficObject as *const MSBaseVehicle) }
+}
+fn base_vehicle_ctor_get_max_speed(o: &SUMOTrafficObject) -> f64 {
+    base_vehicle_ctor_base(o).get_max_speed()
+}
+fn base_vehicle_ctor_get_v_class(o: &SUMOTrafficObject) -> SUMOVehicleClass {
+    base_vehicle_ctor_base(o).get_v_class()
+}
+fn base_vehicle_ctor_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    base_vehicle_ctor_base(o).get_chosen_speed_factor()
+}
+thread_local! {
+    static BASE_VEHICLE_CTOR_VT: &'static SUMOTrafficObjectVt = Box::leak(Box::new(SUMOTrafficObjectVt {
+        get_max_speed: base_vehicle_ctor_get_max_speed,
+        get_v_class: base_vehicle_ctor_get_v_class,
+        get_chosen_speed_factor: base_vehicle_ctor_get_chosen_speed_factor,
+        ..crate::utils::vehicle::sumo_traffic_object::DEFAULT_SUMO_TRAFFIC_OBJECT_VT
+    }));
+}
+
 /// C++ `WrappingCommand<MSBaseVehicle>` wrapping `MSBaseVehicle::activateRemindersOnReroute`
 pub struct MSBaseVehicle_ActivateRemindersCommand {
     pub vehicle: Ptr<MSBaseVehicle>,
@@ -320,6 +343,7 @@ impl MSBaseVehicle {
         if (this.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) == 0 {
             this.set_depart_and_arrival_edge();
         }
+        this.base.base.vt = BASE_VEHICLE_CTOR_VT.with(|v| *v);
         this.calculate_arrival_params(true);
         this.init_transient_model_params();
         this
@@ -502,7 +526,7 @@ impl MSBaseVehicle {
             match self.try_get_device_parameter(&tok[1], &key[tok[0].len() + tok[1].len() + 2..]) {
                 Ok(v) => return v,
                 Err(e) => {
-                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e);
+                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e.to_string());
                     return String::new();
                 }
             }
@@ -588,13 +612,13 @@ impl MSBaseVehicle {
     }
 
     /// Fallible form of `getDeviceParameter` (C++ throws InvalidArgument); the Err carries `what()`
-    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, String> {
+    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
         for dev in self.myDevices.iter() {
             if dev.base2.device_name() == deviceName {
-                return Ok(MSDevice::get_parameter_of(*dev, key));
+                return MSDevice::get_parameter_of(*dev, key);
             }
         }
-        Err(utils::tlf!("no device of type '%' exists", deviceName))
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `bool MSBaseVehicle::hasDevice(const std::string &) const` [const]
@@ -671,8 +695,8 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> String {
-        self.try_get_device_parameter(deviceName, key).unwrap_or_else(|e| panic!("{}", e))
+    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
+        self.try_get_device_parameter(deviceName, key)
     }
 
     /// C++: `void MSBaseVehicle::setDeviceParameter(const std::string &, const std::string &, const std::string &)`
@@ -688,14 +712,13 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) {
+    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) -> Result<(), ProcessError> {
         for dev in self.myDevices.iter_mut() {
             if dev.base2.device_name() == deviceName {
-                MSDevice::set_parameter_of(*dev, key, value);
-                return;
+                return MSDevice::set_parameter_of(*dev, key, value);
             }
         }
-        panic!("{}", utils::tlf!("no device of type '%' exists", deviceName));
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `void MSBaseVehicle::setJunctionModelParameter(const std::string &, const std::string &)`
@@ -1518,7 +1541,8 @@ impl MSBaseVehicle {
                         }
                     }
                     sourcePos = stops[idx].pos;
-                    startTime += self.myStops[stopIt].get_min_duration(startTime);
+                    // shortcut: the C++ int64 add wraps in the release build; a SUMOTIME_MAX duration (setStop default) overflows here, so wrap the same way, upgrade if C++ is ever checked for overflow
+                    startTime = startTime.wrapping_add(self.myStops[stopIt].get_min_duration(startTime));
                 }
                 edges.pop();
                 edges.extend(into.iter().copied());
@@ -3793,7 +3817,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the too-short-stop warning needs getParkingLength per stop type and MSNet::warnOnce, not ported yet, upgrade with those
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3830,18 +3853,23 @@ impl MSBaseVehicle {
         }
         let mut stopType = "stop".to_string();
         let mut stopID = String::new();
+        let mut parkingLength = stop.pars.endPos - stop.pars.startPos;
         if !stop.busstop.is_null() {
             stopType = if stop.busstop.get_element() == SUMO_TAG_TRAIN_STOP { "trainStop".to_string() } else { "busStop".to_string() };
             stopID = stop.busstop.get_id().to_string();
+            parkingLength = stop.busstop.get_parking_length();
         } else if !stop.containerstop.is_null() {
             stopType = "containerStop".to_string();
             stopID = stop.containerstop.get_id().to_string();
+            parkingLength = stop.containerstop.get_parking_length();
         } else if !stop.chargingStation.is_null() {
             stopType = "chargingStation".to_string();
             stopID = stop.chargingStation.get_id().to_string();
+            parkingLength = stop.chargingStation.get_parking_length();
         } else if !stop.overheadWireSegment.is_null() {
             stopType = "overheadWireSegment".to_string();
             stopID = stop.overheadWireSegment.get_id().to_string();
+            parkingLength = stop.overheadWireSegment.get_parking_length();
         } else if !stop.parkingarea.is_null() {
             stopType = "parkingArea".to_string();
             stopID = stop.parkingarea.get_id().to_string();
@@ -3851,6 +3879,14 @@ impl MSBaseVehicle {
         if stop.pars.startPos < 0.0 || stop.pars.endPos > stop.lane.get_length() {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
+        }
+        if stopType != "stop" && stopType != "parkingArea" && self.myType.get_length() / 2. > parkingLength
+            // do not warn for stops that fill the whole lane
+            && parkingLength < stop.lane.get_length()
+            // do not warn twice for the same stop
+            && MSNet::get_instance().m().warn_once(&format!("{}:{}", stopType, stopID))
+        {
+            *errorMsg = format!("{} on lane '{}' is too short for vehicle '{}'.", errorMsgStart, stop.lane.get_id(), self.myParameter.id);
         }
         if stopType == "parkingArea" && !stop.parkingarea.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
             // forbid access in case the parking requests other badges
@@ -4144,8 +4180,25 @@ impl MSBaseVehicle {
                     }
                     ok = false;
                 }
-                Some(it) => {
-                    start = it;
+                Some(_) => {
+                    // C++ also validates the stop's own route index (stop.edge) against the route
+                    let it2 = stop.edge;
+                    if it2 >= edges.len() {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid route index for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), self.get_id(), utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else if it2 < start {
+                        if !silent {
+                            utils::common::msg_handler::write_error(&format!("Stop {} on edge '{}' used invalid (relative) route index {} expected after {} for vehicle '{}' at time={}.",
+                                i, stop.lane.get_edge().get_id(), it2 as i32 - self.myCurrEdge as i32, start as i32 - self.myCurrEdge as i32, self.get_id(),
+                                utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                        }
+                        ok = false;
+                    } else {
+                        start = it2;
+                    }
                 }
             }
             i += 1;
@@ -5040,8 +5093,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn update_best_lanes(&mut self, forceRebuild: bool, startLane: Ptr<MSLane>) {
-        // no-op in the base class; MSVehicle overrides it
-        let _ = (forceRebuild, startLane);
+        // virtual dispatch: MSVehicle overrides it; the base body is empty
+        if let Some(mut v) = self.as_micro_vehicle() {
+            v.m().update_best_lanes(forceRebuild, startLane);
+        }
     }
 
     /// C++: `int MSBaseVehicle::getRNGIndex() const` [const, virtual]
