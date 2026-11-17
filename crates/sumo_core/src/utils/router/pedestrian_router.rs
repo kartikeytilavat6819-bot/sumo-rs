@@ -61,7 +61,8 @@ where
     pub fn new() -> Self where E: RouterEdge<V, Node = N>, V: RouterVehicle {
         let net: Ptr<IntermodalNetwork<E, L, N, V>> = Ptr::from_raw(Box::into_raw(Box::new(IntermodalNetwork::<E, L, N, V>::new(&E::all_edges(), true, 0))));
         let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().clone();
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false).with_compute();
+        let tt: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::options::options_cont::get_float("weights.random-factor") > 1. { IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized } else { IntermodalEdge::<E, L, N, V>::get_travel_time_static };
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(tt), None, false, Ptr::null(), true, false).with_compute();
         Self {
             base: SUMOAbstractRouter::new("PedestrianRouter", true, None, None, false, false),
             myAmClone: false,
@@ -81,9 +82,9 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn new_2(net: Ptr<IntermodalNetwork<E, L, N, V>>) -> Self {
-        // shortcut: gWeightsRandomFactor > 1 selects getTravelTimeStaticRandomized in C++; only the plain getTravelTimeStatic is wired here, upgrade when the random factor option is read here
         let edges: Vec<Ptr<IntermodalEdge<E, L, N, V>>> = net.m().get_all_edges().iter().map(|e| (*e).cast()).collect();
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(IntermodalEdge::<E, L, N, V>::get_travel_time_static), None, false, Ptr::null(), true, false).with_compute();
+        let tt: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::options::options_cont::get_float("weights.random-factor") > 1. { IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized } else { IntermodalEdge::<E, L, N, V>::get_travel_time_static };
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(&edges, true, Some(tt), None, false, Ptr::null(), true, false).with_compute();
         Self {
             base: SUMOAbstractRouter::new("PedestrianRouterClone", true, None, None, false, false),
             myAmClone: true,

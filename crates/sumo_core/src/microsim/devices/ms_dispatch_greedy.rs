@@ -446,7 +446,8 @@ impl MSDispatch_GreedyClosest {
                         continue;
                     }
                     let travelTime = MSDispatch::compute_pickup_time(now, taxi, &*res, router.m());
-                    let taxiWait = res.pickupTime - (now + travelTime);
+                    // determinism: unreachable taxis give travelTime == SUMOTime_MAX; C++ wraps here and the value is unused, so wrap too
+                    let taxiWait = res.pickupTime.wrapping_sub(now.wrapping_add(travelTime));
                     if travelTime < closestTime {
                         if taxiWait < self.myMaximumWaitingTime {
                             closestTime = travelTime;

@@ -98,3 +98,34 @@ Legit (checked, no `&self` write to a field that a `&self` method reads):
 Not yet audited: `let me/this = Ptr::new(self)` aliases in `ms_lane.rs` (8227, 8546, 8694, 8915), `ms_vehicle.rs` (8644, 13388, 14539, 14772, 14896, 15283, 15424, 15498), `ms_drive_way.rs` (1097, 4567), `ms_rail_signal.rs` (977-1199), `dfrouter/rodf_net.rs` (311, 2137), `mesosim/me_segment.rs` (747), `ms_base_vehicle.rs`, `ms_mean_data.rs`, `ms_link.rs`. Only the `.m().field =` / `.push` / `.insert` patterns were grepped for these, and none were hit except the ones fixed above.
 
 Verification (round 2): release run (`PROFILE=release bash tools/oracle/run_all.sh`, `--release` build in `$CARGO_TARGET_DIR-rel`) gave the same verdict on every row as the debug gate for commit `c8cad490` (PASS=214 FAIL=4 SKIP=14; the same four known rows: bluelight, calibrator_multi, peds_crossing, routeprobe). Later commits are verified by the final gate.
+
+## Round 3 (ub03): the round-2 leftovers, and the "not yet audited" aliases
+
+Closes the round-2 deferred row (`SUMOVehicleParameter` writes) and the "Not yet audited" list above. Every `Ptr::new(self)` / `from_mut` / `as *mut` alias in `ms_lane`, `ms_vehicle`, `ms_drive_way`, `ms_rail_signal`, `rodf_net`, `me_segment`, `ms_edge`, `ms_link`, `nb_node`, `nb_loaded_sumotl_def`, `ms_net`, `ms_parking_area`, `ms_charging_station`, `ms_vehicle_type`, `ms_base_vehicle` was read for writes (`.m().field =`, `alias.field =`, `alias.m().mut_method()`, `DerefMut` calls).
+
+| Site | C++ | Rust fix | Verdict |
+|---|---|---|---|
+| `libsumo/person.rs` `set_parameter`, `set_color`; `microsim/devices/ms_device_taxi.rs` `build_vehicle_devices`; `microsim/ms_vehicle.rs` remote-control route update (stops.clear) | `mutable line, stops, via, color, parametersSet` on `SUMOVehicleParameter` (const_cast callers) | owner-based `&mut`: `MSBaseVehicle` / `MSTransportable::get_parameter_mutable()` (returns `myParameter.m()`), `SUMOVehicle` vtable `get_parameter_mutable`, MSVehicle and MEVehicle entries | fixed (was deferred) |
+| `microsim/ms_vehicle.rs` `plan_move_internal` (`&self`), `me.m().myStops[..].waypointWithStop = true` | `const_cast<MSStop&>(stop).waypointWithStop` in a `const` method | `MSStop::waypointWithStop: Cell<bool>`; reader in `ms_stop_out.rs` uses `.get()` | fixed |
+| `microsim/ms_vehicle.rs` 4563, 4660 (dead `veh` casts), 4867 | none (dead / read-only) | casts removed (`Ptr::new(self)`) | fixed |
+| `microsim/traffic_lights/ms_rail_signal.rs` `get_blocking_vehicle_i_ds`, `get_rival_vehicle_i_ds`, `get_priority_vehicle_i_ds`, `get_constraint_info_2`, `get_blocking_drive_way_i_ds`, `get_requested_drive_way_2` | `const` methods doing `const_cast<MSRailSignal*>(this)` to call non-const getters | `&mut self` + `Ptr::from_mut(self)`; no callers in the crate | fixed |
+| `dfrouter/rodf_net.rs` `compute_types`, `build_routes`, `build_detector_edge_dependencies` | `mutable myDetectorsOnEdges`, `myDetectorEdges` (rebuilt by const methods) | `&mut self`; `dfrouter_main.rs` calls through `optNet.m()` | fixed (signature change, listed) |
+| `mesosim/me_segment.rs` `get_mean_speed(&self)` | `mutable myMeanSpeed`, `myLastMeanSpeedUpdate` | `Cell<f64>`, `Cell<SUMOTime>` | fixed |
+| `router/ro_route.rs` `myCosts`, `myProbability`; written via `Rc<RORoute>` in `ro_route_def.rs` (5 sites: `Ptr::new(&*alt).get_mut()`) | plain members written through `RORoute*` in `RORouteDef` | `Cell<f64>` for both; `set_costs` / `set_probability` take `&self`; `ro_route_def` calls them through the `Rc` | fixed |
+| `microsim/output/ms_induct_loop.rs` `myNextMesoLeaveTimes`, `myLastMesoLeaveTimes` (written in `get_last_detection_time(&self)`) | `mutable TimeQueue` | `RefCell<TimeQueue>`; `get_last_detection_time` keeps `&self` (its callers are `&self` and in `ms_actuated`) | fixed |
+| `netbuild/nb_loaded_sumotl_def.rs` `init_needs_cont_relation` (`me.m().base.init_*`) | calls `const` base methods | calls `self.base.*` directly (no `&mut` through an alias) | fixed (cleanup) |
+| `microsim/ms_base_vehicle.rs` `get_prefixed_parameter` (`microVeh.m().get_lane_change_model()`) | `getLaneChangeModel() const` overload | `get_lane_change_model_2()` (`&self`) | fixed |
+| `microsim/devices/ms_device_fcd_replay.rs` `found = Ptr::from_raw(t as *const _ as *mut _)` | none (pointer copy) | `Ptr::new(t)` | fixed |
+| `microsim/ms_lane.rs` (all `Ptr::new(self)` aliases), `ms_drive_way.rs`, `ms_link.rs`, `ms_edge.rs`, `nb_node.rs` (`me`/`self_ptr`), `ms_parking_area.rs` (`me = Ptr::new(forVehicle)`) | | audited: aliases are only passed as identity or read; the `let mut` aliases are only reassigned | legit |
+| `microsim/ms_net.rs` `get_router_tt` / `get_intermodal_router` / `reset_intermodal_router` | `mutable std::map` | already `RefCell` (earlier batch); `get_router_tt` returns `&mut` to a heap router owned through a `Ptr` (not inline in `MSNet`) | legit |
+| `microsim/ms_vehicle_type.rs` `duplicate_type` (`vtype.m().myOriginalType = Ptr::new(self)`) | none | writes the new object, not `self` | legit |
+| `microsim/output/mse2_collector.rs`, `mse3_collector.rs`, `ms_induct_loop.rs`, `ms_instant_induct_loop.rs`, `trigger/ms_calibrator.rs` `*mut` helper casts | none | the helper only dispatches to `&self` `write_xml_detector_prolog` | legit (cast kept) |
+| `microsim/ms_base_vehicle.rs` `as_micro_vehicle` (`self as *mut MSVehicle`) | `dynamic_cast<MSVehicle*>` | callers only read | legit |
+
+Deferred (real UB, not fixed in this round):
+
+| Site | Why |
+|---|---|
+| `microsim/devices/ms_device_transportable.rs` 715-719 `notify_move_internal` (`Ptr::from_raw(veh as *const _ as *mut _)`, then `notify_move(vp.m(), ...)`) | C++ `const_cast<SUMOTrafficObject&>(veh)`. Fixing it needs `&mut SUMOTrafficObject` through `MSMoveReminder::notify_move_internal` and every device/detector override that forwards it (about 15 files). Those files belong to other batches. |
+
+Verification (round 3): `tools/kaggle/agent_run.sh` builds `--release` into `$CARGO_TARGET_DIR-rel`, runs `PROFILE=debug` and `PROFILE=release bash tools/oracle/run_all.sh`, and diffs the verdict columns. Result on `f069bb8f`: debug and release both PASS=301 FAIL=6 SKIP=41, 0 differing verdict rows (the six known FAILs are the same in both: containers, rerouter_parking, taxi x2, tls_waut, busride). Depart 15/15, unit tests pass.

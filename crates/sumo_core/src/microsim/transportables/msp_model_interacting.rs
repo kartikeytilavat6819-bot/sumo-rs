@@ -391,6 +391,11 @@ pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTran
     get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myPerson.get_id(),
+    get_min_x: adapter_default_get_min_x,
+    get_max_x: adapter_default_get_max_x,
+    get_width: adapter_default_get_width,
+    get_o_type: adapter_default_get_o_type,
 };
 
 impl MSPModel_InteractingState {
@@ -582,7 +587,7 @@ impl MSPModel_InteractingState {
     //     }
     #[allow(unused_variables)]
     pub fn get_id(&self) -> &str {
-        self.myPerson.get_id()
+        (self.base.vt.get_id)(&self.base)
     }
 
     /// C++: `double MSPModel_InteractingState::getAngle(const MSStageMoving &, SUMOTime) const` [const, virtual]

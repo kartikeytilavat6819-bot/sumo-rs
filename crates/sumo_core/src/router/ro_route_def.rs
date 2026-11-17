@@ -823,7 +823,7 @@ impl RORouteDef {
                 // correctness of time-dependent traveltimes
                 costs += utils::common::time::steps2time(veh.get_jump_time());
             }
-            Ptr::new(&*current).get_mut().unwrap().set_costs(costs);
+            current.set_costs(costs);
             return replaced;
         }
         // add the route when it's new
@@ -852,12 +852,12 @@ impl RORouteDef {
             if self.myNewRoute.get() {
                 if Rc::ptr_eq(&alt, &current) {
                     // set initial probability and costs
-                    Ptr::new(&*alt).get_mut().unwrap().set_probability(1.0 / (self.myAlternatives.len() as f64));
-                    Ptr::new(&*alt).get_mut().unwrap().set_costs(newCosts);
+                    alt.set_probability(1.0 / (self.myAlternatives.len() as f64));
+                    alt.set_costs(newCosts);
                 } else {
                     // rescale probs for all others
                     let p = alt.get_probability() * scale;
-                    Ptr::new(&*alt).get_mut().unwrap().set_probability(p);
+                    alt.set_probability(p);
                 }
             }
             let isActive = Rc::ptr_eq(&alt, &self.myAlternatives[self.myLastUsed as usize]);
@@ -915,7 +915,7 @@ impl RORouteDef {
         // @note newSum may be larger than 1 for numerical reasons
         for alt in self.myAlternatives.iter() {
             let p = alt.get_probability() / newSum;
-            Ptr::new(&**alt).get_mut().unwrap().set_probability(p);
+            alt.set_probability(p);
         }
 
         // find the route to use
