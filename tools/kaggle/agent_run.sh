@@ -65,5 +65,6 @@ run() {
 run /tmp/target/debug/sumo ours
 run "$CPP" cpp
 grep RX01 $O/cpp.trace > $O/cpp.rx; grep RX01 $O/ours.trace > $O/ours.rx
-echo "first diff (cpp < > ours):"; diff $O/cpp.rx $O/ours.rx | head -12
-echo "--- cpp first lines"; head -8 $O/cpp.rx
+echo "first diff line: $(diff $O/cpp.rx $O/ours.rx | head -1)"
+echo "--- cpp t=185 all"; grep 'RX01 [a-z]* t=185000' $O/cpp.rx | head -20
+echo "--- ours t=185 all"; grep 'RX01 [a-z]* t=185000' $O/ours.rx | head -20
