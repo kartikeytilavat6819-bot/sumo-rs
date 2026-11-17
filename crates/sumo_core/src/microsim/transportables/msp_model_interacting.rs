@@ -373,6 +373,25 @@ impl std::ops::DerefMut for MSPModel_InteractingState {
     }
 }
 
+/// virtual overrides of MSPModel_InteractingState (the others keep the MSTransportableStateAdapter base implementation)
+pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
+    get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
+    get_position: adapter_default_get_position,
+    get_angle: adapter_default_get_angle,
+    get_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_waiting_time(),
+    get_total_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_total_waiting_time(),
+    get_speed: |a, _| Ptr::new(a).cast::<MSPModel_InteractingState>().get_speed(),
+    get_next_edge: adapter_default_get_next_edge,
+    move_to: adapter_default_move_to,
+    move_to_xy: adapter_default_move_to_xy,
+    is_jammed: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().is_jammed(),
+    is_finished: adapter_default_is_finished,
+    get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
+    get_path_length: adapter_default_get_path_length,
+    save_state: adapter_default_save_state,
+};
+
 impl MSPModel_InteractingState {
     /// C++: `void MSPModel_InteractingState::MSPModel_InteractingState(MSPerson *, MSStageMoving *, const MSLane *)`
     /// constructor
@@ -387,7 +406,7 @@ impl MSPModel_InteractingState {
     #[allow(unused_variables)]
     pub fn new(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, lane: Ptr<MSLane>) -> Self {
         Self {
-            base: MSTransportableStateAdapter {},
+            base: MSTransportableStateAdapter { vt: &MSPMODEL_INTERACTING_STATE_VT },
             myPerson: person,
             myStage: stage,
             myLane: lane,

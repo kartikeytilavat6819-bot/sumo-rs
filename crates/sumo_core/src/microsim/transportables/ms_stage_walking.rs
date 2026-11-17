@@ -7,6 +7,11 @@ use utils::common::std_defs::g_precision;
 use utils::options::options_cont::{get_bool, get_string};
 use crate::microsim::transportables::msp_model_striping::walking_sidewalk;
 
+/// C++ `std::istringstream >> value` for the saved state format
+fn next_token<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
+    state.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+}
+
 // C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
@@ -304,7 +309,16 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
-        panic!("MSStageWalking::saveState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model state (saveState); not ported yet");
+        out.push_str(&format!(" {} {} {}", self.myDeparted, self.myRouteStep, self.myLastEdgeEntryTime));
+        if !self.myExitTimes.is_null() {
+            out.push_str(&format!(" {}", self.myExitTimes.len()));
+            for t in self.myExitTimes.iter() {
+                out.push_str(&format!(" {}", t));
+            }
+        } else {
+            out.push_str(" -1");
+        }
+        self.myPState.m().save_state(out);
     }
 
     /// C++: `void MSStageWalking::loadState(MSTransportable *, std::istringstream &)` [virtual]
@@ -338,7 +352,30 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
-        panic!("MSStageWalking::loadState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model loadState; not ported yet");
+        self.myDeparted = next_token(state);
+        let stepIdx: i32 = next_token(state);
+        self.myLastEdgeEntryTime = next_token(state);
+        let exitTimesSize: i32 = next_token(state);
+        if exitTimesSize >= 0 {
+            let mut exits: Vec<SUMOTime> = Vec::new();
+            for _ in 0..exitTimesSize {
+                exits.push(next_token(state));
+            }
+            if get_bool("vehroute-output.exit-times") {
+                self.myExitTimes = Ptr::from_raw(Box::into_raw(Box::new(exits)));
+            } else {
+                self.myExitTimes = Ptr::null();
+            }
+        }
+        self.myRouteStep = stepIdx as usize;
+        self.myPState = MSNet::get_instance().m().get_person_control().get_movement_model().m().load_state(transportable, Ptr::from_mut(&mut self.base), state);
+        let lane = self.myPState.get_lane();
+        if !lane.is_null() && !lane.is_normal() {
+            self.myCurrentInternalEdge = Ptr::from_mut(lane.m().get_edge());
+            self.myCurrentInternalEdge.add_transportable(transportable);
+        } else {
+            self.myRoute[self.myRouteStep].add_transportable(transportable);
+        }
     }
 
     /// C++: `void MSStageWalking::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual]
