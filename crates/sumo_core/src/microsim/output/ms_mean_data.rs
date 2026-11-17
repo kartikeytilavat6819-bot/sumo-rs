@@ -154,6 +154,7 @@ static MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetector
     write_xml_detector_prolog: ms_mean_data_write_xml_detector_prolog,
     reset: ms_mean_data_reset,
     detector_update: ms_mean_data_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
 };
 
 impl MSMeanData {
