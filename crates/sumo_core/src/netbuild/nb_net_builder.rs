@@ -8,7 +8,7 @@ fn jdump(st: &str, ec: &NBEdgeCont) {
         return;
     }
     for e in ec.myEdges.values().copied() {
-        if !e.m().get_from_node().m().get_id().contains("#29more") && !e.m().get_to_node().m().get_id().contains("#29more") {
+        if !e.m().get_from_node().m().get_id().contains("#29more") && !e.m().get_to_node().m().get_id().contains("#29more") && !e.m().get_id().contains("27202251") {
             continue;
         }
         let mut s = format!("JTRACE st {} e {} {}>{}", st, e.m().get_id(), e.m().get_from_node().m().get_id(), e.m().get_to_node().m().get_id());
@@ -1035,6 +1035,7 @@ impl NBNetBuilder {
             }
         }
         self.myNodeCont.guess_t_ls(oc, &mut self.myTLLCont);
+        jdump("guess", &self.myEdgeCont);
 
         // guess ramps (after guessing tls because ramps should not be build at traffic lights)
         let modifyRamps = mayAddOrRemove
@@ -1174,6 +1175,7 @@ impl NBNetBuilder {
         //
         NBEdgePriorityComputer::compute_edge_priorities(&mut self.myNodeCont);
         //
+        jdump("pre-e2e", &self.myEdgeCont);
         self.myEdgeCont.compute_edge2_edges(oc.get_bool("no-left-connections").unwrap());
         jdump("e2e", &self.myEdgeCont);
         //
