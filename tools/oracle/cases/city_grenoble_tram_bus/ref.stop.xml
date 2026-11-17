@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T03:16:54.721305-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/city_grenoble_tram_bus/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/city_grenoble_tram_bus/routes.rou"/>
+        <additional-files value="tools/oracle/cases/city_grenoble_tram_bus/ptstops.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.personinfo.xml"/>
+        <stop-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stop.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cy08/tools/oracle/cases/city_grenoble_tram_bus/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<stops xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/stopinfo_file.xsd">
+    <stopinfo id="L1f.0" type="bus" lane="519254533#1_0" pos="20.62" parking="0" started="64.00" ended="79.00" busStop="4788103942" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.0" type="bus" lane="23016001#1_0" pos="24.72" parking="0" started="117.00" ended="132.00" busStop="9905349792" initialPersons="1" loadedPersons="0" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.0" type="bus" lane="-519254533#1_0" pos="25.95" parking="0" started="173.00" ended="188.00" busStop="-4788103942" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="519254533#1_0" pos="20.62" parking="0" started="185.00" ended="200.00" busStop="4788103942" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="23016001#1_0" pos="24.71" parking="0" started="231.00" ended="246.00" busStop="9905349792" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.0" type="bus" lane="-30986828#5_0" pos="40.47" parking="0" started="250.00" ended="265.00" busStop="-1829038636" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="-519254533#1_0" pos="25.96" parking="0" started="285.00" ended="300.00" busStop="-4788103942" initialPersons="1" loadedPersons="1" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.2" type="bus" lane="519254533#1_0" pos="20.62" parking="0" started="305.00" ended="320.00" busStop="4788103942" initialPersons="0" loadedPersons="1" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L2f.2" type="bus" lane="-30986828#5_0" pos="40.47" parking="0" started="308.00" ended="323.00" busStop="-1829038636" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.2" type="bus" lane="23016001#1_0" pos="24.72" parking="0" started="350.00" ended="365.00" busStop="9905349792" initialPersons="1" loadedPersons="0" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.1" type="bus" lane="-30986828#5_0" pos="40.46" parking="0" started="369.00" ended="384.00" busStop="-1829038636" initialPersons="1" loadedPersons="0" unloadedPersons="1" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L2f.2" type="bus" lane="23016001#1_0" pos="24.68" parking="0" started="373.00" ended="388.00" busStop="9905349792" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="11.00"/>
+    <stopinfo id="L1f.2" type="bus" lane="-519254533#1_0" pos="25.96" parking="0" started="404.00" ended="419.00" busStop="-4788103942" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L2f.2" type="bus" lane="519254533#1_0" pos="20.61" parking="0" started="417.00" ended="432.00" busStop="4788103942" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L2f.2" type="bus" lane="33100107_0" pos="22.31" parking="0" started="476.00" ended="491.00" busStop="1831139761" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+    <stopinfo id="L1f.2" type="bus" lane="-30986828#5_0" pos="40.46" parking="0" started="489.00" ended="504.00" busStop="-1829038636" initialPersons="0" loadedPersons="0" unloadedPersons="0" initialContainers="0" loadedContainers="0" unloadedContainers="0" blockedDuration="0.00"/>
+</stops>

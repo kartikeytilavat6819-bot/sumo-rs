@@ -1,0 +1,74 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="car" length="5.00" maxSpeed="13.89"/>
+    <route id="rL1" edges="519254533#1 519254533#2 519254533#3 -519254533#3 -519254533#2 -519254533#1 -519254533#0 -30613646#2 -30613646#1 -30613646#0 23016001#0 23016001#1 -23016001#1 -23016001#0 30613646#0 30613646#1 30613646#2 519254533#0 519254533#1 519254533#2 519254533#3 -519254533#3 -519254533#2 -519254533#1 -519254533#0 519254533#0 519254533#1 519254533#2 519254533#3 1111757996#0 1111757996#1 38262929 1111597731#0 1111597731#1 1111597731#2 30986828#0 30986828#1 30986828#2 30986828#3 30986828#4 30986828#5 30986828#6 -30986828#6 -30986828#5"/>
+    <vehicle id="L1f.0" type="bus" route="rL1" line="L1" depart="60.00" departSpeed="max">
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="-4788103942" duration="15.00"/>
+        <stop busStop="-1829038636" duration="15.00"/>
+    </vehicle>
+    <vehicle id="L1f.1" type="bus" route="rL1" line="L1" depart="180.00" departSpeed="max">
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="-4788103942" duration="15.00"/>
+        <stop busStop="-1829038636" duration="15.00"/>
+    </vehicle>
+    <vehicle id="L1f.2" type="bus" route="rL1" line="L1" depart="300.00" departSpeed="max">
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="-4788103942" duration="15.00"/>
+        <stop busStop="-1829038636" duration="15.00"/>
+    </vehicle>
+    <person id="pwL10" depart="30.00">
+        <walk from="480036557#2" busStop="4788103942"/>
+        <ride busStop="9905349792" lines="L1"/>
+    </person>
+    <person id="pwL11" depart="120.00">
+        <walk from="480036554" busStop="9905349792"/>
+        <ride busStop="-4788103942" lines="L1"/>
+    </person>
+    <person id="pwL12" depart="210.00">
+        <walk from="480036557#2" busStop="-4788103942"/>
+        <ride busStop="-1829038636" lines="L1"/>
+    </person>
+    <person id="pwL13" depart="300.00">
+        <walk from="480036557#2" busStop="4788103942"/>
+        <ride busStop="9905349792" lines="L1"/>
+    </person>
+    <route id="rL2" edges="-30986828#5 -30986828#4 -30986828#3 -30986828#2 -30986828#1 -30986828#0 -1111597731#2 -1111597731#1 -1111597731#0 -38262929 -1111757996#1 -1111757996#0 -519254533#3 -519254533#2 -519254533#1 -519254533#0 -30613646#2 -30613646#1 -30613646#0 23016001#0 23016001#1 -23016001#1 -23016001#0 30613646#0 30613646#1 30613646#2 519254533#0 519254533#1 519254533#2 519254533#3 1111757996#0 1111757996#1 38262929 1111597731#0 1111597731#1 1111597731#2 30986828#0 30986828#1 30986828#2 30986828#3 30986828#4 30986828#5 30986828#6 220256239#0 220256239#1 220256239#2 220256239#3 220256239#4 33100107"/>
+    <vehicle id="L2f.0" type="bus" route="rL2" line="L2" depart="60.00" departSpeed="max">
+        <stop busStop="-1829038636" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="1831139761" duration="15.00"/>
+    </vehicle>
+    <vehicle id="L2f.1" type="bus" route="rL2" line="L2" depart="180.00" departSpeed="max">
+        <stop busStop="-1829038636" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="1831139761" duration="15.00"/>
+    </vehicle>
+    <vehicle id="L2f.2" type="bus" route="rL2" line="L2" depart="300.00" departSpeed="max">
+        <stop busStop="-1829038636" duration="15.00"/>
+        <stop busStop="9905349792" duration="15.00"/>
+        <stop busStop="4788103942" duration="15.00"/>
+        <stop busStop="1831139761" duration="15.00"/>
+    </vehicle>
+    <person id="pwL20" depart="30.00">
+        <walk from="482866162#2" busStop="-1829038636"/>
+        <ride busStop="9905349792" lines="L2"/>
+    </person>
+    <person id="pwL21" depart="120.00">
+        <walk from="480036554" busStop="9905349792"/>
+        <ride busStop="4788103942" lines="L2"/>
+    </person>
+    <person id="pwL22" depart="210.00">
+        <walk from="480036557#2" busStop="4788103942"/>
+        <ride busStop="1831139761" lines="L2"/>
+    </person>
+    <person id="pwL23" depart="300.00">
+        <walk from="482866162#2" busStop="-1829038636"/>
+        <ride busStop="9905349792" lines="L2"/>
+    </person>
+</routes>
