@@ -51,7 +51,12 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 | getLongest / tieBrakeLeader / getSlowest / getStopped / hasBidiLeader | OK | |
 | checkBlocking / checkBlockingVehicles / updateCFRelated / overlap / lowest_bit / decideDirection / getLCA | OK | |
 | wantsChangeSublane wrapper (keepLatGap, getLCA, computeSpeedLat calls) | OK | |
-| checkStrategicChange, mustOvertakeStopped, computeGapFactor, keepLatGap, updateGaps, getWidth, computeSpeedLat, emergencySpeedLat, getDesiredAlignment, commitManoeuvre, commitFollowSpeed, getSafety*, getParameter, setParameter, wantsChange, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, saveBlockerLength, outsideEdge | NOT AUDITED | |
+| checkStrategicChange / mustOvertakeStopped / computeGapFactor / keepLatGap / updateGaps / getWidth (+ MIN3/MAX3 from StdDefs.h) | OK | |
+| computeSpeedLat, emergencySpeedLat, getDesiredAlignment, commitManoeuvre, commitFollowSpeed | OK | |
+| getParameter (41 keys, same expressions, same InvalidArgument text) | OK | |
+| setParameter (same keys, PUSHYGAP = 1 - v/minGapLat, initDerivedParameters at end) | OK | |
+| wantsChange, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, saveBlockerLength, outsideEdge | OK | |
+| wantsChangeSublane (definition at C++ 182, not only the pasted comment) | OK | |
 | getLca, overlap, getLowestBit, decideDirection, hasBidiLeader, getLongest/getSlowest/getStopped | NOT AUDITED | |
 | updateExpectedSublaneSpeeds, computeSublaneShift, forecastAverageSpeed, computeSpeedGain | NOT AUDITED | |
 | remaining helpers (getWidth, getSublaneWidth, getPosLat, getLateralDrift, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, isBidi, emergencySpeedLat, saveState/loadState) | NOT AUDITED | |
