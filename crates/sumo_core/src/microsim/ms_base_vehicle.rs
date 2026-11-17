@@ -2961,9 +2961,8 @@ impl MSBaseVehicle {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        // shortcut: typeid(*dev) == type needs a device-type key; no device matches until that is ported
-        Ptr::default()
+    pub fn get_device(&self, kind: &str) -> Ptr<MSVehicleDevice> {
+        MSDevice::get_device_by_name(&self.myDevices, kind)
     }
 
     /// C++: `void MSBaseVehicle::replaceVehicleType(const MSVehicleType *)` [virtual]
