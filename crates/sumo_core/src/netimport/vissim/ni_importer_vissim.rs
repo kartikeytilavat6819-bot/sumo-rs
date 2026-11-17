@@ -144,7 +144,7 @@ pub fn vissim_bytes_to_string(b: &[u8]) -> String {
 }
 
 /// C++ `from >> tmp` for a std::string: skips whitespace, reads one whitespace-delimited token ("" at end of stream)
-fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
+pub fn vissim_read_token(from: &mut std::io::Cursor<Vec<u8>>) -> String {
     let data = from.get_ref();
     let mut i = from.position() as usize;
     while i < data.len() && vissim_is_space(data[i]) {
