@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/vclass/vclass.nod.xml --edge-files tools/oracle/cases/vclass/vclass.edg.xml
