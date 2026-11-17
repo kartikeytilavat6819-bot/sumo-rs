@@ -36,7 +36,7 @@ def rep(path, prefix, text):
     open(p, "w").write("\n".join(lines))
 SPR = "MSStoppingPlaceRerouter.cpp"
 TR = "MSTriggeredRerouter.cpp"
-ins(SPR, "const bool destIsFull = destStoppingPlace", r'''    fprintf(stderr, "RRTRACE rsp t=%ld veh=%s dest=%s destVisible=%s ignoreDest=%s stopAnywhere=%d destFull=%s onTheWay=%s\n", (long)SIMSTEP, veh.getID().c_str(), destStoppingPlace == nullptr ? "null" : destStoppingPlace->getID().c_str(), destVisible ? "true" : "false", ignoreDest ? "true" : "false", stopAnywhere, destIsFull ? "true" : "false", onTheWay == nullptr ? "null" : onTheWay->getID().c_str());''')
+ins(SPR, "const bool destIsFull = destStoppingPlace", r'''    fprintf(stderr, "RRTRACE rsp t=%ld veh=%s dest=%s destVisible=%s ignoreDest=%s stopAnywhere=%d destFull=%s onTheWay=%s destOcc=%.6f\n", (long)SIMSTEP, veh.getID().c_str(), destStoppingPlace == nullptr ? "null" : destStoppingPlace->getID().c_str(), destVisible ? "true" : "false", ignoreDest ? "true" : "false", stopAnywhere, destIsFull ? "true" : "false", onTheWay == nullptr ? "null" : onTheWay->getID().c_str(), destStoppingPlace == nullptr ? -1. : getLastStepStoppingPlaceOccupancy(destStoppingPlace, &veh));''')
 ins(SPR, "if (occupancy < getStoppingPlaceCapacity(stoppingPlaceCandidates[i].first))", r'''            fprintf(stderr, "RRTRACE cand %s vis=%s occ=%.6f cap=%.6f\n", stoppingPlaceCandidates[i].first->getID().c_str(), visible ? "true" : "false", occupancy, getStoppingPlaceCapacity(stoppingPlaceCandidates[i].first));''', after=False)
 ins(SPR, "double stoppingPlaceCost = getTargetValue(", r'''            fprintf(stderr, "RRTRACE score %s cost=%.6f\n", it->first->getID().c_str(), stoppingPlaceCost);''')
 ins(SPR, "const double targetPos = alternative->getLastFreePos(veh);", r'''    fprintf(stderr, "RRTRACE eval %s targetPos=%.6f occ=%.6f\n", alternative->getID().c_str(), targetPos, occupancy);''')
@@ -46,7 +46,9 @@ rep(TR, "return dynamic_cast<MSParkingArea*>(rerouteStoppingPlace(destStoppingPl
     return dynamic_cast<MSParkingArea*>(resultSp);''')
 print("instrumented")
 PY
-(cd "$D/build" && make -j8 sumo 2>&1 | grep -E 'error' | head -20)
+(cd "$D/build" && make -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; tail -3 "$OUT/make.log")
+echo "RC02 patched: $(grep -c RRTRACE "$D/src/microsim/trigger/MSTriggeredRerouter.cpp") trig, $(grep -c RRTRACE "$D/src/microsim/trigger/MSStoppingPlaceRerouter.cpp") spr"
+ls -l "$D/bin/sumo" | head -2
 CPP="$D/bin/sumo"
 ARGS="-n $C/ref_simple.net.xml -r $C/routes.rou --no-step-log true --end 400 --additional-files $C/parking.add.xml"
 RR_TRACE=1 timeout 300 "$BIN/sumo" $ARGS --tripinfo-output "$OUT/ours.ti.xml" > "$OUT/ours.log" 2>&1
@@ -54,6 +56,7 @@ timeout 300 "$CPP" $ARGS --tripinfo-output "$OUT/cpp.ti.xml" > "$OUT/cpp.log" 2>
 grep -a RRTRACE "$OUT/ours.log" > "$OUT/ours.tr"
 grep -a RRTRACE "$OUT/cpp.log" > "$OUT/cpp.tr"
 echo "RC02 lines ours=$(wc -l < "$OUT/ours.tr") cpp=$(wc -l < "$OUT/cpp.tr")"
+echo "RC02 --- cpp log head"; head -3 "$OUT/cpp.log"
 echo "RC02 --- cpp trace (head 40)"; head -40 "$OUT/cpp.tr"
 echo "RC02 --- ours trace (head 40)"; head -40 "$OUT/ours.tr"
 echo "RC02 --- first diff"; diff "$OUT/cpp.tr" "$OUT/ours.tr" | head -20

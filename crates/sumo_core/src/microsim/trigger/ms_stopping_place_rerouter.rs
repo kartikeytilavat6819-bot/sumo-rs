@@ -605,7 +605,7 @@ impl MSStoppingPlaceRerouter {
         }
 
         let destIsFull = !destStoppingPlace.is_null() && self.get_last_step_stopping_place_occupancy(destStoppingPlace, vp) >= self.get_stopping_place_capacity(destStoppingPlace);
-        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE rsp t={} veh={} dest={} destVisible={} ignoreDest={} stopAnywhere={} destFull={} onTheWay={}", now, vp.get_id(), if destStoppingPlace.is_null() { "null".to_string() } else { destStoppingPlace.get_id().to_string() }, destVisible, ignoreDest, stopAnywhere, destIsFull, if onTheWay.is_null() { "null".to_string() } else { onTheWay.get_id().to_string() }); }
+        if std::env::var_os("RR_TRACE").is_some() { let dOcc = if destStoppingPlace.is_null() { -1. } else { self.get_last_step_stopping_place_occupancy(destStoppingPlace, vp) }; eprintln!("RRTRACE rsp t={} veh={} dest={} destVisible={} ignoreDest={} stopAnywhere={} destFull={} onTheWay={} destOcc={:.6}", now, vp.get_id(), if destStoppingPlace.is_null() { "null".to_string() } else { destStoppingPlace.get_id().to_string() }, destVisible, ignoreDest, stopAnywhere, destIsFull, if onTheWay.is_null() { "null".to_string() } else { onTheWay.get_id().to_string() }, dOcc); }
         if ignoreDest || destIsFull || !onTheWay.is_null() {
             // if the current route ends at the stopping place, the new route will
             // also end at the new stopping place
