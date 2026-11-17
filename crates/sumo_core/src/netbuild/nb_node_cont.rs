@@ -5504,6 +5504,9 @@ impl NBNodeCont {
         if std::env::var_os("NC_JTRACE").is_some() {
             let jin: BTreeSet<String> = newNode.m().get_incoming_edges().iter().map(|e| e.m().get_id().to_string()).collect();
             let jout: BTreeSet<String> = newNode.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+            let vin: Vec<String> = newNode.m().get_incoming_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+            let vout: Vec<String> = newNode.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+            eprintln!("JTRACE joinorder {} in={} out={}", newNode.m().get_id(), vin.join(","), vout.join(","));
             let p = newNode.m().get_position();
             eprintln!("JTRACE join {} pos={:.10},{:.10} in={} out={}", newNode.m().get_id(), p.x(), p.y(),
                 jin.iter().cloned().collect::<Vec<_>>().join(","), jout.iter().cloned().collect::<Vec<_>>().join(","));

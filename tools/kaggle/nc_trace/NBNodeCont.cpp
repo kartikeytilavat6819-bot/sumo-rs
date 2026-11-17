@@ -2061,12 +2061,13 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
             jout.insert(e->getID());
         }
         std::string sin, sout;
-        for (const std::string& s : jin) {
-            sin += (sin.empty() ? "" : ",") + s;
+        for (NBEdge* e : newNode->getIncomingEdges()) {
+            sin += (sin.empty() ? "" : ",") + e->getID();
         }
-        for (const std::string& s : jout) {
-            sout += (sout.empty() ? "" : ",") + s;
+        for (NBEdge* e : newNode->getOutgoingEdges()) {
+            sout += (sout.empty() ? "" : ",") + e->getID();
         }
+        std::cerr << "JTRACE joinorder " << newNode->getID() << " in=" << sin << " out=" << sout << "\n";
         std::cerr << std::fixed << std::setprecision(10) << "JTRACE join " << newNode->getID() << " pos=" << newNode->getPosition().x() << "," << newNode->getPosition().y()
                   << " in=" << sin << " out=" << sout << "\n";
     }
