@@ -2398,7 +2398,7 @@ impl MSLaneChanger {
                             vehicle.get_impatience(), vehicle.get_car_follow_model().get_max_decel(), vehicle.get_waiting_time(false), vehicle.get_lateral_position_on_lane(),
                             Ptr::null(), false, vehicle.cast::<SUMOTrafficObject>(), api.dist);
                         if std::env::var_os("SC08_TRACE").is_some() {
-                            eprintln!("OPENED t={} veh={} arr={} dist={:.6} ok={}", MSNet::get_instance().m().get_current_time_step(), vehicle.get_id(), api.arrivalTime, api.dist, ok as i32);
+                            eprintln!("OPENED t={} veh={} arr={} dist_um={} ok={}", MSNet::get_instance().m().get_current_time_step(), vehicle.get_id(), api.arrivalTime, (api.dist * 1000000.0) as i64, ok as i32);
                         }
                         if !ok {
                             state |= LCA_BLOCKED;
