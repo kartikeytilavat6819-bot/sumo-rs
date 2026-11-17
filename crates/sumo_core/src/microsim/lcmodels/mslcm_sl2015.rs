@@ -3309,6 +3309,9 @@ impl MSLCM_SL2015 {
                 }
                 let deltaProb = (self.myChangeProbThresholdRight * (fullSpeedDrivingSeconds / acceptanceTime) / KEEP_RIGHT_TIME) * self.myVehicle.get_action_step_length_secs();
                 let isSlide = self.prevent_sliding(latLaneDist);
+                if lctw_on(self.myVehicle) {
+                    eprintln!("LCT-KR {} {} acc={} fsg={} fsd={} dProb={} kr={} slide={} neighDist={} vMax={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(acceptanceTime), lctw_bits(fullSpeedGap), lctw_bits(fullSpeedDrivingSeconds), lctw_bits(deltaProb), lctw_bits(self.myKeepRightProbability), isSlide as i32, lctw_bits(neighDist), lctw_bits(vMax));
+                }
                 // stay below threshold
                 if !isSlide || !self.wants_keep_right(self.myKeepRightProbability + deltaProb) {
                     self.myKeepRightProbability += deltaProb;
@@ -3329,6 +3332,9 @@ impl MSLCM_SL2015 {
 
             let bidiRightFactor = if self.myVehicle.get_lane().get_bidi_lane().is_null() && !self.is_opposite() { 1. } else { 0.05 };
 
+            if lctw_on(self.myVehicle) {
+                eprintln!("LCT-SG {} {} latDist={} spR={} thR={} bidi={} neighDist={} speed={} remain={} ret={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(*latDist), lctw_bits(self.mySpeedGainProbabilityRight), lctw_bits(self.myChangeProbThresholdRight), lctw_bits(bidiRightFactor), lctw_bits(neighDist), lctw_bits(self.myVehicle.get_speed()), lctw_bits(self.mySpeedGainRemainTime), ret);
+            }
             // make changing on the right more attractive on bidi edges
             if *latDist < 0. && self.mySpeedGainProbabilityRight >= self.myChangeProbThresholdRight * bidiRightFactor && neighDist / max2(0.1, self.myVehicle.get_speed()) > self.mySpeedGainRemainTime {
                 ret |= LCA_SPEEDGAIN;
