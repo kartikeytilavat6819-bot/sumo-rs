@@ -13,7 +13,7 @@ rm -rf "$OUT"
 mkdir -p "$OUT"
 for dir in "$HERE"/import_cases/*/; do
   name=$(basename "$dir")
-  opts=$(cat "$dir/options.netconvert")
+  opts=$(tr -d '\r' < "$dir/options.netconvert" | tr '\n' ' ')
   extra=""
   case "$opts" in *--output*|*" -o "*) ;; *) extra="-o net.net.xml" ;; esac
   for side in ref ours; do
