@@ -34,7 +34,9 @@ for f in $P/*.osm; do
   echo "  rust: $(head -c 400 $P/$b.rust.log | tr '\n' '|')"
 done
 export RUST_NETCONVERT=$R CPP_NETCONVERT=$C CPP_SUMO_HOME=$SUMO_HOME NETOPTS_OUT=$O/netopts
-bash tools/oracle/run_netopts.sh city_munich > $O/netopts.out 2>&1
-S=$O/netopts/city_munich/summary.tsv
-echo "NETOPTS city_munich: $(awk -F'\t' '$3=="PASS"' $S | wc -l) PASS / $(wc -l < $S) rows"
-cut -f1-4 $S | cut -c1-220
+bash tools/oracle/run_netopts.sh reimport real city_plano city_munich
+for n in reimport real city_plano city_munich; do
+  S=$O/netopts/$n/summary.tsv
+  echo "NETOPTS $n: $(awk -F'\t' '$3=="PASS"' $S | wc -l) PASS / $(wc -l < $S) rows"
+  awk -F'\t' '$3!="PASS"' $S | cut -c1-300
+done
