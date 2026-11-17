@@ -466,8 +466,8 @@ impl MSDevice_ToC {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         // unregister from static instance container
-        let me = Ptr::from_mut(self);
-        MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
+        let id = self.base.get_numerical_id();
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&id));
         // deschedule commands associated to this device
         if !self.myTriggerMRMCommand.is_null() {
             self.myTriggerMRMCommand.m().deschedule();
