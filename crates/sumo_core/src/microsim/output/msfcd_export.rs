@@ -582,9 +582,8 @@ impl MSFCDExport {
     // }
     #[allow(unused_variables)]
     pub fn has_own_output_2(p: Ptr<MSTransportable>, filter: bool, shapeFilter: bool, isInRadius: bool) -> bool {
-        // shortcut: MSDevice_FCD::shapeFilter has only the SUMOTrafficObject overload, the MSTransportable one is not ported
         (!filter || MSDevice_FCD::get_edge_filter().contains(&p.get_edge()))
-            && (!shapeFilter || panic!("MSDevice_FCD::shapeFilter(MSTransportable) is not ported yet"))
+            && (!shapeFilter || MSDevice_FCD::shape_filter_transportable(p))
             && (!p.get_device("fcd").is_null() || isInRadius)
     }
 
