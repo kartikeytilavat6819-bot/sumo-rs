@@ -354,14 +354,8 @@ impl MSPushButton {
 }
 
 /// C++ `MSEdge::dictionary(id)` lookup
-// shortcut: linear scan over MSEdge::get_all_edges() because MSEdge::dictionary_2 takes an Unmapped key in ms_edge.rs, switch to MSEdge::dictionary_2 once that is mapped to &str
 fn edge_by_id(id: &str) -> Ptr<MSEdge> {
-    for &edge in MSEdge::get_all_edges().iter() {
-        if !edge.is_null() && edge.get_id() == id {
-            return edge;
-        }
-    }
-    Ptr::null()
+    MSEdge::dictionary_2(id)
 }
 
 /// C++: `void (const std::vector<MSEdge *> &, std::vector<MSEdge *> &) getWalking`

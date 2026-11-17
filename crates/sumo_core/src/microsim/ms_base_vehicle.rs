@@ -150,7 +150,7 @@ pub struct MSBaseVehicle {
     pub myRoutingMode: i32,
     pub myNumericalID: SUMOTrafficObject_NumericalID,
     pub myRandomSeed: i64,
-    pub myEdgeWeights: Ptr<MSEdgeWeightsStorage>,
+    pub myEdgeWeights: std::cell::Cell<Ptr<MSEdgeWeightsStorage>>,
 }
 
 impl std::ops::Deref for MSBaseVehicle {
@@ -311,7 +311,7 @@ impl MSBaseVehicle {
                 v
             }),
             myRandomSeed: utils::common::rand_helper::murmur3_32(&id, rand_helper_get_seed()) as i64,
-            myEdgeWeights: Ptr::default(),
+            myEdgeWeights: std::cell::Cell::new(Ptr::default()),
         };
         // shortcut: _DEBUG-only move reminder tracing (myTraceMoveReminders) not ported
         if first_edge.is_taz_connector() || last_edge.is_taz_connector() {
@@ -1443,8 +1443,7 @@ impl MSBaseVehicle {
             let mut jumpEdges: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
             let mut stopsOnVia: BTreeMap<Ptr<MSEdge>, MSBaseVehicle_StopEdgeInfo> = BTreeMap::new();
             for stop in self.myStops.iter() {
-                // shortcut: MSStop::edge is Unmapped, the stop edge is taken from its lane
-                let stopEdge = Ptr::new(stop.lane.get_edge());
+                let stopEdge = self.myRoute.get_edges()[stop.edge];
                 if stop.pars.jump >= 0 {
                     jumpEdges.insert(stopEdge);
                 }
@@ -2002,7 +2001,63 @@ impl MSBaseVehicle {
             self.myStops.clear();
             self.add_stops(true, Ptr::default(), true);
         } else {
-            // shortcut: re-checking the old stops against the new route (searchStart over MSRouteIterator) is not ported
+            // recheck old stops
+            let mut searchStart: usize = self.myCurrEdge;
+            let mut lastPos = self.get_position_on_lane() + self.get_brake_gap(false);
+            if !self.get_lane().is_null() && self.get_lane().is_internal() && !self.myStops.is_empty() && !self.myStops.front().unwrap().lane.is_internal() {
+                // searchStart is still incoming to the intersection so lastPos
+                // relative to that edge must be adapted
+                lastPos += self.myRoute.get_edges()[self.myCurrEdge].get_length();
+            }
+            let mut stopIndex: i32 = 0;
+            let mut iter: usize = 0;
+            while iter < self.myStops.len() {
+                let mut lastToSkip: usize = 0;
+                let endPos = self.myStops[iter].get_end_pos(&self.base);
+                let edgeCount = self.myRoute.get_edges().len();
+                let stopEdge = Ptr::new(self.myStops[iter].lane.get_edge());
+                let mismatch = self.myRoute.get_edges().get(searchStart) != Some(&stopEdge);
+                let stop = &self.myStops[iter];
+                if mismatch
+                    // loop required to reach upstream position
+                    || endPos + utils::geom::NUMERICAL_EPS < lastPos
+                    // loop requested at duplicate pos
+                    || (endPos == lastPos && stop.pars.index == STOP_INDEX_REPEAT)
+                    // index encodes a skip
+                    || (stop.pars.index > self.myPastStops.len() as i32 + stopIndex
+                        // and we are not already past the skipped edge
+                        && lastToSkip < stop.skips.len()
+                        && searchStart as i32 <= stop.skips[lastToSkip])
+                {
+                    if searchStart != edgeCount && !self.myStops[iter].reached {
+                        lastToSkip += 1;
+                        searchStart += 1;
+                    }
+                }
+                lastPos = endPos;
+
+                self.myStops[iter].edge = (searchStart..edgeCount).find(|&i| self.myRoute.get_edges()[i] == stopEdge).unwrap_or(edgeCount);
+                if self.myStops[iter].edge == edgeCount && self.myStops[iter].pars.priority >= 0.0 {
+                    let oldEdge = self.myStops[iter].pars.edge.clone();
+                    let oldName = self.myStops[iter].get_stopping_place_name().0;
+                    if self.replace_with_alternative(iter, searchStart, edgeCount) {
+                        utils::common::msg_handler::write_warning(&utils::tlf!("Vehicle '%' replaced stop on edge '%' (named '%') and now stops at '%' instead; after rerouting (%) at time=%.", self.get_id(), oldEdge, oldName, self.myStops[iter].get_description(true), info, utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                    }
+                }
+                if self.myStops[iter].edge == edgeCount {
+                    if !removeStops {
+                        utils::common::msg_handler::write_error(&utils::tlf!("Vehicle '%' could not assign stop '%' after rerouting (%) at time=%.", self.get_id(), self.myStops[iter].get_description(false), info, utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
+                    }
+                    self.myStops.remove(iter);
+                    continue;
+                }
+                let mut stop = self.myStops.remove(iter).unwrap();
+                self.set_skips(&mut stop, stopIndex);
+                self.myStops.insert(iter, stop);
+                searchStart = self.myStops[iter].edge;
+                iter += 1;
+                stopIndex += 1;
+            }
             if addRouteStops {
                 for i in self.myRoute.clone().get_stops().iter() {
                     let mut error = String::new();
@@ -2620,12 +2675,11 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     /// `it` is an index into myRoute's edges (MSRouteIterator is Unmapped)
     pub fn has_jump(&self, it: usize) -> bool {
-        // shortcut: MSStop::edge is Unmapped, so the stop's edge is taken from its lane and the
-        // early exit on a later stop (stop.edge > it) is not applied
-        let edge = self.myRoute.index_op(it as i32);
         for stop in self.myStops.iter() {
-            if Ptr::new(stop.lane.get_edge()) == edge && stop.pars.jump >= 0 {
+            if stop.edge == it && stop.pars.jump >= 0 {
                 return true;
+            } else if stop.edge > it {
+                return false;
             }
         }
         false
@@ -3368,7 +3422,7 @@ impl MSBaseVehicle {
         stopPar.endPos = parkingArea.get_end_lane_position();
         stopPar.index = STOP_INDEX_FIT;
         // first.edge = myRoute->end(); // will be patched in replaceRoute
-        // shortcut: MSStop::edge is Unmapped, so the "end()" placeholder iterator is not set here (patched in replaceRoute)
+        first.edge = self.myRoute.get_edges().len();
         first.lane = Ptr::new(parkingArea.get_lane());
         first.parkingarea = parkingArea;
         // patch via edges
@@ -3460,9 +3514,11 @@ impl MSBaseVehicle {
     #[allow(unused_variables)]
     pub fn base_pos(&self, edge: Ptr<MSEdge>) -> f64 {
         let mut result = f64::min(self.get_vehicle_type().get_length() + utils::geom::POSITION_EPS, edge.get_min_length());
-        // shortcut: myStops.front().edge == myRoute->begin() compares an Unmapped iterator; the lane edge is compared instead
-        if self.has_stops() && self.myStops.front().unwrap().lane.get_edge() as *const MSEdge == edge.as_raw() as *const MSEdge {
-            result = f64::min(result, f64::max(0.0, self.myStops.front().unwrap().get_end_pos(&self.base)));
+        if self.has_stops() {
+            let front = self.myStops.front().unwrap();
+            if front.edge == 0 && self.myRoute.get_edges().get(front.edge).map_or(false, |e| Ptr::new(front.lane.get_edge()) == *e) {
+                result = f64::min(result, f64::max(0.0, front.get_end_pos(&self.base)));
+            }
         }
         result
     }
@@ -4096,9 +4152,7 @@ impl MSBaseVehicle {
     pub fn get_stop_indices(&self) -> Vec<(i32, f64)> {
         let mut result: Vec<(i32, f64)> = Vec::new();
         for stop in self.myStops.iter() {
-            // shortcut: MSStop::edge is Unmapped, so the route index is found from the stop's lane edge
-            let idx = self.myRoute.get_edges().iter().position(|e| *e == Ptr::new(stop.lane.get_edge())).unwrap_or(0) as i32;
-            result.push((idx, stop.get_end_pos(&self.base)));
+            result.push((stop.edge as i32, stop.get_end_pos(&self.base)));
         }
         result
     }
@@ -4996,7 +5050,11 @@ impl MSBaseVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn has_influencer(&self) -> bool {
-        false // shortcut: no myInfluencer field yet, so nothing can be attached; C++ returns myInfluencer != nullptr
+        if MSGlobals::use_meso_sim() {
+            self.as_me_vehicle().has_influencer()
+        } else {
+            self.as_ms_vehicle().has_influencer()
+        }
     }
 
     /// C++: `int MSBaseVehicle::getRoutingMode() const` [const, virtual]
@@ -5583,10 +5641,23 @@ impl MSBaseVehicle {
     //     }
     //     return false;
     // }
-    #[allow(unused_variables)]
-    pub fn replace_with_alternative(&mut self, iter: Unmapped /* std::list<MSStop>::iterator */, searchStart: MSRouteIterator, end: MSRouteIterator) -> bool {
-        // shortcut: alternative-stop replacement needs MSRouteIterator and the stop list iterator (both Unmapped); not ported yet
-        let _ = (iter, searchStart, end);
+    pub fn replace_with_alternative(&mut self, iter: usize, searchStart: MSRouteIterator, end: MSRouteIterator) -> bool {
+        let nameTag = self.myStops[iter].get_stopping_place_name();
+        if !nameTag.0.is_empty() {
+            let alternatives: Vec<Ptr<MSStoppingPlace>> = MSNet::get_instance().get_stopping_place_alternatives(&nameTag.0, nameTag.1).clone();
+            for alt in alternatives {
+                let altLane = alt.get_lane();
+                if Ptr::new(altLane.get_edge()) == Ptr::new(self.myStops[iter].lane.get_edge()) || !altLane.allows_vehicle_class(self.get_v_class()) {
+                    continue;
+                }
+                let altEdge = Ptr::new(altLane.get_edge());
+                self.myStops[iter].edge = (searchStart..end).find(|&i| self.myRoute.get_edges()[i] == altEdge).unwrap_or(end);
+                if self.myStops[iter].edge != end {
+                    self.myStops[iter].replace_stopping_place(alt);
+                    return true;
+                }
+            }
+        }
         false
     }
 
@@ -5600,8 +5671,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_weights_storage_3(&self) -> &mut MSEdgeWeightsStorage {
-        // shortcut: MSEdgeWeightsStorage lazy allocation via the owned Ptr is not ported; returns the stored pointer
-        self.myEdgeWeights.m()
+        if self.myEdgeWeights.get().is_null() {
+            self.myEdgeWeights.set(Ptr::from_mut(Box::leak(Box::new(MSEdgeWeightsStorage::new()))));
+        }
+        self.myEdgeWeights.get().get_mut().unwrap()
     }
 
     /// C++: `void MSBaseVehicle::initTransientModelParams()` [private]
@@ -5783,8 +5856,35 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn set_skips(&mut self, stop: &mut MSStop, prevActiveStops: i32) {
-        // shortcut: skip bookkeeping needs route-iterator positions (MSRouteIterator is Unmapped); not ported yet
-        let _ = (stop, prevActiveStops);
+        if self.has_departed() && stop.edge > 0 {
+            // if the route is looped we must patch the index to ensure that state
+            // loading (and vehroute-output) encode the correct number of skips
+            stop.skips.clear();
+            let (mut itPrev, mut prevEndPos): (usize, f64) = if prevActiveStops > 0 {
+                let prev = &self.myStops[prevActiveStops as usize - 1];
+                (prev.edge, prev.pars.endPos)
+            } else if !self.myPastStops.is_empty() {
+                let last = self.myPastStops.last().unwrap();
+                (last.routeIndex as usize, last.endPos)
+            } else {
+                (self.myParameter.departEdge as usize, self.myDepartPos)
+            };
+            let route = &self.myRoute;
+            if itPrev < route.get_edges().len() && route.get_edges()[itPrev] == route.get_edges()[stop.edge] && prevEndPos > stop.pars.endPos {
+                itPrev += 1;
+            }
+            while itPrev < stop.edge {
+                if route.get_edges()[itPrev] == route.get_edges()[stop.edge] {
+                    stop.skips.push(itPrev as i32);
+                }
+                itPrev += 1;
+            }
+            let mut newIndex = STOP_INDEX_END;
+            if !stop.skips.is_empty() {
+                newIndex = self.myPastStops.len() as i32 + prevActiveStops + stop.skips.len() as i32;
+            }
+            stop.pars.index = newIndex;
+        }
     }
 
     /// C++: `SUMOTime MSBaseVehicle::activateRemindersOnReroute(SUMOTime)` [private]

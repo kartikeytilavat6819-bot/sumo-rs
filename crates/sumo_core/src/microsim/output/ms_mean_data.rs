@@ -1,9 +1,9 @@
 //! Port of microsim/output/MSMeanData.{h,cpp}
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
-use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
 fn g_use_meso_sim() -> bool {
     crate::microsim::ms_globals::use_meso_sim()
@@ -1311,6 +1311,26 @@ pub struct MSMeanDataVt {
     pub write_prefix: fn(&MSMeanData, &mut OutputDevice, &MSMeanData_MeanDataValues, SumoXMLTag, String),
     pub reset_only: fn(&mut MSMeanData, SUMOTime),
 }
+
+fn base_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
+}
+
+fn base_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
+}
+
+fn base_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+}
+
+/// Detector-level dispatch of MSMeanData itself; subclasses with their own detectorUpdate/writeXMLOutput install a table over it
+static MS_MEAN_DATA_BASE_DETECTOR_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: base_detector_write_xml_output,
+    write_xml_detector_prolog: base_detector_write_xml_detector_prolog,
+    detector_update: base_detector_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 static MS_MEAN_DATA_BASE_VT: MSMeanDataVt = MSMeanDataVt {
     create_values: MSMeanData::create_values_base,

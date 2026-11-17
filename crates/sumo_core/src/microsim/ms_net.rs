@@ -3125,7 +3125,7 @@ impl MSNet {
     pub fn get_travel_time(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
+        if !v.is_null() && !veh.myEdgeWeights.get().is_null() && veh.get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_travel_time(e, t, &mut value) {
@@ -3167,7 +3167,7 @@ impl MSNet {
     pub fn get_effort(e: Ptr<MSEdge>, v: Ptr<SUMOVehicle>, t: f64) -> f64 {
         let mut value = 0.0;
         let veh = v.cast::<MSVehicle>();
-        if !v.is_null() && !veh.myEdgeWeights.is_null() && veh.get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
+        if !v.is_null() && !veh.myEdgeWeights.get().is_null() && veh.get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
             return value;
         }
         if MSNet::get_instance().m().get_weights_storage().retrieve_existing_effort(e, t, &mut value) {
