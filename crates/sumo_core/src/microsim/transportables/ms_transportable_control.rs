@@ -783,7 +783,13 @@ impl MSTransportableControl {
     #[allow(unused_variables)]
     pub fn build_person(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>, rng: Ptr<SumoRNG>) -> Ptr<MSTransportable> {
         let speedFactor = vtype.compute_chosen_speed_deviation(pars.speedFactor, rng, -1.0);
-        leak_ptr(MSPerson::new(pars, vtype, plan, speedFactor)).cast::<MSTransportable>()
+        // C++ builds the devices in the MSTransportable constructor; here after leaking, so the devices' holder pointers stay valid
+        let person = leak_ptr(MSPerson::new(pars, vtype, plan, speedFactor)).cast::<MSTransportable>();
+        let p = person.m();
+        let mut devices = std::mem::take(&mut p.myDevices);
+        MSDevice::build_transportable_devices(p, &mut devices);
+        p.myDevices = devices;
+        person
     }
 
     /// C++: `MSTransportable * MSTransportableControl::buildContainer(const SUMOVehicleParameter *, MSVehicleType *, MSTransportable::MSTransportablePlan *) const` [const, virtual]
@@ -794,7 +800,12 @@ impl MSTransportableControl {
     // }
     #[allow(unused_variables)]
     pub fn build_container(&self, pars: Ptr<SUMOVehicleParameter>, vtype: Ptr<MSVehicleType>, plan: Ptr<MSTransportable_MSTransportablePlan>) -> Ptr<MSTransportable> {
-        leak_ptr(MSTransportable::new(pars, vtype, plan, false))
+        let container = leak_ptr(MSTransportable::new(pars, vtype, plan, false));
+        let c = container.m();
+        let mut devices = std::mem::take(&mut c.myDevices);
+        MSDevice::build_transportable_devices(c, &mut devices);
+        c.myDevices = devices;
+        container
     }
 
     /// C++: `constVehIt MSTransportableControl::loadedBegin() const` [const]
