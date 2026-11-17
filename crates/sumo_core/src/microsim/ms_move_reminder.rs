@@ -49,6 +49,11 @@ pub struct MSMoveReminderExtVt {
     pub notify_reroute: fn(&mut MSMoveReminder, &mut SUMOTrafficObject) -> bool,
 }
 
+/// Virtual dispatch table for notifyMoveInternal; kept apart like the other tables.
+pub struct MSMoveReminderInternalVt {
+    pub notify_move_internal: fn(&mut MSMoveReminder, &SUMOTrafficObject, f64, f64, f64, f64, f64, f64, f64),
+}
+
 /// Something on a lane to be noticed about vehicle movement
 /// C++ class `MSMoveReminder` (microsim/MSMoveReminder.h)
 #[repr(C)]
@@ -64,6 +69,8 @@ pub struct MSMoveReminder {
     pub idle_vt: &'static MSMoveReminderIdleVt,
     /// Virtual dispatch table for leave-back/reroute; installed by the most derived constructor
     pub ext_vt: &'static MSMoveReminderExtVt,
+    /// Virtual dispatch table for notifyMoveInternal; installed by the most derived constructor
+    pub internal_vt: &'static MSMoveReminderInternalVt,
 }
 
 // C++ static members of MSMoveReminder (port as module-level statics, see AGENTS.md):
@@ -96,6 +103,7 @@ impl MSMoveReminder {
             vt: &DEFAULT_MSMOVE_REMINDER_VT,
             idle_vt: &DEFAULT_MSMOVE_REMINDER_IDLE_VT,
             ext_vt: &DEFAULT_MSMOVE_REMINDER_EXT_VT,
+            internal_vt: &DEFAULT_MSMOVE_REMINDER_INTERNAL_VT,
         }
     }
 
@@ -313,7 +321,7 @@ impl MSMoveReminder {
     //     }
     #[allow(unused_variables)]
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        // C++ body only consumes its parameters (UNUSED_PARAMETER); nothing to do.
+        (self.internal_vt.notify_move_internal)(self, veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
     }
 
     /// C++: `void MSMoveReminder::setDescription(const std::string &)`
@@ -417,6 +425,13 @@ static DEFAULT_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
     notify_enter: default_notify_enter,
     notify_move: default_notify_move,
     notify_leave: default_notify_leave,
+};
+
+/// C++ body of `MSMoveReminder::notifyMoveInternal` (only consumes its parameters)
+fn default_notify_move_internal(_: &mut MSMoveReminder, _: &SUMOTrafficObject, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64, _: f64) {}
+
+static DEFAULT_MSMOVE_REMINDER_INTERNAL_VT: MSMoveReminderInternalVt = MSMoveReminderInternalVt {
+    notify_move_internal: default_notify_move_internal,
 };
 
 pub(crate) fn default_notify_leave_back(_: &mut MSMoveReminder, _: &mut SUMOTrafficObject, _: MSMoveReminder_Notification, _: Ptr<MSLane>) -> bool {

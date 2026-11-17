@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T22:51:09.356004-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <sumo-net-file value="tools/oracle/cases/reroute_bypass_p1/ref_simple.net.xml"/>
+    </input>
+
+    <output>
+        <plain-output-prefix value="tools/oracle/cases/reroute_bypass_p1/plain/net"/>
+        <plain-output.lanes value="true"/>
+    </output>
+
+    <processing>
+        <geometry.min-radius.fix.railways value="false"/>
+        <geometry.avoid-overlap value="false"/>
+        <geometry.max-grade.fix value="false"/>
+        <offset.disable-normalization value="true"/>
+    </processing>
+
+    <junctions>
+        <no-turnarounds value="true"/>
+    </junctions>
+
+</netconvertConfiguration>
+-->
+
+<edges version="1.20" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/edges_file.xsd">
+    <edge id="AB" from="nA" to="nB" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="304.86,98.40 495.14,98.40"/>
+    </edge>
+    <edge id="AC" from="nA" to="nC" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="303.24,94.50 398.87,-1.13"/>
+    </edge>
+    <edge id="CB" from="nC" to="nB" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="401.13,-1.13 496.76,94.50"/>
+    </edge>
+    <edge id="IN" from="n0" to="nA" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="100.00,98.40 297.02,98.40"/>
+    </edge>
+    <edge id="LEAD" from="nS" to="n0" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="0.00,98.40 100.00,98.40"/>
+    </edge>
+    <edge id="OUT" from="nB" to="nD" priority="-1" numLanes="1" speed="13.89">
+        <lane index="0" speed="13.89" shape="502.98,98.40 700.00,98.40"/>
+    </edge>
+</edges>
