@@ -1,0 +1,33 @@
+<routes>
+    <vType id="slow" length="5.00" maxSpeed="4.00" accel="2.60" decel="4.50"/>
+    <vType id="cA" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcSublane="1" lcContRight="0" lcKeepRight="1"/>
+    <vType id="cB" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcSublane="0.5" lcContRight="0.5" lcKeepRight="1"/>
+    <vType id="cC" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcSublane="0.5" lcContRight="0.9" lcKeepRight="0"/>
+    <vType id="cD" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcSublane="0.3" lcKeepRight="1"/>
+    <route id="r0" edges="E0 E1"/>
+    <route id="rr" edges="ramp E1"/>
+    <vehicle id="s0" type="slow" route="r0" depart="0.28" departLane="1" departSpeed="max"/>
+    <vehicle id="s1" type="slow" route="r0" depart="37.29" departLane="1" departSpeed="max"/>
+    <vehicle id="s2" type="slow" route="r0" depart="26.24" departLane="0" departSpeed="max"/>
+    <vehicle id="s3" type="slow" route="r0" depart="1.6" departLane="0" departSpeed="max"/>
+    <vehicle id="e0" type="cA" route="r0" depart="37.88" departLane="2" departSpeed="max"/>
+    <vehicle id="e1" type="cB" route="r0" depart="177.36" departLane="2" departSpeed="max"/>
+    <vehicle id="e2" type="cC" route="r0" depart="221.07" departLane="0" departSpeed="max"/>
+    <vehicle id="e3" type="cD" route="r0" depart="140.52" departLane="1" departSpeed="max"/>
+    <vehicle id="e4" type="cA" route="r0" depart="36.52" departLane="1" departSpeed="max"/>
+    <vehicle id="e5" type="cB" route="r0" depart="245.06" departLane="1" departSpeed="max"/>
+    <vehicle id="e6" type="cC" route="r0" depart="202.34" departLane="2" departSpeed="max"/>
+    <vehicle id="e7" type="cD" route="r0" depart="19.25" departLane="0" departSpeed="max"/>
+    <vehicle id="e8" type="cA" route="r0" depart="75.6" departLane="1" departSpeed="max"/>
+    <vehicle id="e9" type="cB" route="r0" depart="88.14" departLane="0" departSpeed="max"/>
+    <vehicle id="e10" type="cC" route="r0" depart="78.67" departLane="1" departSpeed="max"/>
+    <vehicle id="e11" type="cD" route="r0" depart="134.9" departLane="2" departSpeed="max"/>
+    <vehicle id="e12" type="cA" route="r0" depart="168.86" departLane="2" departSpeed="max"/>
+    <vehicle id="e13" type="cB" route="r0" depart="70.74" departLane="0" departSpeed="max"/>
+    <vehicle id="e14" type="cC" route="r0" depart="6.21" departLane="0" departSpeed="max"/>
+    <vehicle id="e15" type="cD" route="r0" depart="66.54" departLane="0" departSpeed="max"/>
+    <vehicle id="m0" type="cA" route="rr" depart="81.36" departLane="0" departSpeed="max"/>
+    <vehicle id="m1" type="cB" route="rr" depart="256.29" departLane="0" departSpeed="max"/>
+    <vehicle id="m2" type="cC" route="rr" depart="178.67" departLane="0" departSpeed="max"/>
+    <vehicle id="m3" type="cD" route="rr" depart="53.32" departLane="0" departSpeed="max"/>
+</routes>
