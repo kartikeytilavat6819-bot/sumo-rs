@@ -313,7 +313,7 @@ impl MSLaneChangerSublane {
                 s += &format!(" L{}:", self.myChanger[ce].lane.get_index());
                 for i in 0..self.myChanger[ce].aheadNext.num_sublanes() {
                     let ld = self.myChanger[ce].aheadNext.index_op(i);
-                    if ld.0.is_null() { s += "-/"; } else { s += &format!("{}@{}/", ld.0.get_id(), lct_bits(ld.1)); }
+                    if ld.0.is_null() { s += &format!("-@{}/", lct_bits(ld.1)); } else { s += &format!("{}@{}/", ld.0.get_id(), lct_bits(ld.1)); }
                 }
             }
             eprintln!("{}", s);
