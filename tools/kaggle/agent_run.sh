@@ -7,9 +7,12 @@ export CARGO_TARGET_DIR=$CT
 export SCORE_OUT=/tmp/ub03score
 mkdir -p "$SCORE_OUT"
 echo "== build debug"
-cargo build -q -p sumo -p netconvert 2>&1 | grep -E '^(error|warning: unused)' | head -5
+cargo build -p sumo -p netconvert 2>&1 | tail -2
 echo "== build release"
-CARGO_TARGET_DIR=$CT-rel cargo build -q --release -p sumo -p netconvert 2>&1 | grep -E '^error' | head -5
+CARGO_TARGET_DIR=$CT-rel cargo build --release -p sumo -p netconvert 2>&1 | tail -2
+echo "rc=${PIPESTATUS[0]}"
+ls -l --time-style=+%T "$CT-rel/release/sumo" "$CT-rel/release/sumo.exe" 2>/dev/null
+echo "newest source: $(find crates -name '*.rs' -printf '%TT %p\n' | sort | tail -1)"
 echo "== run_all debug"
 PROFILE=debug bash tools/oracle/run_all.sh > /tmp/ub03_debug.txt 2>&1
 echo "== run_all release"
@@ -17,6 +20,8 @@ CARGO_TARGET_DIR=$CT-rel PROFILE=release bash tools/oracle/run_all.sh > /tmp/ub0
 echo "debug:   $(tail -1 /tmp/ub03_debug.txt)"
 echo "release: $(tail -1 /tmp/ub03_rel.txt)"
 echo "== verdict diff (case kind verdict), empty means identical"
-diff <(awk 'NF>=3{print $1,$2,$3}' /tmp/ub03_debug.txt) <(awk 'NF>=3{print $1,$2,$3}' /tmp/ub03_rel.txt) && echo SAME_VERDICTS
+VF='$2 ~ /^(net|net-.*|sim|sim-PANIC|variants|net-plain)$/'
+diff <(awk "$VF"'{print $1,$2,$3}' /tmp/ub03_debug.txt) <(awk "$VF"'{print $1,$2,$3}' /tmp/ub03_rel.txt) && echo SAME_VERDICTS
 echo "== FAIL rows (release)"
-awk '$3 ~ /FAIL|PANIC/ || $2 ~ /PANIC/' /tmp/ub03_rel.txt | head -20
+awk '$3 ~ /FAIL|PANIC/ || $2 ~ /PANIC/ {print $1,$2,$3}' /tmp/ub03_rel.txt | head -20
+echo "AGENT RUN DONE"
