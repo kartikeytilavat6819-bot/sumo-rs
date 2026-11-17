@@ -104,6 +104,7 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     #[allow(unused_variables)]
     pub fn update(&mut self) {
         self.meanNTemp += self.currentTimeN;
+        eprintln!("TRACE_HN update mean={}", self.meanNTemp);
         self.currentTimeN = 0.0;
     }
 
@@ -158,6 +159,7 @@ impl MSMeanData_Harmonoise_MSLaneMeanDataValues {
     pub fn notify_move_internal(&mut self, veh: &SUMOTrafficObject, arg1: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, arg7: f64) {
         let sn = HelpersHarmonoise::compute_noise(veh.get_vehicle_type().get_emission_class(), meanSpeedVehicleOnLane, veh.get_acceleration());
         self.currentTimeN += 10.0_f64.powf(sn / 10.0);
+        eprintln!("TRACE_HN notify sn={} cur={} v={} a={}", sn, self.currentTimeN, meanSpeedVehicleOnLane, veh.get_acceleration());
         self.sampleSeconds += timeOnLane;
         self.travelledDistance += travelledDistanceVehicleOnLane;
     }
