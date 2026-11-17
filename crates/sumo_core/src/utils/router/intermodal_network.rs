@@ -67,7 +67,6 @@ where
     edge.other_taz_connector()
 }
 
-// shortcut: RouterEdge has no static getStopPosition(), add it to the trait to port IntermodalNetwork
 fn e_stop_position<E, V>(stop: &SUMOVehicleParameter_Stop) -> Position
 where
     E: RouterEdge<V>,
