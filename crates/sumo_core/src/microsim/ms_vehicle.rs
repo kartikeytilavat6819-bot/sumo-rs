@@ -11995,13 +11995,15 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn compute_further_lanes(&mut self, enteredLane: Ptr<MSLane>, pos: f64, collision: bool) {
+        if format!("{}", self.get_id()) == "3" && (395000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
+            eprintln!("CF t={} veh=3 entered={} pos={} coll={} opp={} furBefore={}", MSNet::get_instance().get_current_time_step(), enteredLane.m().get_id(), pos, collision, self.myLaneChangeModel.m().is_opposite(), self.myFurtherLanes.len());
+        }
         // build the list of lanes the vehicle is lapping into
         if !self.myLaneChangeModel.m().is_opposite() {
             let mut leftLength = self.get_vehicle_type().get_length() - pos;
             let mut clane = enteredLane;
             let mut routeIndex = self.get_route_position();
             while leftLength > 0. {
-                let mut guessed = false;
                 if routeIndex > 0 && clane.get_edge().is_normal() {
                     // get predecessor lane that corresponds to prior route
                     routeIndex -= 1;
@@ -12015,15 +12017,15 @@ impl MSVehicle {
                         }
                     }
                 } else {
-                    // only the predecessor of a normal lane is a guess
-                    guessed = clane.get_edge().is_normal();
                     clane = clane.get_logical_predecessor_lane();
+                }
+                if format!("{}", self.get_id()) == "3" && (397000..=399000).contains(&MSNet::get_instance().get_current_time_step()) {
+                    eprintln!("CFL t={} clane={} rp={} leftLen={}", MSNet::get_instance().get_current_time_step(), if clane.is_null() { "null".to_string() } else { clane.m().get_id().to_string() }, routeIndex, leftLength);
                 }
                 if clane.is_null()
                     || clane == self.myLane
                     || clane == self.myLane.get_bidi_lane()
-                    || (guessed
-                        && clane.is_internal()
+                    || (clane.is_internal()
                         && matches!(clane.get_link_cont()[0].get_direction(), LinkDirection::TURN | LinkDirection::TURN_LEFTHAND))
                 {
                     break;
