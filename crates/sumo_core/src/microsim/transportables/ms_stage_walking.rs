@@ -45,6 +45,9 @@ impl std::ops::DerefMut for MSStageWalking {
 
 // C++ static members of MSStageWalking (port as module-level statics, see AGENTS.md):
 //   static bool MSStageWalking::myWarnedInvalidTripinfo;
+thread_local! {
+    static MY_WARNED_INVALID_TRIPINFO: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 impl MSStageWalking {
     /// C++: `void MSStageWalking::MSStageWalking(const std::string &, const ConstMSEdgeVector &, MSStoppingPlace *, SUMOTime, double, double, double, double, int, const std::string &)`
@@ -366,12 +369,15 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        // shortcut: MSPModel::usingShortcuts() is assumed false (movement model not ported), so the invalid-tripinfo warning is never written
+        if !MY_WARNED_INVALID_TRIPINFO.with(|c| c.get()) && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_shortcuts() {
+            utils::common::msg_handler::write_warning("The pedestrian model uses infrastructure which is not in the network, timeLoss and routeLength may be invalid.");
+            MY_WARNED_INVALID_TRIPINFO.with(|c| c.set(true));
+        }
         let distance = self.walk_distance(true);
         let maxSpeed = self.get_max_speed(transportable);
         let duration = self.myArrived - self.myDeparted;
         let timeLoss = self.get_time_loss(transportable);
-        // shortcut: MSDevice_Tripinfo::addPedestrianData is not ported yet, so the pedestrian totals are not updated
+        MSDevice_Tripinfo::add_pedestrian_data(distance, duration, timeLoss);
         os.open_tag("walk");
         let depart = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
         os.write_attr("depart", &depart);
@@ -865,7 +871,37 @@ impl MSStageWalking {
         for e in self.myRoute[..endIt].iter() {
             length += e.get_length();
         }
-        // shortcut: MSPModel::usingInternalLanes() is assumed false (movement model not ported), so walkingarea distances are not added
+        if self.myRoute.len() > 1 && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_internal_lanes() {
+            if self.myInternalDistance > 0. {
+                length += self.myInternalDistance;
+            } else {
+                // use lower bound for distance to pass the intersection
+                for i in 0..endIt - 1 {
+                    let fromEdge = self.myRoute[i];
+                    let toEdge = self.myRoute[i + 1];
+                    let from = walking_sidewalk(fromEdge, SVC_PEDESTRIAN);
+                    let to = walking_sidewalk(toEdge, SVC_PEDESTRIAN);
+                    let mut fromPos = Position::new(0., 0.);
+                    let mut toPos = Position::new(0., 0.);
+                    if !from.is_null() && !to.is_null() {
+                        if fromEdge.get_to_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape().back().clone();
+                            toPos = to.get_shape().front().clone();
+                        } else if fromEdge.get_to_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape().back().clone();
+                            toPos = to.get_shape().back().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape().front().clone();
+                            toPos = to.get_shape().front().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape().front().clone();
+                            toPos = to.get_shape().back().clone();
+                        }
+                        length += fromPos.distance_to2d(&toPos);
+                    }
+                }
+            }
+        }
         // determine walking direction for depart and arrival
         let mut dummy: i32 = 0;
         let departFwdArrivalDir = MSPModel::can_traverse(MSPMODEL_FORWARD, &self.myRoute, &mut dummy);
