@@ -30,7 +30,7 @@ grep -aE ': error|^error' /tmp/build$slot.log | head -40
 # a failed build leaves the previous snapshot's binary behind: never test it
 if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
 (cd "$CARGO_TARGET_DIR/debug" && ln -sf sumo sumo.exe && ln -sf netconvert netconvert.exe)
-bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|PASS=|STALE|MISSING'
+bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|TIMEOUT|PASS=|STALE|MISSING'
 bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
 if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
   OUT=/tmp/dua$slot timeout 600 bash tools/oracle/run_duarouter.sh >/dev/null 2>&1
