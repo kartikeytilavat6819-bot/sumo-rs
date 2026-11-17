@@ -1110,18 +1110,12 @@ impl MSBaseVehicle {
     //     std::set<int> jumps;
     //
     //
-    //     double sourcePos = getPositionOnLane();
+    //     double sourcePos = onInit ? 0 : getPositionOnLane();
     // #ifdef DEBUG_REROUTE
     //     if (DEBUG_COND) {
     //         std::cout << " curEdge=" << (*myCurrEdge)->getID() << " source=" << source->getID() << " sourcePos=" << sourcePos << " lane=" << Named::getIDSecure(getLane()) << " departPos=" << myParameter->departPos << " oldEdgesRemaining=" << toString(oldEdgesRemaining) << "\n";
     //     }
     // #endif
-    //     if (onInit && myParameter->departPosProcedure == DepartPosDefinition::GIVEN) {
-    //         sourcePos = myParameter->departPos;
-    //     } else if (getLane() != nullptr && source != &getLane()->getEdge()) {
-    //         // routing starts on the next edge
-    //         sourcePos = 0;
-    //     }
     //     if (myParameter->via.size() == 0) {
     //         double firstPos = INVALID_DOUBLE;
     //         double lastPos = INVALID_DOUBLE;
@@ -1316,10 +1310,9 @@ impl MSBaseVehicle {
     //     }
     //     const double routeCost = router.recomputeCosts(edges, this, t);
     //     // trips have no loaded route to compare against when routed on insertion
-    //     const bool isTripInit = onInit && myParameter->wasSet(VEHPARS_FORCE_REROUTE);
-    //     const double previousCost = isTripInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
+    //     const double previousCost = onInit ? routeCost : router.recomputeCosts(oldEdgesRemaining, this, t);
     //     const double savings = previousCost - routeCost;
-    //     bool savingsOk = isTripInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
+    //     bool savingsOk = onInit || info != "device.rerouting" || gWeightsRandomFactor != 1;
     //     if (!savingsOk) {
     //         MSDevice_Routing* routingDevice = static_cast<MSDevice_Routing*>(getDevice(typeid(MSDevice_Routing)));
     //         assert(routingDevice != 0);
@@ -1389,13 +1382,7 @@ impl MSBaseVehicle {
         let mut stops: Vec<MSBaseVehicle_StopEdgeInfo> = Vec::new();
         let mut jumps: BTreeSet<i32> = BTreeSet::new();
 
-        let mut sourcePos = self.get_position_on_lane();
-        if onInit && self.myParameter.departPosProcedure == DepartPosDefinition::GIVEN {
-            sourcePos = self.myParameter.departPos;
-        } else if !self.get_lane().is_null() && source != Ptr::new(self.get_lane().get_edge()) {
-            // routing starts on the next edge
-            sourcePos = 0.0;
-        }
+        let mut sourcePos = if onInit { 0.0 } else { self.get_position_on_lane() };
         if self.myParameter.via.is_empty() {
             let mut firstPos = utils::common::std_defs::INVALID_DOUBLE;
             let mut lastPos = utils::common::std_defs::INVALID_DOUBLE;
@@ -1569,11 +1556,10 @@ impl MSBaseVehicle {
         }
         let routeCost = router.recompute_costs(&edges, Ptr::from_mut(&mut self.base), t, Ptr::default());
         // trips have no loaded route to compare against when routed on insertion
-        let isTripInit = onInit && (self.myParameter.parametersSet & VEHPARS_FORCE_REROUTE) != 0;
-        let previousCost = if isTripInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
+        let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
         let savings = previousCost - routeCost;
         // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
-        let mut savingsOk = isTripInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
+        let mut savingsOk = onInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
         if !savingsOk {
             // shortcut: MSDevice_Routing::sufficientSaving and hasValidRoute over an edge range need the
             // routing device and MSRouteIterator, neither reachable yet; the old route is treated as prohibited

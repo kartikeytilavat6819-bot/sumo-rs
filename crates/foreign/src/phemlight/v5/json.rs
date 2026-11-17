@@ -6,6 +6,12 @@ use std::collections::BTreeMap;
 
 use serde_json::Value;
 
+/// Parses a whole file the way `std::ifstream >> nlohmann::json` does: a leading UTF-8 BOM is skipped
+/// (PHEMlight5 files carry one; serde_json rejects it).
+pub fn parse(text: &str) -> Option<Value> {
+    serde_json::from_str(text.strip_prefix('\u{feff}').unwrap_or(text)).ok()
+}
+
 /// nlohmann type name used in its exception messages.
 pub fn type_name(v: &Value) -> &'static str {
     match v {
@@ -77,5 +83,20 @@ pub fn items(v: &Value) -> Result<Vec<(&String, &Value)>, String> {
     match v {
         Value::Object(map) => Ok(map.iter().collect()),
         other => Err(format!("[json.exception.type_error.306] cannot use items() with {}", type_name(other))),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_skips_utf8_bom_like_nlohmann() {
+        // first bytes of PHEMlight5/PC_EU4_G.PHEMLight.veh (EF BB BF), values from its VehicleData
+        let text = "\u{feff}{\n  \"VehicleData\": {\"Mass\": 1193.7, \"Cw\": 0.3745, \"A\": 2.12}\n}";
+        let root = parse(text).expect("BOM-prefixed JSON must parse");
+        assert_eq!(get_f64(at(at(&root, "VehicleData").unwrap(), "Mass").unwrap()).unwrap(), 1193.7);
+        assert_eq!(get_f64(at(at(&root, "VehicleData").unwrap(), "Cw").unwrap()).unwrap(), 0.3745);
+        assert!(parse("not json").is_none());
     }
 }

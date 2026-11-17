@@ -345,25 +345,6 @@ impl MSDetectorControl {
         self.myReminders.clear();
     }
 
-    /// C++: `void MSDetectorControl::saveState(OutputDevice &) const` [const]
-    /// Saves the state of all detectors
-    // void
-    // MSDetectorControl::saveState(OutputDevice& out) const {
-    //     for (const auto& i : myDetectors) {
-    //         for (const auto& j : getTypedDetectors(i.first)) {
-    //             j.second->saveState(out);
-    //         }
-    //     }
-    // }
-    #[allow(unused_variables)]
-    pub fn save_state(&self, out: &mut OutputDevice) {
-        for type_ in self.get_available_types() {
-            for j in self.get_typed_detectors(type_).values() {
-                j.m().save_state(out);
-            }
-        }
-    }
-
     /// C++: `const std::map<std::string, MSMoveReminder *> & MSDetectorControl::getAllReminders()`
     /// retrieve reminders of all detectors (for loading state)
     // const std::map<std::string, MSMoveReminder*>&
