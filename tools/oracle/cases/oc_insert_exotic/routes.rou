@@ -1,0 +1,22 @@
+<routes>
+    <!-- exotic insertionChecks values: a stopped vehicle blocks insertion at the same spot -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="stopChk" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="stop"/>
+    <vType id="junChk" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="junction"/>
+    <vType id="arrChk" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="arrivalSpeed"/>
+    <vType id="speChk" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="speedLimit"/>
+    <vType id="lcChk" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="laneChange"/>
+    <vType id="allBut" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="collision leaderGap followerGap junction stop arrivalSpeed speedLimit laneChange"/>
+    <route id="rABCD" edges="A B C D"/>
+    <route id="rBC" edges="B C"/>
+    <vehicle id="s0" type="car" route="rABCD" depart="0" departSpeed="max">
+        <stop lane="B_0" endPos="100" duration="40"/>
+    </vehicle>
+    <vehicle id="i1" type="stopChk" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <vehicle id="i2" type="junChk" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <vehicle id="i3" type="arrChk" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <vehicle id="i4" type="speChk" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <vehicle id="i5" type="lcChk" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <vehicle id="i6" type="allBut" route="rBC" depart="10" departLane="0" departPos="100" departSpeed="0"/>
+    <flow id="f" type="car" route="rBC" begin="20" end="30" period="1" departLane="0" departPos="100" departSpeed="0"/>
+</routes>

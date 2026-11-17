@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/oc_stop_trigger_mix/net.nod.xml --edge-files tools/oracle/cases/oc_stop_trigger_mix/net.edg.xml

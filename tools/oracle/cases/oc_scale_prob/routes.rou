@@ -1,0 +1,14 @@
+<routes>
+    <!-- the scale option affects probability flows via getQuota() and number flows via scaled repetition count -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="sc2" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" scale="2"/>
+    <vTypeDistribution id="vd">
+        <vType id="vdA" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" probability="0.5"/>
+        <vType id="vdB" length="8.00" maxSpeed="11.11" accel="1.20" decel="4.00" probability="0.5" scale="3"/>
+    </vTypeDistribution>
+    <route id="r" edges="A B C D"/>
+    <flow id="fp" type="car" route="r" begin="0" end="60" probability="0.3" departSpeed="max"/>
+    <flow id="fn" type="car" route="r" begin="0" end="60" number="10" departSpeed="max"/>
+    <flow id="fs" type="sc2" route="r" begin="0" end="60" number="10" departSpeed="max"/>
+    <flow id="fvd" type="vd" route="r" begin="0" end="60" period="5" departSpeed="max"/>
+</routes>

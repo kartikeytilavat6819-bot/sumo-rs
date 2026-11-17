@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:24:42.450082-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/oc_insert_exotic/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/oc_insert_exotic/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_insert_exotic/ref_global.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_insert_exotic/ref_global.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_insert_exotic/ref_global.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="90"/>
+    </time>
+
+    <processing>
+        <insertion-checks value="junction stop collision"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="i2" depart="13.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="3.00" arrival="55.00" arrivalLane="C_1" arrivalPos="300.00" arrivalSpeed="13.63" duration="42.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.50" rerouteNo="0" devices="tripinfo_i2 fcd_i2" vType="junChk" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="i1" depart="10.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="0.00" arrival="57.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="11.40" duration="47.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.23" rerouteNo="0" devices="tripinfo_i1 fcd_i1" vType="stopChk" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="i3" depart="16.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="6.00" arrival="58.00" arrivalLane="C_1" arrivalPos="300.00" arrivalSpeed="12.95" duration="42.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.63" rerouteNo="0" devices="tripinfo_i3 fcd_i3" vType="arrChk" speedFactor="1.16" vaporized=""/>
+    <tripinfo id="i4" depart="20.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="10.00" arrival="60.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="12.69" duration="40.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.82" rerouteNo="0" devices="tripinfo_i4 fcd_i4" vType="speChk" speedFactor="1.12" vaporized=""/>
+    <tripinfo id="i5" depart="23.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="13.00" arrival="64.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="13.76" duration="41.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.65" rerouteNo="0" devices="tripinfo_i5 fcd_i5" vType="lcChk" speedFactor="1.28" vaporized=""/>
+    <tripinfo id="i6" depart="26.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="16.00" arrival="69.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="12.95" duration="43.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.61" rerouteNo="0" devices="tripinfo_i6 fcd_i6" vType="allBut" speedFactor="0.95" vaporized=""/>
+    <tripinfo id="f.0" depart="29.00" departLane="B_0" departPos="100.00" departSpeed="0.00" departDelay="9.00" arrival="72.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="12.28" duration="43.00" routeLength="500.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="4.24" rerouteNo="0" devices="tripinfo_f.0 fcd_f.0" vType="car" speedFactor="0.94" vaporized=""/>
+</tripinfos>
