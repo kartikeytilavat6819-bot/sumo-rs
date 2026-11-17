@@ -353,7 +353,13 @@ impl NLEdgeControlBuilder {
                 }
             }
         }
-        // shortcut: C++ global deprecatedVehicleClassesSeen (utils/common/SUMOVehicleClass.cpp) is not ported, the deprecated-class warning is skipped until it is
+        {
+            let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap();
+            if !seen.is_empty() {
+                utils::common::msg_handler::write_warning(&format!("Deprecated vehicle classes '{}' in input network.", utils::common::to_string::join_to_string(seen.iter(), " ")));
+                seen.clear();
+            }
+        }
         // check for bi-directional edges (this are edges in opposing direction and superposable/congruent shapes)
         if !self.myBidiEdges.is_empty() || *networkVersion > (1, 0.0) {
             for (edge, bidi) in self.myBidiEdges.iter() {

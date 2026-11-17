@@ -1,0 +1,20 @@
+<routes>
+    <vType id="truck" vClass="truck" length="10.00" maxSpeed="13.89" accel="1.30" decel="4.00" containerCapacity="2"/>
+    <route id="AB" edges="A B"/>
+    <!-- truck0 loads containers at cs0 (waits for them: triggered="container") and unloads at cs1 -->
+    <vehicle id="truck0" type="truck" line="truckline" depart="0" route="AB">
+        <stop containerStop="cs0" duration="10" triggered="container"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" line="truckline" depart="120" route="AB">
+        <stop containerStop="cs0" duration="10"/>
+        <stop containerStop="cs1" duration="20"/>
+    </vehicle>
+    <!-- c0 is transported by truck0, c1 tranships between the two stops -->
+    <container id="c0" depart="10" departPos="110">
+        <transport from="A" to="B" lines="truckline" arrivalPos="110"/>
+    </container>
+    <container id="c1" depart="20">
+        <tranship from="A" to="B" departPos="110" arrivalPos="110" speed="10"/>
+    </container>
+</routes>

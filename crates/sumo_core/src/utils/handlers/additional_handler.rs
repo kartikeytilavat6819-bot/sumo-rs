@@ -2954,8 +2954,9 @@ impl AdditionalHandler {
                         let flowId = flowParameter.id.clone();
                         let flowRouteId = flowParameter.routeid.clone();
                         self.myCommonXMLStructure.get_current_sumo_base_object().m().set_vehicle_parameter(Box::new((*flowParameter).clone()), &flowId, &flowRouteId);
-                        // C++ deletes flowParameter here (XMLStructure keeps a copy); the port keeps the original allocated
-                        // shortcut: flowParameter leaked instead of deleted, upgrade with parameter ownership
+                        // C++ deletes flowParameter here (XMLStructure keeps a copy); freeing it made the
+                        // calibrator flow arrivalSpeed diverge in oracle case calibrator (measured), so it stays allocated
+                        // shortcut: flowParameter leaked instead of deleted, upgrade when the calibrator flow reads the stored copy only
                     } else {
                         self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
                     }

@@ -71,6 +71,33 @@ for dir in tools/oracle/cases/*/; do
   else
     line "$c" net SKIP "no input.osm and no net.args"; SKIP=$((SKIP+1))
   fi
+  # --- net outputs: cases/<c>/net_outputs.txt lines "<variant> <netconvert args, @OUT@ = run dir>". Each variant
+  # writes net.net.xml plus its own output files; every file in ref_net_out/<variant>/ must match its candidate.
+  if [ -f "$dir/net_outputs.txt" ] && [ -f "$dir/input.osm" ]; then
+    while read -r v args; do
+      v=${v%$'\r'}; args=${args%$'\r'}
+      [ -n "$v" ] || continue
+      D="$OUT/$c.net_$v"; rm -rf "$D"; mkdir -p "$D"
+      read -ra A <<< "${args//@OUT@/$D}"
+      "$BIN/netconvert.exe" --osm-files "$dir/input.osm" --simple-projection "${A[@]}" \
+          -o "$D/net.net.xml" >"$D/nc.log" 2>&1 </dev/null
+      r="PASS"; detail=""
+      for f in "$dir/ref_net_out/$v"/*; do
+        n=$(basename "$f")
+        if [ "$n" = net.net.xml ]; then
+          python tools/oracle/compare_net.py "$f" "$D/$n" >"$D/$n.log" 2>&1 || r="FAIL"
+        else
+          python tools/oracle/compare_xml.py "$f" "$D/$n" >"$D/$n.log" 2>&1 || r="FAIL"
+        fi
+        [ "$r" = FAIL ] && [ -z "$detail" ] && detail="$n: $(grep -v '^$' "$D/$n.log" | head -1 | cut -c1-120)"
+      done
+      if [ "$r" = PASS ]; then
+        line "$c" "net-$v" PASS; PASS=$((PASS+1))
+      else
+        line "$c" "net-$v" FAIL "$detail"; FAIL=$((FAIL+1))
+      fi
+    done < "$dir/net_outputs.txt"
+  fi
   # --- sim stage; one run per committed reference variant (ref.*, ref_<v>.*)
   if [ -f "$dir/routes.rou" ] && [ -f "$dir/ref_simple.net.xml" ] && [ -f "$dir/ref.tripinfo.xml" ]; then
     for ref in "$dir"ref*.tripinfo.xml; do
@@ -85,6 +112,12 @@ for dir in tools/oracle/cases/*/; do
       # extra_outputs.txt: "<option> <suffix>" lines, each output compared against $dir/$tag.<suffix>.xml
       XOUT=""
       [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
+      # extra sim outputs (cases/<c>/sim_outputs.txt, @OUT@ = run dir): written by the reference run only
+      SIMOUT=""
+      if [ "$tag" = "ref" ] && [ -f "$dir/sim_outputs.txt" ]; then
+        SIMOUT="$OUT/$c.sim_out"; rm -rf "$SIMOUT"; mkdir -p "$SIMOUT"
+        EXTRA="$EXTRA $(sed "s#@OUT@#$SIMOUT#g" "$dir/sim_outputs.txt" | tr -d '\r')"
+      fi
       "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
           --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \
           --statistic-output "$OUT/$c.$tag.stat.xml" --no-step-log true $EXTRA $XOUT \
@@ -95,6 +128,12 @@ for dir in tools/oracle/cases/*/; do
       fi
       r="PASS"
       python tools/oracle/compare_sim.py --tripinfo "$ref" "$OUT/$c.$tag.ti.xml" >"$OUT/$c.$tag.ti.log" 2>&1 || r="FAIL"
+      if [ -n "$SIMOUT" ]; then
+        for sf in "$dir"/ref_sim_out/*; do
+          n=$(basename "$sf")
+          python tools/oracle/compare_xml.py "$sf" "$SIMOUT/$n" >"$SIMOUT/$n.log" 2>&1 || r="FAIL"
+        done
+      fi
       if [ -f "$dir/$tag.fcd.xml" ]; then
         python tools/oracle/compare_sim.py --fcd "$dir/$tag.fcd.xml" "$OUT/$c.$tag.fcd.xml" >"$OUT/$c.$tag.fcd.log" 2>&1 || r="FAIL"
       fi
@@ -117,6 +156,7 @@ for dir in tools/oracle/cases/*/; do
         d=$( (head -1 "$OUT/$c.$tag.ti.log"; head -1 "$OUT/$c.$tag.fcd.log"; tail -1 "$OUT/$c.$tag.stat.log") 2>/dev/null | grep -vE '^$' | head -1 | cut -c1-90)
         [ -f "$OUT/$c.$tag.edge.log" ] && d="$d | edge: $(grep -v '^$' "$OUT/$c.$tag.edge.log" | head -2 | tr '\n' ' ' | cut -c1-900)"
         d="$d$xd"
+        [ -n "$SIMOUT" ] && d="$d | out: $(grep -h -m1 -E 'DIFF|UNREADABLE' "$SIMOUT"/*.log | cut -c1-160)"
         line "$c/$tag" sim "FAIL $d"; FAIL=$((FAIL+1))
       fi
     done

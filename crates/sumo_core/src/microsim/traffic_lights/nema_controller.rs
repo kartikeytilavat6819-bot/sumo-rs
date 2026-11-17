@@ -566,7 +566,10 @@ impl NEMALogic {
                         }
                         let mut index = lane.get_index();
                         let mut id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
-                        // shortcut: the while-loop that bumps `index` until the detector id is unused needs the typed detector lookup (Unmapped getTypedDetectors); skipped until detector control is ported
+                        while MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).contains_key(&id) {
+                            index += 1;
+                            id = format!("{}_{}_D{}.{}", self.get_id(), self.myProgramID, phaseNumber, index);
+                        }
                         //createE2Detector() method will lead to bad detector showing in sumo-gui
                         //so it is better to use build2Detector() rather than createE2Detector()
                         let _built = nb.build_e2_detector(
@@ -2190,7 +2193,6 @@ impl NEMALogic {
     #[allow(unused_variables)]
     pub fn string2int(&mut self, s: String) -> i32 {
         // emulates `std::stringstream ss(s) >> ret` with ret = 0 on failure
-        // shortcut: no clamp to the i32 range on overflow (C++11 stream extraction saturates), upgrade if an overflowing phase name ever matters
         let bytes = s.trim_start().as_bytes().to_vec();
         let mut i = 0usize;
         let mut neg = false;
@@ -2201,15 +2203,15 @@ impl NEMALogic {
         let start = i;
         let mut v: i64 = 0;
         while i < bytes.len() && bytes[i].is_ascii_digit() {
-            v = v * 10 + (bytes[i] - b'0') as i64;
+            v = (v * 10 + (bytes[i] - b'0') as i64).min(i32::MAX as i64 + 1);
             i += 1;
         }
         if i == start {
             0
         } else if neg {
-            (-v) as i32
+            (-v).max(i32::MIN as i64) as i32
         } else {
-            v as i32
+            v.min(i32::MAX as i64) as i32
         }
     }
 

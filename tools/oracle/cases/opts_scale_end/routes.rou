@@ -1,0 +1,7 @@
+<routes>
+    <!-- 40 vehicles in 10 s: insertion cannot keep up, so depart delays grow past max-depart-delay
+         and the run ends (end 60) with some vehicles still on the edge. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A"/>
+    <flow id="f0" type="car" route="r" begin="0" end="10" number="40" departSpeed="0"/>
+</routes>
