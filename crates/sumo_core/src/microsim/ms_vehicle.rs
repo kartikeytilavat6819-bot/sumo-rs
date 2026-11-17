@@ -14611,6 +14611,7 @@ impl MSVehicle {
                 let futureVSafe = cfModel.follow_speed(me, lastLink.accelV, leaderInfo.1, leaderInfo.0.get_speed(), leaderInfo.0.get_current_apparent_decel(), leaderInfo.0, MSCFModel_CalcReason::FUTURE);
                 lastLink.m().adapt_leave_speed(futureVSafe);
             }
+            if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 adL t={} leaderDist={:x} vsafeLeader={:x} vLinkPass={:x} v={:x}", MSNet::get_instance().get_current_time_step(), leaderInfo.1.to_bits(), vsafeLeader.to_bits(), (*vLinkPass).to_bits(), (*v).to_bits()); }
             *v = min2(*v, vsafeLeader);
             *vLinkPass = min2(*vLinkPass, vsafeLeader);
         }
