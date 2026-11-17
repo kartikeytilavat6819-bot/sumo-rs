@@ -277,8 +277,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_id(vehID: &str) -> String {
-        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback "" is returned.
-        let _veh = Helper::get_vehicle(vehID);
+        let veh = Helper::get_vehicle(vehID);
+        // C++ CALL_MESO_FUN: the vehicle class follows gUseMesoSim, so the MEVehicle cast is valid only in a meso run
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let me = veh.cast::<MEVehicle>();
+            if me.is_on_road() {
+                return me.get_segment().get_id().to_string();
+            }
+        }
         String::new()
     }
 
@@ -290,8 +296,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_index(vehID: &str) -> i32 {
-        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback is returned.
-        let _veh = Helper::get_vehicle(vehID);
+        let veh = Helper::get_vehicle(vehID);
+        // C++ CALL_MESO_FUN: the vehicle class follows gUseMesoSim, so the MEVehicle cast is valid only in a meso run
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let me = veh.cast::<MEVehicle>();
+            if me.is_on_road() {
+                return me.get_segment().get_index();
+            }
+        }
         INVALID_INT_VALUE
     }
 
