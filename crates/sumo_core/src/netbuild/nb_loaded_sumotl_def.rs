@@ -1321,13 +1321,12 @@ impl NBLoadedSUMOTLDef {
     // }
     #[allow(unused_variables)]
     pub fn init_needs_cont_relation(&self) {
-        let me = Ptr::new(self);
         if !self.am_invalid() && !self.base.myNeedsContRelationReady.get() {
             self.base.myNeedsContRelation.borrow_mut().clear();
             self.base.myExtraConflicts.borrow_mut().clear();
             if self.base.myType == TrafficLightType::NEMA {
-                me.m().base.init_needs_cont_relation_base();
-                me.m().base.init_extra_conflicts();
+                self.base.init_needs_cont_relation_base();
+                self.base.init_extra_conflicts();
             } else {
                 let controlledWithin = !utils::options::options_cont::get_bool("tls.uncontrolled-within");
                 let phases: Vec<String> = self.myTLLogic.m().get_phases().iter().map(|p| p.state.clone()).collect();

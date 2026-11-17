@@ -4862,7 +4862,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_max_speed_on_lane(&self) -> f64 {
         if !self.myLane.is_null() {
-            return self.myLane.m().get_vehicle_max_speed(Ptr::from_raw(self as *const MSVehicle as *mut MSVehicle).cast::<SUMOTrafficObject>());
+            return self.myLane.m().get_vehicle_max_speed(Ptr::new(self).cast::<SUMOTrafficObject>());
         }
         self.myType.m().get_max_speed()
     }
