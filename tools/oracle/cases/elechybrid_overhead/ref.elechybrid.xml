@@ -1,0 +1,313 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T05:21:26.060930-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/elechybrid_overhead/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/elechybrid_overhead/routes.rou"/>
+        <additional-files value="tools/oracle/cases/elechybrid_overhead/overhead.add.xml"/>
+    </input>
+
+    <output>
+        <elechybrid-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.elechybrid.xml"/>
+        <elechybrid-output.precision value="4"/>
+        <elechybrid-output.aggregated value="true"/>
+        <overheadwiresegments-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.overheadwires.xml"/>
+        <substations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.substations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-ow01/tools/oracle/cases/elechybrid_overhead/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <elechybrid_device>
+        <device.elechybrid.explicit value="test1,test2,test3"/>
+    </elechybrid_device>
+
+</sumoConfiguration>
+-->
+
+<elecHybrid-export-aggregated xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/" recuperationEnabled="1">
+    <timestep time="0.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="23000.0000" energyConsumed="0.0000" energyCharged="0.0000" power="nan" overheadWireId="" tractionSubstationId="" current="nan" circuitVoltage="nan" alphaCircuitSolver="nan" speed="13.8900" acceleration="0.0000" distance="0.0000" x="0.0000" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="0.0000"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22962.7910" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="599.0899" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="13.8900" x="13.8900" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="13.8900"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22925.5819" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="598.1798" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="27.7800" x="27.7800" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="27.7800"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22888.3729" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="597.2697" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="41.6700" x="41.6700" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="41.6700"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22851.1639" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="596.3596" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="55.5600" x="55.5600" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="55.5600"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22813.9549" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="595.4495" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="69.4500" x="69.4500" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="69.4500"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="23000.0000" energyConsumed="0.0000" energyCharged="0.0000" power="nan" overheadWireId="" tractionSubstationId="" current="nan" circuitVoltage="nan" alphaCircuitSolver="nan" speed="13.8900" acceleration="0.0000" distance="0.0000" x="500.0000" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="0.0000"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22776.7458" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="594.5394" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="83.3400" x="83.3400" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="83.3400"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22962.7910" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="699.2199" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="13.8900" x="486.1100" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="13.8900"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22739.5368" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="593.6293" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="97.2300" x="97.2300" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="97.2300"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22925.5819" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="698.4398" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="27.7800" x="472.2200" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="27.7800"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22702.3278" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="592.7192" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="111.1200" x="111.1200" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="111.1200"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22888.3729" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="697.6597" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="41.6700" x="458.3300" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="41.6700"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22665.1188" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="591.8091" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="125.0100" x="125.0100" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="125.0100"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22851.1639" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="696.8797" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="55.5600" x="444.4400" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="55.5600"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22627.9097" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="590.8990" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="138.9000" x="138.9000" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="138.9000"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22813.9549" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="696.0996" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="69.4500" x="430.5500" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="69.4500"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="5000.0000" energyConsumed="0.0000" energyCharged="0.0000" power="nan" overheadWireId="" tractionSubstationId="" current="nan" circuitVoltage="nan" alphaCircuitSolver="nan" speed="13.8900" acceleration="0.0000" distance="0.0000" x="0.0000" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="0.0000"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22590.7007" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="589.9889" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="152.7900" x="152.7900" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="152.7900"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22776.7458" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="695.3195" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="83.3400" x="416.6600" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="83.3400"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4962.7910" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-0.3034" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="13.8900" x="13.8900" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="13.8900"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22553.4917" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="589.0788" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="166.6800" x="166.6800" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="166.6800"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22739.5368" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="694.5394" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="97.2300" x="402.7700" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="97.2300"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4925.5819" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-0.6067" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="27.7800" x="27.7800" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="27.7800"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22516.2827" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="588.1687" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="180.5700" x="180.5700" y="-4.8000" z="0.0000" slope="0.0000" lane="w2m_0" posOnLane="180.5700"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22702.3278" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="693.7593" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="111.1200" x="388.8800" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="111.1200"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4888.3729" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-0.9101" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="41.6700" x="41.6700" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="41.6700"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22479.0736" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="587.2586" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="194.4600" x="194.4600" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="194.4600"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22665.1188" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="692.9792" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="125.0100" x="374.9900" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="125.0100"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4851.1639" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-5.3387" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="55.5600" x="55.5600" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="55.5600"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22441.8646" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-2.2753" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="208.3500" x="208.3500" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="208.3500"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22627.9097" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="692.1991" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="138.9000" x="361.1000" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="138.9000"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4813.9549" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-2.2753" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="69.4500" x="69.4500" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="69.4500"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22404.6556" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="15627729533009616.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="222.2400" x="222.2400" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="222.2400"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22590.7007" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="691.4190" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="152.7900" x="347.2100" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="152.7900"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4776.7458" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="15627729533009614.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="83.3400" x="83.3400" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="83.3400"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22367.4466" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.1854" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="236.1300" x="236.1300" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="236.1300"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22553.4917" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="690.6390" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="166.6800" x="333.3200" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="166.6800"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4739.5368" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.1854" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="97.2300" x="97.2300" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="97.2300"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22330.2375" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.6404" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="250.0200" x="250.0200" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="250.0200"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22516.2827" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="689.8589" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="180.5700" x="319.4300" y="4.8000" z="0.0000" slope="0.0000" lane="e2m_0" posOnLane="180.5700"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4702.3278" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.6404" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="111.1200" x="111.1200" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="111.1200"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22293.0285" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="582.7081" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="263.9100" x="263.9100" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="263.9100"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22479.0736" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_e2m_0" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="689.0788" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="194.4600" x="305.5400" y="1.6000" z="0.0000" slope="0.0000" lane="e2m_1" posOnLane="194.4600"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4665.1188" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-2.7303" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="125.0100" x="125.0100" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="125.0100"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22255.8195" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="581.7980" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="277.8000" x="277.8000" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="277.8000"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22441.8646" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-5.4617" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="208.3500" x="291.7500" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="8.2500"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4627.9097" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.5185" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="138.9000" x="138.9000" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="138.9000"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22218.6105" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="580.8879" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="291.6900" x="291.6900" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="291.6900"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22404.6556" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-15032867451359582.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="222.2400" x="277.8600" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="22.1400"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4590.7007" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-3.2152" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="152.7900" x="152.7900" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="152.7900"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22181.4014" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="579.7746" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="305.5800" x="305.4800" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="5.4800"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22367.4466" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-20265245106174664.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="236.1300" x="263.9700" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="36.0300"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4553.4917" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-2.9118" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="166.6800" x="166.6800" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="166.6800"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22144.1924" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="578.8645" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="319.4700" x="319.3700" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="19.3700"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22330.2375" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-4.6816" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="250.0200" x="250.0800" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="49.9200"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4516.2827" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-2.6084" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="180.5700" x="180.5700" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="180.5700"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22106.9834" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="577.9544" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="333.3600" x="333.2600" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="33.2600"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22293.0285" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="25153453321643560.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="263.9100" x="236.1900" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="63.8100"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4479.0736" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-4.2471" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="194.4600" x="194.4600" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="194.4600"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22069.7744" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="577.0443" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="347.2500" x="347.1500" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="47.1500"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22255.8195" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-4.1616" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="277.8000" x="222.3000" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="77.7000"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4441.8646" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-4.5505" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="208.3500" x="208.3500" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="208.3500"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22032.5653" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="576.1342" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="361.1400" x="361.0400" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="61.0400"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22218.6105" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-3.9016" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="291.6900" x="208.4100" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="91.5900"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4404.6556" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-4.8539" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="222.2400" x="222.2400" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="222.2400"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21995.3563" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="576.4642" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="375.0300" x="374.9300" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="74.9300"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22181.4014" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-26460054739621404.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="305.5800" x="194.5200" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="105.4800"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4367.4466" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="13904487067274472.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="236.1300" x="236.1300" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="236.1300"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21958.1473" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="574.3140" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="388.9200" x="388.8200" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="88.8200"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22144.1924" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-5.9807" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="319.4700" x="180.6300" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="119.3700"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4330.2375" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_1" tractionSubstationId="trSub1" current="-0.0000" circuitVoltage="-1.0916" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="250.0200" x="250.0200" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="250.0200"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21920.9382" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="556.1120" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="402.8100" x="402.7100" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="102.7100"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22106.9834" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-23105791110442424.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="333.3600" x="166.7400" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="133.2600"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4293.0285" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="565.4161" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="263.9100" x="263.9100" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="263.9100"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21883.7292" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="554.2918" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="416.7000" x="416.6000" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="116.6000"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22069.7744" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="26841111381332032.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="347.2500" x="152.8500" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="147.1500"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4255.8195" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="563.5959" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="277.8000" x="277.8000" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="277.8000"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21846.5202" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="552.4716" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="430.5900" x="430.4900" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="130.4900"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="22032.5653" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="11705815922179228.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="361.1400" x="138.9600" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="161.0400"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4218.6105" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_w2m_0" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="561.7757" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="291.6900" x="291.6900" y="-1.6000" z="0.0000" slope="0.0000" lane="w2m_1" posOnLane="291.6900"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21809.3112" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="550.4483" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="444.4800" x="444.3800" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="144.3800"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21995.3563" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-7.0208" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="375.0300" x="125.0700" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="174.9300"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4181.4014" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="559.5493" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="305.5800" x="305.4800" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="5.4800"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21772.1021" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="548.6280" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="458.3700" x="458.2700" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="158.2700"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21958.1473" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-2.0814" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="388.9200" x="111.1800" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="188.8200"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4144.1924" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="557.7291" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="319.4700" x="319.3700" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="19.3700"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21734.8931" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="546.8078" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="472.2600" x="472.1600" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="172.1600"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21920.9382" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-1.8213" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="402.8100" x="97.2900" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="202.7100"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4106.9834" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="555.9089" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="333.3600" x="333.2600" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="33.2600"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="test1" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21697.6841" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="544.9876" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="486.1500" x="486.0500" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="186.0500"/>
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21883.7292" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="15866173334565966.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="416.7000" x="83.4000" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="216.6000"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4069.7744" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="554.0887" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="347.2500" x="347.1500" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="47.1500"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21846.5202" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-1.3013" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="430.5900" x="69.5100" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="230.4900"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="4032.5653" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="576.1342" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="361.1400" x="361.0400" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="61.0400"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21809.3112" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-1.0412" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="444.4800" x="55.6200" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="244.3800"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3995.3563" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="575.2241" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="375.0300" x="374.9300" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="74.9300"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21772.1021" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="7272018606918837.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="458.3700" x="41.7300" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="258.2700"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3958.1473" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="574.3140" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="388.9200" x="388.8200" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="88.8200"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21734.8931" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="0.0000" circuitVoltage="5116042835498389.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="472.2600" x="27.8400" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="272.1600"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3920.9382" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="573.4039" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="402.8100" x="402.7100" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="102.7100"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="test2" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="21697.6841" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2w_1" tractionSubstationId="trSub2" current="-0.0000" circuitVoltage="-2236203327137499.0000" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="486.1500" x="13.9500" y="1.6000" z="0.0000" slope="0.0000" lane="m2w_1" posOnLane="286.0500"/>
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3883.7292" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="572.4938" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="416.7000" x="416.6000" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="116.6000"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3846.5202" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="571.5837" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="430.5900" x="430.4900" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="130.4900"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3809.3112" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="570.6736" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="444.4800" x="444.3800" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="144.3800"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3772.1021" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="569.7635" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="458.3700" x="458.2700" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="158.2700"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3734.8931" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="568.8534" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="472.2600" x="472.1600" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="172.1600"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="test3" maximumBatteryCapacity="46000.0000" actualBatteryCapacity="3697.6841" energyConsumed="37.2090" energyCharged="-37.2090" power="173952.4933" overheadWireId="ovh_m2e_1" tractionSubstationId="trSub1" current="0.0000" circuitVoltage="567.9433" alphaCircuitSolver="0.0000" speed="13.8900" acceleration="0.0000" distance="486.1500" x="486.0500" y="-1.6000" z="0.0000" slope="0.0000" lane="m2e_1" posOnLane="186.0500"/>
+    </timestep>
+    <timestep time="46.00"/>
+    <timestep time="47.00"/>
+    <timestep time="48.00"/>
+    <timestep time="49.00"/>
+    <timestep time="50.00"/>
+    <timestep time="51.00"/>
+    <timestep time="52.00"/>
+    <timestep time="53.00"/>
+    <timestep time="54.00"/>
+    <timestep time="55.00"/>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+    <timestep time="100.00"/>
+    <timestep time="101.00"/>
+    <timestep time="102.00"/>
+    <timestep time="103.00"/>
+    <timestep time="104.00"/>
+    <timestep time="105.00"/>
+    <timestep time="106.00"/>
+    <timestep time="107.00"/>
+    <timestep time="108.00"/>
+    <timestep time="109.00"/>
+    <timestep time="110.00"/>
+    <timestep time="111.00"/>
+    <timestep time="112.00"/>
+    <timestep time="113.00"/>
+    <timestep time="114.00"/>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+</elecHybrid-export-aggregated>
