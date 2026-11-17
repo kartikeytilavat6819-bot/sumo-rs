@@ -1658,7 +1658,7 @@ impl MSActuatedTrafficLightLogic {
         for loopInfo in self.myInductLoops.iter() {
             state.push(loopInfo.loop_.get().unwrap().get_time_since_last_detection());
         }
-        out.write_attr(SUMO_ATTR_STATE, &state.iter().map(|v| utils::common::to_string::f64_to_string_default(*v)).collect::<Vec<_>>().join(" "));
+        out.write_attr(SUMO_ATTR_STATE, &state);
         out.close_tag("");
     }
 
