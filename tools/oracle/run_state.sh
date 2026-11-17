@@ -27,10 +27,6 @@ sumo_run() {
 run_case() {
   local c=$1 dir=$ROOT/tools/oracle/cases/$1 o=$OUT/$1 a tag v EXTRA end mid st ld veh why
   mkdir -p "$o"
-  # walking/person save is owned by pd02: listed, not compared
-  case $c in persons|persons_router_pending|peds_crossing)
-    printf '%-34s SKIP person/walking state save (pd02)\n' "$c"; return ;;
-  esac
   NET=$dir/ref_simple.net.xml; ROU=$dir/routes.rou
   for a in "$dir"/sim.args "$dir"/sim_*.args; do
     [ -f "$a" ] || continue
