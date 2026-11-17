@@ -272,17 +272,9 @@ impl MSOverheadWire {
         ow_mutex_lock();
         self.set_charging_vehicle(true);
         self.myChargingVehicles.push(Ptr::from_mut(veh));
-        // determinism: C++ std::sort is unstable on ties; Rust sort_by is stable
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal positions tie)
         let mut sorter = MSOverheadWire_vehicle_position_sorter::new();
-        self.myChargingVehicles.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort_vec(&mut self.myChargingVehicles, |a, b| sorter.call_op(*a, *b) != 0);
         ow_mutex_unlock();
     }
 

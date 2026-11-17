@@ -1119,12 +1119,12 @@ impl KDTreePartition_Cell {
     // }
     #[allow(unused_variables)]
     pub fn partition<N: RouterNode>(&mut self) -> usize {
-        // determinism: C++ std::sort is unstable; ties (equal coordinate and equal id number) are ordered by the sort algorithm
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal coordinate and equal id number tie)
         let first = self.myFromInclusive;
         let last = self.myToExclusive;
         let axis = self.myAxis;
         let range = &mut self.mySortedNodes.m()[first..last];
-        range.sort_unstable_by(|a, b| node_cmp::<N>(a.cast::<N>(), b.cast::<N>(), axis));
+        utils::common::std_sort::std_sort(range, |a, b| node_cmp::<N>(a.cast::<N>(), b.cast::<N>(), axis) == std::cmp::Ordering::Less);
         self.myHasNodesSortedWrtToMyAxis = true;
         if !self.mySupercell.is_null() {
             // sorting at one level destroys order at higher levels (but preserves the median split property)

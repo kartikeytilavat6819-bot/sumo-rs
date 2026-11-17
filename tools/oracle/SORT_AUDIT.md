@@ -83,7 +83,7 @@ Helpers: `utils::common::std_sort::std_sort` (slice of Copy), `std_sort_vec` (an
 | trigger/MSTriggeredRerouter.cpp:629 (int,int) | ms_triggered_rerouter.rs:754 | a | index unique |
 | trigger/MSStoppingPlaceRerouter.cpp:227 blockedTimes | ms_stopping_place_rerouter.rs:690 | a | id + index tie-break |
 | trigger/MSStoppingPlaceRerouter.cpp:274 candidates | ms_stopping_place_rerouter.rs:717 | a | id tie-break |
-| trigger/MSOverheadWire.cpp:105 vehicle_position | ms_overhead_wire.rs:277 | todo | |
+| trigger/MSOverheadWire.cpp:105 vehicle_position (no tie-break) | ms_overhead_wire.rs:277 | b | now std_sort_vec |
 | MSE2Collector.cpp:907 compareMoveNotification (distance) | mse2_collector.rs:1044 | b | no tie-break; now std_sort_vec |
 | MSE2Collector.cpp:1483 ret.sort() | mse2_collector.rs:1571 | todo | |
 | MSE3Collector.cpp:690 ret.sort() | mse3_collector.rs:574 | todo | |
@@ -107,7 +107,7 @@ Helpers: `utils::common::std_sort::std_sort` (slice of Copy), `std_sort_vec` (an
 | netimport/NIImporter_OpenDrive.h:662 junctionControllers | ni_importer_open_drive.rs:3172 | todo | |
 | netimport/vissim/* (6 sorts) | ni_vissim_edge.rs:594,954,955,958; ni_vissim_connection_cluster.rs:68 | todo | |
 | utils/traction_wire/Circuit.cpp:672,782 std::less<int> | circuit.rs:529,580 | a | ints |
-| utils/router/KDTreePartition.h:1201,1203 (node x/y) | kd_tree_partition.rs:1127 | todo | coordinate ties likely: check |
+| utils/router/KDTreePartition.h:1201,1203 (node x/y) | kd_tree_partition.rs:1127 | b | ties on coordinate + equal numeric id prefix; was sort_unstable_by, now std_sort |
 | foreign/RoutingKit sort.h, nested_dissection (nth_element x3), customizable_contraction_hierarchy.cpp:35 | foreign/routingkit/* | todo | nth_element ties: check |
 | libsumo/*.cpp id sorts (ChargingStation, BusStop, MeanData, ParkingArea, OverheadWire, Calibrator, Person) | libsumo/*.rs | a | unique string ids |
 | libsumo/Person.cpp:195 reservation_by_id | libsumo/person.rs:476 | todo | |
