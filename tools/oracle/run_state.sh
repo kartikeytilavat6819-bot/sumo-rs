@@ -63,6 +63,8 @@ run_case() {
     fi
     rm -f "$dir/out_edgedata.xml"
     printf '%-34s mid=%-6s veh=%-4s state=%-7s load=%-7s %s\n' "$c/$tag" "$mid" "${veh:-0}" "$st" "$ld" "$why"
+    [ "$st" = FAIL ] && grep -E '^[-+][^-+]' "$v.state.txt" | head -8 | cut -c1-260 | sed 's/^/      state /'
+    [ "$ld" = FAIL ] && head -3 "$v.load.txt" | cut -c1-200 | sed 's/^/      load /'
   done
 }
 
