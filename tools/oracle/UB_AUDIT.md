@@ -128,4 +128,4 @@ Deferred (real UB, not fixed in this round):
 |---|---|
 | `microsim/devices/ms_device_transportable.rs` 715-719 `notify_move_internal` (`Ptr::from_raw(veh as *const _ as *mut _)`, then `notify_move(vp.m(), ...)`) | C++ `const_cast<SUMOTrafficObject&>(veh)`. Fixing it needs `&mut SUMOTrafficObject` through `MSMoveReminder::notify_move_internal` and every device/detector override that forwards it (about 15 files). Those files belong to other batches. |
 
-Verification (round 3): `tools/kaggle/agent_run.sh` builds `--release` into `$CARGO_TARGET_DIR-rel`, runs `PROFILE=debug` and `PROFILE=release bash tools/oracle/run_all.sh`, and diffs the verdict columns. The verdict result is recorded in the commit message of the final gate run.
+Verification (round 3): `tools/kaggle/agent_run.sh` builds `--release` into `$CARGO_TARGET_DIR-rel`, runs `PROFILE=debug` and `PROFILE=release bash tools/oracle/run_all.sh`, and diffs the verdict columns. Result on `f069bb8f`: debug and release both PASS=301 FAIL=6 SKIP=41, 0 differing verdict rows (the six known FAILs are the same in both: containers, rerouter_parking, taxi x2, tls_waut, busride). Depart 15/15, unit tests pass.
