@@ -170,6 +170,7 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     remove: noninteracting_vt_remove,
     using_internal_lanes: noninteracting_vt_using_internal_lanes,
     get_active_number: noninteracting_vt_get_active_number,
+    load_state: msp_model_default_load_state,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
@@ -476,7 +477,7 @@ impl MSPModel_NonInteracting_PState {
     pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
         // shortcut: `(*in) >> myLastEntryTime >> myCurrentDuration` is not ported (no istringstream type in the Rust port), upgrade when the loadState stream type is decided
         Self {
-            base: MSTransportableStateAdapter {},
+            base: MSTransportableStateAdapter { vt: &MSTRANSPORTABLE_STATE_ADAPTER_VT },
             myLastEntryTime: 0,
             myCurrentDuration: 0,
             myCurrentBeginPos: 0.0,
