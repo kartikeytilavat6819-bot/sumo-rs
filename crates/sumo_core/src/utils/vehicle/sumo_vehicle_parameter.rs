@@ -56,10 +56,10 @@ const VEHPARS_PARKING_BADGES_SET: i64 = 2 << 30;
 const VEHPARS_INSERTION_CHECKS_SET: i64 = 2 << 31;
 
 // C++ #define values for the Stop parametersSet bits
-const STOP_START_SET: i32 = 1;
-const STOP_END_SET: i32 = 2;
-const STOP_DURATION_SET: i32 = 2 << 1;
-const STOP_UNTIL_SET: i32 = 2 << 2;
+pub const STOP_START_SET: i32 = 1;
+pub const STOP_END_SET: i32 = 2;
+pub const STOP_DURATION_SET: i32 = 2 << 1;
+pub const STOP_UNTIL_SET: i32 = 2 << 2;
 const STOP_EXTENSION_SET: i32 = 2 << 3;
 const STOP_TRIGGER_SET: i32 = 2 << 4;
 const STOP_PARKING_SET: i32 = 2 << 5;
