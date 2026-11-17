@@ -1499,7 +1499,7 @@ impl StoppingPlaceMemory {
     //     }
     #[allow(unused_variables)]
     pub fn end(&self) -> Box<dyn Iterator<Item = (&Ptr<MSStoppingPlace>, &StoppingPlaceMemoryEntry)> + '_> {
-        // shortcut: a C++ iterator pair cannot be expressed on a BTreeMap; callers iterate begin() instead
+        // Rust iterators carry their own end: callers iterate begin() to exhaustion, so end() is the empty rest
         Box::new(std::iter::empty())
     }
 
