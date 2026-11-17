@@ -306,9 +306,8 @@ impl MSMeanData_Harmonoise {
         self.base.detector_update(step);
         for lm in &self.myMeasures {
             for j in lm {
-                // values in myMeasures are created by this class's createValues, so the downcast is to the same type
-                let v = unsafe { &mut *(j.as_raw() as *mut MSMeanData_Harmonoise_MSLaneMeanDataValues) };
-                v.update();
+                // virtual (*j)->update(): lane values run the harmonoise override, trackers the base no-op
+                j.m().update();
             }
         }
     }
