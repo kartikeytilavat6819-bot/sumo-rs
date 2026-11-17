@@ -1,7 +1,11 @@
 diff --git a/src/microsim/transportables/MSStageTrip.cpp b/src/microsim/transportables/MSStageTrip.cpp
 --- a/src/microsim/transportables/MSStageTrip.cpp
 +++ b/src/microsim/transportables/MSStageTrip.cpp
-@@ -242,2 +242,3 @@
+@@ -213,2 +213,3 @@
+         }
++        if (getenv("CD01") && transportable->getID() == "pwL10") std::cerr << "CD01 RC dst=" << (myDestinationStop == nullptr ? std::string("") : myDestinationStop->getID()) << " dep=" << departPos << " arr=" << myArrivalPos << "\n";
+         if (router.compute(origin, destination, departPos, prevStop == nullptr ? "" : prevStop->getID(),
+@@ -242,2 +243,3 @@
      if (minCost != std::numeric_limits<double>::max()) {
 +        if (getenv("CD01") && transportable->getID() == "pwL10") for (const auto& it : minResult) std::cerr << "CD01 TI line=" << it.line << " dstop=" << it.destStop << " n=" << it.edges.size() << " cost=" << it.cost << "\n";
          const bool isTaxi = minVehicle != nullptr && (myModeSet & SVC_TAXI) != 0 && minVehicle->getParameter().line == "taxi";

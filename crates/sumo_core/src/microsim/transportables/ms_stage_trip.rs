@@ -578,6 +578,7 @@ impl MSStageTrip {
             }
             let prevStopID = if prevStop.is_null() { String::new() } else { prevStop.get_id().to_string() };
             let destStopID = if self.myDestinationStop.is_null() { String::new() } else { self.myDestinationStop.get_id().to_string() };
+            if std::env::var_os("CD01").is_some() && transportable.get_id() == "pwL10" { eprintln!("CD01 RC dst={} dep={} arr={}", destStopID, departPos, self.myArrivalPos); }
             let ok = router.compute(origin, destination, departPos, &prevStopID, self.myArrivalPos, &destStopID,
                 transportable.get_max_speed() * self.myWalkFactor, vehicle, transportable.get_v_type_parameter(), self.myModeSet, time, &mut result, 0.);
             if ok {
