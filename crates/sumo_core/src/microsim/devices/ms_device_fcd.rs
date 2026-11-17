@@ -523,6 +523,15 @@ impl MSDevice_FCD {
         })
     }
 
+    /// C++ `MSDevice_FCD::shapeFilter(const SUMOTrafficObject*)` called with a transportable: not an MSVehicle, so only the position is tested.
+    pub fn shape_filter_transportable(p: Ptr<MSTransportable>) -> bool {
+        if !MY_SHAPE_FILTER_INITIALIZED.get() {
+            MSDevice_FCD::build_shape_filter();
+        }
+        let pos = p.get_position_2();
+        MY_SHAPE4_FILTERS.with(|c| c.borrow().iter().any(|shape| shape.around(&pos, 0.0)))
+    }
+
     /// C++: `bool MSDevice_FCD::hasShapeFilter()` [static]
     /// is there a filter based on shapes?
     // inline static bool hasShapeFilter() {

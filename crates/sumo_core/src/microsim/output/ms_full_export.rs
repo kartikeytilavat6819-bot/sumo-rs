@@ -197,8 +197,37 @@ impl MSFullExport {
     // }
     #[allow(unused_variables)]
     pub fn write_persons(of: &mut OutputDevice) {
-        // shortcut: MSTransportableControl has no ported loaded-person map (myTransportables is not a map in the Rust struct), person rows are not written until it is ported
+        let net = MSNet::get_instance();
+        let has_ele = net.has_elevation();
+        let tc = net.m().get_person_control();
         of.open_tag("persons");
+        for (id, p) in tc.myTransportables.iter() {
+            if p.get_current_stage_type() != MSStageType::WAITING_FOR_DEPART {
+                let e = p.get_edge();
+                let v = p.get_vehicle();
+                let pos = p.get_position_2();
+                of.open_tag("person");
+                of.write_attr("id", id.as_str());
+                of.write_attr("x", &pos.x());
+                of.write_attr("y", &pos.y());
+                if has_ele {
+                    of.write_attr("z", &pos.z());
+                }
+                of.write_attr("angle", &navi_degree(p.get_angle()));
+                of.write_attr("speed", &p.get_speed());
+                of.write_attr("position", &p.get_edge_pos());
+                of.write_attr("edge", e.get_id());
+                of.write_attr("slope", &e.get_lanes()[0].get_shape_2().slope_degree_at_offset(p.get_edge_pos()));
+                if v.is_null() {
+                    of.write_attr("vehicle", "");
+                } else {
+                    of.write_attr("vehicle", &v.get_id());
+                }
+                of.write_attr("type", p.get_vehicle_type().get_id());
+                of.write_attr("stage", &(p.get_current_stage_type() as i64));
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 
