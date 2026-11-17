@@ -167,6 +167,27 @@ fn nema_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
     Ptr::new(l).cast::<NEMALogic>().get().unwrap().get_detector_states()
 }
 
+fn nema_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().get_parameter(key, defaultValue.to_string())
+}
+fn nema_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().set_parameter(key, value)
+}
+fn nema_ext_activate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().activate_program()
+}
+fn nema_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<NEMALogic>().m().deactivate_program()
+}
+
+static NEMA_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_parameter: nema_ext_get_parameter,
+    set_parameter: nema_ext_set_parameter,
+    activate_program: nema_ext_activate_program,
+    deactivate_program: nema_ext_deactivate_program,
+    ..super::ms_traffic_light_logic::DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT
+};
+
 static NEMA_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: nema_try_switch,
     init: nema_init,
@@ -219,6 +240,7 @@ impl NEMALogic {
             myPhase: MSPhaseDefinition::new(phases[0].duration, phases[0].get_state(), ""),
         };
         this.base.base.vt = &NEMA_LOGIC_VT;
+        this.base.base.ext_vt = &NEMA_LOGIC_EXT_VT;
         this.myDetectorLength = utils::common::string_utils::to_double(&this.get_parameter("detector-length", "20".to_string())).unwrap();
         this.myDetectorLengthLeftTurnLane = utils::common::string_utils::to_double(&this.get_parameter("detector-length-leftTurnLane", "20".to_string())).unwrap();
         let cycle_default = this.get_parameter("cycleTime", "60".to_string());
@@ -966,7 +988,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        MSTrafficLightLogic::activate_program(&mut self.base.base);
+        MSTrafficLightLogic::activate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(true);
         }
@@ -982,7 +1004,7 @@ impl NEMALogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        MSTrafficLightLogic::deactivate_program(&mut self.base.base);
+        MSTrafficLightLogic::deactivate_program_base(&mut self.base.base);
         for item in self.myLaneDetectorMap.values() {
             item.m().set_visible(false);
         }

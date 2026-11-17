@@ -473,6 +473,10 @@ fn rail_get_requested_drive_way(l: &mut MSTrafficLightLogic, linkIndex: i32) -> 
     Ptr::from_mut(l).cast::<MSRailSignal>().m().get_requested_drive_way(linkIndex)
 }
 
+fn rail_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().set_parameter(key, value)
+}
+
 static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
     get_rival_vehicles: rail_get_rival_vehicles,
     get_priority_vehicles: rail_get_priority_vehicles,
@@ -480,6 +484,10 @@ static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic:
     get_requested_drive_way: rail_get_requested_drive_way,
     get_detector_state: super::ms_traffic_light_logic::MSTrafficLightLogic::get_detector_state_base,
     get_tl_queue_length: super::ms_traffic_light_logic::MSTrafficLightLogic::get_tl_queue_length_base,
+    get_parameter: super::ms_traffic_light_logic::default_ext_get_parameter,
+    set_parameter: rail_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
 };
 
 static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
