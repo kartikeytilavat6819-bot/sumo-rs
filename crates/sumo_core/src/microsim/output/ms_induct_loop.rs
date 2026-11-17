@@ -127,12 +127,16 @@ fn ms_induct_loop_reset(d: &mut MSDetectorFileOutput) {
 fn ms_induct_loop_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
     unsafe { (*ms_induct_loop_of(d)).detector_update(step) }
 }
+fn ms_induct_loop_clear_state(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    unsafe { (*ms_induct_loop_of(d)).clear_state(step) }
+}
 
 static MS_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
     write_xml_output: ms_induct_loop_write_xml_output,
     write_xml_detector_prolog: ms_induct_loop_write_xml_detector_prolog,
     reset: ms_induct_loop_reset,
     detector_update: ms_induct_loop_detector_update,
+    clear_state: ms_induct_loop_clear_state,
 };
 
 impl MSInductLoop {

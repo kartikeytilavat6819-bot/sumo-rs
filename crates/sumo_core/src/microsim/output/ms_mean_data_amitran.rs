@@ -272,6 +272,7 @@ static MS_MEAN_DATA_AMITRAN_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: amitran_mean_data_open_interval,
     write_prefix: amitran_mean_data_write_prefix,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
 };
 
 fn amitran_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {

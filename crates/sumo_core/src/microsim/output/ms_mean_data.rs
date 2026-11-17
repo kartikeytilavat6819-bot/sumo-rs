@@ -554,6 +554,11 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
+        (self.meandata_vt.detector_update)(self, step)
+    }
+
+    /// C++ body of `MSMeanData::detectorUpdate`, the base entry of `meandata_vt.detector_update`
+    pub fn detector_update_base(&mut self, step: SUMOTime) {
         if step + delta_t() == self.myDumpBegin {
             self.init();
         }
@@ -1310,6 +1315,7 @@ pub struct MSMeanDataVt {
     pub open_interval: fn(&mut MSMeanData, &mut OutputDevice, SUMOTime, SUMOTime),
     pub write_prefix: fn(&MSMeanData, &mut OutputDevice, &MSMeanData_MeanDataValues, SumoXMLTag, String),
     pub reset_only: fn(&mut MSMeanData, SUMOTime),
+    pub detector_update: fn(&mut MSMeanData, SUMOTime),
 }
 
 static MS_MEAN_DATA_BASE_VT: MSMeanDataVt = MSMeanDataVt {
@@ -1320,6 +1326,7 @@ static MS_MEAN_DATA_BASE_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: MSMeanData::open_interval_base,
     write_prefix: MSMeanData::write_prefix_base,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
 };
 
 impl MSMeanData {
