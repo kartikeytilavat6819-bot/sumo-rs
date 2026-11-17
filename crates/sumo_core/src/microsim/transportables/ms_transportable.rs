@@ -1148,7 +1148,7 @@ impl MSTransportable {
             stage.route_output(self.myAmPerson, os, withRouteLength, previous, withTiming, false);
             previous = *stage;
         }
-        // shortcut: SUMOVehicleParameter::writeParams is not ported yet, so the extra parameters are not written
+        myParameter.write_params(os);
         os.close_tag("");
         os.lf();
     }

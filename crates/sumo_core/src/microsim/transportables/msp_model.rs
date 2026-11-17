@@ -27,6 +27,12 @@ pub struct MSPModelVt {
     pub has_pedestrians: fn(&mut MSPModel, Ptr<MSLane>) -> bool,
     pub blocked_at_dist: fn(&mut MSPModel, Ptr<SUMOTrafficObject>, Ptr<MSLane>, f64, f64, f64, Ptr<Vec<Ptr<MSPerson>>>) -> bool,
     pub next_blocking: fn(&mut MSPModel, Ptr<MSLane>, f64, f64, f64, f64, bool) -> PersonDist,
+    pub using_shortcuts: fn(&mut MSPModel) -> bool,
+}
+
+/// C++ MSPModel::usingShortcuts base implementation (returns false)
+pub fn msp_model_default_using_shortcuts(_m: &mut MSPModel) -> bool {
+    false
 }
 
 /// C++ MSPModel::loadState base implementation (returns nullptr)
@@ -160,7 +166,7 @@ impl MSPModel {
     //     }
     #[allow(unused_variables)]
     pub fn using_shortcuts(&mut self) -> bool {
-        false
+        (self.vt.using_shortcuts)(self)
     }
 
     /// C++: `bool MSPModel::usingDoors()` [virtual]

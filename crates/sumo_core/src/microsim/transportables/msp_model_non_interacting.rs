@@ -57,6 +57,15 @@ fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
     Ptr::from_mut(a).cast::<MSPModel_NonInteracting_PState>().m().save_state(out)
 }
 
+/// Token reader for the whitespace-separated state format (C++ `std::istringstream >>`)
+fn ni_next<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
+    state.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+}
+
+fn noninteracting_vt_load_state(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().load_state(t, s, state)
+}
+
 /// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
 static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
     get_lat_offset: adapter_default_get_lat_offset,
@@ -133,7 +142,7 @@ impl MSPModel_NonInteracting_CState {
     // MSPModel_NonInteracting::CState::CState(MoveToNextEdge* cmd, std::istringstream* in) : PState(cmd, in) {
     // }
     #[allow(unused_variables)]
-    pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
+    pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Option<&mut std::str::SplitWhitespace<'_>>) -> Self {
         let mut pstate = MSPModel_NonInteracting_PState::new(cmd, in_);
         pstate.base.vt = &MSPMODEL_NONINTERACTING_CSTATE_VT;
         Self {
@@ -245,10 +254,11 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     remove: noninteracting_vt_remove,
     using_internal_lanes: noninteracting_vt_using_internal_lanes,
     get_active_number: noninteracting_vt_get_active_number,
-    load_state: msp_model_default_load_state,
+    load_state: noninteracting_vt_load_state,
     has_pedestrians: msp_model_default_has_pedestrians,
     blocked_at_dist: msp_model_default_blocked_at_dist,
     next_blocking: msp_model_default_next_blocking,
+    using_shortcuts: msp_model_default_using_shortcuts,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
@@ -307,11 +317,11 @@ impl MSPModel_NonInteracting {
         // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, duration) = if transportable.is_person() {
-            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::null()))));
+            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, None))));
             let d = s.m().compute_duration(Ptr::null(), &*stage, now);
             (Ptr::from_mut(&mut s.m().base), d)
         } else {
-            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, Ptr::null()))));
+            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, None))));
             let d = s.m().compute_duration(Ptr::null(), &*stage, now);
             (Ptr::from_mut(&mut s.m().base.base), d)
         };
@@ -330,15 +340,15 @@ impl MSPModel_NonInteracting {
     //     return state;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
+    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
         // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, eventTime) = if transportable.is_person() {
-            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::from_mut(in_)))));
+            let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Some(in_)))));
             (Ptr::from_mut(&mut s.m().base), s.get_event_time())
         } else {
-            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, Ptr::from_mut(in_)))));
+            let s: Ptr<MSPModel_NonInteracting_CState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_CState::new(cmd, Some(in_)))));
             (Ptr::from_mut(&mut s.m().base.base), s.get_event_time())
         };
         self.myNet.m().get_begin_of_timestep_events().m().add_event(Ptr::from_mut(cmd.m() as &mut dyn Command), eventTime);
@@ -551,16 +561,20 @@ impl MSPModel_NonInteracting_PState {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
-        // shortcut: `(*in) >> myLastEntryTime >> myCurrentDuration` is not ported (no istringstream type in the Rust port), upgrade when the loadState stream type is decided
-        Self {
+    pub fn new(cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge>, in_: Option<&mut std::str::SplitWhitespace<'_>>) -> Self {
+        let mut state = Self {
             base: MSTransportableStateAdapter { vt: &MSPMODEL_NONINTERACTING_PSTATE_VT },
             myLastEntryTime: 0,
             myCurrentDuration: 0,
             myCurrentBeginPos: 0.0,
             myCurrentEndPos: 0.0,
             myCommand: cmd,
+        };
+        if let Some(input) = in_ {
+            state.myLastEntryTime = ni_next::<SUMOTime>(input);
+            state.myCurrentDuration = ni_next::<SUMOTime>(input);
         }
+        state
     }
 
     /// C++: `double PState::getEdgePos(SUMOTime) const` [const, virtual]
