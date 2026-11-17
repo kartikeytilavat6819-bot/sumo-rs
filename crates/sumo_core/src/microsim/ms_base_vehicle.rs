@@ -2658,7 +2658,7 @@ impl MSBaseVehicle {
     //     return false;
     // }
     #[allow(unused_variables)]
-    /// `it` is an index into myRoute's edges (MSRouteIterator is Unmapped)
+    /// `it` is an index into myRoute's edges (MSRouteIterator)
     pub fn has_jump(&self, it: usize) -> bool {
         for stop in self.myStops.iter() {
             if stop.edge == it && stop.pars.jump >= 0 {
@@ -4709,7 +4709,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn reroute_between_stops(&mut self, nextStopIndex: i32, info: &str, teleport: bool, errorMsg: &mut String) -> bool {
-        // shortcut: route-iterator based rerouting between stops (MSRouteIterator is Unmapped) is not ported yet
         let n = self.myStops.len() as i32;
         if nextStopIndex < 0 || nextStopIndex > n {
             *errorMsg = utils::tlf!("invalid nextStopIndex % for % remaining stops", nextStopIndex, n);
@@ -4719,9 +4718,48 @@ impl MSBaseVehicle {
             *errorMsg = "cannot reroute towards reached stop".to_string();
             return false;
         }
-        *errorMsg = "rerouteBetweenStops is not ported yet".to_string();
-        let _ = (info, teleport);
-        false
+        let t = MSNet::get_instance().get_current_time_step();
+
+        let oldEdges: ConstMSEdgeVector = self.myRoute.get_edges().clone();
+        let junctionOffset = if !self.get_lane().is_null() && self.get_lane().is_internal() { 1 } else { 0 };
+        let itStart: MSRouteIterator = if nextStopIndex == 0 { *self.get_current_route_edge() + junctionOffset } else { self.myStops[nextStopIndex as usize - 1].edge };
+        let startPos: f64 = if nextStopIndex == 0 { self.get_position_on_lane() } else { self.myStops[nextStopIndex as usize - 1].pars.endPos };
+        let itEnd: MSRouteIterator = if nextStopIndex == n { oldEdges.len() - 1 } else { self.myStops[nextStopIndex as usize].edge };
+        let endPos: f64 = if nextStopIndex == n { self.get_arrival_pos() } else { self.myStops[nextStopIndex as usize].pars.endPos };
+
+        let me: Ptr<SUMOVehicle> = Ptr::from_mut(self).cast::<SUMOVehicle>();
+        let mut newBetween: ConstMSEdgeVector = Vec::new();
+        if !teleport {
+            self.get_router_tt().compute_2(oldEdges[itStart], startPos, oldEdges[itEnd], endPos, me, t, &mut newBetween, true);
+            if newBetween.is_empty() {
+                *errorMsg = utils::tlf!("no route found from edge '%' to stop edge '%'", oldEdges[itStart].get_id(), oldEdges[itEnd].get_id());
+                return false;
+            }
+        }
+
+        let oldRemainingEdges: ConstMSEdgeVector = oldEdges[self.myCurrEdge..].to_vec();
+        let mut newEdges: ConstMSEdgeVector = oldEdges[self.myCurrEdge..itStart].to_vec(); // only remaining
+        if !teleport {
+            newEdges.extend_from_slice(&newBetween[..newBetween.len() - 1]);
+        } else {
+            newEdges.push(oldEdges[itStart]);
+        }
+        newEdges.extend_from_slice(&oldEdges[itEnd..]);
+
+        let routeCost = self.get_router_tt().recompute_costs(&newEdges, me, t, Ptr::null());
+        let previousCost = self.get_router_tt().recompute_costs(&oldRemainingEdges, me, t, Ptr::null());
+        let savings = previousCost - routeCost;
+
+        if teleport {
+            // let the vehicle jump rather than teleport
+            // we add a jump-stop at the end of the edge (unless the vehicle is
+            // already configure to jump before the replaced stop)
+            if !self.insert_jump(nextStopIndex, itStart, errorMsg) {
+                return false;
+            }
+        }
+        let onInit = !self.has_departed();
+        self.replace_route_edges(&mut newEdges, routeCost, savings, info, onInit, false, false, Ptr::from_mut(errorMsg))
     }
 
     /// C++: `bool MSBaseVehicle::insertStop(int, SUMOVehicleParameter::Stop, const std::string &, bool, std::string &)`
