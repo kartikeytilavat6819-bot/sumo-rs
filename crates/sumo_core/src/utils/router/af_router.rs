@@ -1165,3 +1165,72 @@ impl AFRouter_EdgeInfoComparator {
 
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // Values computed by hand from AFRouter.h:
+    // sharc = (levels - 1) - partition, partition = (levels - 1) - sharc, flag index = sharc * 2 + (0 | 1)
+    type Af = AFRouter<(), (), (), ()>;
+
+    #[test]
+    fn partition_to_sharc_levels() {
+        assert_eq!(Af::partition_level2_sharc_level(1, 5), 3);
+        assert_eq!(Af::partition_level2_sharc_level(4, 5), 0);
+        assert_eq!(Af::partition_level2_sharc_level(1, 3), 1);
+        assert_eq!(Af::partition_level2_sharc_level(2, 3), 0);
+    }
+
+    #[test]
+    fn sharc_to_partition_levels() {
+        assert_eq!(Af::s_harc_level2_partition_level(0, 5), 4);
+        assert_eq!(Af::s_harc_level2_partition_level(3, 5), 1);
+        assert_eq!(Af::s_harc_level2_partition_level(0, 3), 2);
+        assert_eq!(Af::s_harc_level2_partition_level(1, 3), 1);
+    }
+
+    #[test]
+    fn partition_and_sharc_levels_round_trip() {
+        for levels in 2..=6 {
+            for p in 1..levels {
+                let s = Af::partition_level2_sharc_level(p, levels);
+                assert_eq!(Af::s_harc_level2_partition_level(s, levels), p);
+            }
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "given partition level is zero (0) or below")]
+    fn partition_level_zero_is_rejected() {
+        Af::partition_level2_sharc_level(0, 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds the number of partition levels minus one")]
+    fn partition_level_above_top_is_rejected() {
+        Af::partition_level2_sharc_level(5, 5);
+    }
+
+    #[test]
+    #[should_panic(expected = "exceeds the number of SHARC levels minus one")]
+    fn sharc_level_above_top_is_rejected() {
+        Af::s_harc_level2_partition_level(4, 5);
+    }
+
+    #[test]
+    fn flag_without_arc_flags_is_always_set() {
+        let mut info = AFInfo_FlagInfo::new(Ptr::null());
+        assert!(Af::flag(Ptr::from_mut(&mut info), (5, 1, false)));
+    }
+
+    #[test]
+    fn flag_index_is_sharc_level_times_two_plus_cell() {
+        let mut info = AFInfo_FlagInfo::new(Ptr::null());
+        info.arcFlags = vec![false, true, false, true];
+        assert!(!Af::flag(Ptr::from_mut(&mut info), (0, 0, false))); // index 0
+        assert!(Af::flag(Ptr::from_mut(&mut info), (0, 1, false))); // index 1
+        assert!(!Af::flag(Ptr::from_mut(&mut info), (1, 0, true))); // index 2
+        assert!(Af::flag(Ptr::from_mut(&mut info), (1, 1, false))); // index 3
+    }
+}
+
