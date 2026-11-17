@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0.5"/>
+    <vType id="truck" vClass="truck" length="12" maxSpeed="25" accel="1.2" decel="4" sigma="0.5"/>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="rB" edges="-103227#0 -103227#1 -103227#2"/>
+    <route id="rC" edges="--103227#2 --103227#1 --103227#0"/>
+    <route id="rD" edges="-103226#0 -103226#1"/>
+    <route id="rE" edges="-103224#0 -103224#1 -103227#2"/>
+    <route id="rF" edges="--103227#2 -103224#2 -103224#3"/>
+    <route id="rG" edges="-103228 -103227#1 -103227#2"/>
+    <route id="rH" edges="-103230 -103224#3"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="80" period="6" departLane="random" departSpeed="max"/>
+    <flow id="fB" type="car" route="rB" begin="0" end="80" period="8" departLane="random" departSpeed="max"/>
+    <flow id="fC" type="truck" route="rC" begin="0" end="80" period="12" departSpeed="max"/>
+    <flow id="fD" type="car" route="rD" begin="0" end="80" period="15" departSpeed="max"/>
+    <flow id="fE" type="car" route="rE" begin="0" end="80" period="14" departSpeed="max"/>
+    <flow id="fF" type="car" route="rF" begin="0" end="80" period="16" departSpeed="max"/>
+    <flow id="fG" type="truck" route="rG" begin="0" end="80" period="20" departSpeed="max"/>
+    <flow id="fH" type="car" route="rH" begin="0" end="80" period="20" departSpeed="max"/>
+</routes>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="car" sigma="0.5" maxSpeed="15"/>
+    <vType id="ev" vClass="emergency" length="6" maxSpeed="30" speedFactor="1.3" accel="2.6" decel="4.5" sigma="0">
+        <param key="has.bluelight.device" value="true"/>
+    </vType>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="rB" edges="-103227#0 -103227#1 -103227#2"/>
+    <route id="rE" edges="-103224#0 -103224#1 -103227#2"/>
+    <flow id="fA" type="car" route="rA" begin="0" end="180" period="4" departLane="random" departSpeed="max"/>
+    <flow id="fB" type="car" route="rB" begin="0" end="180" period="10" departLane="random" departSpeed="max"/>
+    <flow id="fE" type="car" route="rE" begin="0" end="180" period="12" departSpeed="max"/>
+    <flow id="em" type="ev" route="rA" begin="30" end="180" period="45" departSpeed="max"/>
+    <flow id="emB" type="ev" route="rB" begin="50" end="180" period="60" departSpeed="max"/>
+</routes>

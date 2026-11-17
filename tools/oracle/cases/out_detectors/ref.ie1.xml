@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:02:13.371895-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_detectors/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_detectors/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_detectors/detectors.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_detectors/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_detectors/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_detectors/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<instantE1 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/instant_e1_file.xsd">
+    <instantOut id="ie1_0" time="19.48" state="enter" vehID="fB.2" speed="27.15" length="5.00" type="car"/>
+    <instantOut id="ie1_0" time="19.67" state="leave" vehID="fB.2" speed="27.15" length="5.00" type="car" occupancy="0.18"/>
+    <instantOut id="ie1_1" time="30.22" state="enter" vehID="fA.1" speed="13.76" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="30.58" state="leave" vehID="fA.1" speed="13.76" length="5.00" type="car" occupancy="0.36"/>
+    <instantOut id="ie1_1" time="37.66" state="enter" vehID="fA.2" speed="11.88" length="5.00" type="car" gap="7.08"/>
+    <instantOut id="ie1_1" time="38.00" state="stay" vehID="fA.2" speed="11.88" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="38.07" state="leave" vehID="fA.2" speed="14.07" length="5.00" type="car" occupancy="0.41"/>
+    <instantOut id="ie1_1" time="51.73" state="enter" vehID="fA.3" speed="12.37" length="5.00" type="car" gap="13.66"/>
+    <instantOut id="ie1_1" time="52.00" state="stay" vehID="fA.3" speed="12.37" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="52.12" state="leave" vehID="fA.3" speed="13.79" length="5.00" type="car" occupancy="0.39"/>
+    <instantOut id="ie1_0" time="67.81" state="enter" vehID="fB.8" speed="23.88" length="5.00" type="car" gap="48.15"/>
+    <instantOut id="ie1_0" time="68.00" state="stay" vehID="fB.8" speed="23.88" length="5.00" type="car"/>
+    <instantOut id="ie1_0" time="68.02" state="leave" vehID="fB.8" speed="21.83" length="5.00" type="car" occupancy="0.21"/>
+    <instantOut id="ie1_0" time="76.49" state="enter" vehID="fB.9" speed="16.36" length="5.00" type="car" gap="8.46"/>
+    <instantOut id="ie1_0" time="76.79" state="leave" vehID="fB.9" speed="16.36" length="5.00" type="car" occupancy="0.31"/>
+    <instantOut id="ie1_1" time="78.39" state="enter" vehID="fA.4" speed="13.01" length="5.00" type="car" gap="26.27"/>
+    <instantOut id="ie1_1" time="78.77" state="leave" vehID="fA.4" speed="13.01" length="5.00" type="car" occupancy="0.38"/>
+    <instantOut id="ie1_0" time="83.82" state="enter" vehID="fB.10" speed="24.46" length="5.00" type="car" gap="7.03"/>
+    <instantOut id="ie1_0" time="84.00" state="stay" vehID="fB.10" speed="24.46" length="5.00" type="car"/>
+    <instantOut id="ie1_0" time="84.02" state="leave" vehID="fB.10" speed="24.11" length="5.00" type="car" occupancy="0.20"/>
+    <instantOut id="ie1_1" time="97.67" state="enter" vehID="fA.5" speed="11.29" length="5.00" type="car" gap="18.90"/>
+    <instantOut id="ie1_1" time="98.00" state="stay" vehID="fA.5" speed="11.29" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="98.10" state="leave" vehID="fA.5" speed="12.69" length="5.00" type="car" occupancy="0.43"/>
+    <instantOut id="ie1_1" time="99.71" state="enter" vehID="fA.6" speed="12.03" length="5.00" type="car" gap="1.61"/>
+    <instantOut id="ie1_1" time="100.00" state="stay" vehID="fA.6" speed="12.03" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="100.11" state="leave" vehID="fA.6" speed="14.59" length="5.00" type="car" occupancy="0.39"/>
+    <instantOut id="ie1_0" time="118.05" state="enter" vehID="fB.14" speed="19.71" length="5.00" type="car" gap="34.02"/>
+    <instantOut id="ie1_0" time="118.30" state="leave" vehID="fB.14" speed="19.71" length="5.00" type="car" occupancy="0.25"/>
+    <instantOut id="ie1_0" time="124.12" state="enter" vehID="fB.15" speed="18.93" length="5.00" type="car" gap="5.82"/>
+    <instantOut id="ie1_0" time="124.39" state="leave" vehID="fB.15" speed="18.93" length="5.00" type="car" occupancy="0.26"/>
+    <instantOut id="ie1_0" time="132.55" state="enter" vehID="fB.16" speed="15.78" length="5.00" type="car" gap="8.16"/>
+    <instantOut id="ie1_0" time="132.87" state="leave" vehID="fB.16" speed="15.78" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="133.66" state="enter" vehID="fA.7" speed="12.73" length="5.00" type="car" gap="33.56"/>
+    <instantOut id="ie1_1" time="134.00" state="stay" vehID="fA.7" speed="12.73" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="134.05" state="leave" vehID="fA.7" speed="14.18" length="5.00" type="car" occupancy="0.39"/>
+    <instantOut id="ie1_1" time="147.70" state="enter" vehID="fA.11" speed="13.41" length="5.00" type="car" gap="13.65"/>
+    <instantOut id="ie1_1" time="148.00" state="stay" vehID="fA.11" speed="13.41" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="148.06" state="leave" vehID="fA.11" speed="15.79" length="5.00" type="car" occupancy="0.36"/>
+    <instantOut id="ie1_0" time="156.36" state="enter" vehID="fB.19" speed="18.14" length="5.00" type="car" gap="23.50"/>
+    <instantOut id="ie1_0" time="156.64" state="leave" vehID="fB.19" speed="18.14" length="5.00" type="car" occupancy="0.28"/>
+    <instantOut id="ie1_0" time="163.70" state="enter" vehID="fB.20" speed="25.34" length="5.00" type="car" gap="7.06"/>
+    <instantOut id="ie1_0" time="163.89" state="leave" vehID="fB.20" speed="25.34" length="5.00" type="car" occupancy="0.20"/>
+    <instantOut id="ie1_1" time="173.96" state="enter" vehID="fA.12" speed="11.53" length="5.00" type="car" gap="25.90"/>
+    <instantOut id="ie1_1" time="174.00" state="stay" vehID="fA.12" speed="11.53" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="174.34" state="leave" vehID="fA.12" speed="13.52" length="5.00" type="car" occupancy="0.38"/>
+    <instantOut id="ie1_0" time="181.23" state="enter" vehID="fB.21" speed="17.72" length="5.00" type="car" gap="17.34"/>
+    <instantOut id="ie1_0" time="181.51" state="leave" vehID="fB.21" speed="17.72" length="5.00" type="car" occupancy="0.28"/>
+    <instantOut id="ie1_1" time="196.73" state="enter" vehID="fA.14" speed="12.84" length="5.00" type="car" gap="22.39"/>
+    <instantOut id="ie1_1" time="197.00" state="stay" vehID="fA.14" speed="12.84" length="5.00" type="car"/>
+    <instantOut id="ie1_0" time="196.63" state="enter" vehID="fB.24" speed="17.02" length="5.00" type="car" gap="15.11"/>
+    <instantOut id="ie1_0" time="196.92" state="leave" vehID="fB.24" speed="17.02" length="5.00" type="car" occupancy="0.29"/>
+    <instantOut id="ie1_1" time="197.10" state="leave" vehID="fA.14" speed="15.13" length="5.00" type="car" occupancy="0.37"/>
+    <instantOut id="ie1_1" time="207.05" state="enter" vehID="fA.15" speed="12.49" length="5.00" type="car" gap="9.95"/>
+    <instantOut id="ie1_1" time="207.45" state="leave" vehID="fA.15" speed="12.49" length="5.00" type="car" occupancy="0.40"/>
+    <instantOut id="ie1_1" time="208.90" state="enter" vehID="fA.17" speed="11.68" length="5.00" type="car" gap="1.45"/>
+    <instantOut id="ie1_1" time="209.00" state="stay" vehID="fA.17" speed="11.68" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="209.28" state="leave" vehID="fA.17" speed="13.82" length="5.00" type="car" occupancy="0.38"/>
+    <instantOut id="ie1_1" time="211.12" state="enter" vehID="fA.18" speed="15.64" length="5.00" type="car" gap="1.84"/>
+    <instantOut id="ie1_1" time="211.44" state="leave" vehID="fA.18" speed="15.64" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="212.80" state="enter" vehID="fA.19" speed="14.84" length="5.00" type="car" gap="1.36"/>
+    <instantOut id="ie1_1" time="213.00" state="stay" vehID="fA.19" speed="14.84" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="213.12" state="leave" vehID="fA.19" speed="16.62" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="215.03" state="enter" vehID="fA.20" speed="15.50" length="5.00" type="car" gap="1.90"/>
+    <instantOut id="ie1_1" time="215.35" state="leave" vehID="fA.20" speed="15.50" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="218.87" state="enter" vehID="fA.22" speed="12.18" length="5.00" type="car" gap="3.52"/>
+    <instantOut id="ie1_1" time="219.00" state="stay" vehID="fA.22" speed="12.18" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="219.25" state="leave" vehID="fA.22" speed="13.70" length="5.00" type="car" occupancy="0.38"/>
+    <instantOut id="ie1_1" time="220.84" state="enter" vehID="fA.23" speed="12.67" length="5.00" type="car" gap="1.59"/>
+    <instantOut id="ie1_1" time="221.00" state="stay" vehID="fA.23" speed="12.67" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="221.20" state="leave" vehID="fA.23" speed="14.61" length="5.00" type="car" occupancy="0.36"/>
+    <instantOut id="ie1_1" time="223.46" state="enter" vehID="fA.24" speed="13.80" length="5.00" type="car" gap="2.26"/>
+    <instantOut id="ie1_1" time="223.83" state="leave" vehID="fA.24" speed="13.80" length="5.00" type="car" occupancy="0.36"/>
+    <instantOut id="ie1_1" time="226.29" state="enter" vehID="fA.25" speed="13.70" length="5.00" type="car" gap="2.46"/>
+    <instantOut id="ie1_1" time="226.66" state="leave" vehID="fA.25" speed="13.70" length="5.00" type="car" occupancy="0.36"/>
+    <instantOut id="ie1_1" time="228.06" state="enter" vehID="fA.26" speed="15.68" length="5.00" type="car" gap="1.41"/>
+    <instantOut id="ie1_1" time="228.38" state="leave" vehID="fA.26" speed="15.68" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="229.73" state="enter" vehID="fA.29" speed="14.77" length="5.00" type="car" gap="1.35"/>
+    <instantOut id="ie1_1" time="230.00" state="stay" vehID="fA.29" speed="14.77" length="5.00" type="car"/>
+    <instantOut id="ie1_1" time="230.06" state="leave" vehID="fA.29" speed="17.26" length="5.00" type="car" occupancy="0.33"/>
+    <instantOut id="ie1_1" time="233.49" state="enter" vehID="fA.30" speed="13.31" length="5.00" type="car" gap="3.43"/>
+    <instantOut id="ie1_1" time="233.87" state="leave" vehID="fA.30" speed="13.31" length="5.00" type="car" occupancy="0.38"/>
+    <instantOut id="ie1_1" time="235.16" state="enter" vehID="fA.31" speed="15.25" length="5.00" type="car" gap="1.29"/>
+    <instantOut id="ie1_1" time="235.49" state="leave" vehID="fA.31" speed="15.25" length="5.00" type="car" occupancy="0.33"/>
+    <instantOut id="ie1_1" time="237.03" state="enter" vehID="fA.32" speed="15.83" length="5.00" type="car" gap="1.54"/>
+    <instantOut id="ie1_1" time="237.35" state="leave" vehID="fA.32" speed="15.83" length="5.00" type="car" occupancy="0.32"/>
+    <instantOut id="ie1_1" time="240.61" state="enter" vehID="fA.33" speed="12.96" length="5.00" type="car" gap="3.26"/>
+    <instantOut id="ie1_1" time="240.99" state="leave" vehID="fA.33" speed="12.96" length="5.00" type="car" occupancy="0.39"/>
+</instantE1>
