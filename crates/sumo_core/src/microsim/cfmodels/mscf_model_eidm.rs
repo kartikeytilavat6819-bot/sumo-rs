@@ -4,7 +4,7 @@ use crate::prelude::*;
 use super::mscf_model::*;
 use crate::microsim::ms_globals::MSGlobals;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
 
 fn eidm_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_EIDM>(m).finalize_speed(veh, vPos) }
 fn eidm_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_EIDM>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage) }
@@ -2428,24 +2428,24 @@ impl MSCFModel_EIDM_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "EIDM");
-        // C++ ostream default precision (6) for doubles; bool streams as 0/1
+        // C++ `ostringstream <<` on doubles: default format, bool streams as 0/1
         let parts = vec![
-            f64_to_string_prec(self.minaccel, 6),
-            f64_to_string_prec(self.wouldacc, 6),
-            f64_to_string_prec(self.lastacc, 6),
-            f64_to_string_prec(self.realacc, 6),
-            f64_to_string_prec(self.lastrealacc, 6),
-            f64_to_string_prec(self.realleaderacc, 6),
-            f64_to_string_prec(self.lastleaderacc, 6),
-            f64_to_string_prec(self.v0_int, 6),
-            f64_to_string_prec(self.v0_old, 6),
-            f64_to_string_prec(self.t_off, 6),
-            f64_to_string_prec(self.myw_gap, 6),
-            f64_to_string_prec(self.myw_speed, 6),
-            f64_to_string_prec(self.myw_error, 6),
-            f64_to_string_prec(self.myv_est_l, 6),
-            f64_to_string_prec(self.myv_est, 6),
-            f64_to_string_prec(self.mys_est, 6),
+            f64_to_string_default(self.minaccel),
+            f64_to_string_default(self.wouldacc),
+            f64_to_string_default(self.lastacc),
+            f64_to_string_default(self.realacc),
+            f64_to_string_default(self.lastrealacc),
+            f64_to_string_default(self.realleaderacc),
+            f64_to_string_default(self.lastleaderacc),
+            f64_to_string_default(self.v0_int),
+            f64_to_string_default(self.v0_old),
+            f64_to_string_default(self.t_off),
+            f64_to_string_default(self.myw_gap),
+            f64_to_string_default(self.myw_speed),
+            f64_to_string_default(self.myw_error),
+            f64_to_string_default(self.myv_est_l),
+            f64_to_string_default(self.myv_est),
+            f64_to_string_default(self.mys_est),
             (self.myrespectMinGap as i32).to_string(),
             self.myap_update.to_string(),
         ];

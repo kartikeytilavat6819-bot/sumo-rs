@@ -3,7 +3,7 @@
 use crate::prelude::*;
 use super::mscf_model::*;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
 
 fn wiedemann_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).finalize_speed(veh, vPos) }
 fn wiedemann_follow_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, gap2pred: f64, predSpeed: f64, predMaxDecel: f64, pred: Ptr<MSVehicle>, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_Wiedemann>(m).follow_speed(veh, speed, gap2pred, predSpeed, predMaxDecel, pred, usage) }
@@ -503,7 +503,7 @@ impl MSCFModel_Wiedemann_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "Wiedemann");
-        let internals = f64_to_string_prec(self.accelSign, 6);
+        let internals = f64_to_string_default(self.accelSign);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;

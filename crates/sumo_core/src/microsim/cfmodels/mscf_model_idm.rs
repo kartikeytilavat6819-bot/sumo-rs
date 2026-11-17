@@ -4,7 +4,7 @@ use crate::prelude::*;
 use super::mscf_model::*;
 use crate::microsim::ms_globals::MSGlobals;
 use utils::common::time::{delta_t, time2steps, steps2time, accel2speed, speed2accel, speed2dist, dist2speed, ts};
-use utils::common::to_string::f64_to_string_prec;
+use utils::common::to_string::{f64_to_string_default, f64_to_string_prec};
 
 fn idm_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 { cf_cast::<MSCFModel_IDM>(m).finalize_speed(veh, vPos) }
 fn idm_free_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, speed: f64, seen: f64, maxSpeed: f64, onInsertion: bool, usage: MSCFModel_CalcReason) -> f64 { cf_cast::<MSCFModel_IDM>(m).free_speed(veh, speed, seen, maxSpeed, onInsertion, usage) }
@@ -582,7 +582,7 @@ impl MSCFModel_IDM_VehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "IDMM");
-        let internals = f64_to_string_prec(self.levelOfService, 6);
+        let internals = f64_to_string_default(self.levelOfService);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;
