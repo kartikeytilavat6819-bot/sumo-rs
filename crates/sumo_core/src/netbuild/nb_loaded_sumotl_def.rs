@@ -98,6 +98,7 @@ impl NBLoadedSUMOTLDef {
             myPhasesLoaded: false,
         };
         d.base.vt = &NB_LOADED_SUMOTL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::LoadedSUMOTL;
         d
     }
 
@@ -135,7 +136,12 @@ impl NBLoadedSUMOTLDef {
         ret.base.myControlledLinks = def.get_controlled_links().iter().map(NBConnection::new_4).collect();
         ret.base.myControlledNodes = def.get_nodes().clone();
         ret.base.base2.update_parameters(def.base2.get_parameters_map());
-        // shortcut: C++ dynamic_cast<const NBLoadedSUMOTLDef*>(&def) has no runtime type check in this port, so the reconstruct flags of a source NBLoadedSUMOTLDef are not copied, upgrade: add a kind tag to NBTrafficLightDefinition
+        ret.base.myKind = NBTrafficLightDefinitionKind::LoadedSUMOTL;
+        if def.myKind == NBTrafficLightDefinitionKind::LoadedSUMOTL {
+            let sumoDef = Ptr::new(def).cast::<NBLoadedSUMOTLDef>();
+            ret.myReconstructAddedConnections = sumoDef.myReconstructAddedConnections;
+            ret.myReconstructRemovedConnections = sumoDef.myReconstructRemovedConnections;
+        }
         ret
     }
 

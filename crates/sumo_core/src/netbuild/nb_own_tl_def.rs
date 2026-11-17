@@ -113,6 +113,7 @@ impl NBOwnTLDef {
             myLayout: TrafficLightLayout::DEFAULT,
         };
         d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
         d
     }
 
@@ -132,6 +133,7 @@ impl NBOwnTLDef {
             myLayout: TrafficLightLayout::DEFAULT,
         };
         d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
         d
     }
 
@@ -151,6 +153,7 @@ impl NBOwnTLDef {
             myLayout: TrafficLightLayout::DEFAULT,
         };
         d.base.vt = &NB_OWN_TL_DEF_VT;
+        d.base.myKind = NBTrafficLightDefinitionKind::OwnTL;
         d
     }
 

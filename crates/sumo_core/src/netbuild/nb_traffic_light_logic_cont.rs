@@ -443,7 +443,7 @@ impl NBTrafficLightLogicCont {
             delete_ptr(logic);
         }
         self.myComputed.clear();
-        // shortcut: tls.rebuild, tls.group-signals and tls.ungroup-signals need dynamic_cast<NBLoadedSUMOTLDef*>/<NBOwnTLDef*>, which NBTrafficLightDefinition cannot answer (no type tag). Refuse them instead of silently skipping, upgrade when a type tag is added
+        // shortcut: the bodies of tls.rebuild, tls.group-signals and tls.ungroup-signals (C++ computeLogics branches) are not ported yet; their dynamic_casts can use NBTrafficLightDefinition::myKind. Refuse them instead of silently skipping, upgrade: port the three branches
         for opt in ["tls.rebuild", "tls.group-signals", "tls.ungroup-signals"] {
             if oc.get_bool(opt).unwrap() {
                 panic!("shortcut: option --{opt} is not supported by this port yet (its C++ branch needs runtime type information for traffic light definitions)");
@@ -807,7 +807,7 @@ impl NBTrafficLightLogicCont {
     // }
     #[allow(unused_variables)]
     pub fn apply_open_drive_controllers(&mut self, oc: &mut OptionsCont) {
-        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters) and rebuilds NBLoadedSUMOTLDef via dynamic_cast (needs runtime type info), so no OpenDRIVE controller groups are formed; upgrade when both are ported
+        // shortcut: the controllerID grouping reads NBEdge::Connection parameters (not usable yet, see setOpenDriveSignalParameters), so no OpenDRIVE controller groups are formed; upgrade when NBEdge::Connection is ported
         let _ = oc;
     }
 
