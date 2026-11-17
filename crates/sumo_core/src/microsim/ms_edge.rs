@@ -2255,7 +2255,7 @@ impl MSEdge {
                     // additive term must come after multiplication!
                     vMax += crate::microsim::ms_base_vehicle::SPEED_EPS;
                     if pars.departSpeed > vMax {
-                        // shortcut: MSVehicleType::getSpeedFactor() is Unmapped, so the speed-factor deviation (parameter 1 > 0) cannot be read; the no-deviation branch is taken and the departure is rejected. Upgrade when getSpeedFactor() returns Distribution_Parameterized.
+                        // shortcut: speed-factor deviation (getParameter(1) > 0) is reverted after depart variants regressed; the departure is rejected, upgrade once the chosen speed factor path is verified
                         return false;
                     }
                 }
@@ -3734,15 +3734,14 @@ impl MSEdge {
                     return vehicle;
                 }
                 if !vehicle.is_line_stop(position) && vehicle.allows_boarding(transportable) {
-                    // shortcut: C++ toString(double) uses the global output precision; Rust default formatting is used here
                     utils::common::msg_handler::write_warning(&format!(
                         "{} '{}' at edge '{}' position {} cannot use waiting vehicle '{}' at position {} because it is too far away.",
                         if transportable.is_person() { "Person" } else { "Container" },
                         transportable.get_id(),
                         self.get_id(),
-                        position,
+                        utils::common::to_string::to_string(&position),
                         vehicle.get_id(),
-                        vehicle.get_position_on_lane()
+                        utils::common::to_string::to_string(&vehicle.get_position_on_lane())
                     ));
                 }
             }

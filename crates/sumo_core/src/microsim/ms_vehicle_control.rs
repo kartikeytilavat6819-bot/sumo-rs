@@ -13,13 +13,11 @@ const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 
 
 /// C++ `static_cast<MSBaseVehicle*>(SUMOVehicle*)` for calls that are virtual or only on MSBaseVehicle in the port.
-// shortcut: this cast needs MSBaseVehicle to be #[repr(C)] with `base` first (not done in ms_base_vehicle.rs yet)
 fn as_base(v: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
     v.cast::<MSBaseVehicle>()
 }
 
 /// C++ `static_cast<MSVehicle*>(SUMOVehicle*)`
-// shortcut: this cast needs MSVehicle to be #[repr(C)] with `base` first (not done in ms_vehicle.rs yet)
 fn as_ms_vehicle(v: Ptr<SUMOVehicle>) -> Ptr<MSVehicle> {
     v.cast::<MSVehicle>()
 }
@@ -506,8 +504,7 @@ impl MSVehicleControl {
             self.myRunningVehNo -= 1;
             MSNet::get_instance().m().inform_vehicle_state_listener(veh, MSNet_VehicleState::ARRIVED, "");
             // vehicle is equipped with tripinfo device (not all vehicles are)
-            // shortcut: C++ `veh->getDevice(typeid(MSDevice_Tripinfo))` needs std::type_info, which is not ported; treated as "has a tripinfo device" iff the tripinfo output exists
-            let hasTripinfo = !tripinfoOut.is_null();
+            let hasTripinfo = veh.get_devices().iter().any(|d| MSDevice::get_device_name(d.base2.get_id()) == "tripinfo");
             for dev in veh.get_devices().iter() {
                 MSDevice::generate_output_of(*dev, if hasTripinfo { tripinfoOut } else { Ptr::null() });
             }
