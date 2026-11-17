@@ -1683,8 +1683,9 @@ impl MSBaseVehicle {
             // re-assign stop iterators when rerouting to a new parkingArea / insertStop
             return true;
         }
-        // shortcut: the route color is not copied (null means the default color)
-        let mut newRoute = MSRoute::new(&id, edges, false, Ptr::default(), &StopParVector::new(), -1, -1);
+        // C++ copies the color unless it is the default one (then nullptr)
+        let routeColor: Ptr<RGBColor> = if self.myRoute.myColor.is_null() { Ptr::null() } else { Ptr::from_raw(Box::into_raw(Box::new(*self.myRoute.get_color()))) };
+        let mut newRoute = MSRoute::new(&id, edges, false, routeColor, &StopParVector::new(), -1, -1);
         newRoute.set_costs(cost);
         newRoute.set_savings(savings);
         let constRoute: ConstMSRoutePtr = Rc::new(newRoute);
