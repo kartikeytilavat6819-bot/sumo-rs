@@ -59,6 +59,7 @@ fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
 
 /// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
 static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: pstate_get_position,
@@ -83,6 +84,7 @@ static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTran
 
 /// C++ CState overrides (getPosition, getAngle) on top of the PState table
 static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: cstate_get_position,
@@ -244,6 +246,8 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     using_internal_lanes: noninteracting_vt_using_internal_lanes,
     get_active_number: noninteracting_vt_get_active_number,
     load_state: msp_model_default_load_state,
+    has_pedestrians: msp_model_default_has_pedestrians,
+    next_blocking: msp_model_default_next_blocking,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
