@@ -12,6 +12,8 @@ fn jdump(st: &str, ec: &NBEdgeCont) {
             continue;
         }
         let mut s = format!("JTRACE st {} e {} {}>{}", st, e.m().get_id(), e.m().get_from_node().m().get_id(), e.m().get_to_node().m().get_id());
+        let l0 = e.m().get_lane_shape(0);
+        s += &format!(" L0={:.6},{:.6}>{:.6},{:.6}", l0.front().x(), l0.front().y(), l0.back().x(), l0.back().y());
         for c in e.m().get_connections().iter() {
             let to = if c.toEdge.is_null() { "null".to_string() } else { c.toEdge.m().get_id().to_string() };
             s += &format!(" {}>{}:{}:{}:{}", c.fromLane, to, c.toLane, c.permissions, c.mayDefinitelyPass as i32);
@@ -1110,8 +1112,10 @@ impl NBNetBuilder {
             self.myNodeCont.compute_node_shapes(-1.0);
         }
         //
+        jdump("nshape", &self.myEdgeCont);
         let maxGrade = if oc.get_bool("geometry.max-grade.fix").unwrap() { oc.get_float("geometry.max-grade").unwrap() / 100.0 } else { -1.0 };
         self.myEdgeCont.compute_edge_shapes(maxGrade);
+        jdump("eshape", &self.myEdgeCont);
         // resort edges based on the node and edge shapes
         NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, true);
         NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
