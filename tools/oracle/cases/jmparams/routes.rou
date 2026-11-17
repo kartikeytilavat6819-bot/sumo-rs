@@ -1,0 +1,17 @@
+<routes>
+    <!-- junctionModel: jm* attributes on vType (crossing gap, minor time gap, minor sigma, impatience);
+         per-vehicle junctionModel.ignoreIDs / ignoreTypes params on two vehicles that cross the priority junction -->
+    <vType id="vMaj" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="vMin" length="5.00" maxSpeed="8.33" accel="2.60" decel="4.50" jmTimegapMinor="0.50" jmSigmaMinor="0.90" impatience="0.80"/>
+    <vType id="vCross" length="5.00" maxSpeed="8.33" accel="2.60" decel="4.50" jmCrossingGap="5.00" jmTimegapMinor="2.50" impatience="0.00"/>
+    <route id="ra" edges="W2C C2E"/>
+    <route id="rb" edges="S2C C2N"/>
+    <flow id="fa" type="vMaj" route="ra" begin="0.00" end="150.00" period="6.00" departSpeed="max"/>
+    <flow id="fb" type="vMin" route="rb" begin="1.00" end="150.00" period="4.00" departSpeed="max"/>
+    <vehicle id="vIgnIds" type="vCross" route="rb" depart="20.00" departSpeed="max">
+        <param key="junctionModel.ignoreIDs" value="fa.3 fa.4 fa.5"/>
+    </vehicle>
+    <vehicle id="vIgnTypes" type="vCross" route="rb" depart="40.00" departSpeed="max">
+        <param key="junctionModel.ignoreTypes" value="vMaj"/>
+    </vehicle>
+</routes>
