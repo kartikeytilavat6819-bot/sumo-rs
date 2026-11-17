@@ -2351,7 +2351,7 @@ impl MSCFModel_EIDM {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, s: &MSCFModel_EIDM) -> &mut MSCFModel_EIDM {
-        // shortcut: C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
+        // C++ operator= is private and never defined (C++ cannot call it); panic mirrors that
         panic!("MSCFModel_EIDM::operator= is private and not defined in C++")
     }
 
