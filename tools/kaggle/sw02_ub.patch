@@ -1,0 +1,15 @@
+diff --git a/src/microsim/MSLink.cpp b/src/microsim/MSLink.cpp
+--- a/src/microsim/MSLink.cpp
++++ b/src/microsim/MSLink.cpp
+@@ -84,4 +84,5 @@
+         return 0;
+     } else if (foeConflictIndex >= 0) {
++        if (foeConflictIndex >= (int)foeExitLink->myConflicts.size()) std::cerr << "UBOOB lbc ix=" << foeConflictIndex << " n=" << foeExitLink->myConflicts.size() << "\n";
+         return foeExitLink->myConflicts[foeConflictIndex].lengthBehindCrossing;
+     } else {
+@@ -94,4 +95,5 @@
+ MSLink::ConflictInfo::getFoeConflictSize(const MSLink* foeExitLink) const {
+     if (foeConflictIndex >= 0) {
++        if (foeConflictIndex >= (int)foeExitLink->myConflicts.size()) std::cerr << "UBOOB size ix=" << foeConflictIndex << " n=" << foeExitLink->myConflicts.size() << "\n";
+         return foeExitLink->myConflicts[foeConflictIndex].conflictSize;
+     } else {
