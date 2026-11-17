@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterVehicle};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::common::stable_cache::StableCache;
 
 /// C++ typedef `std::vector<std::pair<const _RailEdge *, const _RailEdge *>> RailEdge::ConstEdgePairVector`
 pub type RailEdge_ConstEdgePairVector<E, V> = Vec<(Ptr<RailEdge<E, V>>, Ptr<RailEdge<E, V>>)>;
@@ -28,7 +29,7 @@ pub struct RailEdge<E, V> {
     /// length of the edge where this turn starts
     pub myStartLength: f64,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, RailEdge_ConstEdgePairVector<E, V>>,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, RailEdge_ConstEdgePairVector<E, V>>,
     pub myViaSuccessors: RailEdge_ConstEdgePairVector<E, V>,
     _p: std::marker::PhantomData<(E, V,)>,
 }
@@ -55,7 +56,7 @@ impl<E, V> RailEdge<E, V> {
             myReplacementEdges: Vec::new(),
             myMaxLength: f64::MAX,
             myStartLength: 0.,
-            myClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
             myViaSuccessors: Vec::new(),
             _p: std::marker::PhantomData,
         }
@@ -86,7 +87,7 @@ impl<E, V> RailEdge<E, V> {
             myReplacementEdges: Vec::new(),
             myMaxLength: turnStart.length() - REVERSAL_SLACK,
             myStartLength: turnStart.length() - REVERSAL_SLACK,
-            myClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
             myViaSuccessors: Vec::new(),
             _p: std::marker::PhantomData,
         };
@@ -476,19 +477,16 @@ impl<E, V> RailEdge<E, V> {
         if vClass == SVC_IGNORING || self.myOriginal.is_null() || self.myOriginal.is_taz_connector() {
             return &self.myViaSuccessors;
         }
-        if let Some(cached) = self.myClassesViaSuccessorMap.get(&vClass) {
-            return cached;
-        }
         // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
-        let me: &mut RailEdge<E, V> = unsafe { &mut *Ptr::new(self).as_raw() };
-        let mut result: RailEdge_ConstEdgePairVector<E, V> = Vec::new();
-        for viaPair in self.myViaSuccessors.iter() {
-            if viaPair.0.myOriginal.is_null() || viaPair.0.myOriginal.is_taz_connector() || self.myOriginal.is_connected_to(&*viaPair.0.myOriginal, vClass, ignoreTransientPermissions) {
-                result.push(*viaPair);
+        self.myClassesViaSuccessorMap.get_or_insert_with(vClass, || {
+            let mut result: RailEdge_ConstEdgePairVector<E, V> = Vec::new();
+            for viaPair in self.myViaSuccessors.iter() {
+                if viaPair.0.myOriginal.is_null() || viaPair.0.myOriginal.is_taz_connector() || self.myOriginal.is_connected_to(&*viaPair.0.myOriginal, vClass, ignoreTransientPermissions) {
+                    result.push(*viaPair);
+                }
             }
-        }
-        me.myClassesViaSuccessorMap.insert(vClass, result);
-        me.myClassesViaSuccessorMap.get(&vClass).unwrap()
+            result
+        })
     }
 
     /// C++: `bool RailEdge::isVirtual() const` [const]
@@ -531,7 +529,7 @@ mod tests {
             myReplacementEdges: vec![],
             myMaxLength: 10.,
             myStartLength: 0.,
-            myClassesViaSuccessorMap: BTreeMap::new(),
+            myClassesViaSuccessorMap: StableCache::new(),
             myViaSuccessors: vec![],
             _p: std::marker::PhantomData,
         };

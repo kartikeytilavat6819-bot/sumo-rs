@@ -3,6 +3,7 @@
 use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use utils::common::stable_cache::StableCache;
 
 /// C++ typedef `std::vector<std::pair<const FlippedEdge<E, N, V> *, const FlippedEdge<E, N, V> *>> FlippedEdge::ConstFlippedEdgePairVector`
 pub type FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec<(Ptr<FlippedEdge<E, N, V>>, Ptr<FlippedEdge<E, N, V>>)>;
@@ -17,7 +18,7 @@ pub struct FlippedEdge<E, N, V> {
     pub myFromJunction: Ptr<FlippedNode<E, N, V>>,
     pub myToJunction: Ptr<FlippedNode<E, N, V>>,
     /// The successors available for a given vClass
-    pub myClassesViaSuccessorMap: BTreeMap<SUMOVehicleClass, FlippedEdge_ConstFlippedEdgePairVector<E, N, V>>,
+    pub myClassesViaSuccessorMap: StableCache<SUMOVehicleClass, FlippedEdge_ConstFlippedEdgePairVector<E, N, V>>,
     pub myViaSuccessors: FlippedEdge_ConstFlippedEdgePairVector<E, N, V>,
     _p: std::marker::PhantomData<(E, N, V,)>,
 }
@@ -168,19 +169,16 @@ where
         if vClass == SVC_IGNORING || self.get_original_edge().is_taz_connector() {
             return &self.myViaSuccessors;
         }
-        if let Some(cached) = self.myClassesViaSuccessorMap.get(&vClass) {
-            return cached;
-        }
         // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
-        let me: &mut FlippedEdge<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
-        let mut result: FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec::new();
-        for viaPair in self.myViaSuccessors.iter() {
-            if viaPair.0.get_original_edge().is_taz_connector() || viaPair.0.get_original_edge().is_connected_to(&*self.get_original_edge(), vClass, false) {
-                result.push(*viaPair);
+        self.myClassesViaSuccessorMap.get_or_insert_with(vClass, || {
+            let mut result: FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec::new();
+            for viaPair in self.myViaSuccessors.iter() {
+                if viaPair.0.get_original_edge().is_taz_connector() || viaPair.0.get_original_edge().is_connected_to(&*self.get_original_edge(), vClass, false) {
+                    result.push(*viaPair);
+                }
             }
-        }
-        me.myClassesViaSuccessorMap.insert(vClass, result);
-        me.myClassesViaSuccessorMap.get(&vClass).unwrap()
+            result
+        })
     }
 
     /// C++: `const FlippedEdge<E, N, V> * FlippedEdge::getBidiEdge() const` [const]
