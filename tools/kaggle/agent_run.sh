@@ -1,5 +1,5 @@
 #!/bin/bash
-# tx01 trace: taxi0 FCD every 5 s, ref vs ours (temporary, removed before merge)
+# tx01 trace: taxi0 FCD per second 164..180, ref vs ours (temporary, removed before merge)
 cd tools/oracle/cases/taxi || exit 1
 BIN="$CARGO_TARGET_DIR/debug"
 OUT=/tmp/tx01
@@ -10,5 +10,9 @@ RUST_BACKTRACE=1 "$BIN/sumo.exe" -n ref_simple.net.xml -r routes.rou \
 echo "== exit=$?"
 for f in ref.fcd.xml "$OUT/ref.fcd.xml"; do
   echo "-- $f"
-  awk -F'"' '/<timestep/{t=$2} /<vehicle id="taxi0"/{ if (int(t)%5==0 && !seen[int(t)]++) print "t=" t, $0 }' "$f" | cut -c1-150 | head -90
+  awk -F'"' '/<timestep/{t=$2} /<vehicle id="taxi0"/{ if (t>=164 && t<=180) print "t=" t, $0 }' "$f" | cut -c1-150
 done
+echo "-- ours tripinfo"
+grep -E 'taxi0|personinfo id="p0"' "$OUT/ref.ti.xml" | cut -c1-200
+echo "-- ours log"
+grep -v '^$' "$OUT/ref.log" | head -20
