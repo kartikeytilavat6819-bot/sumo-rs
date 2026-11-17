@@ -28,13 +28,13 @@ fn as_charging_station(p: Ptr<MSStoppingPlace>) -> Ptr<MSChargingStation> {
 /// C++ `SUMOVehicleParameter::Stop stopPar` as filled in by each charging-stop caller (charging station, parking, lane, positions)
 fn charging_stop_par(cs: Ptr<MSChargingStation>) -> SUMOVehicleParameter_Stop {
     let mut stopPar = SUMOVehicleParameter_Stop::default();
-    stopPar.chargingStation = cs.get_id();
+    stopPar.chargingStation = cs.get_id().to_string();
     if !cs.get_parking_area().is_null() {
-        stopPar.parkingarea = cs.get_parking_area().get_id();
+        stopPar.parkingarea = cs.get_parking_area().get_id().to_string();
         stopPar.parking = if cs.get_parking_area().park_on_road() { ParkingType::ONROAD } else { ParkingType::OFFROAD };
     }
-    stopPar.edge = cs.get_lane().get_edge().get_id();
-    stopPar.lane = cs.get_lane().get_id();
+    stopPar.edge = cs.get_lane().get_edge().get_id().to_string();
+    stopPar.lane = cs.get_lane().get_id().to_string();
     stopPar.startPos = cs.get_begin_lane_position();
     stopPar.endPos = cs.get_end_lane_position();
     stopPar
@@ -643,8 +643,8 @@ impl MSDevice_StationFinder {
                 // schedule the rescue stop
                 let mut rescueStop = SUMOVehicleParameter_Stop::default();
                 rescueStop.index = 0;
-                rescueStop.edge = stopLane2.get_edge().get_id();
-                rescueStop.lane = stopLane2.get_id();
+                rescueStop.edge = stopLane2.get_edge().get_id().to_string();
+                rescueStop.lane = stopLane2.get_id().to_string();
                 rescueStop.startPos = f64::max(endPos - 2. * self.myHolder.m().get_length(), 0.);
                 rescueStop.endPos = endPos;
                 rescueStop.parametersSet |= STOP_START_SET | STOP_END_SET;
