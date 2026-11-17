@@ -20,8 +20,7 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
 Everything is on GitHub: `main`, `wave2` (integration branch) and every `worktree-agent-*` branch (unfinished
 work included). Nothing lives only on the laptop.
 
-**Pending in `wave2`, gated before merging to main** (if the last wave2 gate shows no PASS→FAIL vs main, merge
-`wave2` into `main`): lo01 `16add678` (lc_opposite fixed: checkChange shadowed its targetLane parameter), bo01
+**Merged at the end (main 430/6 after lo01+bo01+vs04; sl07+tr05 in the final gate):** lo01 `16add678` (lc_opposite fixed: checkChange shadowed its targetLane parameter), bo01
 `60f0e73d` (2 base-offset casts), vs04 `c141cd39` (importers 26/26: OpenDRIVE internal-lane reversal used the wrong
 connection's toCP), sl07 `273dd4ea` (state roundtrip: taxi format, rerouter router, drive-way foe order, routeDist
 ids), tr05 `43b843ed` (106 new TraCI infra probes MATCH; error texts, LaneArea offset). Also removed: leftover
@@ -43,8 +42,14 @@ LCTRACE trace code that lc06's merge had brought to main.
 - `city_seattle_downtown_hills`: the official C++ itself reads `foeExitLink->myConflicts[10]` of size 8 (undefined
   behaviour, 17 times) — the reference is not reproducible. Drop/replace this case; the bad index is stored on the
   recheck_set_request_information path (sw01).
-- `city_phoenix_scale_grid` (PANIC in mslcm_lc2013.rs, 3k vehicles): px01 was tracing actuated-TL induction-loop
-  assignment; check its branch `worktree-agent-px01` for its last notes.
+- `city_phoenix_scale_grid` (PANIC in mslcm_lc2013.rs:2632 subtract overflow, 3k vehicles): first divergence t=90000
+  on actuated TL 331861506 — C++ switches phase 2→3, ours stays in 2 because ours counts links 1–3 as usable green
+  (7 loops vs C++'s 4), so the gap stays small (px01). Compare the minor-green classification in
+  ms_actuated_traffic_light_logic.rs (~l.883–893, oneLane / has_major / weak_conflict) with
+  MSActuatedTrafficLightLogic.cpp l.341–354; then make the keep-right `as i64` cast match x86 C++ overflow.
+- Release-vs-debug parity was last verified by ub03 (identical verdicts). bo01's later attempt produced PASS=0 on
+  every release row — a harness problem (release binaries need the `.exe` symlinks the debug side gets; see ub03's
+  agent_run.sh on `worktree-agent-ub03`), not a code result.
 
 **Bug classes that kept recurring (check these first in any new diff):** missing virtual dispatch (dozens of
 fixes tonight); `std::sort` tie order (use `utils::common::std_sort`, see SORT_AUDIT.md); casts from a non-first
