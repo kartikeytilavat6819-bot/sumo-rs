@@ -2385,7 +2385,7 @@ impl MSLaneChanger {
             }
         }
         // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) reverted: the faithful port regressed city_plano and city_bengaluru_blr, and the first differing opened() decision is not measured yet; upgrade after tracing MSLink::opened on both sides
->        let oldstate = state;
+        let oldstate = state;
         // let TraCI influence the wish to change lanes and the security to take
         state = vehicle.m().influence_change_decision(state);
         blocked = state & LCA_BLOCKED;
