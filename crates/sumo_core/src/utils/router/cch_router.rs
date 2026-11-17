@@ -539,7 +539,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, GRAPH> CCHRouter<E, V, GRAPH> {
         true
     }
 
-    /// C++: `CCHRouter<E, V, GRAPH> & CCHRouter::operator=(const CCHRouter<E, V, GRAPH> &)` [private]
+    // C++: `CCHRouter<E, V, GRAPH> & CCHRouter::operator=(const CCHRouter<E, V, GRAPH> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     // operator= is deleted in C++ (= delete): no Rust counterpart
 

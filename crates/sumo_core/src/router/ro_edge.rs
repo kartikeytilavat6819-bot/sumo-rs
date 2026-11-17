@@ -363,10 +363,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
-/// C++ `gWeightsRandomFactor` (StdDefs.cpp) is not ported; it is set from the option of the same name
-// shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from (SystemFrame.cpp) on each use, upgrade when std_defs gains it
+/// C++ `gWeightsRandomFactor` (StdDefs.cpp, set by SystemFrame::checkOptions)
 fn g_weights_random_factor() -> f64 {
-    utils::options::options_cont::get_float("weights.random-factor")
+    utils::common::std_defs::g_weights_random_factor()
 }
 
 /// C++ implicit conversion `ROVehicle *` -> `RORoutable *` (the base subobject)

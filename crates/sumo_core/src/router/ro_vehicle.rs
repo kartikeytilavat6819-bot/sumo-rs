@@ -89,6 +89,14 @@ impl crate::utils::router::router_edge::RouterVehicle for ROVehicle {
     fn ignore_transient_permissions(&self) -> bool {
         self.base.ignore_transient_permissions()
     }
+    /// C++ `ROVehicle::getVTypeParameter()`: `*getType()`
+    fn v_type_parameter(&self) -> &SUMOVTypeParameter {
+        self.get_type().get().expect("ROVehicle without a vehicle type")
+    }
+    /// C++ `V::getParameter().vtypeid`
+    fn vtype_id(&self) -> String {
+        self.get_parameter().vtypeid.clone()
+    }
 }
 
 // C++ static members of ROVehicle (port as module-level statics, see AGENTS.md):

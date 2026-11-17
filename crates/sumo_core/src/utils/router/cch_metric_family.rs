@@ -841,12 +841,12 @@ impl<E: RouterEdge<V>, V: crate::utils::router::router_edge::RouterVehicle, K> C
         c
     }
 
-    /// C++: `void CCHMetricFamily::CCHMetricFamily<E, V, K>(const CCHMetricFamily<E, V, K> &)` [private]
-    /// @}
+    // C++: `void CCHMetricFamily::CCHMetricFamily<E, V, K>(const CCHMetricFamily<E, V, K> &)` [private]
+    // @}
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     // deleted in C++ (= delete): no Rust counterpart
 
-    /// C++: `CCHMetricFamily<E, V, K> & CCHMetricFamily::operator=(const CCHMetricFamily<E, V, K> &)` [private]
+    // C++: `CCHMetricFamily<E, V, K> & CCHMetricFamily::operator=(const CCHMetricFamily<E, V, K> &)` [private]
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     // deleted in C++ (= delete): no Rust counterpart
 
