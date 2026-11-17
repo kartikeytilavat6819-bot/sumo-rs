@@ -8,6 +8,8 @@ use utils::geom::POSITION_EPS;
 use utils::common::sumo_vehicle_class::SVC_BICYCLE;
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
 use utils::common::msg_handler::write_message;
+use utils::common::sys_utils::get_current_millis;
+use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::a_star_router::AStarRouter;
 use crate::microsim::ms_router_defs::MSMapMatcher;
@@ -40,11 +42,6 @@ fn delete_ptr<T>(p: Ptr<T>) {
     if !p.is_null() {
         unsafe { drop(Box::from_raw(p.as_raw())) }
     }
-}
-
-// shortcut: SysUtils::getCurrentMillis is not ported yet, uses the system clock
-fn current_millis() -> i64 {
-    std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_millis() as i64).unwrap_or(0)
 }
 
 fn opt_time(name: &str) -> SUMOTime {
@@ -227,7 +224,7 @@ pub struct MSNet {
     /// Whether the network contains bidirectional rail edges
     pub myHasBidiEdges: bool,
     /// the network version
-    pub myVersion: Unmapped /* MMVersion */,
+    pub myVersion: (i32, f64) /* MMVersion */,
     /// end of loaded edgeData
     pub myEdgeDataEndTime: SUMOTime,
     /// Dictionary of bus / container stops
@@ -249,7 +246,7 @@ pub struct MSNet {
     pub myPedestrianRouter: BTreeMap<i32, Ptr<MSPedestrianRouter>>,
     pub myIntermodalRouter: BTreeMap<i32, Ptr<MSTransportableRouter>>,
     /// An RTree structure holding lane IDs
-    pub myLanesRTree: (bool, Unmapped /* NamedRTree */),
+    pub myLanesRTree: (bool, Ptr<NamedRTree>),
     /// Updater for dynamic shapes that are tracking traffic objects (ensures removal of shape dynamics when the objects are removed)
     pub myDynamicShapeUpdater: Option<Box<MSDynamicShapeUpdater>>, // C++: unique_ptr, null until makeDynamicShapeUpdater
 }
@@ -451,7 +448,7 @@ impl MSNet {
             myHasElevation: false,
             myHasPedestrianNetwork: false,
             myHasBidiEdges: false,
-            myVersion: (), // shortcut: MMVersion is not ported yet, stored as the unit placeholder
+            myVersion: (0, 0.),
             myEdgeDataEndTime: -1,
             myStoppingPlaces: BTreeMap::new(),
             myNamedStoppingPlaces: BTreeMap::new(),
@@ -464,7 +461,7 @@ impl MSNet {
             myRouterEffort: BTreeMap::new(),
             myPedestrianRouter: BTreeMap::new(),
             myIntermodalRouter: BTreeMap::new(),
-            myLanesRTree: (false, ()), // shortcut: NamedRTree is not ported yet
+            myLanesRTree: (false, new_named_rtree()),
             myDynamicShapeUpdater: None,
         });
         MY_INSTANCE.with(|c| c.set(Ptr::from_box(&net)));
@@ -583,19 +580,21 @@ impl MSNet {
             delete_ptr(router);
         }
         self.reset_intermodal_router();
-        // shortcut: NamedRTree (myLanesRTree.second.RemoveAll()) is not ported yet
+        self.myLanesRTree.1.m().remove_all();
         for sub in std::mem::take(&mut self.myTractionSubstations) {
             delete_ptr(sub);
         }
         MSNet::clear_all();
         MY_INSTANCE.with(|c| c.set(Ptr::null()));
+        delete_named_rtree(self.myLanesRTree.1);
+        self.myLanesRTree.1 = Ptr::null();
     }
 
     /// C++: `void MSNet::closeBuilding(const OptionsCont &, MSEdgeControl *, MSJunctionControl *, SUMORouteLoaderControl *, MSTLLogicControl *, std::vector<SUMOTime>, std::vector<std::string>, bool, bool, const MMVersion &)`
     /// Closes the network's building process
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn close_building(&mut self, oc: &OptionsCont, edges: Ptr<MSEdgeControl>, junctions: Ptr<MSJunctionControl>, routeLoaders: Ptr<SUMORouteLoaderControl>, tlc: Ptr<MSTLLogicControl>, stateDumpTimes: Vec<SUMOTime>, stateDumpFiles: Vec<String>, hasInternalLinks: bool, junctionHigherSpeeds: bool, version: &Unmapped /* MMVersion */) {
+    pub fn close_building(&mut self, oc: &OptionsCont, edges: Ptr<MSEdgeControl>, junctions: Ptr<MSJunctionControl>, routeLoaders: Ptr<SUMORouteLoaderControl>, tlc: Ptr<MSTLLogicControl>, stateDumpTimes: Vec<SUMOTime>, stateDumpFiles: Vec<String>, hasInternalLinks: bool, junctionHigherSpeeds: bool, version: &(i32, f64) /* MMVersion */) {
         self.myEdges = edges;
         self.myJunctions = junctions;
         self.myRouteLoaders = routeLoaders;
@@ -608,7 +607,7 @@ impl MSNet {
         self.myStateDumpSuffix = oc_string(oc, "save-state.suffix");
 
         // initialise performance computation
-        self.mySimBeginMillis = current_millis();
+        self.mySimBeginMillis = get_current_millis();
         self.myTraCIMillis = 0;
         self.myHasInternalLinks = hasInternalLinks;
         self.myJunctionHigherSpeeds = junctionHigherSpeeds;
@@ -1066,11 +1065,11 @@ impl MSNet {
         let mut lastTraCICmd = 0;
         if !t.is_null() {
             if self.myLogExecutionTime {
-                self.myTraCIStepDuration = current_millis();
+                self.myTraCIStepDuration = get_current_millis();
             }
             lastTraCICmd = t.m().process_commands(self.myStep, false);
             if self.myLogExecutionTime {
-                self.myTraCIStepDuration = current_millis() - self.myTraCIStepDuration;
+                self.myTraCIStepDuration = get_current_millis() - self.myTraCIStepDuration;
             }
             if TraCIServer::was_closed() || !t.m().get_load_args().is_empty() {
                 return;
@@ -1078,7 +1077,7 @@ impl MSNet {
         }
         // execute beginOfTimestepEvents
         if self.myLogExecutionTime {
-            self.mySimStepDuration = current_millis();
+            self.mySimStepDuration = get_current_millis();
         }
         // simulation state output
         if let Some(dist) = self.myStateDumpTimes.iter().position(|&s| s == self.myStep) {
@@ -1162,7 +1161,7 @@ impl MSNet {
         self.myEndOfTimestepEvents.m().execute(self.myStep);
 
         if self.myLogExecutionTime {
-            self.myTraCIStepDuration -= current_millis();
+            self.myTraCIStepDuration -= get_current_millis();
         }
         if onlyMove {
             self.myStepCompletionMissing = true;
@@ -1774,7 +1773,7 @@ impl MSNet {
             self.write_substation_output();
         }
         self.write_rail_signal_blocks();
-        let now = current_millis();
+        let now = get_current_millis();
         if self.myLogExecutionTime || get_bool("duration-log.statistics") {
             let msg = self.generate_statistics(start, now);
             write_message(&msg);
@@ -3447,7 +3446,7 @@ impl MSNet {
     //         return myVersion;
     //     }
     #[allow(unused_variables)]
-    pub fn get_network_version(&self) -> Unmapped /* MMVersion */ {
+    pub fn get_network_version(&self) -> (i32, f64) /* MMVersion */ {
         self.myVersion
     }
 
@@ -3683,7 +3682,7 @@ impl MSNet {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_REMOTECONTROL);
         }
         if self.myLogExecutionTime {
-            self.myTraCIStepDuration += current_millis();
+            self.myTraCIStepDuration += get_current_millis();
             self.myTraCIMillis += self.myTraCIStepDuration;
         }
         if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
@@ -3692,7 +3691,7 @@ impl MSNet {
             self.remove_outdated_collisions();
         }
         // update and write (if needed) detector values
-        self.mySimStepDuration = current_millis() - self.mySimStepDuration;
+        self.mySimStepDuration = get_current_millis() - self.mySimStepDuration;
         self.write_output();
         if self.myLogExecutionTime {
             self.myVehiclesMoved += self.myVehicleControl.get_running_vehicle_no() as i64;
