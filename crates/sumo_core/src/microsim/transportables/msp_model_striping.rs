@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::sumo_vehicle_class::{SVC_IGNORING, SVC_PEDESTRIAN};
+use utils::common::to_string::f64_to_string_prec;
 
 /// C++ enum `MSPModel_Striping::ObstacleType`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -120,11 +121,22 @@ fn lookup_walking_area_path(before: Ptr<MSLane>, after: Ptr<MSLane>) -> Option<P
     MY_WALKING_AREA_PATHS.with(|m| m.borrow().get(&(before, after)).map(|p| Ptr::new(p)))
 }
 
+/// Token readers for the whitespace-separated state format (C++ `std::istringstream >>`)
+fn ps_next<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
+    state.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+}
+fn ps_next_str(state: &mut std::str::SplitWhitespace<'_>) -> String {
+    state.next().unwrap_or("").to_string()
+}
+fn ps_next_bool(state: &mut std::str::SplitWhitespace<'_>) -> bool {
+    ps_next::<i32>(state) != 0
+}
+
 /// C++ implicit copy constructor `PState(const PState &)` (used as `new PState(*p)`)
 fn copy_pstate(p: &MSPModel_Striping_PState) -> MSPModel_Striping_PState {
     MSPModel_Striping_PState {
         base: MSPModel_InteractingState {
-            base: MSTransportableStateAdapter {},
+            base: MSTransportableStateAdapter { vt: &MSPMODEL_STRIPING_PSTATE_VT },
             myPerson: p.myPerson,
             myStage: p.myStage,
             myLane: p.myLane,
@@ -152,6 +164,11 @@ const SIDEWALK_OFFSET: f64 = 3.0;
 /// C++ `MSPModel::UNSPECIFIED_POS_LAT` / `RANDOM_POS_LAT` (MSPModel.cpp)
 const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
 const RANDOM_POS_LAT: f64 = -f64::MAX;
+
+/// Sidewalk lookup for the walking stage; a uniquely named wrapper avoids clashing with the router's get_sidewalk in the prelude glob
+pub fn walking_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    get_sidewalk(edge, svc)
+}
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
 // shortcut: local copy because the generic getSidewalk in utils/router/intermodal_edge.rs is a stub (needs router trait bounds for E::getLanes and L::getPermissions); delete this copy and call that one once it is ported
@@ -209,6 +226,53 @@ const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
 const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
+// C++ virtual overrides of MSPModel, dispatched through MSPModel::vt
+static MSPMODEL_STRIPING_VT: MSPModelVt = MSPModelVt {
+    add: striping_vt_add,
+    clear_state: striping_vt_clear_state,
+    remove: striping_vt_remove,
+    using_internal_lanes: striping_vt_using_internal_lanes,
+    get_active_number: striping_vt_get_active_number,
+    load_state: striping_vt_load_state,
+};
+fn striping_vt_load_state(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().load_state(t, s, state)
+}
+
+/// PState overrides of the MSTransportableStateAdapter virtual methods (the others come from MSPModel_InteractingState)
+static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
+    get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
+    get_position: |a, stage, now| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_position(stage, now),
+    get_angle: |a, stage, now| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_angle(stage, now),
+    get_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_waiting_time(),
+    get_total_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_total_waiting_time(),
+    get_speed: |a, _| Ptr::new(a).cast::<MSPModel_InteractingState>().get_speed(),
+    get_next_edge: |a, stage| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_next_edge(stage),
+    move_to: |a, p, lane, lanePos, lanePosLat, t| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().move_to(p, lane, lanePos, lanePosLat, t),
+    move_to_xy: |a, p, pos, lane, lanePos, lanePosLat, angle, routeOffset, edges, t| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().move_to_xy(p, pos, lane, lanePos, lanePosLat, angle, routeOffset, edges, t),
+    is_jammed: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().is_jammed(),
+    is_finished: adapter_default_is_finished,
+    get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
+    get_path_length: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_path_length(),
+    save_state: |a, out| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().save_state(out),
+};
+fn striping_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().add(t, s, now)
+}
+fn striping_vt_clear_state(m: &mut MSPModel) {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().clear_state()
+}
+fn striping_vt_remove(m: &mut MSPModel, state: Ptr<MSTransportableStateAdapter>) {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().remove(state)
+}
+fn striping_vt_using_internal_lanes(m: &mut MSPModel) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().using_internal_lanes()
+}
+fn striping_vt_get_active_number(m: &mut MSPModel) -> i32 {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().get_active_number()
+}
+
 impl MSPModel_Striping {
     /// C++: `void MSPModel_Striping::MSPModel_Striping(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
@@ -250,7 +314,7 @@ impl MSPModel_Striping {
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
         let s = MSPModel_Striping {
             base: MSPModel_Interacting {
-                base: MSPModel {},
+                base: MSPModel { vt: &MSPMODEL_STRIPING_VT },
                 myNumActivePedestrians: 0,
                 myActiveLanes: BTreeMap::new(),
                 myAmActive: false,
@@ -362,7 +426,7 @@ impl MSPModel_Striping {
             }
         }
         let ped: Ptr<MSPModel_InteractingState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_Striping_PState::new(person, stage, lane)))).cast::<MSPModel_InteractingState>();
-        self.myActiveLanes.entry(lane).or_default().push(ped);
+        self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(lane)).or_default().push(ped);
         self.myNumActivePedestrians += 1;
         ped.cast::<MSTransportableStateAdapter>()
     }
@@ -383,10 +447,21 @@ impl MSPModel_Striping {
     //     return ped;
     // }
     #[allow(unused_variables)]
-    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
-        // shortcut: std::istringstream is Unmapped (= ()), so the saved PState fields cannot be parsed yet; fail loudly instead of loading a wrong state, upgrade when istringstream is mapped
-        let _ = (transportable, stage, in_);
-        panic!("MSPModel_Striping::loadState is not supported yet (istringstream unmapped)");
+    pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
+        let person: Ptr<MSPerson> = transportable.cast::<MSPerson>();
+        let net = MSNet::get_instance();
+        if !self.myAmActive {
+            let cmd: Ptr<dyn crate::microsim::ms_event_control::Command> =
+                Ptr::from_mut(Box::leak(Box::new(MSPModel_Striping_MovePedestrians::new(Ptr::from_mut(self)))) as &mut dyn crate::microsim::ms_event_control::Command);
+            net.m().get_begin_of_timestep_events().m().add_event(cmd, net.get_current_time_step());
+            self.myAmActive = true;
+        }
+        let state = MSPModel_Striping_PState::new_2(person, stage, in_);
+        let lane = state.base.myLane;
+        let ped: Ptr<MSPModel_InteractingState> = Ptr::from_mut(Box::leak(Box::new(state))).cast::<MSPModel_InteractingState>();
+        self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(lane)).or_default().push(ped);
+        self.myNumActivePedestrians += 1;
+        ped.cast::<MSTransportableStateAdapter>()
     }
 
     /// C++: `double MSPModel_Striping::posLatConversion(const double, const double)` [static]
@@ -556,12 +631,19 @@ impl MSPModel_Striping {
     pub fn move_in_direction(&mut self, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32) {
         // shortcut: DEBUGCOND (person/lane isSelected, GUI-only) debug output is not ported; debugPath stays null
         // shortcut: the C++ holds a reference into myActiveLanes; here a lane's vector is taken out while it is advanced and put back afterwards
-        let lanes: Vec<Ptr<MSLane>> = self.myActiveLanes.keys().copied().collect();
-        for lane in lanes {
-            let mut pedestrians = match self.myActiveLanes.get_mut(&lane) {
-                Some(v) => std::mem::take(v),
-                None => continue,
+        // C++ iterates the live std::map: lanes inserted by arriveAndAdvance are visited when their key is larger than the current one
+        let mut cursor: Option<MSPModel_Interacting_LaneKey> = None;
+        loop {
+            let from = match cursor {
+                Some(c) => std::ops::Bound::Excluded(c),
+                None => std::ops::Bound::Unbounded,
             };
+            let (key, lane) = match self.myActiveLanes.range((from, std::ops::Bound::Unbounded)).next() {
+                Some((k, _)) => (*k, k.0),
+                None => break,
+            };
+            cursor = Some(key);
+            let mut pedestrians = std::mem::take(self.myActiveLanes.get_mut(&key).unwrap());
             if pedestrians.len() == 0 {
                 self.put_back_lane(lane, pedestrians);
                 continue;
@@ -692,8 +774,9 @@ impl MSPModel_Striping {
 
     /// Returns a lane's pedestrian vector to myActiveLanes (see the shortcut in moveInDirection)
     fn put_back_lane(&mut self, lane: Ptr<MSLane>, pedestrians: MSPModel_Interacting_Pedestrians) {
-        let extra = std::mem::replace(self.myActiveLanes.entry(lane).or_default(), pedestrians);
-        self.myActiveLanes.get_mut(&lane).unwrap().extend(extra);
+        let key = MSPModel_Interacting_LaneKey(lane);
+        let extra = std::mem::replace(self.myActiveLanes.entry(key).or_default(), pedestrians);
+        self.myActiveLanes.get_mut(&key).unwrap().extend(extra);
     }
 
     /// C++: `void MSPModel_Striping::moveInDirectionOnLane(Pedestrians &, const MSLane *, SUMOTime, std::set<MSPerson *> &, int, bool)` [protected]
@@ -1068,7 +1151,7 @@ impl MSPModel_Striping {
                 p.m().move_to_next_lane(currentTime);
                 if !p.get_lane().is_null() {
                     changedLane.insert(p.get_person());
-                    self.myActiveLanes.entry(p.get_lane()).or_default().push(p.cast::<MSPModel_InteractingState>());
+                    self.myActiveLanes.entry(MSPModel_Interacting_LaneKey(p.get_lane())).or_default().push(p.cast::<MSPModel_InteractingState>());
                     p.get_stage().m().activate_entry_reminders(p.get_person().cast::<MSTransportable>(), false);
                 } else {
                     // end walking stage and destroy PState
@@ -1731,8 +1814,7 @@ impl MSPModel_Striping {
                     }
                 }
             }
-            // C++ getPedestrians(nextLane) returns myActiveLanes[nextLane]
-            let pedestrians: &mut MSPModel_Interacting_Pedestrians = self.myActiveLanes.entry(nextLane).or_default();
+            let pedestrians: &mut MSPModel_Interacting_Pedestrians = self.get_pedestrians(nextLane);
             if nextLane.is_walking_area() {
                 Self::transform_to_current_lane_positions(&mut obs, currentDir, nextDir, currentLength, nextLength);
                 // complex transformation into the coordinate system of the current lane
@@ -2591,7 +2673,7 @@ impl MSPModel_Striping_PState {
         // MSPModel_InteractingState(person, stage, lane) inlined: its ctor is still todo!() in msp_model_interacting.rs
         let mut s = MSPModel_Striping_PState {
             base: MSPModel_InteractingState {
-                base: MSTransportableStateAdapter {},
+                base: MSTransportableStateAdapter { vt: &MSPMODEL_STRIPING_PSTATE_VT },
                 myPerson: person,
                 myStage: stage,
                 myLane: lane,
@@ -2745,10 +2827,85 @@ impl MSPModel_Striping_PState {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn new_2(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, in_: Ptr<Unmapped /* std::istringstream */>) -> Self {
-        // shortcut: std::istringstream is Unmapped (= ()), so the saved PState fields cannot be parsed yet; fail loudly instead of loading a wrong state, upgrade when istringstream is mapped
-        let _ = (person, stage, in_);
-        panic!("PState loading from a stream is not supported yet (istringstream unmapped)");
+    pub fn new_2(person: Ptr<MSPerson>, stage: Ptr<MSStageMoving>, in_: &mut std::str::SplitWhitespace<'_>) -> Self {
+        let mut s = MSPModel_Striping_PState {
+            base: MSPModel_InteractingState {
+                base: MSTransportableStateAdapter { vt: &MSPMODEL_STRIPING_PSTATE_VT },
+                myPerson: person,
+                myStage: stage,
+                myLane: Ptr::null(),
+                myEdgePos: if !stage.is_null() { stage.get_depart_pos() } else { 0. },
+                myPosLat: if !stage.is_null() { stage.get_depart_pos_lat() } else { 0. },
+                myDir: MSPMODEL_UNDEFINED_DIRECTION,
+                mySpeed: 0.,
+                mySpeedLat: 0.,
+                myWaitingToEnter: !person.is_null(),
+                myWaitingTime: 0,
+                myTotalWaitingTime: 0,
+                myAmJammed: false,
+                myRemoteXYPos: Position::INVALID,
+                myAngle: std::cell::Cell::new(f64::MAX),
+            },
+            myNLI: MSPModel_Striping_NextLaneInfo::new_2(),
+            myWalkingAreaPath: Ptr::null(),
+        };
+        let laneID = ps_next_str(in_);
+        s.base.myEdgePos = ps_next(in_);
+        s.base.myPosLat = ps_next(in_);
+        s.base.myDir = ps_next(in_);
+        s.base.mySpeed = ps_next(in_);
+        s.base.mySpeedLat = ps_next(in_);
+        s.base.myWaitingToEnter = ps_next_bool(in_);
+        s.base.myWaitingTime = ps_next(in_);
+        s.base.myTotalWaitingTime = ps_next(in_);
+        let wapLaneFrom = ps_next_str(in_);
+        let wapLaneTo = ps_next_str(in_);
+        s.base.myAmJammed = ps_next_bool(in_);
+        let nextLaneID = ps_next_str(in_);
+        let nextLinkFrom = ps_next_str(in_);
+        let nextLinkTo = ps_next_str(in_);
+        let nextDir: i32 = ps_next(in_);
+
+        s.base.myLane = MSLane::dictionary_2(&laneID);
+        if s.base.myLane.is_null() {
+            panic!("Unknown lane '{}' when loading walk for person '{}' from state.", laneID, person.get_id());
+        }
+        let mut nextLane: Ptr<MSLane> = Ptr::null();
+        if nextLaneID != "null" {
+            nextLane = MSLane::dictionary_2(&nextLaneID);
+            if nextLane.is_null() {
+                panic!("Unknown next lane '{}' when loading walk for person '{}' from state.", nextLaneID, person.get_id());
+            }
+        }
+        let mut link: Ptr<MSLink> = Ptr::null();
+        if nextLinkFrom != "null" {
+            let from = MSLane::dictionary_2(&nextLinkFrom);
+            let to = MSLane::dictionary_2(&nextLinkTo);
+            if from.is_null() {
+                panic!("Unknown link origin lane '{}' when loading walk for person '{}' from state.", nextLinkFrom, person.get_id());
+            }
+            if to.is_null() {
+                panic!("Unknown link destination lane '{}' when loading walk for person '{}' from state.", nextLinkTo, person.get_id());
+            }
+            link = from.get_link_to(to);
+        }
+        s.myNLI = MSPModel_Striping_NextLaneInfo::new(nextLane, link, nextDir);
+
+        if wapLaneFrom != "null" {
+            let from = MSLane::dictionary_2(&wapLaneFrom);
+            let to = MSLane::dictionary_2(&wapLaneTo);
+            if from.is_null() {
+                panic!("Unknown walkingAreaPath origin lane '{}' when loading walk for person '{}' from state.", wapLaneFrom, person.get_id());
+            }
+            if to.is_null() {
+                panic!("Unknown walkingAreaPath destination lane '{}' when loading walk for person '{}' from state.", wapLaneTo, person.get_id());
+            }
+            match lookup_walking_area_path(from, to) {
+                Some(p) => s.myWalkingAreaPath = p,
+                None => panic!("Unknown walkingAreaPath from lane '{}' to lane '{}' when loading walk for person '{}' from state.", wapLaneFrom, wapLaneTo, person.get_id()),
+            }
+        }
+        s
     }
 
     /// C++: `void PState::~PState() noexcept` [virtual]
@@ -3115,7 +3272,7 @@ impl MSPModel_Striping_PState {
             let old = self.myStage.get_edge();
             let oldLane = self.myLane;
             if lane != self.myLane {
-                pm.m().myActiveLanes.entry(lane).or_default().push(Ptr::from_mut(self).cast::<MSPModel_InteractingState>());
+                pm.m().myActiveLanes.entry(MSPModel_Interacting_LaneKey(lane)).or_default().push(Ptr::from_mut(self).cast::<MSPModel_InteractingState>());
             }
             if edges.is_empty() {
                 self.myStage.m().set_route_index(p.cast::<MSTransportable>(), routeOffset);
@@ -4285,10 +4442,36 @@ impl MSPModel_Striping_PState {
     //         << " " << myNLI.dir;
     // }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        // shortcut: std::ostringstream is Unmapped (= ()), so the state line (lane, edgePos, posLat, dir, speeds, walkingAreaPath, nextLaneInfo) cannot be written yet; fail loudly instead of silently saving nothing, upgrade when ostringstream is mapped
-        let _ = out;
-        panic!("PState::saveState is not supported yet (ostringstream unmapped)");
+    pub fn save_state(&mut self, out: &mut String /* std::ostringstream */) {
+        // ostream default precision (6 significant digits) for doubles, as in the C++ `<<`
+        let wapLaneFrom = if !self.myWalkingAreaPath.is_null() { self.myWalkingAreaPath.from.get_id().to_string() } else { "null".to_string() };
+        let wapLaneTo = if !self.myWalkingAreaPath.is_null() { self.myWalkingAreaPath.to.get_id().to_string() } else { "null".to_string() };
+        let nextLaneID = if !self.myNLI.lane.is_null() { self.myNLI.lane.get_id().to_string() } else { "null".to_string() };
+        let (nextLinkFrom, nextLinkTo) = if !self.myNLI.link.is_null() {
+            (self.myNLI.link.get_lane_before().get_id().to_string(), self.myNLI.link.get_via_lane_or_lane().get_id().to_string())
+        } else {
+            ("null".to_string(), "null".to_string())
+        };
+        let b = &self.base;
+        out.push_str(&format!(
+            " {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+            b.myLane.get_id(),
+            f64_to_string_prec(b.myEdgePos, 6),
+            f64_to_string_prec(b.myPosLat, 6),
+            b.myDir,
+            f64_to_string_prec(b.mySpeed, 6),
+            f64_to_string_prec(b.mySpeedLat, 6),
+            b.myWaitingToEnter as i32,
+            b.myWaitingTime,
+            b.myTotalWaitingTime,
+            wapLaneFrom,
+            wapLaneTo,
+            b.myAmJammed as i32,
+            nextLaneID,
+            nextLinkFrom,
+            nextLinkTo,
+            self.myNLI.dir
+        ));
     }
 
     /// C++: `const MSLane * PState::getNextCrossing() const` [const, virtual]
@@ -4385,7 +4568,7 @@ impl MSPModel_Striping_PState {
         // MSPModel_InteractingState(nullptr, nullptr, nullptr) inlined: all-default state
         MSPModel_Striping_PState {
             base: MSPModel_InteractingState {
-                base: MSTransportableStateAdapter {},
+                base: MSTransportableStateAdapter { vt: &MSPMODEL_STRIPING_PSTATE_VT },
                 myPerson: Ptr::null(),
                 myStage: Ptr::null(),
                 myLane: Ptr::null(),

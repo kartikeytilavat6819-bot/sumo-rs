@@ -4,6 +4,13 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 use utils::common::to_string::f64_to_string_prec;
 use utils::common::std_defs::g_precision;
+use utils::options::options_cont::{get_bool, get_string};
+use crate::microsim::transportables::msp_model_striping::walking_sidewalk;
+
+/// C++ `std::istringstream >> value` for the saved state format
+fn next_token<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
+    state.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+}
 
 // C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
 const MSPMODEL_FORWARD: i32 = 1;
@@ -43,19 +50,8 @@ impl std::ops::DerefMut for MSStageWalking {
 
 // C++ static members of MSStageWalking (port as module-level statics, see AGENTS.md):
 //   static bool MSStageWalking::myWarnedInvalidTripinfo;
-
-// shortcut: MSPModel has no virtual dispatch table yet, so walking calls go to MSPModel_Striping, the model that
-// pedestrian.model=striping creates (the only one wired for walking here); upgrade when MSPModel gets a vtable
-fn striping_model(model: Ptr<MSPModel>) -> Ptr<MSPModel_Striping> {
-    if utils::options::options_cont::get_string("pedestrian.model") != "striping" {
-        panic!("{}", ProcessError::new("walking stage needs pedestrian.model=striping, other pedestrian models are not wired yet"));
-    }
-    model.cast::<MSPModel_Striping>()
-}
-
-// shortcut: MSTransportableStateAdapter::getPathLength is virtual without dispatch; striping states are MSPModel_Striping_PState, upgrade with the vtable above
-fn pstate_path_length(state: Ptr<MSTransportableStateAdapter>) -> f64 {
-    state.cast::<MSPModel_Striping_PState>().get_path_length()
+thread_local! {
+    static MY_WARNED_INVALID_TRIPINFO: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 impl MSStageWalking {
@@ -190,30 +186,35 @@ impl MSStageWalking {
         self.myRouteStep = 0;
         self.myLastEdgeEntryTime = now;
         if self.myWalkingTime == 0 {
-            return person.m().proceed(net, now, false);
+            if !person.m().proceed(net, now, false) {
+                net.m().get_person_control().erase(person);
+            }
+            return true;
         }
-        if previous.get_edge_pos(now) >= 0. && previous.get_edge() == self.get_edge() {
+        if previous.get_edge_pos(now) >= 0. && previous.get_edge() == self.myRoute[self.myRouteStep] {
             // we need to adapt to the arrival position of the vehicle unless we have an explicit access
             self.myDepartPos = previous.get_edge_pos(now);
-            if net.m().get_person_control().get_movement_model().m().using_doors() {
+            if get_string("pedestrian.model") == "jupedsim" {
                 self.myDepartPosLat = previous.get_edge_pos_lat(now);
             }
             if self.myWalkingTime > 0 {
                 self.mySpeed = self.compute_average_speed();
             }
         }
-        self.myPState = striping_model(net.m().get_person_control().get_movement_model()).m().add(person, Ptr::from_mut(&mut self.base), now);
+        let model = net.m().get_person_control().get_movement_model();
+        self.myPState = model.m().add(person, Ptr::from_mut(&mut self.base), now);
         if self.myPState.is_null() {
-            return false;
+            net.m().get_person_control().erase(person);
+            return true;
         }
         if previous.get_stage_type() != MSStageType::WALKING || previous.get_edge() != self.get_edge() {
             // we only need new move reminders if we are walking a different edge (else it is probably a rerouting)
             self.activate_entry_reminders(person, true);
         }
-        if utils::options::options_cont::get_bool("vehroute-output.exit-times") {
-            self.myExitTimes = Ptr::from_mut(Box::leak(Box::new(Vec::new())));
+        if get_bool("vehroute-output.exit-times") {
+            self.myExitTimes = Ptr::from_raw(Box::into_raw(Box::new(Vec::new())));
         }
-        self.get_edge().m().add_transportable(person);
+        self.myRoute[self.myRouteStep].add_transportable(person);
         true
     }
 
@@ -225,7 +226,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn abort(&mut self, arg0: Ptr<MSTransportable>) {
-        panic!("MSStageWalking::abort needs the pedestrian movement model (MSPModel::remove), which is not ported yet");
+        MSNet::get_instance().m().get_person_control().get_movement_model().m().remove(self.myPState);
     }
 
     /// C++: `void MSStageWalking::setSpeed(double)` [virtual]
@@ -257,7 +258,7 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn get_route_position(&self) -> i32 {
-        panic!("MSStageWalking::getRoutePosition needs MSStageMoving::myRouteStep, which is Unmapped (std::vector iterator); not ported yet");
+        self.myRouteStep as i32
     }
 
     /// C++: `std::string MSStageWalking::getStageDescription(const bool) const` [const, virtual]
@@ -308,7 +309,16 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
-        panic!("MSStageWalking::saveState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model state (saveState); not ported yet");
+        out.push_str(&format!(" {} {} {}", self.myDeparted, self.myRouteStep, self.myLastEdgeEntryTime));
+        if !self.myExitTimes.is_null() {
+            out.push_str(&format!(" {}", self.myExitTimes.len()));
+            for t in self.myExitTimes.iter() {
+                out.push_str(&format!(" {}", t));
+            }
+        } else {
+            out.push_str(" -1");
+        }
+        self.myPState.m().save_state(out);
     }
 
     /// C++: `void MSStageWalking::loadState(MSTransportable *, std::istringstream &)` [virtual]
@@ -342,7 +352,30 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
-        panic!("MSStageWalking::loadState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model loadState; not ported yet");
+        self.myDeparted = next_token(state);
+        let stepIdx: i32 = next_token(state);
+        self.myLastEdgeEntryTime = next_token(state);
+        let exitTimesSize: i32 = next_token(state);
+        if exitTimesSize >= 0 {
+            let mut exits: Vec<SUMOTime> = Vec::new();
+            for _ in 0..exitTimesSize {
+                exits.push(next_token(state));
+            }
+            if get_bool("vehroute-output.exit-times") {
+                self.myExitTimes = Ptr::from_raw(Box::into_raw(Box::new(exits)));
+            } else {
+                self.myExitTimes = Ptr::null();
+            }
+        }
+        self.myRouteStep = stepIdx as usize;
+        self.myPState = MSNet::get_instance().m().get_person_control().get_movement_model().m().load_state(transportable, Ptr::from_mut(&mut self.base), state);
+        let lane = self.myPState.get_lane();
+        if !lane.is_null() && !lane.is_normal() {
+            self.myCurrentInternalEdge = Ptr::from_mut(lane.m().get_edge());
+            self.myCurrentInternalEdge.add_transportable(transportable);
+        } else {
+            self.myRoute[self.myRouteStep].add_transportable(transportable);
+        }
     }
 
     /// C++: `void MSStageWalking::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual]
@@ -373,12 +406,15 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        // shortcut: MSPModel::usingShortcuts() is assumed false (movement model not ported), so the invalid-tripinfo warning is never written
+        if !MY_WARNED_INVALID_TRIPINFO.with(|c| c.get()) && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_shortcuts() {
+            utils::common::msg_handler::write_warning("The pedestrian model uses infrastructure which is not in the network, timeLoss and routeLength may be invalid.");
+            MY_WARNED_INVALID_TRIPINFO.with(|c| c.set(true));
+        }
         let distance = self.walk_distance(true);
         let maxSpeed = self.get_max_speed(transportable);
         let duration = self.myArrived - self.myDeparted;
         let timeLoss = self.get_time_loss(transportable);
-        // shortcut: MSDevice_Tripinfo::addPedestrianData is not ported yet, so the pedestrian totals are not updated
+        MSDevice_Tripinfo::add_pedestrian_data(distance, duration, timeLoss);
         os.open_tag("walk");
         let depart = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
         os.write_attr("depart", &depart);
@@ -548,8 +584,8 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn move_to_next_edge(&mut self, person: Ptr<MSTransportable>, currentTime: SUMOTime, prevDir: i32, nextInternal: Ptr<MSEdge>, isReplay: bool) -> bool {
-        self.get_edge().m().remove_transportable(person);
-        let lane = get_sidewalk_lane(self.get_edge(), SVC_PEDESTRIAN);
+        self.get_edge().remove_transportable(person);
+        let lane = walking_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
         let arrived = self.myRouteStep == self.myRoute.len() - 1;
         if !lane.is_null() {
             let tl = person.get_vehicle_type().get_length();
@@ -565,14 +601,13 @@ impl MSStageWalking {
         }
         self.myLastEdgeEntryTime = currentTime;
         if !self.myCurrentInternalEdge.is_null() {
-            self.myInternalDistance += if pstate_path_length(self.myPState) == 0. { self.myCurrentInternalEdge.get_length() } else { pstate_path_length(self.myPState) };
+            self.myInternalDistance += if self.myPState.get_path_length() == 0. { self.myCurrentInternalEdge.get_length() } else { self.myPState.get_path_length() };
         }
         if arrived {
-            // shortcut: dynamic_cast<MSPerson*> is unchecked; only persons walk, so the cast is safe
-            let p: Ptr<MSPerson> = person.cast::<MSPerson>();
+            let p = person.cast::<MSPerson>();
             if !isReplay && p.has_influencer() && p.m().get_influencer().is_remote_controlled() {
                 self.myCurrentInternalEdge = nextInternal;
-                self.get_edge().m().add_transportable(person);
+                self.get_edge().add_transportable(person);
                 return false;
             }
             if !self.myDestinationStop.is_null() {
@@ -580,20 +615,19 @@ impl MSStageWalking {
             }
             if isReplay {
                 // cannot do this in the replay device because the person might get deleted below
-                striping_model(MSNet::get_instance().m().get_person_control().get_movement_model()).m().remove(self.myPState);
+                MSNet::get_instance().m().get_person_control().get_movement_model().m().remove(self.myPState);
             }
             if !person.m().proceed(MSNet::get_instance(), currentTime, false) {
                 MSNet::get_instance().m().get_person_control().erase(person);
             }
-            true
-        } else {
-            if nextInternal.is_null() {
-                self.myRouteStep += 1;
-            }
-            self.myCurrentInternalEdge = nextInternal;
-            self.get_edge().m().add_transportable(person);
-            false
+            return true;
         }
+        if nextInternal.is_null() {
+            self.myRouteStep += 1;
+        }
+        self.myCurrentInternalEdge = nextInternal;
+        self.get_edge().add_transportable(person);
+        false
     }
 
     /// C++: `void MSStageWalking::activateEntryReminders(MSTransportable *, const bool)` [virtual]
@@ -628,16 +662,16 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_entry_reminders(&mut self, person: Ptr<MSTransportable>, isDepart: bool) {
-        let nextLane = get_sidewalk_lane(self.get_edge(), SVC_PEDESTRIAN);
+        let nextLane = walking_sidewalk(self.get_edge(), SVC_PEDESTRIAN);
         if !nextLane.is_null() {
+            let reason = if isDepart { MSMoveReminder_Notification::NOTIFICATION_DEPARTED } else { MSMoveReminder_Notification::NOTIFICATION_JUNCTION };
             for rem in nextLane.get_move_reminders().clone() {
-                let reason = if isDepart { MSMoveReminder_Notification::NOTIFICATION_DEPARTED } else { MSMoveReminder_Notification::NOTIFICATION_JUNCTION };
-                if rem.m().notify_enter(person.m(), reason, nextLane) {
+                if rem.m().notify_enter(&mut person.m().base, reason, nextLane) {
                     self.myMoveReminders.push(rem);
                 }
             }
         }
-        // shortcut: the hasParameter("rerouter") branch (MSTriggeredRerouter::triggerRouting for the nearest rerouter) is not wired, upgrade when persons carry rerouter params
+        // shortcut: the C++ hasParameter("rerouter") branch (nearest MSTriggeredRerouter triggerRouting for a walk) is not ported, Parameterised has no port yet; upgrade when Parameterised is ported
     }
 
     /// C++: `void MSStageWalking::activateMoveReminders(MSTransportable *, double, double, double)`
@@ -653,7 +687,14 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn activate_move_reminders(&mut self, person: Ptr<MSTransportable>, oldPos: f64, newPos: f64, newSpeed: f64) {
-        panic!("MSStageWalking::activateMoveReminders needs the MSMoveReminder notifyMove API, which is not ported yet");
+        let mut i = 0;
+        while i < self.myMoveReminders.len() {
+            if self.myMoveReminders[i].m().notify_move(&mut person.m().base, oldPos, newPos, newSpeed) {
+                i += 1;
+            } else {
+                self.myMoveReminders.remove(i);
+            }
+        }
     }
 
     /// C++: `void MSStageWalking::activateLeaveReminders(MSTransportable *, const MSLane *, double, SUMOTime, bool)`
@@ -674,9 +715,8 @@ impl MSStageWalking {
         let notification = if arrived { MSMoveReminder_Notification::NOTIFICATION_ARRIVED } else { MSMoveReminder_Notification::NOTIFICATION_JUNCTION };
         let mut i = 0;
         while i < self.myMoveReminders.len() {
-            let rem = self.myMoveReminders[i];
-            rem.m().update_detector(person.m(), 0.0, lane.get_length(), self.myLastEdgeEntryTime, t, t, true);
-            if rem.m().notify_leave(person.m(), lastPos, notification, lane) {
+            self.myMoveReminders[i].m().update_detector(&mut person.m().base, 0.0, lane.get_length(), self.myLastEdgeEntryTime, t, t, true);
+            if self.myMoveReminders[i].m().notify_leave(&mut person.m().base, lastPos, notification, Ptr::null()) {
                 i += 1;
             } else {
                 self.myMoveReminders.remove(i);
@@ -715,7 +755,7 @@ impl MSStageWalking {
     //     }
     #[allow(unused_variables)]
     pub fn get_next_route_edge(&self) -> Ptr<MSEdge> {
-        panic!("MSStageWalking::getNextRouteEdge needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
+        if self.myRouteStep + 1 >= self.myRoute.len() { Ptr::null() } else { self.myRoute[self.myRouteStep + 1] }
     }
 
     /// C++: `bool MSStageWalking::isWalk() const` [const, virtual]
@@ -863,22 +903,49 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn walk_distance(&self, partial: bool) -> f64 {
-        // shortcut: the partial (current position) distance needs MSStageMoving::myRouteStep (Unmapped iterator), upgrade when it is ported
-        if partial && self.myArrived < 0 {
-            panic!("MSStageWalking::walkDistance(partial) needs MSStageMoving::myRouteStep (Unmapped iterator); not ported yet");
-        }
+        let endIt = if partial && self.myArrived < 0 { self.myRouteStep + 1 } else { self.myRoute.len() };
         let mut length: f64 = 0.;
-        for e in self.myRoute.iter() {
+        for e in self.myRoute[..endIt].iter() {
             length += e.get_length();
         }
-        // shortcut: MSPModel::usingInternalLanes() is assumed false (movement model not ported), so walkingarea distances are not added
+        if self.myRoute.len() > 1 && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_internal_lanes() {
+            if self.myInternalDistance > 0. {
+                length += self.myInternalDistance;
+            } else {
+                // use lower bound for distance to pass the intersection
+                for i in 0..endIt - 1 {
+                    let fromEdge = self.myRoute[i];
+                    let toEdge = self.myRoute[i + 1];
+                    let from = walking_sidewalk(fromEdge, SVC_PEDESTRIAN);
+                    let to = walking_sidewalk(toEdge, SVC_PEDESTRIAN);
+                    let mut fromPos = Position::new(0., 0.);
+                    let mut toPos = Position::new(0., 0.);
+                    if !from.is_null() && !to.is_null() {
+                        if fromEdge.get_to_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).front().clone();
+                        } else if fromEdge.get_to_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).back().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).front().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).back().clone();
+                        }
+                        length += fromPos.distance_to2d(&toPos);
+                    }
+                }
+            }
+        }
         // determine walking direction for depart and arrival
         let mut dummy: i32 = 0;
         let departFwdArrivalDir = MSPModel::can_traverse(MSPMODEL_FORWARD, &self.myRoute, &mut dummy);
         let departBwdArrivalDir = MSPModel::can_traverse(MSPMODEL_BACKWARD, &self.myRoute, &mut dummy);
         let mayStartForward = departFwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
         let mayStartBackward = departBwdArrivalDir != MSPMODEL_UNDEFINED_DIRECTION;
-        let arrivalPos = self.myArrivalPos;
+        let arrivalPos = if partial && self.myArrived < 0 { self.get_edge_pos(MSNet::get_instance().get_current_time_step()) } else { self.myArrivalPos };
         let lastLength = self.myRoute[self.myRoute.len() - 1].get_length();
         let firstLength = self.myRoute[0].get_length();
         let lengthFwd = length - self.myDepartPos - (if departFwdArrivalDir == MSPMODEL_BACKWARD { arrivalPos } else { lastLength - arrivalPos });

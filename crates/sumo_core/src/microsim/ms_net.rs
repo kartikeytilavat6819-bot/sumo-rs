@@ -3257,7 +3257,6 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_pedestrian_router(&self, rngIndex: i32, prohibited: &MSNet_Prohibitions) -> &mut MSPedestrianRouter {
-        // shortcut: PedestrianRouter::new (utils/router/pedestrian_router.rs) is a stub needing E::getAllEdges via the router trait bounds, upgrade when those bounds land; until then only an already-created router is returned
         let me_ptr = Ptr::new(self);
         let me = me_ptr.m();
         match me.myPedestrianRouter.get(&rngIndex).copied() {
@@ -3265,7 +3264,12 @@ impl MSNet {
                 router.m().prohibit(prohibited);
                 router.get_mut().unwrap()
             }
-            None => panic!("shortcut: pedestrian router is not creatable yet"),
+            None => {
+                let router: Ptr<MSPedestrianRouter> = Ptr::from_raw(Box::into_raw(Box::new(MSPedestrianRouter::new())));
+                me.myPedestrianRouter.insert(rngIndex, router);
+                router.m().prohibit(prohibited);
+                router.get_mut().unwrap()
+            }
         }
     }
 
