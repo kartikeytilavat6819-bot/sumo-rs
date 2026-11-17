@@ -35,10 +35,18 @@ index 1cd6aba..6d25f64 100644
      double posOnLane = veh.getPositionOnLane();
      if (insertStopIndex > 0) {
 diff --git a/src/microsim/trigger/MSTriggeredRerouter.cpp b/src/microsim/trigger/MSTriggeredRerouter.cpp
-index a28695b..b317626 100644
+index a28695b..e685b0f 100644
 --- a/src/microsim/trigger/MSTriggeredRerouter.cpp
 +++ b/src/microsim/trigger/MSTriggeredRerouter.cpp
-@@ -528,6 +528,7 @@ MSTriggeredRerouter::triggerRouting(SUMOTrafficObject& tObject, MSMoveReminder::
+@@ -502,6 +502,7 @@ MSTriggeredRerouter::notifyLeave(SUMOTrafficObject& /*veh*/, double /*lastPos*/,
+ 
+ bool
+ MSTriggeredRerouter::triggerRouting(SUMOTrafficObject& tObject, MSMoveReminder::Notification reason) {
++    fprintf(stderr, "RRTRACE enter t=%ld veh=%s reason=%d speed=%.6f pos=%.6f\n", (long)MSNet::getInstance()->getCurrentTimeStep(), tObject.getID().c_str(), (int)reason, tObject.getSpeed(), tObject.getPositionOnLane());
+     if (!applies(tObject)) {
+         return false;
+     }
+@@ -528,6 +529,7 @@ MSTriggeredRerouter::triggerRouting(SUMOTrafficObject& tObject, MSMoveReminder::
      // Even if the topology stays unchanged, vehicles with a rerouting device could reroute around jams that form due to capacity reduction
      const bool hasReroutingDevice = tObject.getDevice(typeid(MSDevice_Routing)) != nullptr;
      const MSEdge* lastEdge = tObject.getRerouteDestination();
@@ -46,7 +54,7 @@ index a28695b..b317626 100644
  #ifdef DEBUG_REROUTER
      if (DEBUGCOND(tObject)) {
          std::cout << SIMTIME << " veh=" << tObject.getID() << " check rerouter " << getID() << " lane=" << Named::getIDSecure(tObject.getLane()) << " edge=" << tObject.getEdge()->getID() << " finalEdge=" << lastEdge->getID() /*<< " arrivalPos=" << tObject.getArrivalPos()*/ << "\n";
-@@ -977,7 +978,9 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
+@@ -977,7 +979,9 @@ MSTriggeredRerouter::rerouteParkingArea(const MSTriggeredRerouter::RerouteInterv
          }
      }
      StoppingPlaceParamMap_t addInput = {};

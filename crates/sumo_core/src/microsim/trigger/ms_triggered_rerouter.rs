@@ -624,6 +624,7 @@ impl MSTriggeredRerouter {
         // shortcut: router prohibitions (SUMOAbstractRouter_Prohibitions) are Unmapped (`()`), so every router lookup receives `&()` instead of the closed-edge prohibitions; upgrade when that alias is ported
         let tObject = veh;
         let net = MSNet::get_instance();
+        if std::env::var_os("RR_TRACE").is_some() { eprintln!("RRTRACE enter t={} veh={} reason={} speed={:.6} pos={:.6}", net.get_current_time_step(), tObject.get_id(), reason as i32, tObject.get_speed(), tObject.get_position_on_lane()); }
         if !self.applies(tObject) {
             return false;
         }
