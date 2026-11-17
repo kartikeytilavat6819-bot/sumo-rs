@@ -1,7 +1,7 @@
 # Lane-change audit (lc02)
 
 Side-by-side review of the C++ lane-change code against the Rust port, function by function.
-Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` (1.28.0). Status values:
+Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.0). Status values:
 
 - `OK` — read line by line against the C++, same branch order, expressions, constants, early returns.
 - `FIXED` — mismatch found and fixed; fix sha given.
@@ -16,6 +16,9 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` (1.28.0). Status valu
 | wantsChange → _wantsChange (decision path, lines 1119–1923) | OK | |
 | inform | OK | |
 | overtakeDistance | OK | |
+| patchSpeed / _patchSpeed (lines 201–444) | OK | |
+| informLeader (482–671) | OK | |
+| informFollower (673–1042) | OK | |
 | prepareStep (sigma drift) | OK | |
 | changed / resetState | OK | |
 | anticipateFollowSpeed | OK | |
@@ -28,9 +31,6 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` (1.28.0). Status valu
 | getParameter | FIXED | 92c49f2c |
 | setParameter | OK | |
 | saveState / loadState | OK | |
-| patchSpeed / _patchSpeed | NOT AUDITED | |
-| informLeader | NOT AUDITED | |
-| informFollower | NOT AUDITED | |
 
 ## MSLCM_SL2015.cpp
 
@@ -39,23 +39,42 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` (1.28.0). Status valu
 | constants (#define block) | OK | |
 | getParameter | OK | |
 | setParameter | OK | |
-| all other functions (initDerivedParameters, wantsChange, computeSpeedLat, ...) | NOT AUDITED | |
+| initDerivedParameters | NOT AUDITED | |
+| wantsChange / _wantsChange and wantsChangeSublane (SL2015 decision path) | NOT AUDITED | |
+| patchSpeed (SL2015) | NOT AUDITED | |
+| informLeader / informFollower / informLeaders / informFollowers (SL2015) | NOT AUDITED | |
+| checkBlocking / checkBlockingVehicles / checkStrategicChange / keepLatGap / mustOvertakeStopped | NOT AUDITED | |
+| computeSpeedLat, getDesiredAlignment, updateSafeLatDist, commitManoeuvre, commitFollowSpeed | NOT AUDITED | |
+| getLca, overlap, getLowestBit, decideDirection, hasBidiLeader, getLongest/getSlowest/getStopped | NOT AUDITED | |
+| updateExpectedSublaneSpeeds, computeSublaneShift, forecastAverageSpeed, computeSpeedGain | NOT AUDITED | |
+| remaining helpers (getWidth, getSublaneWidth, getPosLat, getLateralDrift, getLeftBorder, getVehicleCenter, getNeighRight, preventSliding, wantsKeepRight, isBidi, emergencySpeedLat, saveState/loadState) | NOT AUDITED | |
 
 ## MSAbstractLaneChangeModel.cpp
 
 | function | status | fix sha |
 |---|---|---|
-| static constants (NO_NEIGHBOR, UNDEFINED_LOOKAHEAD, LC_ASSUMED_DECEL) | NOT AUDITED | |
 | getParameter / setParameter base (error text) | OK | |
 | saveState / loadState (base, LCSTATE_BASE / LCSTATE gate) | OK | |
 | getExtraReservation | OK | |
-| all other functions | NOT AUDITED | |
+| static constants (NO_NEIGHBOR, UNDEFINED_LOOKAHEAD, LC_ASSUMED_DECEL) | NOT AUDITED | |
+| all other functions (computeSpeedLat, getCooperativeHelpSpeed, ... ) | NOT AUDITED | |
 
-## MSLCHelper.cpp, MSLaneChanger.cpp, MSLaneChangerSublane.cpp
+## MSLCHelper.cpp
+
+| function | status | fix sha |
+|---|---|---|
+| getRoundaboutDistBonus | OK | |
+| updateBlockerLength | OK | |
+| canSaveBlockerLength | OK | |
+| divergentRoute | OK | |
+| getSpeedPreservingSecureGap | OK | |
+| isBidiLeader / isBidiFollower | OK | |
+| unwillingToHelp | OK | |
+
+## MSLaneChanger.cpp, MSLaneChangerSublane.cpp
 
 | file | status | fix sha |
 |---|---|---|
-| MSLCHelper.cpp | NOT AUDITED | |
 | MSLaneChanger.cpp | NOT AUDITED | |
 | MSLaneChangerSublane.cpp | NOT AUDITED | |
 
@@ -73,8 +92,12 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` (1.28.0). Status valu
 2. **Constants and enum values checked.** All LC2013/SL2015 `#define` values match. The `LCA_*` bits
    match the generated `sumo_xml_definitions_gen.rs` (`1<<3`, `1<<8`, `1<<16`, `1<<23`, `1<<26`).
 
+3. **No further mismatches** in the LC2013 functions, MSLCHelper, and `getExtraReservation` /
+   save-load paths checked so far. `gapExtrapolation` is static in C++ too, so the Rust static call is correct.
+
 ## Not done
 
-- The remaining NOT AUDITED rows above (about 1 MB of C++ across the six files).
+- The NOT AUDITED rows above: SL2015 logic (about 4,000 lines of C++), the abstract model's remaining
+  functions, MSLaneChanger.cpp (127 KB) and MSLaneChangerSublane.cpp (47 KB).
 - New lane-change cases for SL2015 with bicycles and sublane, lcAssertive high, zipper merges, and
-  emergency lane changes. None were added in this pass.
+  emergency lane changes. None were added yet.
