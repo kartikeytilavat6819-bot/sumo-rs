@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:33:29.657044-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rerouter_via_closed/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rerouter_via_closed/routes.rou"/>
+        <additional-files value="tools/oracle/cases/rerouter_via_closed/via_closed.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-sc02/tools/oracle/cases/rerouter_via_closed/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-sc02/tools/oracle/cases/rerouter_via_closed/ref.tripinfo.xml"/>
+        <vehroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-sc02/tools/oracle/cases/rerouter_via_closed/ref.vehroute.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-sc02/tools/oracle/cases/rerouter_via_closed/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="v0" depart="0.00" departLane="A0B0_0" departPos="4.60" departSpeed="13.89" departDelay="0.00" arrival="23.00" arrivalLane="B1B2_0" arrivalPos="85.60" arrivalSpeed="13.89" duration="23.00" routeLength="284.80" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.05" rerouteNo="1" devices="vehroute_v0 tripinfo_v0 fcd_v0" vType="car" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="v1" depart="10.00" departLane="A0B0_0" departPos="4.60" departSpeed="13.03" departDelay="0.00" arrival="34.00" arrivalLane="B1B2_0" arrivalPos="85.60" arrivalSpeed="13.03" duration="24.00" routeLength="284.80" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.15" rerouteNo="1" devices="vehroute_v1 tripinfo_v1 fcd_v1" vType="car" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="v2" depart="20.00" departLane="A0B0_0" departPos="4.60" departSpeed="13.89" departDelay="0.00" arrival="43.00" arrivalLane="B1B2_0" arrivalPos="85.60" arrivalSpeed="13.89" duration="23.00" routeLength="284.80" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.10" rerouteNo="1" devices="vehroute_v2 tripinfo_v2 fcd_v2" vType="car" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="v3" depart="30.00" departLane="A0B0_0" departPos="4.60" departSpeed="13.89" departDelay="0.00" arrival="53.00" arrivalLane="B1B2_0" arrivalPos="85.60" arrivalSpeed="13.89" duration="23.00" routeLength="284.80" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.02" rerouteNo="1" devices="vehroute_v3 tripinfo_v3 fcd_v3" vType="car" speedFactor="1.08" vaporized=""/>
+</tripinfos>

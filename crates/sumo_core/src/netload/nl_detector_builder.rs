@@ -890,9 +890,7 @@ impl NLDetectorBuilder {
     // }
     #[allow(unused_variables)]
     pub fn create_e3_detector(&mut self, id: &str, entries: &CrossSectionVector, exits: &CrossSectionVector, haltingSpeedThreshold: f64, haltingTimeThreshold: SUMOTime, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, openEntry: bool, expectArrival: bool) -> Ptr<MSDetectorFileOutput> {
-        let mut det = Box::new(MSE3Collector::new(id, entries, exits, haltingSpeedThreshold, haltingTimeThreshold, name, vTypes, nextEdges, detectPersons, openEntry, expectArrival));
-        let this = Ptr::from_mut(&mut *det);
-        det.build_reminders(this);
+        let det = MSE3Collector::new(id, entries, exits, haltingSpeedThreshold, haltingTimeThreshold, name, vTypes, nextEdges, detectPersons, openEntry, expectArrival);
         Ptr::from_raw(Box::into_raw(det)).cast::<MSDetectorFileOutput>()
     }
 

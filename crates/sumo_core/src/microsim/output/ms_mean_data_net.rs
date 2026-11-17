@@ -20,18 +20,6 @@ fn sim_step() -> SUMOTime {
 fn sumo_vehicle_lane(veh: &SUMOTrafficObject) -> Ptr<MSLane> {
     Ptr::new(veh).cast::<MSVehicle>().get_lane()
 }
-/// C++ virtual `SUMOTrafficObject::getLane()`: dispatched by hand on the object kind
-// shortcut: containers are not dispatched (null lane), upgrade when containers reach meandata
-fn traffic_object_lane(veh: &SUMOTrafficObject) -> Ptr<MSLane> {
-    if veh.is_vehicle() {
-        Ptr::new(veh).cast::<MSVehicle>().get_lane()
-    } else if veh.is_person() {
-        Ptr::new(veh).cast::<MSTransportable>().get_lane()
-    } else {
-        Ptr::null()
-    }
-}
-
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Net::MSLaneMeanDataValues` (microsim/output/MSMeanData_Net.h)
 #[repr(C)]
@@ -747,7 +735,7 @@ impl MSMeanData_Net_MSLaneMeanDataValues {
             } else if MSGlobals::use_meso_sim() {
                 self.waitSeconds += steps2time(veh.get_waiting_time(false));
             }
-            let vlane = traffic_object_lane(veh);
+            let vlane = veh.get_lane();
             let vmax = if vlane.is_null() {
                 veh.get_edge().get_vehicle_max_speed(Ptr::new(veh))
             } else {

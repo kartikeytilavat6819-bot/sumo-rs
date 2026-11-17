@@ -1027,8 +1027,7 @@ impl MSE2Collector {
     pub fn detector_update(&mut self, step: SUMOTime) {
         if self.base2.myDetectPersons != PersonMode::NONE as i32 {
             if self.myLanes.len() > 1 {
-                // shortcut: C++ throws ProcessError here; this void signature panics instead, change to Result when callers can propagate it
-                panic!("Multi-lane e2Detector does not support detecting persons yet");
+                std::panic::panic_any(ProcessError::Process("Multi-lane e2Detector does not support detecting persons yet".to_string()));
             }
             for lane in self.get_lanes() {
                 if lane.has_pedestrians() {
@@ -1837,7 +1836,7 @@ impl MSE2Collector {
             if item.onDetector {
                 let v = vc.get_vehicle(id);
                 if !v.is_null() {
-                    // shortcut: C++ dynamic_cast<MSBaseVehicle*>; the cast is unchecked here, only vehicles from MSVehicleControl reach this detector
+                    // dynamic_cast<MSBaseVehicle*>: every SUMOVehicle in MSVehicleControl is an MSBaseVehicle
                     let veh: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
                     let ad = veh.get_stop_arrival_delay();
                     if ad != INVALID_DOUBLE {
@@ -3074,14 +3073,7 @@ impl MSE2Collector {
         ))))
     }
 
-    /// C++: `double MSE2Collector::calculateSegmentTimeLoss(double, double, double, double)` [static, private]
-    /// Calculates the time loss for a segment with constant vmax
-    // (no C++ body found: implicit/defaulted or defined elsewhere)
-    #[allow(unused_variables)]
-    pub fn calculate_segment_time_loss(timespan: f64, initialSpeed: f64, accel: f64, vmax: f64) -> f64 {
-        // shortcut: declared in SUMO but never defined (and never called), so there is no C++ behaviour to port
-        panic!("MSE2Collector::calculateSegmentTimeLoss is declared in C++ but has no definition")
-    }
+    // C++ `MSE2Collector::calculateSegmentTimeLoss` is declared but never defined (nor called): nothing to port
 
     /// C++: `bool MSE2Collector::compareMoveNotification(MoveNotificationInfo *, MoveNotificationInfo *)` [static, private]
     /// brief returns true if the vehicle corresponding to mni1 is closer to the detector end than the vehicle corresponding to mni2

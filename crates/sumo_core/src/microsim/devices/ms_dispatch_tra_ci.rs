@@ -149,11 +149,19 @@ impl MSDispatch_TraCI {
                 std::panic::panic_any(ProcessError::InvalidArgument(format!("Reservation id '{}' is not known", resID)));
             }
         }
-        // shortcut: C++ catches ProcessError from dispatch and rethrows InvalidArgument; the Rust dispatch reports its errors directly
-        if reservations.len() == 1 {
-            taxi.m().dispatch(&*reservations[0]);
-        } else {
-            taxi.m().dispatch_shared(reservations.clone());
+        // C++ catch (ProcessError& e) { throw InvalidArgument(e.what()); }: errors travel as ProcessError panic payloads
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            if reservations.len() == 1 {
+                taxi.m().dispatch(&*reservations[0]);
+            } else {
+                taxi.m().dispatch_shared(reservations.clone());
+            }
+        }));
+        if let Err(payload) = res {
+            match payload.downcast_ref::<ProcessError>() {
+                Some(e) => std::panic::panic_any(ProcessError::InvalidArgument(e.to_string())),
+                None => std::panic::resume_unwind(payload),
+            }
         }
         // in case of ride sharing the same reservation may occur multiple times
         // determinism: std::set<const Reservation*> orders by pointer, BTreeSet<Ptr<_>> orders by address the same way

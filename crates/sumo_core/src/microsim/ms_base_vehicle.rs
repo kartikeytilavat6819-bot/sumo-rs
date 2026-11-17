@@ -2163,6 +2163,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_stop_delay(&self) -> f64 {
+        // virtual: MSVehicle overrides it, MEVehicle does not
+        if !MSGlobals::use_meso_sim() {
+            return self.as_ms_vehicle().get_stop_delay();
+        }
         // @todo implement for meso
         -1.0
     }
@@ -2175,6 +2179,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn get_stop_arrival_delay(&self) -> f64 {
+        // virtual: MSVehicle overrides it, MEVehicle does not
+        if !MSGlobals::use_meso_sim() {
+            return self.as_ms_vehicle().get_stop_arrival_delay();
+        }
         // @todo implement for meso
         utils::common::std_defs::INVALID_DOUBLE
     }
@@ -2186,6 +2194,10 @@ impl MSBaseVehicle {
     //     }
     #[allow(unused_variables)]
     pub fn estimate_time_to_next_stop(&self) -> (f64, f64) {
+        // virtual: MSVehicle overrides it, MEVehicle does not
+        if !MSGlobals::use_meso_sim() {
+            return self.as_ms_vehicle().estimate_time_to_next_stop();
+        }
         (-1.0, -1.0)
     }
 
