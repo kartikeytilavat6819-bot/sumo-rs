@@ -502,7 +502,7 @@ impl MSBaseVehicle {
             match self.try_get_device_parameter(&tok[1], &key[tok[0].len() + tok[1].len() + 2..]) {
                 Ok(v) => return v,
                 Err(e) => {
-                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e);
+                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e.to_string());
                     return String::new();
                 }
             }
@@ -588,13 +588,13 @@ impl MSBaseVehicle {
     }
 
     /// Fallible form of `getDeviceParameter` (C++ throws InvalidArgument); the Err carries `what()`
-    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, String> {
+    fn try_get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
         for dev in self.myDevices.iter() {
             if dev.base2.device_name() == deviceName {
-                return Ok(MSDevice::get_parameter_of(*dev, key));
+                return MSDevice::get_parameter_of(*dev, key);
             }
         }
-        Err(utils::tlf!("no device of type '%' exists", deviceName))
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `bool MSBaseVehicle::hasDevice(const std::string &) const` [const]
@@ -671,8 +671,8 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> String {
-        self.try_get_device_parameter(deviceName, key).unwrap_or_else(|e| panic!("{}", e))
+    pub fn get_device_parameter(&self, deviceName: &str, key: &str) -> Result<String, ProcessError> {
+        self.try_get_device_parameter(deviceName, key)
     }
 
     /// C++: `void MSBaseVehicle::setDeviceParameter(const std::string &, const std::string &, const std::string &)`
@@ -688,14 +688,13 @@ impl MSBaseVehicle {
     //     throw InvalidArgument(TLF("no device of type '%' exists", deviceName));
     // }
     #[allow(unused_variables)]
-    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) {
+    pub fn set_device_parameter(&mut self, deviceName: &str, key: &str, value: &str) -> Result<(), ProcessError> {
         for dev in self.myDevices.iter_mut() {
             if dev.base2.device_name() == deviceName {
-                MSDevice::set_parameter_of(*dev, key, value);
-                return;
+                return MSDevice::set_parameter_of(*dev, key, value);
             }
         }
-        panic!("{}", utils::tlf!("no device of type '%' exists", deviceName));
+        Err(ProcessError::InvalidArgument(utils::tlf!("no device of type '%' exists", deviceName)))
     }
 
     /// C++: `void MSBaseVehicle::setJunctionModelParameter(const std::string &, const std::string &)`
@@ -1518,7 +1517,8 @@ impl MSBaseVehicle {
                         }
                     }
                     sourcePos = stops[idx].pos;
-                    startTime += self.myStops[stopIt].get_min_duration(startTime);
+                    // shortcut: the C++ int64 add wraps in the release build; a SUMOTIME_MAX duration (setStop default) overflows here, so wrap the same way, upgrade if C++ is ever checked for overflow
+                    startTime = startTime.wrapping_add(self.myStops[stopIt].get_min_duration(startTime));
                 }
                 edges.pop();
                 edges.extend(into.iter().copied());
@@ -3793,7 +3793,6 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_stop(&mut self, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<MSRouteIterator>) -> bool {
-        // shortcut: the too-short-stop warning needs getParkingLength per stop type and MSNet::warnOnce, not ported yet, upgrade with those
         let mut stop = MSStop::new(stopPar);
         if stopPar.lane == "" {
             let e = MSEdge::dictionary_2(&stopPar.edge);
@@ -3830,18 +3829,23 @@ impl MSBaseVehicle {
         }
         let mut stopType = "stop".to_string();
         let mut stopID = String::new();
+        let mut parkingLength = stop.pars.endPos - stop.pars.startPos;
         if !stop.busstop.is_null() {
             stopType = if stop.busstop.get_element() == SUMO_TAG_TRAIN_STOP { "trainStop".to_string() } else { "busStop".to_string() };
             stopID = stop.busstop.get_id().to_string();
+            parkingLength = stop.busstop.get_parking_length();
         } else if !stop.containerstop.is_null() {
             stopType = "containerStop".to_string();
             stopID = stop.containerstop.get_id().to_string();
+            parkingLength = stop.containerstop.get_parking_length();
         } else if !stop.chargingStation.is_null() {
             stopType = "chargingStation".to_string();
             stopID = stop.chargingStation.get_id().to_string();
+            parkingLength = stop.chargingStation.get_parking_length();
         } else if !stop.overheadWireSegment.is_null() {
             stopType = "overheadWireSegment".to_string();
             stopID = stop.overheadWireSegment.get_id().to_string();
+            parkingLength = stop.overheadWireSegment.get_parking_length();
         } else if !stop.parkingarea.is_null() {
             stopType = "parkingArea".to_string();
             stopID = stop.parkingarea.get_id().to_string();
@@ -3851,6 +3855,14 @@ impl MSBaseVehicle {
         if stop.pars.startPos < 0.0 || stop.pars.endPos > stop.lane.get_length() {
             *errorMsg = format!("{} for vehicle '{}' on lane '{}' has an invalid position.", errorMsgStart, self.myParameter.id, stop.lane.get_id());
             return false;
+        }
+        if stopType != "stop" && stopType != "parkingArea" && self.myType.get_length() / 2. > parkingLength
+            // do not warn for stops that fill the whole lane
+            && parkingLength < stop.lane.get_length()
+            // do not warn twice for the same stop
+            && MSNet::get_instance().m().warn_once(&format!("{}:{}", stopType, stopID))
+        {
+            *errorMsg = format!("{} on lane '{}' is too short for vehicle '{}'.", errorMsgStart, stop.lane.get_id(), self.myParameter.id);
         }
         if stopType == "parkingArea" && !stop.parkingarea.accepts(Ptr::from_mut(self).cast::<SUMOVehicle>()) {
             // forbid access in case the parking requests other badges

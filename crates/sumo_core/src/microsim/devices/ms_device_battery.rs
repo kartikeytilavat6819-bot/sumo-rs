@@ -82,31 +82,61 @@ const DEFAULT_CHARGE_RATIO: f64 = 0.5;
 /// C++ `VTYPEPARS_EMISSIONCLASS_SET` bit (private in ms_vehicle_type.rs, same value)
 const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
 
-/// C++ `istringstream >> double`; shortcut: failbit state after a bad token is not modelled
+/// C++ failed `istringstream`: every later extraction is a no-op, so the rest of the tokens are dropped
+fn stream_fail(bis: &mut std::str::SplitWhitespace) {
+    while bis.next().is_some() {}
+}
+
+/// C++ `istringstream >> double`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_f64(bis: &mut std::str::SplitWhitespace, target: &mut f64) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<f64>().unwrap_or(0.);
+    match bis.next().map(|t| t.parse::<f64>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0.;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> SUMOTime`; shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> SUMOTime`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_i64(bis: &mut std::str::SplitWhitespace, target: &mut i64) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i64>().unwrap_or(0);
+    match bis.next().map(|t| t.parse::<i64>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> int`; shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> int`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_i32(bis: &mut std::str::SplitWhitespace, target: &mut i32) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i32>().unwrap_or(0);
+    match bis.next().map(|t| t.parse::<i32>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> bool` (written by toString as 1/0); shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> bool` (written by toString as 1/0): 0 and 1 are read, other values set failbit and read as true
 fn read_stream_bool(bis: &mut std::str::SplitWhitespace, target: &mut bool) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i32>().map(|v| v != 0).unwrap_or(false);
+    match bis.next().map(|t| t.parse::<i64>()) {
+        Some(Ok(0)) => *target = false,
+        Some(Ok(1)) => *target = true,
+        Some(Ok(_)) => {
+            *target = true;
+            stream_fail(bis);
+        }
+        Some(Err(_)) => {
+            *target = false;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
@@ -339,7 +369,6 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: C++ istringstream failbit semantics are not modelled (a malformed token is read as 0 or false); state strings are always written by saveState, upgrade if hand-written states must be rejected
         let state = attrs.get_string(SUMO_ATTR_STATE);
         let mut bis = state.split_whitespace();
         read_stream_f64(&mut bis, &mut self.myActualBatteryCapacity);
@@ -391,30 +420,29 @@ impl MSDevice_Battery {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        // shortcut: C++ throws InvalidArgument; the port panics with the same text, as MSDevice::getParameter does
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
-            to_string(&self.get_actual_battery_capacity())
+            Ok(to_string(&self.get_actual_battery_capacity()))
         } else if key == attr_str(SUMO_ATTR_ENERGYCONSUMED) {
-            to_string(&self.get_consum())
+            Ok(to_string(&self.get_consum()))
         } else if key == "chargePower" {
-            to_string(&(self.get_energy_charged() * 3600.))
+            Ok(to_string(&(self.get_energy_charged() * 3600.)))
         } else if key == "usedAverage" {
-            to_string(&(self.get_total_consumption() * 3600. / steps2time(MSNet::get_instance().get_current_time_step() - self.get_holder().get_departure())))
+            Ok(to_string(&(self.get_total_consumption() * 3600. / steps2time(MSNet::get_instance().get_current_time_step() - self.get_holder().get_departure()))))
         } else if key == attr_str(SUMO_ATTR_TOTALENERGYCONSUMED) {
-            to_string(&self.get_total_consumption())
+            Ok(to_string(&self.get_total_consumption()))
         } else if key == attr_str(SUMO_ATTR_TOTALENERGYREGENERATED) {
-            to_string(&self.get_total_regenerated())
+            Ok(to_string(&self.get_total_regenerated()))
         } else if key == attr_str(SUMO_ATTR_ENERGYCHARGED) {
-            to_string(&self.get_energy_charged())
+            Ok(to_string(&self.get_energy_charged()))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMBATTERYCAPACITY) || key == "capacity" {
-            to_string(&self.get_maximum_battery_capacity())
+            Ok(to_string(&self.get_maximum_battery_capacity()))
         } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
-            to_string(&self.get_maximum_charge_rate())
+            Ok(to_string(&self.get_maximum_charge_rate()))
         } else if key == attr_str(SUMO_ATTR_CHARGINGSTATIONID) {
-            self.get_charging_station_id()
+            Ok(self.get_charging_station_id())
         } else {
-            panic!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())
+            Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())))
         }
     }
 
@@ -439,10 +467,10 @@ impl MSDevice_Battery {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
         let doubleValue = match to_double(value) {
             Ok(d) => d,
-            Err(_) => panic!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()),
+            Err(_) => return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' requires a number for device of type '{}'", key, self.device_name()))),
         };
         if key == attr_str(SUMO_ATTR_ACTUALBATTERYCAPACITY) || key == attr_str(SUMO_ATTR_CHARGELEVEL) {
             self.set_actual_battery_capacity(doubleValue);
@@ -451,8 +479,9 @@ impl MSDevice_Battery {
         } else if key == attr_str(SUMO_ATTR_MAXIMUMCHARGERATE) {
             self.set_maximum_charge_rate(doubleValue);
         } else {
-            panic!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name());
+            return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `void MSDevice_Battery::notifyParking()` [virtual]

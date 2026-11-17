@@ -65,9 +65,13 @@ impl MSLCM_LC2013_CC {
     #[allow(unused_variables)]
     pub fn check_change_before_committing(&self, veh: Ptr<MSVehicle>, state: i32) -> i32 {
         if (state & LCA_WANTS_LANECHANGE) != 0 {
-            // C++: dynamic_cast<const MSCFModel_CC*>(&veh->getCarFollowModel()); if it succeeds,
-            // return cfm->commitToLaneChange(veh, (state & LCA_LEFT) != 0)
-            // shortcut: no checked downcast from MSCFModel to MSCFModel_CC exists yet (MSCFModel::get_model_id is pure virtual here and MSCFModel_CC is not repr(C)), so CC car-following models never commit to a lane change; non-CC models return 0 as in C++. Upgrade when a checked downcast is available.
+            // determinism: the dynamic_cast is replaced by a model-id check, which identifies MSCFModel_CC exactly
+            let cf = veh.get_car_follow_model();
+            if cf.get_model_id() == SUMO_TAG_CF_CC as i32 {
+                let cfm = crate::microsim::cfmodels::mscf_model::cf_cast::<crate::microsim::cfmodels::mscf_model_cc::MSCFModel_CC>(cf);
+                let left = (state & LCA_LEFT) != 0;
+                return cfm.commit_to_lane_change(veh, left);
+            }
         }
         0
     }

@@ -5,7 +5,25 @@ Nets: `real`, `city_plano`, `city_munich` (`cases/*/input.osm`); re-import is `-
 Binaries: C++ netconvert 1.28.0 (WSL) vs ours `sumo-rs-target-x07\debug\netconvert.exe`.
 Compare: `compare_net.py` (C++ = reference). Logs and nets go to `%TEMP%\opencode\netopts\`, not the repo.
 
-Totals: **48 PASS, 21 FAIL, 0 PANIC** of 69 runs.
+Totals (run 1, main 1820f92c, 69 runs): **48 PASS, 21 FAIL, 0 PANIC**.
+
+## Run 2 (nx02): 5 OSM nets x 37 variants + re-import
+
+Nets: `real`, `city_plano`, `city_munich`, `city_berlin_priority`, `city_singapore_lefthand` (the last two are the newest OSM cases).
+Totals: **187 PASS, 1 FAIL, 0 PANIC** of 188 runs (real 37/37, city_plano 37/37, city_munich 36/37, city_berlin_priority 37/37, city_singapore_lefthand 37/37, re-import 3/3).
+Runner: `run_netopts.sh` (portable: `CPP_NETCONVERT`, `CPP_SUMO_HOME`, `NETOPTS_OUT`, `NETOPTS_JOBS`). `--proj.utm` runs without `--simple-projection` (the two conflict).
+
+New options added: `geometry.min-dist`, `junctions.join-dist`, `tls.guess` (+ `tls.guess.threshold`), `tls.layout` (`incoming`, `alternateOneWay`), `tls.default-type` (`actuated`, `delay_based`), `no-turnarounds`, `junctions.corner-detail 0`, `junctions.internal-link-detail`, `bikelanes.guess`, `osm.all-attributes`, `offset.disable-normalization`, `proj.utm`.
+Already covered in run 1: `geometry.remove`, `ramps.guess`, `roundabouts.guess`, `junctions.join`, `tls.join`, `edges.join`, `remove-edges.isolated`, `keep-edges.by-vclass`, `sidewalks.guess`, `crossings.guess`, `osm.turn-lanes`, `no-internal-links`, `default.lanewidth`.
+
+| variant | net | verdict | first diff |
+|---|---|---|---|
+| `junctionsJoinDist` (`--junctions.join true --junctions.join-dist 20`) | city_munich | FAIL | lane `:1689059001_0_0` length ref=15.11 ours=10.21 (341 groups) |
+| every other variant | all 5 nets | PASS | net identical |
+
+Finding on the FAIL (measured): with join-dist 20 both sides give the same warnings except for the intersecting-left-turn pair and one cycle-time message. Both nets have 740 vs 741 junctions: ours adds `:cluster_12861231068_12861231069_14264810438_14264810439_#29more_60_0`. Joined node `…#29more_48_0` in ours is missing incoming lane `125226164#0_0`, and its internal node positions differ, so the member set of this cluster differs. Not yet located.
+Fixed on the way: C++ `NodeSet` is `std::set<NBNode*, ComparatorIdLess>` (iterates by id), but the Rust `NodeSet` iterates by address (`Ptr::cmp`). The cluster loops in `nb_node_cont.rs` now iterate by id (`nodes_by_id`). This is faithful and does not change any PASS, but it did not fix the FAIL above.
+Note: `city_munich` base now PASSes on main; the zipper junction FAIL in run 1 is gone.
 
 Verdicts: PASS = same exit code and identical net; FAIL = exit or net differs; PANIC = our binary panicked.
 

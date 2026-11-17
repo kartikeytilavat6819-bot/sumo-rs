@@ -611,8 +611,8 @@ impl MSDevice_ToC {
     //     throw InvalidArgument("Parameter '" + key + "' is not supported for device of type '" + deviceName() + "'");
     // }
     #[allow(unused_variables)]
-    pub fn get_parameter(&self, key: &str) -> String {
-        if key == "manualType" {
+    pub fn get_parameter(&self, key: &str) -> Result<String, ProcessError> {
+        Ok(if key == "manualType" {
             self.myManualTypeID.clone()
         } else if key == "automatedType" {
             self.myAutomatedTypeID.clone()
@@ -655,8 +655,8 @@ impl MSDevice_ToC {
         } else if key == "ogMaxDecel" {
             utils::common::to_string::to_string(&self.myOpenGapParams.maxDecel)
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
-        }
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+        })
     }
 
     /// C++: `void MSDevice_ToC::setParameter(const std::string &, const std::string &)` [virtual]
@@ -760,9 +760,9 @@ impl MSDevice_ToC {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn set_parameter(&mut self, key: &str, value: &str) {
-        let parse = |v: &str| -> f64 {
-            v.parse::<f64>().unwrap_or_else(|_| panic!("{}", ProcessError::new(format!("Invalid number '{}'", v))))
+    pub fn set_parameter(&mut self, key: &str, value: &str) -> Result<(), ProcessError> {
+        let parse = |v: &str| -> Result<f64, ProcessError> {
+            v.parse::<f64>().map_err(|_| ProcessError::new(format!("Invalid number '{}'", v)))
         };
         if key == "manualType" {
             self.myManualTypeID = value.to_string();
@@ -779,36 +779,36 @@ impl MSDevice_ToC {
                 self.switch_holder_type(value);
             }
         } else if key == "responseTime" {
-            self.myResponseTime = time2steps(parse(value));
+            self.myResponseTime = time2steps(parse(value)?);
         } else if key == "recoveryRate" {
-            self.myRecoveryRate = parse(value);
+            self.myRecoveryRate = parse(value)?;
         } else if key == "initialAwareness" {
-            self.myInitialAwareness = parse(value);
+            self.myInitialAwareness = parse(value)?;
         } else if key == "lcAbstinence" {
-            self.myLCAbstinence = parse(value);
+            self.myLCAbstinence = parse(value)?;
             if self.is_manually_driven() {
                 self.set_awareness(self.myCurrentAwareness); // to eventually trigger LC-prevention
             }
         } else if key == "currentAwareness" {
             if self.is_manually_driven() {
-                self.set_awareness(parse(value));
+                self.set_awareness(parse(value)?);
             } else {
                 utils::common::msg_handler::write_warning("Setting device.toc.currentAwareness during automated mode has no effect.");
             }
         } else if key == "mrmDecel" {
-            self.myMRMDecel = parse(value);
+            self.myMRMDecel = parse(value)?;
         } else if key == "requestToC" {
             // setting this magic parameter gives the interface for inducing a ToC
-            let timeTillMRM = time2steps(parse(value));
+            let timeTillMRM = time2steps(parse(value)?);
             self.request_to_c(timeTillMRM, self.myResponseTime);
         } else if key == "requestMRM" {
             // setting this magic parameter gives the interface for inducing an MRM
             self.request_mrm();
         } else if key == "awareness" {
             // setting this magic parameter gives the interface for setting the driverstate's awareness
-            self.set_awareness(parse(value));
+            self.set_awareness(parse(value)?);
         } else if key == "dynamicToCThreshold" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of dynamicToCThreshold must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else if newValue == 0.0 {
@@ -819,41 +819,42 @@ impl MSDevice_ToC {
                 self.myDynamicToCActive = true;
             }
         } else if key == "dynamicMRMProbability" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of dynamicMRMProbability must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else {
                 self.myMRMProbability = newValue;
             }
         } else if key == "mrmKeepRight" {
-            let newValue = utils::common::string_utils::to_bool(value).unwrap_or_else(|e| panic!("{}", e));
+            let newValue = utils::common::string_utils::to_bool(value)?;
             self.myMRMKeepRight = newValue;
         } else if key == "mrmSafeSpot" {
             self.myMRMSafeSpot = value.to_string();
         } else if key == "mrmSafeSpotDuration" {
-            self.myMRMSafeSpotDuration = time2steps(parse(value));
+            self.myMRMSafeSpotDuration = time2steps(parse(value)?);
         } else if key == "maxPreparationAccel" {
-            let newValue = parse(value);
+            let newValue = parse(value)?;
             if newValue < 0.0 {
                 write_warningf!("Value of maxPreparationAccel must be non-negative. (Given value % for vehicle % is ignored)", value, self.myHolder.get_id());
             } else {
                 self.myMaxPreparationAccel = newValue;
             }
         } else if key == "ogNewTimeHeadway" {
-            self.myOpenGapParams.newTimeHeadway = parse(value);
+            self.myOpenGapParams.newTimeHeadway = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogNewSpaceHeadway" {
-            self.myOpenGapParams.newSpaceHeadway = parse(value);
+            self.myOpenGapParams.newSpaceHeadway = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogChangeRate" {
-            self.myOpenGapParams.changeRate = parse(value);
+            self.myOpenGapParams.changeRate = parse(value)?;
             self.myOpenGapParams.active = true;
         } else if key == "ogMaxDecel" {
-            self.myOpenGapParams.maxDecel = parse(value);
+            self.myOpenGapParams.maxDecel = parse(value)?;
             self.myOpenGapParams.active = true;
         } else {
-            panic!("{}", ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
+            return Err(ProcessError::InvalidArgument(format!("Parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
         }
+        Ok(())
     }
 
     /// C++: `SUMOTime MSDevice_ToC::triggerMRM(SUMOTime)`
