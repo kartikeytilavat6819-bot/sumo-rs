@@ -1954,10 +1954,17 @@ impl MSLane {
         }
 
         let followers = self.get_followers_on_consecutive(aVehicle, aVehicle.get_back_position_on_lane_2(), false, -1., MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+        let tx02 = std::env::var_os("TX02_TRACE").is_some() && aVehicle.get_id() == "taxi0";
+        if tx02 {
+            eprintln!("TX02 reachfollow t={} lane={}", MSNet::get_instance().get_current_time_step(), self.get_id());
+        }
         for i in 0..followers.num_sublanes() {
             let (follower, gap) = followers.index_op(i);
             if !follower.is_null() {
                 let backGapNeeded = follower.get_car_follow_model().get_secure_gap(follower, aVehicle, follower.get_speed(), speed, cfModel.get_max_decel());
+                if tx02 {
+                    eprintln!("TX02 follower={} gap={:.6} backGapNeeded={:.6}", follower.get_id(), gap, backGapNeeded);
+                }
                 if gap < backGapNeeded
                     && ((insertionChecks & (InsertionCheck::FOLLOWER_GAP as i32)) != 0
                         || (gap < 0. && (insertionChecks & (InsertionCheck::COLLISION as i32)) != 0)) {
