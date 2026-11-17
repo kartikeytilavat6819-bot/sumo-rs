@@ -153,6 +153,11 @@ const SIDEWALK_OFFSET: f64 = 3.0;
 const UNSPECIFIED_POS_LAT: f64 = f64::MAX;
 const RANDOM_POS_LAT: f64 = -f64::MAX;
 
+/// Sidewalk lookup for the walking stage; a uniquely named wrapper avoids clashing with the router's get_sidewalk in the prelude glob
+pub fn walking_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
+    get_sidewalk(edge, svc)
+}
+
 /// C++ getSidewalk<MSEdge, MSLane>(edge, svc) from utils/router/IntermodalEdge.h
 // shortcut: local copy because the generic getSidewalk in utils/router/intermodal_edge.rs is a stub (needs router trait bounds for E::getLanes and L::getPermissions); delete this copy and call that one once it is ported
 fn get_sidewalk(edge: Ptr<MSEdge>, svc: SUMOVehicleClass) -> Ptr<MSLane> {
@@ -209,6 +214,30 @@ const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
 const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
 
+// C++ virtual overrides of MSPModel, dispatched through MSPModel::vt
+static MSPMODEL_STRIPING_VT: MSPModelVt = MSPModelVt {
+    add: striping_vt_add,
+    clear_state: striping_vt_clear_state,
+    remove: striping_vt_remove,
+    using_internal_lanes: striping_vt_using_internal_lanes,
+    get_active_number: striping_vt_get_active_number,
+};
+fn striping_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().add(t, s, now)
+}
+fn striping_vt_clear_state(m: &mut MSPModel) {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().clear_state()
+}
+fn striping_vt_remove(m: &mut MSPModel, state: Ptr<MSTransportableStateAdapter>) {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().remove(state)
+}
+fn striping_vt_using_internal_lanes(m: &mut MSPModel) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().using_internal_lanes()
+}
+fn striping_vt_get_active_number(m: &mut MSPModel) -> i32 {
+    Ptr::from_mut(m).cast::<MSPModel_Striping>().m().get_active_number()
+}
+
 impl MSPModel_Striping {
     /// C++: `void MSPModel_Striping::MSPModel_Striping(const OptionsCont &, MSNet *)`
     /// Constructor (it should not be necessary to construct more than one instance)
@@ -250,7 +279,7 @@ impl MSPModel_Striping {
     pub fn new(oc: &OptionsCont, net: Ptr<MSNet>) -> Self {
         let s = MSPModel_Striping {
             base: MSPModel_Interacting {
-                base: MSPModel {},
+                base: MSPModel { vt: &MSPMODEL_STRIPING_VT },
                 myNumActivePedestrians: 0,
                 myActiveLanes: BTreeMap::new(),
                 myAmActive: false,
