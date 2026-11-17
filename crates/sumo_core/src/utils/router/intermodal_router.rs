@@ -587,7 +587,7 @@ where
 
     /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
     fn set_internal_dijkstra(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, ttOperation: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>, calc: Ptr<EffortCalculator>) {
-        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, ttOperation, false, calc, true, false);
+        let internal = DijkstraRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>::new(edges, true, effort, ttOperation, false, calc, true, false).with_compute();
         self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 

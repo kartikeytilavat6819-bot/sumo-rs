@@ -651,8 +651,7 @@ impl MSLane {
     //     }
     #[allow(unused_variables)]
     pub fn get_thread_index(&self) -> i32 {
-        // shortcut: MSGlobals::gNumSimThreads is not ported yet, single simulation thread assumed
-        self.myRNGIndex % 1
+        self.myRNGIndex % crate::microsim::ms_globals::num_sim_threads()
     }
 
     /// C++: `int MSLane::getRNGIndex() const` [const]
@@ -1034,8 +1033,7 @@ impl MSLane {
             DepartPosDefinition::LAST => {
                 return self.last_insertion(v, speed, posLat, patchSpeed);
             }
-            // shortcut: MSStop::edge is Unmapped (MSRouteIterator), so the next stop edge is compared via its lane and the current edge
-            DepartPosDefinition::STOP if v.has_stops() && std::ptr::eq(v.get_next_stop().lane.get_edge(), v.get_edge().as_raw()) => {
+            DepartPosDefinition::STOP if v.has_stops() && v.get_next_stop().edge == *v.get_current_route_edge() => {
                 // getLastFreePos of stopping place could return negative position to avoid blocking the stop
                 pos = 0.0f64.max(v.get_next_stop().get_end_pos(v));
             }
@@ -4419,11 +4417,10 @@ impl MSLane {
     }
 
     pub fn init_rn_gs(oc: &OptionsCont) {
-        // shortcut: options are read from the global options container (utils::options::options_cont free fns), the oc argument is not used
         MY_RNGS.with(|r| r.borrow_mut().clear());
-        let numRNGs = utils::options::options_cont::get_int("thread-rngs");
-        let random = utils::options::options_cont::get_bool("random");
-        let mut seed = utils::options::options_cont::get_int("seed");
+        let numRNGs = oc.get_int("thread-rngs").unwrap();
+        let random = oc.get_bool("random").unwrap();
+        let mut seed = oc.get_int("seed").unwrap();
         MY_RNGS.with(|r| r.borrow_mut().reserve(numRNGs as usize)); // this is needed for stable pointers on debugging
         for i in 0..numRNGs {
             let rng = SumoRNG::new(&format!("lanes_{}", i));
@@ -9068,8 +9065,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn may_continue(&self, veh: Ptr<MSVehicle>) -> bool {
-        // shortcut: get_device() is not keyed by type yet, so the MSDevice_Taxi lookup never finds a device
-        if !veh.get_device(&()).is_null() {
+        if !veh.get_device("taxi").is_null() {
             // taxi device may assign a new route that continues past the end of the initial route
             return true;
         }

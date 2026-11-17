@@ -1,11 +1,18 @@
 //! Port of microsim/devices/MSDevice_StationFinder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
 use utils::options::options_cont::{with_options, OptionsCont};
 use utils::options::option::SumoOption;
 use utils::common::msg_handler::{write_error, write_warning, write_message};
 use utils::common::time::{string2time, time2string, time2steps, steps2time, SUMOTIME_MIN};
 use utils::common::to_string::to_string;
+
+/// C++ `MSNet::getInstance()->getBeginOfTimestepEvents()->addEvent(cmd, t)` for a WrappingCommand of this device
+fn add_begin_of_timestep_command(cmd: Ptr<WrappingCommand<MSDevice_StationFinder>>, t: SUMOTime) {
+    MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), t);
+}
 
 const INVALID_DOUBLE: f64 = f64::MAX;
 const DEFAULT_AVG_WAITING_TIME: f64 = 900.; // s
@@ -72,9 +79,9 @@ pub struct MSDevice_StationFinder {
     /// To which station we are currently travelling
     pub myChargingStation: Ptr<MSStoppingPlace>,
     /// The command responsible for rescue actions
-    pub myRescueCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_StationFinder> */>,
+    pub myRescueCommand: Ptr<WrappingCommand<MSDevice_StationFinder>>,
     /// The command responsible for limiting the charging rate (~ implement charging strategies)
-    pub myChargeLimitCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_StationFinder> */>,
+    pub myChargeLimitCommand: Ptr<WrappingCommand<MSDevice_StationFinder>>,
     /// The next charging rates to set via myChargingRateCommand
     pub myChargeLimits: Vec<(SUMOTime, f64)>,
     /// Last time the SoC was checked
@@ -232,7 +239,10 @@ impl MSDevice_StationFinder {
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
         let equip: bool = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "stationfinder", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false));
         if equip {
-            into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_StationFinder::new(v))) as *mut MSVehicleDevice));
+            // the rescue command stores `this`, so it is created once the device is at its final (boxed) address
+            let mut dev = Box::new(MSDevice_StationFinder::new(v));
+            dev.init_rescue_command();
+            into.push(Ptr::from_raw(Box::into_raw(dev) as *mut MSVehicleDevice));
         }
     }
 
@@ -317,9 +327,16 @@ impl MSDevice_StationFinder {
             notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
             notify_stop_ended: crate::microsim::ms_move_reminder::default_notify_stop_ended,
         };
+        fn mr_notify_move_internal(mr: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+            Ptr::from_mut(mr).cast::<MSDevice_StationFinder>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        }
+        static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
+            notify_move_internal: mr_notify_move_internal,
+        };
         let mut this = Self::new_device(holder);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
+        this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
         this
     }
 
@@ -387,7 +404,6 @@ impl MSDevice_StationFinder {
             "none" => dev.myRescueAction = MSDevice_StationFinder_RescueAction::RESCUEACTION_NONE,
             _ => write_error(&format!("Invalid device.stationfinder.rescueAction '{}'.", rescueAction)),
         }
-        dev.init_rescue_command();
         dev.myReserveFactor = holder.get_float_param("device.stationfinder.reserveFactor", false, INVALID_DOUBLE, true).max(1.);
         dev.myEmptySoC = holder.get_float_param("device.stationfinder.emptyThreshold", false, INVALID_DOUBLE, true).min(1.).max(0.);
         dev.myRadius = holder.get_time_param("device.stationfinder.radius", false, SUMOTIME_MIN);
@@ -428,10 +444,10 @@ impl MSDevice_StationFinder {
     pub fn drop_(&mut self) {
         // make the rescue command invalid if there is one
         if !self.myRescueCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+            self.myRescueCommand.m().deschedule();
         }
         if !self.myChargeLimitCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+            self.myChargeLimitCommand.m().deschedule();
         }
     }
 
@@ -605,7 +621,8 @@ impl MSDevice_StationFinder {
                 } else if self.myRescueAction == MSDevice_StationFinder_RescueAction::RESCUEACTION_TOW {
                     // wait next to the road and get teleported to a charging station
                     self.init_rescue_command();
-                    // shortcut: rescue event at SIMSTEP + duration - DELTA_T is not scheduled (no Command type)
+                    let now = MSNet::get_instance().m().get_current_time_step();
+                    add_begin_of_timestep_command(self.myRescueCommand, now + time2steps(self.myRescueTime) - utils::common::time::delta_t());
                     self.mySearchState = MSDevice_StationFinder_SearchState::SEARCHSTATE_BROKEN_DOWN;
                     return true;
                 }
@@ -1503,7 +1520,7 @@ impl MSDevice_StationFinder {
         // teleport to the charging station, stop there for charging
         self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
         // shortcut: the charging stop (SUMOVehicleParameter::Stop) and insertStop(1, ...) are not wired here; upgrade when stop insertion takes SUMOVehicleParameter_Stop
-        // shortcut: rescue command descheduling skipped (no Command type)
+        self.myRescueCommand.m().deschedule();
         self.myRescueCommand = Ptr::default();
         0
     }
@@ -1634,7 +1651,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn init_rescue_command(&mut self) {
         if self.myRescueAction == MSDevice_StationFinder_RescueAction::RESCUEACTION_TOW && self.myRescueCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the rescue command is not created; upgrade when Command exists
+            self.myRescueCommand = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSDevice_StationFinder::teleport_to_charging_station))));
         }
     }
 
@@ -1649,7 +1666,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn init_charge_limit_command(&mut self) {
         if self.myChargingStrategy != MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE && self.myChargeLimitCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the charge-limit command is not created; upgrade when Command exists
+            self.myChargeLimitCommand = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSDevice_StationFinder::update_charge_limit))));
         }
     }
 
@@ -1695,7 +1712,7 @@ impl MSDevice_StationFinder {
             self.myChargeLimits.remove(0);
         }
         if self.myChargeLimits.is_empty() {
-            // shortcut: WrappingCommand deschedule skipped (no Command type)
+            self.myChargeLimitCommand.m().deschedule();
             self.myChargeLimitCommand = Ptr::default();
             0
         } else {
@@ -1740,7 +1757,7 @@ impl MSDevice_StationFinder {
         }
         if !self.myChargeLimits.is_empty() {
             self.init_charge_limit_command();
-            // shortcut: the charge-limit event at begin is not scheduled (no Command type); upgrade when Command exists
+            add_begin_of_timestep_command(self.myChargeLimitCommand, begin);
         }
     }
 

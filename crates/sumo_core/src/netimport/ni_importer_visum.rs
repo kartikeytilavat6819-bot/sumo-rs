@@ -2988,8 +2988,7 @@ impl NIImporter_VISUM {
             return;
         }
         //
-        // shortcut: C++ passes NBEdge::myDefaultConnectionLength as the connection length; the static is private to nb_edge.rs so UNSPECIFIED_LOADED_LENGTH (-1) is used, upgrade when my_default_connection_length is pub
-        fromEdge.m().add_lane2_lane_connection(fromLane, toEdge, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, UNSPECIFIED_LOADED_LENGTH, &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
+        fromEdge.m().add_lane2_lane_connection(fromLane, toEdge, toLane, NBEdge_Lane2LaneInfoType::VALIDATED, false, false, KeepClear::KEEPCLEAR_UNSPECIFIED, UNSPECIFIED_CONTPOS, UNSPECIFIED_VISIBILITY_DISTANCE, UNSPECIFIED_SPEED, UNSPECIFIED_FRICTION, crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, UNSPECIFIED_CONNECTION_UNCONTROLLED, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false);
     }
 
     /// C++: `void NIImporter_VISUM::parse_stopPoints()` [private]
@@ -3089,7 +3088,7 @@ impl NIImporter_VISUM {
 
             let length = opt_float("osm.stop-output.length");
             let element = if is_railway(permissions) { SUMO_TAG_TRAIN_STOP } else { SUMO_TAG_BUS_STOP };
-            let ptStop = std::rc::Rc::new(NBPTStop::new(element, id.clone(), pos, edge.get_id().to_string(), edge.get_id().to_string(), length, name.clone(), permissions, 0.0, RGBColor::new_valid(false), -1.0));
+            let ptStop = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(element, id.clone(), pos, edge.get_id().to_string(), edge.get_id().to_string(), length, name.clone(), permissions, 0.0, RGBColor::new_valid(false), -1.0))));
             self.myNetBuilder.m().get_pt_stop_cont().insert(ptStop, false);
         }
     }

@@ -129,6 +129,18 @@ pub(crate) static DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT: NBTrafficLightDefiniti
     get_layout: default_get_layout,
 };
 
+/// Runtime type tag standing in for the C++ dynamic_cast checks on traffic light definitions.
+/// Set by each subclass constructor, read where C++ tests `dynamic_cast<NBLoadedSUMOTLDef*>` / `<NBOwnTLDef*>`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum NBTrafficLightDefinitionKind {
+    /// Any other definition (the base class and NBLoadedTLDef)
+    Other,
+    /// C++ NBLoadedSUMOTLDef
+    LoadedSUMOTL,
+    /// C++ NBOwnTLDef
+    OwnTL,
+}
+
 /// The base class for traffic light logic definitions
 /// C++ class `NBTrafficLightDefinition` (netbuild/NBTrafficLightDefinition.h)
 #[repr(C)]
@@ -159,6 +171,8 @@ pub struct NBTrafficLightDefinition {
     pub myNeedsContRelationReady: std::cell::Cell<bool>,
     pub myExtraConflicts: std::cell::RefCell<NBTrafficLightDefinition_ExtraConflicts>,
     pub myExtraConflictsReady: std::cell::Cell<bool>,
+    /// Runtime type tag (see NBTrafficLightDefinitionKind)
+    pub myKind: NBTrafficLightDefinitionKind,
 }
 
 impl std::ops::Deref for NBTrafficLightDefinition {
@@ -232,7 +246,6 @@ impl NBTrafficLightDefinition {
         }
         // determinism: node ids are unique within a net, so this sort order is total
         myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
-        // shortcut: C++ calls node->addTrafficLight(this) here, but `this` is not stable in a by-value constructor, so the nodes are not registered (callers must register after boxing), upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
             vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
@@ -249,6 +262,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -266,7 +280,6 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        // shortcut: C++ addNode(junction) also calls junction->addTrafficLight(this); `this` is not stable in a by-value constructor, so only the node list is filled, upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
             vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
@@ -283,6 +296,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -315,6 +329,7 @@ impl NBTrafficLightDefinition {
             myNeedsContRelationReady: std::cell::Cell::new(false),
             myExtraConflicts: std::cell::RefCell::new(BTreeSet::new()),
             myExtraConflictsReady: std::cell::Cell::new(false),
+            myKind: NBTrafficLightDefinitionKind::Other,
         }
     }
 
@@ -406,6 +421,15 @@ impl NBTrafficLightDefinition {
             self.myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
         }
         node.m().add_traffic_light(Ptr::from_mut(self));
+    }
+
+    /// C++ base constructor tail: `node->addTrafficLight(this)` for each junction. Called by the boxed
+    /// owner once its final address exists (see NBOwnTLDef::new), because `this` must be stable.
+    pub fn register_junctions(&mut self, junctions: &Vec<Ptr<NBNode>>) {
+        let this = Ptr::from_mut(self);
+        for node in junctions {
+            node.m().add_traffic_light(this);
+        }
     }
 
     /// C++: `void NBTrafficLightDefinition::removeNode(NBNode *)` [virtual]

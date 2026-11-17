@@ -71,7 +71,7 @@ impl MSJunctionControl {
             if i.get_type() != SumoXMLNodeType::INTERNAL {
                 match i.get_type() {
                     SumoXMLNodeType::NOJUNCTION | SumoXMLNodeType::DEAD_END | SumoXMLNodeType::DEAD_END_DEPRECATED | SumoXMLNodeType::DISTRICT | SumoXMLNodeType::TRAFFIC_LIGHT_NOJUNCTION => {
-                        i.m().postload_init();
+                        (*i).cast::<MSNoLogicJunction>().m().postload_init();
                     }
                     _ => {
                         (*i).cast::<MSRightOfWayJunction>().m().postload_init();

@@ -1,0 +1,24 @@
+<additional>
+    <!-- Two extra programs loaded beside the net's program 0: a long static one and an actuated one
+         with its own detector gap params. The WAUT switches between them during the run. -->
+    <tlLogic id="nC" type="static" programID="progA" offset="0">
+        <phase duration="20" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="20" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <tlLogic id="nC" type="actuated" programID="progB" offset="0">
+        <param key="detector-gap" value="2.5"/>
+        <param key="max-gap" value="3.0"/>
+        <param key="passing-time" value="1.9"/>
+        <phase duration="5" minDur="5" maxDur="45" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="5" minDur="5" maxDur="45" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="waut0" refTime="0" startProg="progA">
+        <wautSwitch time="100" to="progB"/>
+        <wautSwitch time="200" to="progA"/>
+    </WAUT>
+    <wautJunction junctionID="nC" procedure="Sta" wautID="waut0"/>
+</additional>

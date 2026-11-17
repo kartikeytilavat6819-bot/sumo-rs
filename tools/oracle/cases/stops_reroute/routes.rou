@@ -1,0 +1,19 @@
+<routes>
+    <vType id="DEFAULT_VEHTYPE">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="1000"/>
+        <param key="device.rerouting.pre-period" value="0"/>
+    </vType>
+    <!-- stop on IN (before the closed AB); two stops on OUT (after AB, same edge) -->
+    <vehicle id="v0" depart="0.00" departSpeed="max">
+        <route edges="LEAD IN AB OUT"/>
+        <stop lane="IN_0" endPos="40" duration="2"/>
+        <stop lane="OUT_0" endPos="30" duration="3"/>
+        <stop lane="OUT_0" endPos="60" duration="2"/>
+    </vehicle>
+    <!-- single later stop on OUT, departs while AB is still open -->
+    <vehicle id="v1" depart="1.00" departSpeed="max">
+        <route edges="LEAD IN AB OUT"/>
+        <stop lane="OUT_0" endPos="50" duration="4"/>
+    </vehicle>
+</routes>

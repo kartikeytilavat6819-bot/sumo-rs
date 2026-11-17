@@ -43,13 +43,14 @@ pub enum MSVehicle_ChangeRequest {
     REQUEST_HOLD = 3,
 }
 
-/// C++ enum `MSVehicle::LaneChangeMode`
+/// C++ enum `MSVehicle::LaneChangeMode`; C++ stores it as a plain int (setLaneChangeMode can hold 3), so this is a newtype
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(i64)]
-pub enum MSVehicle_LaneChangeMode {
-    LC_NEVER = 0,
-    LC_NOCONFLICT = 1,
-    LC_ALWAYS = 2,
+pub struct MSVehicle_LaneChangeMode(pub i64);
+
+impl MSVehicle_LaneChangeMode {
+    pub const LC_NEVER: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(0);
+    pub const LC_NOCONFLICT: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(1);
+    pub const LC_ALWAYS: MSVehicle_LaneChangeMode = MSVehicle_LaneChangeMode(2);
 }
 
 /// C++ enum `MSVehicle::ManoeuvreType`
@@ -772,12 +773,12 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn get_lane_change_mode(&self) -> i32 {
-        (1 * (self.myStrategicLC as i64)
-            + 4 * (self.myCooperativeLC as i64)
-            + 16 * (self.mySpeedGainLC as i64)
-            + 64 * (self.myRightDriveLC as i64)
+        (1 * self.myStrategicLC.0
+            + 4 * self.myCooperativeLC.0
+            + 16 * self.mySpeedGainLC.0
+            + 64 * self.myRightDriveLC.0
             + 256 * (self.myTraciLaneChangePriority as i64)
-            + 1024 * (self.mySublaneLC as i64)) as i32
+            + 1024 * self.mySublaneLC.0) as i32
     }
 
     /// C++: `SUMOTime Influencer::getLaneTimeLineDuration()`
@@ -1434,13 +1435,8 @@ impl MSVehicle_Influencer {
     // }
     #[allow(unused_variables)]
     pub fn set_lane_change_mode(&mut self, value: i32) {
-        // shortcut: C++ casts out-of-range ints to LaneChangeMode (value 3 is not a variant); mapped to LC_ALWAYS, revisit if it matters
         fn lc_mode_from(v: i32) -> MSVehicle_LaneChangeMode {
-            match v {
-                0 => MSVehicle_LaneChangeMode::LC_NEVER,
-                1 => MSVehicle_LaneChangeMode::LC_NOCONFLICT,
-                _ => MSVehicle_LaneChangeMode::LC_ALWAYS,
-            }
+            MSVehicle_LaneChangeMode(v as i64)
         }
         fn traci_lc_priority_from(v: i32) -> MSVehicle_TraciLaneChangePriority {
             match v {
@@ -1640,7 +1636,7 @@ impl MSVehicle_Influencer {
             let _ = v.m().replace_route_edges(&mut self.myRemoteRoute, -1.0, 0.0, "traci:moveToXY", true, false, true, Ptr::null());
             self.myRemoteRoute.clear();
         }
-        // shortcut: v->myCurrEdge = route.begin() + myRemoteEdgeOffset is not applied, MSRouteIterator is still Unmapped
+        v.m().myCurrEdge = self.myRemoteEdgeOffset as usize;
         if !self.myRemoteLane.is_null() && self.myRemotePos > self.myRemoteLane.get_length() {
             self.myRemotePos = self.myRemoteLane.get_length();
         }
@@ -2175,8 +2171,10 @@ fn ms_vehicle_has_influencer(o: &SUMOTrafficObject) -> bool {
 fn ms_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
     ms_vehicle_ref(o).is_selected()
 }
-fn ms_vehicle_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
-    ms_vehicle_ref(o).get_device(type_)
+fn ms_vehicle_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    let dev = ms_vehicle_ref(o).get_device(kind);
+    // C++ implicit upcast MSVehicleDevice* -> MSDevice*: MSDevice is the second base, so offset it
+    if dev.is_null() { Ptr::default() } else { Ptr::from_raw(&dev.base2 as *const MSDevice as *mut MSDevice) }
 }
 
 fn ms_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
@@ -3620,9 +3618,7 @@ impl MSVehicle {
         // (Leo) to avoid tiny oscillations (< 1e-10) of vNext in a standing vehicle column (observed for ballistic update), we cap off vNext
         //       (We assure to do this only for vNext<<NUMERICAL_EPS since otherwise this would nullify the workaround for #2995
         // (Jakob) We also need to make sure to reach a stop at the start of the next edge
-        // shortcut: myCurrEdge == getNextStop().edge cannot be compared, MSRouteIterator is Unmapped, so this clause is false until ms_route.rs maps it
-        let currEdgeIsNextStopEdge = false;
-        if vNext.abs() < NUMERICAL_EPS_SPEED && (self.myStopDist > POSITION_EPS || (self.has_stops() && currEdgeIsNextStopEdge)) {
+        if vNext.abs() < NUMERICAL_EPS_SPEED && (self.myStopDist > POSITION_EPS || (self.has_stops() && self.myCurrEdge == self.get_next_stop().edge)) {
             vNext = 0.0;
         }
 
@@ -6988,17 +6984,12 @@ impl MSVehicle {
         let mut nextStopLane: Ptr<MSLane> = Ptr::default();
         let mut nextStopPos: f64 = 0.0;
         if let Some(nextStop) = self.myStops.front() {
-            // shortcut: MSStop.edge is an unmapped route iterator, so the stop's route index is recovered
-            // as the first route position at or after myCurrEdge whose edge is the stop lane's edge; upgrade when MSRouteIterator is ported
-            let stopEdgePtr = Ptr::from_mut(nextStop.lane.get_edge());
             nextStopLane = nextStop.lane;
             if nextStop.isOpposite {
                 // target leftmost lane in forward direction
                 nextStopLane = *nextStopLane.get_edge().get_opposite_edge().get_lanes().last().unwrap();
             }
-            nextStopEdge = (self.myCurrEdge..routeSize as usize)
-                .find(|&i| self.myRoute.index_op(i as i32) == stopEdgePtr)
-                .unwrap_or(routeSize as usize);
+            nextStopEdge = nextStop.edge;
             nextStopPos = nextStop.pars.startPos;
         }
         // myArrivalTime = -1 in the context of validating departSpeed with departLane=best

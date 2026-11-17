@@ -3,6 +3,7 @@
 use crate::prelude::*;
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, DEFAULT_CONTAINER_TRANSHIP_SPEED, DEFAULT_VTYPE_ID, SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER, SVC_PEDESTRIAN};
+use crate::microsim::trigger::ms_charging_station::MSChargingStation;
 
 /// C++ enum `MSRouteHandler::ObjectTypeEnum`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -1599,7 +1600,8 @@ impl MSRouteHandler {
             if !(self.myAddVehiclesDirectly || self.check_last_depart())
                 || (self.myVehicleParameter.depart <= net.m().get_state_loader_time() && !self.myAmLoadingState)
             {
-                // shortcut: mySkippedVehicles is an i32 in the skeleton (C++ std::set of ids), skipped ids are not recorded until SUMORouteHandler is fixed
+                let skippedID = self.myVehicleParameter.id.clone();
+                self.mySkippedVehicles.insert(skippedID);
                 return;
             }
         }
@@ -2386,7 +2388,12 @@ impl MSRouteHandler {
             let mut edge: Ptr<MSEdge> = Ptr::null();
             // patch chargingStation stop on a parkingArea
             if !stop.chargingStation.is_empty() {
-                // shortcut: dynamic_cast<MSChargingStation*> needs a downcast from MSStoppingPlace, the parkingArea patch is skipped until it exists
+                let cs: Ptr<MSChargingStation> = MSNet::get_instance().m().get_stopping_place(&stop.chargingStation, SUMO_TAG_CHARGING_STATION).cast();
+                let pa = cs.m().get_parking_area();
+                if !pa.is_null() {
+                    stop.parkingarea = pa.get_id().to_string();
+                    stop.parking = ParkingType::OFFROAD;
+                }
             }
             let mut toStop = self.retrieve_stopping_place(attrs, &errorSuffix, Ptr::from_mut(&mut stop));
             let mut ok = true;
@@ -2815,8 +2822,9 @@ impl MSRouteHandler {
                     arrivalPos,
                 );
                 let raw = Box::into_raw(Box::new(trip));
-                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
-                // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the trip stage is not pushed onto it until SUMORouteHandler is fixed
+                let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+                self.myActiveTransportablePlan.m().push(plan_stage);
+                self.myParamStack.push(plan_stage.cast::<Parameterised>());
                 if attrs.has_attribute(SUMO_ATTR_ARRIVALPOS) {
                     self.myActiveTransportablePlan.last().unwrap().m().mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
@@ -3021,8 +3029,9 @@ impl MSRouteHandler {
                     stage.mark_set(VEHPARS_ARRIVALPOS_SET as i32);
                 }
                 let raw = Box::into_raw(Box::new(stage));
-                self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
-                // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the walk stage is not pushed onto it until SUMORouteHandler is fixed
+                let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) });
+                self.myActiveTransportablePlan.m().push(plan_stage);
+                self.myParamStack.push(plan_stage.cast::<Parameterised>());
                 self.myActiveRoute.clear();
             }));
             if let Err(payload) = result {
@@ -3286,8 +3295,9 @@ impl MSRouteHandler {
             let arrivalPos: f64 = attrs.get_opt(SUMO_ATTR_ARRIVALPOS, &cid, &mut ok, arrivalDefault, true);
             let stage = MSStageTranship::new(&self.myActiveRoute, cs, speed, departPos, arrivalPos);
             let raw = Box::into_raw(Box::new(stage));
-            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) }));
-            // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the tranship stage is not pushed onto it until SUMORouteHandler is fixed
+            let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base.base) });
+            self.myActiveTransportablePlan.m().push(plan_stage);
+            self.myParamStack.push(plan_stage.cast::<Parameterised>());
             self.myActiveRoute.clear();
         }));
         if let Err(payload) = result {
@@ -3822,7 +3832,9 @@ impl MSRouteHandler {
                             && s.get_stage_type() == MSStageType::WALKING
                             && !lastStage.get_destination_stop().is_null()
                         {
-                            // shortcut: C++ static_cast<MSStageMoving*> of the copied walk needs a checked downcast from MSStage, its departPos is not reset until it exists
+                            // the WALKING type check guarantees the copied stage is an MSStageWalking
+                            let walk: Ptr<MSStageMoving> = cloned.cast();
+                            walk.m().set_depart_pos(lastStage.get_destination_stop().get_access_pos(walk.m().get_edge(), SUMORouteHandler::get_parsing_rng()));
                         }
                         lastStage = *s;
                     }
@@ -4245,13 +4257,14 @@ impl MSRouteHandler {
                 }
                 match startVeh {
                     None => {
-                        // shortcut: mySkippedVehicles is i32 in the skeleton, vehicles skipped earlier cannot be recognised here, so this always reports the unknown vehicle
+                        if !self.mySkippedVehicles.contains(&vehID) {
+                            throw_process_error(format!(
+                                "Unknown vehicle '{}' in triggered departure for {} '{}'.",
+                                vehID, agent, aid
+                            ));
+                        }
                         // we cannot simply throw here because we need to parse the rest of the person (just to discard it)
-                        // C++ uses a dummy edge (MSEdge::getAllEdges().front()) to keep parsing active in that case
-                        throw_process_error(format!(
-                            "Unknown vehicle '{}' in triggered departure for {} '{}'.",
-                            vehID, agent, aid
-                        ));
+                        from = MSEdge::get_all_edges()[0];
                     }
                     Some(sv) => {
                         if sv.departProcedure == DepartDefinition::TRIGGERED {
@@ -4349,8 +4362,9 @@ impl MSRouteHandler {
             stage.set_vehicle_id(attrs.get_opt(SUMO_ATTR_VEHICLE, "", &mut ok, String::new(), true));
             stage.set_vehicle_distance(attrs.get_opt(SUMO_ATTR_ROUTELENGTH, "", &mut ok, -1.0, true));
             let raw = Box::into_raw(Box::new(stage));
-            self.myActiveTransportablePlan.m().push(Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) }));
-            // shortcut: myParamStack is an i32 in the skeleton (C++ vector of MSStage*), the stage is not pushed onto it until SUMORouteHandler is fixed
+            let plan_stage: Ptr<MSStage> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
+            self.myActiveTransportablePlan.m().push(plan_stage);
+            self.myParamStack.push(plan_stage.cast::<Parameterised>());
         }));
         if let Err(payload) = result {
             self.delete_active_plan_and_vehicle_parameter();

@@ -502,6 +502,7 @@ impl MSStage {
         match self.myType {
             MSStageType::WALKING => self.as_concrete::<MSStageWalking>().get_waiting_time(),
             MSStageType::TRANSHIP => self.as_concrete::<MSStageTranship>().get_waiting_time(),
+            MSStageType::DRIVING => self.as_concrete::<MSStageDriving>().get_waiting_time_2(),
             _ => 0,
         }
     }

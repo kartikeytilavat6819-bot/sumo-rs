@@ -19,7 +19,8 @@ thread_local! {
 use utils::geom::geom_helper::navi_degree;
 use utils::common::std_defs::INVALID_DOUBLE;
 use utils::common::time::{delta_t, speed2dist, SUMOTIME_MAX};
-use utils::common::to_string::to_string;
+use crate::libsumo::helper::check_time_bounds;
+use utils::common::to_string::{format_g, to_string};
 use utils::xml::sumo_xml_definitions as SUMOXMLDefinitions;
 use utils::common::msg_handler::write_warning;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
@@ -67,9 +68,7 @@ const STOP_ONDEMAND_SET: i32 = 2 << 19;
 const STOP_JUMP_SET: i32 = 2 << 20;
 const STOP_JUMP_UNTIL_SET: i32 = 2 << 21;
 // shortcut: dynamic_cast<MSVehicle*> / dynamic_cast<MEVehicle*> cannot be checked at runtime (no type tag on
-// MSBaseVehicle, MSGlobals::gUseMesoSim not ported), so every vehicle is treated as micro. A MEVehicle would be
-// misread. Upgrade when a vehicle type tag or gUseMesoSim exists. The casts also need #[repr(C)] with `base`
-// first on MSBaseVehicle and MSVehicle (not yet present on those structs).
+// MSBaseVehicle), so every vehicle is treated as micro. A MEVehicle would be misread. Upgrade when a vehicle type tag exists.
 fn micro_veh(veh: Ptr<MSBaseVehicle>) -> Ptr<MSVehicle> {
     veh.cast::<MSVehicle>()
 }
@@ -100,8 +99,6 @@ fn next_link_connection(veh: Ptr<MSVehicle>, lane: Ptr<MSLane>, link: Ptr<MSLink
     let direction = LinkDirections.get_string(link.get_direction()).to_string();
     TraCIConnection { approachedLane, hasPrio, isOpen, hasFoe, approachedInternal, state, direction, length: link.get_length() }
 }
-
-// shortcut: C++ checkTimeBounds(double) (utils, not ported) is not applied; out-of-range durations are not rejected here. upgrade when checkTimeBounds is ported
 
 /// C++ setStopParameter: ProcessError rethrown as TraCIException with this prefix.
 fn set_stop_param_error(vehID: &str, msg: String) -> ! {
@@ -280,8 +277,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_id(vehID: &str) -> String {
-        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback "" is returned.
-        let _veh = Helper::get_vehicle(vehID);
+        let veh = Helper::get_vehicle(vehID);
+        // C++ CALL_MESO_FUN: the vehicle class follows gUseMesoSim, so the MEVehicle cast is valid only in a meso run
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let me = veh.cast::<MEVehicle>();
+            if me.is_on_road() {
+                return me.get_segment().get_id().to_string();
+            }
+        }
         String::new()
     }
 
@@ -293,8 +296,14 @@ impl Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_segment_index(vehID: &str) -> i32 {
-        // shortcut: CALL_MESO_FUN; MEVehicle is never detected (see micro_veh), so the micro fallback is returned.
-        let _veh = Helper::get_vehicle(vehID);
+        let veh = Helper::get_vehicle(vehID);
+        // C++ CALL_MESO_FUN: the vehicle class follows gUseMesoSim, so the MEVehicle cast is valid only in a meso run
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let me = veh.cast::<MEVehicle>();
+            if me.is_on_road() {
+                return me.get_segment().get_index();
+            }
+        }
         INVALID_INT_VALUE
     }
 
@@ -2660,8 +2669,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         }
         if !veh.m().resume_from_stopping() {
             let sto = veh.get_next_stop();
-            // shortcut: MSStop.edge is not typed yet (Unmapped), the stop's parameter edge is used instead
-            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached, sto.duration, sto.pars.edge, sto.pars.startPos);
+            let posStr = format!("reached: {}, duration:{}, edge:{}, startPos: {}", sto.reached as i32, sto.duration, veh.get_route().get_edges()[sto.edge].get_id(), format_g(sto.pars.startPos, 6));
             panic!("{}", format!("Failed to resume from stopping for vehicle '{}', {}", veh.get_id(), posStr));
         }
     }
@@ -3077,6 +3085,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn change_lane(vehID: &str, laneIndex: i32, duration: f64) {
+        if !check_time_bounds(duration) {
+            panic!("Duration parameter exceeds the time value range.");
+        }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         laneTimeLine.push((MSNet::get_instance().get_current_time_step(), laneIndex));
@@ -3115,6 +3126,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn change_lane_relative(vehID: &str, indexOffset: i32, duration: f64) {
+        if !check_time_bounds(duration) {
+            panic!("Duration parameter exceeds the time value range.");
+        }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let mut laneTimeLine: Vec<(SUMOTime, i32)> = Vec::new();
         let laneIndex = veh.get_lane_index() + indexOffset;
@@ -3171,6 +3185,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn slow_down(vehID: &str, speed: f64, duration: f64) {
+        if !check_time_bounds(duration) {
+            panic!("Duration parameter exceeds the time value range.");
+        }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
         speedTimeLine.push((MSNet::get_instance().get_current_time_step(), veh.get_speed()));
@@ -3209,6 +3226,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn open_gap(vehID: &str, mut newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, referenceVehID: &str) {
+        if !check_time_bounds(duration) {
+            panic!("Duration parameter exceeds the time value range.");
+        }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let mut refVeh: Ptr<MSVehicle> = Ptr::default();
         if referenceVehID != "" {
@@ -3308,6 +3328,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn set_acceleration(vehID: &str, acceleration: f64, duration: f64) {
+        if !check_time_bounds(duration) {
+            panic!("Duration parameter exceeds the time value range.");
+        }
         let veh = micro_veh(Helper::get_vehicle(vehID));
         let targetSpeed = f64::max(veh.get_speed() + acceleration * duration, 0.0);
         let mut speedTimeLine: Vec<(SUMOTime, f64)> = Vec::new();
@@ -3442,14 +3465,16 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     #[allow(unused_variables)]
     pub fn set_route_id(vehID: &str, routeID: &str) {
         let veh = Helper::get_vehicle(vehID);
-        // shortcut: MSRoute::dictionary returns a Rc (never null) so the 'not known' panic is skipped, upgrade when the dictionary returns Option
+        if !MSRoute::has_route(routeID) {
+            panic!("{}", format!("The route '{}' is not known.", routeID));
+        }
         let r = MSRoute::dictionary_3(routeID, Ptr::null());
         if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
             write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is referenced.", routeID));
         }
         let mut msg = String::new();
         if !veh.has_valid_route(&mut msg, r.clone()) {
-            if false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */ {
+            if crate::microsim::ms_globals::check_routes() {
                 panic!("{}", format!("Route replacement failed for {}", veh.get_id()));
             }
         }
@@ -4230,8 +4255,35 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn dispatch_taxi(vehID: &str, reservations: &Vec<String>) {
-        // shortcut: MSDevice_Taxi::getDispatchAlgorithm and MSDispatch_TraCI::interpretDispatch are not ported in this pass; upgrade when ms_dispatch.rs is filled
-        panic!("Vehicle::dispatchTaxi not yet ported: depends on MSDispatch_TraCI")
+        let veh = Helper::get_vehicle(vehID);
+        let dev = veh.m().get_device("taxi");
+        let taxi = if dev.is_null() { Ptr::null() } else { dev.cast::<MSDevice_Taxi>() };
+        if !veh.m().has_departed() {
+            panic!("{}", format!("Vehicle '{}' has not yet departed", vehID));
+        }
+        if taxi.is_null() {
+            panic!("{}", format!("Vehicle '{}' is not a taxi", vehID));
+        }
+        let dispatcher = MSDevice_Taxi::get_dispatch_algorithm();
+        if dispatcher.is_null() {
+            panic!("Cannot dispatch taxi because no reservations have been made");
+        }
+        // replaces dynamic_cast: MSDevice_Taxi::initDispatch creates MSDispatch_TraCI only when the algo option is "traci"
+        if utils::options::options_cont::get_string("device.taxi.dispatch-algorithm") != "traci" {
+            panic!("device.taxi.dispatch-algorithm 'traci' has not been loaded");
+        }
+        let traciDispatcher = dispatcher.cast::<MSDispatch_TraCI>();
+        if reservations.len() == 0 {
+            panic!("{}", format!("No reservations have been specified for vehicle '{}'", vehID));
+        }
+        // C++ `catch (InvalidArgument& e)` around interpretDispatch
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| traciDispatcher.m().interpret_dispatch(taxi, reservations)));
+        if let Err(e) = res {
+            if let Some(ProcessError::InvalidArgument(msg)) = e.downcast_ref::<ProcessError>() {
+                panic!("{}", format!("Could not interpret reservations for vehicle '{}' ({}).", vehID, msg));
+            }
+            std::panic::resume_unwind(e);
+        }
     }
 
     /// C++: `void Vehicle::setLength(const std::string &, double)` [static]
@@ -4547,7 +4599,9 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn set_boarding_duration(vehID: &str, boardingDuration: f64) {
-        // shortcut: checkTimeBounds(boardingDuration) not applied (see the top-of-file shortcut); out-of-range values are not rejected
+        if !check_time_bounds(boardingDuration) {
+            panic!("BoardingDuration parameter exceeds the time value range.");
+        }
         Helper::get_vehicle(vehID).m().get_singular_type().set_boarding_duration(time2steps(boardingDuration), true);
     }
 
