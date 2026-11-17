@@ -696,13 +696,7 @@ impl Command for MSDevice_FCDReplay_MoveVehicles {
 
 /// C++ `getDevice(typeid(MSDevice_FCDReplay))`
 fn fcd_replay_device(devices: &Vec<Ptr<MSVehicleDevice>>) -> Ptr<MSDevice_FCDReplay> {
-    // shortcut: C++ looks the device up by dynamic type (typeid); no RTTI here, so the port matches the device name "fcd-replay" it reports
-    for d in devices {
-        if d.base2.get_id() == "fcd-replay" {
-            return d.cast::<MSDevice_FCDReplay>();
-        }
-    }
-    Ptr::null()
+    MSDevice::get_device_by_name(devices, "fcd-replay").cast::<MSDevice_FCDReplay>()
 }
 
 impl MSDevice_FCDReplay {
