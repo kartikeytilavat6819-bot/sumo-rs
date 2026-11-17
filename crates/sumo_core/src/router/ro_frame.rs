@@ -281,7 +281,8 @@ impl ROFrame {
             oc.add_description("weight-attribute", "Input", "Name of the xml attribute which gives the edge weight");
         }
 
-        // shortcut: SystemFrame::addReportOptions not ported yet (report options such as log/verbose are missing), add when SystemFrame lands
+        // need to do this here to be able to check for network and route input options
+        utils::common::system_frame::add_report_options(oc);
         // register the time settings
         oc.do_register_abbr("begin", 'b', SumoOption::string_typed("0", "TIME"));
         oc.add_description("begin", "Time", "Defines the begin time; Previous trips will be discarded");

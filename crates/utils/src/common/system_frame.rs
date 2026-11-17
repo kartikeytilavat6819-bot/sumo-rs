@@ -1,6 +1,9 @@
 //! Port of utils/common/SystemFrame.{h,cpp}
 use super::msg_handler::{MsgHandler, MsgType, with_instance};
-use super::std_defs::{set_g_human_readable_time, set_g_precision, set_g_precision_emissions, set_g_precision_geo};
+use super::std_defs::{
+    g_simulation, set_g_human_readable_time, set_g_ignore_unknown_vclass, set_g_precision, set_g_precision_emissions, set_g_precision_geo, set_g_weights_random_factor,
+    set_g_weights_walk_opposite_factor,
+};
 use crate::iodevices::output_device::OutputDevice;
 use crate::options::option::SumoOption;
 use crate::options::options_cont::{OptionsCont, with_options};
@@ -134,7 +137,19 @@ pub fn check_options(oc: &mut OptionsCont) -> bool {
     }
     set_g_precision_geo(oc.get_int("precision.geo").unwrap_or_else(|e| panic!("{e}")));
     set_g_human_readable_time(oc.get_bool("human-readable-time").unwrap_or_else(|e| panic!("{e}")));
-    // shortcut: gWeightsRandomFactor and gWeightsWalkOppositeFactor are not ported globals (ro_edge reads the option directly), and gIgnoreUnknownVClass/gSimulation checks and the xml-validation.routes default are skipped here, upgrade when those globals are ported
+    if oc.exists("weights.random-factor") {
+        set_g_weights_random_factor(oc.get_float("weights.random-factor").unwrap_or_else(|e| panic!("{e}")));
+    }
+    if oc.exists("persontrip.walk-opposite-factor") {
+        set_g_weights_walk_opposite_factor(oc.get_float("persontrip.walk-opposite-factor").unwrap_or_else(|e| panic!("{e}")));
+    }
+    if oc.exists("xml-validation.routes") && oc.is_default("xml-validation.routes") && !oc.is_default("xml-validation") {
+        let validation = oc.get_string("xml-validation").unwrap_or_else(|e| panic!("{e}"));
+        oc.set_default("xml-validation.routes", &validation).unwrap_or_else(|e| panic!("{e}"));
+    }
+    if (oc.exists("ignore-errors") && oc.get_bool("ignore-errors").unwrap_or_else(|e| panic!("{e}"))) || g_simulation() {
+        set_g_ignore_unknown_vclass(true);
+    }
     true
 }
 

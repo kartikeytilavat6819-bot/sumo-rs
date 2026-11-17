@@ -11,10 +11,14 @@ use std::f64::consts::PI;
 use super::geom_helper::{deg2rad, rad2deg};
 use super::{Boundary, Position};
 use crate::common::msg_handler::{write_error, write_warning};
+use crate::common::std_defs::{g_precision, g_precision_geo};
+use crate::common::string_utils::escape_xml;
 use crate::common::to_string::f64_to_string;
 use crate::common::util_exceptions::ProcessError;
+use crate::iodevices::output_device::OutputDevice;
 use crate::options::option::SumoOption;
 use crate::options::options_cont::OptionsCont;
+use crate::xml::sumo_xml_definitions::{SUMO_ATTR_CONV_BOUNDARY, SUMO_ATTR_NET_OFFSET, SUMO_ATTR_ORIG_BOUNDARY, SUMO_ATTR_ORIG_PROJ, SUMO_TAG_LOCATION};
 
 /// projection method
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -463,8 +467,22 @@ impl GeoConvHelper {
     pub fn get_proj_string(&self) -> &str {
         &self.proj_string
     }
-    // shortcut: writeLocation needs OutputDevice; write netOffset/convBoundary/origBoundary
-    // (gPrecisionGeo when using_geo_projection)/projParameter from with_final once iodevices is ported
+    /// writeLocation: the <location> element of the net and additional files
+    pub fn write_location(&self, into: &mut OutputDevice) {
+        into.open_tag_id(SUMO_TAG_LOCATION);
+        into.write_attr(SUMO_ATTR_NET_OFFSET, &self.get_offset_base());
+        into.write_attr(SUMO_ATTR_CONV_BOUNDARY, self.get_conv_boundary());
+        if self.using_geo_projection() {
+            into.set_precision(g_precision_geo());
+        }
+        into.write_attr(SUMO_ATTR_ORIG_BOUNDARY, self.get_orig_boundary());
+        if self.using_geo_projection() {
+            into.set_precision(g_precision());
+        }
+        into.write_attr(SUMO_ATTR_ORIG_PROJ, escape_xml(self.get_proj_string(), false).as_str());
+        into.close_tag("");
+        into.lf();
+    }
 }
 
 /// Transverse Mercator as PROJ's default `etmerc` (Poder/Engsager; here the Kruger series of order 6)

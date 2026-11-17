@@ -4,9 +4,8 @@ use utils::xml::generic_sax_handler::GenericSAXHandler;
 use crate::prelude::*;
 use utils::common::std_defs::{g_precision, set_g_precision};
 
-/// version written into saved states (C++ VERSION_STRING)
-// shortcut: VERSION_STRING is not a shared constant in utils yet, keep in sync with crates/sumo/src/main.rs VERSION_STRING
-const STATE_VERSION_STRING: &str = "v1.28.0-0000000000";
+// version written into saved states (C++ VERSION_STRING)
+use utils::common::std_defs::VERSION_STRING as STATE_VERSION_STRING;
 
 /// keep a copy of the attributes for later use (C++ `attrs.clone()`); the C++ owner deletes it, here it is leaked
 // shortcut: cached attribute clones are leaked, upgrade when the owner holds a typed Box
@@ -1056,7 +1055,6 @@ impl MSStateHandler {
         // make a copy because myVehicleParameter is reset in closeVehicle()
         let vehID = self.myVehicleParameter.m().id.clone();
         if !self.myVehiclesToRemove.contains(&vehID) {
-            // shortcut: the embedded route "!<id>" checkRemoval is not ported under a verified name
             let deviceNames: Vec<String> = self.myDeviceAttrs.iter().map(|a| MSDevice::get_device_name(&a.get_string(SUMO_ATTR_ID))).collect();
             self.myVehicleParameter.m().set_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES, &deviceNames.join(" "));
             self.base.close_vehicle();
@@ -1116,13 +1114,20 @@ impl MSStateHandler {
                 }
             }
             if !self.myCFMAttrs.is_null() {
-                let vars = v.cast::<MSVehicle>().m().get_car_follow_variables();
+                let veh = v.cast::<MSVehicle>();
+                let vars = veh.m().get_car_follow_variables();
                 if !vars.is_null() {
-                    vars.m().load_state(&*self.myCFMAttrs);
+                    let cfm = veh.m().get_car_follow_model();
+                    cfm.load_vehicle_variables(vars.m(), &*self.myCFMAttrs);
                 }
                 self.myCFMAttrs = Ptr::null();
             }
         } else {
+            let embeddedRouteID = format!("!{}", vehID);
+            if MSRoute::has_route(&embeddedRouteID) {
+                let embedded: ConstMSRoutePtr = MSRoute::dictionary_3(&embeddedRouteID, Ptr::null());
+                embedded.check_removal(false);
+            }
             self.myVehicleParameter = Ptr::null();
             self.myRemoved += 1;
             self.myDeviceAttrs.clear();

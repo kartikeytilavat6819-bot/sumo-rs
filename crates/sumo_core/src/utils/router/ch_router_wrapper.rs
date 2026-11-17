@@ -25,6 +25,10 @@ pub fn wrapper_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstr
     Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().prohibit(toProhibit)
 }
 
+pub fn wrapper_supports_prohibitions<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAbstractRouter<E, V>) -> bool {
+    Ptr::new(base).cast::<CHRouterWrapper<E, V>>().m().supports_prohibitions()
+}
+
 /// Computes the shortest path through a contracted network
 /// C++ class `CHRouterWrapper` (utils/router/CHRouterWrapper.h)
 #[repr(C)]
@@ -59,6 +63,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouterWrapper<E, V> {
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(wrapper_compute::<E, V>);
         self.base.myProhibit = Some(wrapper_prohibit::<E, V>);
+        self.base.mySupportsProhibitions = Some(wrapper_supports_prohibitions::<E, V>);
         self
     }
 
