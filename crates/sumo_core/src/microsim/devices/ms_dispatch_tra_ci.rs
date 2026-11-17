@@ -2,6 +2,16 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
+fn tra_ci_compute_dispatch(d: &mut MSDispatch, now: SUMOTime, fleet: &Vec<Ptr<MSDevice_Taxi>>) {
+    // SAFETY: installed only by MSDispatch_TraCI::new, so d is the base of an MSDispatch_TraCI (repr(C), base first)
+    let t = unsafe { &mut *(d as *mut MSDispatch as *mut MSDispatch_TraCI) };
+    t.compute_dispatch(now, fleet);
+}
+
+pub(crate) const MS_DISPATCH_TRA_CI_VT: MSDispatchVt = MSDispatchVt {
+    compute_dispatch: tra_ci_compute_dispatch,
+};
+
 /// A dispatch algorithm that services customers in reservation order and always sends the closest available taxi
 /// C++ class `MSDispatch_TraCI` (microsim/devices/MSDispatch_TraCI.h)
 #[repr(C)]
@@ -30,8 +40,10 @@ impl MSDispatch_TraCI {
     //     { }
     #[allow(unused_variables)]
     pub fn new(params: &utils::common::parameterised::ParameterisedMap) -> Self {
+        let mut base = MSDispatch::new(params);
+        base.vt = &MS_DISPATCH_TRA_CI_VT;
         Self {
-            base: MSDispatch::new(params),
+            base,
             myReservationLookup: StringBijection::default(),
         }
     }
