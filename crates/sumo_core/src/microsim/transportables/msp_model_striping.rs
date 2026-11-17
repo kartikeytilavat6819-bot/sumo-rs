@@ -585,8 +585,28 @@ impl MSPModel_Striping {
     pub fn move_in_direction(&mut self, currentTime: SUMOTime, changedLane: &mut BTreeSet<Ptr<MSPerson>>, dir: i32) {
         // shortcut: DEBUGCOND (person/lane isSelected, GUI-only) debug output is not ported; debugPath stays null
         // shortcut: the C++ holds a reference into myActiveLanes; here a lane's vector is taken out while it is advanced and put back afterwards
-        let lanes: Vec<Ptr<MSLane>> = self.myActiveLanes.keys().copied().collect();
-        for lane in lanes {
+        // determinism: C++ ActiveLanes is ordered by ComparatorNumericalIdLess and iterated live, so lanes added by arriveAndAdvance are visited when their id is larger than the current one; walk numerical-id order with a cursor
+        let mut pending: BTreeMap<i32, Ptr<MSLane>> = BTreeMap::new();
+        let mut cursor: Option<i32> = None;
+        let mut known = 0usize;
+        loop {
+            if self.myActiveLanes.len() != known {
+                known = self.myActiveLanes.len();
+                for l in self.myActiveLanes.keys() {
+                    if cursor.map_or(true, |c| l.get_numerical_id() > c) {
+                        pending.insert(l.get_numerical_id(), *l);
+                    }
+                }
+            }
+            let from = match cursor {
+                Some(c) => std::ops::Bound::Excluded(c),
+                None => std::ops::Bound::Unbounded,
+            };
+            let (id, lane) = match pending.range((from, std::ops::Bound::Unbounded)).next() {
+                Some((id, lane)) => (*id, *lane),
+                None => break,
+            };
+            cursor = Some(id);
             let mut pedestrians = match self.myActiveLanes.get_mut(&lane) {
                 Some(v) => std::mem::take(v),
                 None => continue,
