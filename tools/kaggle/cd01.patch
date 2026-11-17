@@ -6,3 +6,14 @@ diff --git a/src/microsim/MSBaseVehicle.cpp b/src/microsim/MSBaseVehicle.cpp
  MSBaseVehicle::addTransportable(MSTransportable* transportable) {
 +    if (getenv("CD01")) std::cerr << "CD01 ADD " << getID() << " person=" << transportable->isPerson() << " t=" << transportable->getID() << " time=" << SIMSTEP << " pdev_null=" << (myPersonDevice == nullptr) << "\n";
      if (transportable->isPerson()) {
+diff --git a/src/microsim/transportables/MSTransportableControl.cpp b/src/microsim/transportables/MSTransportableControl.cpp
+--- a/src/microsim/transportables/MSTransportableControl.cpp
++++ b/src/microsim/transportables/MSTransportableControl.cpp
+@@ -324,5 +324,7 @@
+         const SUMOTime currentTime = SIMSTEP;
+         TransportableVector& transportables = wait->second;
++        if (getenv("CD01") && vehicle->getID() == "L1f.0") std::cerr << "CD01 LAW edge=" << edge->getNumericalID() << " n=" << transportables.size() << " time=" << currentTime << " tnl=" << timeToLoadNext << " stopdur=" << stopDuration << "\n";
+         for (TransportableVector::iterator i = transportables.begin(); i != transportables.end();) {
+             MSTransportable* const t = *i;
++            if (getenv("CD01") && vehicle->getID() == "L1f.0") std::cerr << "CD01 CAND t=" << t->getID() << " wf=" << t->isWaitingFor(vehicle) << " allow=" << vehicle->allowsBoarding(t) << " pos=" << t->getEdgePos() << " sir=" << vehicle->isStoppedInRange(t->getEdgePos(), MSGlobals::gStopTolerance) << " edge=" << t->getEdge()->getNumericalID() << "\n";
+             if (t->isWaitingFor(vehicle) && (t == force ||

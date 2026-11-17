@@ -585,8 +585,10 @@ impl MSTransportableControl {
         if let Some(transportables) = self.myWaiting4Vehicle.get_mut(&key) {
             let currentTime = simstep();
             let mut i: usize = 0;
+            if std::env::var_os("CD01").is_some() && vehicle.get_id() == "L1f.0" { eprintln!("CD01 LAW edge={} n={} time={} tnl={} stopdur={}", edge.get_numerical_id(), transportables.len(), currentTime, *timeToLoadNext, *stopDuration); }
             while i < transportables.len() {
                 let t = transportables[i];
+                if std::env::var_os("CD01").is_some() && vehicle.get_id() == "L1f.0" { eprintln!("CD01 CAND t={} wf={} allow={} pos={} sir={} edge={}", t.get_id(), t.is_waiting_for(vehicle), vehicle.allows_boarding(t), t.get_edge_pos(), vehicle.is_stopped_in_range(t.get_edge_pos(), crate::microsim::ms_globals::stop_tolerance(), false), t.get_edge().get_numerical_id()); }
                 if t.is_waiting_for(vehicle)
                     && (t == force
                         || (vehicle.allows_boarding(t)
