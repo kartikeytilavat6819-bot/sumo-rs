@@ -11,8 +11,10 @@ echo "== exit=$?"
 echo "TX01 lines: $(grep -c TX01 "$OUT/ours.log")"
 grep TX01 "$OUT/ours.log" | head -3
 echo "-- taxi0 update/move lines with t in 160..180 (every 4th)"
-grep -E 'TX01 (upd|move) t=[0-9]+ veh=taxi0' "$OUT/ours.log" | awk -F'[ =]' '$4>=160 && $4<=180' | head -60
-echo "-- idle lines t in 100..180"
-grep 'TX01 idle' "$OUT/ours.log" | awk -F'[ =]' '$4>=100 && $4<=180' | head -40
+grep -E 'TX01 (upd|move) t=[0-9]+ veh=taxi0' "$OUT/ours.log" | awk -F'[ =]' '$4>=168000 && $4<=176000' | head -60
+echo "-- ALL idle lines"
+grep 'TX01 idle' "$OUT/ours.log" | head -40
+echo "-- taxi0 update lines by time (every 25 s)"
+grep -E 'TX01 upd t=[0-9]+ veh=taxi0' "$OUT/ours.log" | awk -F'[ =]' '$4%25000==0' | head -40
 echo "-- tripinfo taxi0"
 grep 'tripinfo id="taxi0"' "$OUT/ours.ti.xml" | cut -c1-220
