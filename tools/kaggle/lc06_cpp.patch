@@ -60,3 +60,20 @@ index 0b71770..9dede26 100644
      std::vector<MSLane*> passed;
      if (myShadowLane != nullptr) {
          myShadowLane->setPartialOccupation(&myVehicle);
+diff --git a/src/microsim/MSLaneChanger.cpp b/src/microsim/MSLaneChanger.cpp
+index 40cb6d1..f727910 100644
+--- a/src/microsim/MSLaneChanger.cpp
++++ b/src/microsim/MSLaneChanger.cpp
+@@ -523,6 +523,12 @@ MSLaneChanger::continueChange(MSVehicle* vehicle, ChangerIt& from) {
+     MSAbstractLaneChangeModel& lcm = vehicle->getLaneChangeModel();
+     const int direction = lcm.isOpposite() ? -lcm.getLaneChangeDirection() : lcm.getLaneChangeDirection();
+     const bool pastMidpoint = lcm.updateCompletion(); // computes lcm.mySpeedLat as a side effect
++    if (getenv("LC06_TRACE") != nullptr && vehicle->getID() == "rgt0") {
++        double sl = lcm.getSpeedLat();
++        uint64_t bits;
++        std::memcpy(&bits, &sl, 8);
++        std::cout << "CC " << MSNet::getInstance()->getCurrentTimeStep() << " veh=rgt0 changing=" << (int)lcm.isChangingLanes() << " past=" << (int)pastMidpoint << " speedLat=" << std::hex << bits << std::dec << "\n";
++    }
+     const double speedLat = lcm.isOpposite() ? -lcm.getSpeedLat() : lcm.getSpeedLat();
+     vehicle->myState.myPosLat += SPEED2DIST(speedLat);
+     vehicle->myCachedPosition = Position::INVALID;

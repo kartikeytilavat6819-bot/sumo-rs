@@ -2593,6 +2593,9 @@ impl MSLaneChanger {
         let lcm = vehicle.m().get_lane_change_model();
         let direction: i32 = if lcm.is_opposite() { -lcm.get_lane_change_direction() } else { lcm.get_lane_change_direction() };
         let pastMidpoint = lcm.update_completion(); // computes lcm.mySpeedLat as a side effect
+        if std::env::var_os("LC06_TRACE").is_some() && vehicle.get_id().to_string() == "rgt0" {
+            eprintln!("CC {} veh=rgt0 changing={} past={} speedLat={:x}", MSNet::get_instance().get_current_time_step(), lcm.is_changing_lanes() as i32, pastMidpoint as i32, lcm.get_speed_lat().to_bits());
+        }
         let speedLat = if lcm.is_opposite() { -lcm.get_speed_lat() } else { lcm.get_speed_lat() };
         vehicle.m().myState.myPosLat += speed2dist(speedLat);
         vehicle.m().myCachedPosition.set(Position::INVALID);
