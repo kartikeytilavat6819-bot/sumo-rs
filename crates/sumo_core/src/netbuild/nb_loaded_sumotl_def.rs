@@ -1381,8 +1381,8 @@ impl NBLoadedSUMOTLDef {
                 }
             }
         }
-        me.base.myNeedsContRelationReady.set(true);
-        me.base.myExtraConflictsReady.set(true);
+        self.base.myNeedsContRelationReady.set(true);
+        self.base.myExtraConflictsReady.set(true);
     }
 
     /// C++: `int NBLoadedSUMOTLDef::getMaxIndex()` [virtual, protected]
