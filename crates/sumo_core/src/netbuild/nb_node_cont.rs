@@ -5507,6 +5507,14 @@ impl NBNodeCont {
             let vin: Vec<String> = newNode.m().get_incoming_edges().iter().map(|e| e.m().get_id().to_string()).collect();
             let vout: Vec<String> = newNode.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
             eprintln!("JTRACE joinorder {} in={} out={}", newNode.m().get_id(), vin.join(","), vout.join(","));
+            for e in newNode.m().get_incoming_edges().clone() {
+                let mut s = format!("JTRACE conn {}", e.m().get_id());
+                for c in e.m().get_connections().iter() {
+                    let to = if c.toEdge.is_null() { "null".to_string() } else { c.toEdge.m().get_id().to_string() };
+                    s += &format!(" {}>{}:{}:{}:{}", c.fromLane, to, c.toLane, c.permissions, c.mayDefinitelyPass as i32);
+                }
+                eprintln!("{}", s);
+            }
             let p = newNode.m().get_position();
             eprintln!("JTRACE join {} pos={:.10},{:.10} in={} out={}", newNode.m().get_id(), p.x(), p.y(),
                 jin.iter().cloned().collect::<Vec<_>>().join(","), jout.iter().cloned().collect::<Vec<_>>().join(","));
