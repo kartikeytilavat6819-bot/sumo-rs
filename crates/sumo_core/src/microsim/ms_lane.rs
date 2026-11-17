@@ -2394,6 +2394,9 @@ impl MSLane {
     pub fn set_partial_occupation(&mut self, v: Ptr<MSVehicle>) -> f64 {
         // always check
         self.myNeedsCollisionCheck = true;
+        if std::env::var_os("LC06_TRACE").is_some() {
+            eprintln!("PO+ {} lane={} veh={}", MSNet::get_instance().get_current_time_step(), self.get_id(), v.get_id());
+        }
         self.myPartialVehicles.push(v);
         self.myLength
     }
@@ -2423,6 +2426,9 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn reset_partial_occupation(&mut self, v: Ptr<MSVehicle>) {
+        if std::env::var_os("LC06_TRACE").is_some() {
+            eprintln!("PO- {} lane={} veh={}", MSNet::get_instance().get_current_time_step(), self.get_id(), v.get_id());
+        }
         if let Some(i) = self.myPartialVehicles.iter().position(|x| *x == v) {
             self.myPartialVehicles.remove(i);
             return;

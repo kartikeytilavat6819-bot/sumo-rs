@@ -19,3 +19,27 @@ index 41e69ee..1768487 100644
      return result;
  }
  
+diff --git a/src/microsim/MSLane.cpp b/src/microsim/MSLane.cpp
+index 16179ea..ebed40b 100644
+--- a/src/microsim/MSLane.cpp
++++ b/src/microsim/MSLane.cpp
+@@ -396,6 +396,9 @@ MSLane::setPartialOccupation(MSVehicle* v) {
+     ScopedLocker<> lock(myPartialOccupatorMutex, MSGlobals::gNumSimThreads > 1);
+ #endif
+     //assert(std::find(myPartialVehicles.begin(), myPartialVehicles.end(), v) == myPartialVehicles.end());
++    if (getenv("LC06_TRACE") != nullptr) {
++        std::cout << "PO+ " << MSNet::getInstance()->getCurrentTimeStep() << " lane=" << getID() << " veh=" << v->getID() << "\n";
++    }
+     myPartialVehicles.push_back(v);
+     return myLength;
+ }
+@@ -411,6 +414,9 @@ MSLane::resetPartialOccupation(MSVehicle* v) {
+         std::cout << SIMTIME << " resetPartialOccupation. lane=" << getID() << " veh=" << v->getID() << "\n";
+     }
+ #endif
++    if (getenv("LC06_TRACE") != nullptr) {
++        std::cout << "PO- " << MSNet::getInstance()->getCurrentTimeStep() << " lane=" << getID() << " veh=" << v->getID() << "\n";
++    }
+     for (VehCont::iterator i = myPartialVehicles.begin(); i != myPartialVehicles.end(); ++i) {
+         if (v == *i) {
+             myPartialVehicles.erase(i);
