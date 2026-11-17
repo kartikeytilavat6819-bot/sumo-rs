@@ -10,5 +10,5 @@ exec 8>/home/gate/cpp-$ID.lock; flock 8
 cd "$D"
 git checkout -q -- src
 cp "$FILE" src/netbuild/NBNodeCont.cpp
-(cd build && make -j8 netconvert 2>&1 | grep -E 'error|Error' | head -20) >&2
+(cd build && make -j8 netconvert > /tmp/cppnc-$ID.log 2>&1) || { grep -a -B3 -E 'rror|undefined' /tmp/cppnc-$ID.log | head -60 >&2; exit 1; }
 echo "$D/bin/netconvert"
