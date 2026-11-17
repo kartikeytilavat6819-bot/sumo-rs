@@ -1974,9 +1974,6 @@ impl MSLink {
             };
             for (&person, it) in self.myApproachingPersons.iter() {
                 let personObj = person_to_traffic_object(person);
-                if std::env::var("FP01_DBG").is_ok() && !ego.is_null() && ego.get_id() == "car12" {
-                    eprintln!("FP01 AP t={} person={} arr={} leave={} myArr={} myLeave={} dist={} la={}", MSNet::get_instance().get_current_time_step(), person.get_id(), it.arrivalTime, it.leavingTime, arrivalTime, leaveTime, dist, lookAhead);
-                }
                 if (ego.is_null()
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_PROB, 0.) == 0.
                     || ego.get_vehicle_type().get_parameter().get_jm_param(SUMO_ATTR_JM_IGNORE_FOE_SPEED, 0.) < person.get_speed()
@@ -2851,12 +2848,6 @@ impl MSLink {
                         result.push(MSLink_LinkLeader::new(leader, gap, -1., MSLink_LinkLeaderFlag::LL_SAME_SOURCE as i32, 0.));
                     }
                 }
-            }
-        }
-        if !ego.is_null() && std::env::var("FP01_DBG").is_ok() && ego.get_id() == "car12" {
-            eprintln!("FP01 t={} lane={} n={}", MSNet::get_instance().get_current_time_step(), self.myLaneBefore.get_id(), result.len());
-            for l in result.iter() {
-                eprintln!("FP01   veh_null={} gap={} dtc={} flags={} lat={}", l.vehAndGap.0.is_null(), l.vehAndGap.1, l.distToCrossing, l.llFlags, l.latOffset);
             }
         }
         result
