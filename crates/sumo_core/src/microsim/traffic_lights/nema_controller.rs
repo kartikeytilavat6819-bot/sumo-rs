@@ -918,17 +918,9 @@ impl NEMALogic {
             self.get_next_phases(&mut transitions);
 
             // Sort the next phases by distance and select the closest.
-            // determinism: std::sort is not stable; Rust sort_by is stable, so ties may order differently
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
             if transitions.len() > 1 {
-                transitions.sort_by(|i, j| {
-                    if i.distance < j.distance {
-                        std::cmp::Ordering::Less
-                    } else if j.distance < i.distance {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                utils::common::std_sort::std_sort_vec(&mut transitions, |i, j| i.distance < j.distance);
             }
 
             // Set the Next Phases = to the transition with least combined distance
@@ -2620,8 +2612,8 @@ impl NEMALogic {
         for i in 0..2usize {
             let mut ringCopy = self.get_phases_by_ring(i as i32);
             // sort by the minimum start time in the cycle.
-            // determinism: C++ std::sort with the non-strict `<=` comparator is unspecified on ties; a stable sort on greatestStartTime is used
-            ringCopy.sort_by(|a, b| a.greatestStartTime.cmp(&b.greatestStartTime));
+            // determinism: C++ std::sort with the non-strict `<=` comparator; std_sort reproduces its tie order
+            utils::common::std_sort::std_sort_vec(&mut ringCopy, |a, b| a.greatestStartTime <= b.greatestStartTime);
             let mut found = false;
             // loop through the sorted phases by time and try to find the phase that should be active given the time in the cycle
             for p in ringCopy.iter() {
@@ -2920,8 +2912,8 @@ impl NEMAPhase {
         }
 
         // sort the transitions by distance for speed later. Using plain distance here
-        // determinism: std::sort is unstable; Rust sort_by is stable, so equal distances may order differently
-        self.myTransitions.sort_by(|i, j| i.distance.cmp(&j.distance));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        utils::common::std_sort::std_sort_vec(&mut self.myTransitions, |i, j| i.distance < j.distance);
 
         // create the phase detector info
         let cpdSource = if crossPhaseSource > 0 { controller.m().get_phase_obj(crossPhaseSource, -1) } else { Ptr::null() };

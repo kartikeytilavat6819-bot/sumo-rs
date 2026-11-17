@@ -881,17 +881,8 @@ impl RORouteDef {
         if self.myAlternatives.len() as i32 > maxNumber {
             let last = self.myAlternatives[self.myLastUsed as usize].clone();
             // only keep the routes with highest probability
-            // determinism: C++ std::sort is not stable, ties in probability may end up in a different order than with sort_by
-            self.myAlternatives.sort_by(|a, b| {
-                let (pa, pb) = (a.get_probability(), b.get_probability());
-                if pa > pb {
-                    std::cmp::Ordering::Less
-                } else if pb > pa {
-                    std::cmp::Ordering::Greater
-                } else {
-                    std::cmp::Ordering::Equal
-                }
-            });
+            // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal probabilities tie)
+            utils::common::std_sort::std_sort_vec(&mut self.myAlternatives, |a, b| a.get_probability() > b.get_probability());
             if keepRoute {
                 for i in 0..self.myAlternatives.len() {
                     if Rc::ptr_eq(&self.myAlternatives[i], &last) {

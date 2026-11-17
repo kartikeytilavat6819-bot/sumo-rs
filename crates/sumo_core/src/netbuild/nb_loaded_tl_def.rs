@@ -1025,8 +1025,14 @@ impl NBLoadedTLDef_SignalGroup {
     // }
     #[allow(unused_variables)]
     pub fn sort_phases(&mut self) {
-        // determinism: stable sort; C++ std::sort is unstable on equal begin times
-        self.myPhases.sort_by(|p1, p2| p1.myTime.cmp(&p2.myTime));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        let mut order: Vec<usize> = (0..self.myPhases.len()).collect();
+        {
+            let phases = &self.myPhases;
+            utils::common::std_sort::std_sort(&mut order, |i, j| phases[i].myTime < phases[j].myTime);
+        }
+        let mut slots: Vec<Option<SignalGroup_PhaseDef>> = std::mem::take(&mut self.myPhases).into_iter().map(Some).collect();
+        self.myPhases = order.into_iter().map(|i| slots[i].take().unwrap()).collect();
     }
 
     /// C++: `int SignalGroup::getLinkNo() const` [const]

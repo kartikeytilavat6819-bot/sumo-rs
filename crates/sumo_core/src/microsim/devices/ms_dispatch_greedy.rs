@@ -180,17 +180,9 @@ impl MSDispatch_Greedy {
         // greedy assign closest vehicle in reservation order
         let router = Ptr::from_mut(self.get_router());
         let mut reservations: Vec<Ptr<Reservation>> = self.get_reservations();
-        // determinism: C++ std::sort is unstable; Rust sort_by is stable, so ties may be ordered differently
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let sorter = MSDispatch_time_sorter::new();
-        reservations.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(reservations.as_mut_slice(), |a, b| sorter.call_op(a, b) != 0);
         let mut it: usize = 0;
         while it < reservations.len() {
             if available.len() == 0 {

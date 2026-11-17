@@ -20,11 +20,9 @@ fn search_stop_edges(r: &NamedRTree, min: &[f32; 2], max: &[f32; 2]) -> BTreeSet
 
 /// C++ std::sort by distance of lane 0 shape to pos
 fn sort_by_lane0_distance(edges: &mut Vec<Ptr<NBEdge>>, pos: &Position) {
-    // determinism: C++ std::sort is unstable, ties may come out in another order
-    edges.sort_by(|a, b| {
-        let da = a.get_lane_shape(0).distance2d(pos, false);
-        let db = b.get_lane_shape(0).distance2d(pos, false);
-        da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+    // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+    utils::common::std_sort::std_sort(edges.as_mut_slice(), |a, b| {
+        a.get_lane_shape(0).distance2d(pos, false) < b.get_lane_shape(0).distance2d(pos, false)
     });
 }
 
