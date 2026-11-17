@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/amitran/network.xsd">
+    <node id="0" type="deadEnd"/>
+    <node id="1" type="deadEnd"/>
+    <node id="2" type="priority"/>
+    <node id="3" type="priority"/>
+    <node id="4" type="priority"/>
+    <node id="5" type="priority"/>
+    <node id="6" type="deadEnd"/>
+    <node id="7" type="priority"/>
+    <node id="8" type="deadEnd"/>
+    <node id="9" type="priority"/>
+    <node id="10" type="priority"/>
+    <node id="11" type="priority"/>
+    <link id="0" from="10" to="2" roadClass="4" length="50586" speedLimitKmh="50" laneNr="1"/>
+    <link id="1" from="3" to="10" roadClass="4" length="58533" speedLimitKmh="50" laneNr="1"/>
+    <link id="2" from="7" to="4" roadClass="2" length="23340" speedLimitKmh="100" laneNr="2"/>
+    <link id="3" from="11" to="7" roadClass="2" length="118162" speedLimitKmh="100" laneNr="2"/>
+    <link id="4" from="5" to="11" roadClass="2" length="142312" speedLimitKmh="100" laneNr="2"/>
+    <link id="5" from="0" to="10" roadClass="3" length="50460" speedLimitKmh="80" laneNr="2"/>
+    <link id="6" from="10" to="11" roadClass="3" length="60121" speedLimitKmh="80" laneNr="2"/>
+    <link id="7" from="11" to="9" roadClass="3" length="109992" speedLimitKmh="80" laneNr="2"/>
+    <link id="8" from="9" to="1" roadClass="3" length="35740" speedLimitKmh="80" laneNr="2"/>
+    <link id="9" from="2" to="10" roadClass="4" length="50592" speedLimitKmh="50" laneNr="1"/>
+    <link id="10" from="10" to="3" roadClass="4" length="58526" speedLimitKmh="50" laneNr="1"/>
+    <link id="11" from="4" to="7" roadClass="2" length="23340" speedLimitKmh="100" laneNr="2"/>
+    <link id="12" from="7" to="11" roadClass="2" length="118162" speedLimitKmh="100" laneNr="2"/>
+    <link id="13" from="11" to="5" roadClass="2" length="142313" speedLimitKmh="100" laneNr="2"/>
+    <link id="14" from="6" to="7" roadClass="3" length="69145" speedLimitKmh="80" laneNr="2"/>
+    <link id="15" from="8" to="9" roadClass="4" length="62350" speedLimitKmh="50" laneNr="1"/>
+</network>

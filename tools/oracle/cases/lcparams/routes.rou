@@ -1,0 +1,24 @@
+<routes>
+    <!-- One slow blocker on the right lane; the followers differ only in their lane-change model params. -->
+    <vType id="slow" length="5.00" maxSpeed="5.00" accel="2.60" decel="4.50"/>
+    <vType id="keepright" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"
+           lcStrategic="1.0" lcCooperative="1.0" lcSpeedGain="1.0" lcKeepRight="1.0"/>
+    <vType id="keepleft" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"
+           lcStrategic="1.0" lcCooperative="1.0" lcSpeedGain="1.0" lcKeepRight="0.0"/>
+    <vType id="speedgain" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"
+           lcStrategic="1.0" lcCooperative="0.0" lcSpeedGain="10.0" lcKeepRight="0.1"/>
+    <vType id="coop" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"
+           lcStrategic="1.0" lcCooperative="10.0" lcSpeedGain="1.0" lcKeepRight="1.0"/>
+    <vType id="nostrat" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"
+           lcStrategic="0.0" lcCooperative="1.0" lcSpeedGain="1.0" lcKeepRight="0.5"/>
+    <route id="AB" edges="A B"/>
+    <vehicle id="blocker" type="slow" depart="0" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="kr0" type="keepright" depart="2" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="kl0" type="keepleft" depart="4" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="sg0" type="speedgain" depart="6" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="co0" type="coop" depart="8" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="ns0" type="nostrat" depart="10" departLane="0" departSpeed="max" route="AB"/>
+    <vehicle id="kr1" type="keepright" depart="12" departLane="1" departSpeed="max" route="AB"/>
+    <vehicle id="kl1" type="keepleft" depart="14" departLane="1" departSpeed="max" route="AB"/>
+    <vehicle id="sg1" type="speedgain" depart="16" departLane="2" departSpeed="max" route="AB"/>
+</routes>

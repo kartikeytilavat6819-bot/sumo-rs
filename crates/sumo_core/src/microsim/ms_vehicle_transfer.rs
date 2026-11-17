@@ -28,7 +28,8 @@ impl MSVehicleTransfer {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // destructor: the myVehicles Vec drops with the struct
+        // myInstance = nullptr; the myVehicles Vec drops with the struct
+        MSVehicleTransfer_MY_INSTANCE.with(|cell| cell.set(Ptr::null()));
     }
 
     /// C++: `void MSVehicleTransfer::add(const SUMOTime, MSVehicle *)`

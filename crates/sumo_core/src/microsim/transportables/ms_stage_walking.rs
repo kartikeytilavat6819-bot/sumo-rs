@@ -7,6 +7,11 @@ use utils::common::std_defs::g_precision;
 use utils::options::options_cont::{get_bool, get_string};
 use crate::microsim::transportables::msp_model_striping::walking_sidewalk;
 
+/// C++ `std::istringstream >> value` for the saved state format
+fn next_token<T: std::str::FromStr + Default>(state: &mut std::str::SplitWhitespace<'_>) -> T {
+    state.next().and_then(|t| t.parse::<T>().ok()).unwrap_or_default()
+}
+
 // C++ constants (MSPModel.h, SUMOVehicleParameter.h): not exported as Rust items yet
 const MSPMODEL_FORWARD: i32 = 1;
 const MSPMODEL_BACKWARD: i32 = -1;
@@ -45,6 +50,9 @@ impl std::ops::DerefMut for MSStageWalking {
 
 // C++ static members of MSStageWalking (port as module-level statics, see AGENTS.md):
 //   static bool MSStageWalking::myWarnedInvalidTripinfo;
+thread_local! {
+    static MY_WARNED_INVALID_TRIPINFO: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
 
 impl MSStageWalking {
     /// C++: `void MSStageWalking::MSStageWalking(const std::string &, const ConstMSEdgeVector &, MSStoppingPlace *, SUMOTime, double, double, double, double, int, const std::string &)`
@@ -301,7 +309,16 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn save_state(&mut self, out: &mut String /* std::ostringstream */, transportable: Ptr<MSTransportable>) {
-        panic!("MSStageWalking::saveState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model state (saveState); not ported yet");
+        out.push_str(&format!(" {} {} {}", self.myDeparted, self.myRouteStep, self.myLastEdgeEntryTime));
+        if !self.myExitTimes.is_null() {
+            out.push_str(&format!(" {}", self.myExitTimes.len()));
+            for t in self.myExitTimes.iter() {
+                out.push_str(&format!(" {}", t));
+            }
+        } else {
+            out.push_str(" -1");
+        }
+        self.myPState.m().save_state(out);
     }
 
     /// C++: `void MSStageWalking::loadState(MSTransportable *, std::istringstream &)` [virtual]
@@ -335,7 +352,30 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, state: &mut std::str::SplitWhitespace<'_> /* std::istringstream */) {
-        panic!("MSStageWalking::loadState needs MSStageMoving::myRouteStep (Unmapped iterator) and the movement model loadState; not ported yet");
+        self.myDeparted = next_token(state);
+        let stepIdx: i32 = next_token(state);
+        self.myLastEdgeEntryTime = next_token(state);
+        let exitTimesSize: i32 = next_token(state);
+        if exitTimesSize >= 0 {
+            let mut exits: Vec<SUMOTime> = Vec::new();
+            for _ in 0..exitTimesSize {
+                exits.push(next_token(state));
+            }
+            if get_bool("vehroute-output.exit-times") {
+                self.myExitTimes = Ptr::from_raw(Box::into_raw(Box::new(exits)));
+            } else {
+                self.myExitTimes = Ptr::null();
+            }
+        }
+        self.myRouteStep = stepIdx as usize;
+        self.myPState = MSNet::get_instance().m().get_person_control().get_movement_model().m().load_state(transportable, Ptr::from_mut(&mut self.base), state);
+        let lane = self.myPState.get_lane();
+        if !lane.is_null() && !lane.is_normal() {
+            self.myCurrentInternalEdge = Ptr::from_mut(lane.m().get_edge());
+            self.myCurrentInternalEdge.add_transportable(transportable);
+        } else {
+            self.myRoute[self.myRouteStep].add_transportable(transportable);
+        }
     }
 
     /// C++: `void MSStageWalking::tripInfoOutput(OutputDevice &, const MSTransportable *const) const` [const, virtual]
@@ -366,12 +406,15 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn trip_info_output(&self, os: &mut OutputDevice, transportable: Ptr<MSTransportable>) {
-        // shortcut: MSPModel::usingShortcuts() is assumed false (movement model not ported), so the invalid-tripinfo warning is never written
+        if !MY_WARNED_INVALID_TRIPINFO.with(|c| c.get()) && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_shortcuts() {
+            utils::common::msg_handler::write_warning("The pedestrian model uses infrastructure which is not in the network, timeLoss and routeLength may be invalid.");
+            MY_WARNED_INVALID_TRIPINFO.with(|c| c.set(true));
+        }
         let distance = self.walk_distance(true);
         let maxSpeed = self.get_max_speed(transportable);
         let duration = self.myArrived - self.myDeparted;
         let timeLoss = self.get_time_loss(transportable);
-        // shortcut: MSDevice_Tripinfo::addPedestrianData is not ported yet, so the pedestrian totals are not updated
+        MSDevice_Tripinfo::add_pedestrian_data(distance, duration, timeLoss);
         os.open_tag("walk");
         let depart = if self.myDeparted >= 0 { time2string(self.myDeparted) } else { "-1".to_string() };
         os.write_attr("depart", &depart);
@@ -865,7 +908,37 @@ impl MSStageWalking {
         for e in self.myRoute[..endIt].iter() {
             length += e.get_length();
         }
-        // shortcut: MSPModel::usingInternalLanes() is assumed false (movement model not ported), so walkingarea distances are not added
+        if self.myRoute.len() > 1 && MSNet::get_instance().m().get_person_control().get_movement_model().m().using_internal_lanes() {
+            if self.myInternalDistance > 0. {
+                length += self.myInternalDistance;
+            } else {
+                // use lower bound for distance to pass the intersection
+                for i in 0..endIt - 1 {
+                    let fromEdge = self.myRoute[i];
+                    let toEdge = self.myRoute[i + 1];
+                    let from = walking_sidewalk(fromEdge, SVC_PEDESTRIAN);
+                    let to = walking_sidewalk(toEdge, SVC_PEDESTRIAN);
+                    let mut fromPos = Position::new(0., 0.);
+                    let mut toPos = Position::new(0., 0.);
+                    if !from.is_null() && !to.is_null() {
+                        if fromEdge.get_to_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).front().clone();
+                        } else if fromEdge.get_to_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape(false).back().clone();
+                            toPos = to.get_shape(false).back().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_from_junction() {
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).front().clone();
+                        } else if fromEdge.get_from_junction() == toEdge.get_to_junction() {
+                            fromPos = from.get_shape(false).front().clone();
+                            toPos = to.get_shape(false).back().clone();
+                        }
+                        length += fromPos.distance_to2d(&toPos);
+                    }
+                }
+            }
+        }
         // determine walking direction for depart and arrival
         let mut dummy: i32 = 0;
         let departFwdArrivalDir = MSPModel::can_traverse(MSPMODEL_FORWARD, &self.myRoute, &mut dummy);

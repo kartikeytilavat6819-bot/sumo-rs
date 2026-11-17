@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/opts_scale_end/opts.nod.xml --edge-files tools/oracle/cases/opts_scale_end/opts.edg.xml
