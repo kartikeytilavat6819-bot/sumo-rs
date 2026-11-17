@@ -71,7 +71,6 @@ impl SimVariableWrapper for VariableWrapper {
 }
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (base first)
-// shortcut: relies on #[repr(C)] with `base` first on the TraCIResult subclasses in tra_ci_defs.rs
 fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }

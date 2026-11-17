@@ -86,7 +86,6 @@ fn copy_subscription(s: &Subscription) -> Subscription {
 }
 
 /// C++ `std::shared_ptr<TraCIResult>` built from a subclass (std::make_shared<TraCIDouble>(...) stored as a base pointer)
-// shortcut: relies on #[repr(C)] with `base: TraCIResult` first on the TraCIResult subclasses in tra_ci_defs.rs, add it there
 pub fn as_traci_result<T>(v: T) -> Rc<TraCIResult> {
     let p = Rc::into_raw(Rc::new(v)) as *const TraCIResult;
     unsafe { Rc::from_raw(p) }

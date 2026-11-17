@@ -130,9 +130,17 @@ impl InductionLoop {
     pub fn get_vehicle_data(loopID: &str) -> Vec<TraCIVehicleData> {
         let det = Self::get_detector(loopID);
         let vd = det.collect_vehicles_on_det(MSNet::get_instance().get_current_time_step() - delta_t(), true, true, false, false);
-        let _ = vd;
-        // shortcut: MSInductLoop::VehicleData (idM, lengthM, entryTimeM, leaveTimeM, typeIDM) is not ported; prelude maps VehicleData to phemlight's struct, upgrade when ms_induct_loop defines it
-        panic!("get_vehicle_data: MSInductLoop::VehicleData not ported");
+        let mut tvd: Vec<TraCIVehicleData> = Vec::new();
+        for vdi in vd.iter() {
+            tvd.push(TraCIVehicleData {
+                id: vdi.idM.clone(),
+                length: vdi.lengthM,
+                entryTime: vdi.entryTimeM,
+                leaveTime: vdi.leaveTimeM,
+                typeID: vdi.typeIDM.clone(),
+            });
+        }
+        tvd
     }
 
     /// C++: `double InductionLoop::getIntervalOccupancy(const std::string &)` [static]
