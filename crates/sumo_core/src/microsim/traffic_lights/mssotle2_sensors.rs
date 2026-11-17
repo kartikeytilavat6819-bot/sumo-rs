@@ -13,7 +13,7 @@ const HALTING_TIME_THRS: SUMOTime = 10;
 const HALTING_SPEED_THRS: f64 = 1.0;
 const DIST_THRS: f64 = 20.0;
 // C++ INVALID_POSITION (geom helper)
-const INVALID_POSITION: f64 = -1000000.0;
+const INVALID_POSITION: f64 = f64::MAX; // MSSOTLE2Sensors.cpp: #define INVALID_POSITION std::numeric_limits<double>::max()
 
 /// C++ class `MSSOTLE2Sensors` (microsim/traffic_lights/MSSOTLE2Sensors.h)
 #[repr(C)]
