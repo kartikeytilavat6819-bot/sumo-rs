@@ -476,6 +476,7 @@ impl MSTransportableControl {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn add_waiting(&mut self, edge: Ptr<MSEdge>, person: Ptr<MSTransportable>) {
+        if std::env::var_os("CD01").is_some() { eprintln!("CD01 AW t={} edge={} time={}", person.get_id(), edge.get_numerical_id(), simstep()); }
         self.myWaiting4Vehicle.entry(edge_key(edge)).or_default().push(person);
         self.myWaitingForVehicleNumber += 1;
         self.myHaveNewWaiting = true;

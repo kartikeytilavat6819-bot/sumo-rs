@@ -6,10 +6,23 @@ diff --git a/src/microsim/MSBaseVehicle.cpp b/src/microsim/MSBaseVehicle.cpp
  MSBaseVehicle::addTransportable(MSTransportable* transportable) {
 +    if (getenv("CD01")) std::cerr << "CD01 ADD " << getID() << " person=" << transportable->isPerson() << " t=" << transportable->getID() << " time=" << SIMSTEP << " pdev_null=" << (myPersonDevice == nullptr) << "\n";
      if (transportable->isPerson()) {
+diff --git a/src/microsim/MSVehicle.cpp b/src/microsim/MSVehicle.cpp
+--- a/src/microsim/MSVehicle.cpp
++++ b/src/microsim/MSVehicle.cpp
+@@ -1991,3 +1991,4 @@
+ void
+ MSVehicle::boardTransportables(MSStop& stop) {
++    if (getenv("CD01") && getID() == "L1f.0") std::cerr << "CD01 BT time=" << SIMSTEP << " hp=" << MSNet::getInstance()->hasPersons() << " edge=" << myLane->getEdge().getNumericalID() << "\n";
+     if (stop.skipOnDemand) {
 diff --git a/src/microsim/transportables/MSTransportableControl.cpp b/src/microsim/transportables/MSTransportableControl.cpp
 --- a/src/microsim/transportables/MSTransportableControl.cpp
 +++ b/src/microsim/transportables/MSTransportableControl.cpp
-@@ -324,5 +324,7 @@
+@@ -292,3 +292,4 @@
+ void
+ MSTransportableControl::addWaiting(const MSEdge* const edge, MSTransportable* transportable) {
++    if (getenv("CD01")) std::cerr << "CD01 AW t=" << transportable->getID() << " edge=" << edge->getNumericalID() << " time=" << SIMSTEP << "\n";
+     myWaiting4Vehicle[edge].push_back(transportable);
+@@ -324,5 +325,7 @@
          const SUMOTime currentTime = SIMSTEP;
          TransportableVector& transportables = wait->second;
 +        if (getenv("CD01") && vehicle->getID() == "L1f.0") std::cerr << "CD01 LAW edge=" << edge->getNumericalID() << " n=" << transportables.size() << " time=" << currentTime << " tnl=" << timeToLoadNext << " stopdur=" << stopDuration << "\n";
