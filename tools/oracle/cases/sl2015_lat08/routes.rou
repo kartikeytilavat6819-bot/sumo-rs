@@ -1,0 +1,35 @@
+<routes>
+    <vType id="car" length="4.5" width="1.8" minGapLat="0.6" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5" lcSublane="1" lcPushy="0.3" lcAssertive="1" lcImpatience="0.5" lcAccelLat="1.5" latAlignment="nice"/>
+    <vType id="bike" vClass="bicycle" length="1.8" width="0.7" minGapLat="0.2" maxSpeed="5" accel="1.2" decel="3" sigma="0.5" lcSublane="0.5" lcPushy="0.8" latAlignment="compact"/>
+    <vType id="moto" vClass="motorcycle" length="2.2" width="0.8" minGapLat="0.2" maxSpeed="16" accel="3" decel="5" sigma="0.5" lcSublane="1" lcAssertive="2" lcAccelLat="2" latAlignment="arbitrary"/>
+    <vType id="slow" length="6" width="2.0" minGapLat="0.6" maxSpeed="4" accel="2.6" decel="4.5" sigma="0.5" lcImpatience="1" lcPushy="0" latAlignment="left"/>
+    <vType id="ctr" length="4.5" width="1.8" minGapLat="0.6" maxSpeed="11" accel="2.6" decel="4.5" sigma="0.5" lcPushy="0.5" latAlignment="center" lcImpatience="0.2" lcAssertive="0.5"/>
+    <vType id="rgt" length="4.5" width="1.8" minGapLat="0.6" maxSpeed="12" accel="2.6" decel="4.5" sigma="0.5" latAlignment="right" lcSublane="0.2"/>
+    <route id="r0" edges="100"/>
+    <vehicle id="b0" type="bike" route="r0" depart="0" departLane="0" departPos="5"/>
+    <vehicle id="m0" type="moto" route="r0" depart="0" departLane="1" departPos="5"/>
+    <vehicle id="c0" type="car" route="r0" depart="1" departLane="2" departPos="5"/>
+    <vehicle id="s0" type="slow" route="r0" depart="2" departLane="1" departPos="40"/>
+    <vehicle id="b1" type="bike" route="r0" depart="3" departLane="1" departPos="10"/>
+    <vehicle id="m1" type="moto" route="r0" depart="4" departLane="0" departPos="8"/>
+    <vehicle id="c1" type="car" route="r0" depart="5" departLane="0" departPos="20"/>
+    <vehicle id="c2" type="car" route="r0" depart="6" departLane="1" departPos="30"/>
+    <vehicle id="m2" type="moto" route="r0" depart="7" departLane="2" departPos="10"/>
+    <vehicle id="s1" type="slow" route="r0" depart="8" departLane="0" departPos="60"/>
+    <vehicle id="b2" type="bike" route="r0" depart="9" departLane="0" departPos="15"/>
+    <vehicle id="c3" type="car" route="r0" depart="10" departLane="2" departPos="40"/>
+    <vehicle id="m3" type="moto" route="r0" depart="11" departLane="1" departPos="25"/>
+    <vehicle id="ctr0" type="ctr" route="r0" depart="12" departLane="0" departPos="12"/>
+    <vehicle id="rgt0" type="rgt" route="r0" depart="13" departLane="2" departPos="22"/>
+    <vehicle id="c4" type="car" route="r0" depart="14" departLane="1" departPos="35"/>
+    <vehicle id="m4" type="moto" route="r0" depart="15" departLane="0" departPos="50"/>
+    <vehicle id="s2" type="slow" route="r0" depart="16" departLane="2" departPos="70"/>
+    <vehicle id="b3" type="bike" route="r0" depart="17" departLane="1" departPos="40"/>
+    <vehicle id="c5" type="car" route="r0" depart="18" departLane="0" departPos="55"/>
+    <vehicle id="m5" type="moto" route="r0" depart="19" departLane="2" departPos="60"/>
+    <vehicle id="ctr1" type="ctr" route="r0" depart="20" departLane="1" departPos="30"/>
+    <vehicle id="c6" type="car" route="r0" depart="22" departLane="0" departPos="80"/>
+    <vehicle id="m6" type="moto" route="r0" depart="24" departLane="1" departPos="15"/>
+    <vehicle id="b4" type="bike" route="r0" depart="26" departLane="2" departPos="5"/>
+    <vehicle id="c7" type="car" route="r0" depart="28" departLane="2" departPos="90"/>
+</routes>

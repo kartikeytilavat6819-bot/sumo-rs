@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T01:07:56.323319-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <osm-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-lc03/tools/oracle/cases/sl2015_lat04/input.osm"/>
+    </input>
+
+    <output>
+        <output-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-lc03/tools/oracle/cases/sl2015_lat04/ref_simple.net.xml"/>
+    </output>
+
+    <projection>
+        <simple-projection value="true"/>
+    </projection>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,300.56,0.00" origBoundary="0.000000,0.000000,0.002700,0.000000" projParameter="-"/>
+
+    <type id="highway.primary" priority="12" numLanes="2" speed="27.78" disallow="tram rail_urban rail rail_electric rail_fast ship container cable_car subway aircraft wheelchair scooter drone" oneway="0"/>
+
+    <edge id="100" from="1" to="2" priority="12" type="highway.primary" spreadType="center">
+        <lane id="100_0" index="0" disallow="tram rail_urban rail rail_electric rail_fast ship container cable_car subway aircraft wheelchair scooter drone" speed="13.89" length="300.56" shape="0.00,-3.20 300.56,-3.20"/>
+        <lane id="100_1" index="1" disallow="tram rail_urban rail rail_electric rail_fast ship container cable_car subway aircraft wheelchair scooter drone" speed="13.89" length="300.56" shape="0.00,0.00 300.56,0.00"/>
+        <lane id="100_2" index="2" disallow="tram rail_urban rail rail_electric rail_fast ship container cable_car subway aircraft wheelchair scooter drone" speed="13.89" length="300.56" shape="0.00,3.20 300.56,3.20"/>
+    </edge>
+
+    <junction id="1" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,4.80 0.00,-4.80"/>
+    <junction id="2" type="dead_end" x="300.56" y="0.00" incLanes="100_0 100_1 100_2" intLanes="" shape="300.56,-4.80 300.56,4.80"/>
+
+</net>
