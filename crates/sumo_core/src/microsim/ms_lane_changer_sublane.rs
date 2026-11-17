@@ -1353,6 +1353,9 @@ impl MSLaneChangerSublane {
             let veh = self.myChanger[t].ahead.index_op(i);
             if !veh.is_null() {
                 let gap = veh.get_back_position_on_lane(tlane) - ego.get_position_on_lane() - ego.get_vehicle_type().get_min_gap();
+                if lct_on(ego) {
+                    eprintln!("LCT-GL {} {} L{} i={} veh={} gap={} shift={} nsub={}", MSNet::get_instance().get_current_time_step(), ego.get_id(), tlane.get_index(), i, veh.get_id(), lct_bits(gap), sublaneShift, result.num_sublanes());
+                }
                 if i + sublaneShift >= 0 && i + sublaneShift < result.num_sublanes() {
                     result.add_leader(veh, gap, 0.0, i + sublaneShift);
                 }

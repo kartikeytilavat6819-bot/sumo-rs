@@ -1,5 +1,5 @@
 diff --git a/src/microsim/MSLaneChangerSublane.cpp b/src/microsim/MSLaneChangerSublane.cpp
-index 41e69ee..71afe95 100644
+index 41e69ee..9fe9bb8 100644
 --- a/src/microsim/MSLaneChangerSublane.cpp
 +++ b/src/microsim/MSLaneChangerSublane.cpp
 @@ -34,6 +34,20 @@
@@ -98,6 +98,14 @@ index 41e69ee..71afe95 100644
      MSLane* source = from->lane;
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
+@@ -618,6 +672,7 @@ MSLaneChangerSublane::getLeaders(const ChangerIt& target, const MSVehicle* vehic
+         const MSVehicle* veh = target->ahead[i];
+         if (veh != nullptr) {
+             const double gap = veh->getBackPositionOnLane(target->lane) - vehicle->getPositionOnLane() - vehicle->getVehicleType().getMinGap();
++            if (lcOn(vehicle)) std::cerr << "LCT-GL " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID() << " L" << target->lane->getIndex() << " i=" << i << " veh=" << veh->getID() << " gap=" << lcBits(gap) << " shift=" << sublaneShift << " nsub=" << result.numSublanes() << "\n";
+ #ifdef DEBUG_SURROUNDING
+             if (DEBUG_COND) {
+                 std::cout << " ahead lead=" << veh->getID() << " leadBack=" << veh->getBackPositionOnLane() << " gap=" << gap << " sublaneShift=" << sublaneShift << "\n";
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
 index c892b2d..3d7f183 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
