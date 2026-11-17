@@ -1,6 +1,7 @@
 //! Port of microsim/output/MSMeanData_Harmonoise.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData_Harmonoise::MSLaneMeanDataValues` (microsim/output/MSMeanData_Harmonoise.h)
@@ -209,6 +210,26 @@ static MS_MEAN_DATA_HARMONOISE_VT: MSMeanDataVt = MSMeanDataVt {
     reset_only: MSMeanData::reset_only_base,
 };
 
+fn harmonoise_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
+}
+
+fn harmonoise_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
+}
+
+fn harmonoise_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+}
+
+/// Detector-level dispatch (MSDetectorFileOutput virtuals reached through the base pointer), as in MSMeanData_Emissions
+static MS_MEAN_DATA_HARMONOISE_DETECTOR_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: harmonoise_detector_write_xml_output,
+    write_xml_detector_prolog: harmonoise_detector_write_xml_detector_prolog,
+    detector_update: harmonoise_detector_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
+
 fn harmonoise_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {
     Ptr::new(m).cast::<MSMeanData_Harmonoise>().m().create_values(lane, length, doAdd)
 }
@@ -255,6 +276,7 @@ impl MSMeanData_Harmonoise {
     pub fn new(id: &str, dumpBegin: SUMOTime, dumpEnd: SUMOTime, useLanes: bool, excludeEmpty: &str, withInternal: bool, trackVehicles: bool, maxTravelTime: f64, minSamples: f64, vTypes: &str, writeAttributes: &str, edges: &Vec<Ptr<MSEdge>>, aggregate: AggregateType) -> Self {
         let mut base = MSMeanData::new(id, dumpBegin, dumpEnd, useLanes, excludeEmpty, withInternal, trackVehicles, 0, maxTravelTime, minSamples, vTypes, writeAttributes, edges, aggregate);
         base.meandata_vt = &MS_MEAN_DATA_HARMONOISE_VT;
+        base.base.vt = &MS_MEAN_DATA_HARMONOISE_DETECTOR_VT;
         Self { base }
     }
 
