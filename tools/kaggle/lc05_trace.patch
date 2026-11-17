@@ -71,7 +71,7 @@ index 41e69ee..e77560e 100644
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
-index c892b2d..6d498eb 100644
+index c892b2d..823548e 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
 +++ b/src/microsim/lcmodels/MSLCM_SL2015.cpp
 @@ -178,6 +178,21 @@ MSLCM_SL2015::debugVehicle() const {
@@ -157,3 +157,11 @@ index c892b2d..6d498eb 100644
      if (fabs(latDist) <= NUMERICAL_EPS * myVehicle.getActionStepLengthSecs() ||
              latDistSublane * latDist > 0) {
  
+@@ -2200,6 +2223,7 @@ MSLCM_SL2015::updateExpectedSublaneSpeeds(const MSLeaderDistanceInfo& ahead, int
+                     vSafe = forecastAverageSpeed(vSafe, vMax, gap, leader->getSpeed());
+                 }
+             }
++            if (lcTr(myVehicle)) std::cerr << "LCT-UE " << MSNet::getInstance()->getCurrentTimeStep() << " " << myVehicle.getID() << " esub=" << edgeSublane << " leader=" << (leader == nullptr ? std::string("none") : leader->getID()) << " gap=" << lcBits(gap) << " vSafe=" << lcBits(vSafe) << " vMax=" << lcBits(vMax) << "\n";
+             // take pedestrians into account
+             if (lane->getEdge().getPersons().size() > 0 && lane->hasPedestrians()) {
+                 /// XXX this could be done faster by checking all sublanes at once (but would complicate the MSPModel API)

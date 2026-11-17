@@ -4407,6 +4407,10 @@ impl MSLCM_SL2015 {
                         vSafe = self.forecast_average_speed(vSafe, vMax, gap, leader.get_speed());
                     }
                 }
+                if lctw_on(self.myVehicle) {
+                    let lid = if leader.is_null() { "none".to_string() } else { leader.get_id().to_string() };
+                    eprintln!("LCT-UE {} {} esub={} leader={} gap={} vSafe={} vMax={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), edgeSublane, lid, lctw_bits(gap), lctw_bits(vSafe), lctw_bits(vMax));
+                }
                 // take pedestrians into account
                 if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {
                     let mut foeRight: f64 = 0.;
