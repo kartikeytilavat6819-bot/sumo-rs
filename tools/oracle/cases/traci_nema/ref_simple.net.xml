@@ -91,6 +91,10 @@
     </edge>
 
     <tlLogic id="1802245009" type="NEMA" programID="0" offset="0">
+        <param key="ring1" value="1,2,3,4"/>
+        <param key="ring2" value="5,6,7,8"/>
+        <param key="barrierPhases" value="4,8"/>
+        <param key="coordinatePhases" value="2,6"/>
         <phase duration="82" state="GGGGg" minDur="5" maxDur="50"/>
         <phase duration="3"  state="yyyyy"/>
         <phase duration="5"  state="rrrrr"/>
