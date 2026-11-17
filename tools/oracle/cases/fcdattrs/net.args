@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/fcdattrs/fcdattrs.nod.xml --edge-files tools/oracle/cases/fcdattrs/fcdattrs.edg.xml

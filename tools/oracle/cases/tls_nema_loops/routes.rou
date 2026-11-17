@@ -1,0 +1,19 @@
+<routes>
+    <vType id="car" maxSpeed="13.89"/>
+    <vehicle id="w0" type="car" depart="0.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s0" type="car" depart="2.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w1" type="car" depart="5.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s1" type="car" depart="7.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w2" type="car" depart="10.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s2" type="car" depart="12.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w3" type="car" depart="15.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="w4" type="car" depart="18.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s3" type="car" depart="20.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w5" type="car" depart="25.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s4" type="car" depart="27.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w6" type="car" depart="30.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s5" type="car" depart="33.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w7" type="car" depart="40.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+    <vehicle id="s6" type="car" depart="45.00" departSpeed="max"><route edges="S0 N0"/></vehicle>
+    <vehicle id="w8" type="car" depart="50.00" departSpeed="max"><route edges="W0 E0"/></vehicle>
+</routes>

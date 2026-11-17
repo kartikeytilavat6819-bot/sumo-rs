@@ -1063,7 +1063,7 @@ impl NBRampsComputer {
         if self.myShiftedEdges.contains_key(&ramp) {
             offset -= self.myShiftedEdges[&ramp];
         }
-        // shortcut: Rust move2side cannot signal InvalidArgument, so the C++ catch warning is not emitted
+        // C++ try/catch(InvalidArgument) is unreachable: PositionVector::move2side never throws (only move2sideCustom does)
         g.move2side(offset, 100.0);
         ramp.m().set_geometry(&g, false);
         self.myShiftedEdges.insert(ramp, offset);
@@ -1153,7 +1153,7 @@ impl NBRampsComputer {
             let n = if onRamp { potHighway.get_to_node() } else { potHighway.get_from_node() };
             if potHighway.has_default_geometry_endpoint_at_node(n) {
                 let mut p2: PositionVector = first.get_geometry().clone();
-                // shortcut: Rust move2side cannot signal InvalidArgument, so the C++ empty catch is not needed here
+                // C++ empty catch(InvalidArgument) is unreachable: PositionVector::move2side never throws
                 p2.move2side((first.get_num_lanes() - potHighway.get_num_lanes()) as f64 * first.get_lane_width_2(0) * 0.5, 100.0);
                 first.m().set_geometry(&p2, false);
             }

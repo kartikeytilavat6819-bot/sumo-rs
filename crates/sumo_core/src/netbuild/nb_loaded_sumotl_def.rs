@@ -1370,8 +1370,7 @@ impl NBLoadedSUMOTLDef {
                                         c2.get_to(),
                                     ));
                                 }
-                                // shortcut: NBEdge::get_connection returns CHBuilder_Connection, which has no indirectLeft field in this port, so indirectLeft is taken as false, upgrade: port NBEdge::getConnection returning NBEdge_Connection
-                                let indirectLeft = false;
+                                let indirectLeft = c1.get_from().get_connection(c1.get_from_lane(), c1.get_to(), c1.get_to_lane()).indirectLeft;
                                 if isFoes && (at(i1) == b's' || (!hasContRel && at(i2) == b'G' && !indirectLeft)) {
                                     self.base.myExtraConflicts.borrow_mut().insert((i1, i2));
                                 }

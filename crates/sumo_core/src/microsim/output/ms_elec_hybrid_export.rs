@@ -75,7 +75,32 @@ impl MSElecHybridExport {
         if !veh.is_on_road() {
             return;
         }
-        // shortcut: getDevice(typeid(MSDevice_ElecHybrid)) takes an unmapped type_info and the result must be downcast to MSDevice_ElecHybrid (no repr(C) layout yet); the battery and vehicle attributes are not written until then
+        let micro_veh: Ptr<MSVehicle> = if MSGlobals::use_meso_sim() { Ptr::null() } else { veh.cast::<MSVehicle>() };
+        let dev = if micro_veh.is_null() { Ptr::null() } else { MSDevice::get_device_by_name(&micro_veh.myDevices, "elecHybrid") };
+        if !dev.is_null() {
+            let elec = dev.cast::<MSDevice_ElecHybrid>();
+            of.write_attr(SUMO_ATTR_ACTUALBATTERYCAPACITY, &elec.get_actual_battery_capacity());
+            of.write_attr(SUMO_ATTR_ENERGYCONSUMED, &elec.get_consum());
+            of.write_attr(SUMO_ATTR_ENERGYCHARGED, &elec.get_energy_charged());
+            of.write_attr(SUMO_ATTR_CHARGINGPOWER, &elec.get_power_wanted());
+            of.write_attr(SUMO_ATTR_OVERHEADWIREID, &elec.get_overhead_wire_segment_id());
+            of.write_attr(SUMO_ATTR_TRACTIONSUBSTATIONID, &elec.get_traction_substation_id());
+            of.write_attr(SUMO_ATTR_CURRENTFROMOVERHEADWIRE, &elec.get_current_from_overhead_wire());
+            of.write_attr(SUMO_ATTR_VOLTAGEOFOVERHEADWIRE, &elec.get_voltage_of_overhead_wire());
+            of.write_attr(SUMO_ATTR_ALPHACIRCUITSOLVER, &elec.get_circuit_alpha());
+            of.write_attr(SUMO_ATTR_SPEED, &veh.get_speed());
+            of.write_attr(SUMO_ATTR_ACCELERATION, &veh.get_acceleration());
+            of.write_attr(SUMO_ATTR_DISTANCE, &veh.get_odometer());
+            let pos = veh.get_position(0.);
+            of.write_attr(SUMO_ATTR_X, &pos.x());
+            of.write_attr(SUMO_ATTR_Y, &pos.y());
+            of.write_attr(SUMO_ATTR_Z, &pos.z());
+            of.write_attr(SUMO_ATTR_SLOPE, &veh.get_slope());
+            if !micro_veh.is_null() {
+                of.write_attr(SUMO_ATTR_LANE, &micro_veh.get_lane().get_id().to_string());
+            }
+            of.write_attr(SUMO_ATTR_POSONLANE, &veh.get_position_on_lane());
+        }
         of.close_tag("");
     }
 
@@ -158,7 +183,47 @@ impl MSElecHybridExport {
     pub fn write_aggregated(of: &mut OutputDevice, timestep: SUMOTime, precision: i32) {
         of.open_tag_id(SUMO_TAG_TIMESTEP).write_attr(SUMO_ATTR_TIME, &time2string(timestep));
         of.set_precision(precision);
-        // shortcut: the vehicle rows need the getDevice(typeid(MSDevice_ElecHybrid)) lookup (unmapped type_info) and MSVehicle attributes; no rows are written until those exist
+        let net = MSNet::get_instance();
+        let vc = net.m().get_vehicle_control();
+        for (_, veh) in vc.myVehicleDict.iter() {
+            let veh: Ptr<SUMOVehicle> = *veh;
+            if !veh.is_on_road() {
+                continue;
+            }
+            let micro_veh: Ptr<MSVehicle> = if MSGlobals::use_meso_sim() { Ptr::null() } else { veh.cast::<MSVehicle>() };
+            let dev = if micro_veh.is_null() { Ptr::null() } else { MSDevice::get_device_by_name(&micro_veh.myDevices, "elecHybrid") };
+            if dev.is_null() {
+                continue;
+            }
+            let elec = dev.cast::<MSDevice_ElecHybrid>();
+            if elec.get_maximum_battery_capacity() > 0. {
+                of.open_tag_id(SUMO_TAG_VEHICLE);
+                of.write_attr(SUMO_ATTR_ID, &veh.get_id().to_string());
+                of.write_attr(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, &elec.get_maximum_battery_capacity());
+                of.write_attr(SUMO_ATTR_ACTUALBATTERYCAPACITY, &elec.get_actual_battery_capacity());
+                of.write_attr(SUMO_ATTR_ENERGYCONSUMED, &elec.get_consum());
+                of.write_attr(SUMO_ATTR_ENERGYCHARGED, &elec.get_energy_charged());
+                of.write_attr(SUMO_ATTR_CHARGINGPOWER, &elec.get_power_wanted());
+                of.write_attr(SUMO_ATTR_OVERHEADWIREID, &elec.get_overhead_wire_segment_id());
+                of.write_attr(SUMO_ATTR_TRACTIONSUBSTATIONID, &elec.get_traction_substation_id());
+                of.write_attr(SUMO_ATTR_CURRENTFROMOVERHEADWIRE, &elec.get_current_from_overhead_wire());
+                of.write_attr(SUMO_ATTR_VOLTAGEOFOVERHEADWIRE, &elec.get_voltage_of_overhead_wire());
+                of.write_attr(SUMO_ATTR_ALPHACIRCUITSOLVER, &elec.get_circuit_alpha());
+                of.write_attr(SUMO_ATTR_SPEED, &veh.get_speed());
+                of.write_attr(SUMO_ATTR_ACCELERATION, &veh.get_acceleration());
+                of.write_attr(SUMO_ATTR_DISTANCE, &veh.get_odometer());
+                let pos = veh.get_position(0.);
+                of.write_attr(SUMO_ATTR_X, &pos.x());
+                of.write_attr(SUMO_ATTR_Y, &pos.y());
+                of.write_attr(SUMO_ATTR_Z, &pos.z());
+                of.write_attr(SUMO_ATTR_SLOPE, &veh.get_slope());
+                if !micro_veh.is_null() {
+                    of.write_attr(SUMO_ATTR_LANE, &micro_veh.get_lane().get_id().to_string());
+                }
+                of.write_attr(SUMO_ATTR_POSONLANE, &veh.get_position_on_lane());
+                of.close_tag("");
+            }
+        }
         of.close_tag("");
     }
 

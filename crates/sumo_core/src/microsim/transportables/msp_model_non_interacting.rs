@@ -14,24 +14,8 @@ const MSPMODEL_SIDEWALK_OFFSET: f64 = 3.0;
 const CSTATE_LATERAL_OFFSET: f64 = 0.0;
 
 /// C++ getSidewalk<MSEdge, MSLane>(edge) with the default svc = SVC_PEDESTRIAN (utils/router/IntermodalEdge.h)
-// shortcut: local copy of the pedestrian-only path, because the generic intermodal_edge.rs getSidewalk is still a stub, upgrade when it is ported
 fn get_sidewalk_lane(edge: Ptr<MSEdge>) -> Ptr<MSLane> {
-    if edge.is_null() {
-        return Ptr::null();
-    }
-    let lanes = edge.get_lanes();
-    // prefer lanes that are exclusive to pedestrians
-    for lane in lanes.iter() {
-        if lane.get_permissions() == SVC_PEDESTRIAN as SVCPermissions {
-            return *lane;
-        }
-    }
-    for lane in lanes.iter() {
-        if lane.allows_vehicle_class(SVC_PEDESTRIAN) {
-            return *lane;
-        }
-    }
-    Ptr::null()
+    crate::utils::router::intermodal_edge::get_sidewalk::<MSEdge, MSLane, SUMOVehicle>(edge, SVC_PEDESTRIAN)
 }
 
 // Virtual dispatch for the PState/CState overrides: the adapter base is the first field of both repr(C) structs.
@@ -75,6 +59,7 @@ fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
 
 /// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
 static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: pstate_get_position,
@@ -99,6 +84,7 @@ static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTran
 
 /// C++ CState overrides (getPosition, getAngle) on top of the PState table
 static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: adapter_default_get_lat_offset,
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
     get_position: cstate_get_position,
@@ -260,6 +246,9 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     using_internal_lanes: noninteracting_vt_using_internal_lanes,
     get_active_number: noninteracting_vt_get_active_number,
     load_state: msp_model_default_load_state,
+    has_pedestrians: msp_model_default_has_pedestrians,
+    blocked_at_dist: msp_model_default_blocked_at_dist,
+    next_blocking: msp_model_default_next_blocking,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_NonInteracting>().m().add(t, s, now)
@@ -315,7 +304,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn add(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, duration) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::null()))));
@@ -343,7 +332,7 @@ impl MSPModel_NonInteracting {
     #[allow(unused_variables)]
     pub fn load_state(&mut self, transportable: Ptr<MSTransportable>, stage: Ptr<MSStageMoving>, in_: &mut Unmapped /* std::istringstream */) -> Ptr<MSTransportableStateAdapter> {
         self.myNumActivePedestrians += 1;
-        // shortcut: MoveToNextEdge and the states are leaked, C++ hands ownership to the event queue, upgrade when the event control owns Commands
+        // shortcut: the PState/CState are leaked (C++ deletes them with the MSStageMoving that owns them), upgrade when MSStageMoving owns its state
         let cmd: Ptr<MSPModel_NonInteracting_MoveToNextEdge> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_MoveToNextEdge::new(transportable, stage.m(), Ptr::from_mut(self)))));
         let (state, eventTime) = if transportable.is_person() {
             let s: Ptr<MSPModel_NonInteracting_PState> = Ptr::from_mut(Box::leak(Box::new(MSPModel_NonInteracting_PState::new(cmd, Ptr::from_mut(in_)))));
@@ -477,7 +466,6 @@ impl MSPModel_NonInteracting_MoveToNextEdge {
         let is_person = self.myTransportable.is_person();
         let old = self.myParent.get_edge();
         let dir = self.myParent.get_p_state().cast::<MSPModel_NonInteracting_PState>().get_direction();
-        // shortcut: MSStageMoving::move_to_next_edge is a panic stub (virtual dispatch to the walking/tranship stage is not ported), upgrade when stage subclasses dispatch
         let arrived = self.myParent.m().move_to_next_edge(self.myTransportable, currentTime, dir, Ptr::null(), false);
         if arrived {
             self.myModel.m().register_arrived();
