@@ -337,9 +337,7 @@ impl MSPModel_Striping {
         set_reserve_for_oncoming_factor_junctions(oc.get_float("pedestrian.striping.reserve-oncoming.junctions").unwrap());
         set_reserve_for_oncoming_max(oc.get_float("pedestrian.striping.reserve-oncoming.max").unwrap());
         // beginning with 1.20.0, sensible default speeds were set for crossings and walkingareas
-        // shortcut: MMVersion is not ported (MSNet::myVersion is a () placeholder), so the net version check
-        // (networkVersion >= 1.20) is assumed to hold; upgrade when MMVersion is ported and compare it here
-        set_use_net_speeds(true);
+        set_use_net_speeds(net.get_network_version() >= (1, 20.0));
 
         set_jam_time(utils::common::time::string2time(&oc.get_string("pedestrian.striping.jamtime").unwrap()).unwrap());
         if jam_time() <= 0 {

@@ -69,7 +69,11 @@ fn cstate_get_angle(a: &MSTransportableStateAdapter, stage: &MSStageMoving, now:
     ni_cstate(a).get_angle(stage, now)
 }
 
-/// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge)
+fn pstate_save_state(a: &mut MSTransportableStateAdapter, out: &mut String) {
+    Ptr::from_mut(a).cast::<MSPModel_NonInteracting_PState>().m().save_state(out)
+}
+
+/// C++ PState overrides (getEdgePos, getDirection, getPosition, getAngle, getWaitingTime, getSpeed, getNextEdge, saveState)
 static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
     get_edge_pos: pstate_get_edge_pos,
     get_direction: pstate_get_direction,
@@ -85,7 +89,7 @@ static MSPMODEL_NONINTERACTING_PSTATE_VT: MSTransportableStateAdapterVt = MSTran
     is_finished: adapter_default_is_finished,
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
-    save_state: adapter_default_save_state,
+    save_state: pstate_save_state,
 };
 
 /// C++ CState overrides (getPosition, getAngle) on top of the PState table
@@ -104,7 +108,7 @@ static MSPMODEL_NONINTERACTING_CSTATE_VT: MSTransportableStateAdapterVt = MSTran
     is_finished: adapter_default_is_finished,
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
-    save_state: adapter_default_save_state,
+    save_state: pstate_save_state,
 };
 
 /// C++ class `MSPModel_NonInteracting::CState` (microsim/transportables/MSPModel_NonInteracting.h)
@@ -758,8 +762,8 @@ impl MSPModel_NonInteracting_PState {
     //     out << " " << myLastEntryTime << " " << myCurrentDuration;
     // }
     #[allow(unused_variables)]
-    pub fn save_state(&mut self, out: &mut Unmapped /* std::ostringstream */) {
-        // shortcut: `out << " " << myLastEntryTime << " " << myCurrentDuration` is not ported (no ostringstream type in the Rust port), upgrade when the saveState stream type is decided
+    pub fn save_state(&mut self, out: &mut String) {
+        out.push_str(&format!(" {} {}", self.myLastEntryTime, self.myCurrentDuration));
     }
 
 }
