@@ -192,7 +192,6 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_edge_weights(svc: SUMOVehicleClass, lastAdaption: SUMOTime, index: i32) {
-        eprintln!("SL06TRACE init_edge_weights {:?}", std::backtrace::Backtrace::force_capture());
         let mut st = state();
         if st.myAdaptationWeight == 0. || !is_default("device.rerouting.adaptation-steps") {
             st.myAdaptationSteps = get_int("device.rerouting.adaptation-steps");
