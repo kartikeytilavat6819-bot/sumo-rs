@@ -3164,7 +3164,7 @@ impl MSLCM_SL2015 {
         defaultNextSpeed = min2(defaultNextSpeed, self.myExpectedSublaneSpeeds[rightmostOnEdge as usize]);
 
         if lctw_on(self.myVehicle) {
-            eprintln!("LCT-SS {} {} dns={} sp={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(defaultNextSpeed), self.myExpectedSublaneSpeeds.iter().map(|x| lctw_bits(*x)).collect::<Vec<_>>().join(","));
+            eprintln!("LCT-SS {} {} dns={} sp={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), lctw_bits(defaultNextSpeed), self.myExpectedSublaneSpeeds.iter().map(|x| lctw_bits(*x)).collect::<Vec<_>>().join(",") + &format!(" rvs={} lvs={} lm={} rm={} sides={}", lctw_bits(rightVehSide), lctw_bits(leftVehSide), leftmostOnEdge, rightmostOnEdge, sublaneSides.iter().map(|x| lctw_bits(*x)).collect::<Vec<_>>().join(",")));
         }
         let mut maxGain = -f64::MAX;
         let mut maxGainRight = -f64::MAX;
