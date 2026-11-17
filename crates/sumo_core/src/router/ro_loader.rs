@@ -13,9 +13,9 @@ fn min2t(a: SUMOTime, b: SUMOTime) -> SUMOTime {
     if a < b { a } else { b }
 }
 
-// shortcut: XMLSubSys::runParser needs RONetHandler to implement SaxHandler (and setFileName through GenericSAXHandler), not ported yet
-fn run_net_parser_unwired(handler: &mut RONetHandler, file: &str) {
-    panic!("ROLoader: cannot parse network file '{}', RONetHandler is not a SaxHandler yet", file);
+/// C++ `XMLSubSys::runParser(handler, file, isNet)`: true if no error was reported
+fn run_net_parser(handler: &mut RONetHandler, file: &str, isNet: bool) -> bool {
+    utils::xml::xml_sub_sys::run_parser(handler, file, isNet, false, false, true).unwrap_or_else(|e| panic!("{e}"))
 }
 
 // shortcut: XMLSubSys::runParser needs RORouteHandler to implement SaxHandler, not ported yet
@@ -296,7 +296,13 @@ impl ROLoader {
         let tlsPenalty = if opts.exists("weights.tls-penalty") { opts.get_float("weights.tls-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
         let turnaroundPenalty = if opts.exists("weights.turnaround-penalty") { opts.get_float("weights.turnaround-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
         let mut handler = RONetHandler::new(toFill, eb, ignoreInternal, minorPenalty, tlsPenalty, turnaroundPenalty);
-        run_net_parser_unwired(&mut handler, &file);
+        utils::common::msg_handler::progress_begin_message("Loading net");
+        if !run_net_parser(&mut handler, &file, true) {
+            utils::common::msg_handler::progress_failed_message();
+            panic!("{}", ProcessError::default_msg());
+        } else {
+            utils::common::msg_handler::progress_done_message();
+        }
         if !utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner()).is_empty() {
             let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner());
             let names = utils::common::to_string::to_string_prec(&*seen, utils::common::std_defs::g_precision());
@@ -309,8 +315,13 @@ impl ROLoader {
                 if !utils::common::file_helpers::is_readable(fileIt) {
                     panic!("The additional file '{}' is not accessible.", fileIt);
                 }
-                // shortcut: PROGRESS_BEGIN/DONE status lines are not printed, progress reporting is not ported
-                run_net_parser_unwired(&mut handler, fileIt);
+                utils::common::msg_handler::progress_begin_message(&format!("Loading additional file '{}' ", fileIt));
+                if !run_net_parser(&mut handler, fileIt, false) {
+                    utils::common::msg_handler::progress_failed_message();
+                    panic!("{}", ProcessError::default_msg());
+                } else {
+                    utils::common::msg_handler::progress_done_message();
+                }
             }
         }
         if opts.exists("junction-taz") && utils::options::options_cont::get_bool("junction-taz") {
