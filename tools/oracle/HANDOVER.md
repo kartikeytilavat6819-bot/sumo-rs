@@ -2,7 +2,7 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
 
 # Night run 2026-11-17 (lead loop, 20 Haiku agents, VM gate only) — read this first
 
-- `main` went 151/5 → **424/8** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 8
+- `main` went 151/5 → **429/7** (run_all PASS/FAIL; ~240 new rows added tonight, incl. 3-4k-vehicle cities), depart 15/15, unit tests ok, duarouter 16/16, netopts 188/188. All 7
   FAILs are NEW cases with owners (see tools/lead/agent_preamble.md). Every original city row passes (London/Kansas/
   Karlsruhe/Tokyo: isLeader→MSBitSetLogic dispatch, in01; Paris: computeFurtherLanes break, cb01). Release build gives
   identical verdicts and runs ~0.6x the C++ wall time (tools/oracle/PERF.md). New binary crate: duarouter (18/18 oracle
@@ -14,6 +14,48 @@ references come ONLY from ~/sumo-pristine; ~/sumo-src is for instrumentation onl
   wave2 → `vm_gate.ps1 -Branch wave2` → if no previously passing row is lost, merge wave2 into main and push.
 - Not merged on purpose: ls07 (duplicates tc03/ir01 fixes, 4 conflicts). ou04 is carried by pd02, na01 by na02.
 - Free OpenCode models (glm/deepseek flash) worked for docs/cases but hit their usage limit; Haiku carries on.
+
+## End of night run — all agents stopped (2026-11-17 morning)
+
+Everything is on GitHub: `main`, `wave2` (integration branch) and every `worktree-agent-*` branch (unfinished
+work included). Nothing lives only on the laptop.
+
+**Pending in `wave2`, gated before merging to main** (if the last wave2 gate shows no PASS→FAIL vs main, merge
+`wave2` into `main`): lo01 `16add678` (lc_opposite fixed: checkChange shadowed its targetLane parameter), bo01
+`60f0e73d` (2 base-offset casts), vs04 `c141cd39` (importers 26/26: OpenDRIVE internal-lane reversal used the wrong
+connection's toCP), sl07 `273dd4ea` (state roundtrip: taxi format, rerouter router, drive-way foe order, routeDist
+ids), tr05 `43b843ed` (106 new TraCI infra probes MATCH; error texts, LaneArea offset). Also removed: leftover
+LCTRACE trace code that lc06's merge had brought to main.
+
+**Open FAIL rows — where to start (measured, not guessed):**
+- `city_grenoble_tram_bus`: fixed by cd01 (`a2d29c79`, IntermodalEdge `Stop` kind so routes keep `!stop` edges), but
+  that change breaks `ped_persontrip_public/ref` + `ref_carwalk` (fcd/stat differ, tripinfo MATCH). It was reverted on
+  wave2 (`2fcd081a`). Find what C++ does differently for those personTrips, then re-apply (`git revert 2fcd081a`).
+- `city_delft_campus_crossings`: car42 at junction :44808045, t=347 — C++ stops for person67 on the crossing, ours
+  doesn't (cd01/cd02). Crossing blockedAtDist chain reads faithful; suspects: pedestrian state / walkingarea foe.
+- `tls_nema_loops`: hang fixed (NEMALogic::init must call init_base). Remaining: at t=5 phase 6's E2 detector counts
+  2 vehicles in ours, 0 in C++ → extension keeps GGrr (nm02). Check `lookup_e2_detector_by_id` (base2 offset hack —
+  use `mse2_collector_of`) and `build_e2_detector` positions; also NEMAPhase::new leaves myExpectedDuration 0 (C++:
+  minDuration).
+- `city_rotterdam_rail_yard`: W2 signal (J2 link 3) at t=55 — C++ sees foe driveway J2.1 approached by fr1 and turns
+  red; our J2.2 never gets foe J2.1 and build_sub_foe never runs for J2 pairs (rr01). Look at how C++ adds that foe
+  in the bidi stage (`myBidi` / departure driveways).
+- `city_seattle_downtown_hills`: the official C++ itself reads `foeExitLink->myConflicts[10]` of size 8 (undefined
+  behaviour, 17 times) — the reference is not reproducible. Drop/replace this case; the bad index is stored on the
+  recheck_set_request_information path (sw01).
+- `city_phoenix_scale_grid` (PANIC in mslcm_lc2013.rs, 3k vehicles): px01 was tracing actuated-TL induction-loop
+  assignment; check its branch `worktree-agent-px01` for its last notes.
+
+**Bug classes that kept recurring (check these first in any new diff):** missing virtual dispatch (dozens of
+fixes tonight); `std::sort` tie order (use `utils::common::std_sort`, see SORT_AUDIT.md); casts from a non-first
+base (`base2`/`base3`) without the field offset (use the `*_of` helpers, UB_AUDIT.md "Base-offset casts");
+references generated with different flags than run_all uses (always NEW_CASE + make_sim_refs.sh); objects never
+freed (`Box::leak`) so C++ destructor side effects never run (lc06: arrived vehicles stayed in partial-vehicle lists).
+
+**Infra notes:** VM disk fills from instrumented C++ copies (`/home/gate/cpp-<ID>`, 2.2 GB each) — vm_cpp_trace.sh
+now prunes copies unused for 4 h; manual cleanup = delete `/home/gate/cpp-*` and `/tmp/score*`. `run_all` has a
+per-case timeout (`SIM_TIMEOUT`, 600 s). The VMs are spot instances: restart a TERMINATED one with
+`gcloud compute instances start sumo-gate2 --zone us-central1-b`.
 
 # Handover — 2026-11-16 (end of session, everything stopped)
 
