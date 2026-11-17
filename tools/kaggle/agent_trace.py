@@ -8,7 +8,7 @@ def trace(binary, case, port, end):
     cmd = [binary, '-n', f'{case}/ref_simple.net.xml', '-r', f'{case}/routes.rou',
            '--no-step-log', 'true'] + open(f'{case}/sim.args').read().split()
     traci.start(cmd, port=port)
-    tl, det = [], []
+    tl, det, veh = [], [], []
     while traci.simulation.getTime() < end:
         traci.simulationStep()
         t = traci.simulation.getTime()
@@ -17,13 +17,16 @@ def trace(binary, case, port, end):
                       f"next={traci.trafficlight.getNextSwitch(tlid):.2f} "
                       f"state={traci.trafficlight.getRedYellowGreenState(tlid)} "
                       f"dur={traci.trafficlight.getPhaseDuration(tlid):.2f}")
+        for v in sorted(traci.vehicle.getIDList()):
+            veh.append(f"{t:.2f} {v} pos={traci.vehicle.getLanePosition(v):.4f} "
+                       f"speed={traci.vehicle.getSpeed(v):.4f} lane={traci.vehicle.getLaneID(v)}")
         for d in sorted(traci.inductionloop.getIDList()):
             det.append(f"{t:.2f} {d} gap={traci.inductionloop.getTimeSinceDetection(d):.2f} "
                        f"pos={traci.inductionloop.getPosition(d):.2f} "
                        f"occ={traci.inductionloop.getLastStepOccupancy(d):.2f} "
                        f"veh={traci.inductionloop.getLastStepVehicleNumber(d)}")
     traci.close()
-    return tl, det
+    return tl, det, veh
 
 def first_diff(name, a, b):
     print(f'[{name}] rows ours={len(a)} cpp={len(b)}')
@@ -49,12 +52,13 @@ def main():
     end = float(args[args.index('--end') + 1]) if '--end' in args else 0
     os.makedirs(out, exist_ok=True)
     tag = os.path.basename(case)
-    at, ad = trace(ours, case, 8901, end)
-    bt, bd = trace(cpp, case, 8902, end)
+    at, ad, av = trace(ours, case, 8901, end)
+    bt, bd, bv = trace(cpp, case, 8902, end)
     open(f'{out}/{tag}.ours.tl', 'w').write('\n'.join(at) + '\n')
     open(f'{out}/{tag}.cpp.tl', 'w').write('\n'.join(bt) + '\n')
     first_diff(f'{tag} TL', at, bt)
     first_diff(f'{tag} DET', ad, bd)
+    first_diff(f'{tag} VEH', av, bv)
 
 if __name__ == '__main__':
     main()

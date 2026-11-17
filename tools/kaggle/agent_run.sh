@@ -8,5 +8,5 @@ OUT=/tmp/tl01
 mkdir -p "$OUT"
 export PYTHONPATH="$SUMO_HOME/tools:${PYTHONPATH:-}"
 for c in tls_waut tls_actuated_loops; do
-  python tools/kaggle/agent_trace.py "tools/oracle/cases/$c" "$OURS" "$CPP" "$OUT" 2>&1 | head -60
+  python tools/kaggle/agent_trace.py "tools/oracle/cases/$c" "$OURS" "$CPP" "$OUT" 2>&1 | head -120
 done
