@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- stops given by x/y position (RORouteHandler::addStop map-matching branch), reroute_bypass net -->
+<routes>
+    <vehicle id="v0" depart="0.00">
+        <route edges="LEAD IN AB OUT"/>
+        <stop x="400.00" y="97.00" duration="10"/>
+    </vehicle>
+    <vehicle id="v1" depart="5.00">
+        <route edges="LEAD IN AC CB OUT"/>
+        <stop x="350.00" y="45.00" duration="5"/>
+    </vehicle>
+    <trip id="v2" depart="10.00" from="LEAD" to="OUT">
+        <stop x="352.00" y="40.00" duration="5"/>
+    </trip>
+</routes>
