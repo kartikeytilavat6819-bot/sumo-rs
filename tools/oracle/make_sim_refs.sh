@@ -13,6 +13,7 @@
 #   lefthand     --end 120   (reference net built with netconvert --lefthand; see its CASE.md)
 #   reroute_alt  --end 200 --additional-files tools/oracle/cases/reroute_alt/closing.add.xml
 #   closed_edge  --end 200 --additional-files tools/oracle/cases/closed_edge/closed_lane.add.xml
+#   calibrator_multi  --end 200 --additional-files tools/oracle/cases/calibrator_multi/calibrator_multi.add.xml (tripinfo only)
 #   depart       15 variants via cases/depart/run_ref.sh (--seed 42 --end 120), into cases/depart/ref/
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
@@ -22,7 +23,7 @@ cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 W=/mnt/c${ROOT#/c}
 LOG=/c/Users/karti/AppData/Local/Temp/opencode
-CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart sublanes lanechange lefthand reroute_alt closed_edge}
+CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart sublanes lanechange lefthand reroute_alt closed_edge calibrator_multi}
 wp() { echo "/mnt/c${1#/c}"; }
 # A C++ run counts only when it exits 0 without "Interrupt signal" (WSL signals end a run early and still exit 0)
 # and its outputs pass check_ref_complete.py. Retries once on a signal exit; any failure stops the script.
