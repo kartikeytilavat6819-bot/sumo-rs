@@ -31,6 +31,21 @@ fn special_dest_terminate_route() -> Ptr<MSEdge> {
     MY_SPECIAL_DEST_TERMINATE_ROUTE.with(|p| *p)
 }
 
+fn ms_triggered_rerouter_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_triggered_rerouter_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_triggered_rerouter_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_raw((mr as *mut MSMoveReminder as *mut u8).wrapping_sub(std::mem::offset_of!(MSTriggeredRerouter, base2)) as *mut MSTriggeredRerouter).m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_triggered_rerouter_notify_enter,
+    notify_move: ms_triggered_rerouter_notify_move,
+    notify_leave: ms_triggered_rerouter_notify_leave,
+};
+
 /// Reroutes traffic objects passing an edge
 /// C++ class `MSTriggeredRerouter` (microsim/trigger/MSTriggeredRerouter.h)
 #[repr(C)]
@@ -133,7 +148,10 @@ impl MSTriggeredRerouter {
     pub fn new(id: &str, edges: &MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Self {
         let mut this = MSTriggeredRerouter {
             base: Named::new(id),
-            base2: MSMoveReminder::new(id, Ptr::default(), true),
+            base2: MSMoveReminder {
+                vt: &MS_TRIGGERED_REROUTER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(id, Ptr::default(), true)
+            },
             base3: utils::xml::sumo_sax_handler::new("", ""), // C++ default-constructs SUMOSAXHandler
             base4: MSStoppingPlaceRerouter::new("parking".to_string(), false, Default::default(), Default::default()),
             myEdges: edges.clone(),

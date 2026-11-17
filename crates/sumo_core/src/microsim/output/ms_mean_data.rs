@@ -1393,6 +1393,21 @@ impl MSMeanData_MeanDataValueTracker {
 
 }
 
+fn ms_mean_data_values_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSMeanData_MeanDataValues>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_mean_data_values_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSMeanData_MeanDataValues>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_mean_data_values_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSMeanData_MeanDataValues>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_MEAN_DATA_VALUES_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_mean_data_values_notify_enter,
+    notify_move: ms_mean_data_values_notify_move,
+    notify_leave: ms_mean_data_values_notify_leave,
+};
+
 /// Data structure for mean (aggregated) edge/lane values
 /// C++ class `MSMeanData::MeanDataValues` (microsim/output/MSMeanData.h)
 #[repr(C)] // base must stay at offset 0 for the C++ downcast in as_tracker
@@ -1441,7 +1456,10 @@ impl MSMeanData_MeanDataValues {
         let parentId = if parent.is_null() { String::new() } else { format!("{}|", parent.get_id()) };
         let laneId = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
         Self {
-            base: MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd),
+            base: MSMoveReminder {
+                vt: &MS_MEAN_DATA_VALUES_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd)
+            },
             myParent: parent,
             myLaneLength: length,
             sampleSeconds: 0.0,

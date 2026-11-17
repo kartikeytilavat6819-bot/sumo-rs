@@ -53,6 +53,15 @@ thread_local! {
     static MY_SKIP_EMPTY: Cell<bool> = const { Cell::new(false) };
 }
 
+fn ms_device_fcd_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDevice_FCD>().m().notify_enter(veh, reason, enteredLane)
+}
+static MS_DEVICE_FCD_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_device_fcd_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: default_notify_leave,
+};
+
 /// A device which collects info on the vehicle trip (mainly on departure and arrival)
 /// C++ class `MSDevice_FCD` (microsim/devices/MSDevice_FCD.h)
 #[repr(C)]
@@ -548,9 +557,9 @@ impl MSDevice_FCD {
     // }
     #[allow(unused_variables)]
     pub fn new(holder: &mut SUMOVehicle, id: &str) -> Self {
-        MSDevice_FCD {
-            base: MSVehicleDevice::new(holder, id),
-        }
+        let mut base = MSVehicleDevice::new(holder, id);
+        base.base.vt = &MS_DEVICE_FCD_MSMOVE_REMINDER_VT;
+        MSDevice_FCD { base }
     }
 
     /// C++: `SumoXMLAttrMask MSDevice_FCD::getDefaultMask()` [static, private]
