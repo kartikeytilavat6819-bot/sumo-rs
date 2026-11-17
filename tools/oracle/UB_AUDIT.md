@@ -129,3 +129,29 @@ Deferred (real UB, not fixed in this round):
 | `microsim/devices/ms_device_transportable.rs` 715-719 `notify_move_internal` (`Ptr::from_raw(veh as *const _ as *mut _)`, then `notify_move(vp.m(), ...)`) | C++ `const_cast<SUMOTrafficObject&>(veh)`. Fixing it needs `&mut SUMOTrafficObject` through `MSMoveReminder::notify_move_internal` and every device/detector override that forwards it (about 15 files). Those files belong to other batches. |
 
 Verification (round 3): `tools/kaggle/agent_run.sh` builds `--release` into `$CARGO_TARGET_DIR-rel`, runs `PROFILE=debug` and `PROFILE=release bash tools/oracle/run_all.sh`, and diffs the verdict columns. Result on `f069bb8f`: debug and release both PASS=301 FAIL=6 SKIP=41, 0 differing verdict rows (the six known FAILs are the same in both: containers, rerouter_parking, taxi x2, tls_waut, busride). Depart 15/15, unit tests pass.
+
+## Base-offset casts (multiple inheritance, non-first base fields)
+
+A struct whose C++ class has a second base is ported with that base in a later field (`base2`, `base3`, `base4`). A pointer to that base is at `&s.baseN`, not at `s`. Converting it to the derived type (or back) needs `offset_of!`. `.cast::<T>()` is only correct for the first base.
+
+Fixed in this round:
+
+| Site | C++ | Problem | Fix |
+|---|---|---|---|
+| `libsumo/lane_area.rs` `get_detector` | `static_cast<MSE2Collector*>(MSDetectorFileOutput*)`; `MSE2Collector : MSMoveReminder, MSDetectorFileOutput` | `d.cast::<MSE2Collector>()` read the detector at offset 0 (the MSMoveReminder), so the pointer was wrong | `mse2_collector::mse2_collector_of(d)` (offset of `base2`, mirrors `induct_loop_of`) |
+| `traci_server/tra_ci_server.rs` `TraCIServer::initialise` | `addTransportableStateListener(this)`: `TraCIServer : VehicleStateListener, VariableWrapper, TransportableStateListener` | `inst.cast::<MSNet_TransportableStateListener>()` pointed at offset 0 (`base`, the vehicle listener) | `Ptr::from_mut(&mut inst.m().base3)` |
+
+Verified correct (no change): every other `.cast::<X>()` whose target is a derived type with the base at offset 0. Specific checks:
+
+- `MSInductLoop` (`base2` MSDetectorFileOutput): `induct_loop_of`, `detector_of`, `ms_induct_loop_of`, and the vtable helpers all apply the offset.
+- `MSInstantInductLoop` (`base2`), `MSRouteProbe` (`base2` MSMoveReminder), `MSTriggeredRerouter` (`base2` MSMoveReminder, `base4` MSStoppingPlaceRerouter), `MSCalibrator` (`base3` MSDetectorFileOutput), `MSE2Collector` (`base2`, helper `mse2_of`), `MSE3Collector` (MSDetectorFileOutput first), `MSDelayBased`/`NEMA` detector casts: offsets applied.
+- `MSVehicleDevice` (`base` MSMoveReminder, `base2` MSDevice): all `Ptr<MSDevice>` upcasts use `&dev.base2` (`me_vehicle`, `ms_vehicle`). `Ptr<MSVehicleDevice>` → `MSDevice_GLOSA` / `StationFinder` / `FCD` / `Taxi` / `Tripinfo` / `ToC` / `Bluelight` / `Transportable` / `VehRoutes` all use derived types that have `MSVehicleDevice` first, so the cast is at offset 0.
+- `MSTransportableDevice` (`base2` MSMoveReminder): no derived-pointer casts from a move reminder in the crate.
+- `MSDriveWay` (`base2` Named): MR is first, so the `cast::<MSDriveWay>()` / `cast::<MSMoveReminder>()` sites are fine. No `Named` cast to a drive way.
+- `MSDetectorFileOutput` (`base2` Parameterised): no Parameterised↔detector casts in the crate. `MSMeanData` has the detector base first.
+- `PointOfInterest` (`base` Shape, `base2` Position, `base3` Parameterised) and `SUMOPolygon` (`base2` Parameterised): `cast::<Named>()` is fine (Shape → Named). No Parameterised casts from these.
+- `MSEdge` (`base2` Parameterised), `MSLane`, `MSJunction`, `MSRoute`, `MSStoppingPlace`, `MSTrafficLightLogic`, `NBEdge`, `NBNode`, `ROEdge`: Named is first, so the `cast::<Named>()` sites are fine.
+- `MSSOTL*` policies (`PushButtonLogic` / `SigmoidLogic` as `base2`/`base3`), `MSDevice_FCDReplay` / `MSLaneSpeedTrigger` / `DataHandler` (`base2` GenericSAXHandler or MSMapMatcher), `MSRouteHandler` / `RORouteHandler` (`base2` MapMatcher): no casts into or out of those non-first bases.
+- `ms_device_transportable.rs` `notify_move_internal` (`const_cast` of `veh`): not an offset issue, still listed under the "Deferred" table above.
+
+Known gap, not an offset bug: `MSNet_TransportableStateListener` is an empty struct with no vtable. `MSNet::transportable_state_changed` calls its no-op method, so the TraCIServer override is never reached. The pointer is now correct, and behavior is unchanged. Upgrade with a vtable for the listener when TraCI transportable state reporting is ported.

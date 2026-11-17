@@ -253,7 +253,7 @@ impl TraCIServer {
             // maybe net was deleted and built again
             let net = MSNet::get_instance();
             net.m().add_vehicle_state_listener(inst.cast::<MSNet_VehicleStateListener>());
-            net.m().add_transportable_state_listener(inst.cast::<MSNet_TransportableStateListener>());
+            net.m().add_transportable_state_listener(Ptr::from_mut(&mut inst.m().base3));
             inst.m().mySubscriptionCache.write_int(0);
         }
     }
