@@ -1631,6 +1631,7 @@ impl MSMeanData_MeanDataValues {
         let laneId = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
         let mut base = MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd);
         base.vt = &MEAN_DATA_VALUES_MSMOVE_VT;
+        base.internal_vt = &MEAN_DATA_VALUES_MSMOVE_INTERNAL_VT;
         Self {
             base,
             myParent: parent,
@@ -2191,9 +2192,9 @@ impl MSMeanData_MeanDataValues {
         (self.data_vt.get_attribute_value)(self, a, period, numLanes, speedLimit)
     }
 
-    /// C++ `MeanDataValues` has no notifyMoveInternal override: the MSMoveReminder body applies
+    /// C++ `MeanDataValues` has no notifyMoveInternal override: the MSMoveReminder body applies (empty)
     pub fn notify_move_internal_base(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        self.base.notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        // C++ MSMoveReminder::notifyMoveInternal body only consumes its parameters
     }
 }
 
@@ -2222,6 +2223,15 @@ fn mean_data_values_reminder_move(r: &mut MSMoveReminder, veh: &mut SUMOTrafficO
 
 fn mean_data_values_reminder_leave(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
     Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+/// MSMoveReminder internal table shared by every MeanDataValues object: forwards to `data_vt`.
+static MEAN_DATA_VALUES_MSMOVE_INTERNAL_VT: MSMoveReminderInternalVt = MSMoveReminderInternalVt {
+    notify_move_internal: mean_data_values_reminder_notify_move_internal,
+};
+
+fn mean_data_values_reminder_notify_move_internal(r: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
 }
 
 /// Base MeanDataValues table: the `*_base` implementations
