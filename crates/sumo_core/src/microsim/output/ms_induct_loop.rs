@@ -41,6 +41,17 @@ pub type MSInductLoop_TimeQueue = BinaryHeap<Reverse<SUMOTime>>;
 /// C++ typedef `std::deque<VehicleData> MSInductLoop::VehicleDataCont`
 pub type MSInductLoop_VehicleDataCont = VecDeque<MSInductLoop_VehicleData>;
 
+/// C++ static_cast from the MSDetectorFileOutput base to MSInductLoop: `base2` is not the first field, so undo its offset.
+pub fn induct_loop_of(d: Ptr<MSDetectorFileOutput>) -> Ptr<MSInductLoop> {
+    let p = (d.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2));
+    Ptr::from_raw(p as *mut MSInductLoop)
+}
+
+/// C++ implicit upcast of an MSInductLoop to its MSDetectorFileOutput base.
+pub fn detector_of(l: Ptr<MSInductLoop>) -> Ptr<MSDetectorFileOutput> {
+    Ptr::from_mut(&mut l.m().base2)
+}
+
 /// An unextended detector measuring at a fixed position on a fixed lane.
 /// C++ class `MSInductLoop` (microsim/output/MSInductLoop.h)
 #[repr(C)]
