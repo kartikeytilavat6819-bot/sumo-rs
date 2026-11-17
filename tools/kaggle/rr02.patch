@@ -1,0 +1,78 @@
+diff --git a/src/microsim/traffic_lights/MSDriveWay.cpp b/src/microsim/traffic_lights/MSDriveWay.cpp
+index c2a0dd3..de56a39 100644
+--- a/src/microsim/traffic_lights/MSDriveWay.cpp
++++ b/src/microsim/traffic_lights/MSDriveWay.cpp
+@@ -36,6 +36,9 @@
+ #include "MSRailSignalControl.h"
+ 
+ #define DRIVEWAY_SANITY_CHECK
++#include <iostream>
++static std::string rr02L(const MSLink* l) { return l == nullptr ? std::string("NULL") : l->getLaneBefore()->getID() + ">" + l->getLane()->getID(); }
++template<class T> static std::string rr02V(const std::vector<T*>& v) { std::string s; for (auto x : v) { s += x->getID() + ","; } return s; }
+ //#define SUBDRIVEWAY_WARN_NOCONFLICT
+ 
+ //#define DEBUG_BUILD_DRIVEWAY
+@@ -1383,6 +1386,8 @@ MSDriveWay::findFlankProtection(MSLink* link, MSLink* origLink, std::vector<cons
+ void
+ MSDriveWay::addSwitchFoes(MSLink* link) {
+     auto it = mySwitchDriveWays.find(link);
++    std::cout << "DWSW " << myID << " link=" << rr02L(link) << " n=" << (it == mySwitchDriveWays.end() ? -1 : (int)it->second.size()) << "
++";
+     if (it != mySwitchDriveWays.end()) {
+ #ifdef DEBUG_ADD_FOES
+         if (gDebugFlag4) {
+@@ -1504,6 +1509,14 @@ MSDriveWay::buildDriveWay(const std::string& id, const MSLink* link, MSRouteIter
+     }
+     // add driveways that reverse along this driveways route
+     dw->addReversalFoes(movingBlock);
++    {
++        std::string fs;
++        for (MSLink* l : flankSwitches) { fs += rr02L(l) + ","; }
++        std::string cl;
++        for (MSLink* l : dw->myConflictLinks) { cl += rr02L(l) + ","; }
++        std::cout << "DWR " << SIMTIME << " " << dw->getID() << " link=" << rr02L(link) << " route=" << rr02V(dw->myRoute) << " fwd=" << rr02V(dw->myForward) << " bidi=" << rr02V(dw->myBidi) << " bidiEx=" << rr02V(dw->myBidiExtended) << " flank=" << rr02V(dw->myFlank) << " fs=" << fs << " clinks=" << cl << " raw=" << rr02V(dw->myFoes) << "
++";
++    }
+     // make foes unique and symmetrical
+     std::set<MSDriveWay*, ComparatorNumericalIdLess> uniqueFoes(dw->myFoes.begin(), dw->myFoes.end());
+     dw->myFoes.clear();
+@@ -1612,6 +1625,12 @@ MSDriveWay::buildDriveWay(const std::string& id, const MSLink* link, MSRouteIter
+     }
+     gDebugFlag4 = false;
+ #endif
++    {
++        std::string cl;
++        for (MSLink* l : dw->myConflictLinks) { cl += rr02L(l) + ","; }
++        std::cout << "DWF " << dw->getID() << " foes=" << rr02V(dw->myFoes) << " clinks=" << cl << "
++";
++    }
+     return dw;
+ }
+ 
+@@ -1722,6 +1741,8 @@ MSDriveWay::addFoes(const MSLink* link) {
+     const MSRailSignal* rs = dynamic_cast<const MSRailSignal*>(link->getTLLogic());
+     if (rs != nullptr) {
+         for (MSDriveWay* foe : rs->retrieveDriveWays(link->getTLIndex())) {
++            std::cout << "DWAF " << myID << " link=" << rr02L(link) << " cand=" << foe->myID << " " << flankConflict(*foe) << foe->flankConflict(*this) << crossingConflict(*foe) << foe->crossingConflict(*this) << "
++";
+ #ifdef DEBUG_ADD_FOES
+             if (gDebugFlag4) {
+                 std::cout << "  cand foe=" << foe->myID << " fc1=" << flankConflict(*foe) << " fc2=" << foe->flankConflict(*this) << " cc1=" << crossingConflict(*foe) << " cc2=" <<  foe->crossingConflict(*this) << "\n";
+@@ -1893,6 +1914,8 @@ MSDriveWay::addReversalFoes(bool movingBlock) {
+ 
+ bool
+ MSDriveWay::buildSubFoe(MSDriveWay* foe, bool movingBlock) {
++    std::cout << "DWSF " << getID() << " foe=" << foe->getID() << "
++";
+     // Subdriveways (Teilfahrstraße) model the resolution of a driving conflict
+     // before a vehicle has left the driveway. This is possible when the driveway diverges from the foe
+     // driveway at an earlier point (switch or crossing).
+@@ -2133,6 +2156,8 @@ MSDriveWay::buildSubFoe(MSDriveWay* foe, bool movingBlock) {
+         }
+     }
+ 
++    std::cout << "DWSUB " << getID() << " foe=" << foe->getID() << " sub=" << sub->getID() << " fwd=" << rr02V(sub->myForward) << "
++";
+     foe->myFoes.push_back(sub);
+     if (foe->bidiBlockedByEnd(*sub)) {
+         foe->addSidings(sub);
