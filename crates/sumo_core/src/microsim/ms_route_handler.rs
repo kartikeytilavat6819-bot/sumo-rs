@@ -3396,6 +3396,7 @@ impl MSRouteHandler {
             }
 
             *bs = self.retrieve_stopping_place(attrs, &format!(" {}", description), Ptr::null());
+            if std::env::var_os("CD01").is_some() && personID == "pwL10" { eprintln!("CD01 PW bs_null={} has_bs={}", bs.is_null(), attrs.has_attribute(SUMO_ATTR_BUS_STOP)); }
             if !bs.is_null() {
                 let stopEdge = if !toEdge.is_null() { *toEdge } else { Ptr::from_mut(bs.get_lane().get_edge()) };
                 *arrivalPos = bs.get_access_pos(stopEdge, rng);
