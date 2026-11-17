@@ -14,6 +14,8 @@ grep -h '^TRACE' "$OUT/ref.out" > "$OUT/ref.tr"; grep -h '^TRACE' "$OUT/cand.out
 for e in REG UNREG GLI PBLK; do echo "== $e ref=$(grep -c "ev=$e " "$OUT/ref.tr") cand=$(grep -c "ev=$e " "$OUT/cand.tr")"; done
 echo "== REG first 12 ref"; grep 'ev=REG' "$OUT/ref.tr" | head -12
 echo "== REG first 12 cand"; grep 'ev=REG' "$OUT/cand.tr" | head -12
-echo "== GLI/PBLK first 30 ref"; grep -E 'ev=(GLI|PBLK)' "$OUT/ref.tr" | head -30
-echo "== GLI/PBLK first 30 cand"; grep -E 'ev=(GLI|PBLK)' "$OUT/cand.tr" | head -30
-echo "== first diff of TRACE lines"; diff "$OUT/ref.tr" "$OUT/cand.tr" | head -40
+P='ev=(WALK|MTNL|BADP)'
+echo "== person14 ref: $(grep -cE "$P" "$OUT/ref.tr") cand: $(grep -cE "$P" "$OUT/cand.tr")"
+echo "== first diff of person14 lines"; diff <(grep -E "$P" "$OUT/ref.tr") <(grep -E "$P" "$OUT/cand.tr") | head -60
+echo "== first 30 person14 ref"; grep -E "$P" "$OUT/ref.tr" | head -30
+echo "== first 30 person14 cand"; grep -E "$P" "$OUT/cand.tr" | head -30

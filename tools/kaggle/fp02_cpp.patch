@@ -46,4 +46,24 @@ index f204d55..773d59d 100644
  #ifdef DEBUG_INTERACTING
          if DEBUGCOND(ped) {
              std::cout << SIMTIME << " lane=" << lane->getID() << " dir=" << ped->getDirection() << " pX=" << ped->getEdgePos(0) << " pL=" << ped->getPerson()->getVehicleType().getLength()
+diff --git a/src/microsim/transportables/MSPModel_Striping.cpp b/src/microsim/transportables/MSPModel_Striping.cpp
+index ca74850..45a90da 100644
+--- a/src/microsim/transportables/MSPModel_Striping.cpp
++++ b/src/microsim/transportables/MSPModel_Striping.cpp
+@@ -1776,6 +1776,7 @@ MSPModel_Striping::PState::distToLaneEnd() const {
+ bool
+ MSPModel_Striping::PState::moveToNextLane(SUMOTime currentTime) {
+     double dist = distToLaneEnd();
++    if (myPerson->getID() == "person14") std::cout << "TRACE t=" << MSNet::getInstance()->getCurrentTimeStep() << " ev=MTNL ped=person14 lane=" << myLane->getID() << " edgePos=" << (int)(myEdgePos * 1000) << " dist=" << (int)(dist * 1000) << " dir=" << myDir << "\n";
+     if (DEBUGCOND(*this)) {
+         std::cout << SIMTIME << " ped=" << myPerson->getID() << " myEdgePos=" << myEdgePos << " dist=" << dist << "\n";
+     }
+@@ -1913,6 +1914,7 @@ MSPModel_Striping::getReserved(int stripes, double factor) {
+ void
+ MSPModel_Striping::PState::walk(const Obstacles& obs) {
+     const int stripes = (int)obs.size();
++    if (myPerson->getID() == "person14") std::cout << "TRACE t=" << MSNet::getInstance()->getCurrentTimeStep() << " ev=WALK ped=person14 lane=" << myLane->getID() << " edgePos=" << (int)(myEdgePos * 1000) << " dir=" << myDir << "\n";
+     const int sMax =  stripes - 1;
+     assert(stripes == numStripes(myLane));
+     // account stage-specific max speed but also for normal lane speed limit
 

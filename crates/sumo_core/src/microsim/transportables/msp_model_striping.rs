@@ -3593,6 +3593,7 @@ impl MSPModel_Striping_PState {
     #[allow(unused_variables)]
     pub fn move_to_next_lane(&mut self, currentTime: SUMOTime) -> bool {
         let mut dist = self.dist_to_lane_end();
+        if self.myPerson.get_id().to_string() == "person14" { println!("TRACE t={} ev=MTNL ped=person14 lane={} edgePos={} dist={} dir={}", currentTime, self.myLane.get_id(), (self.myEdgePos * 1000.) as i64, (dist * 1000.) as i64, self.myDir); }
         let person = self.myPerson.cast::<MSTransportable>();
         if dist <= 0. {
             let oldDir = self.myDir;
@@ -3947,6 +3948,7 @@ impl MSPModel_Striping_PState {
     pub fn walk(&mut self, obs: &MSPModel_Striping_Obstacles) {
         // shortcut: DEBUGCOND (person isSelected, GUI-only) debug output is not ported
         let stripes = obs.len() as i32;
+        if self.myPerson.get_id().to_string() == "person14" { println!("TRACE t={} ev=WALK ped=person14 lane={} edgePos={} dir={}", MSNet::get_instance().get_current_time_step(), self.myLane.get_id(), (self.myEdgePos * 1000.) as i64, self.myDir); }
         let sMax = stripes - 1;
         debug_assert!(stripes == MSPModel_Striping::num_stripes(self.myLane));
         // account stage-specific max speed but also for normal lane speed limit
