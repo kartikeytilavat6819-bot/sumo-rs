@@ -165,6 +165,33 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn lanes(&self) -> &[Ptr<ROLane>] {
         self.get_lanes()
     }
+    fn function(&self) -> SumoXMLEdgeFunc {
+        self.get_function()
+    }
+    fn is_normal(&self) -> bool {
+        ROEdge::is_normal(self)
+    }
+    fn other_taz_connector(&self) -> Ptr<ROEdge> {
+        self.get_other_taz_connector()
+    }
+    fn time_penalty(&self) -> f64 {
+        self.get_time_penalty()
+    }
+    fn stop_position(stop: &SUMOVehicleParameter_Stop) -> Position {
+        ROEdge::get_stop_position(stop)
+    }
+    fn lane_edge(lane: Ptr<ROLane>) -> Ptr<ROEdge> {
+        Ptr::from_mut(lane.m().get_edge())
+    }
+    fn lane_outgoing_via_lanes(lane: Ptr<ROLane>) -> Vec<(Ptr<ROLane>, Ptr<ROEdge>)> {
+        lane.get_outgoing_via_lanes().clone()
+    }
+    fn lane_permissions(lane: Ptr<ROLane>) -> SVCPermissions {
+        lane.get_permissions()
+    }
+    fn lane_allows_vehicle_class(lane: Ptr<ROLane>, svc: SUMOVehicleClass) -> bool {
+        lane.allows_vehicle_class(svc)
+    }
     fn speed_limit(&self) -> f64 {
         self.get_speed_limit()
     }

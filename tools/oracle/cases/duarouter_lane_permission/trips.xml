@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trips>
+  <!-- the net has lanes restricted to delivery/bicycle: passenger trips must route around them -->
+  <trip id="t1" depart="0" from="682360554#0" to="1117867029#3"/>
+  <trip id="t2" depart="2" from="1117867028" to="1117867029#3"/>
+</trips>

@@ -32,3 +32,17 @@ median of 3 runs. Ours = release build, pristine = C++ sumo 1.28.0.
 
 Ours is faster than pristine on all five; none is above the 3x threshold, so no profile was taken.
 Caveat: this is one VM slot, and the sims are short (600 s simulated time).
+
+## Scale cases (1800 s, 3000-4000 vehicles)
+
+Sim only (`sim.args`, `--no-step-log true`, no FCD), median of 3 runs, release build on the gate VM, C++ 1.28.0 = `$SUMO_PRISTINE_BIN`.
+
+| Case | Vehicles | Ours (release) | Pristine (C++) | Ours / pristine | Ours output vs ref |
+|---|---:|---:|---:|---:|---|
+| city_vienna_scale_downtown | 3001 | 12.77 s | 15.99 s | 0.79 | matches (544 trips, 323 teleports) |
+| city_phoenix_scale_grid | 3273 | 37.94 s | 41.22 s | 0.92 | DIFFERS (1134 trips, 239 teleports vs ref 925 / 331): timing is of a diverging run |
+| city_dhaka_scale_jam | 4000 | 34.70 s | 34.43 s | 1.00 | matches (797 trips, 662 teleports) |
+
+Phoenix in the debug gate panics at `mslcm_lc2013.rs` (see gate row). The release binary runs to the end but its output differs, so its wall time is not a like-for-like number.
+Ours is not faster than C++ on these cases (Dhaka is level, Phoenix is 8% faster on a diverging run), unlike the 600 s city cases above.
+Caveat: one VM slot, and the Dhaka timing was measured alone, so it does not share a slot with the other two runs.

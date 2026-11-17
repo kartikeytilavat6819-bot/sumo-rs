@@ -42,6 +42,8 @@ fn run(argv: &[String]) -> Result<bool, ProcessError> {
     with_options(|oc| -> Result<(), ProcessError> {
         let mut loader = ROLoader::new(oc, false, !get_bool("no-step-log"));
         let mut net = Box::new(RONet::new());
+        // C++ RONet::RONet sets myInstance = this
+        RONet::register_instance(utils::common::ptr::Ptr::from_box(&net));
         init_net(&mut net, &mut loader, oc);
         // build routes
         // shortcut: C++ also catches Xerces SAXParseException/SAXException here (ret = 1); the Rust parsers report ProcessError only

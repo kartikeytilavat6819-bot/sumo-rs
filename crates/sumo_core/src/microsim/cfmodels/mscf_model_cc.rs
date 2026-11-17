@@ -768,7 +768,7 @@ impl MSCFModel_CC {
             return buf.str();
         }
         if key == PAR_ENGINE_DATA {
-            // shortcut: C++ dynamic_cast<RealisticEngineModel*>; the engine is created together with engineModel, so the model id stands in for the type check
+            // C++ dynamic_cast<RealisticEngineModel*>: engine and engineModel are always set together, so the flag decides the type
             let (gear, rpm) = if vars.engineModel == CC_ENGINE_MODEL_REALISTIC {
                 let mut gear = 0;
                 let mut rpm = 0.;
@@ -1175,7 +1175,9 @@ impl MSCFModel_CC {
             if vehicle.is_null() {
                 return Err(InvalidArgument(format!("Adding {} as member but {} does not exists", id, id)));
             }
-            // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, MSCFModel has no runtime type id in this port
+            if vehicle.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CC as i32 {
+                return Err(InvalidArgument(format!("Adding {} as member but {} is not using MSCFModel_CC", id, id)));
+            }
             self.set_leader(vehicle, veh, veh.get_id().to_string());
             vars.m().isLeader = true;
             return Ok(());
@@ -1187,7 +1189,9 @@ impl MSCFModel_CC {
                 if vehicle.is_null() {
                     return Err(InvalidArgument(format!("Removing {} from members but {} does not exist", value, value)));
                 }
-                // shortcut: dynamic_cast<const MSCFModel_CC*> is not checked, see PAR_ADD_MEMBER
+                if vehicle.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CC as i32 {
+                    return Err(InvalidArgument(format!("Removing {} from members but {} is not using MSCFModel_CC", value, value)));
+                }
                 self.set_leader(vehicle, Ptr::null(), String::new());
                 vars.m().members.remove(&k);
             }
@@ -1272,8 +1276,15 @@ impl MSCFModel_CC {
             return Ok(());
         }
         if key == CC_PAR_VEHICLE_ENGINE_MODEL {
-            // shortcut: C++ deletes the previous engine; it is leaked here because Ptr<GenericEngineModel> does not know its concrete type
             let engineModel = to_i(value)?;
+            // C++ `delete vars->engine`: the concrete type is the one engineModel names, the flag is set together with engine
+            if !vars.engine.is_null() {
+                if vars.engineModel == CC_ENGINE_MODEL_REALISTIC {
+                    drop(unsafe { Box::from_raw(vars.engine.cast::<RealisticEngineModel>().as_raw()) });
+                } else {
+                    drop(unsafe { Box::from_raw(vars.engine.cast::<FirstOrderLagModel>().as_raw()) });
+                }
+            }
             if engineModel == CC_ENGINE_MODEL_REALISTIC {
                 let mut engine = RealisticEngineModel::new();
                 engine.set_parameter_2(ENGINE_PAR_DT.to_string(), ts());
@@ -1694,7 +1705,10 @@ impl MSCFModel_CC {
     // }
     #[allow(unused_variables)]
     pub fn find_vehicle(&self, id: String) -> Ptr<MSVehicle> {
-        // shortcut: C++ dynamic_cast is a plain cast here, the vehicle control only holds MSVehicle objects
+        // C++ dynamic_cast<MSVehicle*>: a meso run holds only MEVehicle, which is not an MSVehicle, so the run mode decides the result
+        if crate::microsim::ms_globals::use_meso_sim() {
+            return Ptr::null();
+        }
         MSNet::get_instance().m().get_vehicle_control().get_vehicle(&id).cast::<MSVehicle>()
     }
 

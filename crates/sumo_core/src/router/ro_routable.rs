@@ -11,6 +11,28 @@ pub type ROIntermodalRouter = IntermodalRouter<ROEdge, ROLane, RONode, ROVehicle
 /// C++ typedef `RouterProvider<ROEdge, ROLane, RONode, ROVehicle> RORouterProvider`
 pub type RORouterProvider = RouterProvider<ROEdge, ROLane, RONode, ROVehicle>;
 
+/// Virtual dispatch table for the pure virtual methods of RORoutable; ROVehicle and ROPerson install their own
+pub struct RORoutableVt {
+    pub compute_route: fn(&mut RORoutable, &RORouterProvider, bool, Ptr<MsgHandler>),
+    pub get_depart_edge: fn(&RORoutable) -> Ptr<ROEdge>,
+    pub save_as_xml: fn(&RORoutable, &mut OutputDevice, Ptr<OutputDevice>, bool, &mut OptionsCont, i32),
+}
+
+fn default_compute_route(_: &mut RORoutable, _: &RORouterProvider, _: bool, _: Ptr<MsgHandler>) {
+    panic!("RORoutable::computeRoute is pure virtual; subclasses must implement it")
+}
+fn default_get_depart_edge(_: &RORoutable) -> Ptr<ROEdge> {
+    panic!("RORoutable::getDepartEdge is pure virtual; subclasses must implement it")
+}
+fn default_save_as_xml(_: &RORoutable, _: &mut OutputDevice, _: Ptr<OutputDevice>, _: bool, _: &mut OptionsCont, _: i32) {
+    panic!("RORoutable::saveAsXML is pure virtual; subclasses must implement it")
+}
+pub static RO_ROUTABLE_DEFAULT_VT: RORoutableVt = RORoutableVt {
+    compute_route: default_compute_route,
+    get_depart_edge: default_get_depart_edge,
+    save_as_xml: default_save_as_xml,
+};
+
 /// A routable thing such as a vehicle or person
 /// C++ class `RORoutable` (router/RORoutable.h)
 pub struct RORoutable {
@@ -22,6 +44,8 @@ pub struct RORoutable {
     pub myRandomSeed: i64,
     /// Whether the last routing was successful
     pub myRoutingSuccess: bool,
+    /// C++ virtual methods of the subclass (see RORoutableVt)
+    pub vt: &'static RORoutableVt,
 }
 
 impl RORoutable {
@@ -39,6 +63,7 @@ impl RORoutable {
             myType: type_,
             myRandomSeed: utils::common::rand_helper::murmur3_32(&pars.id, utils::common::rand_helper::with_default(|r| r.orig_seed)) as i64,
             myRoutingSuccess: false,
+            vt: &RO_ROUTABLE_DEFAULT_VT,
         }
     }
 
@@ -171,8 +196,7 @@ impl RORoutable {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_depart_edge(&self) -> Ptr<ROEdge> {
-        // C++ pure virtual: only subclasses define it
-        panic!("RORoutable::getDepartEdge is pure virtual; subclasses must implement it")
+        (self.vt.get_depart_edge)(self)
     }
 
     /// C++: `bool RORoutable::isPublicTransport() const` [const]
@@ -197,8 +221,7 @@ impl RORoutable {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn compute_route(&mut self, provider: &RORouterProvider, removeLoops: bool, errorHandler: Ptr<MsgHandler>) {
-        // C++ pure virtual: only subclasses define it
-        panic!("RORoutable::computeRoute is pure virtual; subclasses must implement it")
+        (self.vt.compute_route)(self, provider, removeLoops, errorHandler)
     }
 
     /// C++: `void RORoutable::write(OutputDevice *, OutputDevice *const, OutputDevice *const, OptionsCont &, int) const` [const]
@@ -248,8 +271,7 @@ impl RORoutable {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn save_as_xml(&self, os: &mut OutputDevice, typeos: Ptr<OutputDevice>, asAlternatives: bool, options: &mut OptionsCont, cloneIndex: i32) {
-        // C++ pure virtual: only subclasses define it
-        panic!("RORoutable::saveAsXML is pure virtual; subclasses must implement it")
+        (self.vt.save_as_xml)(self, os, typeos, asAlternatives, options, cloneIndex)
     }
 
     /// C++: `void RORoutable::RORoutable(const RORoutable &)` [private]

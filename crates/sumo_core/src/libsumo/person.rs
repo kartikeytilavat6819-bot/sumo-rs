@@ -592,8 +592,7 @@ impl Person {
         } else if key.starts_with("has.") && key.ends_with(".device") {
             panic!("{}", format!("Person '{}' does not support chanigng device status\n", objectID));
         } else {
-            let par = Self::get_person(objectID).get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-            unsafe { (*par).set_parameter(key, value) };
+            Self::get_person(objectID).m().get_parameter_mutable().set_parameter(key, value);
         }
     }
 
@@ -1818,12 +1817,9 @@ impl Person {
     pub fn set_color(personID: &str, color: &TraCIColor) {
         const VEHPARS_COLOR_SET: i64 = 1;
         let person = Self::get_person(personID);
-        // C++ `const SUMOVehicleParameter& p = ...` is mutated here (const_cast-style access, as in vehicle.rs)
-        let p = person.get_parameter() as *const SUMOVehicleParameter as *mut SUMOVehicleParameter;
-        unsafe {
-            (*p).color.set(color.r as u8, color.g as u8, color.b as u8, color.a as u8);
-            (*p).parametersSet |= VEHPARS_COLOR_SET;
-        }
+        let p = person.m().get_parameter_mutable();
+        p.color.set(color.r as u8, color.g as u8, color.b as u8, color.a as u8);
+        p.parametersSet |= VEHPARS_COLOR_SET;
     }
 
     /// C++: `void Person::setMinGap(const std::string &, double)` [static]

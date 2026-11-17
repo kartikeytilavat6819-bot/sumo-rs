@@ -169,6 +169,48 @@ use crate::prelude::*;
 //     }
 // }
 #[allow(unused_variables)]
+use crate::router::ro_net::ROMapMatcher;
+use crate::utils::router::a_star_lookup_table::{AStarLookupTableKind, FullLookupTable, LandmarkLookupTable};
+use crate::utils::router::reversed_edge::ReversedEdge;
+use crate::router::ro_vehicle::ROVehicle;
+use crate::utils::emissions::pollutants_interface::PollutantsInterface_EmissionType;
+use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
+use crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter;
+use crate::utils::router::a_star_router::AStarRouter;
+use crate::utils::router::ch_router::CHRouter;
+use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
+use crate::utils::router::dijkstra_router::DijkstraRouter;
+use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
+
+// C++ `&ROEdge::getEmissionEffort<PollutantsInterface::X>`: one fn item per template instantiation
+fn effort_co(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO, edge, veh, time)
+}
+fn effort_co2(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO2, edge, veh, time)
+}
+fn effort_pm_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::PM_X, edge, veh, time)
+}
+fn effort_hc(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::HC, edge, veh, time)
+}
+fn effort_no_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::NO_X, edge, veh, time)
+}
+fn effort_fuel(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::FUEL, edge, veh, time)
+}
+fn effort_elec(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+    ROEdge::get_emission_effort(PollutantsInterface_EmissionType::ELEC, edge, veh, time)
+}
+
+/// C++ `new` of a router, held as its SUMOAbstractRouter base (the routers live until the process exits)
+fn leak_router<R>(r: R) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
+    Ptr::from_raw(Box::into_raw(Box::new(r))).cast::<SUMOAbstractRouter<ROEdge, ROVehicle>>()
+}
+
 pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
     // initialise the loader
     loader.open_routes(net);
@@ -190,24 +232,50 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     let ignoreErrors = oc.get_bool("ignore-errors").unwrap();
     let restrictionParams = oc.is_set("restriction-params", true).unwrap();
     // C++ `new`: the routers live until the process exits
-    let router: &mut crate::utils::router::dijkstra_router::DijkstraRouter<ROEdge, ROVehicle> = if measure == "traveltime" {
+    let weightPeriod = if oc.is_set("weight-files", true).unwrap() { string2time(&oc.get_string("weight-period").unwrap()).unwrap_or_else(|e| panic!("{e}")) } else { SUMOTIME_MAX };
+    let router: Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> = if measure == "traveltime" {
         if routingAlgorithm == "dijkstra" {
-            Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams)))
+            leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute())
+        } else if routingAlgorithm == "astar" {
+            let mut lookup: Option<std::rc::Rc<AStarLookupTableKind<ROEdge, ROVehicle, ROMapMatcher>>> = None;
+            if oc.is_set("astar.all-distances", true).unwrap() {
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Full(FullLookupTable::new(&oc.get_string("astar.all-distances").unwrap(), ROEdge::get_all_edges().len() as i32))));
+            } else if oc.is_set("astar.landmark-distances", true).unwrap() {
+                let forward = leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), true, Some(ROEdge::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute());
+                let reversed: Vec<Ptr<ReversedEdge<ROEdge, ROVehicle>>> = ROEdge::get_all_edges().iter().map(|edge| edge.get_reversed_routing_edge()).collect();
+                for redge in reversed.iter() {
+                    redge.m().init();
+                }
+                let backward = Ptr::from_raw(Box::into_raw(Box::new(DijkstraRouter::new(&reversed, true, Some(ReversedEdge::<ROEdge, ROVehicle>::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute()))).cast::<SUMOAbstractRouter<ReversedEdge<ROEdge, ROVehicle>, ROVehicle>>();
+                let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
+                let saveFile = if oc.is_set("astar.save-landmark-distances", true).unwrap() { oc.get_string("astar.save-landmark-distances").unwrap() } else { String::new() };
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Landmark(LandmarkLookupTable::new(&oc.get_string("astar.landmark-distances").unwrap(), ROEdge::get_all_edges(), forward, backward, defaultVehicle, &saveFile, oc.get_int("routing-threads").unwrap(), Ptr::null()))));
+            }
+            leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), lookup, net.has_permissions(), restrictionParams).with_compute())
+        } else if routingAlgorithm == "CH" && !net.has_permissions() && !utils::common::std_defs::g_routing_preferences() && !net.has_speed_restrictions() {
+            leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), SVC_IGNORING, weightPeriod, net.has_permissions(), restrictionParams).with_compute())
+        } else if routingAlgorithm == "CHWrapper" || routingAlgorithm == "CH" {
+            leak_router(CHRouterWrapper::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), begin, end, weightPeriod, net.has_permissions(), oc.get_int("routing-threads").unwrap()).with_compute())
         } else {
-            // shortcut: AStarRouter, CHRouter, CHRouterWrapper, CCHRouter and AFRouter are not wired in duarouter yet (their lookup tables and map matcher are not ported), upgrade when computeRoutes can construct them
+            // shortcut: CCH and AFRouter are not wired in duarouter yet (their metric and arc-flag tables are not ported), upgrade when computeRoutes can construct them
             panic!("shortcut: routing algorithm '{}' is not wired in duarouter yet", routingAlgorithm);
         }
     } else {
         op = match measure.as_str() {
+            "CO" => effort_co,
+            "CO2" => effort_co2,
+            "PMx" => effort_pm_x,
+            "HC" => effort_hc,
+            "NOx" => effort_no_x,
+            "fuel" => effort_fuel,
+            "electricity" => effort_elec,
             "noise" => ROEdge::get_noise_effort,
-            // shortcut: the emission efforts take the PollutantsInterface type as a template argument, a plain fn pointer cannot carry it, upgrade when the effort is a closure or typed per pollutant
-            "CO" | "CO2" | "PMx" | "HC" | "NOx" | "fuel" | "electricity" => panic!("shortcut: emission effort '{}' is not wired in duarouter yet", measure),
             _ => ROEdge::get_stored_effort,
         };
         if !net.has_loaded_effort() {
             write_warningf!("No weight data was loaded for attribute '%'.", measure);
         }
-        Box::leak(Box::new(crate::utils::router::dijkstra_router::DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttFunction), false, Ptr::null(), net.has_permissions(), restrictionParams)))
+        leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), Some(ttFunction), false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute())
     };
     let carWalk = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_car_walk_transfer(oc, true);
     let taxiWait = utils::common::time::steps2time(string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
@@ -219,7 +287,7 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     // shortcut: ROIntermodalRouter is not ported, so the intermodal router is null and net.write_intermodal writes nothing
     let _ = (carWalk, taxiWait);
     let pedRouter: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));
-    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(Ptr::from_mut(&mut *router).cast::<crate::utils::router::sumo_abstract_router::SUMOAbstractRouter<ROEdge, ROVehicle>>(), pedRouter, Ptr::null(), railRouter);
+    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, pedRouter, Ptr::null(), railRouter);
     // process route definitions
     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         net.open_output(oc);
