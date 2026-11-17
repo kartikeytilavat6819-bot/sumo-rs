@@ -3096,7 +3096,7 @@ impl MSBaseVehicle {
         let typeID = if self.myParameter.vtypeid != self.get_vehicle_type().get_id() { self.get_vehicle_type().get_id().to_string() } else { String::new() };
         utils::options::options_cont::with_options(|oc| self.myParameter.write(out, oc, SUMO_TAG_VEHICLE, &typeID));
         out.write_attr(SUMO_ATTR_ROUTE, self.myRoute.get_id());
-        let os = format!("{} {}", self.myOdometer, self.myNumberReroutes);
+        let os = format!("{} {}", utils::common::to_string::f64_to_string_default(self.myOdometer), self.myNumberReroutes);
         out.write_attr(SUMO_ATTR_DISTANCE, &os);
         if self.myParameter.arrivalPosProcedure == ArrivalPosDefinition::RANDOM {
             out.write_attr(SUMO_ATTR_ARRIVALPOS_RANDOMIZED, &self.myArrivalPos);
@@ -5643,8 +5643,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn check_route_removal(&mut self) {
-        // shortcut: MSNet::hasInstance / hasFlow(getFlowID()) is not checked; MSRoute::checkRemoval is called directly
-        self.myRoute.check_removal(false);
+        // the check for an instance is needed for the unit tests which do not construct a network
+        if MSNet::has_instance() && !MSNet::get_instance().m().has_flow(&self.get_flow_id()) {
+            self.myRoute.check_removal(false);
+        }
     }
 
     /// C++: `bool MSBaseVehicle::insertJump(int, MSRouteIterator, std::string &)` [private]
