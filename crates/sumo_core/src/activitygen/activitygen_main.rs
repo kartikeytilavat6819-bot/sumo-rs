@@ -156,13 +156,15 @@ pub fn main(argc: i32, argv: &[String]) -> i32 {
     set_args(argv);
     get_options(false).unwrap_or_else(|e| panic!("{}", e));
     if with_options(|oc| oc.process_meta_options(argc < 2)).unwrap_or_else(|e| panic!("{}", e)) {
-        // shortcut: SystemFrame::close is not ported
+        utils::common::system_frame::close();
         return 0;
     }
     xml_sub_sys::set_validation(&get_string("xml-validation"), &get_string("xml-validation.net"), "never").unwrap_or_else(|e| panic!("{}", e));
     MsgHandler::init_output_options().unwrap_or_else(|e| panic!("{}", e));
     init_rand(None, get_bool("random"), get_int("seed")); // RandHelper::initRandGlobal()
-    // shortcut: SystemFrame::checkOptions is not ported
+    with_options(|oc| {
+        utils::common::system_frame::check_options(oc);
+    });
 
     // Load network
     let mut net = RONet::new();
@@ -189,7 +191,7 @@ pub fn main(argc: i32, argv: &[String]) -> i32 {
     }
     let ret = 0;
 
-    // shortcut: SystemFrame::close is not ported
+    utils::common::system_frame::close();
     if ret == 0 {
         println!("Success.");
     }

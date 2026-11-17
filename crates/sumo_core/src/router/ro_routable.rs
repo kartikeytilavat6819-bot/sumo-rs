@@ -111,8 +111,7 @@ impl RORoutable {
         if self.get_parameter().was_set(VEHPARS_SPEEDFACTOR_SET) {
             self.get_parameter().speedFactor
         } else {
-            // shortcut: SUMOVTypeParameter::speedFactor is Distribution_Parameterized (Unmapped), getParameter(0) cannot be read yet, upgrade when that distribution is ported
-            panic!("RORoutable::getChosenSpeedFactor: type speedFactor distribution is not ported yet")
+            self.get_type().speedFactor.get_parameter(0)
         }
     }
 

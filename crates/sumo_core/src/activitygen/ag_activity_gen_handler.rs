@@ -36,6 +36,16 @@ impl std::ops::DerefMut for AGActivityGenHandler {
     }
 }
 
+impl SaxHandler for AGActivityGenHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        AGActivityGenHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+}
+
 impl AGActivityGenHandler {
     /// C++: `void AGActivityGenHandler::AGActivityGenHandler(AGCity &, RONet *)`
     /// Constructor

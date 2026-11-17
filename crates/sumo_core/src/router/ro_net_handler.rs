@@ -439,8 +439,7 @@ impl RONetHandler {
                 let mut prohibition = RouterProhibition {
                     begin: 0.,
                     end: 0.,
-                    // shortcut: C++ parseVehicleClasses(allow, disallow) uses its default network version, here the version of the parsed net is used
-                    permissions: utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, self.myNetworkVersion),
+                    permissions: utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, utils::common::std_defs::NETWORK_VERSION),
                 };
                 prohibition.begin = utils::common::time::steps2time(self.myIntervalBegin);
                 prohibition.end = utils::common::time::steps2time(attrs.get_opt_sumo_time_reporting(SUMO_ATTR_UNTIL, "", &mut ok, self.myIntervalEnd, true));
@@ -458,8 +457,7 @@ impl RONetHandler {
                 let mut prohibition = RouterProhibition {
                     begin: 0.,
                     end: 0.,
-                    // shortcut: C++ parseVehicleClasses(allow, disallow) uses its default network version, here the version of the parsed net is used
-                    permissions: utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, self.myNetworkVersion),
+                    permissions: utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, utils::common::std_defs::NETWORK_VERSION),
                 };
                 prohibition.begin = utils::common::time::steps2time(self.myIntervalBegin);
                 prohibition.end = utils::common::time::steps2time(attrs.get_opt_sumo_time_reporting(SUMO_ATTR_UNTIL, "", &mut ok, self.myIntervalEnd, true));
@@ -886,7 +884,7 @@ impl RONetHandler {
             } else {
                 self.myNet.m().set_permissions_found();
                 // dummyVia is only needed to hold permissions
-                let permissions = utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, self.myNetworkVersion);
+                let permissions = utils::common::sumo_vehicle_class::parse_vehicle_classes_allow_disallow(&allow, &disallow, utils::common::std_defs::NETWORK_VERSION);
                 let fromLaneID = from.get_lanes()[fromLane as usize].base.get_id().to_string();
                 let toLaneID = to.get_lanes()[toLane as usize].base.get_id().to_string();
                 dummyVia = Ptr::from_raw(Box::into_raw(Box::new(ROEdge::new_2(&format!("dummyVia_{}->{}", fromLaneID, toLaneID), from.get_to_junction(), from.get_to_junction(), permissions))));
@@ -954,8 +952,7 @@ impl RONetHandler {
     #[allow(unused_variables)]
     pub fn parse_stopping_place(&mut self, attrs: &SUMOSAXAttributes, element: SumoXMLTag) {
         let mut ok = true;
-        // shortcut: toString(SumoXMLTag) is not ported (no tag-name table), the numeric tag is used as the element name in messages and actType
-        let tagName = format!("{}", element);
+        let tagName = utils::xml::sumo_xml_definitions::Tags.get_string(element).to_string();
         let stopPtr = Ptr::from_raw(Box::into_raw(Box::new(new_stop())));
         self.myCurrentStoppingPlace = stopPtr;
         // get the id, throw if not given or empty...
