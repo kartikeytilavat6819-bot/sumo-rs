@@ -204,6 +204,20 @@ fn actuated_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicCon
     Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_state(tlcontrol, t, step, spentDuration, nextSwitch, timeInCycle, active)
 }
 
+fn actuated_load_extra_state(l: &mut MSTrafficLightLogic, state: &str) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_extra_state(state)
+}
+
+static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
+    get_priority_vehicles: super::ms_traffic_light_logic::default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
+    get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: actuated_load_extra_state,
+};
+
 static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: actuated_try_switch,
     get_phase_number: simple_get_phase_number,
@@ -271,6 +285,7 @@ impl MSActuatedTrafficLightLogic {
             myTargets: BTreeMap::new(),
         };
         this.base.base.vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT;
+        this.base.base.ext_vt = &MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let to_d = |s: String| utils::common::string_utils::to_double(&s).unwrap_or_else(|e| panic!("{}", e));
         this.myMaxGap = to_d(this.get_parameter("max-gap", DEFAULT_MAX_GAP.to_string()));
         this.myJamThreshold = to_d(this.get_parameter("jam-threshold", utils::options::options_cont::get_value_string("tls.actuated.jam-threshold")));
@@ -1618,7 +1633,6 @@ impl MSActuatedTrafficLightLogic {
     //         i++;
     //     }
     // }
-    // shortcut: no load_extra_state vtable hook exists in MSTrafficLightLogic yet, so nothing calls this; upgrade when the MSTLLogicControl loadState path dispatches extra state
     #[allow(unused_variables)]
     pub fn load_extra_state(&mut self, state: &str) {
         let timeGaps: Vec<String> = StringTokenizer::new(state).get_vector();

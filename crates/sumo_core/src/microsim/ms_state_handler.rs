@@ -813,6 +813,9 @@ impl MSStateHandler {
                 }
                 // might not be set if the phase happens to match and there are multiple programs
                 tl.m().load_state(tlc, self.myTime, phase, spentDuration, nextSwitch, timeInCycle, active);
+                if attrs.has_attribute(SUMO_ATTR_STATE) {
+                    tl.m().load_extra_state(&attrs.get::<String>(SUMO_ATTR_STATE, &tlID, &mut ok, true));
+                }
             }
             SUMO_TAG_DRIVEWAY | SUMO_TAG_SUBDRIVEWAY => {
                 MSDriveWay::load_state(attrs, element);

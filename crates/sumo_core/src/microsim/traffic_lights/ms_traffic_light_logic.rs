@@ -61,6 +61,7 @@ pub struct MSTrafficLightLogicExtVt {
     pub get_requested_drive_way: fn(&mut MSTrafficLightLogic, i32) -> String,
     pub get_detector_state: fn(&MSTrafficLightLogic, String) -> f64,
     pub get_tl_queue_length: fn(&MSTrafficLightLogic, String) -> f64,
+    pub load_extra_state: fn(&mut MSTrafficLightLogic, &str),
 }
 
 pub(crate) fn default_decide_next_phase(_: &mut MSTrafficLightLogic) -> i32 {
@@ -134,29 +135,31 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLight
     compute_return_time: default_compute_return_time,
 };
 
-fn default_ext_get_rival_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+pub(crate) fn default_ext_get_rival_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
     logic.get_rival_vehicles_base(linkIndex)
 }
 
-fn default_ext_get_priority_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+pub(crate) fn default_ext_get_priority_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
     logic.get_priority_vehicles_base(linkIndex)
 }
 
-fn default_ext_get_blocking_drive_ways(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+pub(crate) fn default_ext_get_blocking_drive_ways(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
     logic.get_blocking_drive_ways_base(linkIndex)
 }
 
-fn default_ext_get_requested_drive_way(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
+pub(crate) fn default_ext_get_requested_drive_way(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
     logic.get_requested_drive_way_base(linkIndex)
 }
 
-fn default_ext_get_detector_state(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+pub(crate) fn default_ext_get_detector_state(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
     logic.get_detector_state_base(laneID)
 }
 
-fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+pub(crate) fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
     logic.get_tl_queue_length_base(laneID)
 }
+
+pub(crate) fn default_ext_load_extra_state(_: &mut MSTrafficLightLogic, _: &str) {}
 
 static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTrafficLightLogicExtVt {
     get_rival_vehicles: default_ext_get_rival_vehicles,
@@ -165,6 +168,7 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTraff
     get_requested_drive_way: default_ext_get_requested_drive_way,
     get_detector_state: default_ext_get_detector_state,
     get_tl_queue_length: default_ext_get_tl_queue_length,
+    load_extra_state: default_ext_load_extra_state,
 };
 
 /// The parent class for traffic light logics
@@ -1629,6 +1633,11 @@ impl MSTrafficLightLogic {
 
     pub fn save_state_base(&self, arg0: &mut OutputDevice) {
         // C++ default body is empty; subclasses write their state
+    }
+
+    /// C++: `virtual void MSTrafficLightLogic::loadExtraState(const std::string &) {}` [virtual]
+    pub fn load_extra_state(&mut self, state: &str) {
+        (self.ext_vt.load_extra_state)(self, state)
     }
 
     /// C++: `void MSTrafficLightLogic::loadState(MSTLLogicControl &, SUMOTime, int, SUMOTime, SUMOTime, SUMOTime, bool)` [virtual]
