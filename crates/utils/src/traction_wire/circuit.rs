@@ -126,6 +126,16 @@ impl Circuit {
         &mut self.element_arena[idx]
     }
 
+    /// C++ `Element::getVoltage()` for the element at `idx`
+    pub fn element_voltage(&self, idx: ElemIdx) -> f64 {
+        self.element(idx).get_voltage(&self.node_arena)
+    }
+
+    /// C++ `Element::getCurrent()` for the element at `idx`
+    pub fn element_current(&self, idx: ElemIdx) -> f64 {
+        self.element(idx).get_current(&self.node_arena)
+    }
+
     pub fn get_node(&self, name: &str) -> Option<NodeIdx> {
         self.nodes.iter().copied().find(|&n| self.node(n).name() == name)
     }

@@ -4,6 +4,8 @@ use crate::prelude::*;
 use utils::common::time::{delta_t, time2string, ts};
 use utils::traction_wire::circuit::AlphaFlag;
 use crate::microsim::ms_globals::overhead_wire_solver;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
 
 /// C++ `static std::mutex ow_mutex` (MSOverheadWire.cpp); a spin lock because lock()/unlock() are split calls
 static OW_MUTEX: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
@@ -97,10 +99,16 @@ pub struct MSOverheadWire {
     /// Parameter, Pointer to the electrical substation (by default is nullptr)
     pub myTractionSubstation: Ptr<MSTractionSubstation>,
     pub myVoltageSource: bool,
-    pub myCircuitElementPos: Ptr<Element>,
-    pub myCircuitStartNodePos: Ptr<Node>,
-    pub myCircuitEndNodePos: Ptr<Node>,
+    /// index into the substation's circuit (C++ Element*)
+    pub myCircuitElementPos: Option<ElemIdx>,
+    /// index into the substation's circuit (C++ Node*)
+    pub myCircuitStartNodePos: Option<NodeIdx>,
+    /// index into the substation's circuit (C++ Node*)
+    pub myCircuitEndNodePos: Option<NodeIdx>,
 }
+
+/// C++ `const double WIRE_RESISTIVITY` (MSOverheadWire.h)
+const WIRE_RESISTIVITY: f64 = 2.0 * 0.000113;
 
 impl std::ops::Deref for MSOverheadWire {
     type Target = MSStoppingPlace;
@@ -146,9 +154,9 @@ impl MSOverheadWire {
             myChargingVehicles: Vec::new(),
             myTractionSubstation: Ptr::null(),
             myVoltageSource: voltageSource,
-            myCircuitElementPos: Ptr::null(),
-            myCircuitStartNodePos: Ptr::null(),
-            myCircuitEndNodePos: Ptr::null(),
+            myCircuitElementPos: None,
+            myCircuitStartNodePos: None,
+            myCircuitEndNodePos: None,
         };
         if ow.get_begin_lane_position() > ow.get_end_lane_position() {
             utils::common::msg_handler::write_warning(&utils::tlf!("overheadWireSegment with ID = % doesn't have a valid range (% < %).", ow.get_id(), ow.get_begin_lane_position(), ow.get_end_lane_position()));
@@ -185,7 +193,18 @@ impl MSOverheadWire {
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
         if !self.myTractionSubstation.is_null() {
-            // shortcut: circuit element/node teardown needs Ptr<Element>/Ptr<Node> handles, but utils::traction_wire::Circuit is arena-indexed (ElemIdx/NodeIdx); upgrade when myCircuitElementPos/StartNodePos/EndNodePos become indices
+            let mut circuit = self.myTractionSubstation.m().get_circuit();
+            if let (Some(el), Some(startNode), Some(endNode)) = (self.myCircuitElementPos, self.myCircuitStartNodePos, self.myCircuitEndNodePos) {
+                if circuit.m().element(el).p_node() == Some(startNode) && circuit.m().element(el).n_node() == Some(endNode) {
+                    circuit.m().erase_element(el);
+                    if circuit.m().node(endNode).num_of_elements() == 0 {
+                        circuit.m().erase_node(endNode);
+                    }
+                    if circuit.m().node(startNode).num_of_elements() == 0 {
+                        circuit.m().erase_node(startNode);
+                    }
+                }
+            }
             // C++ calls eraseOverheadWireSegmentFromCircuit(this) in both branches of numberOfOverheadSegments() <= 1
             let mut sub = self.myTractionSubstation;
             sub.m().erase_overhead_wire_segment_from_circuit(Ptr::from_mut(self));
@@ -514,7 +533,7 @@ impl MSOverheadWire {
     //         myCircuitStartNodePos = node;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_start_node_pos(&mut self, node: Ptr<Node>) {
+    pub fn set_circuit_start_node_pos(&mut self, node: Option<NodeIdx>) {
         self.myCircuitStartNodePos = node;
     }
 
@@ -523,7 +542,7 @@ impl MSOverheadWire {
     //         myCircuitEndNodePos = node;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_end_node_pos(&mut self, node: Ptr<Node>) {
+    pub fn set_circuit_end_node_pos(&mut self, node: Option<NodeIdx>) {
         self.myCircuitEndNodePos = node;
     }
 
@@ -532,7 +551,7 @@ impl MSOverheadWire {
     //         myCircuitElementPos = element;
     //     }
     #[allow(unused_variables)]
-    pub fn set_circuit_element_pos(&mut self, element: Ptr<Element>) {
+    pub fn set_circuit_element_pos(&mut self, element: Option<ElemIdx>) {
         self.myCircuitElementPos = element;
     }
 
@@ -541,7 +560,7 @@ impl MSOverheadWire {
     //         return myCircuitStartNodePos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_start_node_pos(&self) -> Ptr<Node> {
+    pub fn get_circuit_start_node_pos(&self) -> Option<NodeIdx> {
         self.myCircuitStartNodePos
     }
 
@@ -550,7 +569,7 @@ impl MSOverheadWire {
     //         return myCircuitEndNodePos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_end_node_pos(&self) -> Ptr<Node> {
+    pub fn get_circuit_end_node_pos(&self) -> Option<NodeIdx> {
         self.myCircuitEndNodePos
     }
 
@@ -559,7 +578,7 @@ impl MSOverheadWire {
     //         return myCircuitElementPos;
     //     }
     #[allow(unused_variables)]
-    pub fn get_circuit_element_pos(&self) -> Ptr<Element> {
+    pub fn get_circuit_element_pos(&self) -> Option<ElemIdx> {
         self.myCircuitElementPos
     }
 
@@ -917,7 +936,22 @@ impl MSTractionSubstation {
         newOverheadWireSegment.m().set_traction_substation(Ptr::from_mut(self));
 
         if overhead_wire_solver() {
-            // shortcut: circuit nodes/elements of the segment need Ptr<Node>/Ptr<Element> handles, but utils::traction_wire::Circuit is arena-indexed (NodeIdx/ElemIdx); upgrade when the MSOverheadWire circuit fields become indices
+            let mut circuit = newOverheadWireSegment.m().get_circuit();
+            let segmentID = newOverheadWireSegment.m().get_id().to_string();
+
+            if circuit.m().get_node("negNode_ground").is_none() {
+                circuit.m().add_node("negNode_ground");
+            }
+
+            // convention: pNode is at the beginning of the wire segment, nNode is at the end of the wire segment
+            let startNode = circuit.m().add_node(&format!("pNode_pos_{}", segmentID));
+            newOverheadWireSegment.m().set_circuit_start_node_pos(startNode);
+            let endNode = circuit.m().add_node(&format!("nNode_pos_{}", segmentID));
+            newOverheadWireSegment.m().set_circuit_end_node_pos(endNode);
+            // RICE_TODO: to use startPos and endPos of ovhdsegment: set the length of wire here properly
+            let length = newOverheadWireSegment.m().get_lane().get_length();
+            let element = circuit.m().add_element(&format!("pos_{}", segmentID), length * WIRE_RESISTIVITY, startNode.expect("pNode_pos node is not created"), endNode.expect("nNode_pos node is not created"), ElementType::Resistor);
+            newOverheadWireSegment.m().set_circuit_element_pos(element);
         }
 
         /* in version before SUMO 1.0.1 the function getOutgoingLanes() returning MSLane* exists,
@@ -944,7 +978,16 @@ impl MSTractionSubstation {
                             self.add_overhead_wire_inner_segment_to_circuit(newOverheadWireSegment, ovrhdSegment, connection, lane.m().get_internal_following_lane(connection), connection.m().get_internal_following_lane(it));
                         }
                     } else if overhead_wire_solver() {
-                        // shortcut: relinking the unused circuit node to the outgoing segment needs circuit node handles (see above); upgrade with the circuit node-handle change
+                        let unusedNode = newOverheadWireSegment.m().get_circuit_end_node_pos();
+                        for ows in self.myOverheadWireSegments.iter() {
+                            if ows.m().get_circuit_start_node_pos() == unusedNode {
+                                ows.m().set_circuit_start_node_pos(ovrhdSegment.m().get_circuit_start_node_pos());
+                            }
+                            if ows.m().get_circuit_end_node_pos() == unusedNode {
+                                ows.m().set_circuit_end_node_pos(ovrhdSegment.m().get_circuit_start_node_pos());
+                            }
+                        }
+                        newOverheadWireSegment.m().get_circuit().m().replace_and_delete_node(unusedNode.expect("unused node is not created"), ovrhdSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"));
                     }
                 }
             }
@@ -971,14 +1014,25 @@ impl MSTractionSubstation {
                             self.add_overhead_wire_inner_segment_to_circuit(ovrhdSegment, newOverheadWireSegment, connection, it.m().get_internal_following_lane(connection), connection.m().get_internal_following_lane(lane));
                         }
                     } else if overhead_wire_solver() {
-                        // shortcut: relinking the unused circuit node to the incoming segment needs circuit node handles (see above); upgrade with the circuit node-handle change
+                        let unusedNode = newOverheadWireSegment.m().get_circuit_start_node_pos();
+                        for ows in self.myOverheadWireSegments.iter() {
+                            if ows.m().get_circuit_start_node_pos() == unusedNode {
+                                ows.m().set_circuit_start_node_pos(ovrhdSegment.m().get_circuit_end_node_pos());
+                            }
+                            if ows.m().get_circuit_end_node_pos() == unusedNode {
+                                ows.m().set_circuit_end_node_pos(ovrhdSegment.m().get_circuit_end_node_pos());
+                            }
+                        }
+                        newOverheadWireSegment.m().get_circuit().m().replace_and_delete_node(unusedNode.expect("unused node is not created"), ovrhdSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"));
                     }
                 }
             }
         }
 
         if overhead_wire_solver() && newOverheadWireSegment.m().is_there_voltage_source() {
-            // shortcut: the voltage source element of the segment needs circuit node/element handles (see above); upgrade with the circuit node-handle change
+            let mut circuit = newOverheadWireSegment.m().get_circuit();
+            let ground = circuit.m().get_node("negNode_ground");
+            circuit.m().add_element(&format!("voltage_source_{}", newOverheadWireSegment.m().get_id()), self.mySubstationVoltage, newOverheadWireSegment.m().get_circuit_start_node_pos().expect("segment has no start node"), ground.expect("negNode_ground is not created"), ElementType::VoltageSource);
         }
     }
 
@@ -1002,7 +1056,7 @@ impl MSTractionSubstation {
         if distance > 10.0 {
             utils::common::msg_handler::write_warning(&utils::tlf!("The distance between two overhead wires during adding overhead wire clamp '%' defined for traction substation '%' is % m.", id.as_str(), startSegment.m().get_traction_substation().m().get_id(), distance));
         }
-        // shortcut: the clamp's circuit element needs circuit node handles (startSegment/endSegment circuit nodes), which utils::traction_wire::Circuit does not take as Ptr<Node>; upgrade with the circuit node-handle change (only reached with overhead-wire.solver)
+        self.get_circuit().m().add_element(&id, distance * WIRE_RESISTIVITY, startSegment.m().get_circuit_start_node_pos().expect("clamp start segment has no start node"), endSegment.m().get_circuit_end_node_pos().expect("clamp end segment has no end node"), ElementType::Resistor);
     }
 
     /// C++: `void MSTractionSubstation::eraseOverheadWireSegmentFromCircuit(MSOverheadWire *)`
@@ -1181,7 +1235,8 @@ impl MSTractionSubstation {
     #[allow(unused_variables)]
     pub fn add_solving_circuit_to_end_of_timestep_events(&mut self) {
         if !self.myChargingVehicle {
-            // shortcut: WrappingCommand is not ported, so solveCircuit is not scheduled on the end-of-timestep events; upgrade when Command exists
+            let cmd: Ptr<WrappingCommand<MSTractionSubstation>> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSTractionSubstation::solve_circuit))));
+            MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), -1);
             self.set_charging_vehicle(true);
         }
     }
@@ -1254,7 +1309,32 @@ impl MSTractionSubstation {
         // Note: addSolvingCircuitToEndOfTimestepEvents() and thus solveCircuit() should be called from notifyMove only if eigen is defined.
         self.add_charge_value_for_output(watt2watthr(circuit.m().get_total_power_of_circuit_sources()), circuit.m().get_total_current_of_circuit_sources(), circuit.m().get_alpha_best(), circuit.m().get_alpha_reason());
 
-        // shortcut: the per-vehicle update (vehicle element voltage/current, setCurrentFromOverheadWire, battery energy storage) needs MSDevice_ElecHybrid::get_veh_elem (Ptr<Element>) and Element::get_voltage over the arena-indexed Circuit; upgrade when the vehicle element handle becomes ElemIdx
+        let devices: Vec<Ptr<MSDevice_ElecHybrid>> = self.myElecHybrid.clone();
+        for it in devices {
+            let vehElem: ElemIdx = it.m().veh_elem.expect("elecHybrid device has no vehicle element in the circuit");
+            let circuit = it.m().myCircuit;
+            let voltage = circuit.m().element_voltage(vehElem);
+            let current = -circuit.m().element_current(vehElem); // Vehicle is a power source, hence its current (returned by getCurrent()) flows in opposite direction
+
+            it.m().set_current_from_overhead_wire(current);
+            it.m().set_voltage_of_overhead_wire(voltage);
+
+            // Calulate energy charged
+            let energyIn = watt2watthr(voltage * current); // [Wh]
+
+            // Compute energy charged into/from battery considering recuperation and propulsion efficiency (not considering battery capacity)
+            let energyCharged = it.m().compute_charged_energy(energyIn);
+
+            // Update energy saved in the battery pack and return trully charged energy considering limits of battery
+            let realEnergyCharged = it.m().store_energy_to_battery(energyCharged);
+
+            it.m().set_energy_charged(realEnergyCharged);
+
+            // Add energy wasted to the total sum
+            it.m().update_total_energy_wasted(energyCharged - realEnergyCharged);
+            // Add the energy provided by the overhead wire segment to the output of the segment
+            it.m().get_act_overhead_wire_segment().m().add_charge_value_for_output(energyIn, it, true);
+        }
         0
     }
 
@@ -1529,7 +1609,11 @@ impl MSTractionSubstation {
             self.myOverheadWireSegments.push(innerSegment);
             innerSegment.m().set_traction_substation(incomingSegment.m().get_traction_substation());
             if overhead_wire_solver() {
-                // shortcut: inner segment circuit element needs circuit node handles (incomingSegment/outgoingSegment), which utils::traction_wire::Circuit does not take as Ptr<Node>; upgrade with the circuit node-handle change
+                let circuit = incomingSegment.m().get_circuit();
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
             }
         } else if !frontConnection.is_null() && behindConnection.is_null() {
             let innerSegment = ovrhd_inner_segment(frontConnection);
@@ -1541,7 +1625,18 @@ impl MSTractionSubstation {
             self.myOverheadWireSegments.push(innerSegment2);
 
             if overhead_wire_solver() {
-                // shortcut: inner segment circuit elements need circuit node handles (incomingSegment/outgoingSegment), which utils::traction_wire::Circuit does not take as Ptr<Node>; upgrade with the circuit node-handle change
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenFrontNode_pos = circuit.m().add_node(&format!("betweenFrontNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", frontConnection.m().get_id()), frontConnection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenFrontNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenFrontNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
             }
         } else if frontConnection.is_null() && !behindConnection.is_null() {
             let innerSegment = ovrhd_inner_segment(connection);
@@ -1553,7 +1648,18 @@ impl MSTractionSubstation {
             self.myOverheadWireSegments.push(innerSegment2);
 
             if overhead_wire_solver() {
-                // shortcut: inner segment circuit elements need circuit node handles (incomingSegment/outgoingSegment), which utils::traction_wire::Circuit does not take as Ptr<Node>; upgrade with the circuit node-handle change
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenBehindNode_pos = circuit.m().add_node(&format!("betweenBehindNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", behindConnection.m().get_id()), behindConnection.m().get_length() * WIRE_RESISTIVITY, betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenBehindNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenBehindNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
             }
         } else if !frontConnection.is_null() && !behindConnection.is_null() {
             let innerSegment = ovrhd_inner_segment(frontConnection);
@@ -1568,7 +1674,24 @@ impl MSTractionSubstation {
             self.myOverheadWireSegments.push(innerSegment3);
 
             if overhead_wire_solver() {
-                // shortcut: inner segment circuit elements need circuit node handles (incomingSegment/outgoingSegment), which utils::traction_wire::Circuit does not take as Ptr<Node>; upgrade with the circuit node-handle change
+                let circuit = incomingSegment.m().get_circuit();
+                let betweenFrontNode_pos = circuit.m().add_node(&format!("betweenFrontNode_pos_{}", connection.m().get_id()));
+                let betweenBehindNode_pos = circuit.m().add_node(&format!("betweenBehindNode_pos_{}", connection.m().get_id()));
+                let elem = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", frontConnection.m().get_id()), frontConnection.m().get_length() * WIRE_RESISTIVITY, incomingSegment.m().get_circuit_end_node_pos().expect("incoming segment has no end node"), betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), ElementType::Resistor);
+                let elem2 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", connection.m().get_id()), connection.m().get_length() * WIRE_RESISTIVITY, betweenFrontNode_pos.expect("betweenFrontNode_pos is not created"), betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), ElementType::Resistor);
+                let elem3 = circuit.m().add_element(&format!("pos_ovrhd_inner_{}", behindConnection.m().get_id()), behindConnection.m().get_length() * WIRE_RESISTIVITY, betweenBehindNode_pos.expect("betweenBehindNode_pos is not created"), outgoingSegment.m().get_circuit_start_node_pos().expect("outgoing segment has no start node"), ElementType::Resistor);
+
+                innerSegment.m().set_circuit_element_pos(elem);
+                innerSegment.m().set_circuit_start_node_pos(incomingSegment.m().get_circuit_end_node_pos());
+                innerSegment.m().set_circuit_end_node_pos(betweenFrontNode_pos);
+
+                innerSegment2.m().set_circuit_element_pos(elem2);
+                innerSegment2.m().set_circuit_start_node_pos(betweenFrontNode_pos);
+                innerSegment2.m().set_circuit_end_node_pos(betweenBehindNode_pos);
+
+                innerSegment3.m().set_circuit_element_pos(elem3);
+                innerSegment3.m().set_circuit_start_node_pos(betweenBehindNode_pos);
+                innerSegment3.m().set_circuit_end_node_pos(outgoingSegment.m().get_circuit_start_node_pos());
             }
         }
     }
