@@ -25,11 +25,11 @@ elements and the wall-clock `@duration` on `<step>` (summary) are ignored. No nu
 | amitran | PASS | PASS | PASS | — |
 | link | PASS | PASS | PASS | — |
 | person | PASS | PASS | PASS | — |
-| collision | — | — | PASS (vacuous) | — |
+| collision | — | — | PASS (forced: 47 collisions) | — |
 | lanechange | — | — | — | PASS |
 
-**32 rows: PASS 32, FAIL 0, PANIC 0.** Collision is the one vacuous row: the stress case never collides, so both
-sides write an empty `<collisions/>` and the match proves nothing about collision output.
+**32 rows: PASS 32, FAIL 0, PANIC 0.** Collision was vacuous (the stress case never collides); it now runs with forced
+collisions, see the ou04 section below.
 
 ## Changes that made these pass (this round)
 
@@ -48,14 +48,34 @@ Earlier measurements in this file were on a stale x07 binary and are superseded.
 full, amitran, link and lanechange already matched on current main (the old "silent empty output" and link bool
 format findings no longer reproduce).
 
+## Round ou04 (VM gate, branch worktree-agent-ou04)
+
+Measured with `tools/kaggle/agent_run.sh` (`run_outputs.sh stops_transport stress`), `BIN=$CARGO_TARGET_DIR/debug/sumo`.
+
+| output | case | verdict | what it proves |
+|---|---|---|---|
+| stopout | stops_transport | PASS | bus stop, container stop, parking-area and lane stops match C++ (5 `stopinfo`) |
+| stopout_unfinished | stops_transport | PASS | `--stop-output.write-unfinished` writes the still-stopped vehicle at close (6 `stopinfo`) |
+| collision | stress | PASS | `--collision.mingap-factor 10` forces 47 collisions in C++; ours matches |
+| queue_agg | stress | PASS | `--queue-output.aggregation 50`: 4 intervals, last one (150–200) written by `MSQueueExport::finish` at close |
+
+The stress rows (summary, queue, netstate, vehroute, vehroute_exit, edgedata, full, amitran, link, person) also PASS.
+The aggregated queue row was not measured before the `finish` call was added, so its PASS shows the final interval
+comes out right now, not that the old code was wrong.
+
+Harness notes:
+- `stops_transport` is a new case: bus stop `bs0`, container stop `cs0`, parking area `pa0`, one lane stop still
+  active at `--end 200`. References come from pristine C++ in WSL.
+- `--collision.check-junctions` makes pristine C++ exit 1 with `Invalid Number Format (double) 200`, even as a bare
+  flag, so it is not used.
+- `stress/sim.args` has CRLF endings. The VM gate converts `*.args` to LF. A local WSL reference run must strip the CR.
+- Still open in `MSNet::closeSimulation`: `MSChargingStationExport::write(..., true)` is now called, but no case
+  covers `chargingstations-output.aggregated`.
+
 ## Not measured
 
-- **stop-output**: no case in `run_outputs.sh` writes it. `MSStopOut::generateOutputForUnfinished` is a shortcut in
-  `ms_net.rs` (`close_simulation`), so unfinished-stop output is unverified.
 - **emission-output / edgeData emissions**: owned by em02.
-- **collision with real collisions**: needs a case that produces a collision.
-- **queue `finish` at close**: `MSQueueExport::finish` is not called from `close_simulation` (shortcut in `ms_net.rs`).
-  It only matters with `queue-output.aggregation > 0` and no case covers that.
+- **chargingstations-output (aggregated write-unfinished)**: no case writes it.
 
 ## Harness notes (not product bugs)
 
