@@ -46,7 +46,7 @@ rep(TR, "return dynamic_cast<MSParkingArea*>(rerouteStoppingPlace(destStoppingPl
     return dynamic_cast<MSParkingArea*>(resultSp);''')
 print("instrumented")
 PY
-(cd "$D/build" && make -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; tail -3 "$OUT/make.log")
+(cd "$D/build" && make -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; grep -aiE 'error|No space|undefined' "$OUT/make.log" | head -12; df -h "$D" | tail -1)
 echo "RC02 patched: $(grep -c RRTRACE "$D/src/microsim/trigger/MSTriggeredRerouter.cpp") trig, $(grep -c RRTRACE "$D/src/microsim/trigger/MSStoppingPlaceRerouter.cpp") spr"
 ls -l "$D/bin/sumo" | head -2
 echo "RC02 binary strings: $(strings "$D/bin/sumo" | grep -c RRTRACE)"
