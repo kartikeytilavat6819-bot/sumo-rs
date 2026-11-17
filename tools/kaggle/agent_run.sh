@@ -29,6 +29,7 @@ print('patched', p)
 EOF
 (cd $D/build && make -j8 sumo > $O/cppbuild.log 2>&1); CPP=$D/bin/sumo
 echo "cpp bin: $CPP build-errors: $(grep -c -i ' error' $O/cppbuild.log)"; grep -i ' error' $O/cppbuild.log | head -c 1200
+echo "cpp src RX01: $(grep -c RX01 $F) binary RX01: $(grep -a -c RX01 $CPP) ; build tail:"; tail -3 $O/cppbuild.log | head -c 600; ls -la $CPP
 run() {
   RX01=1 $1 -n $C/ref_simple.net.xml -r $C/routes.rou --tripinfo-output $O/$2.ti.xml --fcd-output $O/$2.fcd.xml \
      --statistic-output $O/$2.stat.xml --no-step-log true --end 600 > $O/$2.log 2> $O/$2.trace
