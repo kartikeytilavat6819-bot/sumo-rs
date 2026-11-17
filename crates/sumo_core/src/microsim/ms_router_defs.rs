@@ -12,7 +12,7 @@ pub type MSCCHMetricFamily = CCHMetricFamily<MSEdge, SUMOVehicle, MSVehicleType>
 pub type MSEdgeVector = Vec<Ptr<MSEdge>>;
 
 /// C++ typedef `MapMatcher<MSEdge, MSLane, MSJunction> MSMapMatcher`
-pub type MSMapMatcher = Unmapped /* MapMatcher<MSEdge, MSLane, MSJunction> */;
+pub type MSMapMatcher = crate::utils::map_matcher::MapMatcher<MSEdge, MSLane, MSJunction>;
 
 /// C++ typedef `PedestrianRouter<MSEdge, MSLane, MSJunction, SUMOVehicle> MSPedestrianRouter`
 pub type MSPedestrianRouter = PedestrianRouter<MSEdge, MSLane, MSJunction, SUMOVehicle>;

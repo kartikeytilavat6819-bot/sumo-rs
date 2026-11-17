@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trips>
+  <!-- lon/lat positions on the Plano residential way 15208774 (nodes 150337943, 150337942, 150337941, 150337936), mapped with the mapmatch distance option -->
+  <trip id="g1" depart="0" fromLonLat="-96.8315519,33.0718493" toLonLat="-96.8312890,33.0719250"/>
+  <trip id="g2" depart="2" fromLonLat="-96.8318640,33.0717380" viaLonLat="-96.8314320,33.0718860" toLonLat="-96.8312890,33.0719250"/>
+</trips>

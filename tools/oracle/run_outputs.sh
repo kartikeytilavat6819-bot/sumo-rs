@@ -34,6 +34,16 @@ row() {
       printf '%s\n' '<additional>' '    <edgeData id="ed" freq="60" file="edge.xml"/>' '</additional>' > "$d/edgedata.add.xml"
     done
   fi
+  if [ "$name" = edgedata_emissions ]; then
+    for d in "$dr" "$dc"; do
+      printf '%s\n' '<additional>' '    <edgeData id="emis" type="emissions" freq="60" file="emis.xml"/>' '</additional>' > "$d/emis.add.xml"
+    done
+  fi
+  if [ "$name" = fcd_shape ]; then
+    for d in "$dr" "$dc"; do
+      printf '%s\n' '<additional>' '    <poly id="fz" type="zone" color="1,0,0" fill="0" layer="1" shape="-5,80 2,80 2,100 -5,100"/>' '</additional>' > "$d/fzone.add.xml"
+    done
+  fi
   if [ "$name" = fcd_filter_edges ]; then
     for d in "$dr" "$dc"; do
       printf '%s\n' '1117867028' '1117867029#0' > "$d/filter.txt"
@@ -110,6 +120,11 @@ for c in $CASES; do
     row "$c" lanechange lanechange.xml --lanechange-output @DIR@/lanechange.xml
     continue
   fi
+  if [ "$c" = persons_nonint ]; then
+    row "$c" full full.xml --full-output @DIR@/full.xml
+    row "$c" fcd_shape fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.filter-shapes fz --additional-files @DIR@/fzone.add.xml
+    continue
+  fi
   if [ "$c" = stops_transport ]; then
     row "$c" stopout stopout.xml --stop-output @DIR@/stopout.xml
     row "$c" stopout_unfinished stopout.xml --stop-output @DIR@/stopout.xml --stop-output.write-unfinished true
@@ -120,6 +135,7 @@ for c in $CASES; do
     row "$c" fcd_attributes fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.attributes speed,angle,pos,lane
     row "$c" fcd_filter_edges fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.filter-edges.input-file @DIR@/filter.txt
     row "$c" vtype_probe vtype.xml --additional-files @DIR@/vtypeprobe.add.xml
+    row "$c" edgedata_emissions emis.xml --additional-files @DIR@/emis.add.xml
   fi
   row "$c" summary summary.xml --summary-output @DIR@/summary.xml
   row "$c" queue queue.xml --queue-output @DIR@/queue.xml
