@@ -110,9 +110,7 @@ impl MSBatteryExport {
                 of.write_attr(SUMO_ATTR_TOTALENERGYREGENERATED, &battery.get_total_regenerated());
                 of.write_attr(SUMO_ATTR_ACTUALBATTERYCAPACITY, &battery.get_actual_battery_capacity());
                 of.write_attr(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, &battery.get_maximum_battery_capacity());
-                if !battery.get_charging_station().is_null() {
-                    of.write_attr(SUMO_ATTR_CHARGINGSTATIONID, &battery.get_charging_station_id());
-                }
+                of.write_attr(SUMO_ATTR_CHARGINGSTATIONID, &battery.get_charging_station_id());
                 of.write_attr(SUMO_ATTR_ENERGYCHARGED, &battery.get_energy_charged());
                 if battery.is_charging_in_transit() {
                     of.write_attr(SUMO_ATTR_ENERGYCHARGEDINTRANSIT, &battery.get_energy_charged());
