@@ -33,6 +33,11 @@ fn default_bike_length_with_gap() -> f64 {
     get_default_vehicle_length(SVC_BICYCLE) + 0.5
 }
 
+// the MSDetectorFileOutput of a loop is its base2 field, not the first one: step back to the enclosing MSInductLoop
+fn induct_loop_of_detector(d: Ptr<MSDetectorFileOutput>) -> Ptr<MSInductLoop> {
+    Ptr::from_raw((d.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSInductLoop, base2)) as *mut MSInductLoop)
+}
+
 /// C++ typedef `std::map<std::string, Function> MSActuatedTrafficLightLogic::FunctionMap`
 pub type MSActuatedTrafficLightLogic_FunctionMap = BTreeMap<String, MSActuatedTrafficLightLogic_Function>;
 
@@ -758,12 +763,13 @@ impl MSActuatedTrafficLightLogic {
                     // Build the induct loop and set it into the container
                     let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
                     let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
-                    loop_ = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true).cast::<MSInductLoop>();
-                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, loop_.cast::<MSDetectorFileOutput>(), &self.myFile, self.myFreq, 0);
+                    let det = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true);
+                    loop_ = induct_loop_of_detector(det);
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, det, &self.myFile, self.myFreq, 0);
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| d.cast::<MSInductLoop>()).unwrap_or(Ptr::null());
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| induct_loop_of_detector(d)).unwrap_or(Ptr::null());
                     if loop_.is_null() {
                         panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
                     }
