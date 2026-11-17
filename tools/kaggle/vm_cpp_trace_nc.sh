@@ -11,8 +11,8 @@ cd "$D"
 git checkout -q -- src
 cp "$FILE" src/netbuild/NBNodeCont.cpp
 touch src/netbuild/NBNodeCont.cpp
-echo "cmake files pointing at pristine src: $(grep -rl '/home/gate/sumo-cpp/src' "$D/build" --include='*.make' | wc -l)" >&2
-grep -rl '/home/gate/sumo-cpp/src' "$D/build" --include='*.make' | xargs -r sed -i "s#/home/gate/sumo-cpp/src#$D/src#g"
+echo "cmake files pointing at pristine tree: $(grep -rl '/home/gate/sumo-cpp' "$D/build" --include='*.make' --include='link.txt' | wc -l)" >&2
+grep -rl '/home/gate/sumo-cpp' "$D/build" --include='*.make' --include='link.txt' | xargs -r sed -i "s#/home/gate/sumo-cpp#$D#g"
 find build -name 'NBNodeCont.cpp.o' -delete
 (cd build && make -j8 netconvert > /tmp/cppnc-$ID.log 2>&1) || { grep -a -B3 -E 'rror|undefined' /tmp/cppnc-$ID.log | head -60 >&2; exit 1; }
 grep -c JTRACE "$D/bin/netconvert" >&2 || { echo "vm_cpp_trace_nc: trace not compiled in" >&2; grep -a 'NBNodeCont' /tmp/cppnc-$ID.log | head -5 >&2; exit 1; }
