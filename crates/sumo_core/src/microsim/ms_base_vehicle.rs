@@ -2508,6 +2508,7 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn add_transportable(&mut self, transportable: Ptr<MSTransportable>) {
+        if std::env::var_os("CD01").is_some() { eprintln!("CD01 ADD {} person={} t={} time={} pdev_null={}", self.get_id(), transportable.is_person(), transportable.get_id(), MSNet::get_instance().get_current_time_step(), self.myPersonDevice.is_null()); }
         if transportable.is_person() {
             if self.myPersonDevice.is_null() {
                 self.init_transportable_device(true);

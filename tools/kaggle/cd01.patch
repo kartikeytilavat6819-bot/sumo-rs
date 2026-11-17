@@ -1,0 +1,8 @@
+diff --git a/src/microsim/MSBaseVehicle.cpp b/src/microsim/MSBaseVehicle.cpp
+--- a/src/microsim/MSBaseVehicle.cpp
++++ b/src/microsim/MSBaseVehicle.cpp
+@@ -889,3 +889,4 @@
+ void
+ MSBaseVehicle::addTransportable(MSTransportable* transportable) {
++    if (getenv("CD01")) std::cerr << "CD01 ADD " << getID() << " person=" << transportable->isPerson() << " t=" << transportable->getID() << " time=" << SIMSTEP << " pdev_null=" << (myPersonDevice == nullptr) << "\n";
+     if (transportable->isPerson()) {
