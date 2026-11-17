@@ -398,8 +398,7 @@ impl VehicleEngineHandler {
                     for i in 0..MAX_POLY_DEGREE {
                         let param = format!("x{i}");
                         if attrs.has_attribute_name(&param) {
-                            // shortcut: EngineParameters_PolynomialEngineModelRpmToHp.x is Unmapped (double[9]) in engine_parameters.rs, so coefficients cannot be stored yet, upgrade when that field is typed as [f64; 9]
-                            return Err(ProcessError::new(format!("Engine polynomial coefficient {param} cannot be loaded yet (not ported)")));
+                            self.engineParameters.engineMapping.x[i as usize] = attrs.get_float_name(&param)?;
                         } else {
                             //save the actual degree
                             self.engineParameters.engineMapping.degree = i;
