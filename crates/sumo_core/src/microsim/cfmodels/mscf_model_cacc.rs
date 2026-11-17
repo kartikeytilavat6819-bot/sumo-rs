@@ -429,8 +429,7 @@ impl MSCFModel_CACC {
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
         // Accel in gap mode should vanish:
         let desSpacing;
-        // shortcut: pred->getCarFollowModel().getModelID() is read from the predecessor's vehicle type (cfModel); the Rust MSCFModel::get_model_id is non-virtual and cannot identify a CACC predecessor, upgrade when car-following models support virtual dispatch
-        if pred.get_vehicle_type().get_parameter().cfModel != SUMO_TAG_CF_CACC {
+        if pred.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CACC as i32 {
             //      0 = myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * (g - myHeadwayTime * speed);
             // <=>  myGapControlGainSpace * g = - myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * myHeadwayTime * speed;
             // <=>  g = - myGapControlGainSpeed * (leaderSpeed - speed) / myGapControlGainSpace + myHeadwayTime * speed;
@@ -960,8 +959,7 @@ impl MSCFModel_CACC {
         let mut newSpeed = 0.0;
 
         if !pred.is_null() {
-            // shortcut: pred->getCarFollowModel().getModelID() is read from the predecessor's vehicle type (cfModel); the Rust MSCFModel::get_model_id is non-virtual, upgrade when car-following models support virtual dispatch
-            if pred.get_vehicle_type().get_parameter().cfModel != SUMO_TAG_CF_CACC {
+            if pred.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CACC as i32 {
                 *vehMode = MSCFModel_CACC_VehicleMode::ACC_MODE;
                 newSpeed = self.acc_CFM.v(veh, gap2pred, speed, predSpeed, desSpeed, true);
             } else {
