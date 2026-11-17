@@ -480,7 +480,7 @@ impl<E, V> RailEdge<E, V> {
             return cached;
         }
         // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
-        let me: &mut RailEdge<E, V> = unsafe { &mut *(self as *const RailEdge<E, V> as *mut RailEdge<E, V>) };
+        let me: &mut RailEdge<E, V> = unsafe { &mut *Ptr::new(self).as_raw() };
         let mut result: RailEdge_ConstEdgePairVector<E, V> = Vec::new();
         for viaPair in self.myViaSuccessors.iter() {
             if viaPair.0.myOriginal.is_null() || viaPair.0.myOriginal.is_taz_connector() || self.myOriginal.is_connected_to(&*viaPair.0.myOriginal, vClass, ignoreTransientPermissions) {
