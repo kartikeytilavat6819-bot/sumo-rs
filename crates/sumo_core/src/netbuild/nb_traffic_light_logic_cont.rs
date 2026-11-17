@@ -454,7 +454,7 @@ impl NBTrafficLightLogicCont {
                     let nodes = def.m().get_nodes().clone();
                     let offset = def.m().get_offset();
                     let programID = def.m().get_program_id().to_string();
-                    let oDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, offset, ty))));
+                    let oDef: Ptr<NBOwnTLDef> = Ptr::from_raw(Box::into_raw(NBOwnTLDef::new(&id, &nodes, offset, ty)));
                     oDef.m().set_program_id(&programID);
                     oDef.m().set_participants_information();
                     for e in oDef.m().get_incoming_edges().clone() {
@@ -722,7 +722,6 @@ impl NBTrafficLightLogicCont {
             let n = *n;
             if n.get_type() == SumoXMLNodeType::RAIL_SIGNAL || n.get_type() == SumoXMLNodeType::RAIL_CROSSING {
                 let mut dummy = NBOwnTLDef::new_2(n.get_id(), n, 0, TrafficLightType::STATIC);
-                n.m().add_traffic_light(Ptr::from_mut(&mut dummy.base));
                 dummy.set_participants_information();
                 dummy.set_tl_controlling_information();
                 n.m().set_crossing_tl_indices(dummy.get_id(), dummy.get_controlled_links().len() as i32, false);

@@ -585,7 +585,7 @@ impl MSFCDExport {
         // shortcut: MSDevice_FCD::shapeFilter has only the SUMOTrafficObject overload, the MSTransportable one is not ported; the device check uses the first device like the vehicle variant
         (!filter || MSDevice_FCD::get_edge_filter().contains(&p.get_edge()))
             && (!shapeFilter || panic!("MSDevice_FCD::shapeFilter(MSTransportable) is not ported yet"))
-            && (!p.get_device(&()).is_null() || isInRadius)
+            && (!p.get_device("fcd").is_null() || isInRadius)
     }
 
     /// C++: `void MSFCDExport::MSFCDExport(const MSFCDExport &)` [private]

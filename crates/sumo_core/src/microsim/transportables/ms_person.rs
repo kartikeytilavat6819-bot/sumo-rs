@@ -975,4 +975,4 @@ person_fwd!(ms_person_get_angle, (), f64, get_angle);
 person_fwd!(ms_person_has_arrived, (), bool, has_arrived);
 person_fwd!(ms_person_has_influencer, (), bool, has_influencer);
 person_fwd!(ms_person_is_selected, (), bool, is_selected);
-person_fwd!(ms_person_get_device, (type_: &Unmapped), Ptr<MSDevice>, get_device);
+person_fwd!(ms_person_get_device, (kind: &str), Ptr<MSDevice>, get_device);

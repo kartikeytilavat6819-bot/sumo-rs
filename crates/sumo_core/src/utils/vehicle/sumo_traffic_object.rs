@@ -50,7 +50,7 @@ pub struct SUMOTrafficObjectVt {
     pub has_arrived: fn(&SUMOTrafficObject) -> bool,
     pub has_influencer: fn(&SUMOTrafficObject) -> bool,
     pub is_selected: fn(&SUMOTrafficObject) -> bool,
-    pub get_device: fn(&SUMOTrafficObject, &Unmapped) -> Ptr<MSDevice>,
+    pub get_device: fn(&SUMOTrafficObject, &str) -> Ptr<MSDevice>,
 }
 
 pub(crate) fn default_is_false(_: &SUMOTrafficObject) -> bool {
@@ -163,7 +163,7 @@ pub(crate) fn default_has_influencer(_: &SUMOTrafficObject) -> bool {
 pub(crate) fn default_is_selected(_: &SUMOTrafficObject) -> bool {
     panic!("SUMOTrafficObject::isSelected is pure virtual")
 }
-pub(crate) fn default_get_device(_: &SUMOTrafficObject, _: &Unmapped) -> Ptr<MSDevice> {
+pub(crate) fn default_get_device(_: &SUMOTrafficObject, _: &str) -> Ptr<MSDevice> {
     panic!("SUMOTrafficObject::getDevice is pure virtual")
 }
 
@@ -571,10 +571,11 @@ impl SUMOTrafficObject {
 
     /// C++: `MSDevice * SUMOTrafficObject::getDevice(const std::type_info &) const` [const, virtual, pure virtual]
     /// Returns a device of the given type if it exists or nullptr if not
+    /// (`kind` is the device's C++ class key, i.e. its deviceName(); see MSDevice::get_device_by_name)
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        (self.vt.get_device)(self, type_)
+    pub fn get_device(&self, kind: &str) -> Ptr<MSDevice> {
+        (self.vt.get_device)(self, kind)
     }
 
     /// C++: `std::string SUMOTrafficObject::getStringParam(const std::string &, const bool, const std::string &) const` [const]
