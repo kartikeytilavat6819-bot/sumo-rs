@@ -1037,8 +1037,7 @@ impl NBTrafficLightDefinition {
             let mut dummy = NBOwnTLDef::new(NBTrafficLightDefinition_DummyID, &self.myControlledNodes, 0, TrafficLightType::STATIC);
             dummy.set_participants_information();
             let tllDummy = dummy.compute_logic_and_conts(0, true);
-            // shortcut: C++ deletes tllDummy here; Ptr-owned logics have no ownership convention yet, so it is leaked, upgrade: free it once Ptr ownership is defined
-            let _ = tllDummy;
+            drop(unsafe { Box::from_raw(tllDummy.as_raw()) });
             // the C++ code assigns through a const method, so the cache is written via Ptr::m
             *self.myExtraConflicts.borrow_mut() = dummy.myExtraConflicts.borrow().clone();
             for node in self.myControlledNodes.clone() {
