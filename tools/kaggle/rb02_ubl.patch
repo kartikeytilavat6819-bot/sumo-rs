@@ -1,5 +1,5 @@
 diff --git a/src/microsim/MSVehicle.cpp b/src/microsim/MSVehicle.cpp
-index 4f1100e..479884b 100644
+index 4f1100e..cb0788c 100644
 --- a/src/microsim/MSVehicle.cpp
 +++ b/src/microsim/MSVehicle.cpp
 @@ -6025,6 +6025,16 @@ MSVehicle::updateBestLanes(bool forceRebuild, const MSLane* startLane) {
@@ -7,7 +7,7 @@ index 4f1100e..479884b 100644
      }
      assert(startLane != 0);
 +    if (getID() == "21" && MSNet::getInstance()->getCurrentTimeStep() >= 40000 && MSNet::getInstance()->getCurrentTimeStep() <= 44000) {
-+        std::cerr << "RB02 ubl t=" << MSNet::getInstance()->getCurrentTimeStep() << " force=" << (int)forceRebuild << " start=" << startLane->getID() << " lane=" << myLane->getID() << " nb=" << myBestLanes.size() << "\n";
++        std::cerr << "RB02 ubl t=" << MSNet::getInstance()->getCurrentTimeStep() << " force=" << (int)forceRebuild << " start=" << startLane->getID() << " nb=" << myBestLanes.size() << "\n";
 +        for (int e = 0; e < (int)myBestLanes.size(); ++e) {
 +            std::cerr << "RB02   e" << e;
 +            for (const LaneQ& q : myBestLanes[e]) {
