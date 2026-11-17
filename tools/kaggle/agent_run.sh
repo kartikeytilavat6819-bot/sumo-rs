@@ -33,7 +33,7 @@ for n in rerouter_parking containers; do
   if [ "$n" = containers ]; then
     echo "-- ref stops:"; stops $C/ref.fcd.xml
     echo "-- ours stops:"; stops $OUT/$n.ours.fcd.xml
-    echo "-- RC01 trace: count nm=$(grep -c 'RC01 nm' $OUT/$n.ours.log) canLeave=$(grep -c 'RC01 canLeave' $OUT/$n.ours.log)"; grep RC01 $OUT/$n.ours.log | grep -v 'myStopped=true hs=true' | head -40; grep -E 'RC01 (wom|leave)' $OUT/$n.ours.log | awk '{split($3,a,"="); if (a[2]+0>=140000 && a[2]+0<=205000) print}' | head -80
+    echo "-- RC01 trace: count nm=$(grep -c 'RC01 nm' $OUT/$n.ours.log) canLeave=$(grep -c 'RC01 canLeave' $OUT/$n.ours.log)"; grep RC01 $OUT/$n.ours.log | grep -v 'myStopped=true hs=true' | head -40; grep -E 'RC01 (wom|leave)' $OUT/$n.ours.log | awk '{split($3,a,"="); if ((a[2]+0>=100000 && a[2]+0<=150000) || $2=="leave") print}' | head -90
     grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
   fi
   echo "-- v2 ref/ours:"; grep 'id="v2"' $C/ref.tripinfo.xml | cut -c1-260; grep 'id="v2"' $OUT/$n.ours.ti.xml | cut -c1-260
