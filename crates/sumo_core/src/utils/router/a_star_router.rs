@@ -148,7 +148,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> AStarRouter<E, V, M> {
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
         let warning = self.base.myErrorMsgHandler == msg_instance(true);
-        let clone: AStarRouter<E, V, M> = AStarRouter::new_2(&self.base.myEdgeInfos, warning, self.base.myOperation, self.myLookupTable.clone(), self.base.myHavePermissions, self.base.myHaveRestrictions);
+        let clone: AStarRouter<E, V, M> = AStarRouter::new_2(&self.base.myEdgeInfos, warning, self.base.myOperation, self.myLookupTable.clone(), self.base.myHavePermissions, self.base.myHaveRestrictions).with_compute();
         Ptr::from_raw(Box::into_raw(Box::new(clone))).cast::<SUMOAbstractRouter<E, V>>()
     }
 

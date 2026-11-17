@@ -15,6 +15,8 @@ pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f6
 pub type SUMOAbstractRouter_ComputeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<E>, Ptr<E>, Ptr<V>, SUMOTime, &mut Vec<Ptr<E>>, bool) -> bool;
 pub type SUMOAbstractRouter_ProhibitFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, &SUMOAbstractRouter_Prohibitions);
 pub type SUMOAbstractRouter_SupportsProhibitionsFn<E, V> = fn(&SUMOAbstractRouter<E, V>) -> bool;
+pub type SUMOAbstractRouter_ResetFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<V>);
+pub type SUMOAbstractRouter_SetBulkModeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, bool);
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -109,6 +111,10 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myProhibit: Option<SUMOAbstractRouter_ProhibitFn<E, V>>,
     /// the subclass supportsProhibitions override (C++ virtual), None for the base behaviour (true)
     pub mySupportsProhibitions: Option<SUMOAbstractRouter_SupportsProhibitionsFn<E, V>>,
+    /// the subclass reset override (C++ virtual `reset`), None for the base no-op
+    pub myReset: Option<SUMOAbstractRouter_ResetFn<E, V>>,
+    /// the subclass setBulkMode override (C++ virtual `setBulkMode`), None for the base behaviour
+    pub mySetBulkMode: Option<SUMOAbstractRouter_SetBulkModeFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -165,6 +171,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myCompute: None,
             myProhibit: None,
             mySupportsProhibitions: None,
+            myReset: None,
+            mySetBulkMode: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -207,6 +215,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myCompute: other.myCompute,
             myProhibit: other.myProhibit,
             mySupportsProhibitions: other.mySupportsProhibitions,
+            myReset: other.myReset,
+            mySetBulkMode: other.mySetBulkMode,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -304,6 +314,15 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn reset(&mut self, vehicle: Ptr<V>) {
+        match self.myReset {
+            Some(reset) => reset(self, vehicle),
+            None => self.reset_base(vehicle),
+        }
+    }
+
+    /// C++ `SUMOAbstractRouter::reset` body, for subclass overrides that call the base explicitly
+    #[allow(unused_variables)]
+    pub fn reset_base(&mut self, vehicle: Ptr<V>) {
         // C++ body is empty: UNUSED_PARAMETER(vehicle)
         let _ = vehicle;
     }
@@ -750,6 +769,15 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
+        match self.mySetBulkMode {
+            Some(set_bulk_mode) => set_bulk_mode(self, mode),
+            None => self.set_bulk_mode_base(mode),
+        }
+    }
+
+    /// C++ `SUMOAbstractRouter::setBulkMode` body, for subclass overrides that call the base explicitly
+    #[allow(unused_variables)]
+    pub fn set_bulk_mode_base(&mut self, mode: bool) {
         self.myBulkMode = mode;
     }
 
