@@ -47,6 +47,21 @@ pub type MSInductLoop_TimeQueue = BinaryHeap<Reverse<SUMOTime>>;
 /// C++ typedef `std::deque<VehicleData> MSInductLoop::VehicleDataCont`
 pub type MSInductLoop_VehicleDataCont = VecDeque<MSInductLoop_VehicleData>;
 
+fn ms_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_induct_loop_notify_enter,
+    notify_move: ms_induct_loop_notify_move,
+    notify_leave: ms_induct_loop_notify_leave,
+};
+
 /// An unextended detector measuring at a fixed position on a fixed lane.
 /// C++ class `MSInductLoop` (microsim/output/MSInductLoop.h)
 #[repr(C)]
@@ -140,7 +155,10 @@ impl MSInductLoop {
         debug_assert!(positionInMeters >= 0. && positionInMeters + length <= lane.get_length());
         // shortcut: gUseMesoSim branch (MESegment lookup and addDetector(this)) not ported; meso is off while g_use_meso_sim() is false
         let mut s = Box::new(MSInductLoop {
-            base: MSMoveReminder::new(id, lane, true),
+            base: MSMoveReminder {
+                vt: &MS_INDUCT_LOOP_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(id, lane, true)
+            },
             // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,

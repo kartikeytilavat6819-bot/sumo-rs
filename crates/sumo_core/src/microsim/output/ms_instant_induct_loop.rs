@@ -8,6 +8,21 @@ fn simtime() -> f64 {
     steps2time(MSNet::get_instance().get_current_time_step())
 }
 
+fn ms_instant_induct_loop_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_instant_induct_loop_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn ms_instant_induct_loop_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSInstantInductLoop>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_INSTANT_INDUCT_LOOP_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_instant_induct_loop_notify_enter,
+    notify_move: ms_instant_induct_loop_notify_move,
+    notify_leave: ms_instant_induct_loop_notify_leave,
+};
+
 /// An instantaneous induction loop
 /// C++ class `MSInstantInductLoop` (microsim/output/MSInstantInductLoop.h)
 #[repr(C)]
@@ -60,7 +75,10 @@ impl MSInstantInductLoop {
     pub fn new(id: &str, od: &mut OutputDevice, lane: Ptr<MSLane>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Self {
         // shortcut: C++ MSMoveReminder(id, lane) registers this reminder with the lane (doAdd); new() returns by value, so the caller must call MSLane::add_move_reminder after placing it
         let this = MSInstantInductLoop {
-            base: MSMoveReminder::new(id, lane, true),
+            base: MSMoveReminder {
+                vt: &MS_INSTANT_INDUCT_LOOP_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(id, lane, true)
+            },
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
             myName: name,
             myOutputDevice: Ptr::from_mut(od),

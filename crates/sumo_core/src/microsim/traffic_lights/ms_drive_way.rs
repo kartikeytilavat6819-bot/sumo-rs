@@ -233,11 +233,14 @@ impl MSDriveWay {
     #[allow(unused_variables)]
     pub fn new(origin: Ptr<MSLink>, id: &str, temporary: bool) -> Self {
         MSDriveWay {
-            base: MSMoveReminder::new(
-                &format!("DriveWay_{}", if temporary { "tmp" } else { id }),
-                Ptr::null(),
-                false,
-            ),
+            base: MSMoveReminder {
+                vt: &MS_DRIVE_WAY_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(
+                    &format!("DriveWay_{}", if temporary { "tmp" } else { id }),
+                    Ptr::null(),
+                    false,
+                )
+            },
             base2: Named::new(id),
             myNumericalID: if temporary {
                 -1
@@ -5259,6 +5262,20 @@ impl MSDriveWay {
     }
 
 }
+
+fn ms_drive_way_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_drive_way_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSDriveWay>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+/// Virtual table of MSDriveWay (MSMoveReminder overrides: notifyEnter, notifyLeave; notifyMove is inherited)
+static MS_DRIVE_WAY_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_drive_way_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: ms_drive_way_notify_leave,
+};
 
 /// C++ class `MSDriveWay::Siding` (microsim/traffic_lights/MSDriveWay.h)
 #[derive(Clone)]

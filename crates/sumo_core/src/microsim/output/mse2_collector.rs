@@ -23,6 +23,23 @@ const MSPMODEL_FORWARD: i32 = 1;
 /// C++ typedef `std::map<std::string, VehicleInfo *> MSE2Collector::VehicleInfoMap`
 pub type MSE2Collector_VehicleInfoMap = BTreeMap<String, Ptr<MSE2Collector_VehicleInfo>>;
 
+fn mse2_collector_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse2_collector_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse2_collector_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE2Collector>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+/// Virtual table of MSE2Collector (MSMoveReminder overrides: notifyEnter, notifyMove, notifyLeave)
+static MSE2_COLLECTOR_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse2_collector_notify_enter,
+    notify_move: mse2_collector_notify_move,
+    notify_leave: mse2_collector_notify_leave,
+};
+
 /// Internal representation of a jam
 /// C++ class `MSE2Collector::JamInfo` (microsim/output/MSE2Collector.h)
 pub struct MSE2Collector_JamInfo {
@@ -172,7 +189,10 @@ impl MSE2Collector {
     /// other members at their C++ in-class defaults. Errors come from MSDetectorFileOutput.
     fn new_base(id: &str, lane: Ptr<MSLane>, usage: DetectorUsage, name: String, haltingTimeThreshold: SUMOTime, haltingSpeedThreshold: f64, jamDistThreshold: f64, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Result<Self, ProcessError> {
         Ok(Self {
-            base: MSMoveReminder::new(id, lane, false),
+            base: MSMoveReminder {
+                vt: &MSE2_COLLECTOR_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(id, lane, false)
+            },
             base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons)?,
             myUsage: usage,
             myName: name,

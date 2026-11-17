@@ -919,6 +919,21 @@ impl MSE3Collector {
 
 }
 
+fn mse3_entry_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse3_entry_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse3_entry_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3EntryReminder>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MSE3_ENTRY_REMINDER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse3_entry_notify_enter,
+    notify_move: mse3_entry_notify_move,
+    notify_leave: mse3_entry_notify_leave,
+};
+
 /// A place on the road net (at a certain lane and position on it) where the E3 area begins
 /// C++ class `MSE3Collector::MSE3EntryReminder` (microsim/output/MSE3Collector.h)
 #[repr(C)]
@@ -955,7 +970,10 @@ impl MSE3Collector_MSE3EntryReminder {
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
         // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
         MSE3Collector_MSE3EntryReminder {
-            base: MSMoveReminder::new(&format!("{}_entry", collector.base.base.get_id()), crossSection.myLane, false),
+            base: MSMoveReminder {
+                vt: &MSE3_ENTRY_REMINDER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(&format!("{}_entry", collector.base.base.get_id()), crossSection.myLane, false)
+            },
             myCollector: Ptr::from_mut(collector),
             myPosition: crossSection.myPosition,
         }
@@ -1157,6 +1175,21 @@ impl MSE3Collector_MSE3EntryReminder {
 
 }
 
+fn mse3_leave_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_enter(veh, reason, enteredLane)
+}
+fn mse3_leave_notify_move(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_move(veh, oldPos, newPos, newSpeed)
+}
+fn mse3_leave_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSE3Collector_MSE3LeaveReminder>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MSE3_LEAVE_REMINDER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: mse3_leave_notify_enter,
+    notify_move: mse3_leave_notify_move,
+    notify_leave: mse3_leave_notify_leave,
+};
+
 /// A place on the road net (at a certain lane and position on it) where the E3 area ends
 /// C++ class `MSE3Collector::MSE3LeaveReminder` (microsim/output/MSE3Collector.h)
 #[repr(C)]
@@ -1192,7 +1225,10 @@ impl MSE3Collector_MSE3LeaveReminder {
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
         // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
         MSE3Collector_MSE3LeaveReminder {
-            base: MSMoveReminder::new(&format!("{}_exit", collector.base.base.get_id()), crossSection.myLane, false),
+            base: MSMoveReminder {
+                vt: &MSE3_LEAVE_REMINDER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(&format!("{}_exit", collector.base.base.get_id()), crossSection.myLane, false)
+            },
             myCollector: Ptr::from_mut(collector),
             myPosition: crossSection.myPosition,
         }
