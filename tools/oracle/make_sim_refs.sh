@@ -15,7 +15,9 @@
 #   closed_edge  --end 200 --additional-files tools/oracle/cases/closed_edge/closed_lane.add.xml
 #   calibrator_multi  --end 200 --additional-files tools/oracle/cases/calibrator_multi/calibrator_multi.add.xml (tripinfo only)
 #   depart       15 variants via cases/depart/run_ref.sh (--seed 42 --end 120), into cases/depart/ref/
+#   device_toc, device_ssm, device_stationfinder, device_driverstate, device_glosa, device_friction   (--end per sim.args)
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
+# A case with extra_outputs.txt (lines "<option> <suffix>") writes fcd+stat and each <suffix> as ref.<suffix>.xml.
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
 # DEST=/c/... writes <DEST>/<case>/ instead, to check committed references without touching them.
 set -u
@@ -23,7 +25,7 @@ cd "$(dirname "$0")/../.." || exit 1
 ROOT=$(pwd)
 W=/mnt/c${ROOT#/c}
 LOG=/c/Users/karti/AppData/Local/Temp/opencode
-CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart sublanes lanechange lefthand reroute_alt closed_edge calibrator_multi}
+CASES=${*:-junction roundabout signal real real_dense stress reroute vtypes depart sublanes lanechange lefthand reroute_alt closed_edge calibrator_multi device_toc device_ssm device_stationfinder device_driverstate device_glosa device_friction}
 wp() { echo "/mnt/c${1#/c}"; }
 # A C++ run counts only when it exits 0 without "Interrupt signal" (WSL signals end a run early and still exit 0)
 # and its outputs pass check_ref_complete.py. Retries once on a signal exit; any failure stops the script.
@@ -40,6 +42,9 @@ run_ref() {  # run_ref <log> <wsl-cmd> <end or empty> <outdir> <tag>
   local chk=(--tripinfo "$od/$tag.tripinfo.xml")
   [ -f "$od/$tag.fcd.xml" ] && chk+=(--fcd "$od/$tag.fcd.xml")
   [ -f "$od/$tag.stat.xml" ] && chk+=(--stat "$od/$tag.stat.xml")
+  for x in "$od/$tag".*.xml; do
+    case $x in *.tripinfo.xml|*.fcd.xml|*.stat.xml) ;; *) [ -f "$x" ] && chk+=(--xml "$x");; esac
+  done
   python tools/oracle/check_ref_complete.py ${end:+--end "$end"} "${chk[@]}" || { echo "FAILED $tag: incomplete output" >&2; exit 1; }
 }
 
@@ -59,6 +64,7 @@ for c in $CASES; do
   outs="--tripinfo-output $(wp "$o")/ref.tripinfo.xml"
   want "$src/ref.fcd.xml" && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
   want "$src/ref.stat.xml" && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
+  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
   flags=$(cat "$src/sim.args" 2>/dev/null)
   run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"

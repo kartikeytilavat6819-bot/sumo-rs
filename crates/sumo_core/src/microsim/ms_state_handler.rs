@@ -1055,7 +1055,6 @@ impl MSStateHandler {
         // make a copy because myVehicleParameter is reset in closeVehicle()
         let vehID = self.myVehicleParameter.m().id.clone();
         if !self.myVehiclesToRemove.contains(&vehID) {
-            // shortcut: the embedded route "!<id>" checkRemoval is not ported under a verified name
             let deviceNames: Vec<String> = self.myDeviceAttrs.iter().map(|a| MSDevice::get_device_name(&a.get_string(SUMO_ATTR_ID))).collect();
             self.myVehicleParameter.m().set_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES, &deviceNames.join(" "));
             self.base.close_vehicle();
@@ -1115,13 +1114,20 @@ impl MSStateHandler {
                 }
             }
             if !self.myCFMAttrs.is_null() {
-                let vars = v.cast::<MSVehicle>().m().get_car_follow_variables();
+                let veh = v.cast::<MSVehicle>();
+                let vars = veh.m().get_car_follow_variables();
                 if !vars.is_null() {
-                    vars.m().load_state(&*self.myCFMAttrs);
+                    let cfm = veh.m().get_car_follow_model();
+                    cfm.load_vehicle_variables(vars.m(), &*self.myCFMAttrs);
                 }
                 self.myCFMAttrs = Ptr::null();
             }
         } else {
+            let embeddedRouteID = format!("!{}", vehID);
+            if MSRoute::has_route(&embeddedRouteID) {
+                let embedded: ConstMSRoutePtr = MSRoute::dictionary_3(&embeddedRouteID, Ptr::null());
+                embedded.check_removal(false);
+            }
             self.myVehicleParameter = Ptr::null();
             self.myRemoved += 1;
             self.myDeviceAttrs.clear();

@@ -1,7 +1,7 @@
 //! Port of router/ROLoader.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::msg_handler::{write_message, write_warning};
+use utils::common::msg_handler::{progress_begin_message, progress_done_message, write_message, write_warning};
 
 /// C++ `MsgHandler::getErrorInstance()->wasInformed()`
 fn error_informed() -> bool {
@@ -13,19 +13,14 @@ fn min2t(a: SUMOTime, b: SUMOTime) -> SUMOTime {
     if a < b { a } else { b }
 }
 
-// shortcut: XMLSubSys::runParser needs RONetHandler to implement SaxHandler (and setFileName through GenericSAXHandler), not ported yet
-fn run_net_parser_unwired(handler: &mut RONetHandler, file: &str) {
-    panic!("ROLoader: cannot parse network file '{}', RONetHandler is not a SaxHandler yet", file);
+/// C++ `XMLSubSys::runParser(handler, file, isNet)`: true if no error was reported
+fn run_net_parser(handler: &mut RONetHandler, file: &str, isNet: bool) -> bool {
+    utils::xml::xml_sub_sys::run_parser(handler, file, isNet, false, false, true).unwrap_or_else(|e| panic!("{e}"))
 }
 
-// shortcut: XMLSubSys::runParser needs RORouteHandler to implement SaxHandler, not ported yet
-fn run_route_parser_unwired(handler: Ptr<RORouteHandler>, file: &str) {
-    panic!("ROLoader: cannot parse route file '{}', RORouteHandler is not a SaxHandler yet", file);
-}
-
-// shortcut: SAXWeightsHandler is not ported, weight files cannot be parsed yet
-fn run_weights_parser_unwired(optionName: &str) {
-    panic!("ROLoader: cannot load weights from option '{}', SAXWeightsHandler is not ported yet", optionName);
+/// C++ `XMLSubSys::runParser(*handler, fileIt)`; false when the loading reported an error
+fn run_route_parser(handler: &mut RORouteHandler, file: &str) -> bool {
+    utils::xml::xml_sub_sys::run_parser(handler, file, false, false, false, true).unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
 /// Obtains edge travel times from a weights handler and stores them within the edges
@@ -104,6 +99,12 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
 
 }
 
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime {
+    fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
+        ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime::add_edge_weight(self, id, val, beg, end)
+    }
+}
+
 /// Obtains edge weights from a weights handler and stores them within the edges
 /// C++ class `ROLoader::EdgeFloatTimeLineRetriever_EdgeWeight` (router/ROLoader.h)
 #[repr(C)]
@@ -178,6 +179,12 @@ impl ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
         }
     }
 
+}
+
+impl utils::xml::saxweights_handler::EdgeFloatTimeLineRetriever for ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight {
+    fn add_edge_weight(&self, id: &str, val: f64, beg: f64, end: f64) {
+        ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight::add_edge_weight(self, id, val, beg, end)
+    }
 }
 
 /// The data loader.
@@ -296,7 +303,13 @@ impl ROLoader {
         let tlsPenalty = if opts.exists("weights.tls-penalty") { opts.get_float("weights.tls-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
         let turnaroundPenalty = if opts.exists("weights.turnaround-penalty") { opts.get_float("weights.turnaround-penalty").unwrap_or_else(|e| panic!("{e}")) } else { 0. };
         let mut handler = RONetHandler::new(toFill, eb, ignoreInternal, minorPenalty, tlsPenalty, turnaroundPenalty);
-        run_net_parser_unwired(&mut handler, &file);
+        utils::common::msg_handler::progress_begin_message("Loading net");
+        if !run_net_parser(&mut handler, &file, true) {
+            utils::common::msg_handler::progress_failed_message();
+            panic!("{}", ProcessError::default_msg());
+        } else {
+            utils::common::msg_handler::progress_done_message();
+        }
         if !utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner()).is_empty() {
             let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner());
             let names = utils::common::to_string::to_string_prec(&*seen, utils::common::std_defs::g_precision());
@@ -309,8 +322,13 @@ impl ROLoader {
                 if !utils::common::file_helpers::is_readable(fileIt) {
                     panic!("The additional file '{}' is not accessible.", fileIt);
                 }
-                // shortcut: PROGRESS_BEGIN/DONE status lines are not printed, progress reporting is not ported
-                run_net_parser_unwired(&mut handler, fileIt);
+                utils::common::msg_handler::progress_begin_message(&format!("Loading additional file '{}' ", fileIt));
+                if !run_net_parser(&mut handler, fileIt, false) {
+                    utils::common::msg_handler::progress_failed_message();
+                    panic!("{}", ProcessError::default_msg());
+                } else {
+                    utils::common::msg_handler::progress_done_message();
+                }
             }
         }
         if opts.exists("junction-taz") && utils::options::options_cont::get_bool("junction-taz") {
@@ -381,8 +399,32 @@ impl ROLoader {
         if !self.myOptions.is_usable_file_list(optionName).unwrap_or_else(|e| panic!("{e}")) {
             return false;
         }
-        // shortcut: SAXWeightsHandler and its ToRetrieveDefinition are not ported, the weight files cannot be parsed yet
-        run_weights_parser_unwired(optionName);
+        // build and prepare the weights handler
+        let mut ttRetriever = ROLoader_EdgeFloatTimeLineRetriever_EdgeTravelTime::new(net);
+        let mut eRetriever = ROLoader_EdgeFloatTimeLineRetriever_EdgeWeight::new(net);
+        //  travel time, first (always used)
+        let mut retrieverDefs = vec![utils::xml::saxweights_handler::ToRetrieveDefinition::new("traveltime", !useLanes, &mut ttRetriever)];
+        //  the measure to use, then
+        if measure != "traveltime" {
+            let mut umeasure = measure.to_string();
+            if measure == "CO" || measure == "CO2" || measure == "HC" || measure == "PMx" || measure == "NOx" || measure == "fuel" || measure == "electricity" {
+                umeasure = format!("{}_perVeh", measure);
+            }
+            retrieverDefs.push(utils::xml::saxweights_handler::ToRetrieveDefinition::new(&umeasure, !useLanes, &mut eRetriever));
+        }
+        //  set up handler
+        let mut handler = utils::xml::saxweights_handler::SAXWeightsHandler::new(retrieverDefs, "");
+        // go through files
+        let files: Vec<String> = self.myOptions.get_string_vector(optionName).unwrap_or_else(|e| panic!("{e}")).clone();
+        for fileIt in files.iter() {
+            progress_begin_message(&format!("Loading precomputed net weights from '{}'", fileIt));
+            if utils::xml::xml_sub_sys::run_parser(&mut handler, fileIt, false, false, false, true).unwrap_or_else(|e| panic!("{e}")) {
+                progress_done_message();
+            } else {
+                write_message("failed.");
+                return false;
+            }
+        }
         // build edge-internal time lines
         for (_, edge) in net.get_edge_map().iter() {
             edge.m().build_time_lines(measure, boundariesOverride);
@@ -433,7 +475,7 @@ impl ROLoader {
             self.myLoaders.load_next(begin);
             if !net.further_stored() {
                 if error_informed() {
-                    panic!("{}", "");
+                    panic!("{}", ProcessError::default_msg());
                 } else if !net.have_skipped_routes() {
                     let error = "No route input specified or all routes were invalid.";
                     if utils::options::options_cont::get_bool("ignore-errors") {
@@ -597,8 +639,10 @@ impl ROLoader {
                 }
             };
             if readAll {
-                // shortcut: RORouteHandler does not implement SaxHandler yet, so the file cannot be parsed here
-                run_route_parser_unwired(handler, fileIt);
+                if !run_route_parser(handler.m(), fileIt) {
+                    write_errorf!("Loading of % failed.", fileIt);
+                    return false;
+                }
             } else {
                 self.myLoaders.add(Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoader::new(Ptr::new(&handler.base))))));
             }

@@ -1,0 +1,1 @@
+--end 120 --device.ssm.probability 1 --device.ssm.measures TTC,DRAC --device.ssm.thresholds 4,3 --device.ssm.range 150 --device.ssm.extratime 5 --device.ssm.trajectories true

@@ -60,11 +60,16 @@ pub fn ch_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRo
     Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().prohibit(toProhibit)
 }
 
+pub fn ch_supports_prohibitions<E: RouterEdge<V>, V: RouterVehicle>(base: &SUMOAbstractRouter<E, V>) -> bool {
+    Ptr::new(base).cast::<CHRouter<E, V>>().m().supports_prohibitions()
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
     /// Installs this router's compute and prohibit into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(ch_compute::<E, V>);
         self.base.myProhibit = Some(ch_prohibit::<E, V>);
+        self.base.mySupportsProhibitions = Some(ch_supports_prohibitions::<E, V>);
         self
     }
 }

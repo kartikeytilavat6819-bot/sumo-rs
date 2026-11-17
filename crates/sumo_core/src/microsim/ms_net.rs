@@ -2288,7 +2288,7 @@ impl MSNet {
         }
 
         // write ToC output
-        for dev in MSDevice_ToC::get_instances().iter() {
+        for dev in MSDevice_ToC::get_instances().values() {
             if dev.m().generates_output() {
                 dev.m().write_output();
             }

@@ -208,6 +208,7 @@ static MS_MEAN_DATA_HARMONOISE_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: MSMeanData::open_interval_base,
     write_prefix: MSMeanData::write_prefix_base,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: harmonoise_mean_data_detector_update,
 };
 
 fn harmonoise_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
@@ -237,6 +238,10 @@ fn harmonoise_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length:
 
 fn harmonoise_mean_data_get_attribute_names(m: &MSMeanData) -> Vec<String> {
     Ptr::new(m).cast::<MSMeanData_Harmonoise>().m().get_attribute_names()
+}
+
+fn harmonoise_mean_data_detector_update(m: &mut MSMeanData, step: SUMOTime) {
+    Ptr::from_mut(m).cast::<MSMeanData_Harmonoise>().m().detector_update(step)
 }
 
 /// C++ class `MSMeanData_Harmonoise` (microsim/output/MSMeanData_Harmonoise.h)
@@ -303,7 +308,7 @@ impl MSMeanData_Harmonoise {
     // }
     #[allow(unused_variables)]
     pub fn detector_update(&mut self, step: SUMOTime) {
-        self.base.detector_update(step);
+        self.base.detector_update_base(step);
         for lm in &self.myMeasures {
             for j in lm {
                 // virtual (*j)->update(): lane values run the harmonoise override, trackers the base no-op
