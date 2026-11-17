@@ -29,6 +29,12 @@ fn rail_get_model_id(m: &MSCFModel) -> i32 {
 fn rail_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
     cf_cast::<MSCFModel_Rail>(m).duplicate(vtype)
 }
+fn rail_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_Rail_RailVehicleVariables) }.save_state(out, m)
+}
+fn rail_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_Rail_RailVehicleVariables) }.load_state(attrs)
+}
 fn rail_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
     cf_cast::<MSCFModel_Rail>(m).create_vehicle_variables()
 }
@@ -62,6 +68,8 @@ pub const RAIL_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: rail_get_model_id,
     duplicate: rail_duplicate,
     create_vehicle_variables: rail_create_vehicle_variables,
+    save_vehicle_variables: rail_save_vehicle_variables,
+    load_vehicle_variables: rail_load_vehicle_variables,
     max_next_speed: rail_max_next_speed,
     min_next_speed: rail_min_next_speed,
     min_next_speed_emergency: rail_min_next_speed_emergency,
