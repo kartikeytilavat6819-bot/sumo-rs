@@ -1,0 +1,9 @@
+<routes>
+    <!-- trips/flows using junction TAZs created at net-load time by the junction-taz simulation option -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <trip id="j0" type="car" depart="0" fromJunction="n0" toJunction="n4" departSpeed="max"/>
+    <trip id="j1" type="car" depart="4" fromJunction="n0" toJunction="n2" departSpeed="max"/>
+    <flow id="jf" type="car" begin="10" end="50" period="10" fromJunction="n0" toJunction="n3" departSpeed="max"/>
+    <trip id="j2" type="car" depart="8" from="A" toJunction="n3" departSpeed="max"/>
+    <trip id="j3" type="car" depart="12" fromJunction="n1" to="D" departSpeed="max"/>
+</routes>

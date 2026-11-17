@@ -1,0 +1,17 @@
+<routes>
+    <!-- person-triggered stops with expected / permitted / line / onDemand / arrival / extension,
+         plus a jump stop with an explicit index -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" personCapacity="3"/>
+    <route id="r" edges="A B C D"/>
+    <vehicle id="p0" type="car" route="r" depart="0" departSpeed="max">
+        <stop lane="B_0" endPos="150" duration="5" triggered="person" expected="ghost" permitted="ghost" line="L1" arrival="20" extension="5"/>
+    </vehicle>
+    <vehicle id="p1" type="car" route="r" depart="10" departSpeed="max">
+        <stop lane="B_0" endPos="200" duration="5" triggered="person" onDemand="true" line="L2"/>
+    </vehicle>
+    <vehicle id="p2" type="car" route="r" depart="20" departSpeed="max">
+        <stop lane="C_0" endPos="150" duration="5" jump="true" index="0"/>
+        <stop lane="D_0" endPos="150" duration="5"/>
+    </vehicle>
+    <vehicle id="p3" type="car" route="r" depart="30" departSpeed="max"/>
+</routes>

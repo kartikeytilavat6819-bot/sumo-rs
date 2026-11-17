@@ -1,0 +1,26 @@
+<routes>
+    <!-- triggered / expected / parking / extension stop combinations -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="E0 E1 E2"/>
+    <vehicle id="v1" type="car" depart="0" route="r">
+        <stop lane="E1_1" endPos="120" triggered="person" expected="p1 p2" duration="3" parking="true"/>
+    </vehicle>
+    <vehicle id="v2" type="car" depart="2" route="r">
+        <stop lane="E2_1" startPos="80" endPos="130" parking="opportunistic" until="60" extension="8"/>
+    </vehicle>
+    <vehicle id="v3" type="car" depart="4" route="r">
+        <stop lane="E1_1" endPos="100" triggered="person" duration="2" extension="5"/>
+    </vehicle>
+    <person id="p1" depart="2" departPos="20">
+        <walk edges="E0" arrivalPos="40"/>
+        <ride from="E1" to="E2" lines="v1"/>
+    </person>
+    <person id="p2" depart="5" departPos="10">
+        <walk edges="E0 E1" arrivalPos="118"/>
+        <ride from="E1" to="E2" lines="v1"/>
+    </person>
+    <person id="p3" depart="10" departPos="10">
+        <walk edges="E0 E1" arrivalPos="98"/>
+        <ride from="E1" to="E2" lines="v3"/>
+    </person>
+</routes>

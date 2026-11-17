@@ -1,0 +1,8 @@
+<routes>
+    <!-- trip/flow fromJunction, toJunction and viaJunctions with the junction-taz option -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <trip id="j0" type="car" depart="0" fromJunction="n0" toJunction="n4" departSpeed="max"/>
+    <trip id="j1" type="car" depart="5" fromJunction="n1" toJunction="n3" departSpeed="max"/>
+    <trip id="j2" type="car" depart="10" fromJunction="n0" toJunction="n4" viaJunctions="n2 n3" departSpeed="max"/>
+    <flow id="jf" type="car" begin="15" end="60" period="10" fromJunction="n0" toJunction="n4" departSpeed="max"/>
+</routes>

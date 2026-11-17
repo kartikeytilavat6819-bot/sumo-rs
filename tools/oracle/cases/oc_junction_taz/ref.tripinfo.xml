@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T14:24:40.499333-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/oc_junction_taz/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/oc_junction_taz/routes.rou"/>
+        <junction-taz value="true"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_junction_taz/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_junction_taz/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc04/tools/oracle/cases/oc_junction_taz/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="90"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="j1" depart="4.00" departLane="A_0" departPos="5.10" departSpeed="12.23" departDelay="0.00" arrival="56.00" arrivalLane="B_0" arrivalPos="300.00" arrivalSpeed="11.03" duration="52.00" routeLength="595.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.07" rerouteNo="1" devices="tripinfo_j1 routing_j1 fcd_j1" vType="car" speedFactor="0.88" vaporized=""/>
+    <tripinfo id="jf.0" depart="10.00" departLane="A_1" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="78.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="13.03" duration="68.00" routeLength="895.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.01" rerouteNo="1" devices="tripinfo_jf.0 routing_jf.0 fcd_jf.0" vType="car" speedFactor="1.16" vaporized=""/>
+    <tripinfo id="j3" depart="12.00" departLane="B_0" departPos="5.10" departSpeed="13.86" departDelay="0.00" arrival="81.00" arrivalLane="D_0" arrivalPos="300.00" arrivalSpeed="13.08" duration="69.00" routeLength="895.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.52" rerouteNo="1" devices="tripinfo_j3 routing_j3 fcd_j3" vType="car" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="jf.1" depart="20.00" departLane="A_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="88.00" arrivalLane="C_0" arrivalPos="300.00" arrivalSpeed="13.46" duration="68.00" routeLength="895.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.78" rerouteNo="1" devices="tripinfo_jf.1 routing_jf.1 fcd_jf.1" vType="car" speedFactor="1.12" vaporized=""/>
+</tripinfos>
