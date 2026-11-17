@@ -36,6 +36,11 @@ for n in rerouter_parking containers; do
     echo "-- RC01 canLeave:"; grep 'RC01 canLeave' $OUT/$n.ours.log | head -10
     echo "-- RC01 nm 135..205:"; grep 'RC01 nm' $OUT/$n.ours.log | awk '{split($3,a,"="); if (a[2]+0>=135000 && a[2]+0<=205000) print}' | head -30
     echo "-- panics:"; grep -m3 -E 'panicked|msp_model' $OUT/$n.ours.log | cut -c1-200
+  fi
+  if [ "$n" = rerouter_parking ]; then
+    echo "-- RC01 rr:"; grep 'RC01 rr' $OUT/$n.ours.log | head -20
+    grep -E 'id="v[012]"' $OUT/$n.ours.ti.xml | cut -c1-330
+    grep -E 'id="v[012]"' $C/ref.tripinfo.xml | cut -c1-330
     grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
   fi
   echo "-- v2 ref/ours:"; grep 'id="v2"' $C/ref.tripinfo.xml | cut -c1-260; grep 'id="v2"' $OUT/$n.ours.ti.xml | cut -c1-260
