@@ -31,6 +31,12 @@ pub fn msp_model_default_load_state(_m: &mut MSPModel, _transportable: Ptr<MSTra
     Ptr::null()
 }
 
+/// C++ MSPModel::getActiveNumber base implementation (pure virtual)
+fn default_get_active_number(_: &mut MSPModel) -> i32 {
+    panic!("MSPModel::getActiveNumber is pure virtual; call it on a concrete pedestrian model")
+}
+
+
 // C++ static members of MSPModel (port as module-level statics, see AGENTS.md):
 //   static const int MSPModel::FORWARD;
 //   static const int MSPModel::BACKWARD;

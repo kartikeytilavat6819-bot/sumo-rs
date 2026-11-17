@@ -1751,10 +1751,10 @@ impl MSNet {
         }
         self.myDetectorControl.m().close(self.myStep);
         if is_set("queue-output") {
-            // shortcut: MSQueueExport::finish is not ported yet
+            MSQueueExport::finish(&mut device_by_option("queue-output").borrow_mut(), self.myStep);
         }
-        if is_set("stop-output.write-unfinished") && get_bool("stop-output.write-unfinished") {
-            // shortcut: MSStopOut::generateOutputForUnfinished is not ported yet
+        if MSStopOut::active() && get_bool("stop-output.write-unfinished") {
+            MSStopOut::get_instance().m().generate_output_for_unfinished();
         }
         MSDevice_Vehroutes::write_pending_output(get_bool("vehroute-output.write-unfinished"));
         if get_bool("tripinfo-output.write-unfinished") {
@@ -1764,7 +1764,7 @@ impl MSNet {
             if !get_bool("chargingstations-output.aggregated") {
                 self.write_charging_station_output();
             } else if get_bool("chargingstations-output.aggregated.write-unfinished") {
-                // shortcut: MSChargingStationExport::write(..., true) is not ported yet
+                MSChargingStationExport::write(&mut device_by_option("chargingstations-output").borrow_mut(), true);
             }
         }
         if is_set("overheadwiresegments-output") {
