@@ -219,7 +219,8 @@ fn harmonoise_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: 
 }
 
 fn harmonoise_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
-    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+    // C++ MSMeanData_Harmonoise::detectorUpdate override (calls update() on every lane value)
+    Ptr::from_mut(d).cast::<MSMeanData_Harmonoise>().m().detector_update(step)
 }
 
 /// Detector-level dispatch (MSDetectorFileOutput virtuals reached through the base pointer), as in MSMeanData_Emissions
