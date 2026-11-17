@@ -33,7 +33,7 @@ for n in rerouter_parking containers; do
   if [ "$n" = containers ]; then
     echo "-- ref stops:"; stops $C/ref.fcd.xml
     echo "-- ours stops:"; stops $OUT/$n.ours.fcd.xml
-    echo "-- RC01 trace:"; grep RC01 $OUT/$n.ours.log | head -60
+    echo "-- RC01 trace: count nm=$(grep -c 'RC01 nm' $OUT/$n.ours.log) canLeave=$(grep -c 'RC01 canLeave' $OUT/$n.ours.log)"; grep RC01 $OUT/$n.ours.log | grep -v 'myStopped=true hs=true' | head -40; grep RC01 $OUT/$n.ours.log | tail -3
     grep -E 'containerinfo|transport ' $OUT/$n.ours.ti.xml | cut -c1-200 | head -6
   fi
   echo "-- v2 ref/ours:"; grep 'id="v2"' $C/ref.tripinfo.xml | cut -c1-260; grep 'id="v2"' $OUT/$n.ours.ti.xml | cut -c1-260
