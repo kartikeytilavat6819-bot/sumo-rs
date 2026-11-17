@@ -15,20 +15,6 @@ pub fn id_less<T: HasId + ?Sized>(a: &T, b: &T) -> bool {
     a.get_id() < b.get_id()
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn id_comparator_is_bytewise() {
-        let (a, b) = (Named::new("a10"), Named::new("a9"));
-        // "a10" < "a9" as std::string (no numerical ordering)
-        assert!(id_less(&a, &b));
-        assert!(!id_less(&b, &a));
-        assert!(!id_less(&a, &a));
-    }
-}
-
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct Named {
     id: String,
@@ -98,5 +84,14 @@ mod tests {
         n.set_id("b");
         assert_eq!(Named::get_id_secure(Some(&n), "NULL"), "b");
         assert_eq!(Named::get_id_secure::<Named>(None, "NULL"), "NULL");
+    }
+
+    #[test]
+    fn id_comparator_is_bytewise() {
+        let (a, b) = (Named::new("a10"), Named::new("a9"));
+        // "a10" < "a9" as std::string (no numerical ordering)
+        assert!(id_less(&a, &b));
+        assert!(!id_less(&b, &a));
+        assert!(!id_less(&a, &a));
     }
 }
