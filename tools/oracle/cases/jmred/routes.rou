@@ -1,0 +1,10 @@
+<routes>
+    <!-- jmDriveAfterRedTime and jmIgnoreKeepClearTime as vType attributes; flows arrive at the red/green signal n1 -->
+    <vType id="vStd" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="vDar" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" jmDriveAfterRedTime="4.00"/>
+    <vType id="vKc" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" jmIgnoreKeepClearTime="2.00" jmDriveAfterRedTime="0.00"/>
+    <route id="r0" edges="E0 E1"/>
+    <flow id="fStd" type="vStd" route="r0" begin="0.00" end="100.00" period="7.00" departSpeed="max"/>
+    <flow id="fDar" type="vDar" route="r0" begin="2.00" end="100.00" period="7.00" departSpeed="max"/>
+    <flow id="fKc" type="vKc" route="r0" begin="4.00" end="100.00" period="7.00" departSpeed="max"/>
+</routes>
