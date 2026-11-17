@@ -333,14 +333,14 @@ impl MSDevice_Bluelight {
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM), "-1");
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD), "0");
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME), "0");
-            // shortcut: C++ catches InvalidArgument from setParameter; here set_parameter panics with that error, so the panic is caught
+            // not supported by the current laneChangeModel: set_parameter panics with InvalidArgument, which is caught here as in C++
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_MINGAP_LAT), "0")));
         } else {
             // restore defaults
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_STRATEGIC_PARAM), &ego.get_vehicle_type().get_parameter().get_lc_param_string(SUMO_ATTR_LCA_STRATEGIC_PARAM, "1"));
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD), &ego.get_vehicle_type().get_parameter().get_lc_param_string(SUMO_ATTR_LCA_SPEEDGAIN_LOOKAHEAD, "5"));
             ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME), &ego.get_vehicle_type().get_parameter().get_lc_param_string(SUMO_ATTR_LCA_SPEEDGAIN_REMAIN_TIME, "20"));
-            // shortcut: C++ catches InvalidArgument from setParameter; here set_parameter panics with that error, so the panic is caught
+            // not supported by the current laneChangeModel: set_parameter panics with InvalidArgument, which is caught here as in C++
             let minGapLat = f64_to_string(ego.get_vehicle_type().get_min_gap_lat());
             let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| ego.m().get_lane_change_model().set_parameter(sumo_attr_name(SUMO_ATTR_MINGAP_LAT), &minGapLat)));
         }
