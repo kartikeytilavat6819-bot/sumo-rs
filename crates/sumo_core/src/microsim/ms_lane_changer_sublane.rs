@@ -267,7 +267,7 @@ impl MSLaneChangerSublane {
             for ce in self.myChanger.iter() {
                 s += &format!(" L{}:", ce.lane.get_index());
                 for i in 0..ce.ahead.num_sublanes() {
-                    let v = ce.ahead.index_op(i).0;
+                    let v = ce.ahead.index_op(i);
                     if v.is_null() { s += "-/"; } else { s += &format!("{}/", v.get_id()); }
                 }
             }
