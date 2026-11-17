@@ -130,9 +130,17 @@ impl InductionLoop {
     pub fn get_vehicle_data(loopID: &str) -> Vec<TraCIVehicleData> {
         let det = Self::get_detector(loopID);
         let vd = det.collect_vehicles_on_det(MSNet::get_instance().get_current_time_step() - delta_t(), true, true, false, false);
-        let _ = vd;
-        // shortcut: MSInductLoop::VehicleData (idM, lengthM, entryTimeM, leaveTimeM, typeIDM) is not ported; prelude maps VehicleData to phemlight's struct, upgrade when ms_induct_loop defines it
-        panic!("get_vehicle_data: MSInductLoop::VehicleData not ported");
+        let mut tvd: Vec<TraCIVehicleData> = Vec::new();
+        for vdi in vd.iter() {
+            tvd.push(TraCIVehicleData {
+                id: vdi.idM.clone(),
+                length: vdi.lengthM,
+                entryTime: vdi.entryTimeM,
+                leaveTime: vdi.leaveTimeM,
+                typeID: vdi.typeIDM.clone(),
+            });
+        }
+        tvd
     }
 
     /// C++: `double InductionLoop::getIntervalOccupancy(const std::string &)` [static]
@@ -344,9 +352,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn get_parameter(loopID: &str, key: &str) -> String {
-        // shortcut: MSInductLoop has no ported getParameter (MSDetectorFileOutput parameter accessors missing), upgrade when they are ported
-        let _ = (loopID, key);
-        panic!("InductionLoop::getParameter: detector parameters not ported")
+        Self::get_detector(loopID).base2.base2.get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> InductionLoop::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -363,9 +369,7 @@ impl InductionLoop {
     // }
     #[allow(unused_variables)]
     pub fn set_parameter(loopID: &str, key: &str, value: &str) {
-        // shortcut: MSInductLoop has no ported setParameter, upgrade when MSDetectorFileOutput parameter accessors are ported
-        let _ = (loopID, key, value);
-        panic!("InductionLoop::setParameter: detector parameters not ported")
+        Self::get_detector(loopID).m().base2.base2.set_parameter(key, value);
     }
 
     /// C++: `void InductionLoop::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]

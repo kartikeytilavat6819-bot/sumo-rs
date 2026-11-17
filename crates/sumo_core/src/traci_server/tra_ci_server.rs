@@ -1910,7 +1910,13 @@ impl TraCIServer {
 
         MY_DO_CLOSE_CONNECTION.store(false, Ordering::Relaxed);
 
-        // shortcut: C++ warns when internal lanes are off (MSGlobals::gUsingInternalLanes / gUseMesoSim), MSGlobals flags are not ported yet, so this warning is skipped
+        // display warning if internal lanes are not used
+        // TODO this may be redundant to the warning in NLBuilder::build
+        if !crate::microsim::ms_globals::using_internal_lanes() && !crate::microsim::ms_globals::use_meso_sim() {
+            utils::common::msg_handler::write_warning("Starting TraCI without using internal lanes!");
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.inform("Vehicles will jump over junctions.", false));
+            utils::common::msg_handler::with_instance(utils::common::msg_handler::MsgType::Warning, |h| h.inform("Use without option --no-internal-links to avoid unexpected behavior", false));
+        }
         // shortcut: C++ rethrows socket errors as ProcessError, this constructor returns Self so socket errors panic instead, upgrade when the constructor returns Result
         write_message(&format!("***Starting server on port {} ***", port));
         let mut server_socket = Socket::new(port);

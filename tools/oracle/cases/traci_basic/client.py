@@ -13,6 +13,8 @@ import os
 import subprocess
 import sys
 import time
+import xml.etree.ElementTree as ET
+from collections import Counter
 from pathlib import Path
 
 import traci
@@ -78,6 +80,17 @@ def sumo_command(side, port, net, rou, ours, extra=()):
 
 # the tripinfo device exists only when tripinfo-output or duration-log.statistics is set (C++ buildVehicleDevices)
 TRIPINFO_PROBE = "vehicle.getParameter(v0, device.tripinfo.waitingTime)"
+
+
+STATE_PROBE_FILE = os.environ.get("TRACI_STATE_FILE", "traci_probe_state.xml")
+
+
+def save_load_probe(t):
+    t.simulation.saveState(STATE_PROBE_FILE)
+    tags = sorted(Counter(el.tag for el in ET.parse(STATE_PROBE_FILE).getroot().iter()).items())
+    t.simulation.loadState(STATE_PROBE_FILE)
+    t.simulationStep(11)
+    return (t.simulation.getTime(), sorted(t.vehicle.getIDList()), tags)
 
 
 def probes(lane, tl_id):
@@ -597,6 +610,13 @@ def probes(lane, tl_id):
         "vehicle.getColor(nope)": lambda t: t.vehicle.getColor("nope"),
         "vehicle.setType(v0, DEFAULT) + getTypeID": set_type,
         "vehicle.setType(v0, nope)": lambda t: t.vehicle.setType("v0", "nope"),
+        "vehicle.changeLane(v0, 0, 1e30) duration range": lambda t: t.vehicle.changeLane("v0", 0, 1e30),
+        "vehicle.slowDown(v0, 3, 1e30) duration range": lambda t: t.vehicle.slowDown("v0", 3.0, 1e30),
+        "vehicle.setAcceleration(v0, 1, 1e30) duration range": lambda t: t.vehicle.setAcceleration("v0", 1.0, 1e30),
+        "vehicle.setBoardingDuration(v0, 1e30) range": lambda t: t.vehicle.setBoardingDuration("v0", 1e30),
+        "vehicletype.setBoardingDuration(DEFAULT, 1e30) range": lambda t: t.vehicletype.setBoardingDuration("DEFAULT_VEHTYPE", 1e30),
+        "vehicle.setRouteID(v0, nope)": lambda t: t.vehicle.setRouteID("v0", "nope"),
+        "vehicle.resume(v0) without stops": lambda t: t.vehicle.resume("v0"),
         "vehicle.changeLane(v0) + step + getLaneID": change_lane_effect,
         "vehicle.subscribe(v0) 3 steps + results": veh_subscribe_3,
         "vehicle.subscribeContext(v0, speed) + step": veh_subscribe_context,
@@ -618,6 +638,7 @@ def probes(lane, tl_id):
         "simulation.getDistance2D(3,4 offset)": sim_distance_2d,
         "simulation.getDeltaT": lambda t: t.simulation.getDeltaT(),
         "simulation.getCurrentTime": lambda t: t.simulation.getCurrentTime(),
+        "simulation.saveState + loadState + step": save_load_probe,
         "trafficlight.setPhase(tl,1) + getPhase": tl_set_phase,
         "trafficlight.setPhaseDuration(tl,7) + step + get": tl_set_phase_duration,
         "trafficlight.getNextSwitch(tl)": lambda t: t.trafficlight.getNextSwitch(tl),

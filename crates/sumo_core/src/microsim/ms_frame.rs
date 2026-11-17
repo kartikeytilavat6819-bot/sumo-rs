@@ -72,29 +72,7 @@ fn st(s: &str) -> utils::common::time::SUMOTime {
     or_panic(utils::common::time::string2time(s))
 }
 
-/// C++ checkStepLengthMultiple (utils/common/SUMOTime.cpp); only emits warnings, its C++ return value is always false
-// shortcut: this function lives in utils/common/SUMOTime.cpp and is not ported there yet, so it is local to MSFrame
-fn check_step_length_multiple(t: utils::common::time::SUMOTime, error: &str, delta_t: utils::common::time::SUMOTime, begin: utils::common::time::SUMOTime) {
-    use utils::common::time::time2string;
-    if begin % delta_t == 0 {
-        if t % delta_t != 0 {
-            utils::common::msg_handler::write_warning(&format!(
-                "The given time value {} is not a multiple of the step length {}{}.",
-                time2string(t),
-                time2string(delta_t),
-                error
-            ));
-        }
-    } else if (t - begin) % delta_t != 0 {
-        utils::common::msg_handler::write_warning(&format!(
-            "The given time value {} is not reached with step length {} and begin time {}{}.",
-            time2string(t),
-            time2string(delta_t),
-            time2string(begin),
-            error
-        ));
-    }
-}
+use utils::common::time::check_step_length_multiple;
 
 impl MSFrame {
     /// C++: `void MSFrame::fillOptions()` [static]

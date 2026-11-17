@@ -264,7 +264,6 @@ impl RouteProbe {
     // }
     #[allow(unused_variables)]
     pub fn get_route_probe(id: &str) -> Ptr<MSRouteProbe> {
-        // shortcut: C++ dynamic_cast is replaced by a cast, valid because only ROUTEPROBE-typed detectors are looked up; MSRouteProbe needs #[repr(C)] (base first), upgrade when ms_route_probe.rs adds it
         let rp = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_ROUTEPROBE).get(id).copied().unwrap_or(Ptr::null()).cast::<MSRouteProbe>();
         if rp.is_null() {
             panic!("{}", format!("Lane area detector '{}' is not known", id));
