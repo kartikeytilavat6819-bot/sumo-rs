@@ -1,0 +1,21 @@
+diff --git a/src/microsim/MSLaneChangerSublane.cpp b/src/microsim/MSLaneChangerSublane.cpp
+index 41e69ee..1768487 100644
+--- a/src/microsim/MSLaneChangerSublane.cpp
++++ b/src/microsim/MSLaneChangerSublane.cpp
+@@ -641,6 +641,16 @@ MSLaneChangerSublane::getLeaders(const ChangerIt& target, const MSVehicle* vehic
+ #endif
+     // @note use the exact same vehiclePos as in getLastVehicleInformation() to avoid missing vehicles
+     target->lane->addLeaders(vehicle, vehicle->getPositionOnLane(vehicle->getLane()), result);
++    if (getenv("LC06_TRACE") != nullptr) {
++        for (int i = 0; i < result.numSublanes(); ++i) {
++            CLeaderDist d = result[i];
++            if (d.first != nullptr) {
++                char buf[64];
++                snprintf(buf, sizeof(buf), "%.6f", d.second);
++                std::cout << "LT " << MSNet::getInstance()->getCurrentTimeStep() << " ego=" << vehicle->getID() << " tl=" << target->lane->getID() << " i=" << i << " veh=" << d.first->getID() << " vl=" << d.first->getLane()->getID() << " gap=" << buf << "\n";
++            }
++        }
++    }
+     return result;
+ }
+ 
