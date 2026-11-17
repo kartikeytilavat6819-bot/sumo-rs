@@ -1909,7 +1909,11 @@ impl MEVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        self.base.get_base_influencer()
+        if self.myInfluencer.is_null() {
+            // shortcut: C++ owns myInfluencer and deletes it in the destructor; Box::leak keeps it alive for the process, upgrade with an owned field
+            self.myInfluencer = Ptr::from_mut(Box::leak(Box::new(MSBaseVehicle_BaseInfluencer::new())));
+        }
+        self.myInfluencer.m()
     }
 
     /// C++: `const BaseInfluencer * MEVehicle::getBaseInfluencer() const` [const, virtual]

@@ -5306,7 +5306,11 @@ impl MSBaseVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        panic!("getBaseInfluencer() is pure virtual in MSBaseVehicle")
+        if MSGlobals::use_meso_sim() {
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().m().get_base_influencer()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().m().get_base_influencer()
+        }
     }
 
     /// C++: `const BaseInfluencer * MSBaseVehicle::getBaseInfluencer() const` [const, virtual, pure virtual]
