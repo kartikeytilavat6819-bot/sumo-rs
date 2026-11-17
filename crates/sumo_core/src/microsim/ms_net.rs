@@ -1,7 +1,7 @@
 //! Port of microsim/MSNet.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::std_defs::{g_routing_preferences, set_g_routing_preferences};
+use utils::common::std_defs::{g_routing_preferences, set_g_routing_preferences, VERSION_STRING};
 use utils::common::time::{delta_t, elapsed_ms2string, steps2time, string2time, time2string, ts};
 use utils::common::to_string::f64_to_string_default;
 use utils::geom::POSITION_EPS;
@@ -30,8 +30,6 @@ const STAGE_INSERTIONS: &str = "insertion";
 const STAGE_REMOTECONTROL: &str = "remoteControl";
 // C++ libsumo ROUTING_MODE_AGGREGATED_CUSTOM (TraCIConstants.h), not in utils::traci yet
 const ROUTING_MODE_AGGREGATED_CUSTOM: i32 = 0x04;
-// shortcut: C++ VERSION_STRING is generated (version.h); same build stamp as crates/sumo/src/main.rs
-const VERSION_STRING: &str = "v1.28.0-0000000000";
 
 /// C++ `new` for a Ptr target that the net owns (freed with delete_ptr)
 fn leak_ptr<T>(v: T) -> Ptr<T> {
