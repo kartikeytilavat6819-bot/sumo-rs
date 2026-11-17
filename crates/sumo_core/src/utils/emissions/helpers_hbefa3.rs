@@ -3,9 +3,7 @@
 use crate::prelude::*;
 use utils::common::string_utils::to_lower_case;
 use utils::geom::geom_helper::{deg2rad, GRAVITY};
-// shortcut: PollutantsInterface::HEAVY_BIT and Helper::ZERO_SPEED_ACCURACY are not Rust consts yet, copied here from PollutantsInterface.h/.cpp
-const HEAVY_BIT: i32 = 1 << 15;
-const HELPER_ZERO_SPEED_ACCURACY: f64 = 0.5;
+use super::pollutants_interface::{HEAVY_BIT, ZERO_SPEED_ACCURACY as HELPER_ZERO_SPEED_ACCURACY};
 
 /// Helper methods for HBEFA3-based emission computation
 /// C++ class `HelpersHBEFA3` (utils/emissions/HelpersHBEFA3.h)
@@ -422,7 +420,7 @@ impl HelpersHBEFA3 {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        // shortcut: StringBijection insert/get throw in C++; they panic here with the same message, upgrade when the emission API returns Result
+        // C++ insert()/get() throw only on a duplicate or missing key; the keys below are distinct constants, so the unwraps cannot fire
         let mut base = PollutantsInterface_Helper::new("HBEFA3".to_string(), HBEFA3_BASE, -1);
         let mut index = HBEFA3_BASE;
         let light: [&str; 33] = [

@@ -1,0 +1,1 @@
+--personinfo-output @OUT@/personinfo.xml --stop-output @OUT@/stop.xml
