@@ -234,13 +234,22 @@ static MSPMODEL_STRIPING_VT: MSPModelVt = MSPModelVt {
     using_internal_lanes: striping_vt_using_internal_lanes,
     get_active_number: striping_vt_get_active_number,
     load_state: striping_vt_load_state,
+    has_pedestrians: striping_vt_has_pedestrians,
+    next_blocking: striping_vt_next_blocking,
 };
+fn striping_vt_has_pedestrians(m: &mut MSPModel, lane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().has_pedestrians(lane)
+}
+fn striping_vt_next_blocking(m: &mut MSPModel, lane: Ptr<MSLane>, minPos: f64, minRight: f64, maxLeft: f64, stopTime: f64, bidi: bool) -> PersonDist {
+    Ptr::from_mut(m).cast::<MSPModel_Interacting>().m().next_blocking(lane, minPos, minRight, maxLeft, stopTime, bidi)
+}
 fn striping_vt_load_state(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, state: &mut std::str::SplitWhitespace<'_>) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_Striping>().m().load_state(t, s, state)
 }
 
 /// PState overrides of the MSTransportableStateAdapter virtual methods (the others come from MSPModel_InteractingState)
 static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_lat_offset: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_lat_offset(),
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: |a, stage, now| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_position(stage, now),
