@@ -19,7 +19,10 @@ python3 - "$OUT" <<'EOF'
 import sys, xml.etree.ElementTree as ET
 O = sys.argv[1]
 def fcd(p):
+    import os
     r = {}
+    if not os.path.exists(p):
+        return r
     for ts in ET.parse(p).getroot().iter("timestep"):
         t = float(ts.get("time"))
         for v in ts.iter("vehicle"):
@@ -47,5 +50,5 @@ for side in ours cpp; do
   echo "== $side load tripinfo 115: $(grep -c 'tripinfo id="115"' $OUT/$side/load.ti.xml) straight: $(grep -c 'tripinfo id="115"' $OUT/$side/straight.ti.xml)"
 done
 echo "== state 115 ours"; grep 'vehicle id="115"' $OUT/ours/s.xml | cut -c1-900
-echo "== state 115 cpp"; grep 'vehicle id="115"' $OUT/cpp/s.xml | cut -c1-900
+echo "== state 115 cpp"; grep 'vehicle id="115"' $OUT/cpp/s.xml 2>/dev/null | cut -c1-900
 echo "AGENT RUN DONE"
