@@ -29,8 +29,10 @@ impl NIVissimNodeDef_Edges {
     //     : NIVissimNodeDef(id, name), myEdges(edges) {}
     #[allow(unused_variables)]
     pub fn new(id: i32, name: &str, edges: &NIVissimNodeParticipatingEdgeVector) -> Self {
+        let mut base = NIVissimNodeDef::new(id, name);
+        base.myKind = NIVissimNodeDefKind::Edges;
         Self {
-            base: NIVissimNodeDef::new(id, name),
+            base,
             myEdges: edges.clone(),
         }
     }

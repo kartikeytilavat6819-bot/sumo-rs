@@ -5,12 +5,21 @@ use crate::prelude::*;
 /// C++ typedef `std::map<int, NIVissimAbstractEdge *> NIVissimAbstractEdge::DictType`
 pub type NIVissimAbstractEdge_DictType = BTreeMap<i32, Ptr<NIVissimAbstractEdge>>;
 
+/// The concrete class an abstract edge was built as; selects the subclass override of the virtual `buildGeom`
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum NIVissimAbstractEdgeKind {
+    Plain,
+    Edge,
+    Connection,
+}
+
 /// C++ class `NIVissimAbstractEdge` (netimport/vissim/tempstructs/NIVissimAbstractEdge.h)
 pub struct NIVissimAbstractEdge {
     pub myID: i32,
     pub myGeom: PositionVector,
     pub myDisturbances: Vec<i32>,
     pub myNode: i32,
+    pub myKind: NIVissimAbstractEdgeKind,
 }
 
 // C++ static members of NIVissimAbstractEdge (port as module-level statics, see AGENTS.md):
@@ -39,7 +48,7 @@ impl NIVissimAbstractEdge {
     /// Subclasses embed the base by value, so they register it once their own Box is allocated.
     #[allow(unused_variables)]
     pub fn new_unregistered(id: i32, geom: &PositionVector) -> Self {
-        let mut s = Self { myID: id, myGeom: PositionVector::default(), myDisturbances: Vec::new(), myNode: -1 };
+        let mut s = Self { myID: id, myGeom: PositionVector::default(), myDisturbances: Vec::new(), myNode: -1, myKind: NIVissimAbstractEdgeKind::Plain };
         // convert/publicate geometry
         for i in geom.iter() {
             let mut p = *i;
@@ -148,7 +157,16 @@ impl NIVissimAbstractEdge {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn set_node_cluster(&mut self, nodeid: i32) {
-        panic!("NIVissimAbstractEdge::setNodeCluster is pure virtual; subclasses implement it")
+        // virtual dispatch, see build_geom
+        match self.myKind {
+            // SAFETY: see build_geom
+            NIVissimAbstractEdgeKind::Edge => unsafe { (*(self as *mut Self as *mut NIVissimEdge)).set_node_cluster(nodeid) },
+            // SAFETY: see build_geom
+            NIVissimAbstractEdgeKind::Connection => unsafe {
+                (*((self as *mut Self as *mut u8).sub(std::mem::offset_of!(NIVissimConnection, base2)) as *mut NIVissimConnection)).set_node_cluster(nodeid)
+            },
+            NIVissimAbstractEdgeKind::Plain => panic!("NIVissimAbstractEdge::setNodeCluster is pure virtual; subclasses implement it"),
+        }
     }
 
     /// C++: `bool NIVissimAbstractEdge::hasNodeCluster() const` [const]
@@ -165,7 +183,16 @@ impl NIVissimAbstractEdge {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn build_geom(&mut self) {
-        panic!("NIVissimAbstractEdge::buildGeom is pure virtual; subclasses implement it")
+        // virtual dispatch: this base is embedded in NIVissimEdge (offset 0) or NIVissimConnection (base2)
+        match self.myKind {
+            // SAFETY: myKind == Edge is only set by NIVissimEdge::new, which embeds this base first (repr(C))
+            NIVissimAbstractEdgeKind::Edge => unsafe { (*(self as *mut Self as *mut NIVissimEdge)).build_geom() },
+            // SAFETY: myKind == Connection is only set by NIVissimConnection::new, which embeds this base as base2
+            NIVissimAbstractEdgeKind::Connection => unsafe {
+                (*((self as *mut Self as *mut u8).sub(std::mem::offset_of!(NIVissimConnection, base2)) as *mut NIVissimConnection)).build_geom()
+            },
+            NIVissimAbstractEdgeKind::Plain => panic!("NIVissimAbstractEdge::buildGeom is pure virtual; subclasses implement it"),
+        }
     }
 
     /// C++: `int NIVissimAbstractEdge::getID() const` [const]
