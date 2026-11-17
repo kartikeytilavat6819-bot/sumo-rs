@@ -126,7 +126,7 @@ impl NIVissimVehTypeClass {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn mean_speed(&self) -> f64 {
-        // shortcut: declared as double meanSpeed() const in NIVissimVehTypeClass.h but never defined in SUMO; upgrade only if SUMO adds a definition.
+        // C++ declares double meanSpeed() const in NIVissimVehTypeClass.h without a definition, so there is no body to port
         panic!("NIVissimVehTypeClass::meanSpeed is declared but not defined in SUMO")
     }
 

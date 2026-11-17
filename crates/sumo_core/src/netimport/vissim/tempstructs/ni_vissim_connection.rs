@@ -63,7 +63,7 @@ impl NIVissimConnection {
             myClosedLanes: clv.clone(),
         });
         NIVissimAbstractEdge::dictionary(id, Ptr::from_mut(&mut b.base2));
-        // shortcut: C++ also inserts this into NIVissimBoundedClusterObject::myDict, which is private to ni_vissim_bounded_cluster_object.rs, so close_loading() never computes this connection's bounding box; upgrade by adding a pub register fn there and calling it here
+        NIVissimBoundedClusterObject::register(Ptr::from_mut(&mut b.base), |o| Ptr::from_mut(o).cast::<NIVissimConnection>().m().compute_bounding());
         b
     }
 

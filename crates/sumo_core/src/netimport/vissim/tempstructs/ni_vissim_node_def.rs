@@ -39,7 +39,7 @@ impl NIVissimNodeDef {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn build_node_cluster(&mut self) -> i32 {
-        // shortcut: C++ declares buildNodeCluster() but never defines it (no body in NIVissimNodeDef.cpp), so SUMO cannot call it either; upgrade only if SUMO adds a definition.
+        // C++ declares buildNodeCluster() without a definition (no body in NIVissimNodeDef.cpp), so there is no body to port
         panic!("NIVissimNodeDef::buildNodeCluster is declared but not defined in SUMO")
     }
 
