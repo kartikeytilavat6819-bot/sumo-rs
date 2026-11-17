@@ -386,9 +386,12 @@ impl MSVehicleControl {
         if let Some(ptVehIt) = self.myPTVehicles.iter().position(|p| *p == veh) {
             self.myPTVehicles.remove(ptVehIt);
         }
-        // `delete veh` runs ~MSBaseVehicle, which calls checkRouteRemoval()
-        // shortcut: C++ `delete veh` is not done, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
+        // `delete veh` runs ~MSVehicle (cleanupParkingReservation, cleanupFurtherLanes), then ~MSBaseVehicle (checkRouteRemoval)
+        // shortcut: C++ `delete veh` frees the vehicle, vehicles are Box::leak'ed by build_vehicle, upgrade when vehicle ownership is Box-based
         if !veh.is_null() {
+            let ms = as_ms_vehicle(veh);
+            ms.m().cleanup_parking_reservation();
+            ms.m().cleanup_further_lanes();
             as_base(veh).m().check_route_removal();
         }
     }
