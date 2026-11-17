@@ -1,0 +1,72 @@
+diff --git a/src/microsim/MSLaneChangerSublane.cpp b/src/microsim/MSLaneChangerSublane.cpp
+index 41e69ee..e77560e 100644
+--- a/src/microsim/MSLaneChangerSublane.cpp
++++ b/src/microsim/MSLaneChangerSublane.cpp
+@@ -34,6 +34,19 @@
+ #include <microsim/lcmodels/MSAbstractLaneChangeModel.h>
+ #include <utils/common/MsgHandler.h>
+ #include <utils/geom/GeomHelper.h>
++#include <cstring>
++#include <cstdio>
++static bool lcOn(const MSVehicle* v) {
++    static const char* t = std::getenv("LCTRACE_ID");
++    return t != nullptr && v->getID() == t;
++}
++static std::string lcBits(double d) {
++    unsigned long long u;
++    std::memcpy(&u, &d, sizeof u);
++    char b[20];
++    std::snprintf(b, sizeof b, "%016llx", u);
++    return b;
++}
+ 
+ 
+ // ===========================================================================
+@@ -117,6 +130,13 @@ MSLaneChangerSublane::change() {
+     myCandi = findCandidate();
+     MSVehicle* vehicle = veh(myCandi);
+     vehicle->getLaneChangeModel().clearNeighbors();
++    if (lcOn(vehicle)) {
++        std::cerr << "LCT " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID()
++                  << " posLat=" << lcBits(vehicle->getLateralPositionOnLane()) << " angle=" << lcBits(vehicle->getAngle())
++                  << " speedLat=" << lcBits(vehicle->getLaneChangeModel().getSpeedLat())
++                  << " manDist=" << lcBits(vehicle->getLaneChangeModel().getManeuverDist())
++                  << " own=" << vehicle->getLaneChangeModel().getOwnState() << " active=" << vehicle->isActive() << "\n";
++    }
+ #ifdef DEBUG_ACTIONSTEPS
+     if (DEBUG_COND) {
+         std::cout << "\n" << SIMTIME << " CHANGE veh=" << vehicle->getID() << " lane=" << vehicle->getLane()->getID() << "\n";
+@@ -303,6 +323,11 @@ MSLaneChangerSublane::checkChangeHelper(MSVehicle* vehicle, int laneOffset, Lane
+                 ? getBestLanesOpposite(vehicle, nullptr, 1000)
+                 : vehicle->getBestLanes());
+         result.state = checkChangeSublane(laneOffset, alternatives, preb, result.latDist, result.maneuverDist);
++        if (lcOn(vehicle)) {
++            std::cerr << "LCT-CH " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID()
++                      << " lo=" << laneOffset << " state=" << result.state << " latDist=" << lcBits(result.latDist)
++                      << " manDist=" << lcBits(result.maneuverDist) << "\n";
++        }
+         result.dir = laneOffset;
+         if ((result.state & LCA_WANTS_LANECHANGE) != 0 && (result.state & LCA_URGENT) != 0 && (result.state & LCA_BLOCKED) != 0) {
+             (myCandi + laneOffset)->lastBlocked = vehicle;
+@@ -326,6 +351,10 @@ MSLaneChangerSublane::continueChangeSublane(MSVehicle* vehicle, ChangerIt& from)
+     }
+     const bool urgent = (vehicle->getLaneChangeModel().getOwnState() & LCA_URGENT) != 0;
+     const double nextLatDist = SPEED2DIST(vehicle->getLaneChangeModel().computeSpeedLat(remLatDist, remLatDist, urgent));
++    if (lcOn(vehicle)) {
++        std::cerr << "LCT-CONT " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID()
++                  << " rem=" << lcBits(remLatDist) << " next=" << lcBits(nextLatDist) << " urgent=" << urgent << "\n";
++    }
+ #ifdef DEBUG_MANEUVER
+     if (DEBUG_COND) {
+         std::cout << SIMTIME << " vehicle '" << vehicle->getID() << "' continueChangeSublane()"
+@@ -344,6 +373,10 @@ MSLaneChangerSublane::startChangeSublane(MSVehicle* vehicle, ChangerIt& from, do
+     if (vehicle->isRemoteControlled()) {
+         return false;
+     }
++    if (lcOn(vehicle)) {
++        std::cerr << "LCT-START " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID()
++                  << " latDist=" << lcBits(latDist) << " manDist=" << lcBits(maneuverDist) << "\n";
++    }
+     MSLane* source = from->lane;
+     // Prevent continuation of LC beyond lane borders if change is not allowed
+     double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
