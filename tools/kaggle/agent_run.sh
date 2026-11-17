@@ -1,6 +1,7 @@
 #!/bin/bash
 # TEMPORARY (agent tr05): TraCI infra probes, C++ vs ours, junction net + infra.add.xml. Removed in the final commit.
 set -u
+python3 -c "import traci" 2>/dev/null || python3 -m pip install -q --break-system-packages traci 2>&1 | tail -2
 cd tools/oracle/cases/traci_basic
 NET=../junction/ref_simple.net.xml; ROU=../junction/routes.rou
 echo "== C++ load of infra.add.xml"
