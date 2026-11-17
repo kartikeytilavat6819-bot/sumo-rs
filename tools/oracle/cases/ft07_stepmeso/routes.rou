@@ -1,0 +1,12 @@
+<routes>
+    <!-- vType actionStepLength 0.5 on one type; the default type uses the global default -->
+    <vType id="asl" carFollowModel="IDM" actionStepLength="0.5" accel="2.0" decel="3.0"/>
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <route id="B" edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <vehicle id="s0" type="asl" route="A" depart="0.00"/>
+    <vehicle id="s1" route="B" depart="1.00"/>
+    <vehicle id="s2" type="asl" route="B" depart="3.00"/>
+    <vehicle id="s3" route="A" depart="5.00"/>
+    <vehicle id="s4" type="asl" route="A" depart="7.00"/>
+    <vehicle id="s5" route="B" depart="9.00"/>
+</routes>
