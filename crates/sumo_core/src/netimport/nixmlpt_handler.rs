@@ -11,12 +11,6 @@ use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_SHIP, SVC_TAXI, get_vehicle
 use utils::options::options_cont::get_bool;
 use utils::xml::sumo_xml_definitions::get_edge_id_from_lane;
 
-/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
-#[allow(clippy::mut_from_ref)]
-fn stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 /// shortcut: SUMOSAXAttributes has no FromAttr impl for RGBColor, so getOpt<RGBColor> is emulated here, upgrade when utils implements FromAttr for RGBColor
 fn get_opt_color(attrs: &SUMOSAXAttributes, attr: i32, objectid: &str, ok: &mut bool) -> RGBColor {
     if !attrs.has_attribute(attr) {
@@ -42,7 +36,7 @@ pub struct NIXMLPTHandler {
     /// The line container (for loading of lines)
     pub myLineCont: Ptr<NBPTLineCont>,
     /// The currently processed stop (None == C++ nullptr; Rc cannot be null)
-    pub myCurrentStop: Option<Rc<NBPTStop>>,
+    pub myCurrentStop: Option<Ptr<NBPTStop>>,
     /// The currently processed line
     pub myCurrentLine: Ptr<NBPTLine>,
     /// The currently processed stand-alone route
@@ -52,7 +46,7 @@ pub struct NIXMLPTHandler {
     /// element to receive parameters
     pub myLastParameterised: Vec<Ptr<Parameterised>>,
     /// stand-alone route information
-    pub myRouteStops: BTreeMap<String, Vec<Rc<NBPTStop>>>,
+    pub myRouteStops: BTreeMap<String, Vec<Ptr<NBPTStop>>>,
     pub myRouteEdges: BTreeMap<String, EdgeVector>,
     /// whether the current stop should be discarded
     pub myCurrentStopWasIgnored: bool,
@@ -218,7 +212,7 @@ impl NIXMLPTHandler {
                     }
                 } else if let Some(stop) = &self.myCurrentStop {
                     let val: String = if attrs.has_attribute(SUMO_ATTR_VALUE) { attrs.get_string(SUMO_ATTR_VALUE) } else { String::new() };
-                    stop_mut(stop).set_parameter(&key, &val);
+                    stop.m().set_parameter(&key, &val);
                 }
             }
             _ => {}
@@ -436,9 +430,9 @@ impl NIXMLPTHandler {
                 }
             }
             let pos: Position = edge.geometry_position_at_offset((startPos + endPos) / 2.);
-            let stopRc: Rc<NBPTStop> = Rc::new(NBPTStop::new(element, id.clone(), pos, edgeID.clone(), edgeID.clone(), endPos - startPos, name.clone(), permissions, parkingLength, color, startPos));
+            let stopRc: Ptr<NBPTStop> = Ptr::from_raw(Box::into_raw(Box::new(NBPTStop::new(element, id.clone(), pos, edgeID.clone(), edgeID.clone(), endPos - startPos, name.clone(), permissions, parkingLength, color, startPos))));
             self.myCurrentStop = Some(stopRc.clone());
-            let stop: &mut NBPTStop = stop_mut(&stopRc);
+            let stop: &mut NBPTStop = stopRc.m();
             while !self.myEdgeCont.get_split(edge).is_null() {
                 stop.reset_loaded();
                 let split: (Ptr<NBEdge>, Ptr<NBEdge>) = *self.myEdgeCont.get_split(edge);
@@ -646,7 +640,7 @@ impl NIXMLPTHandler {
         let pos: f64 = attrs.get::<f64>(SUMO_ATTR_POSITION, "access", &mut ok, true);
         let length: f64 = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, "access", &mut ok, -1., true);
         if ok {
-            stop_mut(&stop).add_access(laneID, pos, length);
+            stop.m().add_access(laneID, pos, length);
         }
     }
 
@@ -769,7 +763,7 @@ impl NIXMLPTHandler {
             // operator[] default-inserts an empty entry for a missing route, as in C++
             let edges: EdgeVector = self.myRouteEdges.entry(route.clone()).or_default().clone();
             self.myCurrentLine.m().set_edges(&edges);
-            let stops: Vec<Rc<NBPTStop>> = self.myRouteStops.entry(route.clone()).or_default().clone();
+            let stops: Vec<Ptr<NBPTStop>> = self.myRouteStops.entry(route.clone()).or_default().clone();
             for stop in stops {
                 self.myCurrentLine.m().add_pt_stop(stop);
             }

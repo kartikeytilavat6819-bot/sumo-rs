@@ -154,8 +154,8 @@ fn ms_container_get_angle(o: &SUMOTrafficObject) -> f64 {
 fn ms_container_has_arrived(o: &SUMOTrafficObject) -> bool {
     ms_container_of(o).has_arrived()
 }
-fn ms_container_get_device(o: &SUMOTrafficObject, type_: &Unmapped) -> Ptr<MSDevice> {
-    ms_container_of(o).get_device(type_)
+fn ms_container_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    ms_container_of(o).get_device(kind)
 }
 fn ms_container_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
     ms_container_of_mut(o).replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
@@ -851,7 +851,8 @@ impl MSTransportable {
     //     }
     #[allow(unused_variables)]
     pub fn get_chosen_speed_factor(&self) -> f64 {
-        1.
+        // MSPerson overrides getChosenSpeedFactor(); containers keep the base value 1
+        if self.is_person() { self.base.get_chosen_speed_factor() } else { 1. }
     }
 
     /// C++: `MSStageType MSTransportable::getCurrentStageType() const` [const]
@@ -1759,8 +1760,13 @@ impl MSTransportable {
     //     return nullptr;
     // }
     #[allow(unused_variables)]
-    pub fn get_device(&self, type_: &Unmapped /* std::type_info */) -> Ptr<MSDevice> {
-        // shortcut: typeid(*dev) == type cannot be checked (std::type_info is Unmapped), returns no device until device type ids are ported
+    pub fn get_device(&self, kind: &str) -> Ptr<MSDevice> {
+        for dev in self.myDevices.iter() {
+            if dev.base.device_name() == kind {
+                // MSDevice is the first base of MSTransportableDevice, so the upcast keeps the address
+                return dev.cast::<MSDevice>();
+            }
+        }
         Ptr::null()
     }
 

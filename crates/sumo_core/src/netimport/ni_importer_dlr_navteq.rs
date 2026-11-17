@@ -1931,7 +1931,7 @@ impl NIImporter_DlrNavteq_TrafficlightsHandler {
                 // @note. There may be additional information somewhere in the GDF files about traffic light type ...
                 let type_ = must(TrafficLightTypes.get(&get_string("tls.default-type")));
                 // @note actually we could use the navteq node ID here
-                let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(node.get_id(), node, 0, type_)));
+                let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(node.get_id(), node, 0, type_));
                 let tlDef = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
                 node.m().add_traffic_light(tlDef);
                 if !self.myTLLogicCont.m().insert(tlDef, false) {
