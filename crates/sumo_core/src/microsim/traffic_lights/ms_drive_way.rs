@@ -2153,12 +2153,15 @@ impl MSDriveWay {
         // add driveways that reverse along this driveways route
         dwm.add_reversal_foes(moving_block);
         // make foes unique and symmetrical
-        // determinism: C++ orders uniqueFoes by driveway numerical id (ComparatorNumericalIdLess) while the
-        // BTreeSet here orders by pointer address.
-        let unique_foes: BTreeSet<Ptr<MSDriveWay>> = dwm.myFoes.iter().copied().collect();
+        // determinism: std::set<MSDriveWay*, ComparatorNumericalIdLess> keeps the first driveway per numerical id
+        // and iterates in numerical id order (this drives the sub-driveway ids "<parent>.<n>")
+        let mut unique_foes: BTreeMap<i32, Ptr<MSDriveWay>> = BTreeMap::new();
+        for f in dwm.myFoes.iter().copied() {
+            unique_foes.entry(f.get_numerical_id()).or_insert(f);
+        }
         dwm.myFoes.clear();
         // check for self-intersecting forward-section in movingBlock mode
-        if moving_block && !unique_foes.contains(&dw) {
+        if moving_block && !unique_foes.contains_key(&dw.get_numerical_id()) {
             let mut forward_junctions: BTreeMap<Ptr<MSJunction>, Vec<Ptr<MSLink>>> = BTreeMap::new();
             let i_last = dwm.myForward.len() as i32 - 1;
             let mut self_intersect = false;
@@ -2192,7 +2195,7 @@ impl MSDriveWay {
         }
         let mut unique_c_link: BTreeSet<Ptr<MSLink>> = dwm.myConflictLinks.iter().copied().collect();
         let last_edge = Ptr::new(dwm.myForward.last().unwrap().get_edge());
-        for &foe in unique_foes.iter() {
+        for &foe in unique_foes.values() {
             let foe_last_edge = Ptr::new(foe.myForward.last().unwrap().get_edge());
             let same_last = foe_last_edge == last_edge;
             if same_last && !moving_block {
@@ -2240,7 +2243,7 @@ impl MSDriveWay {
             // every driveway is it's own foe (also all driveways that depart in the same block)
             let same_ends = MY_ENDING_DRIVEWAYS.with(|m| m.borrow().get(&last_edge).cloned().unwrap_or_default());
             for same_end in same_ends.iter() {
-                if !unique_foes.contains(same_end) {
+                if !unique_foes.contains_key(&same_end.get_numerical_id()) {
                     dwm.myFoes.push(*same_end);
                     if *same_end != dw {
                         same_end.m().myFoes.push(dw);
