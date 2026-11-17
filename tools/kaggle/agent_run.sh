@@ -10,15 +10,21 @@ python - "$F" <<'EOF'
 import sys
 p = sys.argv[1]
 s = open(p, 'rb').read().decode()
-nl = '\r\n' if '\r\n' in s else '\n'
-a = '#include "MSRailCrossing.h"' + nl
-assert s.count(a) == 1
-s = s.replace(a, a + '#include <iostream>' + nl + '#include <cstdlib>' + nl)
-b = '    //if (getID() == "cluster_1088529493_1260626727")'
-assert s.count(b) == 1
-t = '    if (getenv("RX01") != nullptr) { std::cerr << "RX01 upd t=" << now << " step=" << myStep << " stayRed=" << stayRedUntil << "\\n"; for (const MSLink* const l : myIncomingRailLinks) for (const auto& it : l->getApproaching()) std::cerr << "RX01  apv " << it.first->getID() << " arr=" << it.second.arrivalTime << " leave=" << it.second.leavingTime << " dist=" << it.second.dist << "\\n"; }' + nl
-s = s.replace(b, t + b)
-open(p, 'wb').write(s.encode())
+crlf = '\r\n' in s
+L = s.split('\n')
+def at(pred, what):
+    idx = [i for i, l in enumerate(L) if pred(l.strip())]
+    if len(idx) != 1:
+        print('ANCHOR', what, len(idx)); [print('  ', i, repr(l)) for i, l in enumerate(L) if 'stayRedUntil' in l or 'MSRailCrossing.h' in l]
+        sys.exit(1)
+    return idx[0]
+e = '\r' if crlf else ''
+i = at(lambda l: l == '#include "MSRailCrossing.h"', 'include')
+L[i+1:i+1] = ['#include <iostream>' + e, '#include <cstdlib>' + e]
+j = at(lambda l: l == 'const SUMOTime wait = stayRedUntil - now;', 'wait')
+t = '    if (getenv("RX01") != nullptr) { std::cerr << "RX01 upd t=" << now << " step=" << myStep << " stayRed=" << stayRedUntil << "\\n"; for (const MSLink* const l : myIncomingRailLinks) for (const auto& it : l->getApproaching()) std::cerr << "RX01  apv " << it.first->getID() << " arr=" << it.second.arrivalTime << " leave=" << it.second.leavingTime << " dist=" << it.second.dist << "\\n"; }' + e
+L[j:j] = [t]
+open(p, 'wb').write('\n'.join(L).encode())
 print('patched', p)
 EOF
 (cd $D/build && make -j8 sumo > $O/cppbuild.log 2>&1); CPP=$D/bin/sumo
