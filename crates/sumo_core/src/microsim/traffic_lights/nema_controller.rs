@@ -565,7 +565,7 @@ impl NEMALogic {
         self.construct_timing_and_phase_defs(&mut barriers, &mut coordinates, &mut ring1, &mut ring2);
 
         //init the traffic light
-        MSTrafficLightLogic::init(&mut self.base.base, nb);
+        MSTrafficLightLogic::init_base(&mut self.base.base, nb);
         assert!(!self.myLanes.is_empty());
         //iterate through the lanes and build one E2 detector for each lane associated with the traffic light control junction
         let lanes_all = self.myLanes.clone();
