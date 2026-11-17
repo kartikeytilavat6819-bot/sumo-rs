@@ -6632,16 +6632,8 @@ impl MSLane {
             // get the lane with the "straightest" connection
             if !pred.is_empty() {
                 let sorter = MSLane_by_connections_to_sorter::new(self.myEdge);
-                // determinism: std::sort is unstable, ties may be ordered differently than in C++
-                pred.sort_by(|a, b| {
-                    if sorter.call_op(*a, *b) != 0 {
-                        std::cmp::Ordering::Less
-                    } else if sorter.call_op(*b, *a) != 0 {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+                utils::common::std_sort::std_sort(pred.as_mut_slice(), |a, b| sorter.call_op(a, b) != 0);
                 let best = pred[0];
                 let j = self.myIncomingLanes.iter().find(|ili| MSLane_edge_finder::new(best).call_op(ili)).unwrap();
                 self.myLogicalPredecessorLane.set(j.lane);
@@ -6787,15 +6779,11 @@ impl MSLane {
             return Ptr::null();
         }
         // myCanonicalSuccessorLane has not yet been determined and there exist outgoing links
-        // determinism: C++ std::sort leaves the order of equal links unspecified, the first best link is used here
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let sorter = MSLane_outgoing_lane_priority_sorter::new(Ptr::new(self));
-        let mut best = 0;
-        for i in 1..self.myLinks.len() {
-            if sorter.call_op(self.myLinks[i], self.myLinks[best]) != 0 {
-                best = i;
-            }
-        }
-        let bestLane = self.myLinks[best].get_via_lane_or_lane();
+        let mut candidateLinks: Vec<Ptr<MSLink>> = self.myLinks.clone();
+        utils::common::std_sort::std_sort(candidateLinks.as_mut_slice(), |a, b| sorter.call_op(a, b) != 0);
+        let bestLane = candidateLinks[0].get_via_lane_or_lane();
         self.myCanonicalSuccessorLane.set(bestLane);
         bestLane
     }

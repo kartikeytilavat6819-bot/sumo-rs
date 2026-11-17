@@ -1185,17 +1185,9 @@ impl ODMatrix {
     // }
     #[allow(unused_variables)]
     pub fn sort_by_begin_time(&mut self) {
-        // determinism: C++ std::sort is unstable; cells equal in (begin, origin, destination) may end up in a different order
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
         let cmp = ODMatrix_cell_by_begin_comparator::new();
-        self.myContainer.sort_by(|a, b| {
-            if cmp.call_op(*a, *b) != 0 {
-                Ordering::Less
-            } else if cmp.call_op(*b, *a) != 0 {
-                Ordering::Greater
-            } else {
-                Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(self.myContainer.as_mut_slice(), |a, b| cmp.call_op(a, b) != 0);
     }
 
     /// C++: `SUMOTime ODMatrix::getBegin() const` [const]
