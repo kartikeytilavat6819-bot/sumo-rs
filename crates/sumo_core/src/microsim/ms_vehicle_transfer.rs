@@ -286,7 +286,11 @@ impl MSVehicleTransfer {
                 // handle parking vehicles
                 desc.myVeh.m().set_idling(true);
                 let lane = desc.myVeh.get_mutable_lane();
-                if lane.m().is_insertion_success(desc.myVeh, 0.0, departPos, desc.myVeh.get_lateral_position_on_lane(), false, MSMoveReminder_Notification::NOTIFICATION_PARKING) {
+                let insOk = lane.m().is_insertion_success(desc.myVeh, 0.0, departPos, desc.myVeh.get_lateral_position_on_lane(), false, MSMoveReminder_Notification::NOTIFICATION_PARKING);
+                if std::env::var_os("TX02_TRACE").is_some() && desc.myVeh.get_id() == "taxi0" {
+                    eprintln!("TX02 park t={} lane={} pos={:.6} ok={}", time, lane.get_id(), departPos, insOk);
+                }
+                if insOk {
                     MSNet::get_instance().m().inform_vehicle_state_listener(Ptr::from_mut(&mut desc.myVeh.m().base.base), MSNet_VehicleState::ENDING_PARKING, "");
                     lane.m().remove_parking(Ptr::from_mut(&mut desc.myVeh.m().base));
                     // at this point we are in the lane, blocking traffic & if required we configure the exit manoeuvre

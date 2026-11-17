@@ -1775,6 +1775,9 @@ impl MSLane {
         // get the pointer to the vehicle next in front of the given position
         let leaders = self.get_last_vehicle_information(aVehicle, 0., pos, true, Ptr::default());
         let nspeed = self.safe_insertion_speed(aVehicle, -pos, &leaders, speed);
+        if std::env::var_os("TX02_TRACE").is_some() && aVehicle.get_id() == "taxi0" {
+            eprintln!("TX02 ins t={} lane={} pos={:.6} speed={:.6} leaders={} nspeed={:.6}", MSNet::get_instance().get_current_time_step(), self.get_id(), pos, speed, leaders.to_string(), nspeed);
+        }
         if nspeed == INVALID_SPEED || self.check_failure(aVehicle, &mut speed, &mut dist, nspeed, patchSpeed, String::new(), InsertionCheck::LEADER_GAP) {
             // we may not drive with the given velocity - we crash into the leader
             return false;
