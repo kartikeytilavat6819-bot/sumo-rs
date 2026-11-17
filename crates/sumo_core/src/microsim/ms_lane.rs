@@ -8964,7 +8964,7 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn has_approaching_2(&self, links: &Vec<Ptr<MSLink>>) -> bool {
-        // shortcut: C++ declares this overload but never defines or calls it; it mirrors hasApproaching() over the given links
+        // C++ declares this overload but never defines or calls it; it mirrors hasApproaching() over the given links
         for link in links.iter() {
             if link.get_approaching_2().len() > 0 {
                 return true;
