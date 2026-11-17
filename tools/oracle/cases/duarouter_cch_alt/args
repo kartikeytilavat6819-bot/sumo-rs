@@ -1,0 +1,1 @@
+--route-files tools/oracle/cases/duarouter_alt_gawron/alts.rou.alt.xml --weight-files tools/oracle/cases/duarouter_alt_gawron/weights.xml --weight-attribute traveltime --route-choice-method gawron --seed 7 --routing-algorithm CCH --output-file @DIR@/routes.rou.xml

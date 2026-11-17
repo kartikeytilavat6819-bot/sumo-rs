@@ -21,6 +21,10 @@ pub fn wrapper_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstra
     Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
 }
 
+pub fn wrapper_set_msg_handler<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, errorMsgHandler: Ptr<MsgHandler>) {
+    Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().set_msg_handler(errorMsgHandler)
+}
+
 pub fn wrapper_prohibit<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, toProhibit: &SUMOAbstractRouter_Prohibitions) {
     Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().prohibit(toProhibit)
 }
@@ -64,6 +68,8 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouterWrapper<E, V> {
         self.base.myCompute = Some(wrapper_compute::<E, V>);
         self.base.myProhibit = Some(wrapper_prohibit::<E, V>);
         self.base.mySupportsProhibitions = Some(wrapper_supports_prohibitions::<E, V>);
+        self.base.mySetMsgHandler = Some(wrapper_set_msg_handler::<E, V>);
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<CHRouterWrapper<E, V>>().m().clone());
         self
     }
 

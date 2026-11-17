@@ -256,8 +256,18 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
             leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), SVC_IGNORING, weightPeriod, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CHWrapper" || routingAlgorithm == "CH" {
             leak_router(CHRouterWrapper::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), begin, end, weightPeriod, net.has_permissions(), oc.get_int("routing-threads").unwrap()).with_compute())
+        } else if routingAlgorithm == "CCH" {
+            // One weight-independent hierarchy over the union graph; one customized metric per
+            // (vehicle type, weight period), built lazily on first query (see ROCCHMetrics)
+            let hasWeights = oc.is_set("weight-files", true).unwrap() || oc.is_set("lane-weight-files", true).unwrap();
+            let weightPeriod = if hasWeights { string2time(&oc.get_string("weight-period").unwrap()).unwrap_or_else(|e| panic!("{e}")) } else { SUMOTIME_MAX };
+            // process-lifetime singletons: the topology and metric store are shared by every router clone
+            let cchGraph: Ptr<crate::router::rocch_metrics::ROCCHGraph> = Ptr::from_raw(Box::into_raw(Box::new(CCHGraph::new(&ROEdge::get_all_edges()))));
+            crate::router::rocch_metrics::ROCCHMetrics::init(cchGraph, op, begin, weightPeriod);
+            let fallback = leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), None, net.has_permissions(), restrictionParams).with_compute());
+            leak_router(CCHRouter::<ROEdge, ROVehicle, crate::router::rocch_metrics::ROCCHGraph>::new(cchGraph, crate::router::rocch_metrics::ROCCHMetrics::get, Some(op), ignoreErrors, fallback, if hasWeights { Some(crate::router::rocch_metrics::ROCCHMetrics::period_end) } else { None }, None))
         } else {
-            // shortcut: CCH and AFRouter are not wired in duarouter yet (their metric and arc-flag tables are not ported), upgrade when computeRoutes can construct them
+            // shortcut: the arcflag AFRouter is not wired in duarouter yet (AFBuild/KDTreePartition over FlippedEdge are not ported), upgrade with af_build.rs
             panic!("shortcut: routing algorithm '{}' is not wired in duarouter yet", routingAlgorithm);
         }
     } else {
