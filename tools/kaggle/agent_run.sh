@@ -29,6 +29,18 @@ rep('    return MIN2(maximumSafeStopSpeed(gap, decel, speed, false, TS, false), 
 open(p, 'wb').write(s.encode())
 print('patched', p)
 EOF
+python - "$D/src/microsim/MSVehicle.cpp" <<'EOF'
+import sys
+p = sys.argv[1]
+s = open(p, 'rb').read().decode().replace('\r\n', '\n')
+a = 'const bool ignoreRedLink = ignoreRed(link, canBrake) || beyondStopLine;\n'
+assert s.count(a) == 1, a
+t = r'''            if (getenv("RX01") != nullptr && getID() == "train3" && SIMSTEP >= 180000 && SIMSTEP <= 185000) { union { double d; unsigned long long u; } cvt; cvt.d = dpi.myDistance; unsigned long long dist = cvt.u; cvt.d = dpi.myVLinkWait; unsigned long long vW = cvt.u; cvt.d = dpi.myVLinkPass; unsigned long long vP = cvt.u; cvt.d = myState.mySpeed; unsigned long long sp = cvt.u; fprintf(stderr, "RX01 lnk t=%lld link=%s ls=%d yel=%d cb=%d ign=%d beyond=%d dist=%llx vW=%llx vP=%llx req=%d spd=%llx\n", (long long)SIMSTEP, link->getLaneBefore()->getID().c_str(), (int)ls, (int)yellow, (int)canBrake, (int)ignoreRedLink, (int)beyondStopLine, dist, vW, vP, (int)dpi.mySetRequest, sp); }
+'''
+s = s.replace(a, a + t)
+open(p, 'wb').write(s.encode())
+print('patched MSVehicle')
+EOF
 (cd $D/build && make -j8 sumo > $O/cppbuild.log 2>&1); CPP=$D/bin/sumo
 echo "cpp bin: $CPP errors: $(grep -c -i ' error' $O/cppbuild.log) binary RX01: $(grep -a -c RX01 $CPP)"
 grep -i ' error' $O/cppbuild.log | head -c 800

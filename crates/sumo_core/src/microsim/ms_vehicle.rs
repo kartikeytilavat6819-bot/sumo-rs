@@ -10865,6 +10865,7 @@ impl MSVehicle {
                 assert!(!link.get_lane_before().is_null());
                 let beyondStopLine = dDistance < link.get_lane_before().get_vehicle_stop_offset(this);
                 let ignoreRedLink = self.ignore_red(link, canBrake) || beyondStopLine;
+                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 lnk t={} link={} ls={} yel={} cb={} ign={} beyond={} dist={:x} vW={:x} vP={:x} req={} spd={:x}", MSNet::get_instance().get_current_time_step(), link.get_lane_before().get_id(), ls as i32, yellow as i32, canBrake as i32, ignoreRedLink as i32, beyondStopLine as i32, dDistance.to_bits(), dVLinkWait.to_bits(), dVLinkPass.to_bits(), dSetRequest as i32, self.myState.mySpeed.to_bits()); }
                 if yellow && canBrake && !ignoreRedLink {
                     *vSafe = dVLinkWait;
                     self.myHaveToWaitOnNextLink = true;
