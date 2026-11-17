@@ -22,8 +22,9 @@ impl MSChargingStationExport {
     pub fn write(of: &mut OutputDevice, end: bool) {
         // loop through charging stations
         let includeUnfinished = end && utils::options::options_cont::get_bool("chargingstations-output.aggregated.write-unfinished");
-        // shortcut: MSNet::getStoppingPlaces(SUMO_TAG_CHARGING_STATION) cannot be iterated (MSNet::myStoppingPlaces values are Unmapped) and each stop needs a static_cast to MSChargingStation, so no charging-station rows are written yet; upgrade when the stopping-place container and MSStoppingPlace downcasts are ported
-        let _ = (of, includeUnfinished);
+        for (_, stop) in MSNet::get_instance().m().get_stopping_places(utils::xml::sumo_xml_definitions::SUMO_TAG_CHARGING_STATION) {
+            stop.cast::<crate::microsim::trigger::ms_charging_station::MSChargingStation>().m().write_aggregated_charging_station_output(of, includeUnfinished);
+        }
     }
 
     /// C++: `void MSChargingStationExport::MSChargingStationExport(const MSChargingStationExport &)` [private]

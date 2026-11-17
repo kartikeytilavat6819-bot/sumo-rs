@@ -9,17 +9,17 @@ pub struct RORouteDef {
     /// C++ base class `Named`
     pub base: Named,
     /// precomputed route for out-of-order computation
-    pub myPrecomputed: Option<Rc<RORoute>>,
+    pub myPrecomputed: std::cell::RefCell<Option<Rc<RORoute>>>,
     /// Index of the route used within the last step
     pub myLastUsed: i32,
     /// The alternatives
     pub myAlternatives: Vec<Rc<RORoute>>,
     /// Information whether a new route was generated
-    pub myNewRoute: bool,
+    pub myNewRoute: std::cell::Cell<bool>,
     pub myTryRepair: bool,
     pub myMayBeDisconnected: bool,
     /// Whether this route should be silently discarded
-    pub myDiscardSilent: bool,
+    pub myDiscardSilent: std::cell::Cell<bool>,
 }
 
 impl std::ops::Deref for RORouteDef {
@@ -61,13 +61,13 @@ impl RORouteDef {
     pub fn new(id: &str, lastUsed: i32, tryRepair: bool, mayBeDisconnected: bool) -> Self {
         RORouteDef {
             base: Named::new(&utils::common::string_utils::convert_umlaute(id)),
-            myPrecomputed: None,
+            myPrecomputed: std::cell::RefCell::new(None),
             myLastUsed: lastUsed,
             myAlternatives: Vec::new(),
-            myNewRoute: false,
+            myNewRoute: std::cell::Cell::new(false),
             myTryRepair: tryRepair,
             myMayBeDisconnected: mayBeDisconnected,
-            myDiscardSilent: false,
+            myDiscardSilent: std::cell::Cell::new(false),
         }
     }
 
@@ -147,10 +147,10 @@ impl RORouteDef {
     // }
     #[allow(unused_variables)]
     pub fn build_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle) -> Option<Rc<RORoute>> {
-        if self.myPrecomputed.is_none() {
+        if self.myPrecomputed.borrow().is_none() {
             self.pre_compute_current_route(router, begin, veh);
         }
-        self.myPrecomputed.clone()
+        self.myPrecomputed.borrow().clone()
     }
 
     /// C++: `void RORouteDef::preComputeCurrentRoute(SUMOAbstractRouter<ROEdge, ROVehicle> &, SUMOTime, const ROVehicle &) const` [const]
@@ -232,8 +232,8 @@ impl RORouteDef {
     #[allow(unused_variables)]
     pub fn pre_compute_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle) {
         // C++ `mutable` members are written from this const method
-        let me = Ptr::new(self).get_mut().unwrap();
-        me.myNewRoute = false;
+        let me = self;
+        me.myNewRoute.set(false);
         let ignoreErrors = utils::options::options_cont::get_bool("ignore-errors");
         let hasRestrictions = RONet::get_instance().has_param_restrictions();
         assert!(me.myAlternatives[0].get_edge_vector().len() > 0);
@@ -264,18 +264,18 @@ impl RORouteDef {
                     if !me.myMayBeDisconnected {
                         write_warningf!("Repaired route of vehicle '%'.", veh.get_id());
                     }
-                    me.myNewRoute = true;
+                    me.myNewRoute.set(true);
                     let col = me.myAlternatives[0].get_color();
-                    me.myPrecomputed = Some(Rc::new(RORoute::new(self.get_id(), 0.0, me.myAlternatives[0].get_probability(), &newEdges, col, me.myAlternatives[0].get_stops())));
+                    *me.myPrecomputed.borrow_mut() = Some(Rc::new(RORoute::new(self.get_id(), 0.0, me.myAlternatives[0].get_probability(), &newEdges, col, me.myAlternatives[0].get_stops())));
                 } else {
-                    me.myPrecomputed = Some(me.myAlternatives[0].clone());
+                    *me.myPrecomputed.borrow_mut() = Some(me.myAlternatives[0].clone());
                 }
             }
             return;
         }
         if RouteCostCalculator::<RORoute, ROEdge, ROVehicle>::get_calculator().skip_route_calculation() || utils::options::options_cont::get_bool("remove-loops") {
             if skipTripRouting || me.myAlternatives[me.myLastUsed as usize].is_valid(veh, ignoreErrors, Ptr::null()) {
-                me.myPrecomputed = Some(me.myAlternatives[me.myLastUsed as usize].clone());
+                *me.myPrecomputed.borrow_mut() = Some(me.myAlternatives[me.myLastUsed as usize].clone());
             }
         } else {
             // build a new route to test whether it is better
@@ -297,11 +297,11 @@ impl RORouteDef {
                     }
                 }
                 if existing >= 0 {
-                    me.myPrecomputed = Some(me.myAlternatives[existing as usize].clone());
+                    *me.myPrecomputed.borrow_mut() = Some(me.myAlternatives[existing as usize].clone());
                 } else {
                     let col = me.myAlternatives[0].get_color();
-                    me.myPrecomputed = Some(Rc::new(RORoute::new(self.get_id(), 0.0, 1.0, &edges, col, me.myAlternatives[0].get_stops())));
-                    me.myNewRoute = true;
+                    *me.myPrecomputed.borrow_mut() = Some(Rc::new(RORoute::new(self.get_id(), 0.0, 1.0, &edges, col, me.myAlternatives[0].get_stops())));
+                    me.myNewRoute.set(true);
                 }
             }
         }
@@ -498,7 +498,7 @@ impl RORouteDef {
     #[allow(unused_variables)]
     pub fn repair_current_route(&self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, begin: SUMOTime, veh: &ROVehicle, oldEdges: ConstROEdgeVector, newEdges: &mut ConstROEdgeVector, isTrip: bool) -> bool {
         // C++ `mutable` member (myDiscardSilent) is written from this const method
-        let me = Ptr::new(self).get_mut().unwrap();
+        let me = self;
         let mh = msg_instance(utils::options::options_cont::get_bool("ignore-errors"));
         let net = RONet::get_instance();
         let mut oldEdges = oldEdges;
@@ -516,7 +516,7 @@ impl RORouteDef {
             if MY_USING_JTRR.load(std::sync::atomic::Ordering::Relaxed) {
                 // only ROJTRRouter is supposed to handle this type of input
                 let ok = router.compute(oldEdges[0], Ptr::null(), Ptr::new(veh), begin, newEdges, false);
-                me.myDiscardSilent = ok && newEdges.is_empty();
+                me.myDiscardSilent.set(ok && newEdges.is_empty());
             } else {
                 *newEdges = oldEdges;
             }
@@ -809,7 +809,7 @@ impl RORouteDef {
     pub fn add_alternative(&mut self, router: &mut SUMOAbstractRouter<ROEdge, ROVehicle>, veh: Ptr<ROVehicle>, current: Rc<RORoute>, begin: SUMOTime, errorHandler: Ptr<MsgHandler>) -> Option<Rc<RORoute>> {
         let mut replaced: Option<Rc<RORoute>> = None;
         if self.myTryRepair || MY_USING_JTRR.load(std::sync::atomic::Ordering::Relaxed) {
-            if self.myNewRoute {
+            if self.myNewRoute.get() {
                 replaced = Some(self.myAlternatives[0].clone());
                 self.myAlternatives[0] = current.clone();
             }
@@ -835,7 +835,7 @@ impl RORouteDef {
             }
             self.myAlternatives.pop();
         }
-        if self.myNewRoute {
+        if self.myNewRoute.get() {
             self.myAlternatives.push(current.clone());
         }
         // recompute the costs and (when a new route was added) scale the probabilities
@@ -849,7 +849,7 @@ impl RORouteDef {
             // recompute the costs for all routes
             let newCosts = router.recompute_costs(alt.get_edge_vector(), veh, begin, Ptr::null());
             assert!(self.myAlternatives.len() != 0);
-            if self.myNewRoute {
+            if self.myNewRoute.get() {
                 if Rc::ptr_eq(&alt, &current) {
                     // set initial probability and costs
                     Ptr::new(&*alt).get_mut().unwrap().set_probability(1.0 / (self.myAlternatives.len() as f64));
@@ -1062,7 +1062,7 @@ impl RORouteDef {
     //     }
     #[allow(unused_variables)]
     pub fn discard_silent(&self) -> bool {
-        self.myDiscardSilent
+        self.myDiscardSilent.get()
     }
 
     /// C++: `void RORouteDef::setUsingJTRR()` [static]

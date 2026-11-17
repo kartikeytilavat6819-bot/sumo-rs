@@ -18,6 +18,12 @@ fn cacc_maximum_lane_speed_cf(m: &MSCFModel, veh: Ptr<MSVehicle>, maxSpeed: f64,
 fn cacc_set_headway_time(m: &mut MSCFModel, headwayTime: f64) { cf_cast_mut::<MSCFModel_CACC>(m).set_headway_time(headwayTime) }
 fn cacc_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_CACC>(m).get_model_id() }
 fn cacc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_CACC>(m).duplicate(vtype) }
+fn cacc_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_CACC_CACCVehicleVariables) }.save_state(out, m)
+}
+fn cacc_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_CACC_CACCVehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn cacc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_CACC>(m).create_vehicle_variables() }
 fn cacc_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String { cf_cast::<MSCFModel_CACC>(m).get_parameter(veh, key) }
 fn cacc_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> { cf_cast::<MSCFModel_CACC>(m).set_parameter(veh, key, value); Ok(()) }
@@ -35,6 +41,8 @@ pub const CACC_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: cacc_get_model_id,
     duplicate: cacc_duplicate,
     create_vehicle_variables: cacc_create_vehicle_variables,
+    save_vehicle_variables: cacc_save_vehicle_variables,
+    load_vehicle_variables: cacc_load_vehicle_variables,
     get_parameter: cacc_get_parameter,
     set_parameter: cacc_set_parameter,
     ..DEFAULT_MSCF_MODEL_VT

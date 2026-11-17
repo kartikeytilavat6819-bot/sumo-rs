@@ -59,6 +59,23 @@ fn delay_get_detector_states(l: &MSTrafficLightLogic) -> BTreeMap<String, f64> {
     Ptr::new(l).cast::<MSDelayBasedTrafficLightLogic>().get().unwrap().get_detector_states()
 }
 
+fn delay_get_detector_state_ext(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    Ptr::new(logic).cast::<MSDelayBasedTrafficLightLogic>().m().get_detector_state(laneID)
+}
+
+fn delay_get_tl_queue_length_ext(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    Ptr::new(logic).cast::<MSDelayBasedTrafficLightLogic>().m().get_tl_queue_length(laneID)
+}
+
+static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::MSTrafficLightLogic::get_rival_vehicles_base,
+    get_priority_vehicles: super::ms_traffic_light_logic::MSTrafficLightLogic::get_priority_vehicles_base,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::MSTrafficLightLogic::get_blocking_drive_ways_base,
+    get_requested_drive_way: super::ms_traffic_light_logic::MSTrafficLightLogic::get_requested_drive_way_base,
+    get_detector_state: delay_get_detector_state_ext,
+    get_tl_queue_length: delay_get_tl_queue_length_ext,
+};
+
 static MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: delay_try_switch,
     init: delay_init,
@@ -74,6 +91,7 @@ impl MSDelayBasedTrafficLightLogic {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &ParameterisedMap, basePath: &str) -> Self {
         let mut base = MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, utils::xml::sumo_xml_definitions::TrafficLightType::DELAYBASED, phases, step, delay, parameter);
         base.base.vt = &MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_VT;
+        base.base.ext_vt = &MS_DELAY_BASED_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let myShowDetectors = utils::common::string_utils::to_bool(&base.get_parameter("show-detectors", "false".to_string())).unwrap();
         let myDetectionRange = utils::common::string_utils::to_double(&base.get_parameter("detectorRange", utils::common::to_string::to_string(&utils::options::options_cont::get_float("tls.delay_based.detector-range")))).unwrap();
         let myTimeLossThreshold = utils::common::string_utils::to_double(&base.get_parameter("minTimeloss", "1.0".to_string())).unwrap();

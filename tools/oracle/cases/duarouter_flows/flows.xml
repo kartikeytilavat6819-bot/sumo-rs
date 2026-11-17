@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<flows>
+  <flow id="f1" begin="0" end="60" period="10" from="-103224#0" to="-103224#3"/>
+  <flow id="f2" begin="5" end="40" number="5" from="-103227#0" to="-103227#2"/>
+  <flow id="f3" begin="10" end="30" probability="0.5" from="-103228" to="-103227#2"/>
+</flows>

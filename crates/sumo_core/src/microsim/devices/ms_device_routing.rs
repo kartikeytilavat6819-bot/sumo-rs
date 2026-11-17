@@ -69,6 +69,16 @@ static MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt
     notify_leave: default_notify_leave,
 };
 
+fn ms_device_routing_notify_stop_ended(mr: &mut MSMoveReminder) {
+    Ptr::from_mut(mr).cast::<MSDevice_Routing>().m().notify_stop_ended()
+}
+
+static MS_DEVICE_ROUTING_MSMOVE_REMINDER_IDLE_VT: crate::microsim::ms_move_reminder::MSMoveReminderIdleVt = crate::microsim::ms_move_reminder::MSMoveReminderIdleVt {
+    notify_idle: crate::microsim::ms_move_reminder::default_notify_idle,
+    notify_parking: crate::microsim::ms_move_reminder::default_notify_parking,
+    notify_stop_ended: ms_device_routing_notify_stop_ended,
+};
+
 impl Drop for MSDevice_Routing {
     /// C++: `MSDevice_Routing::~MSDevice_Routing()`: make the rerouting command invalid if there is one
     fn drop(&mut self) {
@@ -731,6 +741,7 @@ impl MSDevice_Routing {
             myLastRouteCost: -1.,
         });
         dev.base.base.vt = &MS_DEVICE_ROUTING_MSMOVE_REMINDER_VT;
+        dev.base.base.idle_vt = &MS_DEVICE_ROUTING_MSMOVE_REMINDER_IDLE_VT;
         // we do always a pre insertion reroute for trips to fill the best lanes of the vehicle with somehow meaningful values (especially for deaprtLane="best")
         if preInsertionPeriod > 0 || holder.get_parameter().was_set(VEHPARS_FORCE_REROUTE) {
             let cmd: Ptr<MSDevice_Routing_WrappingCommand> = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(&mut *dev), MSDevice_Routing::pre_insertion_reroute))));

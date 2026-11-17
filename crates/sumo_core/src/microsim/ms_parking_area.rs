@@ -131,6 +131,27 @@ impl MSParkingArea_LotSpaceDefinition {
 }
 
 /// A lane area vehicles can halt at
+fn ms_parking_area_sp_enter(sp: &mut MSStoppingPlace, veh: Ptr<SUMOVehicle>, parking: bool) {
+    Ptr::from_mut(sp).cast::<MSParkingArea>().m().enter(veh, parking)
+}
+fn ms_parking_area_sp_leave_from(sp: &mut MSStoppingPlace, what: Ptr<SUMOVehicle>) {
+    Ptr::from_mut(sp).cast::<MSParkingArea>().m().leave_from(what)
+}
+fn ms_parking_area_sp_get_last_free_pos(sp: &MSStoppingPlace, forVehicle: &SUMOVehicle, brakePos: f64) -> f64 {
+    Ptr::new(sp).cast::<MSParkingArea>().get_last_free_pos(forVehicle, brakePos)
+}
+fn ms_parking_area_sp_accepts(sp: &MSStoppingPlace, veh: Ptr<SUMOVehicle>) -> bool {
+    Ptr::new(sp).cast::<MSParkingArea>().accepts(veh)
+}
+
+/// Virtual table of MSParkingArea as MSStoppingPlace (overrides enter, leaveFrom, getLastFreePos and accepts)
+static MS_PARKING_AREA_SP_VT: MSStoppingPlaceVt = MSStoppingPlaceVt {
+    enter: ms_parking_area_sp_enter,
+    leave_from: ms_parking_area_sp_leave_from,
+    get_last_free_pos: ms_parking_area_sp_get_last_free_pos,
+    accepts: ms_parking_area_sp_accepts,
+};
+
 /// C++ class `MSParkingArea` (microsim/MSParkingArea.h)
 #[repr(C)]
 pub struct MSParkingArea {
@@ -261,7 +282,7 @@ impl MSParkingArea {
     #[allow(unused_variables)]
     pub fn new(id: &str, lines: &Vec<String>, badges: &Vec<String>, lane: &mut MSLane, begPos: f64, endPos: f64, capacity: i32, width: f64, length: f64, angle: f64, name: &str, onRoad: bool, departPos: &str, lefthand: bool, reservable: bool) -> Self {
         let mut me = MSParkingArea {
-            base: MSStoppingPlace::new(id, SUMO_TAG_PARKING_AREA, lines, lane, begPos, endPos, name.to_string(), 0, 0.0, &RGBColor::INVISIBLE, 90.0),
+            base: MSStoppingPlace { vt: &MS_PARKING_AREA_SP_VT, ..MSStoppingPlace::new(id, SUMO_TAG_PARKING_AREA, lines, lane, begPos, endPos, name.to_string(), 0, 0.0, &RGBColor::INVISIBLE, 90.0) },
             myLastFreeLot: -1,
             myRoadSideCapacity: capacity,
             myCapacity: 0,

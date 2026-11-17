@@ -826,6 +826,7 @@ static MS_MEAN_DATA_NET_VT: MSMeanDataVt = MSMeanDataVt {
     open_interval: MSMeanData::open_interval_base,
     write_prefix: MSMeanData::write_prefix_base,
     reset_only: MSMeanData::reset_only_base,
+    detector_update: MSMeanData::detector_update_base,
 };
 
 fn net_mean_data_create_values(m: &MSMeanData, lane: Ptr<MSLane>, length: f64, doAdd: bool) -> Ptr<MSMeanData_MeanDataValues> {

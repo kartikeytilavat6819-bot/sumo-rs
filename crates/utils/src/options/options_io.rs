@@ -1,5 +1,4 @@
 //! Port of utils/options/OptionsIO.{h,cpp}
-// shortcut: gzipped files given as the single argument are not decompressed in get_root, add flate2 when needed
 use super::options_cont::with_options;
 use super::options_loader::OptionsLoader;
 use super::options_parser;
@@ -7,6 +6,7 @@ use crate::common::file_helpers;
 use crate::common::msg_handler::{progress_begin_message, progress_done_message};
 use crate::common::util_exceptions::ProcessError;
 use crate::tlf;
+use std::io::Read;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -106,8 +106,17 @@ pub fn get_root(filename: &str) -> Result<String, ProcessError> {
         return Err(ProcessError::new(tlf!("Could not open '%'.", filename)));
     }
     let mut handler = OptionsLoader::new(false);
-    with_options(|oc| handler.parse_file(oc, filename, true))
-        .map_err(|e| ProcessError::new(format!("Could not load '{filename}':\n {e}")))?;
+    // zstr::ifstream in C++: gzipped input is inflated transparently (detected by its magic bytes)
+    let load_error = |e: &dyn std::fmt::Display| ProcessError::new(format!("Could not load '{filename}':\n {e}"));
+    let bytes = std::fs::read(filename).map_err(|e| load_error(&e))?;
+    let text = if bytes.starts_with(&[0x1f, 0x8b]) {
+        let mut inflated = Vec::new();
+        flate2::read::GzDecoder::new(&bytes[..]).read_to_end(&mut inflated).map_err(|e| load_error(&e))?;
+        String::from_utf8_lossy(&inflated).into_owned()
+    } else {
+        String::from_utf8_lossy(&bytes).into_owned()
+    };
+    with_options(|oc| handler.parse_str(oc, &text, true));
     if handler.error_occurred() {
         return Err(ProcessError::new(tlf!("Could not load '%'.", filename)));
     }
@@ -125,5 +134,19 @@ mod tests {
         assert_eq!(get_arg_c(), 2);
         set_args(&["-a".into()]);
         assert_eq!(args(), ["prog", "-a"]);
+    }
+
+    #[test]
+    fn get_root_inflates_gzip() {
+        use std::io::Write;
+        let dir = std::env::temp_dir().join(format!("sumo_rs_get_root_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("net.xml.gz");
+        let mut enc = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        enc.write_all(b"<net version=\"1.9\"/>\n").unwrap();
+        std::fs::write(&path, enc.finish().unwrap()).unwrap();
+        let root = get_root(path.to_str().unwrap());
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(root.unwrap(), "net");
     }
 }
