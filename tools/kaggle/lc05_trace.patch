@@ -71,6 +71,17 @@ index 41e69ee..2eeb9e8 100644
      MSLane* source = from->lane;
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
+@@ -643,2 +662,10 @@ MSLaneChangerSublane::getLeaders(const ChangerIt& target, const MSVehicle* vehicle) const {
+     target->lane->addLeaders(vehicle, vehicle->getPositionOnLane(vehicle->getLane()), result);
++    if (lcOn(vehicle)) {
++        std::cerr << "LCT-GL " << MSNet::getInstance()->getCurrentTimeStep() << " " << vehicle->getID() << " lane=" << target->lane->getID();
++        for (int i = 0; i < result.numSublanes(); ++i) {
++            CLeaderDist ld = result[i];
++            std::cerr << " s" << i << "=" << (ld.first == nullptr ? std::string("none") : ld.first->getID()) << ":" << lcBits(ld.second);
++        }
++        std::cerr << "\n";
++    }
+     return result;
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
 index c892b2d..3d7f183 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp

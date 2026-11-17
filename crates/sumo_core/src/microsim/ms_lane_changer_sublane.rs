@@ -1346,6 +1346,14 @@ impl MSLaneChangerSublane {
         }
         // @note use the exact same vehiclePos as in getLastVehicleInformation() to avoid missing vehicles
         tlane.m().add_leaders(ego, ego.get_position_on_lane_2(ego.get_lane()), &mut result, false);
+        if lct_on(ego) {
+            let mut s = format!("LCT-GL {} {} lane={}", MSNet::get_instance().get_current_time_step(), ego.get_id(), tlane.get_id());
+            for i in 0..result.num_sublanes() {
+                let (v, d) = result.index_op(i);
+                s += &format!(" s{}={}:{}", i, if v.is_null() { "none".to_string() } else { v.get_id().to_string() }, lct_bits(d));
+            }
+            eprintln!("{}", s);
+        }
         result
     }
 
