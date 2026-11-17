@@ -1,0 +1,309 @@
+diff --git a/src/netbuild/NBEdge.cpp b/src/netbuild/NBEdge.cpp
+index 03cb4fa..7b1ab11 100644
+--- a/src/netbuild/NBEdge.cpp
++++ b/src/netbuild/NBEdge.cpp
+@@ -23,6 +23,8 @@
+ // Methods for the representation of a single edge
+ /****************************************************************************/
+ #include <config.h>
++#include <iostream>
++#include <iomanip>
+ 
+ #include <vector>
+ #include <string>
+@@ -2618,13 +2620,23 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+         return true;
+     }
+     const bool fromRail = isRailway(getPermissions());
++    const bool jt = getenv("NC_JTRACE") != nullptr && myTo->getID().find("#29more") != std::string::npos;
++    if (jt) {
++        std::cerr << "JTRACE e2e-start " << getID() << " turn=" << (myTurnDestination != nullptr ? myTurnDestination->getID() : std::string("null")) << " rail=" << fromRail << "\n";
++    }
+     for (NBEdge* out : myTo->getOutgoingEdges()) {
+         if (noLeftMovers && myTo->isLeftMover(this, out)) {
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " leftmover\n";
++            }
+             continue;
+         }
+         // avoid sharp railway turns
+         if (fromRail && isRailway(out->getPermissions())) {
+             const double angle = fabs(NBHelpers::normRelAngle(getAngleAtNode(myTo), out->getAngleAtNode(myTo)));
++            if (jt) {
++                std::cerr << "JTRACE e2e rail " << getID() << " " << out->getID() << " angle=" << std::fixed << std::setprecision(6) << angle << "\n";
++            }
+             if (angle > 150) {
+                 continue;
+             } else if (angle > 90) {
+@@ -2635,6 +2647,14 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+                 const double radius = shape.length2D() / DEG2RAD(angle);
+                 const double minRadius = (getPermissions() & SVC_TRAM) != 0 ? 20 : 80;
+                 //std::cout << getID() << " to=" << out->getID() << " radius=" << radius << " minRadius=" << minRadius << "\n";
++                if (jt) {
++                    std::cerr << "JTRACE e2e rail " << getID() << " " << out->getID() << " radius=" << std::fixed << std::setprecision(6) << radius << "\n";
++                    std::cerr << "JTRACE e2e shape from=" << fromShape.back().x() << "," << fromShape.back().y() << " to=" << toShape.front().x() << "," << toShape.front().y() << " pts";
++                    for (const Position& p : shape) {
++                        std::cerr << " " << p.x() << "," << p.y();
++                    }
++                    std::cerr << "\n";
++                }
+                 if (radius < minRadius) {
+                     continue;
+                 }
+@@ -2642,12 +2662,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+         }
+         if (out == myTurnDestination) {
+             // will be added by appendTurnaround
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " turndest\n";
++            }
+             continue;
+         }
+         if ((getPermissions() & out->getPermissions() & ~SVC_PEDESTRIAN) == 0) {
+             // no common permissions
++            if (jt) {
++                std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " perm " << getPermissions() << " " << out->getPermissions() << "\n";
++            }
+             continue;
+         }
++        if (jt) {
++            std::cerr << "JTRACE e2e " << getID() << " " << out->getID() << " add\n";
++        }
+         myConnections.push_back(Connection(-1, out, -1));
+     }
+     myStep = EdgeBuildingStep::EDGE2EDGES;
+diff --git a/src/netbuild/NBNetBuilder.cpp b/src/netbuild/NBNetBuilder.cpp
+index dc52035..2f3c49b 100644
+--- a/src/netbuild/NBNetBuilder.cpp
++++ b/src/netbuild/NBNetBuilder.cpp
+@@ -23,6 +23,7 @@
+ // Instance responsible for building networks
+ /****************************************************************************/
+ #include <config.h>
++#include <iostream>
+ 
+ #include <string>
+ #include <fstream>
+@@ -75,6 +76,23 @@ NBNetBuilder::applyOptions(OptionsCont& oc) {
+ }
+ 
+ 
++// TEMP-JTRACE
++static void jdump(const std::string& st, NBEdgeCont& ec) {
++    if (getenv("NC_JTRACE") == nullptr) {
++        return;
++    }
++    for (NBEdge* e : ec.getAllEdges()) {
++        if (e->getFromNode()->getID().find("#29more") == std::string::npos && e->getToNode()->getID().find("#29more") == std::string::npos && e->getID().find("27202251") == std::string::npos) {
++            continue;
++        }
++        std::cerr << "JTRACE st " << st << " e " << e->getID() << " " << e->getFromNode()->getID() << ">" << e->getToNode()->getID();
++        for (const NBEdge::Connection& c : e->getConnections()) {
++            std::cerr << " " << c.fromLane << ">" << (c.toEdge != nullptr ? c.toEdge->getID() : std::string("null")) << ":" << c.toLane << ":" << c.permissions << ":" << (int)c.mayDefinitelyPass;
++        }
++        std::cerr << "\n";
++    }
++}
++
+ void
+ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurnarounds, bool mayAddOrRemove) {
+     GeoConvHelper& geoConvHelper = GeoConvHelper::getProcessing();
+@@ -255,6 +273,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+     if (mayAddOrRemove && oc.getBool("junctions.join")) {
+         before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Joining junction clusters"));
+         numJoined += myNodeCont.joinJunctions(oc.getFloat("junctions.join-dist"), myDistrictCont, myEdgeCont, myTLLCont, myPTStopCont);
++        jdump("join", myEdgeCont);
+         PROGRESS_TIME_MESSAGE(before);
+     }
+     if (numJoined > 0) {
+@@ -367,6 +386,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+         }
+     }
+     myNodeCont.guessTLs(oc, myTLLCont);
++    jdump("guess", myEdgeCont);
+     PROGRESS_TIME_MESSAGE(before);
+ 
+     // guess ramps (after guessing tls because ramps should not be build at traffic lights)
+@@ -518,7 +538,9 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+     PROGRESS_TIME_MESSAGE(before);
+     //
+     before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Computing approached edges"));
++    jdump("pre-e2e", myEdgeCont);
+     myEdgeCont.computeEdge2Edges(oc.getBool("no-left-connections"));
++    jdump("e2e", myEdgeCont);
+     PROGRESS_TIME_MESSAGE(before);
+     //
+     if (oc.getBool("roundabouts.guess")) {
+@@ -538,6 +560,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+     before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Dividing of lanes on approached lanes"));
+     myNodeCont.computeLanes2Lanes();
+     myEdgeCont.sortOutgoingLanesConnections();
++    jdump("l2l", myEdgeCont);
+     PROGRESS_TIME_MESSAGE(before);
+     //
+     if (oc.getBool("fringe.guess")) {
+@@ -569,6 +592,7 @@ NBNetBuilder::compute(OptionsCont& oc, const std::set<std::string>& explicitTurn
+     //
+     before = PROGRESS_BEGIN_TIME_MESSAGE(TL("Rechecking of lane endings"));
+     myEdgeCont.recheckLanes();
++    jdump("recheck", myEdgeCont);
+     PROGRESS_TIME_MESSAGE(before);
+ 
+     if (myNetworkHaveCrossings && !oc.getBool("no-internal-links")) {
+diff --git a/src/netbuild/NBNodeCont.cpp b/src/netbuild/NBNodeCont.cpp
+index b058ac5..2f3d515 100644
+--- a/src/netbuild/NBNodeCont.cpp
++++ b/src/netbuild/NBNodeCont.cpp
+@@ -24,6 +24,7 @@
+ // Container for nodes during the netbuilding process
+ /****************************************************************************/
+ #include <config.h>
++#include <iomanip>
+ 
+ #include <string>
+ #include <map>
+@@ -789,6 +790,13 @@ NBNodeCont::joinLoadedClusters(NBDistrictCont& dc, NBEdgeCont& ec, NBTrafficLigh
+ }
+ 
+ 
++// TEMP-JTRACE
++static void jtrace(const std::string& stage, const NodeSet& s) {
++    if (getenv("NC_JTRACE") != nullptr) {
++        std::cerr << "JTRACE " << stage << " " << joinNamedToString(s, ',') << "\n";
++    }
++}
++
+ int
+ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NBTrafficLightLogicCont& tlc, NBPTStopCont& sc) {
+ #ifdef DEBUG_JOINJUNCTIONS
+@@ -805,7 +813,11 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+         }
+     }
+     generateNodeClusters(maxDist, cands);
++    int jci = -1;
+     for (NodeSet& cluster : cands) {
++        jci++;
++        const std::string jc = "c" + std::to_string(jci);
++        jtrace(jc + " gen", cluster);
+ #ifdef DEBUG_JOINJUNCTIONS
+         gDebugFlag1 = false;
+         for (NBNode* n : cluster) {
+@@ -822,14 +834,17 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+                 cluster.erase(check);
+             }
+         }
++        jtrace(jc + " excl", cluster);
+         std::string origCluster = joinNamedToString(cluster, ',');
+         // remove nodes that can be eliminated by geometry.remove
+         pruneClusterFringe(cluster, maxDist);
++        jtrace(jc + " fringe1", cluster);
+         if (cluster.size() < 2) {
+             continue;
+         }
+         // remove nodes that are part of a bypass lane (typically for turning right without waiting at a traffic light)
+         pruneSlipLaneNodes(cluster, maxDist);
++        jtrace(jc + " slip1", cluster);
+         if (cluster.size() < 2) {
+             WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, "slip lane");
+             continue;
+@@ -844,6 +859,7 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+             origReason = "long edge";
+             feasible = false;
+         }
++        jtrace(jc + " feas0 " + std::to_string(feasible) + " " + origReason, cluster);
+         if (!feasible) {
+ #ifdef DEBUG_JOINJUNCTIONS
+             if (gDebugFlag1) {
+@@ -857,6 +873,7 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+                 }
+             }
+         }
++        jtrace(jc + " red4 " + std::to_string(feasible), cluster);
+         if (!feasible) {
+ #ifdef DEBUG_JOINJUNCTIONS
+             if (gDebugFlag1) {
+@@ -870,6 +887,7 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+                 }
+             }
+         }
++        jtrace(jc + " red2 " + std::to_string(feasible), cluster);
+         while (!feasible && tryRemove != nullptr) {
+             cluster.erase(tryRemove);
+             pruneClusterFringe(cluster, maxDist);
+@@ -879,12 +897,14 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+                 WRITE_WARNINGF(TL("Reducing junction cluster % (%)."), origCluster, origReason);
+             }
+         }
++        jtrace(jc + " while " + std::to_string(feasible), cluster);
+         if (cluster.size() < 2) {
+             WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, "after reduction");
+             continue;
+         }
+         // avoid removal of long edges (must have been added via an alternative path).
+         const int numPruned = pruneLongEdges(cluster, maxDist);
++        jtrace(jc + " longedge " + std::to_string(numPruned), cluster);
+         if (cluster.size() < 2) {
+             WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, "long edge");
+             continue;
+@@ -892,17 +912,20 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+         // after pruning long edges we have to recheck
+         if (numPruned > 0) {
+             pruneClusterFringe(cluster, maxDist);
++            jtrace(jc + " fringe2", cluster);
+             if (cluster.size() < 2) {
+                 WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, "long edge");
+                 continue;
+             }
+             pruneSlipLaneNodes(cluster, maxDist);
++            jtrace(jc + " slip2", cluster);
+             if (cluster.size() < 2) {
+                 WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, "slip lane");
+                 continue;
+             }
+         }
+         feasible = feasibleCluster(cluster, ptStopEnds, maxDist, origReason, tryRemove);
++        jtrace(jc + " final " + std::to_string(feasible), cluster);
+         if (!feasible) {
+             WRITE_WARNINGF(TL("Not joining junctions % (%)."), origCluster, origReason);
+             continue;
+@@ -936,6 +959,7 @@ NBNodeCont::joinJunctions(double maxDist, NBDistrictCont& dc, NBEdgeCont& ec, NB
+             components.push_back(newComp);
+         }
+         for (NodeClusters::iterator it_comp = components.begin(); it_comp != components.end(); ++it_comp) {
++            jtrace(jc + " comp", *it_comp);
+             if ((*it_comp).size() > 1) {
+                 //std::cout << "adding cluster " << toString(*it_comp) << "\n";
+                 clusters.push_back(*it_comp);
+@@ -2028,6 +2052,32 @@ NBNodeCont::joinNodeCluster(NodeSet cluster, NBDistrictCont& dc, NBEdgeCont& ec,
+         }
+     }
+ 
++    {
++        std::set<std::string> jin, jout;
++        for (NBEdge* e : newNode->getIncomingEdges()) {
++            jin.insert(e->getID());
++        }
++        for (NBEdge* e : newNode->getOutgoingEdges()) {
++            jout.insert(e->getID());
++        }
++        std::string sin, sout;
++        for (NBEdge* e : newNode->getIncomingEdges()) {
++            sin += (sin.empty() ? "" : ",") + e->getID();
++        }
++        for (NBEdge* e : newNode->getOutgoingEdges()) {
++            sout += (sout.empty() ? "" : ",") + e->getID();
++        }
++        std::cerr << "JTRACE joinorder " << newNode->getID() << " in=" << sin << " out=" << sout << "\n";
++        for (NBEdge* e : newNode->getIncomingEdges()) {
++            std::cerr << "JTRACE conn " << e->getID();
++            for (const NBEdge::Connection& c : e->getConnections()) {
++                std::cerr << " " << c.fromLane << ">" << (c.toEdge != nullptr ? c.toEdge->getID() : std::string("null")) << ":" << c.toLane << ":" << c.permissions << ":" << (int)c.mayDefinitelyPass;
++            }
++            std::cerr << "\n";
++        }
++        std::cerr << std::fixed << std::setprecision(10) << "JTRACE join " << newNode->getID() << " pos=" << newNode->getPosition().x() << "," << newNode->getPosition().y()
++                  << " in=" << sin << " out=" << sout << "\n";
++    }
+     // remove original nodes
+     registerJoinedCluster(cluster);
+     for (NBNode* n : cluster) {
