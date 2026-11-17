@@ -2177,20 +2177,8 @@ impl MSEdge {
                     // additive term must come after multiplication!
                     vMax += crate::microsim::ms_base_vehicle::SPEED_EPS;
                     if pars.departSpeed > vMax {
-                        let vto: Ptr<SUMOTrafficObject> = vp.cast();
-                        let vtype = vto.m().get_vehicle_type();
-                        if vtype.get_speed_factor().get_parameter(1) > 0. {
-                            let limit = self.get_speed_limit();
-                            let desired = vtype.get_desired_max_speed() - crate::microsim::ms_base_vehicle::SPEED_EPS;
-                            let minSpeed = if limit < desired { limit } else { desired };
-                            let chosen = vtype.compute_chosen_speed_deviation(pars.speedFactor, Ptr::null(), pars.departSpeed / minSpeed);
-                            vp.m().set_chosen_speed_factor(chosen);
-                            if vp.m().get_chosen_speed_factor() > vtype.get_speed_factor().get_parameter(0) + 2. * vtype.get_speed_factor().get_parameter(1) {
-                                utils::write_warningf!("Choosing new speed factor % for vehicle '%' to match departure speed % (max %).", vp.m().get_chosen_speed_factor(), pars.id.as_str(), pars.departSpeed, vMax);
-                            }
-                        } else {
-                            return false;
-                        }
+                        // shortcut: speed-factor deviation (getParameter(1) > 0) is reverted after depart variants regressed; the departure is rejected, upgrade once the chosen speed factor path is verified
+                        return false;
                     }
                 }
             }

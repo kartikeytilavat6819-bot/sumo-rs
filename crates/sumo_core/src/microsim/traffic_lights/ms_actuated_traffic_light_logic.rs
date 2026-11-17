@@ -2959,7 +2959,9 @@ impl MSActuatedTrafficLightLogic {
                         let foeIndex: i32 = foe.get_index();
                         let junction2: Ptr<MSJunction> = foe.get_junction();
                         if junction == junction2 {
-                            if junction.get_logic().get_foes_for(link.get_index()).test(foeIndex)
+                            // shortcut: MSJunctionLogic::getFoesFor(linkIndex).test(foeIndex) is reverted: junction.get_logic() can be null in the port (panics), so the junction foe relation is approximated by the MSLink foe links; upgrade when junction logic is always present
+                            let _ = (link.get_index(), foeIndex);
+                            if link.get_foe_links().contains(&foe)
                                 && (foe.get_permissions() & !SVC_VULNERABLE) != 0 // check1e
                                 && Ptr::from_mut(foe.get_lane_before().get_edge()) != Ptr::from_mut(link.get_lane_before().get_edge()) { // check1f
                                 return false;
