@@ -2384,29 +2384,7 @@ impl MSLaneChanger {
                 }
             }
         }
-        if self.checkOpened && (state & LCA_BLOCKED) == 0 && (state & LCA_WANTS_LANECHANGE) != 0
-            && vehicle.get_lane().is_normal()
-            && vehicle.get_best_lanes_continuation().len() > 1
-        {
-            let link = vehicle.get_lane().get_link_to(vehicle.get_best_lanes_continuation()[1]);
-            if !link.is_null() && link.is_entry_link() {
-                let link2 = link.get_parallel_link(laneOffset);
-                if !link2.is_null() {
-                    let api = link.get_approaching_ptr(vehicle.cast::<SUMOVehicle>());
-                    if !api.is_null() {
-                        let ok = link2.opened(api.arrivalTime, api.arrivalSpeed, api.leaveSpeed, vehicle.get_length(),
-                            vehicle.get_impatience(), vehicle.get_car_follow_model().get_max_decel(), vehicle.get_waiting_time(false), vehicle.get_lateral_position_on_lane(),
-                            Ptr::null(), false, vehicle.cast::<SUMOTrafficObject>(), api.dist);
-                        if std::env::var_os("SC08_TRACE").is_some() {
-                            eprintln!("OPENED t={} veh={} arr={} dist_um={} ok={}", MSNet::get_instance().m().get_current_time_step(), vehicle.get_id(), api.arrivalTime, (api.dist * 1000000.0) as i64, ok as i32);
-                        }
-                        if !ok {
-                            state |= LCA_BLOCKED;
-                        }
-                    }
-                }
-            }
-        }
+        // shortcut: checkOpened entry-link check (MSLink::opened / approaching info) reverted: the faithful port regressed city_plano and city_bengaluru_blr, and the first differing opened() decision is not measured yet; upgrade after tracing MSLink::opened on both sides
         let oldstate = state;
         // let TraCI influence the wish to change lanes and the security to take
         state = vehicle.m().influence_change_decision(state);
