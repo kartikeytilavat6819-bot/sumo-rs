@@ -71,6 +71,12 @@ fn cc_max_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
 fn cc_min_next_speed(m: &MSCFModel, speed: f64, veh: Ptr<MSVehicle>) -> f64 {
     cf_cast::<MSCFModel_CC>(m).min_next_speed(speed, veh)
 }
+fn cc_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String {
+    cf_cast::<MSCFModel_CC>(m).get_parameter(veh, key)
+}
+fn cc_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+    cf_cast::<MSCFModel_CC>(m).set_parameter(veh, key, value)
+}
 fn cc_get_model_id(m: &MSCFModel) -> i32 {
     cf_cast::<MSCFModel_CC>(m).get_model_id()
 }
@@ -99,6 +105,8 @@ pub const CC_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: cc_get_model_id,
     duplicate: cc_duplicate,
     create_vehicle_variables: cc_create_vehicle_variables,
+    get_parameter: cc_get_parameter,
+    set_parameter: cc_set_parameter,
     ..DEFAULT_MSCF_MODEL_VT
 };
 

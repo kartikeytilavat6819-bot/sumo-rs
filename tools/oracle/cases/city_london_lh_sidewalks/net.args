@@ -1,0 +1,1 @@
+--osm-files tools/oracle/cases/city_london_lh/input.osm --simple-projection --lefthand --osm.sidewalks --osm.bike-access --osm.turn-lanes

@@ -1,6 +1,7 @@
 //! Port of utils/router/FlippedNode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::router_edge::{RouterEdge, RouterNode};
 
 /// C++ typedef `std::vector<const FlippedEdge<E, N, V> *> FlippedNode::ConstFlippedEdgeVector`
 pub type FlippedNode_ConstFlippedEdgeVector<E, N, V> = Vec<Ptr<FlippedEdge<E, N, V>>>;
@@ -46,9 +47,11 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOriginalNode->getPosition();
     //     }
     #[allow(unused_variables)]
-    pub fn get_position(&self) -> &Position {
-        // shortcut: needs router trait bounds (lead), N::getPosition is not callable on generic N
-        panic!("shortcut: needs router trait bounds (lead), N::getPosition")
+    pub fn get_position(&self) -> &Position
+    where
+        N: RouterNode,
+    {
+        self.myOriginalNode.position()
     }
 
     /// C++: `const std::string & FlippedNode::getID() const` [const]
@@ -57,9 +60,11 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOriginalNode->getID();
     //     }
     #[allow(unused_variables)]
-    pub fn get_id(&self) -> &str {
-        // shortcut: needs router trait bounds (lead), N::getID is not callable on generic N
-        panic!("shortcut: needs router trait bounds (lead), N::getID")
+    pub fn get_id(&self) -> &str
+    where
+        N: RouterNode,
+    {
+        self.myOriginalNode.id()
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getIncoming() const` [const]
@@ -74,9 +79,19 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myIncoming;
     //     }
     #[allow(unused_variables)]
-    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V> {
-        // shortcut: needs router trait bounds (lead), N::getOutgoing/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
-        panic!("shortcut: needs router trait bounds (lead), N::getOutgoing")
+    pub fn get_incoming(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V>
+    where
+        N: RouterNode<Edge = E>,
+        E: RouterEdge<V, Node = N>,
+    {
+        if self.myIncoming.is_empty() {
+            // C++ mutable cache: the const method fills myIncoming in place
+            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
+            for edge in self.myOriginalNode.outgoing().iter() {
+                me.myIncoming.push(edge.flipped_routing_edge());
+            }
+        }
+        &self.myIncoming
     }
 
     /// C++: `const ConstFlippedEdgeVector & FlippedNode::getOutgoing() const` [const]
@@ -91,9 +106,19 @@ impl<E, N, V> FlippedNode<E, N, V> {
     //         return myOutgoing;
     //     }
     #[allow(unused_variables)]
-    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V> {
-        // shortcut: needs router trait bounds (lead), N::getIncoming/E::getFlippedRoutingEdge are not callable on generic N/E; the lazy fill also needs Ptr::new(self).m()
-        panic!("shortcut: needs router trait bounds (lead), N::getIncoming")
+    pub fn get_outgoing(&self) -> &FlippedNode_ConstFlippedEdgeVector<E, N, V>
+    where
+        N: RouterNode<Edge = E>,
+        E: RouterEdge<V, Node = N>,
+    {
+        if self.myOutgoing.is_empty() {
+            // C++ mutable cache: the const method fills myOutgoing in place
+            let me: &mut FlippedNode<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
+            for edge in self.myOriginalNode.incoming().iter() {
+                me.myOutgoing.push(edge.flipped_routing_edge());
+            }
+        }
+        &self.myOutgoing
     }
 
     /// C++: `const N * FlippedNode::getOriginalNode() const` [const]
