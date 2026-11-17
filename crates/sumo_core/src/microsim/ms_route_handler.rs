@@ -1600,7 +1600,8 @@ impl MSRouteHandler {
             if !(self.myAddVehiclesDirectly || self.check_last_depart())
                 || (self.myVehicleParameter.depart <= net.m().get_state_loader_time() && !self.myAmLoadingState)
             {
-                self.mySkippedVehicles.insert(self.myVehicleParameter.id.clone());
+                let skippedID = self.myVehicleParameter.id.clone();
+                self.mySkippedVehicles.insert(skippedID);
                 return;
             }
         }
@@ -4256,7 +4257,7 @@ impl MSRouteHandler {
                 }
                 match startVeh {
                     None => {
-                        if !self.mySkippedVehicles.contains(vehID) {
+                        if !self.mySkippedVehicles.contains(&vehID) {
                             throw_process_error(format!(
                                 "Unknown vehicle '{}' in triggered departure for {} '{}'.",
                                 vehID, agent, aid

@@ -1033,7 +1033,7 @@ impl MSLane {
             DepartPosDefinition::LAST => {
                 return self.last_insertion(v, speed, posLat, patchSpeed);
             }
-            DepartPosDefinition::STOP if v.has_stops() && v.get_next_stop().edge == v.get_route().get_edges()[*v.get_current_route_edge()] => {
+            DepartPosDefinition::STOP if v.has_stops() && v.get_next_stop().edge == *v.get_current_route_edge() => {
                 // getLastFreePos of stopping place could return negative position to avoid blocking the stop
                 pos = 0.0f64.max(v.get_next_stop().get_end_pos(v));
             }
