@@ -71,7 +71,7 @@ index 41e69ee..e77560e 100644
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
-index c892b2d..9c45bf8 100644
+index c892b2d..9e11dbc 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
 +++ b/src/microsim/lcmodels/MSLCM_SL2015.cpp
 @@ -178,6 +178,21 @@ MSLCM_SL2015::debugVehicle() const {
@@ -117,3 +117,11 @@ index c892b2d..9c45bf8 100644
      if ((ret & LCA_STAY) != 0 && latDist == 0) {
          // ensure that mySafeLatDistLeft / mySafeLatDistRight are up to date for the
          // subsquent check with laneOffset = 0
+@@ -1958,6 +1976,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+         }
+     }
+     // only factor in preferred lateral alignment if there is no speedGain motivation or it runs in the same direction
++    if (lcTr(myVehicle)) std::cerr << "LCT-AL " << MSNet::getInstance()->getCurrentTimeStep() << " " << myVehicle.getID() << " lo=" << laneOffset << " latDist=" << lcBits(latDist) << " latDistSublane=" << lcBits(latDistSublane) << " ret=" << ret << "\n";
+     if (fabs(latDist) <= NUMERICAL_EPS * myVehicle.getActionStepLengthSecs() ||
+             latDistSublane * latDist > 0) {
+ 

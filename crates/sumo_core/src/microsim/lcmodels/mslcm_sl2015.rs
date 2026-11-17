@@ -3445,6 +3445,9 @@ impl MSLCM_SL2015 {
             }
         }
         // only factor in preferred lateral alignment if there is no speedGain motivation or it runs in the same direction
+        if lctw_on(self.myVehicle) {
+            eprintln!("LCT-AL {} {} lo={} latDist={} latDistSublane={} ret={}", MSNet::get_instance().get_current_time_step(), self.myVehicle.get_id(), laneOffset, lctw_bits(*latDist), lctw_bits(latDistSublane), ret);
+        }
         if latDist.abs() <= utils::geom::NUMERICAL_EPS * self.myVehicle.get_action_step_length_secs() || latDistSublane * *latDist > 0. {
             if (latDistSublane < 0. && self.mySpeedGainProbabilityRight < self.mySpeedLossProbThreshold)
                 || (latDistSublane > 0. && self.mySpeedGainProbabilityLeft < self.mySpeedLossProbThreshold)
