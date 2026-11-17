@@ -1554,6 +1554,18 @@ impl MSCalibrator {
 
 }
 
+fn ms_calibrator_vehicle_remover_notify_enter(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSCalibrator_VehicleRemover>().m().notify_enter(veh, reason, enteredLane)
+}
+fn ms_calibrator_vehicle_remover_notify_leave(mr: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
+    Ptr::from_mut(mr).cast::<MSCalibrator_VehicleRemover>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+static MS_CALIBRATOR_VEHICLE_REMOVER_MSMOVE_REMINDER_VT: MSMoveReminderVt = MSMoveReminderVt {
+    notify_enter: ms_calibrator_vehicle_remover_notify_enter,
+    notify_move: default_notify_move,
+    notify_leave: ms_calibrator_vehicle_remover_notify_leave,
+};
+
 /// C++ class `MSCalibrator::VehicleRemover` (microsim/trigger/MSCalibrator.h)
 #[repr(C)] // base must stay at offset 0: VehicleRemover is cast to MSMoveReminder for myLeftoverReminders
 pub struct MSCalibrator_VehicleRemover {
@@ -1582,7 +1594,10 @@ impl MSCalibrator_VehicleRemover {
     #[allow(unused_variables)]
     pub fn new(lane: Ptr<MSLane>, parent: Ptr<MSCalibrator>, undo: bool) -> Self {
         MSCalibrator_VehicleRemover {
-            base: MSMoveReminder::new(parent.base3.get_id(), lane, true),
+            base: MSMoveReminder {
+                vt: &MS_CALIBRATOR_VEHICLE_REMOVER_MSMOVE_REMINDER_VT,
+                ..MSMoveReminder::new(parent.base3.get_id(), lane, true)
+            },
             myParent: parent,
             myUndoCalibration: undo,
         }
