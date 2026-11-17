@@ -509,7 +509,7 @@ impl TrafficLight {
         if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
             panic!("{}", format!("'{}' is not a NEMA controller", objectID));
         }
-        tll.base2.get_parameter(key, "")
+        tll.m().get_parameter(key, "")
     }
 
     /// C++: `const std::pair<std::string, std::string> TrafficLight::getParameterWithKey(const std::string &, const std::string &)` [static]
@@ -534,7 +534,7 @@ impl TrafficLight {
         if starts_with(key, "NEMA.") && tll.get_logic_type() != TrafficLightType::NEMA {
             panic!("{}", format!("'{}' is not a NEMA controller", objectID));
         }
-        tll.m().base2.set_parameter(key, value);
+        tll.m().set_parameter(key, value);
     }
 
     /// C++: `void TrafficLight::subscribe(const std::string &, const std::vector<int> &, double, double, const libsumo::TraCIResults &)` [static]
