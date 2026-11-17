@@ -232,6 +232,7 @@ pub struct MSTransportableStateAdapterVt {
     pub get_lane: fn(&MSTransportableStateAdapter) -> Ptr<MSLane>,
     pub get_path_length: fn(&MSTransportableStateAdapter) -> f64,
     pub save_state: fn(&mut MSTransportableStateAdapter, &mut String),
+    pub get_id: fn(&MSTransportableStateAdapter) -> &str,
 }
 
 /// C++ MSTransportableStateAdapter base implementations (pure virtuals panic, as the concrete state must provide them)
@@ -279,6 +280,9 @@ pub fn adapter_default_get_path_length(_: &MSTransportableStateAdapter) -> f64 {
 }
 pub fn adapter_default_save_state(_: &mut MSTransportableStateAdapter, _: &mut String) {
 }
+pub fn adapter_default_get_id(_: &MSTransportableStateAdapter) -> &str {
+    panic!("getID is virtual on MSPModel_InteractingState only; call it on an interacting state")
+}
 
 /// base vtable of MSTransportableStateAdapter, used by states that do not override the virtual methods
 pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
@@ -297,6 +301,7 @@ pub static MSTRANSPORTABLE_STATE_ADAPTER_VT: MSTransportableStateAdapterVt = MST
     get_lane: adapter_default_get_lane,
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
+    get_id: adapter_default_get_id,
 };
 
 impl MSTransportableStateAdapter {

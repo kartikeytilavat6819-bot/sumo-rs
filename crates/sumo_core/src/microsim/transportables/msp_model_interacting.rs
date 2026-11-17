@@ -390,6 +390,7 @@ pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTran
     get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
     get_path_length: adapter_default_get_path_length,
     save_state: adapter_default_save_state,
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().get_id(),
 };
 
 impl MSPModel_InteractingState {

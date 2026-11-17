@@ -256,6 +256,12 @@ static MSPMODEL_STRIPING_PSTATE_VT: MSTransportableStateAdapterVt = MSTransporta
     get_lane: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_lane(),
     get_path_length: |a| Ptr::new(a).cast::<MSPModel_Striping_PState>().get_path_length(),
     save_state: |a, out| Ptr::from_mut(a).cast::<MSPModel_Striping_PState>().m().save_state(out),
+    get_id: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().get_id(),
+};
+/// PStateVehicle overrides getID (C++ `PStateVehicle::getID` returns the vehicle's ID)
+static MSPMODEL_STRIPING_PSTATE_VEHICLE_VT: MSTransportableStateAdapterVt = MSTransportableStateAdapterVt {
+    get_id: |a| Ptr::new(a).cast::<MSPModel_Striping_PStateVehicle>().get().unwrap().get_id(),
+    ..MSPMODEL_STRIPING_PSTATE_VT
 };
 fn striping_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {
     Ptr::from_mut(m).cast::<MSPModel_Striping>().m().add(t, s, now)
@@ -4639,6 +4645,7 @@ impl MSPModel_Striping_PStateVehicle {
             myXWidth: xWidth,
             myYWidth: yWidth,
         };
+        s.base.base.base.vt = &MSPMODEL_STRIPING_PSTATE_VEHICLE_VT;
         s.myLane = walkingarea; // to ensure correct limits when calling otherStripe()
         // relX is the center but we want it to be the max value if the movement direction is forward
         // and the min value otherwise (indicated by xWidth sign)
