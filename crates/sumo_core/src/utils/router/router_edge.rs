@@ -105,6 +105,20 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     {
         panic!("shortcut: this edge type has no lane allowsVehicleClass()")
     }
+    /// C++ `L::geometryPositionAtOffset(double)` as CCHGraph calls it; only the network lane types have it (C++ would not compile for the others)
+    fn lane_geometry_position_at_offset(_lane: Ptr<Self::Lane>, _offset: f64) -> Position
+    where
+        Self: Sized,
+    {
+        panic!("this edge type has no lane geometryPositionAtOffset()")
+    }
+    /// C++ junction `getPosition()` as CCHGraph calls it on `E::getToJunction()`; only the network node types have it
+    fn junction_position(_node: Ptr<Self::Node>) -> Position
+    where
+        Self: Sized,
+    {
+        panic!("this edge type has no junction getPosition()")
+    }
     // shortcut: only the network edge type provides a railway routing edge, upgrade when IntermodalEdge needs it
     fn railway_routing_edge(&self) -> Ptr<RailEdge<Self, V>>
     where

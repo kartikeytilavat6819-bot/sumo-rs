@@ -174,6 +174,12 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn other_taz_connector(&self) -> Ptr<ROEdge> {
         self.get_other_taz_connector()
     }
+    fn lane_geometry_position_at_offset(lane: Ptr<ROLane>, offset: f64) -> Position {
+        lane.geometry_position_at_offset(offset, 0.)
+    }
+    fn junction_position(node: Ptr<RONode>) -> Position {
+        node.get_position().clone()
+    }
     fn time_penalty(&self) -> f64 {
         self.get_time_penalty()
     }
