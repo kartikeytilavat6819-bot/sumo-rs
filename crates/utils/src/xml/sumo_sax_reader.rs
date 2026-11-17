@@ -56,7 +56,7 @@ fn first_undeclared_reference(data: &[u8], from: usize) -> Option<(String, usize
     None
 }
 
->impl XmlStream {
+impl XmlStream {
     fn new(input: Box<dyn BufRead>, source: Source) -> Self {
         XmlStream { reader: Reader::from_reader(input), source, buf: Vec::new(), pending: None, event_start: 0, open: Vec::new(), root_seen: false }
     }
