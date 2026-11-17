@@ -4243,8 +4243,8 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     // }
     #[allow(unused_variables)]
     pub fn dispatch_taxi(vehID: &str, reservations: &Vec<String>) {
-        // shortcut: MSDevice_Taxi::getDispatchAlgorithm and MSDispatch_TraCI::interpretDispatch are not ported in this pass; upgrade when ms_dispatch.rs is filled
-        panic!("Vehicle::dispatchTaxi not yet ported: depends on MSDispatch_TraCI")
+        // shortcut: needs a typed MSBaseVehicle::getDevice(typeid(MSDevice_Taxi)) and a runtime tag for dynamic_cast<MSDispatch_TraCI*>; MSDispatch_TraCI::interpretDispatch itself is ported, upgrade when getDevice takes a typed device id and MSDispatch has a type tag
+        panic!("Vehicle::dispatchTaxi not yet ported: depends on typed getDevice and the MSDispatch type tag")
     }
 
     /// C++: `void Vehicle::setLength(const std::string &, double)` [static]

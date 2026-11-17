@@ -1730,7 +1730,7 @@ impl Helper {
         let vehLane = v.get_lane();
         let vehEdge = Ptr::from_mut(vehLane.m().get_edge());
         // This is to remember the lanes checked in the driving direction of the vehicle (their opposites can be added in a second pass)
-        let checkedLanesInDrivingDir: Rc<LaneCoverageInfo> = Rc::new(LaneCoverageInfo::new());
+        let checkedLanesInDrivingDir: Rc<std::cell::RefCell<LaneCoverageInfo>> = Rc::new(std::cell::RefCell::new(LaneCoverageInfo::new()));
         for &offset in filterLanes.iter() {
             let mut lane = vehLane.get_parallel_lane(offset, false);
             if !lane.is_null() {
@@ -1742,7 +1742,7 @@ impl Helper {
                 for nv in newVehs.iter() {
                     vehs.insert(nv.cast::<SUMOTrafficObject>());
                 }
-                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), Rc::new(checkedLanes.borrow().clone()));
+                Helper::fuse_lane_coverage(checkedLanesInDrivingDir.clone(), &checkedLanes.borrow());
             } else if !disregardOppositeDirection && offset > 0 {
                 // Check opposite edge, too
                 // index points beyond this edge
@@ -1775,7 +1775,7 @@ impl Helper {
                 let nOpp = i32::max(0, maxOffset - (vehEdge.get_lanes().len() as i32 - 1 - vehLane.get_index()));
                 // Collect vehicles from opposite lanes
                 if nOpp > 0 {
-                    for (l, range) in checkedLanesInDrivingDir.iter() {
+                    for (l, range) in checkedLanesInDrivingDir.borrow().iter() {
                         let l = *l;
                         if l.is_null() || l.get_edge().get_opposite_edge().is_null() {
                             continue;
@@ -3408,10 +3408,9 @@ impl Helper {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn fuse_lane_coverage(aggregatedLaneCoverage: Rc<LaneCoverageInfo>, newLaneCoverage: Rc<LaneCoverageInfo>) {
+    pub fn fuse_lane_coverage(aggregatedLaneCoverage: Rc<std::cell::RefCell<LaneCoverageInfo>>, newLaneCoverage: &LaneCoverageInfo) {
+        let mut agg = aggregatedLaneCoverage.borrow_mut();
         for (lane, range2) in newLaneCoverage.iter() {
-            // shortcut: Rc<LaneCoverageInfo> is mutated in place like the C++ shared_ptr, needs interior mutability in ms_lane.rs to be sound
-            let agg: &mut LaneCoverageInfo = unsafe { &mut *(Rc::as_ptr(&aggregatedLaneCoverage) as *mut LaneCoverageInfo) };
             match agg.get(lane).copied() {
                 None => {
                     // Lane has no coverage in aggregatedLaneCoverage, yet
