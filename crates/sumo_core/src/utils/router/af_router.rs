@@ -1117,24 +1117,20 @@ impl<E, N, V, M> AFRouter<E, N, V, M> where E: RouterEdge<V, Node = N>, V: Route
         edge.from_junction()
     }
 
-    // shortcut: RouterEdge has no getMinimumTravelTime(nullptr) accessor, add minimum_travel_time() to router_edge.rs
     fn edge_minimum_travel_time(edge: Ptr<E>) -> f64 {
-        panic!("shortcut: RouterEdge has no getMinimumTravelTime accessor, add minimum_travel_time() to router_edge.rs")
+        edge.minimum_travel_time(Ptr::null())
     }
 
-    // shortcut: RouterVehicle has no getMaxSpeed() accessor, add max_speed() to router_edge.rs
     fn vehicle_max_speed(vehicle: Ptr<V>) -> f64 {
-        panic!("shortcut: RouterVehicle has no getMaxSpeed accessor, add max_speed() to router_edge.rs")
+        vehicle.get_max_speed()
     }
 
-    // shortcut: RouterVehicle has no getChosenSpeedFactor() accessor, add chosen_speed_factor() to router_edge.rs
     fn vehicle_chosen_speed_factor(vehicle: Ptr<V>) -> f64 {
-        panic!("shortcut: RouterVehicle has no getChosenSpeedFactor accessor, add chosen_speed_factor() to router_edge.rs")
+        vehicle.get_chosen_speed_factor()
     }
 
-    // shortcut: RouterVehicle has no getID() accessor (Named::getIDSecure), add id() to router_edge.rs
     fn vehicle_id_secure(vehicle: Ptr<V>) -> String {
-        panic!("shortcut: RouterVehicle has no getID accessor (Named::getIDSecure), add id() to router_edge.rs")
+        vehicle.id()
     }
 
     // shortcut: KDTreePartition::get_cells_at_level returns a &i32 placeholder, upgrade kd_tree_partition.rs to return Vec<Ptr<KDTreePartition_Cell>>
