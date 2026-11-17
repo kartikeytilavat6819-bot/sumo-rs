@@ -164,8 +164,6 @@ impl MSPModel_Interacting {
         for ped in self.get_pedestrians(lane).iter().copied() {
             let leaderFrontDist = (if ped.get_direction() == MSPMODEL_FORWARD { vehCenter - ped.get_edge_pos(0) } else { ped.get_edge_pos(0) - vehCenter }) - vehWidth * 0.5;
             let leaderBackDist = leaderFrontDist + ped.get_person().get_vehicle_type().get_length();
-            let dc01_t = MSNet::get_instance().get_current_time_step();
-            if std::env::var_os("DC01").is_some() && dc01_t >= 340000 && dc01_t <= 352000 && lane.get_id().to_string() == ":44808045_c0" { println!("DC01 BAD t={:.2} ego={} ped={} dir={} x={:.6} wt={} lFD={:.6} lBD={:.6}", dc01_t as f64 / 1000., ego.get_id(), ped.get_person().get_id(), ped.get_direction(), ped.get_edge_pos(0), ped.get_waiting_time(), leaderFrontDist, leaderBackDist); }
             // DEBUG_INTERACTING output (compile-time debug logging) is not ported
             if leaderBackDist >= -vehWidth && (leaderFrontDist < 0.0 || (leaderFrontDist <= oncomingGap && ped.get_waiting_time() < utils::common::time::time2steps(2.0))) {
                 let person = ped.get_person();

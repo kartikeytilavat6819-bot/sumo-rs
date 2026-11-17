@@ -2098,6 +2098,9 @@ impl MSPModel_Striping {
         let crossingExitLink = crossing.get_link_cont()[0];
         // GUI-only debug dump: DEBUGCOND2 is lane isSelected(), always false in a headless run, so not ported
         let linkLeaders = crossingExitLink.get_leader_info(Ptr::null(), crossing.get_length(), Ptr::null(), false);
+        let dc01_t = MSNet::get_instance().get_current_time_step();
+        let dc01 = std::env::var_os("DC01").is_some() && crossing.get_id().to_string() == ":1383026286_c0_0" && dc01_t >= 528000 && dc01_t <= 531000;
+        if dc01 { println!("DC01 ACV t={:.2} n={} dir={} prio={} stripes={} latOff={:.6} flip={}", dc01_t as f64 / 1000., linkLeaders.len(), dir, prio as i32, stripes, lateral_offset, flipY as i32); }
         if linkLeaders.len() > 0 {
             for it in linkLeaders.iter() {
                 // the vehicle to enter the junction first has priority
@@ -2132,6 +2135,7 @@ impl MSPModel_Striping {
                         vehYmin = vehYmax - veh.get_vehicle_type().get_length() - bGap - min_gap_to_vehicle();
                         vehYmax += min_gap_to_vehicle();
                     }
+                    if dc01 { println!("DC01 ACVV t={:.2} veh={} gap={:.6} dtc={:.6} fromLeft={} bGap={:.6} ymin={:.6} ymax={:.6} spd={:.6}", dc01_t as f64 / 1000., veh.get_id(), it.vehAndGap.1, it.distToCrossing, it.from_left() as i32, bGap, vehYmin, vehYmax, veh.get_speed()); }
                     let sEnd = std::cmp::min(MSPModel_Striping_PState::stripe_2(vehYmax), stripes);
                     for s in std::cmp::max(0, MSPModel_Striping_PState::stripe_2(vehYmin))..sEnd {
                         let su = s as usize;

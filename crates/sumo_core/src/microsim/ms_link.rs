@@ -2625,8 +2625,8 @@ impl MSLink {
     pub fn get_leader_info(&self, ego: Ptr<MSVehicle>, dist: f64, collectBlockers: Ptr<Vec<Ptr<MSPerson>>>, isShadowLink: bool) -> MSLink_LinkLeaders {
         let mut result: MSLink_LinkLeaders = Vec::new();
         let dc01_t = MSNet::get_instance().get_current_time_step();
-        let dc01 = std::env::var_os("DC01").is_some() && !ego.is_null() && ego.get_id().to_string() == "car42" && dc01_t >= 340000 && dc01_t <= 352000;
-        if dc01 { println!("DC01 GLI t={:.2} via={} lane={} dist={:.6} fromInt={} nFoe={} egoLane={} egoPos={:.6} egoSpd={:.6}", dc01_t as f64 / 1000., self.get_via_lane_or_lane().get_id(), self.myLane.get_id(), dist, self.from_internal_lane() as i32, self.myFoeLanes.len(), ego.get_lane().get_id(), ego.get_position_on_lane(), ego.get_speed()); }
+        let dc01b = std::env::var_os("DC01").is_some() && ego.is_null() && self.myLaneBefore.get_id().to_string() == ":1383026286_c0_0" && dc01_t >= 528000 && dc01_t <= 531000;
+        if dc01b { println!("DC01 GLIX t={:.2} dist={:.6} nFoe={}", dc01_t as f64 / 1000., dist, self.myFoeLanes.len()); }
         if !ego.is_null() && (!self.from_internal_lane() || ego.get_lane_change_model_2().is_opposite()) {
             return result;
         }
@@ -2648,7 +2648,7 @@ impl MSLink {
             let crossingWidth = if sameTarget || sameSource { 0. } else { self.myConflicts[i].conflictSize };
             let foeCrossingWidth = if sameTarget || sameSource { 0. } else { self.myConflicts[i].get_foe_conflict_size(foeExitLink) };
             let contLane = foeExitLink.get_via_lane_or_lane().get_edge().is_internal() && !(self.is_internal_junction_link() || self.is_exit_link_after_internal_junction());
-            if dc01 { println!("DC01 FOE t={:.2} foe={} dtc={:.6} fdtc={:.6} cw={:.6} sT={} sS={}", dc01_t as f64 / 1000., foeLane.get_id(), distToCrossing, foeDistToCrossing, crossingWidth, sameTarget as i32, sameSource as i32); }
+            if dc01b { println!("DC01 FOE t={:.2} foe={} dtc={:.6} fdtc={:.6} cw={:.6} fcw={:.6} sT={} sS={} contLane={} nVeh={}", dc01_t as f64 / 1000., foeLane.get_id(), distToCrossing, foeDistToCrossing, crossingWidth, foeCrossingWidth, sameTarget as i32, sameSource as i32, contLane as i32, foeLane.get_vehicle_number_with_partials()); }
             if distToCrossing + crossingWidth < 0. && !sameTarget && (ego.is_null() || !g_compute_lc() || distToCrossing + crossingWidth + ego.get_vehicle_type().get_length() < 0.) {
                 // vehicle is behind the crossing point, continue with next foe lane
                 continue;
@@ -2683,6 +2683,7 @@ impl MSLink {
                 let isOpposite = leader.get_lane_change_model_2().is_opposite();
                 let avi = foeExitLink.get_approaching(msveh_to_sumo_vehicle(leader));
                 let willPass = avi.willPass || (avi.arrivalTime == INVALID_TIME && sameTarget);
+                if dc01b { println!("DC01 CAND t={:.2} foe={} veh={} lb={:.6} lbd={:.6} past={} entered={} inTheWay={} willPass={} aT={} front={} spd={:.6} ignGC={} stopped={} willStop={}", dc01_t as f64 / 1000., foeLane.get_id(), leader.get_id(), leaderBack, leaderBackDist, pastTheCrossingPoint as i32, enteredTheCrossingPoint as i32, inTheWay as i32, willPass as i32, avi.arrivalTime, leader.is_front_on_lane(foeLane) as i32, leader.get_speed(), ignoreGreenCont as i32, leader.is_stopped() as i32, leader.will_stop() as i32); }
                 if leader == ego {
                     continue;
                 }
@@ -2795,7 +2796,6 @@ impl MSLink {
                 let vehWidth = ego.get_vehicle_type().get_width() + MSPMODEL_SAFETY_GAP;
                 let wayIn = self.myConflicts[i].lengthBehindCrossing < self.myLaneBefore.get_length() * 0.5;
                 let vehCenter = foeDistToCrossing + self.myLaneBefore.get_width() * 0.5 + ego.get_lateral_position_on_lane() * (if wayIn { -1. } else { 1. });
-                if dc01 { println!("DC01 PED t={:.2} foe={} dtp={:.6} vc={:.6} vw={:.6} wayIn={} lbc={:.6} lbLen={:.6} lbW={:.6} lat={:.6}", dc01_t as f64 / 1000., foeLane.get_id(), distToPeds, vehCenter, vehWidth, wayIn as i32, self.myConflicts[i].lengthBehindCrossing, self.myLaneBefore.get_length(), self.myLaneBefore.get_width(), ego.get_lateral_position_on_lane()); }
                 // C++ short-circuits: blockedAtDist is only called when distToPeds >= -SAFETY_GAP
                 let blocked = if distToPeds >= -MSPMODEL_SAFETY_GAP {
                     let movementModel = MSNet::get_instance().m().get_person_control().get_movement_model();
