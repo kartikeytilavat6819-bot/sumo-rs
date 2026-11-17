@@ -1,15 +1,9 @@
 #!/bin/bash
-# temporary (sl05): routes_forms edge-speed diagnostics
+# temporary (sl05): where does the routing engine first init edge weights?
 cd "$(dirname "$0")/../.." || exit 1
-export STATE_OUT=/tmp/sl05
-bash tools/oracle/run_state.sh routes_forms >/tmp/sl05_rs.txt 2>&1
-D=/tmp/sl05/routes_forms/sim
-for f in $D.ours.state.xml $D.pristine.state.xml; do
-  echo "== $f"
-  grep -h 'routingengine' $f | cut -c1-200
-  grep -h '<edge id="-103224#0"' $f | sed 's/pastSpeed="\([^"]*\)"/PAST \1/' | cut -c1-2500
-  grep -h '<edge id="-103224#0"' $f | sed 's/.*pastSpeed="\([^"]*\)".*/\1/' | tr ' ' '\n' | awk '{s+=$1;n++} END{printf "n=%d mean=%.6f\n", n, s/n}'
-done
-grep -h 'edge id' $D.ours.state.xml | wc -l
-grep -h 'edge id' $D.pristine.state.xml | wc -l
+BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo
+cd tools/oracle/cases/routes_forms || exit 1
+SL05_TRACE=1 RUST_BACKTRACE=0 $BIN -n ref_simple.net.xml -r routes.rou --end 100 --no-step-log true --save-state.times 50 --save-state.files /tmp/sl05_rf.state.xml >/tmp/sl05_rf.log 2>&1
+grep -n "SL05 init" /tmp/sl05_rf.log | head -5
+grep -A40 -m1 "SL05 init" /tmp/sl05_rf.log | grep -E "sumo_core|sumo::|  at " | head -40
 echo "AGENT RUN DONE"

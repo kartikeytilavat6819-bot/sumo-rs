@@ -1335,6 +1335,10 @@ impl MSRoutingEngine {
             if bike { st.myEdgeBikeSpeeds.is_empty() } else { st.myEdgeSpeeds.is_empty() }
         };
         if empty {
+            if std::env::var("SL05_TRACE").is_ok() {
+                eprintln!("SL05 init t={} bike={}", MSNet::get_instance().get_current_time_step(), bike);
+                eprintln!("{}", std::backtrace::Backtrace::force_capture());
+            }
             let useLoaded = get_bool("device.rerouting.init-with-loaded-weights");
             let currentSecond = steps2time(MSNet::get_instance().get_current_time_step());
             let sep = weights_separate_turns();
