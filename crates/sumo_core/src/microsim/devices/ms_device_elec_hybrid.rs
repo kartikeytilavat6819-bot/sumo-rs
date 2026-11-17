@@ -1590,7 +1590,6 @@ impl MSDevice_ElecHybrid {
     //     }
     #[allow(unused_variables)]
     pub fn get_veh_elem(&mut self) -> Ptr<Element> {
-        // shortcut: C++ returns the Element pointer; the port returns a pointer into the circuit's element arena, valid until the arena grows, upgrade when circuits hand out stable handles
         if let Some(ve) = self.veh_elem {
             Ptr::from_mut(self.myCircuit.m().element_mut(ve))
         } else {
