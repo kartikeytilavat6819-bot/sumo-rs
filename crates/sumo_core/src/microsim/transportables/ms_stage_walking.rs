@@ -78,7 +78,6 @@ impl MSStageWalking {
     // }
     #[allow(unused_variables)]
     pub fn new(personID: &str, route: &ConstMSEdgeVector, toStop: Ptr<MSStoppingPlace>, walkingTime: SUMOTime, speed: f64, departPos: f64, arrivalPos: f64, departPosLat: f64, departLane: i32, routeID: &str) -> Self {
-        if std::env::var_os("CD01").is_some() && personID == "pwL10" { eprintln!("CD01 MSW dstop_null={} bt={}", toStop.is_null(), std::backtrace::Backtrace::force_capture()); }
         let mut walk = MSStageWalking {
             base: MSStageMoving::new(MSStageType::WALKING, route, routeID, toStop, speed, departPos, arrivalPos, departPosLat, departLane),
             myWalkingTime: walkingTime,

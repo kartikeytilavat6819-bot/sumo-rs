@@ -578,7 +578,6 @@ impl MSStageTrip {
             }
             let prevStopID = if prevStop.is_null() { String::new() } else { prevStop.get_id().to_string() };
             let destStopID = if self.myDestinationStop.is_null() { String::new() } else { self.myDestinationStop.get_id().to_string() };
-            if std::env::var_os("CD01").is_some() && transportable.get_id() == "pwL10" { eprintln!("CD01 RC dst={} dep={} arr={}", destStopID, departPos, self.myArrivalPos); }
             let ok = router.compute(origin, destination, departPos, &prevStopID, self.myArrivalPos, &destStopID,
                 transportable.get_max_speed() * self.myWalkFactor, vehicle, transportable.get_v_type_parameter(), self.myModeSet, time, &mut result, 0.);
             if ok {
@@ -597,7 +596,6 @@ impl MSStageTrip {
                 vehControl.discount_routing_vehicle();
             }
         }
-        if std::env::var_os("CD01").is_some() && transportable.get_id() == "pwL10" { for it in minResult.iter() { eprintln!("CD01 TI line={} dstop={} n={} cost={}", it.line, it.destStop, it.edges.len(), it.cost); } }
         if minCost != f64::MAX {
             let isTaxi = !minVehicle.is_null() && (self.myModeSet & SVC_TAXI) != 0 && minVehicle.get_parameter().line == "taxi";
             let mut carUsed = false;

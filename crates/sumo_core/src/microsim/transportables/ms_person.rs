@@ -325,7 +325,6 @@ impl MSPerson {
     // }
     #[allow(unused_variables)]
     pub fn check_access(&mut self, prior: Ptr<MSStage>, waitAtStop: bool) -> bool {
-        if std::env::var_os("CD01").is_some() && self.get_id() == "pwL10" { eprintln!("CD01 CA wait={} dstop_null={} dedge={} walk={}", waitAtStop, prior.get_destination_stop().is_null(), prior.get_destination().get_numerical_id(), prior.get_stage_type() == MSStageType::WALKING); }
         let mut prevStop = prior.get_destination_stop();
         if !waitAtStop && prior.get_stage_type() == MSStageType::TRIP {
             prevStop = prior.get_origin_stop();

@@ -1,7 +1,0 @@
-diff --git a/src/utils/router/IntermodalRouter.h b/src/utils/router/IntermodalRouter.h
---- a/src/utils/router/IntermodalRouter.h
-+++ b/src/utils/router/IntermodalRouter.h
-@@ -137,2 +137,3 @@
-             for (const _IntermodalEdge* iEdge : intoEdges) {
-+                if (getenv("CD01") && stopID == "4788103942") std::cerr << "CD01 IE " << iEdge->getID() << " " << iEdge->getLine() << " inc=" << iEdge->includeInRoute(false) << "\n";
-                 bool addedEdge = false;

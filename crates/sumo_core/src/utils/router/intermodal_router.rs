@@ -266,7 +266,6 @@ where
             let mut length = 0.;
             let mut prev: Ptr<IntermodalEdge<E, L, N, V>> = Ptr::null();
             for iEdge in intoEdges.iter().copied() {
-                if std::env::var_os("CD01").is_some() && stopID == "4788103942" { eprintln!("CD01 IE {} {} inc={}", iEdge.get_id(), iEdge.get_line(), iEdge.include_in_route(false)); }
                 let mut addedEdge = false;
                 let edge: Ptr<Unmapped> = iEdge.get_edge().cast();
                 if iEdge.include_in_route(false) {

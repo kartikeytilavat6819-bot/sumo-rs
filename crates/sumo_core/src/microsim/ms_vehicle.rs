@@ -12199,7 +12199,6 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn board_transportables(&mut self, stop: &mut MSStop) {
-        if std::env::var_os("CD01").is_some() && self.get_id() == "L1f.0" { eprintln!("CD01 BT time={} hp={} edge={}", MSNet::get_instance().get_current_time_step(), MSNet::get_instance().has_persons(), self.myLane.get_edge().get_numerical_id()); }
         if stop.skipOnDemand {
             return;
         }
