@@ -1069,8 +1069,8 @@ impl MSStageDriving {
                     }
                 }
                 if exit != MSStoppingPlace_AccessExit::PLATFORM {
-                    // shortcut: dynamic_cast<MSVehicle*> is unchecked; only a mesoscopic vehicle would fail it, and meso is not ported
-                    let train = self.myVehicle.cast::<MSVehicle>();
+                    // dynamic_cast<MSVehicle*>: a mesoscopic vehicle carries ME_VEHICLE_VT instead of MS_VEHICLE_VT
+                    let train = if std::ptr::eq(self.myVehicle.base.vt, &crate::microsim::ms_vehicle::MS_VEHICLE_VT) { self.myVehicle.cast::<MSVehicle>() } else { Ptr::null() };
                     if !train.is_null() {
                         let mut trainHelper = MSTrainHelper::new(train, -1., false, false, 1.0, 3);
                         let lane = train.get_lane();

@@ -1040,16 +1040,8 @@ impl MSE2Collector {
             }
         }
         // sort myMoveNotifications (required for jam processing) ascendingly according to vehicle's distance to the detector end
-        // determinism: C++ std::sort is unstable; the order of equal distances may differ from SUMO
-        self.myMoveNotifications.sort_by(|a, b| {
-            if Self::compare_move_notification(*a, *b) {
-                std::cmp::Ordering::Less
-            } else if Self::compare_move_notification(*b, *a) {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order
+        utils::common::std_sort::std_sort(self.myMoveNotifications.as_mut_slice(), |a, b| Self::compare_move_notification(a, b));
 
         // reset values concerning current time step (these are updated in integrateMoveNotification() and aggregateOutputValues())
         self.myCurrentVehicleSamples = 0.0;

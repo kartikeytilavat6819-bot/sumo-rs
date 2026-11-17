@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/city_tokyo_scramble/city_tokyo_scramble.nod.xml --edge-files tools/oracle/cases/city_tokyo_scramble/city_tokyo_scramble.edg.xml --crossings.guess true --walkingareas true

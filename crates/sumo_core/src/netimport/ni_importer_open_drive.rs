@@ -366,17 +366,6 @@ impl NIImporter_OpenDrive_LaneSorter {
 
 }
 
-/// Ordering induced by C++ `LaneSorter::operator()` (used with `std::sort`)
-fn lane_sorter_ordering(sorter: &NIImporter_OpenDrive_LaneSorter, a: &NIImporter_OpenDrive_OpenDriveLane, b: &NIImporter_OpenDrive_OpenDriveLane) -> std::cmp::Ordering {
-    if sorter.call_op(a, b) != 0 {
-        std::cmp::Ordering::Less
-    } else if sorter.call_op(b, a) != 0 {
-        std::cmp::Ordering::Greater
-    } else {
-        std::cmp::Ordering::Equal
-    }
-}
-
 /// Maps a raw SAX tag number back to its `OpenDriveXMLTag` (unknown numbers map to OPENDRIVE_TAG_NOTHING)
 fn open_drive_tag_from_i32(v: i32) -> NIImporter_OpenDrive_OpenDriveXMLTag {
     use NIImporter_OpenDrive_OpenDriveXMLTag as T;
@@ -1577,10 +1566,10 @@ impl NIImporter_OpenDrive {
                         rightGeom.clone(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
                     currRight = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
-                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|
+                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|, so equal |id| lanes tie
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_RIGHT).or_default());
                     let sorter = NIImporter_OpenDrive_LaneSorter::new();
-                    lanes.sort_by(|a, b| lane_sorter_ordering(&sorter, a, b));
+                    utils::common::std_sort::std_sort_vec(&mut lanes, |a, b| sorter.call_op(a, b) != 0);
                     for odl in &lanes {
                         if let Some(&sumoLaneIndex) = e.laneSections[j].laneMap.get(&odl.id) {
                             NIImporter_OpenDrive::set_lane_attributes(oe.clone(), currRight.m().get_lane_struct(sumoLaneIndex), odl, saveOrigIDs, tc.m());
@@ -1632,10 +1621,10 @@ impl NIImporter_OpenDrive {
                         leftGeom.reverse(), utils::xml::sumo_xml_definitions::LaneSpreadFunction::RIGHT, &e.streetName, "", true);
                     currLeft = Ptr::from_raw(Box::into_raw(edge));
                     lanesBuilt = true;
-                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|
+                    // determinism: C++ std::sort is unstable; the comparator only orders by |id|, so equal |id| lanes tie
                     let mut lanes = std::mem::take(e.laneSections[j].lanesByDir.entry(NIImporter_OpenDrive_OpenDriveXMLTag::OPENDRIVE_TAG_LEFT).or_default());
                     let sorter = NIImporter_OpenDrive_LaneSorter::new();
-                    lanes.sort_by(|a, b| lane_sorter_ordering(&sorter, a, b));
+                    utils::common::std_sort::std_sort_vec(&mut lanes, |a, b| sorter.call_op(a, b) != 0);
                     for odl in &lanes {
                         if let Some(&sumoLaneIndex) = e.laneSections[j].laneMap.get(&odl.id) {
                             NIImporter_OpenDrive::set_lane_attributes(oe.clone(), currLeft.m().get_lane_struct(sumoLaneIndex), odl, saveOrigIDs, tc.m());
@@ -4741,17 +4730,8 @@ impl NIImporter_OpenDrive {
             }
             if !sorted {
                 write_warningf!("The sections of edge '%' are not sorted properly.", e.id.clone());
-                // determinism: C++ std::sort is unstable; ties on s may be ordered differently
-                let mut sorter = NIImporter_OpenDrive_sections_by_s_sorter::new();
-                e.laneSections.sort_by(|a, b| {
-                    if sorter.call_op(a, b) != 0 {
-                        std::cmp::Ordering::Less
-                    } else if sorter.call_op(b, a) != 0 {
-                        std::cmp::Ordering::Greater
-                    } else {
-                        std::cmp::Ordering::Equal
-                    }
-                });
+                // determinism: libstdc++ std::sort order (ties on s)
+                utils::common::std_sort::std_sort_vec(&mut e.laneSections, |a, b| NIImporter_OpenDrive_sections_by_s_sorter::new().call_op(a, b) != 0);
             }
             // check whether duplicate s-values occur
             // but keep all lane sections for connecting roads because they are

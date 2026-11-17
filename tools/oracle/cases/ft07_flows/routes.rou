@@ -1,0 +1,9 @@
+<routes>
+    <!-- three flow forms: vehsPerHour, probability and period="exp(0.5)"; one vehicle with insertionChecks="none" -->
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <route id="B" edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <flow id="f_rate" route="A" begin="0" end="100" vehsPerHour="360"/>
+    <flow id="f_prob" route="B" begin="0" end="100" probability="0.2"/>
+    <flow id="f_exp" route="A" begin="5" end="100" period="exp(0.5)"/>
+    <vehicle id="nochk" route="B" depart="2.00" insertionChecks="none"/>
+</routes>

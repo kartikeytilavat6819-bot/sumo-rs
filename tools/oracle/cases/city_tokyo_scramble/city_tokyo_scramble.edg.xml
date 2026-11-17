@@ -1,0 +1,34 @@
+<edges>
+    <edge id="armN_f" from="N" to="c" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armN_b" from="c" to="N" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armS_f" from="S" to="c" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armS_b" from="c" to="S" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armE_f" from="E" to="c" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armE_b" from="c" to="E" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armW_f" from="W" to="c" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="armW_b" from="c" to="W" numLanes="2" speed="13.89" disallow="pedestrian"/>
+    <edge id="swNWNE_f" from="NW" to="NE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swNWNE_b" from="NE" to="NW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swNESE_f" from="NE" to="SE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swNESE_b" from="SE" to="NE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swSESW_f" from="SE" to="SW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swSESW_b" from="SW" to="SE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swSWNW_f" from="SW" to="NW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="swSWNW_b" from="NW" to="SW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acNNW_f" from="N" to="NW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acNNW_b" from="NW" to="N" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acNNE_f" from="N" to="NE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acNNE_b" from="NE" to="N" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acSSW_f" from="S" to="SW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acSSW_b" from="SW" to="S" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acSSE_f" from="S" to="SE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acSSE_b" from="SE" to="S" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acENE_f" from="E" to="NE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acENE_b" from="NE" to="E" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acESE_f" from="E" to="SE" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acESE_b" from="SE" to="E" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acWNW_f" from="W" to="NW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acWNW_b" from="NW" to="W" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acWSW_f" from="W" to="SW" numLanes="1" speed="1.40" allow="pedestrian"/>
+    <edge id="acWSW_b" from="SW" to="W" numLanes="1" speed="1.40" allow="pedestrian"/>
+</edges>

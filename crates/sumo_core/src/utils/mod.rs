@@ -3,6 +3,7 @@ pub mod handlers;
 pub mod router;
 pub mod shapes;
 pub mod vehicle;
+pub mod map_matcher;
 pub mod named_rtree;
 pub mod parametrised_wrapping_command;
 pub mod wrapping_command;

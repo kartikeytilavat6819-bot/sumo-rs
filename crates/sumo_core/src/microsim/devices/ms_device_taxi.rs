@@ -2,7 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::options::options_cont::with_options;
-use utils::common::to_string::{f64_to_string_prec, join_to_string_sorting};
+use utils::common::to_string::{f64_to_string_default, join_to_string_sorting};
 use crate::utils::vehicle::sumo_route_handler::SUMORouteHandler;
 
 
@@ -1376,8 +1376,8 @@ impl MSDevice_Taxi {
         let internals = format!("{} {} {} {}",
             self.myState,
             self.myCustomersServed,
-            f64_to_string_prec(self.myOccupiedDistance, 6),
-            f64_to_string_prec(self.myOccupiedTime as f64, 6));
+            f64_to_string_default(self.myOccupiedDistance),
+            self.myOccupiedTime);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         if self.myCustomers.len() > 0 {
             out.write_attr(SUMO_ATTR_CUSTOMERS, sorted_join(self.myCustomers.iter().map(|c| c.get_id().to_string()).collect()).as_str());

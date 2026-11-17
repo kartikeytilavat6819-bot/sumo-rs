@@ -1,0 +1,26 @@
+<routes>
+    <!-- congestion: 20 vehicles on two alternative routes into the same corridor; half are slow -->
+    <vType id="slow" carFollowModel="IDM" accel="1.0" decel="2.0" maxSpeed="4"/>
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <route id="B" edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <vehicle id="a0" type="slow" route="A" depart="0.00"/>
+    <vehicle id="b0" route="B" depart="1.00"/>
+    <vehicle id="a1" type="slow" route="A" depart="2.00"/>
+    <vehicle id="b1" route="B" depart="3.00"/>
+    <vehicle id="a2" type="slow" route="A" depart="4.00"/>
+    <vehicle id="b2" route="B" depart="5.00"/>
+    <vehicle id="a3" type="slow" route="A" depart="6.00"/>
+    <vehicle id="b3" route="B" depart="7.00"/>
+    <vehicle id="a4" type="slow" route="A" depart="8.00"/>
+    <vehicle id="b4" route="B" depart="9.00"/>
+    <vehicle id="a5" type="slow" route="A" depart="10.00"/>
+    <vehicle id="b5" route="B" depart="11.00"/>
+    <vehicle id="a6" type="slow" route="A" depart="12.00"/>
+    <vehicle id="b6" route="B" depart="13.00"/>
+    <vehicle id="a7" type="slow" route="A" depart="14.00"/>
+    <vehicle id="b7" route="B" depart="15.00"/>
+    <vehicle id="a8" type="slow" route="A" depart="16.00"/>
+    <vehicle id="b8" route="B" depart="17.00"/>
+    <vehicle id="a9" type="slow" route="A" depart="18.00"/>
+    <vehicle id="b9" route="B" depart="19.00"/>
+</routes>

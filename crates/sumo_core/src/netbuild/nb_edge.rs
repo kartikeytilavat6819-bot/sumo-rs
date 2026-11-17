@@ -2957,16 +2957,8 @@ impl NBEdge {
             }
         }
         let sorter = NBContHelper_relative_outgoing_edge_sorter::new(Ptr::from_mut(self));
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        edges.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order (ties and non-transitive angle checks resolve as in C++)
+        utils::common::std_sort::std_sort(&mut edges, |a, b| sorter.call_op(a, b));
         Ptr::from_raw(Box::into_raw(Box::new(edges)))
     }
 
@@ -3056,16 +3048,8 @@ impl NBEdge {
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_angle(&mut self) {
         let sorter = NBEdge_connections_relative_edgelane_sorter::new(Ptr::from_mut(self));
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        self.myConnections.sort_by(|a, b| {
-            if sorter.call_op(a, b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(b, a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort_vec(&mut self.myConnections, |a, b| sorter.call_op(a, b) != 0);
     }
 
     /// C++: `void NBEdge::sortOutgoingConnectionsByIndex()`
@@ -3076,16 +3060,8 @@ impl NBEdge {
     // }
     #[allow(unused_variables)]
     pub fn sort_outgoing_connections_by_index(&mut self) {
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        self.myConnections.sort_by(|a, b| {
-            if NBEdge::connections_sorter(a, b) {
-                std::cmp::Ordering::Less
-            } else if NBEdge::connections_sorter(b, a) {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order (connections_sorter ties on different toEdges)
+        utils::common::std_sort::std_sort_vec(&mut self.myConnections, |a, b| NBEdge::connections_sorter(a, b));
     }
 
     /// C++: `void NBEdge::remapConnections(const EdgeVector &)`
@@ -8299,16 +8275,8 @@ impl NBEdge {
             return Ptr::null();
         }
         let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), true);
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        cands.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort(&mut cands, |a, b| sorter.call_op(a, b) != 0);
         let best: Ptr<NBEdge> = cands[0];
         if best.is_turning_direction_at(Ptr::new(self)) {
             Ptr::null()
@@ -8340,16 +8308,8 @@ impl NBEdge {
             return Ptr::null();
         }
         let sorter = NBContHelper_edge_similar_direction_sorter::new(Ptr::new(self), false);
-        // determinism: C++ std::sort is unstable, Rust sort_by is stable; ties may end up in a different order
-        cands.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        // determinism: libstdc++ std::sort order
+        utils::common::std_sort::std_sort(&mut cands, |a, b| sorter.call_op(a, b) != 0);
         let best: Ptr<NBEdge> = cands[0];
         if best.is_turning_direction_at(Ptr::new(self)) {
             Ptr::null()

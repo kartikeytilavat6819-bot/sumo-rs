@@ -1112,7 +1112,7 @@ impl MSStoppingPlaceRerouter {
     // }
     #[allow(unused_variables)]
     pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited)
+        MSNet::get_instance().get().unwrap().get_router_tt(veh.get_rng_index(), prohibited)
     }
 
     /// C++: `double MSStoppingPlaceRerouter::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual, pure virtual]

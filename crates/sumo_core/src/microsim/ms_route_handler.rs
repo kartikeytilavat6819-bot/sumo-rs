@@ -4,6 +4,8 @@ use crate::prelude::*;
 const VTYPEPARS_VEHICLECLASS_SET: i64 = 1 << 7;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_names, DEFAULT_CONTAINER_TRANSHIP_SPEED, DEFAULT_VTYPE_ID, SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER, SVC_PEDESTRIAN};
 use crate::microsim::trigger::ms_charging_station::MSChargingStation;
+use crate::utils::map_matcher::{MapMatcher, MapMatcherHost, JUNCTION_TAZ_MISSING_HELP};
+use crate::utils::named_rtree::NamedRTree;
 
 /// C++ enum `MSRouteHandler::ObjectTypeEnum`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -14,14 +16,13 @@ pub enum MSRouteHandler_ObjectTypeEnum {
     UNDEFINED = 2,
 }
 
-// shortcut: VEHPARS_* and JUNCTION_TAZ_MISSING_HELP belong to SUMOVehicleParameter.h / MapMatcher.h, not ported yet, move them there
+// shortcut: VEHPARS_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const VEHPARS_FROM_TAZ_SET: i64 = 2 << 15;
 const VEHPARS_TO_TAZ_SET: i64 = 2 << 16;
 const VEHPARS_ROUTE_SET: i64 = 2 << 10;
 const VEHPARS_FORCE_REROUTE: i64 = 2 << 17;
 const VEHPARS_ARRIVALPOS_SET: i64 = 2 << 12;
 const VTYPEPARS_MAXSPEED_SET: i64 = 1 << 2;
-const JUNCTION_TAZ_MISSING_HELP: &str = "\nSet option '--junction-taz' or load a TAZ-file";
 // shortcut: STOP_INDEX_* belong to SUMOVehicleParameter.h, not ported yet, move them there
 const STOP_INDEX_REPEAT: i32 = -3;
 const STOP_INDEX_END: i32 = -1;
@@ -81,13 +82,6 @@ fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
     let dist = MSRoute::dist_dictionary(id);
     let known = MSRoute::has_route(id) || (!dist.is_null() && dist.get_overall_prob() != 0.0);
     if known { Some(MSRoute::dictionary_3(id, SUMORouteHandler::get_parsing_rng())) } else { None }
-}
-
-/// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
-// shortcut: parseGeoEdges belongs to the unported MapMatcher base class, geo-coordinate route parsing panics until it is ported
-#[allow(unused_variables)]
-fn parse_geo_edges(pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstMSEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
-    panic!("parseGeoEdges needs the unported MapMatcher base class");
 }
 
 /// C++ `toString(SumoXMLTag)`: the canonical name of a tag
@@ -213,7 +207,7 @@ pub struct MSRouteHandler {
     /// C++ base class `SUMORouteHandler`
     pub base: SUMORouteHandler,
     /// C++ base class `MapMatcher<MSEdge, MSLane, MSJunction>`
-    pub base2: Unmapped /* MapMatcher<MSEdge, MSLane, MSJunction> */,
+    pub base2: MSMapMatcher,
     /// The current route
     pub myActiveRoute: ConstMSEdgeVector,
     /// number of repetitions of the active route
@@ -265,6 +259,18 @@ impl std::ops::DerefMut for MSRouteHandler {
     }
 }
 
+impl MapMatcherHost<MSEdge> for MSRouteHandler {
+    fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        MSRouteHandler::init_lane_tree(self, tree)
+    }
+    fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
+        MSRouteHandler::retrieve_edge(self, id)
+    }
+    fn get_rng(&self) -> Ptr<SumoRNG> {
+        MSRouteHandler::get_rng(self)
+    }
+}
+
 impl MSRouteHandler {
     /// C++: `void MSRouteHandler::MSRouteHandler(const std::string &, bool)`
     /// standard constructor
@@ -291,10 +297,14 @@ impl MSRouteHandler {
     // }
     #[allow(unused_variables)]
     pub fn new(file: &str, addVehiclesDirectly: bool) -> Self {
-        // shortcut: MapMatcher<MSEdge, MSLane, MSJunction> is not ported yet (base2 is a unit placeholder), its mapmatch.* options are not read, upgrade when utils MapMatcher exists
         let mut h = MSRouteHandler {
             base: SUMORouteHandler::new(file, if addVehiclesDirectly { "" } else { "routes" }, true),
-            base2: (),
+            base2: MapMatcher::new(
+                utils::options::options_cont::get_bool("mapmatch.junctions"),
+                utils::options::options_cont::get_bool("mapmatch.taz"),
+                utils::options::options_cont::get_float("mapmatch.distance"),
+                Ptr::from_raw(utils::common::msg_handler::with_instance(MsgType::Error, |h| h as *mut MsgHandler)),
+            ),
             myActiveRoute: Vec::with_capacity(100),
             myActiveRouteRepeat: 0,
             myActiveRoutePeriod: 0,
@@ -530,6 +540,18 @@ impl MSRouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
+    /// C++ `MapMatcher::parseGeoEdges(positions, geo, vClass, into, rid, isFrom, ok)` (forceEdge false), called on the route handler
+    pub fn parse_geo_edges(&self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, into: &mut ConstMSEdgeVector, rid: &str, isFrom: bool, ok: &mut bool) {
+        self.base2.parse_geo_edges(&*self, &pv, geo, vClass, into, rid, isFrom, ok, false);
+    }
+
+    /// `parseGeoEdges` into myActiveRoute: the route is taken out while the host is borrowed
+    fn parse_geo_edges_active(&mut self, pv: PositionVector, geo: bool, vClass: SUMOVehicleClass, rid: &str, isFrom: bool, ok: &mut bool) {
+        let mut route = std::mem::take(&mut self.myActiveRoute);
+        self.parse_geo_edges(pv, geo, vClass, &mut route, rid, isFrom, ok);
+        self.myActiveRoute = route;
+    }
+
     pub fn parse_from_via_to(&mut self, tag: SumoXMLTag, attrs: &SUMOSAXAttributes) {
         let element = tag_to_string(tag);
         self.myActiveRoute.clear();
@@ -574,7 +596,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, true, &mut ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, true, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().fromTaz = taz;
@@ -582,7 +604,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_FROMLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_FROMLONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, true, &mut ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, true, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().fromTaz = taz;
@@ -603,10 +625,10 @@ impl MSRouteHandler {
         let mut viaEdges: ConstMSEdgeVector = Vec::new();
         if attrs.has_attribute(SUMO_ATTR_VIAXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIAXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, &mut ok);
+            self.parse_geo_edges(pv, false, vClass, &mut viaEdges, &rid, false, &mut ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIALONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_VIALONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, &mut ok);
+            self.parse_geo_edges(pv, true, vClass, &mut viaEdges, &rid, false, &mut ok);
         } else if attrs.has_attribute(SUMO_ATTR_VIAJUNCTIONS) {
             let junctionIDs: Vec<String> = attrs.get(SUMO_ATTR_VIAJUNCTIONS, &self.myVehicleParameter.id, &mut ok, true);
             for junctionID in junctionIDs {
@@ -653,7 +675,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOXY) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOXY, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, false, vClass, &mut self.myActiveRoute, &rid, false, &mut ok);
+            self.parse_geo_edges_active(pv, false, vClass, &rid, false, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().toTaz = taz;
@@ -661,7 +683,7 @@ impl MSRouteHandler {
             }
         } else if attrs.has_attribute(SUMO_ATTR_TOLONLAT) {
             let pv: PositionVector = attrs.get(SUMO_ATTR_TOLONLAT, &self.myVehicleParameter.id, &mut ok, true);
-            parse_geo_edges(pv, true, vClass, &mut self.myActiveRoute, &rid, false, &mut ok);
+            self.parse_geo_edges_active(pv, true, vClass, &rid, false, &mut ok);
             if myMapMatchTAZ && ok {
                 let taz = self.myActiveRoute.last().unwrap().get_id().to_string();
                 self.myVehicleParameter.m().toTaz = taz;
@@ -2460,7 +2482,7 @@ impl MSRouteHandler {
                             vClass = type_.get_parameter().vehicleClass;
                         }
                     }
-                    parse_geo_edges(positions, geo, vClass, &mut geoEdges, &self.myVehicleParameter.id, true, &mut ok);
+                    self.base2.parse_geo_edges(&*self, &positions, geo, vClass, &mut geoEdges, &self.myVehicleParameter.id, true, &mut ok, true);
                     if ok {
                         edge = geoEdges[0];
                         if geo {
@@ -3458,9 +3480,17 @@ impl MSRouteHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        // shortcut: NamedRTree is not ported, lanes are not inserted into the tree until it is (the tree only serves map matching)
-        let _ = tree;
+    pub fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        for edge in MSEdge::get_all_edges().iter() {
+            if edge.m().is_normal() || crate::microsim::ms_globals::using_internal_lanes() {
+                for lane in edge.m().get_lanes().iter() {
+                    let b = lane.m().get_shape(false).get_box_boundary();
+                    let cmin = [b.xmin() as f32, b.ymin() as f32];
+                    let cmax = [b.xmax() as f32, b.ymax() as f32];
+                    tree.m().insert(&cmin, &cmax, &Ptr::new(&lane.base));
+                }
+            }
+        }
     }
 
     /// C++: `MSEdge * MSRouteHandler::retrieveEdge(const std::string &)` [virtual, protected]
@@ -3469,7 +3499,7 @@ impl MSRouteHandler {
     //     return MSEdge::dictionary(id);
     // }
     #[allow(unused_variables)]
-    pub fn retrieve_edge(&mut self, id: &str) -> Ptr<MSEdge> {
+    pub fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
         MSEdge::dictionary_2(id)
     }
 
@@ -3479,7 +3509,7 @@ impl MSRouteHandler {
     //     return &myParsingRNG;
     // }
     #[allow(unused_variables)]
-    pub fn get_rng(&mut self) -> Ptr<SumoRNG> {
+    pub fn get_rng(&self) -> Ptr<SumoRNG> {
         SUMORouteHandler::get_parsing_rng()
     }
 

@@ -379,7 +379,7 @@ pub static MSPMODEL_INTERACTING_STATE_VT: MSTransportableStateAdapterVt = MSTran
     get_edge_pos: |a, now| Ptr::new(a).cast::<MSPModel_InteractingState>().get_edge_pos(now),
     get_direction: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_direction(),
     get_position: adapter_default_get_position,
-    get_angle: adapter_default_get_angle,
+    get_angle: |a, _, _| Ptr::new(a).cast::<MSPModel_InteractingState>().get().unwrap().myAngle.get(),
     get_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_waiting_time(),
     get_total_waiting_time: |a| Ptr::new(a).cast::<MSPModel_InteractingState>().get_total_waiting_time(),
     get_speed: |a, _| Ptr::new(a).cast::<MSPModel_InteractingState>().get_speed(),

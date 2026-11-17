@@ -146,7 +146,9 @@ impl MSDetectorControl {
         if begin <= utils::common::time::string2time(&utils::options::options_cont::get_string("begin"))? {
             mn.m().init();
         }
-        // shortcut: MSGlobals::gHaveEmissions |= typeid(*md) == typeid(MSMeanData_Emissions) needs RTTI and MSGlobals statics are not ported, set it once both exist
+        // typeid(*md) == typeid(MSMeanData_Emissions): the exact subclass is identified by its vtable
+        let is_emissions = std::ptr::eq(mn.m().meandata_vt, &super::ms_mean_data_emissions::MS_MEAN_DATA_EMISSIONS_VT);
+        MSGlobals::set_have_emissions(MSGlobals::have_emissions() || is_emissions);
         Ok(())
     }
 

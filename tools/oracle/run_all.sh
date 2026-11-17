@@ -119,12 +119,12 @@ for dir in tools/oracle/cases/*/; do
         EXTRA="$EXTRA $(sed "s#@OUT@#$SIMOUT#g" "$dir/sim_outputs.txt" | tr -d '\r')"
       fi
       # a hang in our binary must not stall the whole run (a NEMA case looped forever)
-      timeout "${SIM_TIMEOUT:-900}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
+      timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
           --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \
           --statistic-output "$OUT/$c.$tag.stat.xml" --no-step-log true $EXTRA $XOUT \
           >"$OUT/$c.$tag.sumo.log" 2>&1
       rc=$?
-      if [ $rc -eq 124 ]; then line "$c/$tag" sim-TIMEOUT "no exit after ${SIM_TIMEOUT:-900}s"; FAIL=$((FAIL+1)); continue; fi
+      if [ $rc -eq 124 ]; then line "$c/$tag" sim-TIMEOUT "no exit after ${SIM_TIMEOUT:-600}s"; FAIL=$((FAIL+1)); continue; fi
       if [ $rc -ne 0 ]; then
         line "$c/$tag" sim-PANIC "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.$tag.sumo.log" | cut -c1-90)"; FAIL=$((FAIL+1))
         continue

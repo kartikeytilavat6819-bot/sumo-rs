@@ -4,6 +4,10 @@ use utils::xml::generic_sax_handler::GenericSAXHandler;
 use utils::xml::generic_sax_handler::SaxHandler;
 use crate::microsim::ms_event_control::Command;
 use crate::prelude::*;
+use crate::microsim::ms_router_defs::MSMapMatcher;
+use crate::utils::map_matcher::{MapMatcher, MapMatcherHost};
+use crate::utils::named_rtree::NamedRTree;
+use utils::common::sumo_vehicle_class::{SVC_IGNORING, SVC_PASSENGER};
 
 /// C++ typedef `std::vector<TrajectoryEntry> MSDevice_FCDReplay::Trajectory`
 pub type MSDevice_FCDReplay_Trajectory = Vec<MSDevice_FCDReplay_TrajectoryEntry>;
@@ -14,7 +18,7 @@ pub struct MSDevice_FCDReplay_FCDHandler {
     /// C++ base class `SUMOSAXHandler`
     pub base: GenericSAXHandler,
     /// C++ base class `MapMatcher<MSEdge, MSLane, MSJunction>`
-    pub base2: Unmapped /* MapMatcher<MSEdge, MSLane, MSJunction> */,
+    pub base2: MSMapMatcher,
     pub myTime: SUMOTime,
     pub myTrajectories: BTreeMap<String, Box<MSDevice_FCDReplay_Trajectory>>,
     pub myRoutes: BTreeMap<String, (SUMOTime, String, bool, ConstMSEdgeVector, Vec<FCDHandler_StageStart>)>, // C++: std::map<std::string, std::tuple<SUMOTime, std::string, bool, ConstMSEdgeVector, std::vector<StageStart>>>
@@ -33,6 +37,15 @@ impl std::ops::DerefMut for MSDevice_FCDReplay_FCDHandler {
     }
 }
 
+impl MapMatcherHost<MSEdge> for MSDevice_FCDReplay_FCDHandler {
+    fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        MSDevice_FCDReplay_FCDHandler::init_lane_tree(self, tree)
+    }
+    fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
+        MSDevice_FCDReplay_FCDHandler::retrieve_edge(self, id)
+    }
+}
+
 impl MSDevice_FCDReplay_FCDHandler {
     /// C++: `void FCDHandler::FCDHandler(const std::string &)`
     // MSDevice_FCDReplay::FCDHandler::FCDHandler(const std::string& file) :
@@ -44,8 +57,12 @@ impl MSDevice_FCDReplay_FCDHandler {
     pub fn new(file: &str) -> Self {
         MSDevice_FCDReplay_FCDHandler {
             base: utils::xml::sumo_sax_handler::new(file, ""),
-            // shortcut: MapMatcher is not ported, so base2 is the unit placeholder and the closest-lane lookup in myStartElement is skipped; upgrade when MapMatcher exists
-            base2: (),
+            base2: MapMatcher::new(
+                false,
+                false,
+                utils::options::options_cont::get_float("mapmatch.distance"),
+                Ptr::from_raw(utils::common::msg_handler::with_instance(MsgType::Error, |h| h as *mut MsgHandler)),
+            ),
             myTime: 0,
             myTrajectories: BTreeMap::new(),
             myRoutes: BTreeMap::new(),
@@ -421,7 +438,22 @@ impl MSDevice_FCDReplay_FCDHandler {
                         }
                     }
                     if !self.myRoutes.contains_key(&id) {
-                        // shortcut: C++ looks up the closest lane for an edge-less position through MapMatcher, which is not ported; that branch is skipped
+                        let mut edge = edge;
+                        if edgeOrLane == "" {
+                            let lane = self.base2.get_closest_lane(&*self, &xy, SVC_PASSENGER, -1.0);
+                            if !lane.is_null() {
+                                let laneID = lane.m().base.get_id().to_string();
+                                let lanePos = lane.m().interpolate_geometry_pos_to_lane_pos(lane.m().get_shape(false).nearest_offset_to_point25d(&xy, false));
+                                let trajectory = self.myTrajectories.get_mut(&id).unwrap();
+                                trajectory.last_mut().unwrap().edgeOrLane = laneID;
+                                trajectory.last_mut().unwrap().lanePos = lanePos;
+                                edge = Ptr::from_mut(lane.m().get_edge());
+                                while edge.m().is_internal() {
+                                    // we cannot use an internal edge for a route
+                                    edge = edge.m().get_successors(SVC_IGNORING)[0];
+                                }
+                            }
+                        }
                         self.myRoutes.insert(id.clone(), (self.myTime, type_, isPerson, vec![edge], Vec::new()));
                     } else {
                         let route = &mut self.myRoutes.get_mut(&id).unwrap().3;
@@ -455,9 +487,15 @@ impl MSDevice_FCDReplay_FCDHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn init_lane_tree(&mut self, tree: Ptr<Unmapped /* NamedRTree */>) {
-        // shortcut: NamedRTree is not ported, so the lane index is not built here; upgrade together with the closest-lane lookup
-        let _ = tree;
+    pub fn init_lane_tree(&self, tree: Ptr<NamedRTree>) {
+        for edge in MSEdge::get_all_edges().iter() {
+            for lane in edge.m().get_lanes().iter() {
+                let b = lane.m().get_shape(false).get_box_boundary();
+                let cmin = [b.xmin() as f32, b.ymin() as f32];
+                let cmax = [b.xmax() as f32, b.ymax() as f32];
+                tree.m().insert(&cmin, &cmax, &Ptr::new(&lane.base));
+            }
+        }
     }
 
     /// C++: `MSEdge * FCDHandler::retrieveEdge(const std::string &)` [virtual, protected]
@@ -466,7 +504,7 @@ impl MSDevice_FCDReplay_FCDHandler {
     //     return MSEdge::dictionary(id);
     // }
     #[allow(unused_variables)]
-    pub fn retrieve_edge(&mut self, id: &str) -> Ptr<MSEdge> {
+    pub fn retrieve_edge(&self, id: &str) -> Ptr<MSEdge> {
         MSEdge::dictionary_2(id)
     }
 

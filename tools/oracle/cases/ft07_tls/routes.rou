@@ -1,0 +1,11 @@
+<routes>
+    <!-- vehicles through the signalised net; the tls all-off and actuated jam threshold options change signal control -->
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <route id="B" edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <vehicle id="t0" route="A" depart="0.00"/>
+    <vehicle id="t1" route="B" depart="4.00"/>
+    <vehicle id="t2" route="A" depart="8.00"/>
+    <vehicle id="t3" route="B" depart="12.00"/>
+    <vehicle id="t4" route="A" depart="16.00"/>
+    <vehicle id="t5" route="B" depart="20.00"/>
+</routes>

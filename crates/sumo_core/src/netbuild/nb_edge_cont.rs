@@ -881,8 +881,8 @@ impl NBEdgeCont {
             return;
         }
         let origID = e.get_id().to_string();
-        // determinism: C++ std::sort is unstable (introsort); Rust sort_by is stable, equal pos values may be ordered differently
-        splits.sort_by(|a, b| a.pos.partial_cmp(&b.pos).unwrap_or(std::cmp::Ordering::Equal));
+        // determinism: C++ std::sort is unstable; std_sort reproduces libstdc++ tie order (equal pos values tie)
+        utils::common::std_sort::std_sort_vec(&mut splits, |a, b| a.pos < b.pos);
         let mut maxNumLanes = e.get_num_lanes();
         // compute the node positions and sort the lanes
         for split in splits.iter_mut() {
@@ -1852,17 +1852,9 @@ impl NBEdgeCont {
         let mut priority: i32 = -1;
         let mut joinEdges = true;
         let mut id = String::new();
-        // determinism: C++ std::sort is unstable; sort_by with the same strict-weak comparator gives the same order for distinct keys
+        // determinism: libstdc++ std::sort order
         let sorter = NBContHelper_same_connection_edge_sorter::new();
-        edges.sort_by(|a, b| {
-            if sorter.call_op(*a, *b) != 0 {
-                std::cmp::Ordering::Less
-            } else if sorter.call_op(*b, *a) != 0 {
-                std::cmp::Ordering::Greater
-            } else {
-                std::cmp::Ordering::Equal
-            }
-        });
+        utils::common::std_sort::std_sort(&mut edges, |a, b| sorter.call_op(a, b) != 0);
         // retrieve the connected nodes
         let tpledge = edges[0];
         let from = tpledge.m().get_from_node();
