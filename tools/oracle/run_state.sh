@@ -36,10 +36,10 @@ run_case() {
     sumo_run ours "$v.save_ours" $EXTRA --save-state.times "$mid" --save-state.files "$v.ours.state.xml"
     sumo_run pristine "$v.save_pristine" $EXTRA --save-state.times "$mid" --save-state.files "$v.pristine.state.xml"
     if [ ! -f "$v.ours.state.xml" ] && [ ! -f "$v.pristine.state.xml" ]; then
-      # short routes end before mid: both sides save at half of the last arrival instead
+      # short routes end before mid: both sides save at whole seconds, half of the last arrival (a save fires only on a step boundary)
       sumo_run pristine "$v.full" $EXTRA --tripinfo-output "$v.full.ti.xml"
       last=$(grep -o ' arrival="[0-9.]*"' "$v.full.ti.xml" 2>/dev/null | sed 's/[^0-9.]//g' | sort -g | tail -1)
-      mid=$(awk -v e="${last:-0}" 'BEGIN{ if (e > 0) print e / 2; else print "" }')
+      mid=$(awk -v e="${last:-0}" 'BEGIN{ if (e >= 2) print int(e / 2); else print "" }')
       if [ -n "$mid" ]; then
         sumo_run ours "$v.save_ours" $EXTRA --save-state.times "$mid" --save-state.files "$v.ours.state.xml"
         sumo_run pristine "$v.save_pristine" $EXTRA --save-state.times "$mid" --save-state.files "$v.pristine.state.xml"

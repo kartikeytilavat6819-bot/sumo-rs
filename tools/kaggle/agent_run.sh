@@ -7,7 +7,7 @@ grep -E 'variants=|state=(FAIL|NOSTATE)|load=(FAIL|NOLOAD)|NONE' /tmp/state_sl04
 for f in $(find /tmp/state_sl04 -name '*.ours.state.xml' | sort); do
   p=${f%.ours.state.xml}.pristine.state.xml
   [ -f "$p" ] || continue
-  if ! cmp -s "$f" "$p"; then
+  if grep -q '^[-+][^-+]' "${f%.ours.state.xml}.state.txt" 2>/dev/null; then
     echo "STATE-IDS $(echo "$f" | sed 's#.*/state-[0-9]*/##')"
     comm -3 <(grep -o '<vehicle id="[^"]*"' "$p" | sort) <(grep -o '<vehicle id="[^"]*"' "$f" | sort) | head -6 | sed 's/^/   /'
     echo "   counts: ref_vehicles=$(grep -c '<vehicle ' "$p") ours_vehicles=$(grep -c '<vehicle ' "$f")"
