@@ -15486,6 +15486,7 @@ impl MSVehicle {
                     gap -= pred.get_vehicle_type().get_length_with_gap();
                     oncoming = true;
                 }
+                if std::env::var_os("RX01").is_some() && format!("{}", self.get_id()) == "train3" && MSNet::get_instance().get_current_time_step() >= 180000 && MSNet::get_instance().get_current_time_step() <= 185000 { eprintln!("RX01 alp t={} pred={} gap={:x} oncoming={} lane={} lastLinkNull={}", MSNet::get_instance().get_current_time_step(), pred.get_id(), gap.to_bits(), oncoming as i32, lane.get_id(), lastLink.is_null() as i32); }
                 if oncoming && gap >= 0.0 {
                     self.adapt_to_oncoming_leader((pred, gap), lastLink, v, vLinkPass);
                 } else {
