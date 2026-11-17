@@ -1,0 +1,16 @@
+diff --git a/src/microsim/traffic_lights/MSRailCrossing.cpp b/src/microsim/traffic_lights/MSRailCrossing.cpp
+--- a/src/microsim/traffic_lights/MSRailCrossing.cpp
++++ b/src/microsim/traffic_lights/MSRailCrossing.cpp
+@@ -31,4 +31,6 @@
+ #include "MSTrafficLightLogic.h"
+ #include "MSRailCrossing.h"
++#include <iostream>
++#include <cstdlib>
+ #include <microsim/MSLane.h>
+ #include "MSPhaseDefinition.h"
+@@ -139,4 +141,5 @@
+         }
+     }
++    if (getenv("RX01") != nullptr) { std::cerr << "RX01 upd t=" << now << " step=" << myStep << " stayRed=" << stayRedUntil << "\n"; for (const MSLink* const l : myIncomingRailLinks) for (const auto& it : l->getApproaching()) std::cerr << "RX01  apv " << it.first->getID() << " arr=" << it.second.arrivalTime << " leave=" << it.second.leavingTime << " dist=" << it.second.dist << "\n"; }
+     //if (getID() == "cluster_1088529493_1260626727") std::cout << SIMTIME << " stayRedUntil=" << stayRedUntil;
+     const SUMOTime wait = stayRedUntil - now;
