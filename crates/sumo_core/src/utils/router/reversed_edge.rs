@@ -1,7 +1,7 @@
 //! Port of utils/router/ReversedEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 use utils::common::stable_cache::StableCache;
 
@@ -199,5 +199,75 @@ where
         })
     }
 
+}
+
+// C++ ReversedEdge<E, V> is a valid routing edge type for the generic routers (e.g. the backward DijkstraRouter of the
+// landmark table); accessors C++ ReversedEdge does not have stay shortcuts, as in the IntermodalEdge case of RouterEdge.
+impl<E, V> RouterEdgeInfo for ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
+    fn edge_numerical_id(&self) -> i32 {
+        self.myOriginal.numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.myOriginal.id().to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.myOriginal.edge_permissions()
+    }
+}
+
+impl<E, V> RouterEdge<V> for ReversedEdge<E, V>
+where
+    E: RouterEdge<V>,
+{
+    type Node = <E as RouterEdge<V>>::Node;
+    type Lane = <E as RouterEdge<V>>::Lane;
+    fn id(&self) -> &str {
+        self.myOriginal.id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.myOriginal.numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.myOriginal.length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getLengthGeometryFactor()")
+    }
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getDistanceTo()")
+    }
+    fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("shortcut: C++ ReversedEdge has no getSuccessors()")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        &self.get_via_successors(vclass, ignore_transient)[..]
+    }
+    fn speed_limit(&self) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getSpeedLimit()")
+    }
+    fn minimum_travel_time(&self, veh: Ptr<V>) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getMinimumTravelTime()")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        self.get_bidi_edge()
+    }
+    fn is_internal(&self) -> bool {
+        self.myOriginal.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool {
+        self.myOriginal.prohibits(veh, check_restrictions)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.myOriginal.restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        Self::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        panic!("shortcut: C++ ReversedEdge has no getTravelTimeAggregated()")
+    }
 }
 

@@ -62,6 +62,10 @@ pub struct MSTrafficLightLogicExtVt {
     pub get_detector_state: fn(&MSTrafficLightLogic, String) -> f64,
     pub get_tl_queue_length: fn(&MSTrafficLightLogic, String) -> f64,
     pub load_extra_state: fn(&mut MSTrafficLightLogic, &str),
+    pub get_parameter: fn(&mut MSTrafficLightLogic, &str, &str) -> String,
+    pub set_parameter: fn(&mut MSTrafficLightLogic, &str, &str),
+    pub activate_program: fn(&mut MSTrafficLightLogic),
+    pub deactivate_program: fn(&mut MSTrafficLightLogic),
 }
 
 pub(crate) fn default_decide_next_phase(_: &mut MSTrafficLightLogic) -> i32 {
@@ -161,7 +165,23 @@ pub(crate) fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneI
 
 pub(crate) fn default_ext_load_extra_state(_: &mut MSTrafficLightLogic, _: &str) {}
 
-static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTrafficLightLogicExtVt {
+pub(crate) fn default_ext_get_parameter(logic: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    logic.base2.get_parameter(key, defaultValue)
+}
+
+pub(crate) fn default_ext_set_parameter(logic: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    logic.base2.set_parameter(key, value);
+}
+
+pub(crate) fn default_ext_activate_program(logic: &mut MSTrafficLightLogic) {
+    logic.activate_program_base();
+}
+
+pub(crate) fn default_ext_deactivate_program(logic: &mut MSTrafficLightLogic) {
+    logic.deactivate_program_base();
+}
+
+pub(crate) static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTrafficLightLogicExtVt {
     get_rival_vehicles: default_ext_get_rival_vehicles,
     get_priority_vehicles: default_ext_get_priority_vehicles,
     get_blocking_drive_ways: default_ext_get_blocking_drive_ways,
@@ -169,6 +189,10 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTraff
     get_detector_state: default_ext_get_detector_state,
     get_tl_queue_length: default_ext_get_tl_queue_length,
     load_extra_state: default_ext_load_extra_state,
+    get_parameter: default_ext_get_parameter,
+    set_parameter: default_ext_set_parameter,
+    activate_program: default_ext_activate_program,
+    deactivate_program: default_ext_deactivate_program,
 };
 
 /// The parent class for traffic light logics
@@ -1044,6 +1068,11 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
+        (self.ext_vt.activate_program)(self)
+    }
+
+    /// C++: `void MSTrafficLightLogic::activateProgram()` [virtual, base body]
+    pub fn activate_program_base(&mut self) {
         self.myAmActive = true;
         // updated the traffic light logic stored in the link
         let this = Ptr::from_mut(self);
@@ -1061,7 +1090,22 @@ impl MSTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
+        (self.ext_vt.deactivate_program)(self)
+    }
+
+    /// C++: `void MSTrafficLightLogic::deactivateProgram()` [virtual, base body]
+    pub fn deactivate_program_base(&mut self) {
         self.myAmActive = false;
+    }
+
+    /// C++: `std::string Parameterised::getParameter(...)` as seen through the virtual `MSTrafficLightLogic::getParameter`
+    pub fn get_parameter(&mut self, key: &str, defaultValue: &str) -> String {
+        (self.ext_vt.get_parameter)(self, key, defaultValue)
+    }
+
+    /// C++: `void MSTrafficLightLogic::setParameter(...)` as seen through the virtual dispatch
+    pub fn set_parameter(&mut self, key: &str, value: &str) {
+        (self.ext_vt.set_parameter)(self, key, value)
     }
 
     /// C++: `bool MSTrafficLightLogic::setTrafficLightSignals(SUMOTime) const` [const]

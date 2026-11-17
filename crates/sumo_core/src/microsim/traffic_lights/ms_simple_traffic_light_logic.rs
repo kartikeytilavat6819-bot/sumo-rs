@@ -72,6 +72,27 @@ pub(crate) fn simple_map_time_in_cycle(l: &MSTrafficLightLogic, t: SUMOTime) -> 
     Ptr::new(l).cast::<MSSimpleTrafficLightLogic>().get().unwrap().map_time_in_cycle(t)
 }
 
+pub(crate) fn simple_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().get_parameter(key, defaultValue.to_string())
+}
+pub(crate) fn simple_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSSimpleTrafficLightLogic>().m().set_parameter(key, value)
+}
+
+pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
+    get_priority_vehicles: super::ms_traffic_light_logic::default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: super::ms_traffic_light_logic::default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
+    get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
+    load_extra_state: super::ms_traffic_light_logic::default_ext_load_extra_state,
+    get_parameter: simple_ext_get_parameter,
+    set_parameter: simple_ext_set_parameter,
+    activate_program: super::ms_traffic_light_logic::default_ext_activate_program,
+    deactivate_program: super::ms_traffic_light_logic::default_ext_deactivate_program,
+};
+
 pub(crate) static MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: simple_try_switch,
     get_phase_number: simple_get_phase_number,
@@ -135,6 +156,8 @@ impl MSSimpleTrafficLightLogic {
         if matches!(logicType, TrafficLightType::STATIC) {
             base.vt = &MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_VT;
         }
+        // C++ MSSimpleTrafficLightLogic::getParameter/setParameter are inherited by every derived logic
+        base.ext_vt = &MS_SIMPLE_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let myPhases: MSTrafficLightLogic_Phases = phases.clone();
         base.myDefaultCycleTime = base.compute_cycle_time(&myPhases);
         let mut this = MSSimpleTrafficLightLogic {

@@ -3,6 +3,8 @@
 - Repo: C:\Users\karti\sumo-rs (Rust port of SUMO 1.28.0). Create your worktree:
   `git -C C:\Users\karti\sumo-rs worktree add .claude/worktrees/agent-<ID> -b worktree-agent-<ID> main` (main = 1820f92c or later).
   If your branch already exists, reuse its worktree and first `git merge origin/main` (fix conflicts faithfully).
+  NEVER edit files under C:\Users\karti\sumo-rs\ directly (that is the lead's main checkout) — only inside your
+  worktree C:\Users\karti\sumo-rs\.claude\worktrees\agent-<ID>\. Double-check paths before every edit.
   Read AGENTS.md in the repo, but these rules override its build notes.
 - C++ oracle (WSL): `~/sumo-pristine/bin/{sumo,netconvert}`, SUMO_HOME=/home/karti/sumo-pristine/lib/python3.12/site-packages/sumo.
   Official source (READ-ONLY): `~/sumo-src/src` or `C:\Users\karti\sumo-src\src`. Never edit it. For C++ instrumentation,
@@ -27,9 +29,9 @@
     result arrives, because its completion is what wakes you. Rerunning it for the same commit reattaches; it never re-queues.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
   * Instrumented C++ traces: build in WSL (~/sumo-<ID>, make -j2, only the target you need) - that is C++, allowed.
-- Do NOT run gates on `main`. Main's numbers (28f9932d or later): run_all PASS=314 FAIL=7 SKIP=43, depart 15/15, unit
-  tests ok. Known FAILs (new cases, each has an owner): rerouter_parking [rc02], taxi/ref + taxi/ref_closest [tx02],
-  busride [pt03], city_german_level_crossing [rx01], city_florence_pedestrians PANIC [fp01], person_public_car [pc02].
+- Do NOT run gates on `main`. Main's numbers (43f50e37 or later): run_all PASS=322 FAIL=5 SKIP=63, depart 15/15, unit
+  tests ok. Known FAILs (new cases, each has an owner): 
+  busride [pt03], city_german_level_crossing [rx01], city_florence_pedestrians [fp02], person_public_car [pt03], city_phoenix_scale_grid PANIC [px01].
   These are NOT your regressions: never investigate them unless they are your target.
 - New case references: put an empty NEW_CASE file in the case dir, run tools/oracle/make_sim_refs.sh <case> (it then
   writes tripinfo+fcd+stat, all outputs run_all compares), delete NEW_CASE before committing. If you merged main before 6c696d3d and see calibrator

@@ -173,6 +173,7 @@ static ME_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
     get_stops: me_sv_get_stops,
     get_next_stop: me_sv_get_next_stop,
     get_next_stop_mutable: me_sv_get_next_stop_mutable,
+    get_parameter_mutable: me_sv_get_parameter_mutable,
     unregister_waiting: me_sv_unregister_waiting,
     get_next_stop_parameter: me_sv_get_next_stop_parameter,
     get_stop_duration: me_sv_get_stop_duration,
@@ -389,6 +390,9 @@ fn me_sv_get_next_stop(v: &SUMOVehicle) -> &MSStop {
 }
 fn me_sv_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
     me_sv_ref_mut(v).get_next_stop_mutable()
+}
+fn me_sv_get_parameter_mutable(v: &mut SUMOVehicle) -> &mut SUMOVehicleParameter {
+    me_sv_ref_mut(v).get_parameter_mutable()
 }
 fn me_sv_unregister_waiting(v: &mut SUMOVehicle) {
     me_sv_ref_mut(v).unregister_waiting()
@@ -1909,7 +1913,11 @@ impl MEVehicle {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        self.base.get_base_influencer()
+        if self.myInfluencer.is_null() {
+            // shortcut: C++ owns myInfluencer and deletes it in the destructor; Box::leak keeps it alive for the process, upgrade with an owned field
+            self.myInfluencer = Ptr::from_mut(Box::leak(Box::new(MSBaseVehicle_BaseInfluencer::new())));
+        }
+        self.myInfluencer.m()
     }
 
     /// C++: `const BaseInfluencer * MEVehicle::getBaseInfluencer() const` [const, virtual]

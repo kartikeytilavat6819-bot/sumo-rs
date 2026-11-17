@@ -434,6 +434,11 @@ impl MSBaseVehicle {
         self.myParameter.get().unwrap()
     }
 
+    /// C++ `mutable` parameter members (line, stops, via, color, parametersSet) are written through this owner-based `&mut`
+    pub fn get_parameter_mutable(&mut self) -> &mut SUMOVehicleParameter {
+        self.myParameter.m()
+    }
+
     /// C++: `std::string MSBaseVehicle::getPrefixedParameter(const std::string &, std::string &) const` [const]
     /// retrieve parameters of devices, models and the vehicle itself
     // std::string
@@ -536,7 +541,7 @@ impl MSBaseVehicle {
                 return String::new();
             };
             let attrName = &key[16..];
-            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.m().get_lane_change_model().get_parameter(attrName)));
+            let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| microVeh.get_lane_change_model_2().get_parameter(attrName)));
             match result {
                 Ok(v) => return v,
                 Err(payload) => {
@@ -5361,7 +5366,11 @@ impl MSBaseVehicle {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_base_influencer(&mut self) -> &mut MSBaseVehicle_BaseInfluencer {
-        panic!("getBaseInfluencer() is pure virtual in MSBaseVehicle")
+        if MSGlobals::use_meso_sim() {
+            Ptr::from_mut(self).cast::<crate::mesosim::me_vehicle::MEVehicle>().get_mut().unwrap().get_base_influencer()
+        } else {
+            Ptr::from_mut(self).cast::<crate::microsim::ms_vehicle::MSVehicle>().get_mut().unwrap().get_base_influencer()
+        }
     }
 
     /// C++: `const BaseInfluencer * MSBaseVehicle::getBaseInfluencer() const` [const, virtual, pure virtual]

@@ -22,10 +22,8 @@ fn base_vehicle_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSBaseVehicle> {
 }
 
 /// C++ `static_cast<MSDevice_Taxi*>(veh.getDevice(typeid(MSDevice_Taxi)))`
-// shortcut: device lookup by C++ type id is not ported; no taxi device is found, so taxi customer hooks are skipped
 fn taxi_device_of(veh: Ptr<SUMOVehicle>) -> Ptr<MSDevice_Taxi> {
-    let _ = veh;
-    Ptr::default()
+    MSDevice::get_device_by_name(&veh.cast::<MSVehicle>().m().myDevices, "taxi").cast::<MSDevice_Taxi>()
 }
 
 /// C++ `istringstream >> x`: whitespace token parsed as T, default on failure

@@ -207,6 +207,18 @@ fn actuated_load_state(l: &mut MSTrafficLightLogic, tlcontrol: &mut MSTLLogicCon
 fn actuated_load_extra_state(l: &mut MSTrafficLightLogic, state: &str) {
     Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().load_extra_state(state)
 }
+fn actuated_ext_get_parameter(l: &mut MSTrafficLightLogic, key: &str, defaultValue: &str) -> String {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().get_parameter(key, defaultValue.to_string())
+}
+fn actuated_ext_set_parameter(l: &mut MSTrafficLightLogic, key: &str, value: &str) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().set_parameter(key, value)
+}
+fn actuated_ext_activate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().activate_program()
+}
+fn actuated_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
+    Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().deactivate_program()
+}
 
 static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
     get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
@@ -216,6 +228,10 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MS
     get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
     get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
     load_extra_state: actuated_load_extra_state,
+    get_parameter: actuated_ext_get_parameter,
+    set_parameter: actuated_ext_set_parameter,
+    activate_program: actuated_ext_activate_program,
+    deactivate_program: actuated_ext_deactivate_program,
 };
 
 static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
@@ -773,12 +789,13 @@ impl MSActuatedTrafficLightLogic {
                     // Build the induct loop and set it into the container
                     let detLength: f64 = self.base2.get_double(&format!("detector-length:{}", lane.get_id()), detDefaultLength);
                     let id = format!("{}D{}.{}", self.myDetectorPrefix, detEdgeIndex, detLaneIndex);
-                    loop_ = crate::microsim::output::ms_induct_loop::induct_loop_of(nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true));
-                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, crate::microsim::output::ms_induct_loop::detector_of(loop_), &self.myFile, self.myFreq, 0);
+                    let det = nb.create_induct_loop(&id, placementLane, ilpos, detLength, String::new(), &self.myVehicleTypes, "", 0 /* PersonMode::NONE */, self.myShowDetectors, true);
+                    loop_ = crate::microsim::output::ms_induct_loop::induct_loop_of(det);
+                    MSNet::get_instance().m().get_detector_control().add(SUMO_TAG_INDUCTION_LOOP, det, &self.myFile, self.myFreq, 0);
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| crate::microsim::output::ms_induct_loop::induct_loop_of(d.cast::<crate::microsim::output::ms_detector_file_output::MSDetectorFileOutput>())).unwrap_or(Ptr::null());
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| crate::microsim::output::ms_induct_loop::induct_loop_of(*d)).unwrap_or(Ptr::null());
                     if loop_.is_null() {
                         panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
                     }
@@ -1346,7 +1363,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn activate_program(&mut self) {
-        self.base.base.activate_program();
+        self.base.base.activate_program_base();
         for loopInfo in self.myInductLoops.iter() {
             loopInfo.loop_.m().set_visible(self.myShowDetectors);
         }
@@ -1362,7 +1379,7 @@ impl MSActuatedTrafficLightLogic {
     // }
     #[allow(unused_variables)]
     pub fn deactivate_program(&mut self) {
-        self.base.base.deactivate_program();
+        self.base.base.deactivate_program_base();
         for loopInfo in self.myInductLoops.iter() {
             loopInfo.loop_.m().set_visible(false);
         }

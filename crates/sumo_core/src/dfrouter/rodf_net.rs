@@ -306,10 +306,8 @@ impl RODFNet {
     //     WRITE_MESSAGEF(TL(" % invalid detectors"), toString(myInvalidNumber));
     // }
     #[allow(unused_variables)]
-    pub fn compute_types(&self, dets: &mut RODFDetectorCon, sourcesStrict: bool) {
-        // mutable counters of a const method in C++: mutate through the shared pointer
-        let this_ptr = Ptr::new(self);
-        let this = this_ptr.m();
+    pub fn compute_types(&mut self, dets: &mut RODFDetectorCon, sourcesStrict: bool) {
+        let this = self;
         progress_begin_message("Computing detector types");
         let dets_list = dets.get_detectors().clone();
         // build needed information. first
@@ -426,7 +424,7 @@ impl RODFNet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_routes(&self, det: &mut RODFDetectorCon, keepUnfoundEnds: bool, includeInBetween: bool, keepShortestOnly: bool, maxFollowingLength: i32) {
+    pub fn build_routes(&mut self, det: &mut RODFDetectorCon, keepUnfoundEnds: bool, includeInBetween: bool, keepShortestOnly: bool, maxFollowingLength: i32) {
         // build needed information first
         self.build_detector_edge_dependencies(det);
         // then build the routes
@@ -2132,16 +2130,13 @@ impl RODFNet {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn build_detector_edge_dependencies(&self, dets: &mut RODFDetectorCon) {
-        // const in C++, but it rebuilds the mutable edge caches
-        let this_ptr = Ptr::new(self);
-        let this = this_ptr.m();
-        this.myDetectorsOnEdges.clear();
-        this.myDetectorEdges.clear();
+    pub fn build_detector_edge_dependencies(&mut self, dets: &mut RODFDetectorCon) {
+        self.myDetectorsOnEdges.clear();
+        self.myDetectorEdges.clear();
         for i in dets.get_detectors().iter().copied() {
             let e = self.get_detector_edge(i.m());
-            this.myDetectorsOnEdges.entry(e).or_default().push(i.get_id().to_string());
-            this.myDetectorEdges.insert(i.get_id().to_string(), e);
+            self.myDetectorsOnEdges.entry(e).or_default().push(i.get_id().to_string());
+            self.myDetectorEdges.insert(i.get_id().to_string(), e);
         }
     }
 
