@@ -70,7 +70,7 @@ for c in $CASES; do
   outs="--tripinfo-output $(wp "$o")/ref.tripinfo.xml"
   want "$src/ref.fcd.xml" && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
   want "$src/ref.stat.xml" && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
-  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
+  [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
   flags=$(cat "$src/sim.args" 2>/dev/null)
   run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
@@ -87,7 +87,7 @@ for c in $CASES; do
     # run_all always passes --fcd-output, which adds fcd_<id> to every device list: write a scratch fcd when none is wanted
     if want "$src/ref_$v.fcd.xml"; then vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"; else vouts="$vouts --fcd-output /tmp/fcd_$v.xml"; fi
     want "$src/ref_$v.stat.xml" && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
-    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do vouts="$vouts $opt $(wp "$o")/ref_$v.$suf.xml"; done < "$src/extra_outputs.txt"
+    [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; vouts="$vouts $opt $(wp "$o")/ref_$v.$suf.xml"; done < "$src/extra_outputs.txt"
     run_ref "$LOG/ref_${c}_$v.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" "$(echo "$vflags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" "ref_$v"
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
   done

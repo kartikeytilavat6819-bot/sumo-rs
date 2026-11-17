@@ -111,7 +111,7 @@ for dir in tools/oracle/cases/*/; do
       fi
       # extra_outputs.txt: "<option> <suffix>" lines, each output compared against $dir/$tag.<suffix>.xml
       XOUT=""
-      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
+      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
       # extra sim outputs (cases/<c>/sim_outputs.txt, @OUT@ = run dir): written by the reference run only
       SIMOUT=""
       if [ "$tag" = "ref" ] && [ -f "$dir/sim_outputs.txt" ]; then
@@ -147,7 +147,7 @@ for dir in tools/oracle/cases/*/; do
         python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
       fi
       xd=""
-      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do
+      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}  # git archive (core.autocrlf) gives the VM CRLF .txt files
         [ -f "$dir/$tag.$suf.xml" ] || continue
         python tools/oracle/compare_xml.py "$dir/$tag.$suf.xml" "$OUT/$c.$tag.$suf.xml" >"$OUT/$c.$tag.$suf.log" 2>&1 || { r="FAIL"; xd="$xd | $suf: $(grep -v '^$' "$OUT/$c.$tag.$suf.log" | head -1 | cut -c1-300)"; }
       done < "$dir/extra_outputs.txt"

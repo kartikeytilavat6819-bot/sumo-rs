@@ -155,7 +155,7 @@ impl NLDiscreteEventBuilder {
                 let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
                 let mut od = od.borrow_mut();
                 // C++ `new` without delete: the command is owned by the event control
-                Box::leak(Box::new(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions)));
+                Box::leak(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions));
             }
         } else {
             // get the logic
@@ -166,7 +166,7 @@ impl NLDiscreteEventBuilder {
             // build the action
             let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
             let mut od = od.borrow_mut();
-            Box::leak(Box::new(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions)));
+            Box::leak(Command_SaveTLSState::new(logics, &mut od, saveDetectors, saveConditions));
         }
         Ok(())
     }
@@ -214,7 +214,7 @@ impl NLDiscreteEventBuilder {
                 let logics = self.myNet.m().get_tls_control().get(tls);
                 let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
                 let mut od = od.borrow_mut();
-                Box::leak(Box::new(Command_SaveTLSSwitches::new(logics, &mut od)));
+                Box::leak(Command_SaveTLSSwitches::new(logics, &mut od));
             }
         } else {
             // get the logic
@@ -225,7 +225,7 @@ impl NLDiscreteEventBuilder {
             // build the action
             let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
             let mut od = od.borrow_mut();
-            Box::leak(Box::new(Command_SaveTLSSwitches::new(logics, &mut od)));
+            Box::leak(Command_SaveTLSSwitches::new(logics, &mut od));
         }
         Ok(())
     }
@@ -273,7 +273,7 @@ impl NLDiscreteEventBuilder {
                 let logics = self.myNet.m().get_tls_control().get(tls);
                 let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
                 let mut od = od.borrow_mut();
-                Box::leak(Box::new(Command_SaveTLSSwitchStates::new(logics, &mut od)));
+                Box::leak(Command_SaveTLSSwitchStates::new(logics, &mut od));
             }
         } else {
             // get the logic
@@ -284,7 +284,7 @@ impl NLDiscreteEventBuilder {
             // build the action
             let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
             let mut od = od.borrow_mut();
-            Box::leak(Box::new(Command_SaveTLSSwitchStates::new(logics, &mut od)));
+            Box::leak(Command_SaveTLSSwitchStates::new(logics, &mut od));
         }
         Ok(())
     }
@@ -332,7 +332,7 @@ impl NLDiscreteEventBuilder {
                 let logics = self.myNet.m().get_tls_control().get(tls);
                 let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
                 let mut od = od.borrow_mut();
-                Box::leak(Box::new(Command_SaveTLSProgram::new(logics, &mut od)));
+                Box::leak(Command_SaveTLSProgram::new(logics, &mut od));
             }
         } else {
             // get the logic
@@ -343,7 +343,7 @@ impl NLDiscreteEventBuilder {
             // build the action
             let od = utils::iodevices::output_device::OutputDevice::get_device(&utils::common::file_helpers::check_for_relativity(&dest, basePath), true)?;
             let mut od = od.borrow_mut();
-            Box::leak(Box::new(Command_SaveTLSProgram::new(logics, &mut od)));
+            Box::leak(Command_SaveTLSProgram::new(logics, &mut od));
         }
         Ok(())
     }
