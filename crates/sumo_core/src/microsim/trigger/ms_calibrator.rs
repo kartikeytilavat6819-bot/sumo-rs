@@ -33,21 +33,8 @@ impl MSCalibrator_AspiredState {
 /// C++ class `MSCalibrator::CalibratorCommand` (microsim/trigger/MSCalibrator.h)
 #[repr(C)]
 pub struct MSCalibrator_CalibratorCommand {
-    /// C++ base class `Command`
-    pub base: Unmapped /* Command */,
+    /// C++ base class `Command` (stateless: its trait impl is below)
     pub myCalibrator: Ptr<MSCalibrator>,
-}
-
-impl std::ops::Deref for MSCalibrator_CalibratorCommand {
-    type Target = Unmapped /* Command */;
-    fn deref(&self) -> &Unmapped /* Command */ {
-        &self.base
-    }
-}
-impl std::ops::DerefMut for MSCalibrator_CalibratorCommand {
-    fn deref_mut(&mut self) -> &mut Unmapped /* Command */ {
-        &mut self.base
-    }
 }
 
 impl MSCalibrator_CalibratorCommand {
@@ -56,9 +43,7 @@ impl MSCalibrator_CalibratorCommand {
     //             myCalibrator(cali) {}
     #[allow(unused_variables)]
     pub fn new(cali: Ptr<MSCalibrator>) -> Self {
-        // shortcut: C++ base class Command is not ported (Unmapped), its default state is left as (), upgrade when Command is ported
         MSCalibrator_CalibratorCommand {
-            base: (),
             myCalibrator: cali,
         }
     }
@@ -107,8 +92,6 @@ impl Command for MSCalibrator_CalibratorCommand {
 pub struct MSCalibrator {
     /// C++ base class `MSRouteHandler`
     pub base: MSRouteHandler,
-    /// C++ base class `Command`
-    pub base2: Unmapped /* Command */,
     /// C++ base class `MSDetectorFileOutput`
     pub base3: MSDetectorFileOutput,
     /// the edge on which this calibrator lies
@@ -188,6 +171,12 @@ impl utils::xml::generic_sax_handler::SaxHandler for MSCalibrator {
     fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
         MSCalibrator::my_end_element(self, element);
         Ok(())
+    }
+}
+
+impl Command for MSCalibrator {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        MSCalibrator::execute(self, currentTime)
     }
 }
 
@@ -331,7 +320,6 @@ impl MSCalibrator {
         let myDefaultSpeed = if lane.is_null() { if edge.is_null() { 0. } else { edge.get_speed_limit() } } else { lane.get_speed_limit() };
         let mut b = Box::new(MSCalibrator {
             base: MSRouteHandler::new(aXMLFilename, true),
-            base2: (),
             base3: match MSDetectorFileOutput::new(id, vTypes, "", PersonMode::NONE as i32) {
                 Ok(v) => v,
                 Err(e) => std::panic::panic_any(e),

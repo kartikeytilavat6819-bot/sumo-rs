@@ -12,15 +12,14 @@ CAL_TRACE=1 "$OURS" $NET --tripinfo-output "$O/ours.ti.xml" --fcd-output "$O/our
 echo "ours rc=$?"
 "$REF" $NET --tripinfo-output "$O/cpp.ti.xml" --fcd-output "$O/cpp.fcd.xml" >"$O/cpp.log" 2>&1
 echo "cpp rc=$?"
-echo "--- ref vs cpp (tripinfo)"
-python tools/oracle/compare_sim.py --tripinfo "$D/ref.tripinfo.xml" "$O/cpp.ti.xml" 2>&1 | tail -3
-echo "--- ref vs ours (tripinfo)"
-python tools/oracle/compare_sim.py --tripinfo "$D/ref.tripinfo.xml" "$O/ours.ti.xml" 2>&1 | tail -3
-echo "--- departs ref vs ours (first 12 diff lines)"
-diff <(grep -o '<tripinfo id="[^"]*" depart="[^"]*"' "$D/ref.tripinfo.xml") <(grep -o '<tripinfo id="[^"]*" depart="[^"]*"' "$O/ours.ti.xml") | head -12
-echo "--- ours CALTRACE (first 40)"
-grep CALTRACE "$O/ours.log" | head -40
-echo "--- ours CALTRACE count"
-grep -c CALTRACE "$O/ours.log"
+strip() { sed -E 's/ devices="[^"]*"//' "$1" | grep '<tripinfo '; }
+echo "--- tripinfo ours vs cpp, devices ignored (first 6 diff lines)"
+diff <(strip "$O/cpp.ti.xml") <(strip "$O/ours.ti.xml") | head -6
+echo "tripinfo rows cpp=$(strip "$O/cpp.ti.xml" | wc -l) ours=$(strip "$O/ours.ti.xml" | wc -l)"
+echo "--- tripinfo ref vs cpp, devices ignored (diff line count)"
+diff <(strip "$D/ref.tripinfo.xml") <(strip "$O/cpp.ti.xml") | wc -l
+echo "--- fcd ours vs cpp"
+python tools/oracle/compare_sim.py --fcd "$O/cpp.fcd.xml" "$O/ours.fcd.xml" 2>&1 | tail -2
+echo "--- CALTRACE count $(grep -c CALTRACE "$O/ours.log")"
 echo "--- cpp log tail"
-tail -3 "$O/cpp.log"
+tail -2 "$O/cpp.log"
