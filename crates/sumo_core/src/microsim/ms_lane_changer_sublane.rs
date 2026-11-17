@@ -263,6 +263,15 @@ impl MSLaneChangerSublane {
             let lcm = vehicle.get_lane_change_model_2();
             eprintln!("LCT {} {} posLat={} angle={} speedLat={} manDist={} own={} active={}", MSNet::get_instance().get_current_time_step(), vehicle.get_id(),
                 lct_bits(vehicle.get_lateral_position_on_lane()), lct_bits(vehicle.get_angle()), lct_bits(lcm.get_speed_lat()), lct_bits(lcm.get_maneuver_dist()), lcm.get_own_state(), vehicle.is_active() as i32);
+            let mut s = format!("LCT-AH {} {}", MSNet::get_instance().get_current_time_step(), vehicle.get_id());
+            for ce in self.myChanger.iter() {
+                s += &format!(" L{}:", ce.lane.get_index());
+                for i in 0..ce.ahead.num_sublanes() {
+                    let v = ce.ahead.index_op(i).0;
+                    if v.is_null() { s += "-/"; } else { s += &format!("{}/", v.get_id()); }
+                }
+            }
+            eprintln!("{}", s);
         }
 
         if vehicle.m().get_lane_change_model().already_changed() || vehicle.is_stopped_on_lane() {
