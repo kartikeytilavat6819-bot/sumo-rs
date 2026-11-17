@@ -27,13 +27,7 @@ pub struct MSPModelVt {
     pub has_pedestrians: fn(&mut MSPModel, Ptr<MSLane>) -> bool,
     pub blocked_at_dist: fn(&mut MSPModel, Ptr<SUMOTrafficObject>, Ptr<MSLane>, f64, f64, f64, Ptr<Vec<Ptr<MSPerson>>>) -> bool,
     pub next_blocking: fn(&mut MSPModel, Ptr<MSLane>, f64, f64, f64, f64, bool) -> PersonDist,
-    pub blocked_at_dist: fn(&mut MSPModel, Ptr<SUMOTrafficObject>, Ptr<MSLane>, f64, f64, f64, Ptr<Vec<Ptr<MSPerson>>>) -> bool,
     pub using_shortcuts: fn(&mut MSPModel) -> bool,
-}
-
-/// C++ MSPModel::blockedAtDist base implementation (returns false)
-pub fn msp_model_default_blocked_at_dist(_m: &mut MSPModel, _ego: Ptr<SUMOTrafficObject>, _lane: Ptr<MSLane>, _vehCenter: f64, _vehWidth: f64, _oncomingGap: f64, _collectBlockers: Ptr<Vec<Ptr<MSPerson>>>) -> bool {
-    false
 }
 
 /// C++ MSPModel::usingShortcuts base implementation (returns false)
