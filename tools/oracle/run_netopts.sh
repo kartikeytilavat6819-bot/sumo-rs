@@ -9,11 +9,8 @@
 B=$(cd "$(dirname "$0")" && pwd)
 C=$B/cases
 RUST=${RUST_NETCONVERT:-/mnt/c/Users/karti/sumo-rs-target-x07/debug/netconvert.exe}
-CPP=${CPP_NETCONVERT:-$HOME/sumo-src/bin/netconvert}
-CPP_SH=${CPP_SUMO_HOME:-$HOME/sumo-src}
+CPP=$HOME/sumo-src/bin/netconvert
 OUT=${NETOPTS_OUT:-/mnt/c/Users/karti/AppData/Local/Temp/opencode/netopts}
-# Windows path for a Windows binary under WSL; identity on native Linux (gate VM, Kaggle)
-winpath() { if command -v wslpath >/dev/null 2>&1; then wslpath -w "$1"; else printf '%s' "$1"; fi; }
 
 NAMES=()
 ARGS=()
@@ -49,16 +46,16 @@ run_pair() {
   rm -f "$d/rust.net.xml" "$d/cpp.net.xml"
   if [ "$mode" = osm ]; then
     in=$C/$net/input.osm
-    rargs=(--simple-projection true "$@" --osm-files "$(winpath "$in")")
+    rargs=(--simple-projection true "$@" --osm-files "$(wslpath -w "$in")")
     cargs=(--simple-projection true "$@" --osm-files "$in")
   else
     in=$C/$v/ref_simple.net.xml
-    rargs=(-s "$(winpath "$in")")
+    rargs=(-s "$(wslpath -w "$in")")
     cargs=(-s "$in")
   fi
-  timeout 900 "$RUST" "${rargs[@]}" -o "$(winpath "$d")/rust.net.xml" > "$d/rust.log" 2>&1
+  timeout 900 "$RUST" "${rargs[@]}" -o "$(wslpath -w "$d")\\rust.net.xml" > "$d/rust.log" 2>&1
   rrc=$?
-  SUMO_HOME=$CPP_SH timeout 900 "$CPP" "${cargs[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
+  SUMO_HOME=$HOME/sumo-src timeout 900 "$CPP" "${cargs[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
   crc=$?
   if grep -q panicked "$d/rust.log"; then
     V=PANIC; D=$(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')
