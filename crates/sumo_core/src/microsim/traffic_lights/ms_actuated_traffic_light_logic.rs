@@ -763,8 +763,12 @@ impl MSActuatedTrafficLightLogic {
                 } else if customID == NO_DETECTOR {
                     continue;
                 } else {
-                    // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so custom induction loops cannot be looked up; upgrade when that container is mapped
-                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    loop_ = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&customID.to_string()).map(|d| d.cast::<MSInductLoop>()).unwrap_or(Ptr::null());
+                    if loop_.is_null() {
+                        panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' given as custom detector for actuated tlLogic '{}', program '{}.", customID, self.get_id(), self.get_program_id())));
+                    }
+                    ilpos = loop_.get_position();
+                    inductLoopPosition = length - ilpos;
                 }
                 let maxGap: f64 = self.base2.get_double(&format!("max-gap:{}", lane.get_id()), self.myMaxGap);
                 let jamThreshold: f64 = self.base2.get_double(&format!("jam-threshold:{}", lane.get_id()), self.myJamThreshold);
@@ -2955,9 +2959,7 @@ impl MSActuatedTrafficLightLogic {
                         let foeIndex: i32 = foe.get_index();
                         let junction2: Ptr<MSJunction> = foe.get_junction();
                         if junction == junction2 {
-                            // shortcut: MSJunctionLogic::getFoesFor(linkIndex).test(foeIndex) is not usable yet (bitset Unmapped), so the junction foe relation is approximated by the MSLink foe links; upgrade when the junction logic bitsets are mapped
-                            let _ = (link.get_index(), foeIndex);
-                            if link.get_foe_links().contains(&foe)
+                            if junction.get_logic().get_foes_for(link.get_index()).test(foeIndex)
                                 && (foe.get_permissions() & !SVC_VULNERABLE) != 0 // check1e
                                 && Ptr::from_mut(foe.get_lane_before().get_edge()) != Ptr::from_mut(link.get_lane_before().get_edge()) { // check1f
                                 return false;

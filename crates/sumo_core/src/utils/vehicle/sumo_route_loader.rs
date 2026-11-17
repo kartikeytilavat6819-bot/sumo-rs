@@ -24,7 +24,7 @@ impl SUMORouteLoader {
     // }
     #[allow(unused_variables)]
     pub fn new(handler: Ptr<SUMORouteHandler>) -> Self {
-        // the reader is heap-allocated like XMLSubSys::getSAXReader's `new`; ownership is not freed (shortcut: no destructor for the reader yet, upgrade with SUMORouteLoader::drop_)
+        // the reader is heap-allocated like XMLSubSys::getSAXReader's `new`; like the C++ implicit destructor, nothing frees it
         let myParser: Ptr<SUMOSAXReader> = Ptr::from_raw(Box::into_raw(Box::new(utils::xml::xml_sub_sys::get_sax_reader(false, true))));
         let file = handler.m().base.get_file_name().to_string();
         if !myParser.m().parse_first(handler.m(), &file).unwrap_or_else(|e| std::panic::panic_any(e)) {

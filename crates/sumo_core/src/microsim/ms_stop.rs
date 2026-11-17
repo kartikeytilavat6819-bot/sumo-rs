@@ -332,8 +332,7 @@ impl MSStop {
         let net = MSNet::get_instance();
         self.busstop = net.m().get_stopping_place(&stopPar.busstop, SUMO_TAG_BUS_STOP);
         self.containerstop = net.m().get_stopping_place(&stopPar.containerstop, SUMO_TAG_CONTAINER_STOP);
-        // shortcut: static_cast<MSParkingArea*> of a stopping place is a pointer cast until a checked downcast exists
-        self.parkingarea = Ptr::from_raw(net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).as_raw() as *mut MSParkingArea);
+        self.parkingarea = net.m().get_stopping_place(&stopPar.parkingarea, SUMO_TAG_PARKING_AREA).cast();
         self.chargingStation = net.m().get_stopping_place(&stopPar.chargingStation, SUMO_TAG_CHARGING_STATION);
         self.overheadWireSegment = net.m().get_stopping_place(&stopPar.overheadWireSegment, SUMO_TAG_OVERHEAD_WIRE_SEGMENT);
         // shortcut: stopPar.durationDist (Distribution_Parameterized) is not ported, the fixed duration is always used
@@ -598,8 +597,7 @@ impl MSStop {
                 self.pars.containerstop = sp.get_id().to_string();
             }
             SUMO_TAG_PARKING_AREA => {
-                // shortcut: dynamic_cast<MSParkingArea*> is a pointer cast until a checked downcast exists
-                self.parkingarea = Ptr::from_raw(sp.as_raw() as *mut MSParkingArea);
+                self.parkingarea = sp.cast();
                 self.pars.parkingarea = sp.get_id().to_string();
             }
             SUMO_TAG_CHARGING_STATION => {

@@ -881,7 +881,7 @@ impl MSTriggeredRerouter {
                     // since the old route was closed, savings would be infinite. This isn't useful
                     let previousCost = router.recompute_costs(&prevEdges, Ptr::from_mut(v), now, Ptr::default());
                     let savings = previousCost - v.get_route().get_costs();
-                    Ptr::from_raw(v.get_route() as *const MSRoute as *mut MSRoute).m().set_savings(savings); // const_cast<MSRoute&>
+                    v.get_route().set_savings(savings);
                 }
                 if !rerouteDef.isVia && ok && newArrivalPos != -1.0 {
                     // must be called here because replaceRouteEdges may also set the arrivalPos

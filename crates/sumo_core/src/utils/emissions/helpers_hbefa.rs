@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::geom::geom_helper::{rad2deg, GRAVITY};
+use super::pollutants_interface::{HEAVY_BIT, ZERO_SPEED_ACCURACY as HELPER_ZERO_SPEED_ACCURACY};
 
 /// Helper methods for HBEFA-based emission computation
 /// C++ class `HelpersHBEFA` (utils/emissions/HelpersHBEFA.h)
@@ -27,9 +28,6 @@ impl std::ops::DerefMut for HelpersHBEFA {
 //   static const int HelpersHBEFA::HBEFA_BASE;
 //   static double[42][36] HelpersHBEFA::myFunctionParameter;
 const HBEFA_BASE: i32 = 1 << 16;
-// shortcut: PollutantsInterface::HEAVY_BIT and Helper::ZERO_SPEED_ACCURACY are not Rust consts yet, copied here from PollutantsInterface.h/.cpp
-const HEAVY_BIT: i32 = 1 << 15;
-const HELPER_ZERO_SPEED_ACCURACY: f64 = 0.5;
 const MY_FUNCTION_PARAMETER: [[f64; 36]; 42] = [
     [4245.223, 154.6451, 1.927562, 541.2383, -4.550742, 0.04188938, 28.93721, 0.2037537, -0.003240476, 0.4930771, 0.008678762, -0.000121619, 13.32557, 0.01322119, 0.000700762, 0.095335, 0.001058381, -1.49E-05, 1337.078, 48.70711, 0.6071061, 170.4687, -1.433304, 0.01319348, 57.36627, 1.608585, -0.01356748, 5.374104, -0.04497662, 0.000340619, 4.261253, 0.02554976, 0.000149429, 0.03476595, 0.000966905, -8.29E-06],
     [7532.393, 296.2907, 4.776591, 894.9408, -4.454462, 0.01506321, 64.0142, 0.4218208, -0.003186929, 0.7000011, 0.01569257, -0.000193357, 30.24542, 0.0187745, 0.002567214, -0.08659921, 0.008306071, -7.94E-05, 2372.407, 93.3199, 1.504438, 281.8711, -1.40298, 0.004744429, 61.59909, 4.076068, 0.02217579, 12.79584, -0.09531593, 0.0005145, 11.43318, 0.08889879, 0.001239571, 0.09093043, 0.003454929, -3.71E-05],
@@ -115,7 +113,7 @@ impl HelpersHBEFA {
     // }
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        // shortcut: StringBijection insert/get throw in C++; they panic here with the same message, upgrade when the emission API returns Result
+        // C++ insert() throws only on a duplicate key; every key below is a distinct constant, so the unwrap cannot fire
         let mut base = PollutantsInterface_Helper::new("HBEFA2".to_string(), HBEFA_BASE, -1);
         let clusterSizesH = [3, 6, 12];
         let clusterSizesP = [7, 14];

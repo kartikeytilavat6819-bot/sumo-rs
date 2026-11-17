@@ -1,6 +1,7 @@
 //! Port of utils/handlers/DataHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::xml::common_xml_structure::CommonXMLStructure_SumoBaseObject;
 use utils::xml::generic_sax_handler::SaxHandler;
 use utils::common::msg_handler::{write_error, write_warning};
 use utils::xml::sumo_xml_definitions::{
@@ -133,18 +134,48 @@ impl DataHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn parse_sumo_base_object(&mut self, obj: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>) {
-        // shortcut: CommonXMLStructure::SumoBaseObject is not ported (CommonHandler.myCommonXMLStructure is Unmapped), so the tag switch and child recursion cannot run; upgrade when CommonXMLStructure is ported
+    pub fn parse_sumo_base_object(&mut self, obj: Ptr<CommonXMLStructure_SumoBaseObject>) -> Result<(), ProcessError> {
+        // check if loading was aborted
         if !self.myAbortLoading {
-            let _ = obj;
+            // switch tag
+            match obj.get_tag() {
+                // Stopping Places
+                SUMO_TAG_INTERVAL => {
+                    if self.build_data_interval(obj, obj.get_string_attribute(SUMO_ATTR_ID)?, obj.get_double_attribute(SUMO_ATTR_BEGIN)?, obj.get_double_attribute(SUMO_ATTR_END)?) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_EDGE => {
+                    if self.build_edge_data(obj, obj.get_string_attribute(SUMO_ATTR_ID)?, obj.get_parameters()) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_EDGEREL => {
+                    if self.build_edge_relation_data(obj, obj.get_string_attribute(SUMO_ATTR_FROM)?, obj.get_string_attribute(SUMO_ATTR_TO)?, obj.get_parameters()) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                SUMO_TAG_TAZREL => {
+                    if self.build_taz_relation_data(obj, obj.get_string_attribute(SUMO_ATTR_FROM)?, obj.get_string_attribute(SUMO_ATTR_TO)?, obj.get_parameters()) {
+                        obj.m().mark_as_created();
+                    }
+                }
+                _ => {}
+            }
+            // now iterate over childrens
+            for child in obj.get_sumo_base_object_children().iter() {
+                // call this function recursively
+                self.parse_sumo_base_object(Ptr::from_box(child))?;
+            }
         }
+        Ok(())
     }
 
     /// C++: `bool DataHandler::buildDataInterval(const CommonXMLStructure::SumoBaseObject *, const std::string &, const double, const double)` [virtual, pure virtual]
     /// Builds DataInterval
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_data_interval(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, dataSetID: &str, begin: f64, end: f64) -> bool {
+    pub fn build_data_interval(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, dataSetID: &str, begin: f64, end: f64) -> bool {
         // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
         false
     }
@@ -153,7 +184,7 @@ impl DataHandler {
     /// Builds edgeData
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_edge_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, edgeID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
+    pub fn build_edge_data(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, edgeID: &str, parameters: &BTreeMap<String, String>) -> bool {
         // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
         false
     }
@@ -162,7 +193,7 @@ impl DataHandler {
     /// Builds edgeRelationData
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_edge_relation_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, fromEdgeID: &str, toEdgeID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
+    pub fn build_edge_relation_data(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, fromEdgeID: &str, toEdgeID: &str, parameters: &BTreeMap<String, String>) -> bool {
         // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
         false
     }
@@ -171,7 +202,7 @@ impl DataHandler {
     /// Builds TAZRelationData
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
-    pub fn build_taz_relation_data(&mut self, sumoBaseObject: Ptr<Unmapped /* CommonXMLStructure::SumoBaseObject */>, fromTAZID: &str, toTAZID: &str, parameters: &Unmapped /* Parameterised::Map */) -> bool {
+    pub fn build_taz_relation_data(&mut self, sumoBaseObject: Ptr<CommonXMLStructure_SumoBaseObject>, fromTAZID: &str, toTAZID: &str, parameters: &BTreeMap<String, String>) -> bool {
         // pure virtual in C++ (no base body); subclasses override. Nothing to build at this level.
         false
     }
@@ -218,7 +249,8 @@ impl DataHandler {
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
         // obtain tag
         let tag = if element == 0 { SUMO_TAG_ROOTFILE } else { element };
-        // shortcut: myCommonXMLStructure.openSUMOBaseOBject()/abortSUMOBaseOBject() not ported (CommonXMLStructure is Unmapped), upgrade when CommonXMLStructure is ported
+        // open SUMOBaseOBject
+        self.myCommonXMLStructure.open_sumo_base_object();
         // check tag
         // (C++ catches InvalidArgument and calls writeError(e.what()); the parse_* helpers here use get<T>, which does not throw)
         match tag {
@@ -230,9 +262,12 @@ impl DataHandler {
             SUMO_TAG_TAZREL => self.parse_taz_relation_data(attrs),
             SUMO_TAG_PARAM => {
                 write_warning("Data elements cannot load attributes as params");
+                self.myCommonXMLStructure.abort_sumo_base_object();
             }
             // tag cannot be parsed in routeHandler
-            _ => {}
+            _ => {
+                self.myCommonXMLStructure.abort_sumo_base_object();
+            }
         }
     }
 
@@ -262,11 +297,30 @@ impl DataHandler {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn my_end_element(&mut self, element: i32) {
+    pub fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
         // obtain tag
         let tag = element;
-        // shortcut: myCommonXMLStructure.getCurrentSumoBaseObject()/closeSUMOBaseOBject() not ported (CommonXMLStructure is Unmapped), so the closed object is unavailable and the INTERVAL parse + delete cannot run; upgrade when CommonXMLStructure is ported
-        let _ = tag;
+        // get last inserted object
+        let obj = self.myCommonXMLStructure.get_current_sumo_base_object();
+        // close SUMOBaseOBject
+        self.myCommonXMLStructure.close_sumo_base_object();
+        if !obj.is_null() {
+            // check tag
+            match tag {
+                // only interval
+                SUMO_TAG_INTERVAL => {
+                    // parse object and all their childrens
+                    self.parse_sumo_base_object(obj)?;
+                    // delete object (and all of their childrens): the parent drops its owned child
+                    let parent = obj.get_parent_sumo_base_object();
+                    if !parent.is_null() {
+                        parent.m().remove_sumo_base_object_child(obj);
+                    }
+                }
+                _ => {}
+            }
+        }
+        Ok(())
     }
 
     /// C++: `void DataHandler::parseInterval(const SUMOSAXAttributes &)` [private]
@@ -300,8 +354,16 @@ impl DataHandler {
         let begin = steps2time(attrs.get_sumo_time_reporting(SUMO_ATTR_BEGIN, "", &mut parsedOk, true));
         let end = steps2time(attrs.get_sumo_time_reporting(SUMO_ATTR_END, "", &mut parsedOk, true));
         // continue if flag is ok
-        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/add*Attribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
-        let _ = (id, begin, end, parsedOk);
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_INTERVAL);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_ID, &id);
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_double_attribute(SUMO_ATTR_BEGIN, begin);
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_double_attribute(SUMO_ATTR_END, end);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void DataHandler::parseEdgeData(const SUMOSAXAttributes &)` [private]
@@ -333,8 +395,14 @@ impl DataHandler {
         // fill attributes
         self.get_attributes(attrs, vec![SUMO_ATTR_ID]);
         // continue if flag is ok
-        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
-        let _ = (id, parsedOk);
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_EDGE);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_ID, &id);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void DataHandler::parseEdgeRelationData(const SUMOSAXAttributes &)` [private]
@@ -369,8 +437,15 @@ impl DataHandler {
         // fill attributes
         self.get_attributes(attrs, vec![SUMO_ATTR_FROM, SUMO_ATTR_TO]);
         // continue if flag is ok
-        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
-        let _ = (from, to, parsedOk);
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_EDGEREL);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_FROM, &from);
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_TO, &to);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void DataHandler::parseTAZRelationData(const SUMOSAXAttributes &)` [private]
@@ -405,8 +480,15 @@ impl DataHandler {
         // fill attributes
         self.get_attributes(attrs, vec![SUMO_ATTR_FROM, SUMO_ATTR_TO]);
         // continue if flag is ok
-        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->setTag/addStringAttribute (and SUMO_TAG_ERROR) not ported, upgrade when CommonXMLStructure is ported
-        let _ = (from, to, parsedOk);
+        if parsedOk {
+            // set tag
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_TAZREL);
+            // add all attributes
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_FROM, &from);
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().add_string_attribute(SUMO_ATTR_TO, &to);
+        } else {
+            self.myCommonXMLStructure.get_current_sumo_base_object().m().set_tag(SUMO_TAG_ERROR);
+        }
     }
 
     /// C++: `void DataHandler::getAttributes(const SUMOSAXAttributes &, const std::vector<SumoXMLAttr>) const` [const, private]
@@ -433,8 +515,7 @@ impl DataHandler {
         for attribute in attrs.get_attribute_names() {
             if !avoidAttributesStr.contains(&attribute.as_str()) {
                 let value = attrs.get_string_secure_name(&attribute, "");
-                // shortcut: addParameter on CommonXMLStructure::SumoBaseObject not ported (CommonHandler.myCommonXMLStructure is Unmapped), upgrade when CommonXMLStructure is ported
-                let _ = value;
+                self.myCommonXMLStructure.get_current_sumo_base_object().m().add_parameter(&attribute, &value);
             }
         }
     }
@@ -452,8 +533,12 @@ impl DataHandler {
     // }
     #[allow(unused_variables)]
     pub fn check_parent(&mut self, currentTag: SumoXMLTag, parentTag: SumoXMLTag, ok: &mut bool) {
-        // shortcut: CommonXMLStructure getCurrentSumoBaseObject()->getParentSumoBaseObject() not ported, so the parent tag cannot be checked and no error is written; upgrade when CommonXMLStructure is ported
-        let _ = (currentTag, parentTag, ok);
+        // check that parent SUMOBaseObject's tag is the parentTag
+        let parent = self.myCommonXMLStructure.get_current_sumo_base_object().get_parent_sumo_base_object();
+        if parent.is_null() || parent.get_tag() != parentTag {
+            self.write_error(&format!("{} must be defined within the definition of a {}", tag_name(currentTag), tag_name(parentTag)));
+            *ok = false;
+        }
     }
 
     /// C++: `void DataHandler::DataHandler()` [private]
@@ -492,8 +577,7 @@ impl SaxHandler for DataHandler {
         Ok(())
     }
     fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
-        DataHandler::my_end_element(self, element);
-        Ok(())
+        DataHandler::my_end_element(self, element)
     }
 }
 
