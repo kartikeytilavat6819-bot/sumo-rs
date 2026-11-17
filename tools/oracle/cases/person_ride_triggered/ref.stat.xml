@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:10:26.780978-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/person_ride_triggered/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/person_ride_triggered/routes.rou"/>
+        <additional-files value="tools/oracle/cases/person_ride_triggered/person_ride_triggered.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794939026.79" clockEnd="1794939026.85" clockDuration="0.06" traciDuration="0.00" realTimeFactor="4098.36" vehicleUpdatesPerSecond="3934.43" personUpdatesPerSecond="24573.77" begin="0.00" end="250.00" duration="250.00"/>
+    <vehicles loaded="3" inserted="3" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="12" running="8" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="3" routeLength="388.00" speed="6.64" duration="80.00" waitingTime="0.33" timeLoss="17.17" departDelay="1.00" departDelayWaiting="-1.00" totalTravelTime="240.00" totalDepartDelay="3.00"/>
+    <pedestrianStatistics number="4" routeLength="60.00" duration="40.50" timeLoss="4.31"/>
+    <rideStatistics number="4" waitingTime="16.50" routeLength="250.14" duration="30.25" bus="4" train="0" taxi="0" bike="0" aborted="0"/>
+    <transportStatistics number="0"/>
+</statistics>

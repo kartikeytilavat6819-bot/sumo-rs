@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:09:56.417774-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ped_striping_dawdle/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ped_striping_dawdle/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref_dawdle.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref_dawdle.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref_dawdle.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_striping_dawdle/ref_dawdle.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <pedestrian.striping.stripe-width value="0.4"/>
+        <pedestrian.striping.dawdling value="0.8"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794938996.43" clockEnd="1794938996.64" clockDuration="0.21" traciDuration="0.00" realTimeFactor="947.87" vehicleUpdatesPerSecond="1066.35" personUpdatesPerSecond="40436.02" begin="0.00" end="200.00" duration="200.00"/>
+    <vehicles loaded="7" inserted="7" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="60" running="30" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="7" routeLength="395.00" speed="12.33" duration="32.14" waitingTime="0.00" timeLoss="1.62" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="225.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="30" routeLength="100.00" duration="105.80" timeLoss="42.49"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

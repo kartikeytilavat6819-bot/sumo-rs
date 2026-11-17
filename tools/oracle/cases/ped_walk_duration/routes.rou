@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <person id="w0" type="ped" depart="0"><walk edges="AB BC" duration="40"/></person>
+  <person id="w1" type="ped" depart="2"><walk edges="AB BC" speed="0.8"/></person>
+  <person id="w2" type="ped" depart="4"><walk edges="BC CB" duration="30"/></person>
+  <person id="w3" type="ped" depart="6"><walk edges="CB BA" speed="2.0" arrivalPos="50"/></person>
+  <person id="w4" type="ped" depart="8"><walk edges="AB"/><walk edges="BC" duration="20"/><walk edges="CB" speed="1.5"/></person>
+  <person id="w5" type="ped" depart="10"><walk edges="AB BC" speed="1.1"/></person>
+  <person id="w6" type="ped" depart="12"><walk edges="BA AB" duration="25"/></person>
+</routes>

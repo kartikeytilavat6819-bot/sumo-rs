@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:09:53.761816-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ped_walkingarea_many/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ped_walkingarea_many/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_walkingarea_many/ref_detail.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_walkingarea_many/ref_detail.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_walkingarea_many/ref_detail.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/ped_walkingarea_many/ref_detail.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <pedestrian.striping.walkingarea-detail value="3"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794938993.77" clockEnd="1794938994.01" clockDuration="0.24" traciDuration="0.00" realTimeFactor="1234.57" vehicleUpdatesPerSecond="3288.07" personUpdatesPerSecond="37493.83" begin="0.00" end="300.00" duration="300.00"/>
+    <vehicles loaded="31" inserted="31" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="60" running="24" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="31" routeLength="304.58" speed="12.03" duration="25.77" waitingTime="0.16" timeLoss="3.02" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="799.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="36" routeLength="170.85" duration="123.25" timeLoss="17.10"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>
