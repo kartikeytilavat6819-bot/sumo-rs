@@ -14,6 +14,7 @@ pub type SUMOAbstractRouter_TypedOperation<E, V> = fn(Ptr<E>, Ptr<V>, f64) -> f6
 /// The concrete router's `compute` (C++ virtual), installed by the subclass that implements it.
 pub type SUMOAbstractRouter_ComputeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<E>, Ptr<E>, Ptr<V>, SUMOTime, &mut Vec<Ptr<E>>, bool) -> bool;
 pub type SUMOAbstractRouter_ProhibitFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, &SUMOAbstractRouter_Prohibitions);
+pub type SUMOAbstractRouter_SupportsProhibitionsFn<E, V> = fn(&SUMOAbstractRouter<E, V>) -> bool;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -106,6 +107,8 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myCompute: Option<SUMOAbstractRouter_ComputeFn<E, V>>,
     /// the subclass prohibit override (C++ virtual `prohibit`), None for the base behaviour
     pub myProhibit: Option<SUMOAbstractRouter_ProhibitFn<E, V>>,
+    /// the subclass supportsProhibitions override (C++ virtual), None for the base behaviour (true)
+    pub mySupportsProhibitions: Option<SUMOAbstractRouter_SupportsProhibitionsFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -161,6 +164,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myTTOperation: ttOperation,
             myCompute: None,
             myProhibit: None,
+            mySupportsProhibitions: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -202,6 +206,7 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             myTTOperation: other.myTTOperation,
             myCompute: other.myCompute,
             myProhibit: other.myProhibit,
+            mySupportsProhibitions: other.mySupportsProhibitions,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -807,6 +812,9 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn supports_prohibitions(&self) -> bool {
+        if let Some(supports) = self.mySupportsProhibitions {
+            return supports(self);
+        }
         true
     }
 
