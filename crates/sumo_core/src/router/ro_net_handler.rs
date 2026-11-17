@@ -1028,10 +1028,7 @@ impl RONetHandler {
         let mut pos = if random { edge.get_length() / 2. } else { attrs.get_opt::<f64>(SUMO_ATTR_POSITION, "access", &mut ok, 0., true) };
         let mut length = attrs.get_opt::<f64>(SUMO_ATTR_LENGTH, "access", &mut ok, -1., true);
         let friendlyPos = attrs.get_opt::<bool>(SUMO_ATTR_FRIENDLY_POS, "access", &mut ok, false, true);
-        // shortcut: C++ passes pos as both start and end position (aliased); two independent copies are checked here
-        let mut checkStart = pos;
-        let mut checkEnd = pos;
-        if !ok || crate::utils::vehicle::sumo_route_handler::SUMORouteHandler::check_stop_pos(&mut checkStart, &mut checkEnd, edge.get_length(), 0., friendlyPos) != crate::utils::vehicle::sumo_route_handler::SUMORouteHandler_StopPos::STOPPOS_VALID {
+        if !ok || !check_stop_pos_aliased(&mut pos, edge.get_length(), 0., friendlyPos) {
             throw_error(ProcessError::InvalidArgument(format!("Invalid position {} for access on lane '{}'.", utils::common::to_string::f64_to_string_prec(pos, utils::common::std_defs::g_precision()), lane)));
         }
         if !ok {
@@ -1045,10 +1042,48 @@ impl RONetHandler {
             length = accPos.distance_to(&stopPos);
         }
         // shortcut: SUMOVehicleParameter_Stop::accessPos is still Unmapped in the port, so the access entry (lane, pos, length) is not stored
-        let _ = (lane, length);
-        pos = checkStart;
-        let _ = pos;
+        let _ = (lane, pos, length);
     }
+}
+
+/// C++ `SUMORouteHandler::checkStopPos(pos, pos, ...)` with both reference parameters bound to the same
+/// variable (RONetHandler::parseAccess): every write to startPos or endPos lands in `pos`; true iff STOPPOS_VALID
+fn check_stop_pos_aliased(pos: &mut f64, laneLength: f64, minLength: f64, friendlyPos: bool) -> bool {
+    if minLength > laneLength {
+        return false;
+    }
+    if *pos < 0. {
+        *pos += laneLength;
+    }
+    if *pos < 0. {
+        *pos += laneLength;
+    }
+    if (*pos < minLength) || (*pos > laneLength) {
+        if !friendlyPos {
+            return false;
+        }
+        if *pos < minLength {
+            *pos = minLength;
+        }
+        if *pos > laneLength {
+            *pos = laneLength;
+        }
+    }
+    if (*pos < 0.) || (*pos > (*pos - minLength)) {
+        if !friendlyPos {
+            return false;
+        }
+        if *pos < 0. {
+            *pos = 0.;
+        }
+        if *pos > (*pos - minLength) {
+            *pos = *pos - minLength;
+        }
+    }
+    true
+}
+
+impl RONetHandler {
 
     /// C++: `void RONetHandler::parseDistrict(const SUMOSAXAttributes &)` [protected]
     /// Parses a district and creates a pseudo edge for it

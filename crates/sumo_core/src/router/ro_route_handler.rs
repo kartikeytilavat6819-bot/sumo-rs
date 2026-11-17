@@ -2250,8 +2250,41 @@ impl RORouteHandler {
                     return result;
                 }
             } else if ok && ((attrs.has_attribute(SUMO_ATTR_X) && attrs.has_attribute(SUMO_ATTR_Y)) || (attrs.has_attribute(SUMO_ATTR_LON) && attrs.has_attribute(SUMO_ATTR_LAT))) {
-                // shortcut: stop positions given as x/y or lon/lat need PositionVector::nearest_offset_to_point2D and GeoConvHelper, not ported yet
-                panic!("addStop: x/y and lon/lat stop positions need the unported nearest_offset_to_point2D and GeoConvHelper");
+                let mut pos: Position;
+                let mut geo = false;
+                let vid = self.myVehicleParameter.id.clone();
+                if attrs.has_attribute(SUMO_ATTR_X) && attrs.has_attribute(SUMO_ATTR_Y) {
+                    let x: f64 = attrs.get(SUMO_ATTR_X, &vid, &mut ok, true);
+                    let y: f64 = attrs.get(SUMO_ATTR_Y, &vid, &mut ok, true);
+                    pos = Position::new(x, y);
+                } else {
+                    let lon: f64 = attrs.get(SUMO_ATTR_LON, &vid, &mut ok, true);
+                    let lat: f64 = attrs.get(SUMO_ATTR_LAT, &vid, &mut ok, true);
+                    pos = Position::new(lon, lat);
+                    geo = true;
+                }
+                let mut positions = PositionVector(Vec::new());
+                positions.push(pos);
+                let mut geoEdges: ConstROEdgeVector = Vec::new();
+                let mut vClass = SVC_PASSENGER;
+                if self.myNet.m().get_v_type_distribution(&self.myVehicleParameter.vtypeid).is_null() {
+                    let type_ = self.myNet.m().get_vehicle_type_secure(&self.myVehicleParameter.vtypeid);
+                    if !type_.is_null() {
+                        vClass = type_.vehicleClass;
+                    }
+                }
+                self.base2.parse_geo_edges(&*self, &positions, geo, vClass, &mut geoEdges, &vid, true, &mut ok, true);
+                if ok {
+                    edge = geoEdges[0];
+                    hasPos = true;
+                    if geo {
+                        GeoConvHelper::with_final(|g| g.x2cartesian_const(&mut pos));
+                    }
+                    stop.parametersSet |= STOP_END_SET;
+                    stop.endPos = edge.get_lanes()[0].get_shape().nearest_offset_to_point2d(&pos, false);
+                } else {
+                    return result;
+                }
             } else if !ok || (stop.lane == "" && stop.edge == "") {
                 let msg = format!("A stop must be placed on a bus stop, a container stop, a parking area, an edge or a lane{}", errorSuffix);
                 self.myErrorOutput.m().inform(&msg, true);
