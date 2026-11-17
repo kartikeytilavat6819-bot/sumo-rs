@@ -7,7 +7,11 @@ mkdir -p "$O"
 d=tools/oracle/cases/persons
 "$B/netconvert" --osm-files "$d/input.osm" --simple-projection $(cat "$d/net.args") -o "$O/persons.net.xml" >"$O/nc.log" 2>&1
 echo "netconvert exit $?"
-"$B/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") --tripinfo-output "$O/ti.xml" --no-step-log true >"$O/sumo.log" 2>&1
+RUST_BACKTRACE=1 "$B/sumo" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $(cat "$d/sim.args") --tripinfo-output "$O/ti.xml" --no-step-log true >"$O/sumo.log" 2>&1
 echo "sim exit $? : $(grep -m1 -E 'panicked|Error' "$O/sumo.log" | cut -c1-200)"
+grep -a -A40 'panicked at' "$O/sumo.log" | grep -a -E 'sumo_core|sumo::|at crates' | head -30 | cut -c1-220
+grep -a -m3 -iE 'bus0|Warning|Error' "$O/sumo.log" | cut -c1-200
+grep -a -m8 -E 'bus0|persons|pb0' "$d/ref.tripinfo.xml" | cut -c1-200
+cat "$d/routes.rou" | head -40 | cut -c1-200
 python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$O/ti.xml" 2>&1 | head -3 | sed "s/^/persons tripinfo: /"
 diff <(grep -A2 personinfo "$d/ref.tripinfo.xml") <(grep -A2 personinfo "$O/ti.xml") | head -30
