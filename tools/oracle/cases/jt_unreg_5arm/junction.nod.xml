@@ -1,0 +1,8 @@
+<nodes>
+    <node id="C" x="0.00" y="0.00" type="unregulated"/>
+    <node id="n0" x="200.00" y="0.00" type="unregulated"/>
+    <node id="n1" x="61.80" y="190.21" type="unregulated"/>
+    <node id="n2" x="-161.80" y="117.56" type="unregulated"/>
+    <node id="n3" x="-161.80" y="-117.56" type="unregulated"/>
+    <node id="n4" x="61.80" y="-190.21" type="unregulated"/>
+</nodes>

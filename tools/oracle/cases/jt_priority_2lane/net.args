@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_priority_2lane/junction.nod.xml --edge-files tools/oracle/cases/jt_priority_2lane/junction.edg.xml --connection-files tools/oracle/cases/jt_priority_2lane/junction.con.xml

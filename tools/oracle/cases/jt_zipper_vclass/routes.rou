@@ -1,0 +1,126 @@
+<routes>
+<vType id="car" vClass="passenger" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0.5"/>
+<vType id="bike" vClass="bicycle" length="2.00" width="0.80" maxSpeed="6.00" accel="1.50" decel="3.00" sigma="0.5"/>
+<vType id="moto" vClass="motorcycle" length="2.50" maxSpeed="18.00" accel="3.00" decel="5.00" sigma="0.5"/>
+<vType id="truck" vClass="truck" length="10.00" maxSpeed="10.00" accel="1.00" decel="3.00" sigma="0.5"/>
+    <vehicle id="v00" depart="0.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v01" depart="0.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v02" depart="1.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v03" depart="1.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v04" depart="2.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v05" depart="2.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v06" depart="3.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v07" depart="3.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v08" depart="4.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v09" depart="4.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v10" depart="5.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v11" depart="5.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v12" depart="6.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v13" depart="6.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v14" depart="7.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v15" depart="7.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v16" depart="8.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v17" depart="8.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v18" depart="9.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v19" depart="9.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v20" depart="10.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v21" depart="10.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v22" depart="11.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v23" depart="11.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v24" depart="12.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v25" depart="12.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v26" depart="13.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v27" depart="13.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v28" depart="14.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v29" depart="14.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v30" depart="15.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v31" depart="15.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v32" depart="16.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v33" depart="16.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v34" depart="17.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v35" depart="17.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v36" depart="18.00" departSpeed="max" type="car">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v37" depart="18.50" departSpeed="max" type="bike">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v38" depart="19.00" departSpeed="max" type="moto">
+        <route edges="IN OUT"/>
+    </vehicle>
+    <vehicle id="v39" depart="19.50" departSpeed="max" type="truck">
+        <route edges="IN OUT"/>
+    </vehicle>
+</routes>
