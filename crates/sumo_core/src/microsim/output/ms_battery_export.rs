@@ -96,7 +96,7 @@ impl MSBatteryExport {
             if !(mveh.is_on_road() || mveh.is_parking() || mveh.is_remote_controlled()) {
                 continue;
             }
-            // shortcut: C++ getDevice(typeid(MSDevice_Battery)) is matched by device name
+            // Port note: C++ getDevice(typeid(MSDevice_Battery)) is the exact-class lookup, emulated by deviceName (see MSDevice::get_device_by_name)
             let dev = MSDevice::get_device_by_name(&mveh.myDevices, "battery");
             if dev.is_null() {
                 continue;

@@ -27,7 +27,9 @@ impl NBPTLineCont {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // shortcut: NBPTLine objects are shared as Ptr and their owner is not ported yet, so they are not freed here; upgrade when NBPTLine ownership is decided
+        for line in self.myPTLines.values() {
+            drop(unsafe { Box::from_raw(line.as_raw()) });
+        }
         self.myPTLines.clear();
     }
 
