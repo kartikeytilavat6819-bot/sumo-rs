@@ -849,8 +849,8 @@ impl ROEdge {
     pub fn cache_param_restrictions(&mut self, restrictionKeys: &Vec<String>) {
         for key in restrictionKeys {
             let value = self.base2.get_parameter(key, "1e40");
-            // shortcut: C++ StringUtils::toDouble throws on malformed input; here it panics with the same message
-            self.myParamRestrictions.push(utils::common::string_utils::to_double(&value).unwrap_or_else(|e| panic!("{e}")));
+            // C++ StringUtils::toDouble throws on malformed input: rethrown as the same exception
+            self.myParamRestrictions.push(utils::common::string_utils::to_double(&value).unwrap_or_else(|e| std::panic::panic_any(e)));
         }
     }
 

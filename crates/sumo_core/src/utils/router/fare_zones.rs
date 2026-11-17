@@ -75,7 +75,7 @@ pub fn get_overlay_zone(zoneNumber: i32) -> i32 {
 }
 
 /// C++ `static std::unordered_map<int, long long int> fareZoneToRep` (utils/router/FareZones.h)
-// shortcut: linear scan of a 62-entry table instead of a hash map; same values, C++ operator[] returns 0 for absent keys
+// looked up by linear scan (lookup only, no iteration order involved); C++ operator[] returns 0 for absent keys
 static FARE_ZONE_TO_REP: [(i32, i64); 62] = [
     (110, 1),
     (121, 2),
