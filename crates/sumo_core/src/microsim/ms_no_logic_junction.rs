@@ -71,7 +71,6 @@ impl MSNoLogicJunction {
     pub fn postload_init(&mut self) {
         // inform links where they have to report approaching vehicles to
         for l in self.myIncomingLanes.iter() {
-            eprintln!("NLPI junction={} lane={} links={}", self.get_id(), l.get_id(), l.get_link_cont().len());
             for link in l.get_link_cont().iter() {
                 link.m().set_request_information(-1, false, false, &Vec::new(), &Vec::new(), Ptr::null());
             }

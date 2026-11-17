@@ -592,12 +592,7 @@ impl MSTrafficLightLogic {
             for j in 0..numLinks {
                 for k in 0..self.myLinks[j].len() {
                     let junction = self.myLinks[j][k].get_junction();
-                    if junction.is_null() {
-                        let ln = self.myLinks[j][k].get_lane_before();
-                        eprintln!("NULLJ tl={} j={} k={} lane={} edge={}", self.get_id(), j, k, ln.get_id(), ln.get_edge().get_id());
-                    }
-                    // shortcut: C++ asserts link->getJunction() != nullptr; some Rust links still have no junction, so null is skipped here; upgrade when every MSLink gets its junction at construction
-                    if !junction.is_null() && !controlledJunctions.contains(&junction) {
+                    if !controlledJunctions.contains(&junction) {
                         controlledJunctions.push(junction);
                     }
                 }
