@@ -104,8 +104,10 @@ where
 // shortcut: C++ dynamic_cast<_AccessEdge*> stand-in: both AccessEdge ctors tag the line "!access" and no other intermodal edge does, upgrade to a type flag when the edge kinds get one
 fn as_access_edge<E, L, N, V>(edge: Ptr<IntermodalEdge<E, L, N, V>>) -> Ptr<AccessEdge<E, L, N, V>>
 where
-    E: RouterEdge<V, Node = N, Lane = L>,
-    V: RouterVehicle,
+    E: RouterEdge<V, Node = N, Lane = L> + 'static,
+    L: 'static,
+    N: 'static,
+    V: RouterVehicle + 'static,
 {
     if edge.get_line() == "!access" { edge.cast() } else { Ptr::null() }
 }
