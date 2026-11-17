@@ -545,7 +545,8 @@ impl LaneArea {
         // shortcut: C++ dynamic_cast<MSE2Collector*> cannot be checked at runtime; a non-MSE2Collector typed detector is cast unchecked, upgrade with a type tag on MSDetectorFileOutput
         let e2 = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(detID).copied();
         match e2 {
-            Some(d) => d.cast::<MSE2Collector>(),
+            // the registry holds the MSDetectorFileOutput base2 sub-object: step back to the MSE2Collector start (dynamic_cast adjustment)
+            Some(d) => Ptr::from_raw((d.as_raw() as *mut u8).wrapping_sub(std::mem::offset_of!(MSE2Collector, base2)) as *mut MSE2Collector),
             None => {
                 let msg = format!("Lane area detector '{}' is not known", detID);
                 panic!("{}", msg);
