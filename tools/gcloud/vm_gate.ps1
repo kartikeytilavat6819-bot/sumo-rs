@@ -20,6 +20,6 @@ $st = gcloud compute instances describe $Vm --zone $Zone --format "value(status)
 if ($st -ne "RUNNING") { gcloud compute instances start $Vm --zone $Zone --quiet 2>&1 | Out-Null; Start-Sleep 30 }
 $run = Join-Path $PSScriptRoot "vm_gate_run.sh"
 gcloud compute scp $tgz $run "${Vm}:/tmp/" --zone $Zone --quiet 2>&1 | Out-Null
-gcloud compute ssh $Vm --zone $Zone --quiet --command "while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/$id.tgz /tmp/vm_gate_run.sh /home/gate/ && sudo chown gate /home/gate/$id.tgz && sudo -iu gate bash /home/gate/vm_gate_run.sh /home/gate/$id.tgz '$Branch $sha'; sudo rm -f /home/gate/$id.tgz" 2>&1 |
+gcloud compute ssh $Vm --zone $Zone --quiet --command "while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha'; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh" 2>&1 |
     Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s*\+|\s*~)' }
 Remove-Item $tgz -ErrorAction SilentlyContinue

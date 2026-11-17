@@ -1524,7 +1524,7 @@ impl MSRailSignal {
                 veh_ref.add_reminder(prev.cast::<MSMoveReminder>(), 1.);
             }
         }
-        for i in depart_index..end_index - 1 {
+        for i in depart_index..=end_index - 1 {
             let e = edges[i as usize];
             if e.is_normal() && e.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL {
                 let e2 = edges[(i + 1) as usize];
