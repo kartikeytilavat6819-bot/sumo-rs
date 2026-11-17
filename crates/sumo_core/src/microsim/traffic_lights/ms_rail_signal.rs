@@ -237,9 +237,7 @@ impl MSRailSignal_LinkInfo {
     // }
     #[allow(unused_variables)]
     pub fn reroute(&mut self, veh: Ptr<SUMOVehicle>, occupied: &MSEdgeVector) {
-        // shortcut: MSBaseVehicle::getDevice needs a device-type key (typeid is not ported), so no
-        // routing device is ever found and the rerouting below is never triggered
-        let r_dev = veh.cast::<MSBaseVehicle>().get_device(&());
+        let r_dev = veh.cast::<MSBaseVehicle>().get_device("rerouting");
         let now = MSNet::get_instance().get_current_time_step();
         if !r_dev.is_null() {
             let r_dev: Ptr<MSDevice_Routing> = r_dev.cast();

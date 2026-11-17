@@ -31,6 +31,12 @@ fn loaded_tl_def_my_compute(d: &mut NBTrafficLightDefinition, brakingTime: i32) 
 fn loaded_tl_def_get_max_index(d: &mut NBTrafficLightDefinition) -> i32 {
     loaded_tl_def_of_mut(d).get_max_index()
 }
+fn loaded_tl_def_init_needs_cont_relation(d: &NBTrafficLightDefinition) {
+    loaded_tl_def_of(d).init_needs_cont_relation()
+}
+fn loaded_tl_def_set_participants_information(d: &mut NBTrafficLightDefinition) {
+    loaded_tl_def_of_mut(d).set_participants_information()
+}
 static NB_LOADED_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitionVt {
     collect_links: loaded_tl_def_collect_links,
     set_tl_controlling_information: loaded_tl_def_set_tl_controlling_information,
@@ -38,6 +44,9 @@ static NB_LOADED_TL_DEF_VT: NBTrafficLightDefinitionVt = NBTrafficLightDefinitio
     replace_removed: loaded_tl_def_replace_removed,
     my_compute: loaded_tl_def_my_compute,
     get_max_index: loaded_tl_def_get_max_index,
+    init_needs_cont_relation: loaded_tl_def_init_needs_cont_relation,
+    set_participants_information: loaded_tl_def_set_participants_information,
+    ..DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT
 };
 
 /// A loaded (complete) traffic light logic
@@ -74,14 +83,15 @@ impl NBLoadedTLDef {
     //     myEdgeCont(&ec) {
     // }
     #[allow(unused_variables)]
-    pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        let mut d = NBLoadedTLDef {
+    pub fn new(ec: &NBEdgeCont, id: &str, junctions: &Vec<Ptr<NBNode>>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(NBLoadedTLDef {
             base: NBTrafficLightDefinition::new(id, junctions, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        };
+        });
         d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d.base.register_junctions(junctions);
         d
     }
 
@@ -92,14 +102,15 @@ impl NBLoadedTLDef {
     //     myEdgeCont(&ec) {
     // }
     #[allow(unused_variables)]
-    pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        let mut d = NBLoadedTLDef {
+    pub fn new_2(ec: &NBEdgeCont, id: &str, junction: Ptr<NBNode>, offset: SUMOTime, type_: TrafficLightType) -> Box<Self> {
+        let mut d = Box::new(NBLoadedTLDef {
             base: NBTrafficLightDefinition::new_2(id, junction, "0", offset, type_), // DefaultProgramID = "0"
             myEdgeCont: Ptr::new(ec),
             mySignalGroups: BTreeMap::new(),
             myCycleDuration: 0,
-        };
+        });
         d.base.vt = &NB_LOADED_TL_DEF_VT;
+        d.base.add_node(junction);
         d
     }
 

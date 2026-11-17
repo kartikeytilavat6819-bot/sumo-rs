@@ -2,6 +2,7 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use crate::utils::router::router_edge::RouterEdge;
+use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 /// C++ typedef `std::vector<std::pair<const FlippedEdge<E, N, V> *, const FlippedEdge<E, N, V> *>> FlippedEdge::ConstFlippedEdgePairVector`
 pub type FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec<(Ptr<FlippedEdge<E, N, V>>, Ptr<FlippedEdge<E, N, V>>)>;
@@ -78,8 +79,21 @@ where
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        // shortcut: needs router trait bounds (lead), E::isInternal/getViaSuccessors/getFlippedRoutingEdge are not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getViaSuccessors")
+        let original = self.base.get_original_edge();
+        if !original.is_internal() {
+            let this: Ptr<FlippedEdge<E, N, V>> = Ptr::from_mut(self);
+            for viaPair in original.via_successors(SVC_IGNORING, false).to_vec() {
+                let revSource = viaPair.0.flipped_routing_edge();
+                let mut via = viaPair.1;
+                let mut preVia: Ptr<FlippedEdge<E, N, V>> = Ptr::null();
+                while !via.is_null() && via.is_internal() {
+                    via.flipped_routing_edge().m().myViaSuccessors.push((this, preVia));
+                    preVia = via.flipped_routing_edge();
+                    via = via.via_successors(SVC_IGNORING, false)[0].1;
+                }
+                revSource.m().myViaSuccessors.push((this, preVia));
+            }
+        }
     }
 
     /// C++: `const FlippedNode<E, N, V> * FlippedEdge::getFromJunction() const` [const]
@@ -109,8 +123,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<FlippedEdge<E, N, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTravelTime is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTravelTime")
+        edge.get_original_edge().travel_time(veh, time)
     }
 
     /// C++: `double FlippedEdge::getTravelTimeStaticRandomized(const FlippedEdge<E, N, V> *const, const V *const, double)` [static]
@@ -152,8 +165,22 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_via_successors(&self, vClass: SUMOVehicleClass, ignoreTransientPermissions: bool) -> &FlippedEdge_ConstFlippedEdgePairVector<E, N, V> {
-        // shortcut: needs router trait bounds (lead), E::isTazConnector/isConnectedTo are not callable on generic E; the cache rebuild also needs Ptr::new(self).m()
-        panic!("shortcut: needs router trait bounds (lead), E::isTazConnector")
+        if vClass == SVC_IGNORING || self.get_original_edge().is_taz_connector() {
+            return &self.myViaSuccessors;
+        }
+        if let Some(cached) = self.myClassesViaSuccessorMap.get(&vClass) {
+            return cached;
+        }
+        // C++ mutable cache: the const method fills myClassesViaSuccessorMap[vClass] in place
+        let me: &mut FlippedEdge<E, N, V> = unsafe { &mut *Ptr::new(self).as_raw() };
+        let mut result: FlippedEdge_ConstFlippedEdgePairVector<E, N, V> = Vec::new();
+        for viaPair in self.myViaSuccessors.iter() {
+            if viaPair.0.get_original_edge().is_taz_connector() || viaPair.0.get_original_edge().is_connected_to(&*self.get_original_edge(), vClass, false) {
+                result.push(*viaPair);
+            }
+        }
+        me.myClassesViaSuccessorMap.insert(vClass, result);
+        me.myClassesViaSuccessorMap.get(&vClass).unwrap()
     }
 
     /// C++: `const FlippedEdge<E, N, V> * FlippedEdge::getBidiEdge() const` [const]
@@ -163,8 +190,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_bidi_edge(&self) -> Ptr<FlippedEdge<E, N, V>> {
-        // shortcut: needs router trait bounds (lead), E::getBidiEdge is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getBidiEdge")
+        self.get_original_edge().bidi_edge().flipped_routing_edge()
     }
 
     /// C++: `double FlippedEdge::getDistanceTo(const FlippedEdge<E, N, V> *, const bool) const` [const]

@@ -5,6 +5,7 @@ use utils::common::msg_handler::write_warning;
 use utils::common::string_utils::starts_with;
 use utils::common::sumo_vehicle_class::{get_vehicle_class_id, get_vehicle_shape_id, get_vehicle_shape_name, SUMO_VEHICLE_CLASS_STRINGS};
 use utils::common::time::{steps2time, time2steps};
+use crate::libsumo::helper::check_time_bounds;
 use utils::common::to_string::to_string;
 
 /// C++ class `libsumo::VehicleType` (libsumo/VehicleType.h)
@@ -675,7 +676,9 @@ impl VehicleType {
     // }
     #[allow(unused_variables)]
     pub fn set_boarding_duration(typeID: &str, boardingDuration: f64) {
-        // shortcut: checkTimeBounds (utils/common/SUMOTime.h) is not ported, so out-of-range durations are not rejected, upgrade when checkTimeBounds is ported
+        if !check_time_bounds(boardingDuration) {
+            panic!("BoardingDuration parameter exceeds the time value range.");
+        }
         Self::get_v_type(typeID.to_string()).m().set_boarding_duration(time2steps(boardingDuration), true);
     }
 

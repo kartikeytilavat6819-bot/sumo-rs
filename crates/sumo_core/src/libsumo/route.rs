@@ -283,7 +283,7 @@ impl Route {
     // }
     #[allow(unused_variables)]
     pub fn get_route(id: &str) -> ConstMSRoutePtr {
-        // shortcut: MSRoute::dictionary cannot return nullptr through Rc<MSRoute>, so existence is checked with hasRoute first
+        // C++ `r == nullptr` test: MSRoute::dictionary returns a non-null Rc, so existence is checked with has_route
         if !MSRoute::has_route(id) {
             panic!("{}", format!("Route '{}' is not known", id));
         }

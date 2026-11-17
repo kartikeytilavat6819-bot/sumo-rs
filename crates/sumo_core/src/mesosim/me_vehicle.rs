@@ -63,41 +63,142 @@ impl std::ops::DerefMut for MEVehicle {
     }
 }
 
-use crate::utils::vehicle::sumo_traffic_object::{DEFAULT_SUMO_TRAFFIC_OBJECT_VT, SUMOTrafficObject, SUMOTrafficObjectVt};
-use crate::utils::vehicle::sumo_vehicle::{DEFAULT_SUMO_VEHICLE_VT, SUMOVehicle, SUMOVehicleVt};
+use crate::utils::vehicle::sumo_traffic_object::{SUMOTrafficObject, SUMOTrafficObjectVt};
+use crate::utils::vehicle::sumo_vehicle::{SUMOVehicle, SUMOVehicleVt};
 
-// SUMOTrafficObject vtable for MEVehicle (mirrors MS_VEHICLE_VT); getters not listed keep the default
+// SUMOTrafficObject vtable for MEVehicle: every entry of MS_VEHICLE_VT, routed to the MEVehicle override
+// where MEVehicle.h declares one and to the MSBaseVehicle method otherwise (the C++ override chain)
 static ME_VEHICLE_VT: SUMOTrafficObjectVt = SUMOTrafficObjectVt {
     is_vehicle: me_vehicle_is_vehicle,
+    is_person: me_vehicle_is_person,
+    is_container: me_vehicle_is_container,
+    get_parameter: me_vehicle_get_parameter,
     get_edge: me_vehicle_get_edge,
     get_lane: me_vehicle_get_lane,
     get_speed: me_vehicle_get_speed,
     get_position: me_vehicle_get_position,
+    get_numerical_id: me_vehicle_get_numerical_id,
+    get_random_seed: me_vehicle_get_random_seed,
+    get_vehicle_type: me_vehicle_get_vehicle_type,
+    get_v_type_parameter: me_vehicle_get_v_type_parameter,
+    replace_vehicle_type: me_vehicle_replace_vehicle_type,
+    get_rng: me_vehicle_get_rng,
+    get_rng_index: me_vehicle_get_rng_index,
+    is_stopped: me_vehicle_is_stopped,
     get_current_edge: me_vehicle_get_current_edge,
     get_next_edge_ptr: me_vehicle_get_next_edge_ptr,
+    get_upcoming_edge_i_ds: me_vehicle_get_upcoming_edge_i_ds,
     get_back_lane: me_vehicle_get_back_lane,
+    get_route_position: me_vehicle_get_route_position,
     get_reroute_destination: me_vehicle_get_reroute_destination,
+    replace_route: me_vehicle_replace_route,
     get_slope: me_vehicle_get_slope,
+    get_chosen_speed_factor: me_vehicle_get_chosen_speed_factor,
     get_v_class: me_vehicle_get_v_class,
+    get_routing_mode: me_vehicle_get_routing_mode,
+    set_routing_mode: me_vehicle_set_routing_mode,
     get_max_speed: me_vehicle_get_max_speed,
     get_waiting_time: me_vehicle_get_waiting_time,
+    get_previous_speed: me_vehicle_get_previous_speed,
     get_acceleration: me_vehicle_get_acceleration,
     get_position_on_lane: me_vehicle_get_position_on_lane,
     get_back_position_on_lane: me_vehicle_get_back_position_on_lane,
     get_angle: me_vehicle_get_angle,
     has_arrived: me_vehicle_has_arrived,
     has_influencer: me_vehicle_has_influencer,
-    ..DEFAULT_SUMO_TRAFFIC_OBJECT_VT
+    is_selected: me_vehicle_is_selected,
+    get_device: me_vehicle_get_device,
 };
 
-// SUMOVehicle vtable for MEVehicle: the C++ virtuals MEVehicle overrides at SUMOVehicle level
+// SUMOVehicle vtable for MEVehicle: every entry of MS_VEHICLE_SUMO_VEHICLE_VT, routed to the MEVehicle override
+// where MEVehicle declares one and to the MSBaseVehicle method otherwise (the C++ override chain)
 static ME_SUMO_VEHICLE_VT: SUMOVehicleVt = SUMOVehicleVt {
-    is_on_road: me_sv_is_on_road,
-    is_idling: me_sv_is_idling,
-    get_angle: me_sv_get_angle,
-    get_time_loss: me_sv_get_time_loss,
+    get_route: me_sv_get_route,
+    get_departure: me_sv_get_departure,
+    get_depart_pos: me_sv_get_depart_pos,
+    get_odometer: me_sv_get_odometer,
+    has_departed: me_sv_has_departed,
+    is_stopped: me_sv_is_stopped,
+    get_length: me_sv_get_length,
     get_current_edge: me_sv_get_current_edge,
-    ..DEFAULT_SUMO_VEHICLE_VT
+    is_on_road: me_sv_is_on_road,
+    get_lateral_position_on_lane: me_sv_get_lateral_position_on_lane,
+    get_angle: me_sv_get_angle,
+    get_route_ptr: me_sv_get_route_ptr,
+    get_route_position: me_sv_get_route_position,
+    succ_edge: me_sv_succ_edge,
+    get_reroute_origin: me_sv_get_reroute_origin,
+    replace_route_edges: me_sv_replace_route_edges,
+    reroute: me_sv_reroute,
+    get_router_tt: me_sv_get_router_tt,
+    has_valid_route: me_sv_has_valid_route,
+    has_valid_route_start: me_sv_has_valid_route_start,
+    get_route_validity: me_sv_get_route_validity,
+    get_current_route_edge: me_sv_get_current_route_edge,
+    get_emission_parameters: me_sv_get_emission_parameters,
+    replace_parameter: me_sv_replace_parameter,
+    on_depart: me_sv_on_depart,
+    is_idling: me_sv_is_idling,
+    is_front_on_lane: me_sv_is_front_on_lane,
+    is_parking: me_sv_is_parking,
+    is_remote_controlled: me_sv_is_remote_controlled,
+    was_remote_controlled: me_sv_was_remote_controlled,
+    get_arrival_pos: me_sv_get_arrival_pos,
+    set_arrival_pos: me_sv_set_arrival_pos,
+    get_depart_edge: me_sv_get_depart_edge,
+    get_number_reroutes: me_sv_get_number_reroutes,
+    allows_boarding: me_sv_allows_boarding,
+    add_transportable: me_sv_add_transportable,
+    get_person_number: me_sv_get_person_number,
+    get_person_id_list: me_sv_get_person_id_list,
+    get_container_number: me_sv_get_container_number,
+    remove_transportable: me_sv_remove_transportable,
+    remove_transportable_mass: me_sv_remove_transportable_mass,
+    get_persons: me_sv_get_persons,
+    get_containers: me_sv_get_containers,
+    add_stop: me_sv_add_stop,
+    get_stop_indices: me_sv_get_stop_indices,
+    is_line_stop: me_sv_is_line_stop,
+    abort_next_stop: me_sv_abort_next_stop,
+    get_next_parking_area: me_sv_get_next_parking_area,
+    replace_parking_area: me_sv_replace_parking_area,
+    get_parking_badges: me_sv_get_parking_badges,
+    remaining_stop_duration: me_sv_remaining_stop_duration,
+    is_stopped_triggered: me_sv_is_stopped_triggered,
+    is_stopped_parking: me_sv_is_stopped_parking,
+    is_stopped_in_range: me_sv_is_stopped_in_range,
+    stops_at: me_sv_stops_at,
+    stops_at_edge: me_sv_stops_at_edge,
+    has_stops: me_sv_has_stops,
+    get_stops: me_sv_get_stops,
+    get_next_stop: me_sv_get_next_stop,
+    get_next_stop_mutable: me_sv_get_next_stop_mutable,
+    unregister_waiting: me_sv_unregister_waiting,
+    get_next_stop_parameter: me_sv_get_next_stop_parameter,
+    get_stop_duration: me_sv_get_stop_duration,
+    add_traci_stop: me_sv_add_traci_stop,
+    set_chosen_speed_factor: me_sv_set_chosen_speed_factor,
+    get_depart_delay: me_sv_get_depart_delay,
+    get_time_loss: me_sv_get_time_loss,
+    get_brake_gap: me_sv_get_brake_gap,
+    get_impatience: me_sv_get_impatience,
+    get_devices: me_sv_get_devices,
+    is_rail: me_sv_is_rail,
+    get_last_action_time: me_sv_get_last_action_time,
+    get_bounding_box: me_sv_get_bounding_box,
+    get_scope_lock: me_sv_get_scope_lock,
+    remember_blocked_parking_area: me_sv_remember_blocked_parking_area,
+    saw_blocked_parking_area: me_sv_saw_blocked_parking_area,
+    remember_parking_area_score: me_sv_remember_parking_area_score,
+    reset_parking_area_scores: me_sv_reset_parking_area_scores,
+    get_number_parking_reroutes: me_sv_get_number_parking_reroutes,
+    set_number_parking_reroutes: me_sv_set_number_parking_reroutes,
+    remember_blocked_charging_station: me_sv_remember_blocked_charging_station,
+    saw_blocked_charging_station: me_sv_saw_blocked_charging_station,
+    remember_charging_station_score: me_sv_remember_charging_station_score,
+    reset_charging_station_scores: me_sv_reset_charging_station_scores,
+    save_state: me_sv_save_state,
+    load_state: me_sv_load_state,
 };
 
 fn me_sv_ref(v: &SUMOVehicle) -> &MEVehicle {
@@ -118,12 +219,323 @@ fn me_sv_get_time_loss(v: &SUMOVehicle) -> SUMOTime {
 fn me_sv_get_current_edge(v: &SUMOVehicle) -> Ptr<MSEdge> {
     me_sv_ref(v).get_current_edge()
 }
+fn me_sv_ref_mut(v: &mut SUMOVehicle) -> &mut MEVehicle {
+    Ptr::from_mut(v).cast::<MEVehicle>().get_mut().unwrap()
+}
+fn me_sv_get_route(v: &SUMOVehicle) -> &MSRoute {
+    me_sv_ref(v).get_route()
+}
+fn me_sv_get_departure(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_departure()
+}
+fn me_sv_get_depart_pos(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_depart_pos()
+}
+fn me_sv_get_odometer(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_odometer()
+}
+fn me_sv_has_departed(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).has_departed()
+}
+fn me_sv_is_stopped(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_stopped()
+}
+fn me_sv_get_length(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_length()
+}
+fn me_sv_get_lateral_position_on_lane(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_lateral_position_on_lane()
+}
+fn me_sv_get_route_ptr(v: &SUMOVehicle) -> ConstMSRoutePtr {
+    me_sv_ref(v).get_route_ptr()
+}
+fn me_sv_get_route_position(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_route_position()
+}
+fn me_sv_succ_edge(v: &SUMOVehicle, nSuccs: i32) -> Ptr<MSEdge> {
+    me_sv_ref(v).succ_edge(nSuccs)
+}
+fn me_sv_get_reroute_origin(v: &SUMOVehicle) -> crate::microsim::ms_route::MSRouteIterator {
+    me_sv_ref(v).get_reroute_origin()
+}
+fn me_sv_replace_route_edges(v: &mut SUMOVehicle, edges: &mut ConstMSEdgeVector, cost: f64, savings: f64, info: &str, onInit: bool, check: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    me_sv_ref_mut(v).replace_route_edges(edges, cost, savings, info, onInit, check, removeStops, msgReturn)
+}
+fn me_sv_reroute(v: &mut SUMOVehicle, t: SUMOTime, info: &str, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, onInit: bool, withTaz: bool, silent: bool, sink: Ptr<MSEdge>) -> bool {
+    me_sv_ref_mut(v).reroute(t, info, router, onInit, withTaz, silent, sink)
+}
+fn me_sv_get_router_tt(v: &SUMOVehicle) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
+    me_sv_ref(v).get_router_tt()
+}
+fn me_sv_has_valid_route(v: &SUMOVehicle, msg: &mut String, route: ConstMSRoutePtr) -> bool {
+    me_sv_ref(v).has_valid_route(msg, route)
+}
+fn me_sv_has_valid_route_start(v: &mut SUMOVehicle, msg: &mut String) -> bool {
+    me_sv_ref_mut(v).has_valid_route_start(msg)
+}
+fn me_sv_get_route_validity(v: &mut SUMOVehicle, update: bool, silent: bool, msgReturn: Ptr<String>) -> i32 {
+    me_sv_ref_mut(v).get_route_validity(update, silent, msgReturn)
+}
+fn me_sv_get_current_route_edge(v: &SUMOVehicle) -> &crate::microsim::ms_route::MSRouteIterator {
+    me_sv_ref(v).get_current_route_edge()
+}
+fn me_sv_get_emission_parameters(v: &SUMOVehicle) -> Ptr<EnergyParams> {
+    Ptr::new(v).cast::<MEVehicle>().m().get_emission_parameters()
+}
+fn me_sv_replace_parameter(v: &mut SUMOVehicle, p: Ptr<SUMOVehicleParameter>) {
+    me_sv_ref_mut(v).replace_parameter(p)
+}
+fn me_sv_on_depart(v: &mut SUMOVehicle) {
+    me_sv_ref_mut(v).on_depart()
+}
+fn me_sv_is_front_on_lane(v: &SUMOVehicle, lane: Ptr<MSLane>) -> bool {
+    me_sv_ref(v).is_front_on_lane(lane)
+}
+fn me_sv_is_parking(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_parking()
+}
+fn me_sv_is_remote_controlled(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_remote_controlled()
+}
+fn me_sv_was_remote_controlled(v: &SUMOVehicle, lookBack: SUMOTime) -> bool {
+    me_sv_ref(v).was_remote_controlled(lookBack)
+}
+fn me_sv_get_arrival_pos(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_arrival_pos()
+}
+fn me_sv_set_arrival_pos(v: &mut SUMOVehicle, arrivalPos: f64) {
+    me_sv_ref_mut(v).set_arrival_pos(arrivalPos)
+}
+fn me_sv_get_depart_edge(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_depart_edge()
+}
+fn me_sv_get_number_reroutes(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_number_reroutes()
+}
+fn me_sv_allows_boarding(v: &SUMOVehicle, t: Ptr<MSTransportable>) -> bool {
+    me_sv_ref(v).allows_boarding(t)
+}
+fn me_sv_add_transportable(v: &mut SUMOVehicle, t: Ptr<MSTransportable>) {
+    me_sv_ref_mut(v).add_transportable(t)
+}
+fn me_sv_get_person_number(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_person_number()
+}
+fn me_sv_get_person_id_list(v: &SUMOVehicle) -> Vec<String> {
+    me_sv_ref(v).get_person_id_list()
+}
+fn me_sv_get_container_number(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_container_number()
+}
+fn me_sv_remove_transportable(v: &mut SUMOVehicle, t: Ptr<MSTransportable>) {
+    me_sv_ref_mut(v).remove_transportable(t)
+}
+fn me_sv_remove_transportable_mass(v: &mut SUMOVehicle, t: Ptr<MSTransportable>) {
+    me_sv_ref_mut(v).remove_transportable_mass(t)
+}
+fn me_sv_get_persons(v: &SUMOVehicle) -> &Vec<Ptr<MSTransportable>> {
+    me_sv_ref(v).get_persons()
+}
+fn me_sv_get_containers(v: &SUMOVehicle) -> &Vec<Ptr<MSTransportable>> {
+    me_sv_ref(v).get_containers()
+}
+fn me_sv_add_stop(v: &mut SUMOVehicle, stopPar: &SUMOVehicleParameter_Stop, errorMsg: &mut String, untilOffset: SUMOTime, searchStart: Ptr<crate::microsim::ms_route::MSRouteIterator>) -> bool {
+    me_sv_ref_mut(v).add_stop(stopPar, errorMsg, untilOffset, searchStart)
+}
+fn me_sv_get_stop_indices(v: &SUMOVehicle) -> Vec<(i32, f64)> {
+    me_sv_ref(v).get_stop_indices()
+}
+fn me_sv_is_line_stop(v: &SUMOVehicle, position: f64) -> bool {
+    me_sv_ref(v).is_line_stop(position)
+}
+fn me_sv_abort_next_stop(v: &mut SUMOVehicle, nextStopIndex: i32) -> bool {
+    me_sv_ref_mut(v).abort_next_stop(nextStopIndex)
+}
+fn me_sv_get_next_parking_area(v: &mut SUMOVehicle) -> Ptr<MSParkingArea> {
+    me_sv_ref_mut(v).get_next_parking_area()
+}
+fn me_sv_replace_parking_area(v: &mut SUMOVehicle, parkingArea: Ptr<MSParkingArea>, errorMsg: &mut String) -> bool {
+    me_sv_ref_mut(v).replace_parking_area(parkingArea, errorMsg)
+}
+fn me_sv_get_parking_badges(v: &SUMOVehicle) -> &Vec<String> {
+    me_sv_ref(v).get_parking_badges()
+}
+fn me_sv_remaining_stop_duration(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).remaining_stop_duration()
+}
+fn me_sv_is_stopped_triggered(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_stopped_triggered()
+}
+fn me_sv_is_stopped_parking(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_stopped_parking()
+}
+fn me_sv_is_stopped_in_range(v: &SUMOVehicle, pos: f64, tolerance: f64, checkFuture: bool) -> bool {
+    me_sv_ref(v).is_stopped_in_range(pos, tolerance, checkFuture)
+}
+fn me_sv_stops_at(v: &SUMOVehicle, stop: Ptr<MSStoppingPlace>) -> bool {
+    me_sv_ref(v).stops_at(stop)
+}
+fn me_sv_stops_at_edge(v: &SUMOVehicle, edge: Ptr<MSEdge>) -> bool {
+    me_sv_ref(v).stops_at_edge(edge)
+}
+fn me_sv_has_stops(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).has_stops()
+}
+fn me_sv_get_stops(v: &SUMOVehicle) -> &VecDeque<MSStop> {
+    me_sv_ref(v).get_stops()
+}
+fn me_sv_get_next_stop(v: &SUMOVehicle) -> &MSStop {
+    me_sv_ref(v).get_next_stop()
+}
+fn me_sv_get_next_stop_mutable(v: &mut SUMOVehicle) -> &mut MSStop {
+    me_sv_ref_mut(v).get_next_stop_mutable()
+}
+fn me_sv_unregister_waiting(v: &mut SUMOVehicle) {
+    me_sv_ref_mut(v).unregister_waiting()
+}
+fn me_sv_get_next_stop_parameter(v: &SUMOVehicle) -> Ptr<SUMOVehicleParameter_Stop> {
+    me_sv_ref(v).get_next_stop_parameter()
+}
+fn me_sv_get_stop_duration(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_stop_duration()
+}
+fn me_sv_add_traci_stop(v: &mut SUMOVehicle, stop: SUMOVehicleParameter_Stop, errorMsg: &mut String) -> bool {
+    me_sv_ref_mut(v).add_traci_stop(stop, errorMsg)
+}
+fn me_sv_set_chosen_speed_factor(v: &mut SUMOVehicle, factor: f64) {
+    me_sv_ref_mut(v).set_chosen_speed_factor(factor)
+}
+fn me_sv_get_depart_delay(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_depart_delay()
+}
+fn me_sv_get_brake_gap(v: &SUMOVehicle, delayed: bool) -> f64 {
+    me_sv_ref(v).get_brake_gap(delayed)
+}
+fn me_sv_get_impatience(v: &SUMOVehicle) -> f64 {
+    me_sv_ref(v).get_impatience()
+}
+fn me_sv_get_devices(v: &SUMOVehicle) -> &Vec<Ptr<MSVehicleDevice>> {
+    me_sv_ref(v).get_devices()
+}
+fn me_sv_is_rail(v: &SUMOVehicle) -> bool {
+    me_sv_ref(v).is_rail()
+}
+fn me_sv_get_last_action_time(v: &SUMOVehicle) -> SUMOTime {
+    me_sv_ref(v).get_last_action_time()
+}
+fn me_sv_get_bounding_box(v: &SUMOVehicle, offset: f64) -> PositionVector {
+    me_sv_ref(v).get_bounding_box(offset)
+}
+fn me_sv_get_scope_lock(v: &mut SUMOVehicle) -> Box<Unmapped> {
+    me_sv_ref_mut(v).get_scope_lock()
+}
+fn me_sv_remember_blocked_parking_area(v: &mut SUMOVehicle, pa: Ptr<MSStoppingPlace>, local: bool) {
+    me_sv_ref_mut(v).remember_blocked_parking_area(pa, local)
+}
+fn me_sv_saw_blocked_parking_area(v: &SUMOVehicle, pa: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
+    me_sv_ref(v).saw_blocked_parking_area(pa, local)
+}
+fn me_sv_remember_parking_area_score(v: &mut SUMOVehicle, pa: Ptr<MSStoppingPlace>, score: &str) {
+    me_sv_ref_mut(v).remember_parking_area_score(pa, score)
+}
+fn me_sv_reset_parking_area_scores(v: &mut SUMOVehicle) {
+    me_sv_ref_mut(v).reset_parking_area_scores()
+}
+fn me_sv_get_number_parking_reroutes(v: &SUMOVehicle) -> i32 {
+    me_sv_ref(v).get_number_parking_reroutes()
+}
+fn me_sv_set_number_parking_reroutes(v: &mut SUMOVehicle, value: i32) {
+    me_sv_ref_mut(v).set_number_parking_reroutes(value)
+}
+fn me_sv_remember_blocked_charging_station(v: &mut SUMOVehicle, cs: Ptr<MSStoppingPlace>, local: bool) {
+    me_sv_ref_mut(v).remember_blocked_charging_station(cs, local)
+}
+fn me_sv_saw_blocked_charging_station(v: &SUMOVehicle, cs: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
+    me_sv_ref(v).saw_blocked_charging_station(cs, local)
+}
+fn me_sv_remember_charging_station_score(v: &mut SUMOVehicle, cs: Ptr<MSStoppingPlace>, score: &str) {
+    me_sv_ref_mut(v).remember_charging_station_score(cs, score)
+}
+fn me_sv_reset_charging_station_scores(v: &mut SUMOVehicle) {
+    me_sv_ref_mut(v).reset_charging_station_scores()
+}
+fn me_sv_save_state(v: &mut SUMOVehicle, out: &mut OutputDevice) {
+    me_sv_ref_mut(v).save_state(out)
+}
+fn me_sv_load_state(v: &mut SUMOVehicle, attrs: &SUMOSAXAttributes, offset: SUMOTime) {
+    me_sv_ref_mut(v).load_state(attrs, offset)
+}
 
 fn me_vehicle_ref(o: &SUMOTrafficObject) -> &MEVehicle {
     Ptr::new(o).cast::<MEVehicle>().get().unwrap()
 }
 fn me_vehicle_is_vehicle(_: &SUMOTrafficObject) -> bool {
     true
+}
+fn me_vehicle_is_person(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn me_vehicle_is_container(_: &SUMOTrafficObject) -> bool {
+    false
+}
+fn me_vehicle_ref_mut(o: &mut SUMOTrafficObject) -> &mut MEVehicle {
+    Ptr::from_mut(o).cast::<MEVehicle>().get_mut().unwrap()
+}
+fn me_vehicle_get_parameter(o: &SUMOTrafficObject) -> &SUMOVehicleParameter {
+    MSBaseVehicle::get_parameter(me_vehicle_ref(o))
+}
+fn me_vehicle_get_numerical_id(o: &SUMOTrafficObject) -> SUMOTrafficObject_NumericalID {
+    me_vehicle_ref(o).get_numerical_id()
+}
+fn me_vehicle_get_random_seed(o: &SUMOTrafficObject) -> i64 {
+    me_vehicle_ref(o).get_random_seed()
+}
+fn me_vehicle_get_vehicle_type(o: &SUMOTrafficObject) -> &MSVehicleType {
+    me_vehicle_ref(o).get_vehicle_type()
+}
+fn me_vehicle_get_v_type_parameter(o: &SUMOTrafficObject) -> &SUMOVTypeParameter {
+    me_vehicle_ref(o).get_v_type_parameter()
+}
+fn me_vehicle_replace_vehicle_type(o: &mut SUMOTrafficObject, type_: Ptr<MSVehicleType>) {
+    me_vehicle_ref_mut(o).replace_vehicle_type(type_)
+}
+fn me_vehicle_get_rng(o: &SUMOTrafficObject) -> Ptr<SumoRNG> {
+    me_vehicle_ref(o).get_rng()
+}
+fn me_vehicle_get_rng_index(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_rng_index()
+}
+fn me_vehicle_is_stopped(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).is_stopped()
+}
+fn me_vehicle_get_upcoming_edge_i_ds(o: &SUMOTrafficObject) -> BTreeSet<SUMOTrafficObject_NumericalID> {
+    me_vehicle_ref(o).get_upcoming_edge_i_ds()
+}
+fn me_vehicle_get_route_position(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_route_position()
+}
+fn me_vehicle_replace_route(o: &mut SUMOTrafficObject, route: ConstMSRoutePtr, info: &str, onInit: bool, offset: i32, addStops: bool, removeStops: bool, msgReturn: Ptr<String>) -> bool {
+    me_vehicle_ref_mut(o).replace_route(route, info, onInit, offset, addStops, removeStops, msgReturn)
+}
+fn me_vehicle_get_chosen_speed_factor(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_chosen_speed_factor()
+}
+fn me_vehicle_get_routing_mode(o: &SUMOTrafficObject) -> i32 {
+    me_vehicle_ref(o).get_routing_mode()
+}
+fn me_vehicle_set_routing_mode(o: &mut SUMOTrafficObject, value: i32) {
+    me_vehicle_ref_mut(o).set_routing_mode(value)
+}
+fn me_vehicle_get_previous_speed(o: &SUMOTrafficObject) -> f64 {
+    me_vehicle_ref(o).get_previous_speed()
+}
+fn me_vehicle_is_selected(o: &SUMOTrafficObject) -> bool {
+    me_vehicle_ref(o).is_selected()
+}
+fn me_vehicle_get_device(o: &SUMOTrafficObject, kind: &str) -> Ptr<MSDevice> {
+    let dev = me_vehicle_ref(o).get_device(kind);
+    // C++ implicit upcast MSVehicleDevice* -> MSDevice*: MSDevice is the second base, so offset it
+    if dev.is_null() { Ptr::default() } else { Ptr::from_raw(&dev.base2 as *const MSDevice as *mut MSDevice) }
 }
 fn me_vehicle_get_edge(o: &SUMOTrafficObject) -> Ptr<MSEdge> {
     me_vehicle_ref(o).get_edge()
@@ -373,10 +785,13 @@ impl MEVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_speed(&self) -> f64 {
-        if self.get_waiting_time(false) > 0 || self.is_stopped() {
+        let w = self.get_waiting_time(false);
+        let st = self.is_stopped();
+        let avg = self.get_average_speed();
+        if w > 0 || st {
             0.
         } else {
-            self.get_average_speed()
+            avg
         }
     }
 
@@ -654,7 +1069,10 @@ impl MEVehicle {
             }
             if net.get_current_time_step() > self.myStops[i].endBoarding {
                 if self.myStops[i].triggered || self.myStops[i].containerTriggered {
-                    // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so cancelCurrentCustomers() is skipped; upgrade when device lookup by type is ported
+                    let taxiDevice = MSDevice::get_device_by_name(&self.myDevices, "taxi").cast::<MSDevice_Taxi>();
+                    if !taxiDevice.is_null() {
+                        taxiDevice.m().cancel_current_customers();
+                    }
                     self.myStops[i].triggered = false;
                     self.myStops[i].containerTriggered = false;
                 }
@@ -757,10 +1175,8 @@ impl MEVehicle {
         let mut hadStop = false;
         let me = Ptr::from_mut(self);
         while !self.myStops.is_empty() {
-            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
-            let curEdge = self.myRoute.index_op(self.myCurrEdge as i32);
             let endPos = self.myStops[0].pars.endPos;
-            if self.myStops[0].get_edge() != curEdge || self.myStops[0].segment != self.mySegment || endPos <= lastPos {
+            if self.myStops[0].edge != self.myCurrEdge || self.myStops[0].segment != self.mySegment || endPos <= lastPos {
                 break;
             }
             lastPos = endPos;
@@ -780,9 +1196,13 @@ impl MEVehicle {
             self.resume_from_stopping();
             hadStop = true;
         }
-        if self.get_waiting_time(false) > 0 {
+        let waitingTime = self.get_waiting_time(false);
+        if waitingTime > 0 {
             // entry back onto the road was blocked for some time
-            // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so recordMesoParkingTimeLoss() is skipped; upgrade when device lookup by type is ported
+            let tripinfoDevice = MSDevice::get_device_by_name(&self.myDevices, "tripinfo").cast::<MSDevice_Tripinfo>();
+            if !tripinfoDevice.is_null() {
+                tripinfoDevice.m().record_meso_parking_time_loss(waitingTime);
+            }
         }
         self.mySegment.get_edge().remove_waiting(me.cast::<SUMOVehicle>());
     }
@@ -863,8 +1283,7 @@ impl MEVehicle {
                 utils::common::msg_handler::write_warning(&utils::tlf!("Join stops are not available in meso yet (vehicle '%', segment '%').", self.get_id(), self.mySegment.get_id()));
                 continue;
             }
-            // shortcut: MSStop.edge is an Unmapped route iterator; compare the stop's edge with the route edge at myCurrEdge
-            if self.myStops[i].get_edge() != self.myRoute.index_op(self.myCurrEdge as i32) || self.myStops[i].segment != self.mySegment {
+            if self.myStops[i].edge != self.myCurrEdge || self.myStops[i].segment != self.mySegment {
                 break;
             }
             let cur = time;
@@ -903,10 +1322,15 @@ impl MEVehicle {
             hadStop = true;
         }
         if reachedStop {
-            // shortcut: getDevice(typeid(MSDevice_Taxi)) is null in MSBaseVehicle, so taxi->notifyMove(*this, 0, 0, 0) is skipped
+            let taxiDevice = MSDevice::get_device_by_name(&self.myDevices, "taxi").cast::<MSDevice_Taxi>();
+            if !taxiDevice.is_null() {
+                taxiDevice.m().notify_move(self, 0., 0., 0.);
+            }
         }
-        // shortcut: getDevice(typeid(MSDevice_Tripinfo)) is null in MSBaseVehicle, so tripinfo->updateStopTime(time - initialTime) is skipped
-        let _ = initialTime;
+        let tripinfoDevice = MSDevice::get_device_by_name(&self.myDevices, "tripinfo").cast::<MSDevice_Tripinfo>();
+        if !tripinfoDevice.is_null() {
+            tripinfoDevice.m().update_stop_time(time - initialTime);
+        }
         time
     }
 
@@ -958,8 +1382,7 @@ impl MEVehicle {
             }
             let pars = self.myStops.front().unwrap().pars.clone();
             self.myPastStops.push(pars);
-            // shortcut: MSStop.edge is an Unmapped route iterator; routeIndex uses the current route position, which equals stop.edge for stops handled in meso
-            self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+            self.myPastStops.last_mut().unwrap().routeIndex = self.myStops.front().unwrap().edge as i32;
             let (triggered, containerTriggered, joinTriggered) = {
                 let s = self.myStops.front().unwrap();
                 (s.triggered, s.containerTriggered, s.joinTriggered)
@@ -1751,7 +2174,8 @@ impl MEVehicle {
 
         // load stops
         self.myStops.clear();
-        // shortcut: addStops(!MSGlobals::gCheckRoutes, &myCurrEdge, false) needs an MSRouteIterator (Unmapped); stops are not re-added from the saved state until it is mapped
+        let searchStart = Ptr::from_mut(&mut self.myCurrEdge);
+        self.add_stops(!MSGlobals::check_routes(), searchStart, false);
 
         if self.has_departed() {
             self.myDeparture -= offset;
@@ -1765,8 +2189,7 @@ impl MEVehicle {
                 }
                 let pars = self.myStops.front().unwrap().pars.clone();
                 self.myPastStops.push(pars);
-                // shortcut: routeIndex is (int)(stop.edge - myRoute->begin()) on an Unmapped iterator; uses the current route position
-                self.myPastStops.last_mut().unwrap().routeIndex = self.myCurrEdge as i32;
+                self.myPastStops.last_mut().unwrap().routeIndex = self.myStops.front().unwrap().edge as i32;
                 self.myStops.pop_front();
                 pastStops -= 1;
             }

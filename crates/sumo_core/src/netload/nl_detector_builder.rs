@@ -31,24 +31,7 @@ fn cpp_double(v: f64) -> String {
     }
 }
 
-/// C++ checkStepLengthMultiple(t, error, deltaT, begin) (utils/common/SUMOTime.cpp).
-// shortcut: copy of ms_frame.rs's private check_step_length_multiple; make the utils one public and call it here instead
-fn check_step_length_multiple(t: SUMOTime, error: &str, delta_t: SUMOTime, begin: SUMOTime) {
-    use utils::common::time::time2string;
-    if begin % delta_t == 0 {
-        if t % delta_t != 0 {
-            utils::common::msg_handler::write_warning(&format!("The given time value {} is not a multiple of the step length {}{}.", time2string(t), time2string(delta_t), error));
-        }
-    } else if (t - begin) % delta_t != 0 {
-        utils::common::msg_handler::write_warning(&format!(
-            "The given time value {} is not reached with step length {} and begin time {}{}.",
-            time2string(t),
-            time2string(delta_t),
-            time2string(begin),
-            error
-        ));
-    }
-}
+use utils::common::time::check_step_length_multiple;
 
 /// C++ static_cast<MSDetectorFileOutput*>(MSE2Collector*): the output base sits in `base2` (after the MSMoveReminder base).
 fn e2_det_file_output(det: Ptr<MSE2Collector>) -> Ptr<MSDetectorFileOutput> {

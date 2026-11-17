@@ -1,0 +1,16 @@
+<routes>
+    <!-- CACC platoon: a slow Krauss leader, then four CACC vehicles that follow it on the same route -->
+    <vType id="slowLeader" carFollowModel="Krauss" accel="2.6" decel="4.5" emergencyDecel="9" sigma="0.5" tau="1" length="5" minGap="2.5" maxSpeed="3"/>
+    <vType id="platoonCACC" carFollowModel="CACC" accel="2.6" decel="4.5" emergencyDecel="9" sigma="0.5" tau="1" length="5" minGap="2.5" maxSpeed="13.89"/>
+    <route id="A" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <route id="B" edges="682360554#0 682360554#1 682360554#2 1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <vehicle id="leader" type="slowLeader" route="A" depart="0.00" departSpeed="max"/>
+    <vehicle id="p0" type="platoonCACC" route="A" depart="4.00" departSpeed="max"/>
+    <vehicle id="p1" type="platoonCACC" route="A" depart="6.00" departSpeed="max"/>
+    <vehicle id="p2" type="platoonCACC" route="A" depart="8.00" departSpeed="max"/>
+    <vehicle id="p3" type="platoonCACC" route="A" depart="10.00" departSpeed="max"/>
+    <!-- background traffic uses DEFAULT_VEHTYPE, which the variant files override -->
+    <vehicle id="b0" route="B" depart="1.00" departSpeed="max"/>
+    <vehicle id="b1" route="B" depart="3.00" departSpeed="max"/>
+    <vehicle id="b2" route="B" depart="5.00" departSpeed="max"/>
+</routes>

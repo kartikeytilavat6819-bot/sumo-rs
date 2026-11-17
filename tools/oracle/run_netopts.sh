@@ -9,8 +9,7 @@
 B=$(cd "$(dirname "$0")" && pwd)
 C=$B/cases
 RUST=${RUST_NETCONVERT:-/mnt/c/Users/karti/sumo-rs-target-x07/debug/netconvert.exe}
-CPP=${CPP_NETCONVERT:-$HOME/sumo-src/bin/netconvert}
-CPP_SH=${CPP_SUMO_HOME:-$HOME/sumo-src}
+CPP=$HOME/sumo-src/bin/netconvert
 OUT=${NETOPTS_OUT:-/mnt/c/Users/karti/AppData/Local/Temp/opencode/netopts}
 
 NAMES=()
@@ -56,7 +55,7 @@ run_pair() {
   fi
   timeout 900 "$RUST" "${rargs[@]}" -o "$(wslpath -w "$d")\\rust.net.xml" > "$d/rust.log" 2>&1
   rrc=$?
-  SUMO_HOME=$CPP_SH timeout 900 "$CPP" "${cargs[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
+  SUMO_HOME=$HOME/sumo-src timeout 900 "$CPP" "${cargs[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1
   crc=$?
   if grep -q panicked "$d/rust.log"; then
     V=PANIC; D=$(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')

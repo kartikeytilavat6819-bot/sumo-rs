@@ -1856,11 +1856,7 @@ impl NLTriggerBuilder {
     #[allow(unused_variables)]
     pub fn build_rerouter(&mut self, net: &mut MSNet, id: &str, edges: &mut MSEdgeVector, prob: f64, off: bool, optional: bool, timeThreshold: SUMOTime, vTypes: &str, pos: &Position, radius: f64) -> Ptr<MSTriggeredRerouter> {
         // return new MSTriggeredRerouter(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius);
-        let r = leak_ptr(Box::new(MSTriggeredRerouter::new(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius)));
-        // C++ registers `this` with myInstances and with every lane's move reminders inside the
-        // constructor. The object only has its final address after placement, so register here.
-        r.m().register_at(r);
-        r
+        leak_ptr(MSTriggeredRerouter::new(id, edges, prob, off, optional, timeThreshold, vTypes, pos, radius))
     }
 
     /// C++: `std::string NLTriggerBuilder::getFileName(const SUMOSAXAttributes &, const std::string &, const bool)` [protected]

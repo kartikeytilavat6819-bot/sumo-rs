@@ -32,6 +32,18 @@ fn min2(a: f64, b: f64) -> f64 {
 thread_local! {
     // static MESegment::myMultiModalWarnings
     static MY_MULTI_MODAL_WARNINGS: std::cell::Cell<SVCPermissions> = const { std::cell::Cell::new(0) };
+    // static MESegment::myDummyParent
+    static MY_DUMMY_PARENT: Ptr<MSEdge> = Ptr::from_mut(Box::leak(Box::new(MSEdge::new("MESegmentDummyParent", -1, SumoXMLEdgeFunc::UNKNOWN, "", "", "", -1, 0.))));
+    // static MESegment::myVaporizationTarget
+    static MY_VAPORIZATION_TARGET: Ptr<MESegment> = Ptr::from_mut(Box::leak(Box::new(MESegment::new_3("vaporizationTarget"))));
+}
+
+fn my_dummy_parent() -> Ptr<MSEdge> {
+    MY_DUMMY_PARENT.with(|p| *p)
+}
+
+fn my_vaporization_target() -> Ptr<MESegment> {
+    MY_VAPORIZATION_TARGET.with(|p| *p)
 }
 
 /// A single mesoscopic segment (cell)
@@ -924,7 +936,7 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn is_open(&self, veh: Ptr<MEVehicle>) -> bool {
-        // shortcut: DEBUG_OPENED trace block omitted (debug-only output)
+        // C++ `#ifdef DEBUG_OPENED` block not ported: MESegment.cpp:51 has `//#define DEBUG_OPENED`, so it is never compiled
         if self.myTLSPenalty {
             // XXX should limited control take precedence over tls penalty?
             return true;
@@ -1132,13 +1144,7 @@ impl MESegment {
                 let leaderOut = self.myQueues[qi].myVehicles[0].get_event_time();
                 if !isDepart && leaderOut > tleave && self.overtake() {
                     if self.myQueues[qi].myVehicles.len() == 1 {
-                        // the overtaken car is no longer the leader and must not block foes
-                        let car0 = self.myQueues[qi].myVehicles[0];
-                        let link = self.get_link(car0, false);
-                        if !link.is_null() {
-                            link.m().remove_approaching(car0.cast::<SUMOVehicle>());
-                        }
-                        meso_net().m().remove_leader_car(car0);
+                        meso_net().m().remove_leader_car(self.myQueues[qi].myVehicles[0]);
                         newLeader = veh;
                     }
                     self.myQueues[qi].myVehicles.insert(1, veh);
@@ -1205,8 +1211,7 @@ impl MESegment {
                 for veh in q.get_vehicles().iter() {
                     if filter.vehicle_applies(&**veh) {
                         meso_net().m().remove_leader_car(*veh);
-                        // shortcut: C++ myVaporizationTarget static segment not ported, a null target is treated as invalid (same as isInvalid)
-                        meso_net().m().change_segment(*veh, currentTime + 1, Ptr::null(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
+                        meso_net().m().change_segment(*veh, currentTime + 1, my_vaporization_target(), MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR, false);
                         return true;
                     }
                 }
@@ -1530,8 +1535,7 @@ impl MESegment {
     //     }
     #[allow(unused_variables)]
     pub fn is_invalid(segment: Ptr<MESegment>) -> bool {
-        // shortcut: C++ also treats the static myVaporizationTarget as invalid, not ported (null target used instead)
-        segment.is_null()
+        segment.is_null() || segment == my_vaporization_target()
     }
 
     /// C++: `SUMOTime MESegment::getNextInsertionTime(SUMOTime) const` [const]
@@ -2070,10 +2074,9 @@ impl MESegment {
     // }
     #[allow(unused_variables)]
     pub fn new_3(id: &str) -> Self {
-        // shortcut: C++ myDummyParent static MSEdge not ported, myEdge stays null until a real edge is assigned, upgrade with the MESegment statics
         MESegment {
             base: Named::new(id),
-            myEdge: Ptr::null(),
+            myEdge: my_dummy_parent(),
             myNextSegment: Ptr::null(),
             myLength: 0.,
             myIndex: 0,

@@ -1,0 +1,28 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="truck" vClass="truck" length="7.50" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="bike" vClass="bicycle" length="1.80" maxSpeed="6.00" accel="0.80" decel="2.00" width="0.60"/>
+    <vType id="moto" vClass="motorcycle" length="2.20" maxSpeed="16.00" accel="2.00" decel="3.00" width="0.80"/>
+    <vType id="car" vClass="passenger" length="5.00" maxSpeed="13.89"/>
+    <vehicle id="bus0" type="bus" depart="0.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="car0" type="car" depart="2.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="truck0" type="truck" depart="4.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="bike0" type="bike" depart="6.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="moto0" type="moto" depart="8.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="car1" type="car" depart="10.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+    <vehicle id="bus1" type="bus" depart="12.00" departSpeed="max">
+        <route edges="E0 E1"/>
+    </vehicle>
+</routes>

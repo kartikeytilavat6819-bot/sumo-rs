@@ -100,6 +100,8 @@ pub struct MSCFModelVt {
     pub min_next_speed_emergency: fn(&MSCFModel, f64, Ptr<MSVehicle>) -> f64,
     pub brake_gap_2: fn(&MSCFModel, f64, f64, f64) -> f64,
     pub get_secure_gap: fn(&MSCFModel, Ptr<MSVehicle>, Ptr<MSVehicle>, f64, f64, f64) -> f64,
+    pub get_parameter: fn(&MSCFModel, Ptr<MSVehicle>, &str) -> String,
+    pub set_parameter: fn(&MSCFModel, Ptr<MSVehicle>, &str, &str) -> Result<(), InvalidArgument>,
 }
 
 fn default_finalize_speed(m: &MSCFModel, veh: Ptr<MSVehicle>, vPos: f64) -> f64 {
@@ -177,6 +179,12 @@ fn default_brake_gap_2(m: &MSCFModel, speed: f64, decel: f64, headwayTime: f64) 
 fn default_get_secure_gap(m: &MSCFModel, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
     m.get_secure_gap_base(veh, pred, speed, leaderSpeed, leaderMaxDecel)
 }
+fn default_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String {
+    m.get_parameter_base(veh, key)
+}
+fn default_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+    m.set_parameter_base(veh, key, value)
+}
 
 /// C++ static_cast from `MSCFModel` to a derived class. Derived structs embed their base first (repr(C)),
 /// and the `vt` installed by the derived constructor guarantees the dynamic type.
@@ -218,6 +226,8 @@ pub(crate) const DEFAULT_MSCF_MODEL_VT: MSCFModelVt = MSCFModelVt {
     min_next_speed_emergency: default_min_next_speed_emergency,
     brake_gap_2: default_brake_gap_2,
     get_secure_gap: default_get_secure_gap,
+    get_parameter: default_get_parameter,
+    set_parameter: default_set_parameter,
 };
 
 impl MSCFModel {
@@ -2400,8 +2410,16 @@ impl MSCFModel {
     //         UNUSED_PARAMETER(key);
     //         return "";
     //     }
-    #[allow(unused_variables)]
     pub fn get_parameter(&self, veh: Ptr<MSVehicle>, key: &str) -> String {
+        (self.vt.get_parameter)(self, veh, key)
+    }
+    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+        (self.vt.set_parameter)(self, veh, key, value)
+    }
+
+    /// C++: `std::string MSCFModel::getParameter(const MSVehicle *, const std::string &) const` (base body)
+    #[allow(unused_variables)]
+    pub fn get_parameter_base(&self, veh: Ptr<MSVehicle>, key: &str) -> String {
         // base model has no parameters
         let _ = (veh, key);
         String::new()
@@ -2415,8 +2433,9 @@ impl MSCFModel {
     //         UNUSED_PARAMETER(value);
     //         throw InvalidArgument("Setting parameter '" + key + "' is not supported by carFollowModel");
     //     }
+    /// C++: `void MSCFModel::setParameter(...) const` (base body)
     #[allow(unused_variables)]
-    pub fn set_parameter(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
+    pub fn set_parameter_base(&self, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> {
         // C++ throws InvalidArgument for unknown keys
         let _ = (veh, value);
         Err(InvalidArgument(format!("Setting parameter '{}' is not supported by carFollowModel", key)))
@@ -2489,7 +2508,7 @@ impl MSCFModel {
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::from_raw(pred.as_raw() as *mut ()));
         let perceivedSpeedDifference = ds_mut.get_perceived_speed_difference(*predSpeed - speed, *gap, Ptr::from_raw(pred.as_raw() as *mut ()));
-        // shortcut: the C++ accelError recomputation via followSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
         *predSpeed = speed + perceivedSpeedDifference;
     }
@@ -2537,7 +2556,7 @@ impl MSCFModel {
         let ds = veh.get_driver_state();
         let ds_mut = unsafe { &mut *(Rc::as_ptr(&ds) as *mut MSSimpleDriverState) };
         let perceivedGap = ds_mut.get_perceived_headway(*gap, Ptr::default());
-        // shortcut: the C++ accelError recomputation via stopSpeed() is debug-only (DEBUG_DRIVER_ERRORS) and is skipped
+        // DEBUG_DRIVER_ERRORS block is compiled out in MSCFModel.cpp (its #define is commented out), so nothing runs here
         *gap = perceivedGap;
     }
 

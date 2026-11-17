@@ -3,8 +3,8 @@
 use crate::prelude::*;
 use crate::microsim::cfmodels::mscf_model::{MSCFModel, g_semi_implicit_euler_update};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
+use super::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
 
-// shortcut: the mesoscopic branches (gMesoNet, MESegment) are not ported; ms_net refuses mesosim runs, so the micro path is taken
 fn g_use_meso_sim() -> bool {
     crate::microsim::ms_globals::use_meso_sim()
 }
@@ -68,6 +68,24 @@ fn reminder_of(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMoveReminder> {
 fn as_tracker(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMeanData_MeanDataValueTracker> {
     Ptr::from_raw(v.as_raw() as *mut MSMeanData_MeanDataValueTracker)
 }
+
+fn ms_mean_data_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
+}
+fn ms_mean_data_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
+}
+fn ms_mean_data_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
+}
+
+/// Virtual table of MSMeanData as MSDetectorFileOutput (inherited by all MSMeanData subclasses)
+static MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_mean_data_detector_write_xml_output,
+    write_xml_detector_prolog: ms_mean_data_detector_write_xml_detector_prolog,
+    detector_update: ms_mean_data_detector_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 /// Data collector for edges/lanes
 /// C++ class `MSMeanData` (microsim/output/MSMeanData.h)
@@ -198,6 +216,7 @@ impl MSMeanData {
             myPendingIntervals: VecDeque::new(),
             meandata_vt: &MS_MEAN_DATA_BASE_VT,
         };
+        this.base.vt = &MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT;
         match utils::common::string_utils::to_bool(excludeEmpty) {
             Ok(b) => this.myDumpEmpty = !b,
             Err(e @ ProcessError::BoolFormat(_)) => {
@@ -323,7 +342,6 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn init(&mut self) {
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         self.myInitTime = MSNet::get_instance().get_current_time_step();
         if self.myEdges.is_empty() {
             // use all edges by default
@@ -341,6 +359,39 @@ impl MSMeanData {
             self.myEdgeIndex.insert(edge, index);
             index += 1;
             let lanes: Vec<Ptr<MSLane>> = edge.get_lanes().clone();
+            if crate::microsim::ms_globals::use_meso_sim() {
+                if !self.myAmEdgeBased {
+                    for lane in lanes.iter().copied() {
+                        let data = self.create_values(lane, lanes[0].get_length(), false);
+                        self.myMeasures.last_mut().unwrap().push(data);
+                        let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                        while !s.is_null() {
+                            s.m().add_detector(reminder_of(data), lane.get_index());
+                            s.m().prepare_detector_for_writing(reminder_of(data).m(), lane.get_index());
+                            s = s.m().get_next_segment();
+                        }
+                        data.m().reset(false);
+                        data.m().reset(true);
+                    }
+                } else {
+                    let data = if self.myTrackVehicles {
+                        upcast_tracker(heap(MSMeanData_MeanDataValueTracker::new(Ptr::null(), lanes[0].get_length(), Ptr::from_mut(&mut *self))))
+                    } else {
+                        self.create_values(Ptr::null(), lanes[0].get_length(), false)
+                    };
+                    reminder_of(data).m().set_description(&format!("meandata_{}|{}", self.get_id(), edge.get_id()));
+                    self.myMeasures.last_mut().unwrap().push(data);
+                    let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                    while !s.is_null() {
+                        s.m().add_detector(reminder_of(data), -1);
+                        s.m().prepare_detector_for_writing(reminder_of(data).m(), -1);
+                        s = s.m().get_next_segment();
+                    }
+                    data.m().reset(false);
+                    data.m().reset(true);
+                }
+                continue;
+            }
             if self.myAmEdgeBased && self.myTrackVehicles {
                 let t = heap(MSMeanData_MeanDataValueTracker::new(Ptr::null(), lanes[0].get_length(), Ptr::from_mut(&mut *self)));
                 self.myMeasures.last_mut().unwrap().push(upcast_tracker(t));
@@ -669,7 +720,20 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn reset_only_base(&mut self, stopTime: SUMOTime) {
-        // C++ UNUSED_PARAMETER(stopTime); the mesoscopic branch is not ported (see g_use_meso_sim)
+        if crate::microsim::ms_globals::use_meso_sim() {
+            for (edge, i) in self.myEdges.iter().zip(self.myMeasures.iter()) {
+                // C++ walks the segments once per edge, so only the first value sees them
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                for data in i.iter() {
+                    while !s.is_null() {
+                        s.m().prepare_detector_for_writing(reminder_of(*data).m(), -1);
+                        s = s.m().get_next_segment();
+                    }
+                    data.m().reset(false);
+                }
+            }
+            return;
+        }
         for i in self.myMeasures.iter() {
             for j in i.iter() {
                 j.m().reset(false);
@@ -792,8 +856,36 @@ impl MSMeanData {
     // }
     #[allow(unused_variables)]
     pub fn write_edge(&mut self, dev: &mut OutputDevice, edgeValues: &Vec<Ptr<MSMeanData_MeanDataValues>>, edge: Ptr<MSEdge>, startTime: SUMOTime, stopTime: SUMOTime) {
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut idx: i32 = 0;
+            for data in edgeValues.iter() {
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                while !s.is_null() {
+                    s.m().prepare_detector_for_writing(reminder_of(*data).m(), if self.myAmEdgeBased { -1 } else { idx });
+                    s = s.m().get_next_segment();
+                }
+                idx += 1;
+            }
+            if self.myAmEdgeBased {
+                let data = edgeValues[0];
+                if self.myDumpEmpty || (self.myPrintModified && edge.get_lanes()[0].is_speed_modified()) || !data.is_empty() {
+                    let id = edge.get_id().to_string();
+                    self.write_prefix(dev, &data, SUMO_TAG_EDGE, id);
+                    let mut d = data;
+                    while !d.is_null() {
+                        let defaultTravelTime = if self.myPrintDefaults { edge.get_length() / edge.get_speed_limit() } else { -1. };
+                        d.write(dev, &self.myWrittenAttributes, stopTime - startTime, edge.get_num_driving_lanes(), edge.get_speed_limit(), defaultTravelTime, -1);
+                        d = d.m().get_sub_data();
+                    }
+                    dev.close_tag("");
+                }
+                if !skip_final_reset {
+                    data.m().reset(true);
+                }
+                return;
+            }
+        }
         if !self.myAmEdgeBased {
             let mut writeCheck = self.myDumpEmpty;
             if !writeCheck {
@@ -934,7 +1026,6 @@ impl MSMeanData {
             // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
             panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
         let mut edgeLengthSum = 0.0;
@@ -953,6 +1044,21 @@ impl MSMeanData {
                 meanData.add_to(sumData.m());
                 if !skip_final_reset {
                     meanData.m().reset(false);
+                }
+            }
+        }
+        if crate::microsim::ms_globals::use_meso_sim() {
+            for (edge, edgeValues) in self.myEdges.iter().zip(self.myMeasures.iter()) {
+                let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                while !s.is_null() {
+                    for meanData in edgeValues.iter() {
+                        s.m().prepare_detector_for_writing(reminder_of(*meanData).m(), -1);
+                        meanData.add_to(sumData.m());
+                        if !skip_final_reset {
+                            meanData.m().reset(false);
+                        }
+                    }
+                    s = s.m().get_next_segment();
                 }
             }
         }
@@ -1044,7 +1150,6 @@ impl MSMeanData {
             // shortcut: C++ throws ProcessError here; this unit-returning function panics with the same text
             panic!("{}", ProcessError::Process("aggregated meanData output not yet implemented for trackVehicles".to_string()));
         }
-        // shortcut: the mesoscopic branch (gUseMesoSim) is not ported, see g_use_meso_sim
         let skip_final_reset = MSNet::get_instance().skip_final_reset();
 
         for taz in self.myTAZ.clone() {
@@ -1071,8 +1176,19 @@ impl MSMeanData {
                 let edge = self.myEdges[i];
                 if connected.contains(&edge) {
                     let edgeValues = &self.myMeasures[i];
-                    for meanData in edgeValues.iter() {
-                        meanData.add_to(sumData.m());
+                    if crate::microsim::ms_globals::use_meso_sim() {
+                        let mut s = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(edge.m(), 0.);
+                        while !s.is_null() {
+                            for meanData in edgeValues.iter() {
+                                s.m().prepare_detector_for_writing(reminder_of(*meanData).m(), -1);
+                                meanData.add_to(sumData.m());
+                            }
+                            s = s.m().get_next_segment();
+                        }
+                    } else {
+                        for meanData in edgeValues.iter() {
+                            meanData.add_to(sumData.m());
+                        }
                     }
                 }
             }
@@ -1535,6 +1651,7 @@ impl MSMeanData_MeanDataValues {
         let laneId = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
         let mut base = MSMoveReminder::new(&format!("meandata_{}{}", parentId, laneId), lane, doAdd);
         base.vt = &MEAN_DATA_VALUES_MSMOVE_VT;
+        base.internal_vt = &MEAN_DATA_VALUES_MSMOVE_INTERNAL_VT;
         Self {
             base,
             myParent: parent,
@@ -2095,9 +2212,9 @@ impl MSMeanData_MeanDataValues {
         (self.data_vt.get_attribute_value)(self, a, period, numLanes, speedLimit)
     }
 
-    /// C++ `MeanDataValues` has no notifyMoveInternal override: the MSMoveReminder body applies
+    /// C++ `MeanDataValues` has no notifyMoveInternal override: the MSMoveReminder body applies (empty)
     pub fn notify_move_internal_base(&mut self, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
-        self.base.notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
+        // C++ MSMoveReminder::notifyMoveInternal body only consumes its parameters
     }
 }
 
@@ -2126,6 +2243,15 @@ fn mean_data_values_reminder_move(r: &mut MSMoveReminder, veh: &mut SUMOTrafficO
 
 fn mean_data_values_reminder_leave(r: &mut MSMoveReminder, veh: &mut SUMOTrafficObject, lastPos: f64, reason: MSMoveReminder_Notification, enteredLane: Ptr<MSLane>) -> bool {
     Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_leave(veh, lastPos, reason, enteredLane)
+}
+
+/// MSMoveReminder internal table shared by every MeanDataValues object: forwards to `data_vt`.
+static MEAN_DATA_VALUES_MSMOVE_INTERNAL_VT: MSMoveReminderInternalVt = MSMoveReminderInternalVt {
+    notify_move_internal: mean_data_values_reminder_notify_move_internal,
+};
+
+fn mean_data_values_reminder_notify_move_internal(r: &mut MSMoveReminder, veh: &SUMOTrafficObject, frontOnLane: f64, timeOnLane: f64, meanSpeedFrontOnLane: f64, meanSpeedVehicleOnLane: f64, travelledDistanceFrontOnLane: f64, travelledDistanceVehicleOnLane: f64, meanLengthOnLane: f64) {
+    Ptr::from_mut(r).cast::<MSMeanData_MeanDataValues>().m().notify_move_internal(veh, frontOnLane, timeOnLane, meanSpeedFrontOnLane, meanSpeedVehicleOnLane, travelledDistanceFrontOnLane, travelledDistanceVehicleOnLane, meanLengthOnLane)
 }
 
 /// Base MeanDataValues table: the `*_base` implementations

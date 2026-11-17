@@ -27,7 +27,7 @@ fn simstep() -> SUMOTime {
 }
 
 /// C++ typedef `std::map<std::string, MSTransportable*>::const_iterator MSTransportableControl::constVehIt`
-pub type MSTransportableControl_constVehIt = Unmapped /* btree_map::Iter over myTransportables; no begin/end pair in the port yet */;
+pub type MSTransportableControl_constVehIt<'a> = std::collections::btree_map::Iter<'a, String, Ptr<MSTransportable>>;
 
 /// The class is used to handle transportables (persons and containers) who are not using a transportation system but are walking or waiting. This includes waiting for the arrival or departure time / the time the waiting is over.
 /// C++ class `MSTransportableControl` (microsim/transportables/MSTransportableControl.h)
@@ -814,8 +814,8 @@ impl MSTransportableControl {
     //         return myTransportables.begin();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_begin(&self) -> MSTransportableControl_constVehIt {
-        panic!("shortcut: MSTransportableControl::loadedBegin needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
+    pub fn loaded_begin(&self) -> MSTransportableControl_constVehIt<'_> {
+        self.myTransportables.iter()
     }
 
     /// C++: `constVehIt MSTransportableControl::loadedEnd() const` [const]
@@ -824,7 +824,7 @@ impl MSTransportableControl {
     //         return myTransportables.end();
     //     }
     #[allow(unused_variables)]
-    pub fn loaded_end(&self) -> MSTransportableControl_constVehIt {
+    pub fn loaded_end(&self) -> MSTransportableControl_constVehIt<'_> {
         panic!("shortcut: MSTransportableControl::loadedEnd needs a map iterator type; the port has no begin/end iterator pair for myTransportables yet, upgrade when that iterator is ported")
     }
 

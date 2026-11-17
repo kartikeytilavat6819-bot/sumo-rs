@@ -17,6 +17,8 @@ use utils::xml::sumo_xml_definitions::SUMO_PARAM_ORIGID;
 use utils::geom::POSITION_EPS;
 use super::nb_cont::KeepClear;
 use utils::common::std_defs::SUMO_CONST_LANE_WIDTH;
+use utils::common::named::{Named, NamedStoringVisitor};
+use crate::utils::named_rtree::NamedRTree;
 
 // C++ NBEdge::UNSPECIFIED_SIGNAL_OFFSET (NBEdge.cpp)
 const UNSPECIFIED_SIGNAL_OFFSET: f64 = -1.;
@@ -47,7 +49,6 @@ fn pc_get_or_insert(map: &mut BTreeMap<(Ptr<NBEdge>, Ptr<NBEdge>), SVCPermission
 
 /// C++ `addLane2LaneConnection(fromLane, dest, toLane, USER, false, mayDefinitelyPass)` with the header defaults filled in
 fn add_lane2_lane_connection_user(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayDefinitelyPass: bool) -> bool {
-    // shortcut: C++ default length is NBEdge::myDefaultConnectionLength (static, not ported); the unspecified default -1 is used
     from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::USER, false, mayDefinitelyPass, KeepClear::KEEPCLEAR_UNSPECIFIED, -1., -1., -1., 1., crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
@@ -128,7 +129,7 @@ pub struct NBNodeCont {
     /// nodes that are excluded from tls-guessing
     pub myUnsetTLS: BTreeSet<Ptr<NBNode>>,
     /// node positions for faster lookup
-    pub myRTree: Unmapped /* NamedRTree */,
+    pub myRTree: NamedRTree,
     /// network components that must be removed if not connected to the road network via stop access
     pub myRailComponents: Vec<Vec<String>>,
 }
@@ -139,7 +140,6 @@ impl NBNodeCont {
     // NBNodeCont() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        // shortcut: NamedRTree is not ported (myRTree is a placeholder), so position queries scan myNodes; upgrade when NamedRTree lands
         NBNodeCont {
             myNodes: BTreeMap::new(),
             myExtractedNodes: BTreeMap::new(),
@@ -150,7 +150,7 @@ impl NBNodeCont {
             mySplit: BTreeSet::new(),
             myGuessedTLS: BTreeSet::new(),
             myUnsetTLS: BTreeSet::new(),
-            myRTree: (),
+            myRTree: NamedRTree::new(),
             myRailComponents: Vec::new(),
         }
     }
@@ -186,7 +186,8 @@ impl NBNodeCont {
         }
         let node = Ptr::from_raw(Box::into_raw(Box::new(NBNode::new_2(id, position, district))));
         self.myNodes.insert(id.to_string(), node);
-        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        let pos = [position.x() as f32, position.y() as f32];
+        self.myRTree.insert(&pos, &pos, &node.cast::<Named>());
         true
     }
 
@@ -210,8 +211,10 @@ impl NBNodeCont {
         if self.myNodes.contains_key(&id) {
             return false;
         }
+        let p = node.get_position();
+        let pos = [p.x() as f32, p.y() as f32];
         self.myNodes.insert(id, node);
-        // shortcut: NamedRTree not ported, position index not updated; upgrade when NamedRTree lands
+        self.myRTree.insert(&pos, &pos, &node.cast::<Named>());
         true
     }
 
@@ -260,7 +263,9 @@ impl NBNodeCont {
             return false;
         }
         self.myNodes.remove(&id);
-        // shortcut: NamedRTree not ported, nothing to remove from the position index
+        let p = node.get_position();
+        let pos = [p.x() as f32, p.y() as f32];
+        self.myRTree.remove(&pos, &pos, &node.cast::<Named>());
         node.m().remove_traffic_lights(false);
         if remember {
             self.myExtractedNodes.insert(node.get_id().to_string(), node);
@@ -306,12 +311,19 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn retrieve_by_pos(&self, position: &Position, offset: f64) -> Vec<Ptr<NBNode>> {
-        // shortcut: NamedRTree not ported, candidates come from a scan of myNodes (id order, C++ uses address order); upgrade when NamedRTree lands
+        let extOffset = offset + POSITION_EPS;
+        let cmin = [(position.x() - extOffset) as f32, (position.y() - extOffset) as f32];
+        let cmax = [(position.x() + extOffset) as f32, (position.y() + extOffset) as f32];
+        let mut into: BTreeSet<Ptr<Named>> = BTreeSet::new();
+        let sv = NamedStoringVisitor::new(&mut into);
+        self.myRTree.search(&cmin, &cmax, &sv, |d, c| d.add_to(c));
         let mut result = Vec::new();
-        for node in self.myNodes.values() {
+        for namedNode in &into {
+            // dynamic_cast<const NBNode*>: only NBNodes are inserted into myRTree
+            let node: Ptr<NBNode> = namedNode.cast::<NBNode>();
             let p = node.get_position();
             if (p.x() - position.x()).abs() <= offset && (p.y() - position.y()).abs() <= offset {
-                result.push(*node);
+                result.push(node);
             }
         }
         result
@@ -2358,7 +2370,7 @@ impl NBNodeCont {
                                 tlc.remove_fully(s.m().get_id().to_string());
                             }
                         }
-                        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_)));
+                        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&format!("GS_{}", node.m().get_id()), node, 0, type_));
                         // @todo patch endOffset for all incoming lanes according to the signal positions
                         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
                         node.m().add_traffic_light(tlDef);
@@ -2403,7 +2415,7 @@ impl NBNodeCont {
                     self.myGuessedTLS.insert(node);
                 }
                 let id = self.create_cluster_id(nodeSet, "joinedG_");
-                let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+                let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
                 let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
                 for n in nodes.iter().copied() {
                     n.m().add_traffic_light(tlDef);
@@ -2620,7 +2632,7 @@ impl NBNodeCont {
                 }
             }
             let nodes: Vec<Ptr<NBNode>> = c.iter().copied().collect();
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new(&id, &nodes, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new(&id, &nodes, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
             for n in nodes.iter().copied() {
                 n.m().add_traffic_light(tlDef);
@@ -2653,7 +2665,7 @@ impl NBNodeCont {
     #[allow(unused_variables)]
     pub fn set_as_tl_controlled(&mut self, node: Ptr<NBNode>, tlc: &mut NBTrafficLightLogicCont, type_: TrafficLightType, id: String) {
         let id = if id == "" { node.get_id().to_string() } else { id };
-        let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&id, node, 0, type_)));
+        let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&id, node, 0, type_));
         let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
         node.m().add_traffic_light(tlDef);
         if !tlc.insert(tlDef, false) {
@@ -5313,7 +5325,7 @@ impl NBNodeCont {
             newNode.m().base2.set_parameter(SUMO_PARAM_ORIGID, &clusterNames.join(" "));
         }
         if setTL && !newNode.m().is_tl_controlled() {
-            let raw: *mut NBOwnTLDef = Box::into_raw(Box::new(NBOwnTLDef::new_2(&tlID, newNode, 0, type_)));
+            let raw: *mut NBOwnTLDef = Box::into_raw(NBOwnTLDef::new_2(&tlID, newNode, 0, type_));
             let tlDef: Ptr<NBTrafficLightDefinition> = Ptr::from_raw(unsafe { std::ptr::addr_of_mut!((*raw).base) });
             newNode.m().add_traffic_light(tlDef);
             if !tlc.insert(tlDef, false) {

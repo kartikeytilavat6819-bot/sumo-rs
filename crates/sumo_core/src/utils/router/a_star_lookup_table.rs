@@ -78,10 +78,17 @@ impl<E, V> FullLookupTable<E, V> {
         let mut myTable: Vec<Vec<f64>> = vec![Vec::new(); size as usize];
         let text = std::fs::read_to_string(filename).unwrap_or_default();
         let mut tokens = text.split_whitespace();
+        // C++ `strm >> val`: the first failed extraction sets failbit, and every later extraction is a no-op
+        let mut failed = false;
         for i in 0..(size as usize) {
             for _j in 0..(size as usize) {
-                // shortcut: C++ `strm >> val` stops at the first malformed token; here each bad or missing token reads as 0
-                let val: f64 = tokens.next().and_then(|t| t.parse::<f64>().ok()).unwrap_or(0.0);
+                let mut val: f64 = 0.0;
+                if !failed {
+                    match tokens.next().and_then(|t| t.parse::<f64>().ok()) {
+                        Some(v) => val = v,
+                        None => failed = true,
+                    }
+                }
                 myTable[i].push(val);
             }
         }
@@ -418,8 +425,10 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
                 numericID.insert(e_id::<E, V>(*e), e_numerical_id::<E, V>(*e) - s.myFirstNonInternal);
             }
         }
-        // shortcut: zstr (zlib) input for compressed landmark files is not ported; plain text only
-        let text = match std::fs::read_to_string(filename) {
+        let text = match utils::iodevices::zstr::open_read(filename).and_then(|mut r| {
+            let mut t = String::new();
+            std::io::Read::read_to_string(&mut r, &mut t).map(|_| t)
+        }) {
             Ok(t) => t,
             Err(_) => panic!("{}", ProcessError::new(format!("Could not load landmark-lookup-table from '{}'.", filename))),
         };
@@ -579,8 +588,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
             }
         }
         if !outfile.is_empty() {
-            // shortcut: zstr gzip output for '.gz' outfiles is not ported; the table is written uncompressed
-            let mut ostrm = match std::fs::File::create(outfile) {
+            let mut ostrm = match utils::iodevices::zstr::create_write(outfile) {
                 Ok(f) => f,
                 Err(_) => panic!("{}", ProcessError::new(format!("Could not open file '{}' for writing.", outfile))),
             };
@@ -588,8 +596,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
             let mut out = String::new();
             for i in 0..(numLandMarks as usize) {
                 out += &s.get_landmark(i as i32);
-                out += "
-        ";
+                out += "\n";
             }
             for j in 0..s.myFromLandmarkDists[0].len() {
                 out += &e_id::<E, V>(edges[(j as i32 + s.myFirstNonInternal) as usize]);
@@ -597,8 +604,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
                     // ostream default formatting of doubles (precision 6)
                     out += &format!(" {} {}", format_g(s.myFromLandmarkDists[i][j], 6), format_g(s.myToLandmarkDists[i][j], 6));
                 }
-                out += "
-        ";
+                out += "\n";
             }
             let _ = std::io::Write::write_all(&mut ostrm, out.as_bytes());
         }

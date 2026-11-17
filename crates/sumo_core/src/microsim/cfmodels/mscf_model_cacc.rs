@@ -19,6 +19,8 @@ fn cacc_set_headway_time(m: &mut MSCFModel, headwayTime: f64) { cf_cast_mut::<MS
 fn cacc_get_model_id(m: &MSCFModel) -> i32 { cf_cast::<MSCFModel_CACC>(m).get_model_id() }
 fn cacc_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> { cf_cast::<MSCFModel_CACC>(m).duplicate(vtype) }
 fn cacc_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> { cf_cast::<MSCFModel_CACC>(m).create_vehicle_variables() }
+fn cacc_get_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str) -> String { cf_cast::<MSCFModel_CACC>(m).get_parameter(veh, key) }
+fn cacc_set_parameter(m: &MSCFModel, veh: Ptr<MSVehicle>, key: &str, value: &str) -> Result<(), InvalidArgument> { cf_cast::<MSCFModel_CACC>(m).set_parameter(veh, key, value); Ok(()) }
 
 /// Virtual table of MSCFModel_CACC (C++ subclass of MSCFModel_ACC): its overrides on top of the MSCFModel default table
 pub const CACC_VT: MSCFModelVt = MSCFModelVt {
@@ -33,6 +35,8 @@ pub const CACC_VT: MSCFModelVt = MSCFModelVt {
     get_model_id: cacc_get_model_id,
     duplicate: cacc_duplicate,
     create_vehicle_variables: cacc_create_vehicle_variables,
+    get_parameter: cacc_get_parameter,
+    set_parameter: cacc_set_parameter,
     ..DEFAULT_MSCF_MODEL_VT
 };
 
@@ -429,8 +433,7 @@ impl MSCFModel_CACC {
     pub fn get_secure_gap(&self, veh: Ptr<MSVehicle>, pred: Ptr<MSVehicle>, speed: f64, leaderSpeed: f64, leaderMaxDecel: f64) -> f64 {
         // Accel in gap mode should vanish:
         let desSpacing;
-        // shortcut: pred->getCarFollowModel().getModelID() is read from the predecessor's vehicle type (cfModel); the Rust MSCFModel::get_model_id is non-virtual and cannot identify a CACC predecessor, upgrade when car-following models support virtual dispatch
-        if pred.get_vehicle_type().get_parameter().cfModel != SUMO_TAG_CF_CACC {
+        if pred.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CACC as i32 {
             //      0 = myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * (g - myHeadwayTime * speed);
             // <=>  myGapControlGainSpace * g = - myGapControlGainSpeed * (leaderSpeed - speed) + myGapControlGainSpace * myHeadwayTime * speed;
             // <=>  g = - myGapControlGainSpeed * (leaderSpeed - speed) / myGapControlGainSpace + myHeadwayTime * speed;
@@ -960,8 +963,7 @@ impl MSCFModel_CACC {
         let mut newSpeed = 0.0;
 
         if !pred.is_null() {
-            // shortcut: pred->getCarFollowModel().getModelID() is read from the predecessor's vehicle type (cfModel); the Rust MSCFModel::get_model_id is non-virtual, upgrade when car-following models support virtual dispatch
-            if pred.get_vehicle_type().get_parameter().cfModel != SUMO_TAG_CF_CACC {
+            if pred.get_car_follow_model().get_model_id() != SUMO_TAG_CF_CACC as i32 {
                 *vehMode = MSCFModel_CACC_VehicleMode::ACC_MODE;
                 newSpeed = self.acc_CFM.v(veh, gap2pred, speed, predSpeed, desSpeed, true);
             } else {

@@ -582,10 +582,10 @@ impl MSFCDExport {
     // }
     #[allow(unused_variables)]
     pub fn has_own_output_2(p: Ptr<MSTransportable>, filter: bool, shapeFilter: bool, isInRadius: bool) -> bool {
-        // shortcut: MSDevice_FCD::shapeFilter has only the SUMOTrafficObject overload, the MSTransportable one is not ported; getDevice(typeid(MSTransportableDevice_FCD)) is found by the "fcd_" id prefix like the vehicle variant, upgrade when getDevice takes a type key
+        // shortcut: MSDevice_FCD::shapeFilter has only the SUMOTrafficObject overload, the MSTransportable one is not ported
         (!filter || MSDevice_FCD::get_edge_filter().contains(&p.get_edge()))
             && (!shapeFilter || panic!("MSDevice_FCD::shapeFilter(MSTransportable) is not ported yet"))
-            && (p.get_devices().iter().any(|dev| dev.m().base.base.get_id().starts_with("fcd_")) || isInRadius)
+            && (!p.get_device("fcd").is_null() || isInRadius)
     }
 
     /// C++: `void MSFCDExport::MSFCDExport(const MSFCDExport &)` [private]

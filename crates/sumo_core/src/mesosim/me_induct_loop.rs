@@ -2,6 +2,21 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 use utils::common::string_utils;
+use crate::microsim::output::ms_detector_file_output::{DEFAULT_MSDETECTOR_FILE_OUTPUT_VT, MSDetectorFileOutputVt};
+
+fn me_induct_loop_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    Ptr::from_mut(d).cast::<MEInductLoop>().m().write_xml_output(dev, startTime, stopTime)
+}
+fn me_induct_loop_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    Ptr::new(d).cast::<MEInductLoop>().m().write_xml_detector_prolog(dev)
+}
+
+/// Virtual table of MEInductLoop as MSDetectorFileOutput (overrides writeXMLOutput and writeXMLDetectorProlog)
+static ME_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: me_induct_loop_write_xml_output,
+    write_xml_detector_prolog: me_induct_loop_write_xml_detector_prolog,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 /// An induction loop for mesoscopic simulation
 /// C++ class `MEInductLoop` (mesosim/MEInductLoop.h)
@@ -50,7 +65,8 @@ impl MEInductLoop {
     // shortcut-free: returns Box<Self> because the body registers &myMeanData with the segment (stores `this`)
     #[allow(unused_variables)]
     pub fn new(id: &str, s: Ptr<MESegment>, positionInMeters: f64, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32) -> Box<Self> {
-        let base = MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e));
+        let mut base = MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e));
+        base.vt = &ME_INDUCT_LOOP_DETECTOR_FILE_OUTPUT_VT;
         let mut b = Box::new(MEInductLoop {
             base,
             myName: name,

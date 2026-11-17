@@ -4178,7 +4178,13 @@ impl MSLane {
         self.myMaxSpeed = val;
         self.mySpeedModified = modified;
         self.myEdge.m().recalc_cache();
-        // shortcut: MSGlobals::gUseMesoSim segment speed update (MESegment) not ported, upgrade when mesoscopic model is ported
+        if crate::microsim::ms_globals::use_meso_sim() {
+            let mut first = crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(self.myEdge.m(), 0.);
+            while !first.is_null() {
+                first.m().set_speed(val, MSNet::get_instance().get_current_time_step(), jamThreshold, self.myIndex);
+                first = first.m().get_next_segment();
+            }
+        }
     }
 
     /// C++: `void MSLane::setFrictionCoefficient(double)`
@@ -9062,8 +9068,7 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn may_continue(&self, veh: Ptr<MSVehicle>) -> bool {
-        // shortcut: get_device() is not keyed by type yet, so the MSDevice_Taxi lookup never finds a device
-        if !veh.get_device(&()).is_null() {
+        if !veh.get_device("taxi").is_null() {
             // taxi device may assign a new route that continues past the end of the initial route
             return true;
         }
