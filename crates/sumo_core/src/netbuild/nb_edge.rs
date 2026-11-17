@@ -4105,6 +4105,11 @@ impl NBEdge {
                     let minRadius = if (this.get_permissions(-1) & SVC_TRAM) != 0 { 20.0 } else { 80.0 };
                     if jt {
                         eprintln!("JTRACE e2e rail {} {} radius={:.6}", this.get_id(), out.get_id(), radius);
+                        let mut pts = String::new();
+                        for p in shape.iter() {
+                            pts += &format!(" {:.6},{:.6}", p.x(), p.y());
+                        }
+                        eprintln!("JTRACE e2e shape from={:.6},{:.6} to={:.6},{:.6} pts{}", fromShape.back().x(), fromShape.back().y(), toShape.front().x(), toShape.front().y(), pts);
                     }
                     if radius < minRadius {
                         continue;

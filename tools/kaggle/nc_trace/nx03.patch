@@ -1,5 +1,5 @@
 diff --git a/src/netbuild/NBEdge.cpp b/src/netbuild/NBEdge.cpp
-index 03cb4fa..436961d 100644
+index 03cb4fa..7b1ab11 100644
 --- a/src/netbuild/NBEdge.cpp
 +++ b/src/netbuild/NBEdge.cpp
 @@ -23,6 +23,8 @@
@@ -35,17 +35,22 @@ index 03cb4fa..436961d 100644
              if (angle > 150) {
                  continue;
              } else if (angle > 90) {
-@@ -2635,6 +2647,9 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+@@ -2635,6 +2647,14 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
                  const double radius = shape.length2D() / DEG2RAD(angle);
                  const double minRadius = (getPermissions() & SVC_TRAM) != 0 ? 20 : 80;
                  //std::cout << getID() << " to=" << out->getID() << " radius=" << radius << " minRadius=" << minRadius << "\n";
 +                if (jt) {
 +                    std::cerr << "JTRACE e2e rail " << getID() << " " << out->getID() << " radius=" << std::fixed << std::setprecision(6) << radius << "\n";
++                    std::cerr << "JTRACE e2e shape from=" << fromShape.back().x() << "," << fromShape.back().y() << " to=" << toShape.front().x() << "," << toShape.front().y() << " pts";
++                    for (const Position& p : shape) {
++                        std::cerr << " " << p.x() << "," << p.y();
++                    }
++                    std::cerr << "\n";
 +                }
                  if (radius < minRadius) {
                      continue;
                  }
-@@ -2642,12 +2657,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
+@@ -2642,12 +2662,21 @@ NBEdge::computeEdge2Edges(bool noLeftMovers) {
          }
          if (out == myTurnDestination) {
              // will be added by appendTurnaround
