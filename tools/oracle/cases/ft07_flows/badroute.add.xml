@@ -1,0 +1,6 @@
+<additional>
+    <!-- B edge sequence is not connected: loads only when route errors are ignored -->
+    <vehicle id="badroute" depart="3.00">
+        <route edges="1117867028 682360554#0"/>
+    </vehicle>
+</additional>
