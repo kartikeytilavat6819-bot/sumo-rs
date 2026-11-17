@@ -502,7 +502,7 @@ impl MSBaseVehicle {
             match self.try_get_device_parameter(&tok[1], &key[tok[0].len() + tok[1].len() + 2..]) {
                 Ok(v) => return v,
                 Err(e) => {
-                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e);
+                    *error = utils::tlf!("Vehicle '%' does not support device parameter '%' (%).", self.get_id(), key, e.to_string());
                     return String::new();
                 }
             }
