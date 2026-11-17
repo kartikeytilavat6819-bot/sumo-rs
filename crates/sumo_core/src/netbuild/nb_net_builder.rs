@@ -2,36 +2,6 @@
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
 
-// TEMP-JTRACE
-fn jdump(st: &str, ec: &NBEdgeCont) {
-    if std::env::var_os("NC_JTRACE").is_none() {
-        return;
-    }
-    let mut shapePrinted = false;
-    for e in ec.myEdges.values().copied() {
-        if !e.m().get_from_node().m().get_id().contains("#29more") && !e.m().get_to_node().m().get_id().contains("#29more") && !e.m().get_id().contains("27202251") {
-            continue;
-        }
-        if !shapePrinted && e.m().get_to_node().m().get_id().contains("#29more") {
-            shapePrinted = true;
-            let tn = e.m().get_to_node();
-            let mut pts = String::new();
-            for p in tn.m().get_shape().iter() {
-                pts += &format!(" {:.6},{:.6}", p.x(), p.y());
-            }
-            eprintln!("JTRACE st {} nodeshape {} pts{}", st, tn.m().get_id(), pts);
-        }
-        let mut s = format!("JTRACE st {} e {} {}>{}", st, e.m().get_id(), e.m().get_from_node().m().get_id(), e.m().get_to_node().m().get_id());
-        let l0 = e.m().get_lane_shape(0);
-        s += &format!(" L0={:.6},{:.6}>{:.6},{:.6}", l0.front().x(), l0.front().y(), l0.back().x(), l0.back().y());
-        for c in e.m().get_connections().iter() {
-            let to = if c.toEdge.is_null() { "null".to_string() } else { c.toEdge.m().get_id().to_string() };
-            s += &format!(" {}>{}:{}:{}:{}", c.fromLane, to, c.toLane, c.permissions, c.mayDefinitelyPass as i32);
-        }
-        eprintln!("{}", s);
-    }
-}
-
 /// Instance responsible for building networks
 /// C++ class `NBNetBuilder` (netbuild/NBNetBuilder.h)
 pub struct NBNetBuilder {
@@ -952,7 +922,6 @@ impl NBNetBuilder {
         let mut numJoined = self.myNodeCont.join_loaded_clusters(&mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont);
         if mayAddOrRemove && oc.get_bool("junctions.join").unwrap() {
             numJoined += self.myNodeCont.join_junctions(oc.get_float("junctions.join-dist").unwrap(), &mut self.myDistrictCont, &mut self.myEdgeCont, &mut self.myTLLCont, &mut self.myPTStopCont);
-            jdump("join", &self.myEdgeCont);
         }
         if numJoined > 0 {
             write_messagef!(" Joined % junction cluster(s).", numJoined);
@@ -1047,7 +1016,6 @@ impl NBNetBuilder {
             }
         }
         self.myNodeCont.guess_t_ls(oc, &mut self.myTLLCont);
-        jdump("guess", &self.myEdgeCont);
 
         // guess ramps (after guessing tls because ramps should not be build at traffic lights)
         let modifyRamps = mayAddOrRemove
@@ -1122,10 +1090,8 @@ impl NBNetBuilder {
             self.myNodeCont.compute_node_shapes(-1.0);
         }
         //
-        jdump("nshape", &self.myEdgeCont);
         let maxGrade = if oc.get_bool("geometry.max-grade.fix").unwrap() { oc.get_float("geometry.max-grade").unwrap() / 100.0 } else { -1.0 };
         self.myEdgeCont.compute_edge_shapes(maxGrade);
-        jdump("eshape", &self.myEdgeCont);
         // resort edges based on the node and edge shapes
         NBNodesEdgesSorter::sort_nodes_edges(&mut self.myNodeCont, true);
         NBTurningDirectionsComputer::compute_turn_directions(&mut self.myNodeCont, false);
@@ -1189,9 +1155,7 @@ impl NBNetBuilder {
         //
         NBEdgePriorityComputer::compute_edge_priorities(&mut self.myNodeCont);
         //
-        jdump("pre-e2e", &self.myEdgeCont);
         self.myEdgeCont.compute_edge2_edges(oc.get_bool("no-left-connections").unwrap());
-        jdump("e2e", &self.myEdgeCont);
         //
         if oc.get_bool("roundabouts.guess").unwrap() {
             let numGuessed = self.myEdgeCont.guess_roundabouts();
@@ -1204,7 +1168,6 @@ impl NBNetBuilder {
         self.myEdgeCont.compute_lanes2_edges();
         //
         self.myNodeCont.compute_lanes2_lanes();
-        jdump("l2l", &self.myEdgeCont);
         self.myEdgeCont.sort_outgoing_lanes_connections();
         //
         if oc.get_bool("fringe.guess").unwrap() {
@@ -1231,7 +1194,6 @@ impl NBNetBuilder {
         }
         //
         self.myEdgeCont.recheck_lanes();
-        jdump("recheck", &self.myEdgeCont);
 
         if self.myNetworkHaveCrossings && !oc.get_bool("no-internal-links").unwrap() {
             for node in self.myNodeCont.myNodes.values() {

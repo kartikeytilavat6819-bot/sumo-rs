@@ -61,6 +61,10 @@ fn geom_pos(geoms: &mut NBNodeShapeComputer_GeomsMap, e: Ptr<NBEdge>, idx: i32) 
 fn dget(distances: &BTreeMap<Ptr<NBEdge>, f64>, e: Ptr<NBEdge>) -> f64 {
     distances.get(&e).copied().unwrap_or(0.0)
 }
+// TEMP-JTRACE
+fn jt_pv(pv: &PositionVector) -> String {
+    pv.iter().map(|p| format!(" {:.10},{:.10}", p.x(), p.y())).collect()
+}
 
 impl NBNodeShapeComputer {
     /// C++: `void NBNodeShapeComputer::NBNodeShapeComputer(const NBNode &)`
@@ -600,8 +604,36 @@ impl NBNodeShapeComputer {
 
         // check which edges are parallel
         self.join_same_direction_edges(&usedEdges, &mut same, useEndpoints);
+        // TEMP-JTRACE
+        let jtr = std::env::var_os("NC_JTRACE").is_some() && node.get_id().contains("#29more");
+        if jtr {
+            eprintln!("JTRACE nsd {} simple={} radius={:.10} ext={:.10}", node.get_id(), simpleContinuation as i32, self.myRadius, ext);
+            for &e in usedEdges.iter() {
+                eprintln!("JTRACE pre {} ccw{} cw{}", e.get_id(), jt_pv(&geom_get(&mut geomsCCW, e)), jt_pv(&geom_get(&mut geomsCW, e)));
+            }
+            let mut s = String::from("JTRACE same");
+            for &e in usedEdges.iter() {
+                s += &format!(" {}:", e.get_id());
+                let mut sv: Vec<Ptr<NBEdge>> = same.get(&e).map(|s| s.iter().copied().collect()).unwrap_or_default();
+                sv.sort_by(|a, b| a.get_id().cmp(b.get_id()));
+                for x in sv {
+                    s += &format!("{},", x.get_id());
+                }
+            }
+            eprintln!("{}", s);
+        }
         // compute unique direction list
         let newAll = self.compute_unique_direction_list(&usedEdges, &mut same, &mut geomsCCW, &mut geomsCW);
+        if jtr {
+            let mut s = String::from("JTRACE newAll");
+            for &e in newAll.iter() {
+                s += &format!(" {}", e.get_id());
+            }
+            eprintln!("{}", s);
+            for &e in newAll.iter() {
+                eprintln!("JTRACE post {} ccw{} cw{}", e.get_id(), jt_pv(&geom_get(&mut geomsCCW, e)), jt_pv(&geom_get(&mut geomsCW, e)));
+            }
+        }
         // if we have only two "directions", let's not compute the geometry using this method
         if newAll.len() < 2 {
             return PositionVector::new();
@@ -793,6 +825,11 @@ impl NBNodeShapeComputer {
             }
         }
 
+        if jtr {
+            for &e in newAll.iter() {
+                eprintln!("JTRACE dist {} d={:.10} d2={:.10} ext={}", e.get_id(), dget(&distances, e), distances2.get(&e).copied().unwrap_or(-999.0), myExtended.contains(&e) as i32);
+            }
+        }
         for &edge in &newAll {
             if !distances.contains_key(&edge) {
                 distances.insert(edge, ext);
@@ -864,6 +901,9 @@ impl NBNodeShapeComputer {
             let mut p2 = cwBound.position_at_offset2d(offset2, 0.0, false);
             p2.setz(node.get_position().z());
             //ret.append(getEdgeCuts(*i, geomsCCW, geomsCW, offset, offset2, same));
+            if jtr {
+                eprintln!("JTRACE build {} off={:.10} off2={:.10} p={:.10},{:.10} p2={:.10},{:.10} retsize={}", edge.get_id(), offset, offset2, p.x(), p.y(), p2.x(), p2.y(), ret.len());
+            }
             ret.push_back_no_double_pos(&p);
             ret.push_back_no_double_pos(&p2);
             edge.m().set_node_border(node, &p, &p2, rectangularCut);
@@ -875,6 +915,9 @@ impl NBNodeShapeComputer {
         // final curve segment
         let corner = self.get_smooth_corner(geom_get(&mut geomsCW, newAll[n - 1]), geom_get(&mut geomsCCW, newAll[0]), ret.at(-1), ret.at(0), cornerDetail);
         ret.append(&corner, 2.0);
+        if jtr {
+            eprintln!("JTRACE final n={}{}", ret.len(), jt_pv(&ret));
+        }
         ret
     }
 

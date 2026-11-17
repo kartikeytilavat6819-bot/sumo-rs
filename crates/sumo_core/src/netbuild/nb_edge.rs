@@ -4076,24 +4076,13 @@ impl NBEdge {
         let this = Ptr::from_mut(&mut *self);
         let myTo = self.myTo;
         let outgoing = myTo.get_outgoing_edges().clone();
-        let jt = std::env::var_os("NC_JTRACE").is_some() && myTo.get_id().contains("#29more");
-        if jt {
-            let td = this.myTurnDestination;
-            eprintln!("JTRACE e2e-start {} turn={} rail={}", this.get_id(), if td.is_null() { "null".to_string() } else { td.m().get_id().to_string() }, is_railway(this.get_permissions(-1)) as i32);
-        }
         for out in outgoing {
             if noLeftMovers && myTo.is_left_mover(this, out) {
-                if jt {
-                    eprintln!("JTRACE e2e {} {} leftmover", this.get_id(), out.get_id());
-                }
                 continue;
             }
             // avoid sharp railway turns
             if fromRail && is_railway(out.get_permissions(-1)) {
                 let angle = NBHelpers::norm_rel_angle(this.get_angle_at_node(myTo), out.get_angle_at_node(myTo)).abs();
-                if jt {
-                    eprintln!("JTRACE e2e rail {} {} angle={:.6}", this.get_id(), out.get_id(), angle);
-                }
                 if angle > 150.0 {
                     continue;
                 } else if angle > 90.0 {
@@ -4103,14 +4092,6 @@ impl NBEdge {
                     let shape = myTo.compute_smooth_shape(&fromShape, &toShape, 5, this.get_turn_destination(false) == out, 5.0, 5.0, Ptr::default(), 0);
                     let radius = shape.length2d() / utils::geom::geom_helper::deg2rad(angle);
                     let minRadius = if (this.get_permissions(-1) & SVC_TRAM) != 0 { 20.0 } else { 80.0 };
-                    if jt {
-                        eprintln!("JTRACE e2e rail {} {} radius={:.6}", this.get_id(), out.get_id(), radius);
-                        let mut pts = String::new();
-                        for p in shape.iter() {
-                            pts += &format!(" {:.6},{:.6}", p.x(), p.y());
-                        }
-                        eprintln!("JTRACE e2e shape from={:.6},{:.6} to={:.6},{:.6} pts{}", fromShape.back().x(), fromShape.back().y(), toShape.front().x(), toShape.front().y(), pts);
-                    }
                     if radius < minRadius {
                         continue;
                     }
@@ -4118,20 +4099,11 @@ impl NBEdge {
             }
             if out == this.myTurnDestination {
                 // will be added by appendTurnaround
-                if jt {
-                    eprintln!("JTRACE e2e {} {} turndest", this.get_id(), out.get_id());
-                }
                 continue;
             }
             if (this.get_permissions(-1) & out.get_permissions(-1) & !SVC_PEDESTRIAN) == 0 {
                 // no common permissions
-                if jt {
-                    eprintln!("JTRACE e2e {} {} perm {} {}", this.get_id(), out.get_id(), this.get_permissions(-1), out.get_permissions(-1));
-                }
                 continue;
-            }
-            if jt {
-                eprintln!("JTRACE e2e {} {} add", this.get_id(), out.get_id());
             }
             this.m().myConnections.push(NBEdge_Connection::new(-1, out, -1, false));
         }
