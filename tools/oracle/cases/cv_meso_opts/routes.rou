@@ -1,0 +1,6 @@
+<routes>
+    <flow id="mf" begin="0" end="300" period="5"><route edges="M F"/></flow>
+    <flow id="wf" begin="0" end="300" period="3" departLane="best"><route edges="W C F"/></flow>
+    <flow id="ns" begin="1" end="300" period="7"><route edges="N S"/></flow>
+    <flow id="nf" begin="2" end="300" period="11"><route edges="N C F"/></flow>
+</routes>

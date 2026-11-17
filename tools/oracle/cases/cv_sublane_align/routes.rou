@@ -1,0 +1,13 @@
+<routes>
+    <vType id="carR" latAlignment="right" maxSpeedLat="1.5"/>
+    <vType id="carN" latAlignment="nice" minGapLat="0.4"/>
+    <vType id="carL" latAlignment="left"/>
+    <vType id="moto" vClass="motorcycle" width="0.80" latAlignment="arbitrary" minGapLat="0.3" maxSpeed="20.00"/>
+    <vType id="bike" vClass="bicycle" latAlignment="compact" maxSpeed="5.00"/>
+    <route id="r" edges="E0 E1"/>
+    <flow id="fR" type="carR" route="r" begin="0" end="90" period="9" departLane="random"/>
+    <flow id="fM" type="moto" route="r" begin="1" end="90" period="7" departPosLat="random"/>
+    <flow id="fN" type="carN" route="r" begin="2" end="90" period="11"/>
+    <flow id="fB" type="bike" route="r" begin="3" end="90" period="8" departPosLat="right"/>
+    <flow id="fL" type="carL" route="r" begin="4" end="90" period="13" departLane="1"/>
+</routes>

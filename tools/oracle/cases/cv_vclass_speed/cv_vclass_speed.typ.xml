@@ -1,0 +1,6 @@
+<types>
+    <type id="road" priority="2" numLanes="2" speed="27.78">
+        <restriction vClass="truck" speed="22.22"/>
+        <restriction vClass="bus" speed="16.67"/>
+    </type>
+</types>
