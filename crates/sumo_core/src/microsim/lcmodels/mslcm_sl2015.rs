@@ -4376,7 +4376,40 @@ impl MSLCM_SL2015 {
                         vSafe = self.forecast_average_speed(vSafe, vMax, gap, leader.get_speed());
                     }
                 }
-                // shortcut: pedestrian blockers (MSLane::nextBlocking, hasPedestrians on the edge and on the bidi lane) are not ported, so pedestrians are ignored here; upgrade with the pedestrian model
+                // take pedestrians into account
+                if lane.get_edge().get_persons().len() > 0 && lane.has_pedestrians() {
+                    let mut foeRight: f64 = 0.;
+                    let mut foeLeft: f64 = 0.;
+                    ahead.get_sublane_borders(sublane, 0., &mut foeRight, &mut foeLeft);
+                    let ped_leader = lane.next_blocking(myVehicle.get_position_on_lane() - myVehicle.get_vehicle_type().get_length(), foeRight, foeLeft, 0., false);
+                    if !ped_leader.0.is_null() {
+                        let pedGap = ped_leader.1 - myVehicle.get_vehicle_type().get_min_gap() - myVehicle.get_vehicle_type().get_length();
+                        // we do not know the walking direction here so we take the pedestrian speed as 0
+                        vSafe = min2(
+                            myVehicle.get_car_follow_model().stop_speed(myVehicle, vMax, pedGap, MSCFModel_CalcReason::CURRENT),
+                            self.forecast_average_speed(vSafe, vMax, pedGap, 0.),
+                        );
+                    }
+                }
+                // take bidi pedestrians into account
+                if !bidi.is_null() && bidi.get_edge().get_persons().len() > 0 && bidi.has_pedestrians() {
+                    let mut foeRight: f64 = 0.;
+                    let mut foeLeft: f64 = 0.;
+                    ahead.get_sublane_borders(sublane, 0., &mut foeRight, &mut foeLeft);
+                    let foeRightBidi = bidi.get_width() - foeLeft;
+                    let foeLeftBidi = bidi.get_width() - foeRight;
+                    let relativeBackPos = myVehicle.get_lane().get_length() - myVehicle.get_position_on_lane() + myVehicle.get_length();
+                    let stopTime = (myVehicle.get_speed() / myVehicle.get_car_follow_model().get_max_decel()).ceil();
+                    let ped_leader = bidi.next_blocking(relativeBackPos, foeRightBidi, foeLeftBidi, stopTime, true);
+                    if !ped_leader.0.is_null() {
+                        let pedGap = ped_leader.1 - myVehicle.get_vehicle_type().get_min_gap() - myVehicle.get_vehicle_type().get_length();
+                        // we do not know the walking direction here so we take the pedestrian speed as 0
+                        vSafe = min2(
+                            myVehicle.get_car_follow_model().stop_speed(myVehicle, vMax, pedGap, MSCFModel_CalcReason::CURRENT),
+                            self.forecast_average_speed(vSafe, vMax, pedGap, 0.),
+                        );
+                    }
+                }
                 vSafe = min2(vMax, vSafe);
                 // forget old data when on the opposite side
                 let memoryFactor = if self.is_opposite() { 0. } else { SPEEDGAIN_MEMORY_FACTOR.powf(myVehicle.get_action_step_length_secs()) };
@@ -4530,7 +4563,7 @@ impl MSLCM_SL2015 {
             let sl2015 = unsafe { &mut *(model as *mut MSAbstractLaneChangeModel as *mut MSLCM_SL2015) };
             sl2015.inform(info, self.myVehicle);
         } else {
-            // shortcut: informing a neighbour with another lane change model goes through the base inform, which is not ported yet
+            // virtual dispatch: the base inform forwards to the neighbour model's vt
             model.inform(info, self.myVehicle);
         }
     }

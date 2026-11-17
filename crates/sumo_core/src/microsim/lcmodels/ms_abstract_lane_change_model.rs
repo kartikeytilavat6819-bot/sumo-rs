@@ -303,7 +303,7 @@ impl MSAbstractLaneChangeModel {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn get_model_id(&self) -> LaneChangeModel {
-        // shortcut: pure virtual in C++ (no base body); the field holds the model this object was built with, which is what every subclass returns
+        // pure virtual in C++; the stored model is what every subclass returns
         self.myModel
     }
 
@@ -568,8 +568,7 @@ impl MSAbstractLaneChangeModel {
             myCooperativeHelpThreshold: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_HELPTHRESHOLD, -1.),
             myCooperativeMinSpeed: p.get_lc_param(SUMO_ATTR_LCA_COOPERATIVE_MINSPEED, 0.),
             // see MSVehicle::initDevices
-            // shortcut: get_device(typeid) matches no device yet, so the blue light flag is always false until the device type key is ported
-            myHaveBlueLight: !v.get_device(&()).is_null(),
+            myHaveBlueLight: !v.get_device("bluelight").is_null(),
             myLCAccelerationAdvices: Vec::new(),
             myLastLaneChangeOffset: 0,
             myApproachedByShadow: std::cell::RefCell::new(Vec::new()),
@@ -2900,7 +2899,7 @@ impl MSAbstractLaneChangeModel {
     // }
     #[allow(unused_variables)]
     pub fn check_tra_ci_commands(&mut self) {
-        // shortcut: gDebugFlag2 debug printing is not ported (no debug flags in Rust yet), add it when the flags are ported
+        // gDebugFlag2 std::cout diagnostics are not ported; they do not affect simulation results
         let mut newstate = self.myVehicle.m().influence_change_decision(self.myOwnState);
         if self.myOwnState != newstate {
             if MSGlobals::lateral_resolution() > 0. {

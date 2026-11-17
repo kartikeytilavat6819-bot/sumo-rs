@@ -1,6 +1,8 @@
 //! Port of utils/common/StdDefs.{h,cpp}
-use std::sync::atomic::{AtomicBool, AtomicI32, Ordering::Relaxed};
+use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering::Relaxed};
 
+// shortcut: C++ VERSION_STRING is generated (version.h); this is the stamp of the reference build, shared by all binaries
+pub const VERSION_STRING: &str = "v1.28.0-0000000000";
 pub const SUMO_MAX_CONNECTIONS: usize = 256;
 pub const SUMO_CONST_LANE_WIDTH: f64 = 3.2;
 pub const SUMO_CONST_HALF_LANE_WIDTH: f64 = SUMO_CONST_LANE_WIDTH / 2.;
@@ -37,6 +39,22 @@ global!(g_ignore_unknown_vclass, set_g_ignore_unknown_vclass, G_IGNORE_UNKNOWN_V
 global!(g_routing_preferences, set_g_routing_preferences, G_ROUTING_PREFERENCES, bool, AtomicBool, false);
 global!(g_taxi_classes, set_g_taxi_classes, G_TAXI_CLASSES, i32, AtomicI32, 0);
 global!(g_locale_initialized, set_g_locale_initialized, G_LOCALE_INITIALIZED, bool, AtomicBool, false);
+
+// C++ doubles (default 1): stored as their bit patterns
+static G_WEIGHTS_RANDOM_FACTOR: AtomicU64 = AtomicU64::new(0x3FF0_0000_0000_0000);
+static G_WEIGHTS_WALK_OPPOSITE_FACTOR: AtomicU64 = AtomicU64::new(0x3FF0_0000_0000_0000);
+pub fn g_weights_random_factor() -> f64 {
+    f64::from_bits(G_WEIGHTS_RANDOM_FACTOR.load(Relaxed))
+}
+pub fn set_g_weights_random_factor(v: f64) {
+    G_WEIGHTS_RANDOM_FACTOR.store(v.to_bits(), Relaxed)
+}
+pub fn g_weights_walk_opposite_factor() -> f64 {
+    f64::from_bits(G_WEIGHTS_WALK_OPPOSITE_FACTOR.load(Relaxed))
+}
+pub fn set_g_weights_walk_opposite_factor(v: f64) {
+    G_WEIGHTS_WALK_OPPOSITE_FACTOR.store(v.to_bits(), Relaxed)
+}
 
 pub fn truncate(x: f64, fraction_bits: i32) -> f64 {
     let s = (1i64 << fraction_bits) as f64;

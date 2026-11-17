@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="car" sigma="0" speedFactor="1" maxSpeed="20" decel="4.5"/>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <!-- the leader stops abruptly, the followers produce TTC/DRAC conflicts -->
+  <vehicle id="lead" type="car" route="r0" depart="0">
+    <stop lane="-103224#2_0" endPos="40" duration="25"/>
+  </vehicle>
+  <vehicle id="follow" type="car" route="r0" depart="2"/>
+  <vehicle id="follow2" type="car" route="r0" depart="6"/>
+  <vehicle id="cross" type="car" route="r1" depart="4"/>
+</routes>

@@ -19,6 +19,7 @@ pub struct MSDetectorFileOutputVt {
     pub write_xml_detector_prolog: fn(&MSDetectorFileOutput, &mut OutputDevice),
     pub reset: fn(&mut MSDetectorFileOutput),
     pub detector_update: fn(&mut MSDetectorFileOutput, SUMOTime),
+    pub clear_state: fn(&mut MSDetectorFileOutput, SUMOTime),
 }
 
 fn default_write_xml_output(_: &mut MSDetectorFileOutput, _: &mut OutputDevice, _: SUMOTime, _: SUMOTime) {
@@ -31,12 +32,14 @@ fn default_reset(_: &mut MSDetectorFileOutput) {}
 fn default_detector_update(_: &mut MSDetectorFileOutput, step: SUMOTime) {
     let _ = step; // UNUSED_PARAMETER(step)
 }
+fn default_clear_state(_: &mut MSDetectorFileOutput, _: SUMOTime) {}
 
 pub static DEFAULT_MSDETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
     write_xml_output: default_write_xml_output,
     write_xml_detector_prolog: default_write_xml_detector_prolog,
     reset: default_reset,
     detector_update: default_detector_update,
+    clear_state: default_clear_state,
 };
 
 /// Base of value-generating classes (detectors)
@@ -325,7 +328,8 @@ impl MSDetectorFileOutput {
     // virtual void clearState(SUMOTime /*step*/) {}
     #[allow(unused_variables)]
     pub fn clear_state(&mut self, arg0: SUMOTime) {
-        // C++ body is empty
+        let vt = self.vt;
+        (vt.clear_state)(self, arg0)
     }
 
     /// C++: `void MSDetectorFileOutput::MSDetectorFileOutput(const MSDetectorFileOutput &)` [private]

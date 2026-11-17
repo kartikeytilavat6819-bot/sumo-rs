@@ -289,7 +289,7 @@ impl<E: RouterEdge<V>, V, GRAPH> CCHRouter<E, V, GRAPH> {
     //     }
     #[allow(unused_variables)]
     pub fn set_bulk_mode(&mut self, mode: bool) {
-        self.base.set_bulk_mode(mode);
+        self.base.set_bulk_mode_base(mode);
         self.myFallback.m().set_bulk_mode(mode);
     }
 

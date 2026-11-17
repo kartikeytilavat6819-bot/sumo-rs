@@ -47,16 +47,56 @@ impl<E, V> std::ops::DerefMut for RailwayRouter<E, V> {
     }
 }
 
-// C++ static members of RailwayRouter (port as module-level statics, see AGENTS.md):
-//   static typename SUMOAbstractRouter<E, V>::Operation RailwayRouter::myStaticOperation;
-//   static double RailwayRouter::myReversalPenalty;
-//   static double RailwayRouter::myReversalPenaltyFactor;
+/// C++ statics of `RailwayRouter<E, V>`: `myStaticOperation`, `myReversalPenalty` and `myReversalPenaltyFactor`.
+/// C++ keeps one set per template instantiation, so they are stored per `type_name::<(E, V)>()`.
+#[derive(Clone, Copy)]
+struct RailwayStatics {
+    /// the address of the `SUMOAbstractRouter_TypedOperation<E, V>` (0 = nullptr)
+    operation: usize,
+    reversal_penalty: f64,
+    reversal_penalty_factor: f64,
+}
+
+const RAILWAY_STATICS_INIT: RailwayStatics = RailwayStatics { operation: 0, reversal_penalty: 60., reversal_penalty_factor: 0.2 };
 
 thread_local! {
-    /// C++ static `RailwayRouter::myReversalPenalty` (set by the constructor)
-    static MY_REVERSAL_PENALTY: std::cell::Cell<f64> = std::cell::Cell::new(60.);
-    /// C++ static `RailwayRouter::myReversalPenaltyFactor`
-    static MY_REVERSAL_PENALTY_FACTOR: std::cell::Cell<f64> = std::cell::Cell::new(0.2);
+    static RAILWAY_STATICS: std::cell::RefCell<std::collections::HashMap<&'static str, RailwayStatics>> = std::cell::RefCell::new(std::collections::HashMap::new());
+}
+
+fn railway_statics<E, V>() -> RailwayStatics {
+    let key = std::any::type_name::<(E, V)>();
+    RAILWAY_STATICS.with(|m| m.borrow().get(key).copied().unwrap_or(RAILWAY_STATICS_INIT))
+}
+
+fn set_railway_statics<E, V>(set: impl FnOnce(&mut RailwayStatics)) {
+    let key = std::any::type_name::<(E, V)>();
+    RAILWAY_STATICS.with(|m| set(m.borrow_mut().entry(key).or_insert(RAILWAY_STATICS_INIT)));
+}
+
+/// C++ `myStaticOperation`
+fn railway_static_operation<E, V>() -> Option<SUMOAbstractRouter_TypedOperation<E, V>> {
+    let addr = railway_statics::<E, V>().operation;
+    // SAFETY: a non-zero address was stored from a SUMOAbstractRouter_TypedOperation<E, V> of this same instantiation
+    if addr == 0 { None } else { Some(unsafe { std::mem::transmute::<usize, SUMOAbstractRouter_TypedOperation<E, V>>(addr) }) }
+}
+
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
+
+#[cfg(test)]
+mod railway_statics_tests {
+    use super::*;
+
+    #[test]
+    fn statics_are_per_instantiation() {
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty, 60.);
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty_factor, 0.2);
+        set_railway_statics::<u8, u16>(|s| s.reversal_penalty = 7.);
+        assert_eq!(railway_statics::<u8, u16>().reversal_penalty, 7.);
+        assert_eq!(railway_statics::<u16, u8>().reversal_penalty, 60.);
+        assert!(railway_static_operation::<u8, u16>().is_none());
+    }
 }
 
 /// MsgHandler::getWarningInstance() / getErrorInstance()
@@ -69,10 +109,16 @@ pub fn railway_compute<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstra
     Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().compute(from, to, vehicle, msTime, into, silent)
 }
 
+/// The `RailwayRouter::setBulkMode` reached from the base router's setBulkMode slot (C++ virtual dispatch)
+pub fn railway_set_bulk_mode<E: RouterEdge<V>, V: RouterVehicle>(base: &mut SUMOAbstractRouter<E, V>, mode: bool) {
+    Ptr::from_mut(base).cast::<RailwayRouter<E, V>>().m().set_bulk_mode(mode)
+}
+
 impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
-    /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
+    /// Installs this router's compute and setBulkMode into the base, so a `SUMOAbstractRouter` pointer (C++ virtual calls) reaches them.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(railway_compute::<E, V>);
+        self.base.mySetBulkMode = Some(railway_set_bulk_mode::<E, V>);
         self
     }
 
@@ -97,8 +143,10 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     where
         E: RouterEdge<V>,
     {
-        MY_REVERSAL_PENALTY.with(|p| p.set(reversalPenalty));
-        // shortcut: effortOperation is not kept as myStaticOperation, SUMOAbstractRouter_Operation is Unmapped (fn pointer)
+        set_railway_statics::<E, V>(|s| {
+            s.reversal_penalty = reversalPenalty;
+            s.operation = effortOperation.map_or(0, |f| f as usize);
+        });
         let myInitialEdges = edges.iter().map(|e| e.railway_routing_edge()).collect();
         Self {
             base: SUMOAbstractRouter::new("RailwayRouter", unbuildIsWarning, effortOperation, ttOperation, havePermissions, haveRestrictions),
@@ -244,7 +292,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
                         *lengthp.m() -= savingsFactor * lengthCorrection;
                     }
                 }
-                effort += MY_REVERSAL_PENALTY.with(|p| p.get());
+                effort += railway_statics::<E, V>().reversal_penalty;
             }
             prev = *e;
         }
@@ -411,7 +459,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         // make sure that the vehicle can turn-around when starting on a short edge (the virtual turn-around for this lies backwards along the route / track)
         // if reversals are forbidden (negative penalty), we don't need to check this
         let mut backLengths: Vec<f64> = Vec::new();
-        let mut backDist = if MY_REVERSAL_PENALTY.with(|p| p.get()) >= 0. { vehicle.length() - from.length() } else { 0. };
+        let mut backDist = if railway_statics::<E, V>().reversal_penalty >= 0. { vehicle.length() - from.length() } else { 0. };
         let mut start = from;
         while backDist > 0. {
             let prev = Self::get_straight_predecessor(start, into, backLengths.len() as i32);
@@ -512,7 +560,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         if self.myRailEdges.is_empty() {
             self.myRailEdges = self.myInitialEdges.clone();
             let mut numericalID = self.myInitialEdges.last().unwrap().get_numerical_id() + 1;
-            let permitReversal = MY_REVERSAL_PENALTY.with(|p| p.get()) >= 0.;
+            let permitReversal = railway_statics::<E, V>().reversal_penalty >= 0.;
             for railEdge in self.myInitialEdges.clone() {
                 railEdge.m().init(&mut self.myRailEdges, &mut numericalID, self.myMaxTrainLength, permitReversal);
             }
@@ -552,12 +600,30 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static(edge: Ptr<RailEdge<E, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        if !edge.get_original().is_null() || edge.is_virtual() {
-            // shortcut: the effort function myStaticOperation is Unmapped (SUMOAbstractRouter_Operation), upgrade when the operation type is ported
-            panic!("shortcut: RailwayRouter::getTravelTimeStatic needs myStaticOperation");
+        let op = || railway_static_operation::<E, V>().expect("RailwayRouter::myStaticOperation is not set");
+        if !edge.get_original().is_null() {
+            return op()(edge.get_original(), veh, time);
         }
-        // turnaround edge that is not virtual: the reversal penalty only
-        MY_REVERSAL_PENALTY.with(|p| p.get())
+        // turnaround edge
+        if edge.is_virtual() {
+            // add up time for replacement edges
+            let mut repl: Vec<Ptr<E>> = Vec::new();
+            edge.insert_original_edges(veh.length(), &mut repl);
+            assert!(repl.len() > 0);
+            let mut seenDist: f64 = 0.;
+            let mut result: f64 = 0.;
+            repl.pop(); // last edge must not be used fully
+            for e in repl.iter() {
+                result += op()(*e, veh, time + result);
+                seenDist += e.length();
+            }
+            let lengthOnLastEdge = max2(0.0, veh.length() - seenDist);
+            let s = railway_statics::<E, V>();
+            return result + s.reversal_penalty + lengthOnLastEdge * s.reversal_penalty_factor;
+        }
+        // if the edge from which this turnaround starts is longer than the vehicle then we are overstimating the cost
+        // (because the turnaround may happen before driving to the end)
+        railway_statics::<E, V>().reversal_penalty
     }
 
     /// C++: `const E * RailwayRouter::getStraightPredecessor(const E *, std::vector<const E *> &, int)` [static, private]

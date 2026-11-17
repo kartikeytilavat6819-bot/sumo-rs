@@ -27,9 +27,13 @@
     result arrives, because its completion is what wakes you. Rerunning it for the same commit reattaches; it never re-queues.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
   * Instrumented C++ traces: build in WSL (~/sumo-<ID>, make -j2, only the target you need) - that is C++, allowed.
-- Do NOT run gates on `main`. Main's numbers (262ab8f3 or later): run_all PASS=214 FAIL=4 SKIP=14 (known FAILs, all
-  new cases with owners: peds_crossing PANIC [pd02], routeprobe + bluelight PANIC [rp01], calibrator_multi [ca03]),
-  depart 15/15, unit tests ok. These are NOT your regressions: never investigate them. If you merged main before 6c696d3d and see calibrator
+- Do NOT run gates on `main`. Main's numbers (2d25e432 or later): run_all PASS=271 FAIL=9 SKIP=26, depart 15/15, unit
+  tests ok. Known FAILs (new cases, each has an owner): containers (PANIC msp_model) + rerouter_parking [rc01],
+  taxi/ref + taxi/ref_closest [tx01], tls_actuated_loops + tls_waut + city_portland_actuated [tl01], busride [pt02],
+  city_paris_etoile [rb02].
+  These are NOT your regressions: never investigate them unless they are your target.
+- New case references: put an empty NEW_CASE file in the case dir, run tools/oracle/make_sim_refs.sh <case> (it then
+  writes tripinfo+fcd+stat, all outputs run_all compares), delete NEW_CASE before committing. If you merged main before 6c696d3d and see calibrator
   FAIL, merge main again. Merge main into your branch often.
   Any other failing row on your branch is a regression you must fix.
 - TraCI harness (tools/oracle/cases/traci_basic/client.py) uses port+i per probe: use the base port given to you.

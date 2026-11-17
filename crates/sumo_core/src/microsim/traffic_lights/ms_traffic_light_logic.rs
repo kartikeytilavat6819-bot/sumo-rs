@@ -52,6 +52,17 @@ pub struct MSTrafficLightLogicVt {
     pub compute_return_time: fn(&mut MSTrafficLightLogic) -> SUMOTime,
 }
 
+/// Virtual dispatch table for the rival/priority/driveway queries and detector queries; kept apart from
+/// `MSTrafficLightLogicVt` so the existing per-subclass tables stay valid.
+pub struct MSTrafficLightLogicExtVt {
+    pub get_rival_vehicles: fn(&mut MSTrafficLightLogic, i32) -> MSVehicleContainer_VehicleVector,
+    pub get_priority_vehicles: fn(&mut MSTrafficLightLogic, i32) -> MSVehicleContainer_VehicleVector,
+    pub get_blocking_drive_ways: fn(&mut MSTrafficLightLogic, i32) -> Vec<Ptr<MSDriveWay>>,
+    pub get_requested_drive_way: fn(&mut MSTrafficLightLogic, i32) -> String,
+    pub get_detector_state: fn(&MSTrafficLightLogic, String) -> f64,
+    pub get_tl_queue_length: fn(&MSTrafficLightLogic, String) -> f64,
+}
+
 pub(crate) fn default_decide_next_phase(_: &mut MSTrafficLightLogic) -> i32 {
     panic!("MSSOTLTrafficLightLogic::decideNextPhase is pure virtual; call it on a concrete traffic light logic")
 }
@@ -123,6 +134,39 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLight
     compute_return_time: default_compute_return_time,
 };
 
+fn default_ext_get_rival_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    logic.get_rival_vehicles_base(linkIndex)
+}
+
+fn default_ext_get_priority_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    logic.get_priority_vehicles_base(linkIndex)
+}
+
+fn default_ext_get_blocking_drive_ways(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+    logic.get_blocking_drive_ways_base(linkIndex)
+}
+
+fn default_ext_get_requested_drive_way(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
+    logic.get_requested_drive_way_base(linkIndex)
+}
+
+fn default_ext_get_detector_state(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    logic.get_detector_state_base(laneID)
+}
+
+fn default_ext_get_tl_queue_length(logic: &MSTrafficLightLogic, laneID: String) -> f64 {
+    logic.get_tl_queue_length_base(laneID)
+}
+
+static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT: MSTrafficLightLogicExtVt = MSTrafficLightLogicExtVt {
+    get_rival_vehicles: default_ext_get_rival_vehicles,
+    get_priority_vehicles: default_ext_get_priority_vehicles,
+    get_blocking_drive_ways: default_ext_get_blocking_drive_ways,
+    get_requested_drive_way: default_ext_get_requested_drive_way,
+    get_detector_state: default_ext_get_detector_state,
+    get_tl_queue_length: default_ext_get_tl_queue_length,
+};
+
 /// The parent class for traffic light logics
 /// C++ class `MSTrafficLightLogic` (microsim/traffic_lights/MSTrafficLightLogic.h)
 #[repr(C)]
@@ -131,6 +175,8 @@ pub struct MSTrafficLightLogic {
     pub base: Named,
     /// Virtual dispatch table; must stay after `base`
     pub vt: &'static MSTrafficLightLogicVt,
+    /// Virtual dispatch table for the queries and detector states; installed by the subclasses that override them
+    pub ext_vt: &'static MSTrafficLightLogicExtVt,
     /// C++ base class `Parameterised`
     pub base2: Parameterised,
     /// The id of the logic
@@ -197,6 +243,7 @@ impl MSTrafficLightLogic {
         MSTrafficLightLogic {
             base: Named::new(id),
             vt: &DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT,
+            ext_vt: &DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_EXT_VT,
             base2: Parameterised::from_map(parameters.clone()),
             myProgramID: programID.to_string(),
             myOffset: offset,
@@ -583,7 +630,74 @@ impl MSTrafficLightLogic {
             };
             utils::write_warningf!("Unsafe green phase % in tlLogic '%', program '%'. Lane '%' is targeted by % 'G'-links. (use 'g' instead)%", firstUnsafePhase, self.get_id(), self.get_program_id(), firstUnsafeLane.get_id(), firstUnsafeOrigins, furtherAffected);
         }
-        // shortcut: the incompatible-junction-logic check (symmetric response between junction links) is skipped because MSLogicJunction::LinkBits is still Unmapped; upgrade when the response bitset is mapped
+        // check incompatible junction logic
+        let mustCheck = MSNet::get_instance().m().has_internal_links();
+        if mustCheck && phases.len() > 0 {
+            // see NBNode::tlsConflict
+            // determinism: C++ std::set<const MSJunction*> is ordered by address; first-seen order is used here
+            let mut controlledJunctions: Vec<Ptr<MSJunction>> = Vec::new();
+            for j in 0..numLinks {
+                for k in 0..self.myLinks[j].len() {
+                    let junction = self.myLinks[j][k].get_junction();
+                    if !controlledJunctions.contains(&junction) {
+                        controlledJunctions.push(junction);
+                    }
+                }
+            }
+            let minor = "gos";
+            for junction in controlledJunctions.iter().copied() {
+                let logic = junction.get_logic();
+                if !logic.is_null() {
+                    let logicSize = logic.get_logic_size();
+                    let mut foundProblem = false;
+                    let mut tlIndex: Vec<i32> = Vec::new();
+                    for u in 0..logicSize {
+                        if foundProblem {
+                            break;
+                        }
+                        let response = logic.get_response_for(u);
+                        for v in 0..logicSize {
+                            if foundProblem {
+                                break;
+                            }
+                            if response.test(v) && logic.get_response_for(v).test(u) {
+                                if tlIndex.len() == 0 {
+                                    tlIndex.resize(logicSize as usize, -1);
+                                    for j in 0..numLinks {
+                                        for k in 0..self.myLinks[j].len() {
+                                            let link = self.myLinks[j][k];
+                                            if link.get_junction() == junction {
+                                                if link.from_internal_lane() {
+                                                    continue;
+                                                }
+                                                if link.is_cont() && !link.get_via_lane().is_null() && link.get_via_lane().get_link_cont()[0].get_tl_index() >= 0 {
+                                                    continue;
+                                                }
+                                                tlIndex[link.get_index() as usize] = link.get_tl_index();
+                                            }
+                                        }
+                                    }
+                                }
+                                let tlu = tlIndex[u as usize];
+                                let tlv = tlIndex[v as usize];
+                                if tlu >= 0 && tlv >= 0 {
+                                    let mut phaseIndex = 0;
+                                    for p in phases.iter() {
+                                        let state = p.get_state().as_bytes();
+                                        if minor.as_bytes().contains(&state[tlu as usize]) && minor.as_bytes().contains(&state[tlv as usize]) {
+                                            utils::write_warningf!("Program '%' at tlLogic '%' is incompatible with logic at junction '%' (mutual conflict between link indices %,% tl indices %,% phase %).\n  To avoid deadlock/collisions, either: rebuild the signal plan with a newer version of netconvert/netedit\n  or rebuild the network with option '--tls.ignore-internal-junction-jam' or include the program when building.", self.get_program_id(), self.get_id(), junction.get_id(), u, v, tlu, tlv, phaseIndex);
+                                            foundProblem = true;
+                                            break;
+                                        }
+                                        phaseIndex += 1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
         self.myNumLinks = self.myLinks.len() as i32;
     }
 
@@ -730,7 +844,6 @@ impl MSTrafficLightLogic {
         let mut shortEdges: BTreeSet<Ptr<MSEdge>> = BTreeSet::new();
         // SHORT_EDGE = (default SUMOVTypeParameter length 5 + minGap 2.5) * 2
         let shortEdgeLength: f64 = (5.0 + 2.5) * 2.0;
-        // shortcut: MESegment::OVERRIDE_TLS_PENALTIES ("meso.tls.control") is read from the logic parameters, which are not stored yet, so it is always off
         let overridePenalty = utils::common::string_utils::to_bool(&self.base2.get_parameter("meso.tls.control", "0")).unwrap_or_else(|e| panic!("{}", e));
         for j in 0..numLinks {
             for k in 0..self.myLinks[j].len() {
@@ -757,7 +870,9 @@ impl MSTrafficLightLogic {
                         utils::write_warningf!("Edge '%' is shorter than %m (%m) and will cause incorrect flow reduction with option --meso-tls-penalty", edge.get_id(), shortEdgeLength, edge.get_length());
                     }
                     if overridePenalty {
-                        // shortcut: MESegment::overrideTLSPenalty needs MSGlobals::gMesoNet, which is not reachable from this port yet; upgrade when MSGlobals statics are ported
+                        let mut last = crate::microsim::ms_globals::meso_net();
+                        let lastSeg = last.m().get_segment_for_edge(edge.m(), f64::MAX);
+                        lastSeg.m().override_tls_penalty();
                     }
                 }
                 link.m().set_meso_tls_penalty(time2steps(tlsPenalty * penalty[j] / durationSeconds));
@@ -1386,6 +1501,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_detector_state(&self, arg0: String) -> f64 {
+        (self.ext_vt.get_detector_state)(self, arg0)
+    }
+
+    pub fn get_detector_state_base(&self, arg0: String) -> f64 {
         // C++ default: no detectors
         0.0
     }
@@ -1397,6 +1516,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_tl_queue_length(&self, arg0: String) -> f64 {
+        (self.ext_vt.get_tl_queue_length)(self, arg0)
+    }
+
+    pub fn get_tl_queue_length_base(&self, arg0: String) -> f64 {
         // C++ default: no detectors
         0.0
     }
@@ -1440,6 +1563,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_rival_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+        (self.ext_vt.get_rival_vehicles)(self, linkIndex)
+    }
+
+    pub fn get_rival_vehicles_base(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
         // C++ default: no rival vehicles
         Vec::new()
     }
@@ -1452,6 +1579,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_priority_vehicles(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+        (self.ext_vt.get_priority_vehicles)(self, linkIndex)
+    }
+
+    pub fn get_priority_vehicles_base(&mut self, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
         // C++ default: no priority vehicles
         Vec::new()
     }
@@ -1464,6 +1595,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_blocking_drive_ways(&mut self, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+        (self.ext_vt.get_blocking_drive_ways)(self, linkIndex)
+    }
+
+    pub fn get_blocking_drive_ways_base(&mut self, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
         // C++ default: no blocking driveways
         Vec::new()
     }
@@ -1476,6 +1611,10 @@ impl MSTrafficLightLogic {
     //     }
     #[allow(unused_variables)]
     pub fn get_requested_drive_way(&mut self, linkIndex: i32) -> String {
+        (self.ext_vt.get_requested_drive_way)(self, linkIndex)
+    }
+
+    pub fn get_requested_drive_way_base(&mut self, linkIndex: i32) -> String {
         // C++ default: no requested driveway
         String::new()
     }
@@ -1589,6 +1728,9 @@ impl crate::microsim::ms_event_control::Command for MSTrafficLightLogic_SwitchCo
     fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
         MSTrafficLightLogic_SwitchCommand::execute(self, currentTime)
     }
+    fn priority(&self) -> i32 {
+        i32::MAX
+    }
 }
 
 impl MSTrafficLightLogic_SwitchCommand {
@@ -1603,7 +1745,6 @@ impl MSTrafficLightLogic_SwitchCommand {
     // }
     #[allow(unused_variables)]
     pub fn new(tlcontrol: &mut MSTLLogicControl, tlLogic: Ptr<MSTrafficLightLogic>, nextSwitch: SUMOTime) -> Self {
-        // shortcut: C++ sets `priority = max` on the Command base, which is still Unmapped; the event queue therefore orders switch commands by time only, upgrade when Command is ported
         MSTrafficLightLogic_SwitchCommand {
             base: (),
             myTLControl: Ptr::from_mut(tlcontrol),

@@ -1,11 +1,19 @@
 //! Port of microsim/devices/MSDevice_StationFinder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::microsim::ms_event_control::Command;
+use crate::utils::wrapping_command::WrappingCommand;
 use utils::options::options_cont::{with_options, OptionsCont};
 use utils::options::option::SumoOption;
 use utils::common::msg_handler::{write_error, write_warning, write_message};
-use utils::common::time::{string2time, time2string, time2steps, steps2time, SUMOTIME_MIN};
+use utils::common::time::{string2time, time2string, time2steps, steps2time, SUMOTIME_MIN, SUMOTIME_MAX};
+use crate::utils::vehicle::sumo_vehicle_parameter::{SUMOVehicleParameter_Stop, STOP_DURATION_SET, STOP_UNTIL_SET, STOP_START_SET, STOP_END_SET};
 use utils::common::to_string::to_string;
+
+/// C++ `MSNet::getInstance()->getBeginOfTimestepEvents()->addEvent(cmd, t)` for a WrappingCommand of this device
+fn add_begin_of_timestep_command(cmd: Ptr<WrappingCommand<MSDevice_StationFinder>>, t: SUMOTime) {
+    MSNet::get_instance().m().get_begin_of_timestep_events().m().add_event(Ptr::from_raw(cmd.as_raw() as *mut dyn Command), t);
+}
 
 const INVALID_DOUBLE: f64 = f64::MAX;
 const DEFAULT_AVG_WAITING_TIME: f64 = 900.; // s
@@ -15,6 +23,21 @@ const DEFAULT_CONSUMPTION_ESTIMATE_HISTORY: f64 = 10.; // s
 /// C++ `dynamic_cast<MSChargingStation*>(stoppingPlace)`; the callers only pass charging stations
 fn as_charging_station(p: Ptr<MSStoppingPlace>) -> Ptr<MSChargingStation> {
     Ptr::from_raw(p.as_raw() as *mut MSChargingStation)
+}
+
+/// C++ `SUMOVehicleParameter::Stop stopPar` as filled in by each charging-stop caller (charging station, parking, lane, positions)
+fn charging_stop_par(cs: Ptr<MSChargingStation>) -> SUMOVehicleParameter_Stop {
+    let mut stopPar = SUMOVehicleParameter_Stop::default();
+    stopPar.chargingStation = cs.get_id().to_string();
+    if !cs.get_parking_area().is_null() {
+        stopPar.parkingarea = cs.get_parking_area().get_id().to_string();
+        stopPar.parking = if cs.get_parking_area().park_on_road() { ParkingType::ONROAD } else { ParkingType::OFFROAD };
+    }
+    stopPar.edge = cs.get_lane().get_edge().get_id().to_string();
+    stopPar.lane = cs.get_lane().get_id().to_string();
+    stopPar.startPos = cs.get_begin_lane_position();
+    stopPar.endPos = cs.get_end_lane_position();
+    stopPar
 }
 
 /// C++ enum `MSDevice_StationFinder::ChargeType`
@@ -72,9 +95,9 @@ pub struct MSDevice_StationFinder {
     /// To which station we are currently travelling
     pub myChargingStation: Ptr<MSStoppingPlace>,
     /// The command responsible for rescue actions
-    pub myRescueCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_StationFinder> */>,
+    pub myRescueCommand: Ptr<WrappingCommand<MSDevice_StationFinder>>,
     /// The command responsible for limiting the charging rate (~ implement charging strategies)
-    pub myChargeLimitCommand: Ptr<Unmapped /* WrappingCommand<MSDevice_StationFinder> */>,
+    pub myChargeLimitCommand: Ptr<WrappingCommand<MSDevice_StationFinder>>,
     /// The next charging rates to set via myChargingRateCommand
     pub myChargeLimits: Vec<(SUMOTime, f64)>,
     /// Last time the SoC was checked
@@ -232,7 +255,10 @@ impl MSDevice_StationFinder {
     pub fn build_vehicle_devices(v: &mut SUMOVehicle, into: &mut Vec<Ptr<MSVehicleDevice>>) {
         let equip: bool = with_options(|oc| MSDevice::equipped_by_default_assignment_options(oc, "stationfinder", v.get_id(), v.get_parameter(), v.get_vehicle_type().get_parameter(), false, false));
         if equip {
-            into.push(Ptr::from_raw(Box::into_raw(Box::new(MSDevice_StationFinder::new(v))) as *mut MSVehicleDevice));
+            // the rescue command stores `this`, so it is created once the device is at its final (boxed) address
+            let mut dev = Box::new(MSDevice_StationFinder::new(v));
+            dev.init_rescue_command();
+            into.push(Ptr::from_raw(Box::into_raw(dev) as *mut MSVehicleDevice));
         }
     }
 
@@ -394,7 +420,6 @@ impl MSDevice_StationFinder {
             "none" => dev.myRescueAction = MSDevice_StationFinder_RescueAction::RESCUEACTION_NONE,
             _ => write_error(&format!("Invalid device.stationfinder.rescueAction '{}'.", rescueAction)),
         }
-        dev.init_rescue_command();
         dev.myReserveFactor = holder.get_float_param("device.stationfinder.reserveFactor", false, INVALID_DOUBLE, true).max(1.);
         dev.myEmptySoC = holder.get_float_param("device.stationfinder.emptyThreshold", false, INVALID_DOUBLE, true).min(1.).max(0.);
         dev.myRadius = holder.get_time_param("device.stationfinder.radius", false, SUMOTIME_MIN);
@@ -435,10 +460,10 @@ impl MSDevice_StationFinder {
     pub fn drop_(&mut self) {
         // make the rescue command invalid if there is one
         if !self.myRescueCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+            self.myRescueCommand.m().deschedule();
         }
         if !self.myChargeLimitCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+            self.myChargeLimitCommand.m().deschedule();
         }
     }
 
@@ -572,7 +597,9 @@ impl MSDevice_StationFinder {
             }
         }
         // check if the vehicle travels at most an edge length to the charging station after jump/teleport
-        // shortcut: MSStop::chargingStation accessor is not ported, so this early return is not taken; upgrade when MSStop exposes its charging station
+        if self.mySearchState == MSDevice_StationFinder_SearchState::SEARCHSTATE_BROKEN_DOWN && self.myVeh.m().has_stops() && !self.myVeh.m().get_stops()[0].chargingStation.is_null() && as_charging_station(self.myVeh.m().get_stops()[0].chargingStation).get_lane().get_edge().get_id() == self.myVeh.m().get_lane().get_edge().get_id() {
+            return true;
+        }
         let now = MSNet::get_instance().m().get_current_time_step();
         if !self.myChargingStation.is_null() {
             if self.myArrivalAtChargingStation > 0 && now - self.myArrivalAtChargingStation > self.myWaitForCharge {
@@ -604,15 +631,47 @@ impl MSDevice_StationFinder {
             let brakeGap = self.myVeh.m().get_car_follow_model().brake_gap(self.myVeh.m().get_speed());
             let (stopLane, _stopDist) = self.myVeh.m().get_lane_pos_after_dist(brakeGap);
             if !stopLane.is_null() {
-                // shortcut: the rescue stop (SUMOVehicleParameter::Stop) and its insertStop/replaceStop are not wired here, so only the mode change is applied; upgrade when stop insertion takes SUMOVehicleParameter_Stop
+                let stopLane2 = if stopLane.is_internal() { stopLane.get_normal_successor_lane() } else { stopLane };
+                let mut endPos = _stopDist;
+                if stopLane2.as_raw() != stopLane.as_raw() {
+                    endPos = f64::min(utils::geom::POSITION_EPS, stopLane2.get_length());
+                }
+                // remove possibly scheduled charging stop
+                if self.myVeh.m().has_stops() && !self.myVeh.m().get_stops()[0].chargingStation.is_null() {
+                    self.myVeh.m().abort_next_stop(0);
+                }
+                // schedule the rescue stop
+                let mut rescueStop = SUMOVehicleParameter_Stop::default();
+                rescueStop.index = 0;
+                rescueStop.edge = stopLane2.get_edge().get_id().to_string();
+                rescueStop.lane = stopLane2.get_id().to_string();
+                rescueStop.startPos = f64::max(endPos - 2. * self.myHolder.m().get_length(), 0.);
+                rescueStop.endPos = endPos;
+                rescueStop.parametersSet |= STOP_START_SET | STOP_END_SET;
+                write_message(&format!("Vehicle '{}' wants to stop on lane {} at pos {} because of low battery charge {} at time={}.", self.myHolder.m().get_id(), rescueStop.lane, to_string(&rescueStop.endPos), to_string(&currentSoC), time2string(now)));
                 if self.myRescueAction == MSDevice_StationFinder_RescueAction::RESCUEACTION_REMOVE {
                     // remove vehicle from network
+                    rescueStop.until = SUMOTIME_MAX;
+                    rescueStop.breakDown = true;
+                    let mut errorMsg = "Could not insert the rescue stop.".to_string();
+                    if !self.myVeh.m().insert_stop(0, rescueStop, "stationfinder:rescue", false, &mut errorMsg) {
+                        write_error(&errorMsg);
+                    }
                     self.mySearchState = MSDevice_StationFinder_SearchState::SEARCHSTATE_BROKEN_DOWN;
                     return true;
                 } else if self.myRescueAction == MSDevice_StationFinder_RescueAction::RESCUEACTION_TOW {
                     // wait next to the road and get teleported to a charging station
+                    let rescueTime = time2steps(self.myRescueTime);
+                    rescueStop.duration = rescueTime;
+                    rescueStop.parking = ParkingType::ONROAD;
+                    rescueStop.jump = 0;
+                    let rescueDuration = rescueStop.duration;
+                    let mut errorMsg = "Could not insert the rescue stop.".to_string();
+                    if !self.myVeh.m().insert_stop(0, rescueStop, "stationfinder:rescue", false, &mut errorMsg) {
+                        write_error(&errorMsg);
+                    }
                     self.init_rescue_command();
-                    // shortcut: rescue event at SIMSTEP + duration - DELTA_T is not scheduled (no Command type)
+                    add_begin_of_timestep_command(self.myRescueCommand, now + rescueDuration - utils::common::time::delta_t());
                     self.mySearchState = MSDevice_StationFinder_SearchState::SEARCHSTATE_BROKEN_DOWN;
                     return true;
                 }
@@ -1347,10 +1406,39 @@ impl MSDevice_StationFinder {
             if !cs.is_null() {
                 // integrate previously planned stops which do not have charging facilities
                 self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
-                // shortcut: the charging stop (SUMOVehicleParameter::Stop) construction and replaceStop/insertStop are not wired here; upgrade when stop insertion takes SUMOVehicleParameter_Stop built from the charging station
-                if self.myReplacePlannedStop > 0. && self.myHolder.m().has_stops() && self.myHolder.m().get_next_stop_parameter().chargingStation.is_empty() {
+                let mut stopPar = charging_stop_par(cs);
+                stopPar.duration = time2steps(expectedConsumption / (cs.get_charging_power(false) * cs.get_efficency()));
+                stopPar.parametersSet = STOP_DURATION_SET;
+                if self.myReplacePlannedStop > 0. {
                     // "reuse" a previously planned stop (stop at charging station instead of a different stop)
-                    // shortcut: rescheduling the planned stop's until time and charging strategy requires the stop parameter wiring above
+                    // what if the charging station is skipped due to long waiting time?
+                    if self.myReplacePlannedStop > 0. && self.myHolder.m().has_stops() && self.myHolder.m().get_next_stop_parameter().chargingStation.is_empty() {
+                        // compare the distance to the original target
+                        if scores["distfrom"] < self.myDistanceToOriginalStop {
+                            // compute the arrival time at the original stop
+                            let timeToOriginalStop = time2steps(scores["timefrom"]);
+                            let originalUntil = self.myHolder.m().get_next_stop_parameter().until;
+                            if timeToOriginalStop + self.myLastSearch < originalUntil {
+                                let delta = originalUntil - (timeToOriginalStop + self.myLastSearch);
+                                stopPar.until = timeToOriginalStop + self.myLastSearch + ((delta as f64) * f64::min(self.myReplacePlannedStop, 1.)) as SUMOTime;
+                                stopPar.parametersSet |= STOP_UNTIL_SET;
+                                if self.myReplacePlannedStop > 1. {
+                                    self.myHolder.m().abort_next_stop(0);
+                                }
+                                // optionally implement a charging strategy by adjusting the accepted charging rates
+                                if self.myChargingStrategy != MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE {
+                                    // the charging strategy should actually only be computed at the arrival at the charging station
+                                    self.implement_charging_strategy(self.myLastSearch + time2steps(scores["timeto"]), stopPar.until, expectedConsumption, cs);
+                                }
+                            }
+                        }
+                    }
+                }
+                let mut errorMsg = String::new();
+                let ok = if replace { self.myVeh.m().replace_stop(0, stopPar, "stationfinder:search", false, &mut errorMsg) } else { self.myVeh.m().insert_stop(0, stopPar, "stationfinder:search", false, &mut errorMsg) };
+                if !ok {
+                    write_message(&format!("Problem with inserting the charging station stop for vehicle {}.", self.myHolder.m().get_id()));
+                    write_error(&errorMsg);
                 }
                 self.myArrivalAtChargingStation = -1;
                 self.mySearchState = MSDevice_StationFinder_SearchState::SEARCHSTATE_SUCCESSFUL;
@@ -1419,13 +1507,27 @@ impl MSDevice_StationFinder {
             if self.myHolder.m().is_stopped() || !nextStop.chargingStation.is_null() || self.myHolder.m().get_current_route_edge() != &nextStop.edge || nextStop.get_min_duration(now) < self.myMinOpportunisticTime {
                 return false;
             }
+            // copy over depart time from previously planned stop
+            let oldUntil = nextStop.get_until();
+            let oldDuration = nextStop.duration;
             // find charging station on same edge
             let mut scores: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t = Default::default();
             let cs = self.find_charging_station(MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default()), 0., &mut scores, true, true, true, true);
             if !cs.is_null() {
                 // replace next stop by charging stop
                 self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
-                // shortcut: the replacement stop (SUMOVehicleParameter::Stop) and replaceStop are not wired here; upgrade when stop insertion takes SUMOVehicleParameter_Stop
+                let mut stopPar = charging_stop_par(cs);
+                if oldUntil > 0 {
+                    stopPar.until = oldUntil;
+                    stopPar.duration = 0;
+                } else {
+                    // set a duration needed to charge to the target SoC
+                    stopPar.duration = oldDuration;
+                }
+                let mut errorMsg = String::new();
+                if !self.myVeh.m().replace_stop(0, stopPar, "stationfinder:opportunisticSearch", false, &mut errorMsg) {
+                    write_error(&errorMsg);
+                }
                 return true;
             }
         }
@@ -1499,7 +1601,10 @@ impl MSDevice_StationFinder {
             write_message(&format!("MSDevice_StationFinder::teleportToChargingStation: No charging station available to teleport the broken-down vehicle {} to at time {}", self.myHolder.m().get_id(), time2string(currentTime)));
             // remove the vehicle if teleport to a charging station fails
             if self.myHolder.m().is_stopped() {
-                // shortcut: MSStop jump/breakDown flags are not wired here; the search state is still updated
+                let currentStop = self.myHolder.m().get_next_stop_mutable();
+                currentStop.duration += delta_t();
+                currentStop.pars.jump = -1;
+                currentStop.pars.breakDown = true;
                 self.mySearchState = MSDevice_StationFinder_SearchState::SEARCHSTATE_BROKEN_DOWN;
                 write_warning(&format!("There is no charging station available to teleport the vehicle '{}' to at time={}. Thus the vehicle will be removed.", self.myHolder.m().get_id(), time2string(currentTime)));
             } else {
@@ -1509,8 +1614,13 @@ impl MSDevice_StationFinder {
         }
         // teleport to the charging station, stop there for charging
         self.myChargingStation = Ptr::from_raw(cs.as_raw() as *mut MSStoppingPlace);
-        // shortcut: the charging stop (SUMOVehicleParameter::Stop) and insertStop(1, ...) are not wired here; upgrade when stop insertion takes SUMOVehicleParameter_Stop
-        // shortcut: rescue command descheduling skipped (no Command type)
+        let mut stopPar = charging_stop_par(cs);
+        stopPar.duration = time2steps(expectedConsumption / (cs.get_charging_power(false) * cs.get_efficency()));
+        let mut errorMsg = String::new();
+        if !self.myVeh.m().insert_stop(1, stopPar, "stationfinder:search", true, &mut errorMsg) {
+            write_error(&errorMsg);
+        }
+        self.myRescueCommand.m().deschedule();
         self.myRescueCommand = Ptr::default();
         0
     }
@@ -1641,7 +1751,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn init_rescue_command(&mut self) {
         if self.myRescueAction == MSDevice_StationFinder_RescueAction::RESCUEACTION_TOW && self.myRescueCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the rescue command is not created; upgrade when Command exists
+            self.myRescueCommand = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSDevice_StationFinder::teleport_to_charging_station))));
         }
     }
 
@@ -1656,7 +1766,7 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn init_charge_limit_command(&mut self) {
         if self.myChargingStrategy != MSDevice_StationFinder_ChargingStrategy::CHARGINGSTRATEGY_NONE && self.myChargeLimitCommand.is_null() {
-            // shortcut: WrappingCommand is not ported, so the charge-limit command is not created; upgrade when Command exists
+            self.myChargeLimitCommand = Ptr::from_raw(Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSDevice_StationFinder::update_charge_limit))));
         }
     }
 
@@ -1702,7 +1812,7 @@ impl MSDevice_StationFinder {
             self.myChargeLimits.remove(0);
         }
         if self.myChargeLimits.is_empty() {
-            // shortcut: WrappingCommand deschedule skipped (no Command type)
+            self.myChargeLimitCommand.m().deschedule();
             self.myChargeLimitCommand = Ptr::default();
             0
         } else {
@@ -1747,7 +1857,7 @@ impl MSDevice_StationFinder {
         }
         if !self.myChargeLimits.is_empty() {
             self.init_charge_limit_command();
-            // shortcut: the charge-limit event at begin is not scheduled (no Command type); upgrade when Command exists
+            add_begin_of_timestep_command(self.myChargeLimitCommand, begin);
         }
     }
 

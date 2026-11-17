@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:20:49.933785-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="ref.fcd.xml"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <toc_device>
+        <device.toc.probability value="1"/>
+        <device.toc.manualType value="manual"/>
+        <device.toc.automatedType value="automated"/>
+        <device.toc.file value="ref.toc.xml"/>
+    </toc_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="toc_dyn" depart="1.00" departLane="e0_1" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="25.00" arrivalLane="e2_0" arrivalPos="146.00" arrivalSpeed="19.13" duration="24.00" routeLength="445.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.56" rerouteNo="0" devices="tripinfo_toc_dyn toc_toc_dyn driverstatetoc_dyn fcd_toc_dyn" vType="manual" speedFactor="0.96" vaporized=""/>
+    <tripinfo id="toc_mrm" depart="4.00" departLane="e0_1" departPos="5.10" departSpeed="18.77" departDelay="0.00" arrival="31.00" arrivalLane="e2_0" arrivalPos="146.00" arrivalSpeed="15.79" duration="27.00" routeLength="445.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.80" rerouteNo="0" devices="tripinfo_toc_mrm toc_toc_mrm driverstatetoc_mrm fcd_toc_mrm" vType="manual" speedFactor="0.84" vaporized=""/>
+</tripinfos>

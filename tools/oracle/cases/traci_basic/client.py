@@ -543,6 +543,13 @@ def probes(lane, tl_id):
         "vehicle.getPosition(v0)": lambda t: t.vehicle.getPosition("v0"),
         "vehicle.getSpeed(v0)": lambda t: t.vehicle.getSpeed("v0"),
         TRIPINFO_PROBE: lambda t: t.vehicle.getParameter("v0", "device.tripinfo.waitingTime"),
+        "vehicle.getParameter(v0, laneChangeModel.nope)": lambda t: t.vehicle.getParameter("v0", "laneChangeModel.nope"),
+        "vehicle.getParameter(v0, carFollowModel.caccCommunicationsOverrideMode)": lambda t: t.vehicle.getParameter("v0", "carFollowModel.caccCommunicationsOverrideMode"),
+        # LC2013 probability state is long long: C++ prints integer division (0.5 -> 0), not a fraction
+        "lcm: set speedGainProbabilityRight 0.5 + get": lambda t: (t.vehicle.setParameter("v0", "laneChangeModel.speedGainProbabilityRight", "0.5"), t.vehicle.getParameter("v0", "laneChangeModel.speedGainProbabilityRight"))[1],
+        "lcm: set speedGainProbabilityLeft 1.5 + get": lambda t: (t.vehicle.setParameter("v0", "laneChangeModel.speedGainProbabilityLeft", "1.5"), t.vehicle.getParameter("v0", "laneChangeModel.speedGainProbabilityLeft"))[1],
+        "lcm: set keepRightProbability -2.5 + get": lambda t: (t.vehicle.setParameter("v0", "laneChangeModel.keepRightProbability", "-2.5"), t.vehicle.getParameter("v0", "laneChangeModel.keepRightProbability"))[1],
+        "lcm: set keepRightProbability 2.5 + get": lambda t: (t.vehicle.setParameter("v0", "laneChangeModel.keepRightProbability", "2.5"), t.vehicle.getParameter("v0", "laneChangeModel.keepRightProbability"))[1],
         "lane.getLastStepVehicleNumber": lambda t: t.lane.getLastStepVehicleNumber(lane),
         "lane.getLength": lambda t: t.lane.getLength(lane),
         "trafficlight.getIDList": lambda t: t.trafficlight.getIDList(),

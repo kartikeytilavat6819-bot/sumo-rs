@@ -3,6 +3,8 @@
 // shortcut: C++ throw TraCIException(msg) is ported as panic!("{}", msg), upgrade when TraCIException is ported
 use crate::prelude::*;
 use crate::utils::named_rtree::{delete_named_rtree, new_named_rtree, NamedRTree};
+use crate::microsim::ms_event_control::Command;
+use crate::utils::parametrised_wrapping_command::ParametrisedWrappingCommand;
 
 /// C++ class `libsumo::Polygon` (libsumo/Polygon.h)
 pub struct Polygon {
@@ -329,8 +331,11 @@ impl Polygon {
             let listener = MSNet::get_instance().m().make_dynamic_shape_updater().cast::<MSNet_VehicleStateListener>();
             MSNet::get_instance().m().add_vehicle_state_listener(listener);
         }
-        // shortcut: the regular polygon update command (ParametrisedWrappingCommand) is unmapped, so it cannot be scheduled yet, upgrade with the command port
-        panic!("shortcut: Polygon::addDynamics cannot schedule the polygon update command (ParametrisedWrappingCommand unmapped)")
+        // Schedule the regular polygon update
+        let shapeCont = Ptr::from_mut(MSNet::get_instance().m().get_shape_container());
+        let cmd: *mut ParametrisedWrappingCommand<ShapeContainer, Ptr<PolygonDynamics>> = Box::into_raw(Box::new(ParametrisedWrappingCommand::new(shapeCont, &pd, ShapeContainer::polygon_dynamics_update)));
+        MSNet::get_instance().m().get_shape_container().add_polygon_update_command(pd.get_polygon_id().to_string(), Ptr::from_raw(cmd));
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_raw(cmd as *mut dyn Command), MSNet::get_instance().m().get_current_time_step());
     }
 
     /// C++: `void Polygon::remove(const std::string &, int)` [static]
