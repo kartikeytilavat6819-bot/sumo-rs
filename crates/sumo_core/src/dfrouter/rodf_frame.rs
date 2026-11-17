@@ -412,7 +412,7 @@ impl RODFFrame {
             oc.do_register("no-step-log", SumoOption::bool(false));
             oc.add_description("no-step-log", "Report", "Disable console output of route parsing step");
 
-            // shortcut: RandHelper::insertRandOptions is not ported yet, the random options are missing, upgrade when rand_helper registers them
+            utils::common::rand_helper::insert_rand_options(oc);
         });
     }
 

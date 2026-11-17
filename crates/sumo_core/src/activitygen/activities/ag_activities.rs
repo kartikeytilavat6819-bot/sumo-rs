@@ -122,9 +122,8 @@ impl AGActivities {
             }
         }
         if numbErr != 0 {
-            // shortcut: C++ ostream prints doubles with %g (6 significant digits), f64_to_string_prec prints fixed, upgrade when a %g helper exists
             let pct = (numbErr as f32 as f64) * 100.0 / (city.m().busLines.len() as f32 as f64);
-            eprintln!("ERROR: {} bus lines couldn't been completely generated ( {}% )...", numbErr, utils::common::to_string::f64_to_string_prec(pct, 6));
+            eprintln!("ERROR: {} bus lines couldn't been completely generated ( {}% )...", numbErr, utils::common::to_string::f64_to_string_default(pct));
         } else {
             println!("no problem during bus line trip generation...");
         }
@@ -139,9 +138,8 @@ impl AGActivities {
             }
         }
         if numbErr != 0 {
-            // shortcut: C++ ostream prints doubles with %g (6 significant digits), f64_to_string_prec prints fixed, upgrade when a %g helper exists
             let pct = (numbErr as f32 as f64) * 100.0 / (city.m().households.len() as f32 as f64);
-            println!("WARNING: {} ( {}% ) households' trips haven't been generated: would probably need more iterations for rebuilding...", numbErr, utils::common::to_string::f64_to_string_prec(pct, 6));
+            println!("WARNING: {} ( {}% ) households' trips haven't been generated: would probably need more iterations for rebuilding...", numbErr, utils::common::to_string::f64_to_string_default(pct));
         } else {
             println!("no problem during households' trips generation...");
         }

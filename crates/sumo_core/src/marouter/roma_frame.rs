@@ -50,7 +50,7 @@ impl ROMAFrame {
         Self::add_import_options();
         Self::add_assignment_options();
         // add rand options
-        // shortcut: RandHelper::insertRandOptions is not ported yet, the random options are missing, upgrade when rand_helper registers them
+        utils::options::options_cont::with_options(|oc| utils::common::rand_helper::insert_rand_options(oc));
     }
 
     /// C++: `bool ROMAFrame::checkOptions()` [static]
