@@ -19,17 +19,7 @@ fn simtime() -> f64 {
 fn current_step() -> SUMOTime {
     MSNet::get_instance().get_current_time_step()
 }
-/// C++ `getCategory()` of the traffic object kinds seen by E3 detectors
-// shortcut: SUMOTrafficObject::get_category is still todo!() in utils, so the category is derived from the kind flags, upgrade when it is ported
-fn category_of(veh: &SUMOTrafficObject) -> &'static str {
-    if veh.is_person() {
-        "person"
-    } else if veh.is_vehicle() {
-        "vehicle"
-    } else {
-        "container"
-    }
-}
+use crate::microsim::transportables::msp_model::MSPMODEL_FORWARD;
 /// The port has no Clone for MSCrossSection; copy the list field by field
 fn copy_cross_sections(v: &CrossSectionVector) -> CrossSectionVector {
     v.iter().map(|c| MSCrossSection::new(c.myLane, c.myPosition)).collect()
@@ -208,9 +198,9 @@ impl MSE3Collector {
     //     reset();
     // }
     #[allow(unused_variables)]
-    pub fn new(id: &str, entries: &CrossSectionVector, exits: &CrossSectionVector, haltingSpeedThreshold: f64, haltingTimeThreshold: SUMOTime, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, openEntry: bool, expectArrival: bool) -> Self {
-        let mut s = MSE3Collector {
-            base: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| panic!("{e}")),
+    pub fn new(id: &str, entries: &CrossSectionVector, exits: &CrossSectionVector, haltingSpeedThreshold: f64, haltingTimeThreshold: SUMOTime, name: String, vTypes: &str, nextEdges: &str, detectPersons: i32, openEntry: bool, expectArrival: bool) -> Box<Self> {
+        let mut s = Box::new(MSE3Collector {
+            base: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
             myName: name,
             myEntries: copy_cross_sections(entries),
             myExits: copy_cross_sections(exits),
@@ -229,8 +219,11 @@ impl MSE3Collector {
             myLastResetTime: -1,
             myOpenEntry: openEntry,
             myExpectArrival: expectArrival,
-        };
+        });
         s.base.vt = &MSE3_DETECTOR_FILE_OUTPUT_VT;
+        // Set MoveReminders to entries and exits (boxed first: the reminders keep a pointer to `this`)
+        let this = Ptr::from_mut(&mut *s);
+        s.build_reminders(this);
         s.reset();
         s
     }
@@ -257,9 +250,8 @@ impl MSE3Collector {
         }
     }
 
-    /// Creates and registers the entry and exit reminders, owned by `this`. Callers must invoke this once the collector is boxed.
-    // shortcut: C++ creates these in the constructor, but a by-value Rust constructor has no stable address for the back-pointer, upgrade when constructors return Box<Self>
-    pub fn build_reminders(&mut self, this: Ptr<MSE3Collector>) {
+    /// Creates and registers the entry and exit reminders, owned by `this` (part of the C++ constructor).
+    fn build_reminders(&mut self, this: Ptr<MSE3Collector>) {
         for cs in self.myEntries.iter() {
             let rem = Ptr::from_raw(Box::into_raw(Box::new(MSE3Collector_MSE3EntryReminder::new(cs, this.m()))));
             rem.m().base.vt = &MSE3_ENTRY_REMINDER_VT;
@@ -339,16 +331,23 @@ impl MSE3Collector {
     #[allow(unused_variables)]
     pub fn enter(&mut self, veh: &SUMOTrafficObject, entryTimestep: f64, fractionTimeOnDet: f64, entryReminder: Ptr<MSE3Collector_MSE3EntryReminder>, isBackward: bool) {
         if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
-            // shortcut: C++ forwards to each person on the vehicle (dynamic_cast<const MSBaseVehicle&>), MSBaseVehicle is not #[repr(C)] so the cast is unavailable; persons riding in vehicles are skipped, upgrade when ms_base_vehicle.rs is #[repr(C)]
+            let v = Ptr::new(veh).cast::<MSBaseVehicle>();
+            for p in v.get_persons().clone() {
+                self.enter(&p.base, entryTimestep, fractionTimeOnDet, entryReminder, false);
+            }
             return;
         }
         if !self.vehicle_applies(veh) {
             return;
         }
-        // shortcut: C++ treats a person walking backwards over an entry detector as leaving; MSTransportable is not #[repr(C)] so its direction is not read here, upgrade when ms_transportable.rs is #[repr(C)]
+        if veh.is_person() && !isBackward && Ptr::new(veh).cast::<MSTransportable>().get_direction() != MSPMODEL_FORWARD {
+            // walking backward over an entry detector means "leaving"
+            self.leave(veh, entryTimestep, fractionTimeOnDet, true);
+            return;
+        }
         let key = Ptr::new(veh);
         if self.myEnteredContainer.contains_key(&key) {
-            write_warningf!("% '%' reentered % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+            write_warningf!("% '%' reentered % '%', time=%.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
             return;
         }
         let speed_fraction = veh.get_speed() * fractionTimeOnDet;
@@ -402,7 +401,10 @@ impl MSE3Collector {
     #[allow(unused_variables)]
     pub fn leave_front(&mut self, veh: &SUMOTrafficObject, leaveTimestep: f64) {
         if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
-            // shortcut: C++ forwards to each person on the vehicle, see enter
+            let v = Ptr::new(veh).cast::<MSBaseVehicle>();
+            for p in v.get_persons().clone() {
+                self.leave_front(&p.base, leaveTimestep);
+            }
             return;
         }
         if !self.vehicle_applies(veh) {
@@ -411,7 +413,7 @@ impl MSE3Collector {
         let key = Ptr::new(veh);
         if !self.myEnteredContainer.contains_key(&key) {
             if !self.myOpenEntry && veh.is_vehicle() {
-                write_warningf!("% '%' left % '%' without entering it, time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+                write_warningf!("% '%' left % '%' without entering it, time=%.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
             }
         } else {
             self.myEnteredContainer.get_mut(&key).unwrap().frontLeaveTime = leaveTimestep;
@@ -469,17 +471,24 @@ impl MSE3Collector {
     #[allow(unused_variables)]
     pub fn leave(&mut self, veh: &SUMOTrafficObject, leaveTimestep: f64, fractionTimeOnDet: f64, isBackward: bool) {
         if self.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
-            // shortcut: C++ forwards to each person on the vehicle, see enter
+            let v = Ptr::new(veh).cast::<MSBaseVehicle>();
+            for p in v.get_persons().clone() {
+                self.leave(&p.base, leaveTimestep, fractionTimeOnDet, false);
+            }
             return;
         }
         if !self.vehicle_applies(veh) {
             return;
         }
-        // shortcut: C++ handles a person walking backwards over an exit detector as entering, see enter
+        if veh.is_person() && !isBackward && Ptr::new(veh).cast::<MSTransportable>().get_direction() != MSPMODEL_FORWARD {
+            // walking backward over an exit detector means "entering"
+            self.enter(veh, leaveTimestep, fractionTimeOnDet, Ptr::default(), true);
+            return;
+        }
         let key = Ptr::new(veh);
         if !self.myEnteredContainer.contains_key(&key) {
             if !self.myOpenEntry && veh.is_vehicle() {
-                write_warningf!("% '%' left % '%' without entering it, time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
+                write_warningf!("% '%' left % '%' without entering it, time=%.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), self.base.base.get_id(), time2string(current_step()));
             }
         } else {
             let mut values = self.myEnteredContainer[&key];
@@ -1021,7 +1030,7 @@ impl MSE3Collector_MSE3EntryReminder {
     // }
     #[allow(unused_variables)]
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
-        // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
+        // lane registration is done by MSE3Collector::build_reminders
         MSE3Collector_MSE3EntryReminder {
             base: MSMoveReminder::new(&format!("{}_entry", collector.base.base.get_id()), crossSection.myLane, false),
             myCollector: Ptr::from_mut(collector),
@@ -1138,8 +1147,9 @@ impl MSE3Collector_MSE3EntryReminder {
     #[allow(unused_variables)]
     pub fn notify_move(&mut self, veh: &mut SUMOTrafficObject, oldPos: f64, newPos: f64, newSpeed: f64) -> bool {
         let collector = self.myCollector;
-        // shortcut: C++ also matches a person walking backwards (MSTransportable direction), not readable until ms_transportable.rs is #[repr(C)]
-        if !collector.myEnteredContainer.contains_key(&Ptr::new(veh)) && newPos > self.myPosition {
+        if (!collector.myEnteredContainer.contains_key(&Ptr::new(veh))
+                || (veh.is_person() && Ptr::new(veh).cast::<MSTransportable>().get_direction() != MSPMODEL_FORWARD))
+                && newPos > self.myPosition {
             if oldPos > self.myPosition {
                 // was behind the detector already in the last step
                 return false;
@@ -1190,7 +1200,7 @@ impl MSE3Collector_MSE3EntryReminder {
         if reason >= MSMoveReminder_Notification::NOTIFICATION_ARRIVED {
             let collector = self.myCollector;
             if collector.m().myEnteredContainer.remove(&Ptr::new(veh)).is_some() && !collector.myExpectArrival {
-                write_warningf!("% '%' arrived inside % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
+                write_warningf!("% '%' arrived inside % '%', time=%.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
             }
             return false;
         }
@@ -1258,7 +1268,7 @@ impl MSE3Collector_MSE3LeaveReminder {
     //     myCollector(collector), myPosition(crossSection.myPosition) {}
     #[allow(unused_variables)]
     pub fn new(crossSection: &MSCrossSection, collector: &mut MSE3Collector) -> Self {
-        // lane registration is done by MSE3Collector::build_reminders (see shortcut there)
+        // lane registration is done by MSE3Collector::build_reminders
         MSE3Collector_MSE3LeaveReminder {
             base: MSMoveReminder::new(&format!("{}_exit", collector.base.base.get_id()), crossSection.myLane, false),
             myCollector: Ptr::from_mut(collector),
@@ -1439,13 +1449,13 @@ impl MSE3Collector_MSE3LeaveReminder {
         }
         let collector = self.myCollector;
         if reason == MSMoveReminder_Notification::NOTIFICATION_TELEPORT {
-            write_warningf!("% '%' teleported from % '%'.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id());
+            write_warningf!("% '%' teleported from % '%'.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id());
             collector.m().myEnteredContainer.remove(&Ptr::new(veh));
             return false;
         }
         if reason >= MSMoveReminder_Notification::NOTIFICATION_ARRIVED {
             if collector.m().myEnteredContainer.remove(&Ptr::new(veh)).is_some() && !collector.myExpectArrival {
-                write_warningf!("% '%' arrived inside % '%', time=%.", category_of(veh), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
+                write_warningf!("% '%' arrived inside % '%', time=%.", veh.get_category(), veh.base.get_id(), Tags.get_string(SUMO_TAG_E3DETECTOR), collector.base.base.get_id(), time2string(current_step()));
             }
             return false;
         }
