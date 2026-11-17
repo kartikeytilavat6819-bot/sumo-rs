@@ -1345,14 +1345,6 @@ impl MSLaneChangerSublane {
         }
         // @note use the exact same vehiclePos as in getLastVehicleInformation() to avoid missing vehicles
         tlane.m().add_leaders(ego, ego.get_position_on_lane_2(ego.get_lane()), &mut result, false);
-        if std::env::var_os("LC06_TRACE").is_some() {
-            for i in 0..result.num_sublanes() {
-                let (veh, dist) = result.index_op(i);
-                if !veh.is_null() {
-                    eprintln!("LT {} ego={} tl={} i={} veh={} vl={} gap={:.6}", MSNet::get_instance().get_current_time_step(), ego.get_id(), tlane.get_id(), i, veh.get_id(), veh.get_lane().get_id(), dist);
-                }
-            }
-        }
         result
     }
 
