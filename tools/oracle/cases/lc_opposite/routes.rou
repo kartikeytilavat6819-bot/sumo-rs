@@ -1,0 +1,29 @@
+<routes>
+    <vType id="slow" maxSpeed="6.00" lcOpposite="0.00"/>
+    <vType id="fast" maxSpeed="20.00" lcOpposite="1.00"/>
+    <vType id="oncoming" maxSpeed="15.00"/>
+    <vehicle id="slow0" type="slow" depart="0.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="on0" type="oncoming" depart="0.00" departSpeed="max">
+        <route edges="E1"/>
+    </vehicle>
+    <vehicle id="fast0" type="fast" depart="10.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="on1" type="oncoming" depart="20.00" departSpeed="max">
+        <route edges="E1"/>
+    </vehicle>
+    <vehicle id="slow1" type="slow" depart="30.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="on2" type="oncoming" depart="40.00" departSpeed="max">
+        <route edges="E1"/>
+    </vehicle>
+    <vehicle id="fast1" type="fast" depart="50.00" departSpeed="max">
+        <route edges="E0"/>
+    </vehicle>
+    <vehicle id="on3" type="oncoming" depart="60.00" departSpeed="max">
+        <route edges="E1"/>
+    </vehicle>
+</routes>

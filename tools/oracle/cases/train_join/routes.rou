@@ -1,0 +1,15 @@
+<routes>
+    <vType id="train" vClass="rail" maxSpeed="20.00" length="50.00"/>
+    <vType id="tram" vClass="rail_urban" maxSpeed="20.00" length="25.00"/>
+    <vehicle id="lead" type="train" depart="0.00" departSpeed="max">
+        <route edges="T0 T1"/>
+        <stop lane="T0_0" endPos="150.00" duration="30.00"/>
+    </vehicle>
+    <vehicle id="follow" type="train" depart="5.00" departSpeed="max">
+        <route edges="T0 T1"/>
+        <stop lane="T0_0" endPos="130.00" triggered="join" join="lead"/>
+    </vehicle>
+    <vehicle id="tram0" type="tram" depart="20.00" departSpeed="max">
+        <route edges="T0 T1"/>
+    </vehicle>
+</routes>

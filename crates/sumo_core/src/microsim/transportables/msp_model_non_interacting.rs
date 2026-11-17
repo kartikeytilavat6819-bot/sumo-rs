@@ -247,6 +247,7 @@ static MSPMODEL_NONINTERACTING_VT: MSPModelVt = MSPModelVt {
     get_active_number: noninteracting_vt_get_active_number,
     load_state: msp_model_default_load_state,
     has_pedestrians: msp_model_default_has_pedestrians,
+    blocked_at_dist: msp_model_default_blocked_at_dist,
     next_blocking: msp_model_default_next_blocking,
 };
 fn noninteracting_vt_add(m: &mut MSPModel, t: Ptr<MSTransportable>, s: Ptr<MSStageMoving>, now: SUMOTime) -> Ptr<MSTransportableStateAdapter> {

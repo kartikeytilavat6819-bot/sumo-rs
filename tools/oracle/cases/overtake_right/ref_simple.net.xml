@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T00:05:37.990841-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="overtake_right.nod.xml"/>
+        <edge-files value="overtake_right.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,800.00,0.00" origBoundary="0.00,0.00,800.00,0.00" projParameter="!"/>
+
+    <edge id="R0" from="o0" to="o1" priority="-1">
+        <lane id="R0_0" index="0" speed="33.33" length="800.00" shape="0.00,-8.00 800.00,-8.00"/>
+        <lane id="R0_1" index="1" speed="33.33" length="800.00" shape="0.00,-4.80 800.00,-4.80"/>
+        <lane id="R0_2" index="2" speed="33.33" length="800.00" shape="0.00,-1.60 800.00,-1.60"/>
+    </edge>
+
+    <junction id="o0" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-9.60"/>
+    <junction id="o1" type="dead_end" x="800.00" y="0.00" incLanes="R0_0 R0_1 R0_2" intLanes="" shape="800.00,-9.60 800.00,0.00"/>
+
+</net>
