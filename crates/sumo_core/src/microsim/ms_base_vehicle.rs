@@ -6087,9 +6087,21 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn init_transient_model_params(&mut self) {
-        // shortcut: the junction-model / carFollow-model transient parameter setup (MSBaseVehicle.cpp:2725)
-        // depends on SUMOVehicleParameter::getParameter and the model setters, which are not ported yet
-        let _ = self.myParameter.parametersSet;
+        // Design idea for additional junction model parameters:
+        // 1. typically shared by multiple vehicles -> vType parameter
+        // 2. specific to one vehicle but stays constant throughout the simulation -> vehicle parameter
+        // 3. specific to one vehicle and expected to change during simulation -> prefixed generic vehicle parameter
+        let items: Vec<(String, String)> = self.get_parameter().get_parameters_map().iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+        for (key, value) in items {
+            if utils::common::string_utils::starts_with(&key, "junctionModel.") {
+                self.set_junction_model_parameter(&key, &value);
+            } else if utils::common::string_utils::starts_with(&key, "carFollowModel.") {
+                if let Err(e) = self.set_car_follow_model_parameter(&key, &value) {
+                    std::panic::panic_any(e);
+                }
+            }
+        }
+        // shortcut: the device.rerouting.mode -> setRoutingMode part of MSBaseVehicle::initTransientModelParams is not ported, upgrade with the rerouting device
     }
 
     /// C++: `std::string MSBaseVehicle::getFlowID() const` [const, private]

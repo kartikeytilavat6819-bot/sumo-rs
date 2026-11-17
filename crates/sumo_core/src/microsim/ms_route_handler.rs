@@ -78,7 +78,9 @@ fn exception_what(payload: &Box<dyn std::any::Any + Send>) -> String {
 
 /// C++ `MSRouteHandler` lookup `MSRoute::dictionary(id, &myParsingRNG)` that yields nullptr when unknown
 fn lookup_route(id: &str) -> Option<ConstMSRoutePtr> {
-    if MSRoute::has_route(id) { Some(MSRoute::dictionary_3(id, SUMORouteHandler::get_parsing_rng())) } else { None }
+    let dist = MSRoute::dist_dictionary(id);
+    let known = MSRoute::has_route(id) || (!dist.is_null() && dist.get_overall_prob() != 0.0);
+    if known { Some(MSRoute::dictionary_3(id, SUMORouteHandler::get_parsing_rng())) } else { None }
 }
 
 /// C++ MapMatcher::parseGeoEdges (protected member of the MapMatcher base class)
