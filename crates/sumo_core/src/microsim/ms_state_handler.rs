@@ -1064,11 +1064,14 @@ impl MSStateHandler {
             if v.is_null() {
                 panic!("{}", ProcessError::new(format!("Could not load vehicle '{}' from state", vehID)));
             }
-            if deviceNames.iter().any(|d| d == "person" || d == "container") {
-                // shortcut: MSBaseVehicle::initTransportableDevice is a stub (buildVehicleDevices not wired in ms_base_vehicle.rs), upgrade when it creates myPersonDevice/myContainerDevice
-                panic!("shortcut: transportable devices in loaded state are not ported");
-            }
             let base: Ptr<MSBaseVehicle> = v.cast::<MSBaseVehicle>();
+            // special case: transportable devices are not assigned by options
+            if deviceNames.iter().any(|d| d == "person") {
+                base.m().init_transportable_device(true);
+            }
+            if deviceNames.iter().any(|d| d == "container") {
+                base.m().init_transportable_device(false);
+            }
             base.m().myParameter.m().unset_parameter(crate::microsim::devices::ms_device::LOADSTATE_DEVICENAMES);
             let attrs: &SUMOSAXAttributes = &*self.myAttrs;
             base.m().set_chosen_speed_factor(attrs.get_float(SUMO_ATTR_SPEEDFACTOR).unwrap_or_else(|e| panic!("{e}")));
