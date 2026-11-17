@@ -15,6 +15,12 @@ else sed 's/\r$//' "$2" > "$PATCH"; fi
 D=/home/gate/cpp-$ID
 [ -d /home/gate/sumo-cpp/bin ] || { echo "vm_cpp_trace: no C++ tree on this VM" >&2; exit 1; }
 exec 8>/home/gate/cpp-$ID.lock; flock 8
+touch /home/gate/cpp-$ID.lock
+# each copy is ~2.2 GB and filled the disk: drop copies whose agent has not used them for 4 h
+for l in /home/gate/cpp-*.lock; do
+  [ "$l" = "/home/gate/cpp-$ID.lock" ] && continue
+  [ -n "$(find "$l" -mmin +240 2>/dev/null)" ] && rm -rf "${l%.lock}" "$l"
+done
 # a copied build dir keeps the original's absolute paths and would rebuild /home/gate/sumo-cpp: configure our own
 if [ ! -f "$D/build/CMakeCache.txt" ] || ! grep -q "CMAKE_HOME_DIRECTORY:INTERNAL=$D\$" "$D/build/CMakeCache.txt"; then
   rm -rf "$D"; mkdir -p "$D"
