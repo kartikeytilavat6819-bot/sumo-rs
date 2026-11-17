@@ -25,12 +25,18 @@ printf 'output\tcase\tverdict\tref_rc\tcand_rc\tdetail\n' >> "$RESULTS"
 row() {
   local c=$1 name=$2 file=$3; shift 3
   local extra="$*"
+  if [ -n "${ONLY_OUT:-}" ] && [ "$name" != "$ONLY_OUT" ]; then return 0; fi
   local sub=$OUT/$c/$name dr dc
   dr=$sub/ref; dc=$sub/cand
   rm -rf "$sub"; mkdir -p "$dr" "$dc"
   if [ "$name" = edgedata ]; then
     for d in "$dr" "$dc"; do
       printf '%s\n' '<additional>' '    <edgeData id="ed" freq="60" file="edge.xml"/>' '</additional>' > "$d/edgedata.add.xml"
+    done
+  fi
+  if [ "$name" = e3 ]; then
+    for d in "$dr" "$dc"; do
+      printf '%s\n' '<additional>' '    <e3Detector id="e3" freq="60" file="e3.xml">' '        <detEntry lane="1117867028_0" pos="0.1"/>' '        <detExit lane="1117867029#1_0" pos="0.1"/>' '    </e3Detector>' '</additional>' > "$d/e3.add.xml"
     done
   fi
   local sim base cdir=tools/oracle/cases/$c
@@ -114,6 +120,7 @@ for c in $CASES; do
   row "$c" person person.xml --person-summary-output @DIR@/person.xml
   if [ "$c" = stress ]; then
     row "$c" collision collision.xml --collision-output @DIR@/collision.xml --collision.action warn --collision.mingap-factor 10
+    row "$c" e3 e3.xml --additional-files @DIR@/e3.add.xml
   fi
 done
 echo "results: $RESULTS"

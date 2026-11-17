@@ -1,0 +1,15 @@
+<routes>
+    <!-- a burst of vehicles on one lane at the same and at fractional depart times (between simulation steps),
+         plus a flow with period 0.5 s: insertion order, delays and depart positions depend on the insertion options -->
+    <vType id="vB" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="D"/>
+    <vehicle id="b0" type="vB" route="r0" depart="5.00" departSpeed="max"/>
+    <vehicle id="b1" type="vB" route="r0" depart="5.00" departSpeed="max"/>
+    <vehicle id="b2" type="vB" route="r0" depart="5.00" departSpeed="max"/>
+    <vehicle id="b3" type="vB" route="r0" depart="5.00" departSpeed="max"/>
+    <vehicle id="b4" type="vB" route="r0" depart="5.25" departSpeed="max"/>
+    <vehicle id="b5" type="vB" route="r0" depart="5.25" departSpeed="max" departPos="0.00"/>
+    <vehicle id="b6" type="vB" route="r0" depart="8.40" departSpeed="max"/>
+    <vehicle id="b7" type="vB" route="r0" depart="8.40" departSpeed="max" departPos="2.00"/>
+    <flow id="fl" type="vB" route="r0" begin="10.00" end="30.00" period="0.50" departSpeed="max"/>
+</routes>
