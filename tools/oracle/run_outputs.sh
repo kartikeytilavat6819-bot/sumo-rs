@@ -34,6 +34,16 @@ row() {
       printf '%s\n' '<additional>' '    <edgeData id="ed" freq="60" file="edge.xml"/>' '</additional>' > "$d/edgedata.add.xml"
     done
   fi
+  if [ "$name" = fcd_filter_edges ]; then
+    for d in "$dr" "$dc"; do
+      printf '%s\n' '1117867028' '1117867029#0' > "$d/filter.txt"
+    done
+  fi
+  if [ "$name" = vtype_probe ]; then
+    for d in "$dr" "$dc"; do
+      printf '%s\n' '<additional>' '    <vTypeProbe id="vp" type="DEFAULT_VEHTYPE" freq="60" file="vtype.xml"/>' '</additional>' > "$d/vtypeprobe.add.xml"
+    done
+  fi
   if [ "$name" = e3 ]; then
     for d in "$dr" "$dc"; do
       printf '%s\n' '<additional>' '    <e3Detector id="e3" freq="60" file="e3.xml">' '        <detEntry lane="1117867028_0" pos="0.1"/>' '        <detExit lane="1117867029#1_0" pos="0.1"/>' '    </e3Detector>' '</additional>' > "$d/e3.add.xml"
@@ -41,7 +51,7 @@ row() {
   fi
   local sim base cdir=tools/oracle/cases/$c
   sim=$(cat "$cdir/sim.args" 2>/dev/null)
-  base="-n $cdir/ref_simple.net.xml -r $cdir/routes.rou $sim"
+  base="-n $cdir/${NETF:-ref_simple.net.xml} -r $cdir/routes.rou $sim"
   local rargs=${extra//@DIR@//mnt/c${dr#/c}}
   local cargs=${extra//@DIR@/$dc}
   local rrc=0 try missing=0
@@ -104,6 +114,12 @@ for c in $CASES; do
     row "$c" stopout stopout.xml --stop-output @DIR@/stopout.xml
     row "$c" stopout_unfinished stopout.xml --stop-output @DIR@/stopout.xml --stop-output.write-unfinished true
     continue
+  fi
+  if [ "$c" = real ]; then
+    NETF=ref_utm.net.xml row "$c" fcd_geo fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.geo true
+    row "$c" fcd_attributes fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.attributes speed,angle,pos,lane
+    row "$c" fcd_filter_edges fcd.xml --fcd-output @DIR@/fcd.xml --fcd-output.filter-edges.input-file @DIR@/filter.txt
+    row "$c" vtype_probe vtype.xml --additional-files @DIR@/vtypeprobe.add.xml
   fi
   row "$c" summary summary.xml --summary-output @DIR@/summary.xml
   row "$c" queue queue.xml --queue-output @DIR@/queue.xml
