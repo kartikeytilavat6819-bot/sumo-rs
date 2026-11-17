@@ -20,6 +20,8 @@ if [ -f "$res" ]; then
     c=${cv%%/*}; t=${cv#*/}
     echo "== load $cv"; tail -4 "$STATE_OUT/$c/$t.load.txt" 2>/dev/null | cut -c1-240
     grep -hE 'WARN|rror|panicked' "$STATE_OUT/$c/$t.load_ours.log" 2>/dev/null | head -6 | cut -c1-240
+    echo "ours log tail:"; tail -3 "$STATE_OUT/$c/$t.load_ours.log" 2>/dev/null | cut -c1-240
+    echo "lines ours=$(wc -l < "$STATE_OUT/$c/$t.load_ours.ti.xml" 2>/dev/null) pristine=$(wc -l < "$STATE_OUT/$c/$t.load_pristine.ti.xml" 2>/dev/null)"
   done
 else
   tail -20 /tmp/sl07_state_run.txt | cut -c1-260
