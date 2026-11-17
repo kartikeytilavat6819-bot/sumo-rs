@@ -5,7 +5,7 @@ use utils::common::std_defs::{g_routing_preferences, set_g_routing_preferences, 
 use utils::common::time::{delta_t, elapsed_ms2string, steps2time, string2time, time2string, ts};
 use utils::common::to_string::f64_to_string_default;
 use utils::geom::POSITION_EPS;
-use utils::common::sumo_vehicle_class::SVC_BICYCLE;
+use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_PEDESTRIAN, SVC_TAXI};
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_set};
 use utils::common::msg_handler::write_message;
 use utils::common::sys_utils::get_current_millis;
@@ -3439,9 +3439,36 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn adapt_intermodal_router(router: &mut MSTransportableRouter) {
-        // shortcut: the access/stop registration for the intermodal router needs MSTransportableRouter's network API, which is not ported yet
-        let _ = router;
-        let _ = MSNet::get_instance();
+        let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&get_string("persontrip.taxi.waiting-time")).unwrap());
+        // add access to all parking areas
+        let external: Ptr<EffortCalculator> = router.get_external_effort();
+        let me = MSNet::get_instance();
+        for (element, stops) in me.m().myStoppingPlaces.iter() {
+            // add access to all stopping places
+            let element = *element;
+            for (id, stop) in stops.iter() {
+                router.get_network().m().add_access(id, Ptr::from_mut(stop.m().get_lane().get_edge()), stop.m().get_begin_lane_position(), stop.m().get_end_lane_position(), 0., element, false, taxiWait);
+                if element == SUMO_TAG_BUS_STOP {
+                    // add access to all public transport stops
+                    for a in stop.m().get_all_access_pos().iter() {
+                        router.get_network().m().add_access(id, Ptr::from_mut(a.lane.m().get_edge()), a.startPos, a.endPos, a.length, element, true, taxiWait);
+                    }
+                    if !external.is_null() {
+                        external.m().add_stop(router.get_network().m().get_stop_edge(id).m().get_numerical_id(), &stop.m().base2);
+                    }
+                }
+            }
+        }
+        me.m().get_insertion_control().adapt_intermodal_router(router);
+        me.m().get_vehicle_control().adapt_intermodal_router(router);
+        // add access to transfer from walking to taxi-use
+        if (router.get_car_walk_transfer() & ModeChangeOptions::TAXI_PICKUP_ANYWHERE as i32) != 0 {
+            for edge in me.m().get_edge_control().get_edges().iter() {
+                if (edge.m().get_permissions() & SVC_PEDESTRIAN) != 0 && (edge.m().get_permissions() & SVC_TAXI) != 0 {
+                    router.get_network().m().add_car_access(*edge, SVC_TAXI, taxiWait);
+                }
+            }
+        }
     }
 
     /// C++: `bool MSNet::hasInternalLinks() const` [const]

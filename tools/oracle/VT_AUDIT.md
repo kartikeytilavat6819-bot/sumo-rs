@@ -49,6 +49,7 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MSRouteProbe | notifyEnter | FIXED (table added on top of main; offset_of back-cast since base2 is not first) |
 | MSCalibrator::VehicleRemover | notifyEnter, notifyLeave | FIXED (table added on top of main) |
 | MSRailSignalConstraint::PassedTracker | notifyEnter | FIXED (table added on top of main) |
+| MSDevice_Routing | notifyEnter, notifyStopEnded | FIXED (notifyStopEnded was missing: installed in MS_DEVICE_ROUTING_MSMOVE_REMINDER_IDLE_VT, set as `idle_vt`) |
 | MSDevice_FCD | notifyEnter (returns false: reminder is dropped) | MAIN (MS_MOVE_REMINDER_VT, new_device) |
 | MSDevice_Tripinfo | notifyEnter, notifyMove, notifyLeave | PASS |
 | MSDevice_BTsender / BTreceiver / Routing / GLOSA / ElecHybrid / Friction / Example / Bluelight / Battery / SSM / StationFinder / Taxi / ToC / Vehroutes / Emissions | device overrides | MAIN (each installs its own table or MS_MOVE_REMINDER_VT) |
@@ -69,6 +70,26 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MSDeterministicHiLevelTrafficLightLogic | init | MAIN |
 | MSSOTLPhase / PolicyBased / Wave | no own overrides; inherit SOTL table | MAIN |
 | NEMALogic | init, trySwitch, getCurrentPhaseDef, resetLastSwitch, getDetectorStates | MAIN (NEMA_LOGIC_VT) |
+| MSRailSignal (ext table) | getRivalVehicles, getPriorityVehicles, getBlockingDriveWays, getRequestedDriveWay | FIXED: base queries went to the base no-op (libsumo `trafficlight.getRivalVehicles`). Now `MSTrafficLightLogicExtVt` via `ext_vt` (base field, default installed in `new`) |
+| MSDelayBasedTrafficLightLogic (ext table) | getDetectorState, getTLQueueLength | FIXED: GLOSA's `get_tl_queue_length` on the base type ignored the override |
+| MSActuatedTrafficLightLogic | getMinDur, getMaxDur, getEarliestEnd, getLatestEnd, getDetectorState, activate/deactivateProgram, loadExtraState, get/setParameter | GAP, tl01 owns: overrides exist as inherent methods, not in any table |
+| MSSimpleTrafficLightLogic, MSRailSignal, NEMALogic | get/setParameter | GAP, not fixed: `Parameterised` has no table, so base `set_parameter`/`get_parameter` do not reach overrides |
+| NEMALogic | activateProgram, deactivateProgram | GAP, not fixed: needs base table slots (same pattern as the rows above) |
+
+## Routers (`SUMOAbstractRouter` slots: `myCompute`, `myProhibit`, `mySupportsProhibitions`, `myReset`, `mySetBulkMode`)
+
+| Class | Overrides | Status |
+|---|---|---|
+| DijkstraRouter | compute | FIXED: the three MARouter constructions never installed compute (base compute panicked); now `.with_compute()` |
+| CHRouter | compute, prohibit, supportsProhibitions, reset | FIXED: reset slot added (`ch_reset`); `clone()` now installs its slots (cloned routers panicked on compute) |
+| CHRouterWrapper | compute, prohibit, supportsProhibitions | FIXED: `clone()` installs slots |
+| AStarRouter | compute | FIXED: `clone()` installs compute |
+| RailwayRouter | compute, setBulkMode | FIXED: setBulkMode slot added (`railway_set_bulk_mode`) |
+| IntermodalRouter, PedestrianRouter | none virtual on base | explicit base calls renamed to `set_bulk_mode_base` |
+| CCHRouter | reset, setBulkMode | GAP, not wired: no slot installed (`CCHRouter::new` has no callers outside its file). Explicit base call renamed to `set_bulk_mode_base`, so a future slot cannot recurse |
+| AFRouter | reset, setBulkMode | GAP, not wired: no slot installed (no constructor callers outside its file) |
+| Node2EdgeRouter (derives AStarRouter) | reset, setBulkMode | GAP, not wired: `Node2EdgeRouter::new` never installs compute, reached only from AF builder |
+| MARouter `router->reset(&defaultVehicle)` | CH reset via base | GAP: MARouter only builds Dijkstra (CH/astar/CCH panic with shortcut), so no-op is correct today |
 
 ## Lane change models (`MSAbstractLaneChangeModelVt`)
 
@@ -96,6 +117,8 @@ MAIN = already wired on main (merged in, verified by grep of main); OPEN = gap l
 | MS_ROUTE_HANDLER_VT (MSRouteHandler) | PASS: all 25 slots set; closeVehicle/addTransportable/getVTypeParameter overrides present |
 | MS_STATE_HANDLER_VT (MSStateHandler) | PASS: its only override in C++ is closeVehicle; inherits the MS table |
 | RO_ROUTE_HANDLER_VT (RORouteHandler) | PASS: all 25 slots; addTransportable stays on the base no-op, which matches C++ `SUMORouteHandler::addTransportable` (empty body). checkLastDepart override is an inherent method, and no base-class code calls it, so no dispatch gap |
+| RORouteHandler myStartElement / myEndElement | GAP, not fixed: no `impl SaxHandler for RORouteHandler`, so the SAX path (SUMORouteHandler's trait impl) can never reach `RORouteHandler::my_start_element`. ro_loader.rs has the matching shortcut ("RORouteHandler is not a SaxHandler yet"). Upgrade with the ROLoader run path |
+| SUMORouteHandler `start_element_override` | PASS for MSRouteHandler (`ms_my_start_element`, set in its constructor). The field is an optional hook, so any subclass that needs `myStartElement` must set it or implement SaxHandler |
 
 ## NBTrafficLightDefinition (`NBTrafficLightDefinitionVt`)
 

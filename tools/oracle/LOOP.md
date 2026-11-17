@@ -51,18 +51,22 @@ A panic is reported as `sim-PANIC` with the first message line.
 
 ## Known failing rows and their owners
 
-Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at `8093db8c`:
-**PASS=151 FAIL=5 SKIP=18; depart 15/15; unit tests ok.** Only these five rows fail — everything
-previously listed is fixed and must not be re-investigated. All five fail at the sim stage; their
-net stages PASS.
+Measured by the VM gate (`tools/gcloud/vm_gate.ps1`) on main at `933e39f6`:
+**PASS=271 FAIL=9 SKIP=26; depart 15/15; unit tests ok.** Only these nine rows fail — everything
+previously listed is fixed and must not be re-investigated. All nine fail at the sim stage; their
+net stages PASS. Full verdicts and SKIP reasons: `SCOREBOARD.md`.
 
 | Row | Owner |
 |---|---|
-| city_london_lh/ref sim | in01 (fix being merged) |
-| city_kansas_rural/ref sim | ck01 |
-| city_karlsruhe_tram/ref sim | ck02 |
-| city_paris_dense/ref sim | cb01 |
-| city_tokyo_lefthand/ref sim | cb01 |
+| busride/ref sim (panic: no connection E1 → bs0) | pt02 |
+| city_paris_etoile/ref sim (arrivalSpeed) | rb02 |
+| city_portland_actuated/ref sim (arrivalSpeed) | tl01 |
+| containers/ref sim (panic msp_model) | rc01 |
+| rerouter_parking/ref sim (panic ms_stopping_place) | rc01 |
+| taxi/ref sim (panic ms_device_taxi) | tx01 |
+| taxi/ref_closest sim (panic ms_device_taxi) | tx01 |
+| tls_actuated_loops/ref sim (arrival) | tl01 |
+| tls_waut/ref sim (arrival) | tl01 |
 
 Fixed since the table below was written, do **not** reopen:
 
