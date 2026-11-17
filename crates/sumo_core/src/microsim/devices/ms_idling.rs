@@ -313,6 +313,7 @@ impl MSIdling_Stop {
         let now = MSNet::get_instance().m().get_current_time_step();
         let veh: &mut SUMOVehicle = taxi.get_holder();
         let vehB: Ptr<MSBaseVehicle> = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+        eprintln!("TX01 idle t={} hasStops={}", now, vehB.has_stops()); // tx01-trace
         if !vehB.has_stops() {
             let mut errorOut = String::new();
             let mut brakeGap = 0.0;

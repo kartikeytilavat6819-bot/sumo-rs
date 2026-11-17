@@ -1,18 +1,13 @@
 #!/bin/bash
-# tx01 trace: taxi0 FCD per second 164..180, ref vs ours (temporary, removed before merge)
+# tx01 trace: taxi0 stop-end window 166..177 (temporary, removed before merge)
 cd tools/oracle/cases/taxi || exit 1
 BIN="$CARGO_TARGET_DIR/debug"
 OUT=/tmp/tx01
 mkdir -p "$OUT"
 RUST_BACKTRACE=1 "$BIN/sumo.exe" -n ref_simple.net.xml -r routes.rou \
-  --tripinfo-output "$OUT/ref.ti.xml" --fcd-output "$OUT/ref.fcd.xml" \
-  --statistic-output "$OUT/ref.stat.xml" --no-step-log true $(cat sim.args) >"$OUT/ref.log" 2>&1
+  --tripinfo-output "$OUT/ours.ti.xml" --fcd-output "$OUT/ours.fcd.xml" \
+  --statistic-output "$OUT/ours.stat.xml" --no-step-log true $(cat sim.args) >"$OUT/ours.log" 2>&1
 echo "== exit=$?"
-for f in ref.fcd.xml "$OUT/ref.fcd.xml"; do
-  echo "-- $f"
-  awk -F'"' '/<timestep/{t=$2} /<vehicle id="taxi0"/{ if (t>=164 && t<=180) print "t=" t, $0 }' "$f" | cut -c1-150
-done
-echo "-- ours tripinfo"
-grep -E 'taxi0|personinfo id="p0"' "$OUT/ref.ti.xml" | cut -c1-200
-echo "-- ours log"
-grep -v '^$' "$OUT/ref.log" | head -20
+grep -E 'TX01 .* t=(16[6-9]|17[0-7]) ' "$OUT/ours.log" | grep 'taxi0\|veh=taxi0\|idle' | head -80
+echo "-- tripinfo taxi0"
+grep 'tripinfo id="taxi0"' "$OUT/ours.ti.xml" | cut -c1-220

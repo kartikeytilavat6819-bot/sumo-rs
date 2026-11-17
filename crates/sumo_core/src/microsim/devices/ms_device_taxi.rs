@@ -1980,6 +1980,7 @@ impl MSDevice_Taxi {
     pub fn update_move(&mut self, traveltime: SUMOTime, travelledDist: f64) {
         let holderPtr = self.myHolder;
         let holder = holderPtr.m();
+        eprintln!("TX01 upd t={} veh={} empty={} stops={} stopped={} pos={}", MSNet::get_instance().get_current_time_step(), holder.get_id(), self.is_empty(), holder.get_stops().len(), holder.is_stopped(), holder.get_position_on_lane()); // tx01-trace
         if holder.get_person_number() > 0 || holder.get_container_number() > 0 {
             self.myOccupiedDistance += travelledDist;
             self.myOccupiedTime += traveltime;

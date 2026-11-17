@@ -3303,6 +3303,7 @@ impl MSLane {
             let length = veh.get_vehicle_type().get_length_with_gap();
             let nettoLength = veh.get_vehicle_type().get_length();
             let moved = veh.m().execute_move();
+            eprintln!("TX01 move t={} veh={} arrived={} speed={} stops={}", MSNet::get_instance().get_current_time_step(), veh.get_id(), veh.m().has_arrived(), veh.get_speed(), veh.m().get_stops().len()); // tx01-trace
             let target = veh.get_mutable_lane();
             // true when C++ falls through to the length bookkeeping and erase; false for the `continue` branches
             let removed: bool = if veh.has_arrived() {
