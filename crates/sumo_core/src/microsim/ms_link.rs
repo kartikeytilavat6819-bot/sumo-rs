@@ -1426,7 +1426,6 @@ impl MSLink {
         }
         // emplace does not overwrite an existing entry
         self.myApproachingPersons.m().entry(approaching).or_insert(MSLink_ApproachingPersonInformation::new(arrivalTime, leaveTime));
-        println!("TRACE t={} ev=REG link={} person={} arr={} leave={}", MSNet::get_instance().get_current_time_step(), self.get_via_lane_or_lane().get_id(), approaching.get_id(), arrivalTime, leaveTime);
     }
 
     /// C++: `void MSLink::removeApproaching(const SUMOVehicle *)`
@@ -1478,7 +1477,6 @@ impl MSLink {
             return;
         }
         self.myApproachingPersons.m().remove(&person);
-        println!("TRACE t={} ev=UNREG link={} person={} n={}", MSNet::get_instance().get_current_time_step(), self.get_via_lane_or_lane().get_id(), person.get_id(), self.myApproachingPersons.len());
     }
 
     /// C++: `ApproachingVehicleInformation MSLink::getApproaching(const SUMOVehicle *) const` [const]
@@ -2629,9 +2627,6 @@ impl MSLink {
         if !ego.is_null() && (!self.from_internal_lane() || ego.get_lane_change_model_2().is_opposite()) {
             return result;
         }
-        if !ego.is_null() && ego.get_id().to_string() == "car12" {
-            println!("TRACE t={} ev=GLI link={} dist={} nfoe={} persons={}", MSNet::get_instance().get_current_time_step(), self.get_via_lane_or_lane().get_id(), (dist * 1000.) as i64, self.myFoeLanes.len(), MSNet::get_instance().has_persons() as i32);
-        }
         if g_compute_lc() && !ego.is_null() && ego.get_lane().is_normal() {
             let junctionEntry = self.get_lane_before().get_entry_link();
             if junctionEntry.have_red() && !ego.ignore_red(junctionEntry, true) && (!g_compute_lc() || junctionEntry.get_lane_before().get_bidi_lane().is_null()) {
@@ -2796,10 +2791,6 @@ impl MSLink {
                 let vehWidth = ego.get_vehicle_type().get_width() + MSPMODEL_SAFETY_GAP;
                 let wayIn = self.myConflicts[i].lengthBehindCrossing < self.myLaneBefore.get_length() * 0.5;
                 let vehCenter = foeDistToCrossing + self.myLaneBefore.get_width() * 0.5 + ego.get_lateral_position_on_lane() * (if wayIn { -1. } else { 1. });
-                if ego.get_id().to_string() == "car12" {
-                    let napp: i64 = if foeLane.is_crossing() && !foeLane.get_incoming_lanes()[0].viaLink.myApproachingPersons.is_null() { foeLane.get_incoming_lanes()[0].viaLink.myApproachingPersons.len() as i64 } else { -1 };
-                    println!("TRACE t={} ev=PBLK link={} foe={} dtc={} dtp={} crossing={} internal={} napp={}", MSNet::get_instance().get_current_time_step(), self.get_via_lane_or_lane().get_id(), foeLane.get_id(), (distToCrossing * 1000.) as i64, (distToPeds * 1000.) as i64, foeLane.is_crossing() as i32, ego.get_lane().is_internal() as i32, napp);
-                }
                 // C++ short-circuits: blockedAtDist is only called when distToPeds >= -SAFETY_GAP
                 let blocked = if distToPeds >= -MSPMODEL_SAFETY_GAP {
                     let movementModel = MSNet::get_instance().m().get_person_control().get_movement_model();
@@ -3850,7 +3841,6 @@ impl MSLink {
                         continue;
                     }
                     distToPeds = min2(distToPeds, dist);
-                    if ego.get_id().to_string() == "car12" { println!("TRACE t={} ev=CWAF foe={} ped={} dist={} inFront={}", MSNet::get_instance().get_current_time_step(), foeLane.get_id(), p.get_id(), (dist * 1000.) as i64, inFront as i32); }
                     if !collectBlockers.is_null() {
                         collectBlockers.m().push(p);
                     }
