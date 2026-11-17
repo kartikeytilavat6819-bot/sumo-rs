@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:06:40.702964-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/cv_rerouter_prob/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/cv_rerouter_prob/routes.rou"/>
+        <additional-files value="tools/oracle/cases/cv_rerouter_prob/cv_rerouter_prob.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv02/tools/oracle/cases/cv_rerouter_prob/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv02/tools/oracle/cases/cv_rerouter_prob/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv02/tools/oracle/cases/cv_rerouter_prob/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794935200.71" clockEnd="1794935201.11" clockDuration="0.40" traciDuration="0.00" realTimeFactor="1002.51" vehicleUpdatesPerSecond="26147.87" personUpdatesPerSecond="0.00" begin="0.00" end="400.00" duration="400.00"/>
+    <vehicles loaded="91" inserted="91" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="0" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="91" routeLength="913.83" speed="8.49" duration="114.65" waitingTime="27.89" timeLoss="48.03" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="10433.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="0" routeLength="0.00" duration="0.00" timeLoss="0.00"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

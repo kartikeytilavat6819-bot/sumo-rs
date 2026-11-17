@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:05:59.998385-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/cv_teleport_remove/cv_teleport_remove.nod.xml"/>
+        <edge-files value="tools/oracle/cases/cv_teleport_remove/cv_teleport_remove.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/cv_teleport_remove/ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,900.00,0.00" origBoundary="0.00,0.00,900.00,0.00" projParameter="!"/>
+
+    <edge id=":n1_0" function="internal">
+        <lane id=":n1_0_0" index="0" speed="13.89" length="0.10" shape="300.00,-1.60 300.00,-1.60"/>
+    </edge>
+
+    <edge id="E0" from="n0" to="n1" priority="-1">
+        <lane id="E0_0" index="0" speed="13.89" length="300.00" shape="0.00,-1.60 300.00,-1.60"/>
+    </edge>
+    <edge id="E1" from="n1" to="n2" priority="-1">
+        <lane id="E1_0" index="0" speed="13.89" length="298.50" shape="300.00,-1.60 598.50,-1.60"/>
+    </edge>
+    <edge id="X" from="n3" to="n2" priority="-1">
+        <lane id="X_0" index="0" speed="13.89" length="298.50" shape="900.00,1.60 601.50,1.60"/>
+    </edge>
+
+    <junction id="n0" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-3.20"/>
+    <junction id="n1" type="priority" x="300.00" y="0.00" incLanes="E0_0" intLanes=":n1_0_0" shape="300.00,0.00 300.00,-3.20 300.00,0.00">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="n2" type="dead_end" x="600.00" y="0.00" incLanes="X_0 E1_0" intLanes="" shape="601.50,3.20 601.50,0.00 598.50,-3.20 598.50,0.00"/>
+    <junction id="n3" type="dead_end" x="900.00" y="0.00" incLanes="" intLanes="" shape="900.00,0.00 900.00,3.20"/>
+
+    <connection from="E0" to="E1" fromLane="0" toLane="0" via=":n1_0_0" dir="s" state="M"/>
+
+    <connection from=":n1_0" to="E1" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

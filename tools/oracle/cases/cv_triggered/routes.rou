@@ -1,0 +1,27 @@
+<routes>
+    <vehicle id="t0" depart="triggered" departPos="50">
+        <route edges="E1 E2"/>
+    </vehicle>
+    <person id="p1" depart="0" departPos="200">
+        <walk edges="E0 E1" arrivalPos="120"/>
+        <ride from="E1" to="E2" lines="v1"/>
+    </person>
+    <person id="p3" depart="0" departPos="20">
+        <walk edges="E2" arrivalPos="100"/>
+        <ride from="E2" to="E2" lines="v3"/>
+    </person>
+    <vehicle id="v1" depart="0">
+        <route edges="E0 E1 E2"/>
+        <stop edge="E1" endPos="120" triggered="person" expected="p1" duration="2"/>
+    </vehicle>
+    <vehicle id="v2" depart="3">
+        <route edges="E0 E1 E2"/>
+    </vehicle>
+    <person id="p0" depart="5" departPos="50">
+        <ride from="E1" to="E2" lines="t0"/>
+    </person>
+    <vehicle id="v3" depart="10">
+        <route edges="E0 E1 E2"/>
+        <stop edge="E2" endPos="100" triggered="person" duration="1"/>
+    </vehicle>
+</routes>
