@@ -1,26 +1,29 @@
 #!/usr/bin/env bash
 # TEMPORARY (tr04): TraCI vehicle/TL setter probes on the VM. Remove in the final commit.
+# The gate kills this script after 600 s, so the probes run as 4 parallel shards (2 cases x 2 halves).
 set -u
 VENV=/tmp/tr04venv
 if [ ! -x "$VENV/bin/python" ]; then
   python3 -m venv "$VENV" || echo "VENV CREATE FAILED"
   "$VENV/bin/pip" install -q traci 2>&1 | tail -n 5
 fi
-echo "venv python: $(ls -l $VENV/bin/python 2>&1)"
-echo "traci: $("$VENV/bin/python" -c 'import traci; print(traci.__file__)' 2>&1 | tail -n 2)"
 export SUMO_HOME="${SUMO_HOME:-$SUMO_PRISTINE_BIN/../lib/python3.12/site-packages/sumo}"
 OURS="${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo"
-echo "ours: $(ls -l $OURS 2>&1)"
 i=0
 for c in signal junction; do
-  "$VENV/bin/python" tools/oracle/cases/traci_basic/client.py --case $c --ours "$OURS" --port $((9900 + i * 400)) --filter "dom " > /tmp/tr04_$c.log 2>&1 &
-  i=$((i + 1))
+  for s in 0 1; do
+    "$VENV/bin/python" tools/oracle/cases/traci_basic/client.py --case $c --ours "$OURS" \
+      --port $((9900 + i * 200)) --shard $s/2 --filter "dom " > /tmp/tr04_${c}_$s.log 2>&1 &
+    i=$((i + 1))
+  done
 done
 wait
 for c in signal junction; do
-  echo "== $c"
-  grep -E "MATCH|DIFF|match|TOTAL" /tmp/tr04_$c.log | tail -n 400
-  echo "-- raw tail $c"
-  tail -n 15 /tmp/tr04_$c.log
+  for s in 0 1; do
+    echo "== $c shard $s"
+    echo "MATCH rows: $(grep -c ' MATCH$' /tmp/tr04_${c}_$s.log)"
+    grep -E " DIFF$|match$" /tmp/tr04_${c}_$s.log | cut -c1-260
+    grep -aE "Traceback|Error:" /tmp/tr04_${c}_$s.log | tail -n 3
+  done
 done
 echo "AGENT RUN DONE"
