@@ -1,8 +1,8 @@
 diff --git a/src/microsim/MSLaneChangerSublane.cpp b/src/microsim/MSLaneChangerSublane.cpp
-index 41e69ee..e77560e 100644
+index 41e69ee..2eeb9e8 100644
 --- a/src/microsim/MSLaneChangerSublane.cpp
 +++ b/src/microsim/MSLaneChangerSublane.cpp
-@@ -34,6 +34,19 @@
+@@ -34,6 +34,20 @@
  #include <microsim/lcmodels/MSAbstractLaneChangeModel.h>
  #include <utils/common/MsgHandler.h>
  #include <utils/geom/GeomHelper.h>
@@ -10,7 +10,8 @@ index 41e69ee..e77560e 100644
 +#include <cstdio>
 +static bool lcOn(const MSVehicle* v) {
 +    static const char* t = std::getenv("LCTRACE_ID");
-+    return t != nullptr && v->getID() == t;
++    static const char* t2 = std::getenv("LCTRACE_ID2");
++    return (t != nullptr && v->getID() == t) || (t2 != nullptr && v->getID() == t2);
 +}
 +static std::string lcBits(double d) {
 +    unsigned long long u;
@@ -22,7 +23,7 @@ index 41e69ee..e77560e 100644
  
  
  // ===========================================================================
-@@ -117,6 +130,13 @@ MSLaneChangerSublane::change() {
+@@ -117,6 +131,13 @@ MSLaneChangerSublane::change() {
      myCandi = findCandidate();
      MSVehicle* vehicle = veh(myCandi);
      vehicle->getLaneChangeModel().clearNeighbors();
@@ -36,7 +37,7 @@ index 41e69ee..e77560e 100644
  #ifdef DEBUG_ACTIONSTEPS
      if (DEBUG_COND) {
          std::cout << "\n" << SIMTIME << " CHANGE veh=" << vehicle->getID() << " lane=" << vehicle->getLane()->getID() << "\n";
-@@ -303,6 +323,11 @@ MSLaneChangerSublane::checkChangeHelper(MSVehicle* vehicle, int laneOffset, Lane
+@@ -303,6 +324,11 @@ MSLaneChangerSublane::checkChangeHelper(MSVehicle* vehicle, int laneOffset, Lane
                  ? getBestLanesOpposite(vehicle, nullptr, 1000)
                  : vehicle->getBestLanes());
          result.state = checkChangeSublane(laneOffset, alternatives, preb, result.latDist, result.maneuverDist);
@@ -48,7 +49,7 @@ index 41e69ee..e77560e 100644
          result.dir = laneOffset;
          if ((result.state & LCA_WANTS_LANECHANGE) != 0 && (result.state & LCA_URGENT) != 0 && (result.state & LCA_BLOCKED) != 0) {
              (myCandi + laneOffset)->lastBlocked = vehicle;
-@@ -326,6 +351,10 @@ MSLaneChangerSublane::continueChangeSublane(MSVehicle* vehicle, ChangerIt& from)
+@@ -326,6 +352,10 @@ MSLaneChangerSublane::continueChangeSublane(MSVehicle* vehicle, ChangerIt& from)
      }
      const bool urgent = (vehicle->getLaneChangeModel().getOwnState() & LCA_URGENT) != 0;
      const double nextLatDist = SPEED2DIST(vehicle->getLaneChangeModel().computeSpeedLat(remLatDist, remLatDist, urgent));
@@ -59,7 +60,7 @@ index 41e69ee..e77560e 100644
  #ifdef DEBUG_MANEUVER
      if (DEBUG_COND) {
          std::cout << SIMTIME << " vehicle '" << vehicle->getID() << "' continueChangeSublane()"
-@@ -344,6 +373,10 @@ MSLaneChangerSublane::startChangeSublane(MSVehicle* vehicle, ChangerIt& from, do
+@@ -344,6 +374,10 @@ MSLaneChangerSublane::startChangeSublane(MSVehicle* vehicle, ChangerIt& from, do
      if (vehicle->isRemoteControlled()) {
          return false;
      }
@@ -71,10 +72,10 @@ index 41e69ee..e77560e 100644
      // Prevent continuation of LC beyond lane borders if change is not allowed
      double distToRightLaneBorder = vehicle->getLane()->getWidth() * 0.5 + vehicle->getLateralPositionOnLane() - vehicle->getWidth() * 0.5;
 diff --git a/src/microsim/lcmodels/MSLCM_SL2015.cpp b/src/microsim/lcmodels/MSLCM_SL2015.cpp
-index c892b2d..823548e 100644
+index c892b2d..3d7f183 100644
 --- a/src/microsim/lcmodels/MSLCM_SL2015.cpp
 +++ b/src/microsim/lcmodels/MSLCM_SL2015.cpp
-@@ -178,6 +178,21 @@ MSLCM_SL2015::debugVehicle() const {
+@@ -178,6 +178,22 @@ MSLCM_SL2015::debugVehicle() const {
  }
  
  
@@ -83,7 +84,8 @@ index c892b2d..823548e 100644
 +#include <cstdlib>
 +static bool lcTr(const MSVehicle& v) {
 +    static const char* t = std::getenv("LCTRACE_ID");
-+    return t != nullptr && v.getID() == t;
++    static const char* t2 = std::getenv("LCTRACE_ID2");
++    return (t != nullptr && v.getID() == t) || (t2 != nullptr && v.getID() == t2);
 +}
 +static std::string lcBits(double d) {
 +    unsigned long long u;
@@ -96,7 +98,7 @@ index c892b2d..823548e 100644
  int
  MSLCM_SL2015::wantsChangeSublane(
      int laneOffset,
-@@ -220,10 +235,12 @@ MSLCM_SL2015::wantsChangeSublane(
+@@ -220,10 +236,12 @@ MSLCM_SL2015::wantsChangeSublane(
                                       neighLane, preb,
                                       lastBlocked, firstBlocked, latDist, maneuverDist, blocked);
  
@@ -109,7 +111,7 @@ index c892b2d..823548e 100644
      result |= getLCA(result, latDist);
      // take into account lateral acceleration
  #if defined(DEBUG_MANEUVER) || defined(DEBUG_STATE)
-@@ -1304,6 +1321,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1304,6 +1322,7 @@ MSLCM_SL2015::_wantsChangeSublane(
                                 latDist);
  
  
@@ -117,7 +119,7 @@ index c892b2d..823548e 100644
      if ((ret & LCA_STAY) != 0 && latDist == 0) {
          // ensure that mySafeLatDistLeft / mySafeLatDistRight are up to date for the
          // subsquent check with laneOffset = 0
-@@ -1531,6 +1549,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1531,6 +1550,7 @@ MSLCM_SL2015::_wantsChangeSublane(
          std::cout << "   sublaneSides[rightmostOnEdge]=" << sublaneSides[rightmostOnEdge] << " rightVehSide=" << rightVehSide << "\n";
      }
  #endif
@@ -125,7 +127,7 @@ index c892b2d..823548e 100644
      double maxGain = -std::numeric_limits<double>::max();
      double maxGainRight = -std::numeric_limits<double>::max();
      double maxGainLeft = -std::numeric_limits<double>::max();
-@@ -1656,6 +1675,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1656,6 +1676,7 @@ MSLCM_SL2015::_wantsChangeSublane(
              }
          }
      }
@@ -133,7 +135,7 @@ index c892b2d..823548e 100644
      // updated change probabilities
      if (maxGainRight != -std::numeric_limits<double>::max()) {
  #ifdef DEBUG_WANTSCHANGE
-@@ -1757,6 +1777,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1757,6 +1778,7 @@ MSLCM_SL2015::_wantsChangeSublane(
              }
              const double deltaProb = (myChangeProbThresholdRight * (fullSpeedDrivingSeconds / acceptanceTime) / KEEP_RIGHT_TIME) * myVehicle.getActionStepLengthSecs();
              const bool isSlide = preventSliding(latLaneDist);
@@ -141,7 +143,7 @@ index c892b2d..823548e 100644
              // stay below threshold
              if (!isSlide || !wantsKeepRight(myKeepRightProbability + deltaProb)) {
                  myKeepRightProbability += deltaProb;
-@@ -1814,6 +1835,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1814,6 +1836,7 @@ MSLCM_SL2015::_wantsChangeSublane(
          }
  #endif
  
@@ -149,7 +151,7 @@ index c892b2d..823548e 100644
          // make changing on the right more attractive on bidi edges
          if (latDist < 0 && mySpeedGainProbabilityRight >= myChangeProbThresholdRight * bidiRightFactor
                  && neighDist / MAX2(.1, myVehicle.getSpeed()) > mySpeedGainRemainTime) {
-@@ -1958,6 +1980,7 @@ MSLCM_SL2015::_wantsChangeSublane(
+@@ -1958,6 +1981,7 @@ MSLCM_SL2015::_wantsChangeSublane(
          }
      }
      // only factor in preferred lateral alignment if there is no speedGain motivation or it runs in the same direction
@@ -157,7 +159,7 @@ index c892b2d..823548e 100644
      if (fabs(latDist) <= NUMERICAL_EPS * myVehicle.getActionStepLengthSecs() ||
              latDistSublane * latDist > 0) {
  
-@@ -2200,6 +2223,7 @@ MSLCM_SL2015::updateExpectedSublaneSpeeds(const MSLeaderDistanceInfo& ahead, int
+@@ -2200,6 +2224,7 @@ MSLCM_SL2015::updateExpectedSublaneSpeeds(const MSLeaderDistanceInfo& ahead, int
                      vSafe = forecastAverageSpeed(vSafe, vMax, gap, leader->getSpeed());
                  }
              }

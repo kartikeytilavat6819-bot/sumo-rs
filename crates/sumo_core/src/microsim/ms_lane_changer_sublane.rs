@@ -4,7 +4,8 @@ use crate::prelude::*;
 use utils::geom::POSITION_EPS;
 
 fn lct_on(v: Ptr<MSVehicle>) -> bool {
-    std::env::var("LCTRACE_ID").map(|t| t == v.get_id().to_string()).unwrap_or(false)
+    let s = v.get_id().to_string();
+    std::env::var("LCTRACE_ID").map(|t| t == s).unwrap_or(false) || std::env::var("LCTRACE_ID2").map(|t| t == s).unwrap_or(false)
 }
 fn lct_bits(d: f64) -> String {
     format!("{:016x}", d.to_bits())
