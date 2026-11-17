@@ -1,0 +1,10 @@
+<routes>
+    <vType id="car" length="4.5" maxSpeed="13.89" accel="2.6" decel="4.5" sigma="0.5">
+        <param key="device.rerouting.probability" value="1"/>
+        <param key="device.rerouting.period" value="5"/>
+    </vType>
+    <route id="via_top" edges="10 11 13"/>
+    <vehicle id="v0" type="car" route="via_top" depart="0"/>
+    <vehicle id="v1" type="car" route="via_top" depart="5"/>
+    <vehicle id="v2" type="car" route="via_top" depart="10"/>
+</routes>
