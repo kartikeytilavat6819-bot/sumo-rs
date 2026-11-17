@@ -65,7 +65,7 @@ for c in $CASES; do
   # Variants: run_all pairs ref_<v>.tripinfo.xml with sim_<v>.args, so each variant reference must be
   # regenerable the same way. Without this loop a variant reference can only be reproduced by hand.
   if [ -f "$src/NEW_CASE" ]; then
-    vlist=$(for f in "$src"/sim_*.args; do b=$(basename "$f" .args); echo "${b#sim_}"; done)
+    vlist=$(for f in "$src"/sim_*.args; do [ -f "$f" ] || continue; b=$(basename "$f" .args); echo "${b#sim_}"; done)
   else
     vlist=$(for vf in "$src"/ref_*.tripinfo.xml; do [ -f "$vf" ] || continue; b=$(basename "$vf" .tripinfo.xml); echo "${b#ref_}"; done)
   fi
