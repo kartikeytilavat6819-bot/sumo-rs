@@ -1,0 +1,13 @@
+<routes>
+    <!-- routeExtension: taxis extend their route to pick up reserved persons. -->
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50">
+        <param key="has.taxi.device" value="true"/>
+    </vType>
+    <route id="AB" edges="A B"/>
+    <vehicle id="taxi0" type="taxi" depart="0" route="AB"/>
+    <vehicle id="taxi1" type="taxi" depart="20" route="AB"/>
+    <person id="p0" depart="5" departPos="80"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p1" depart="30" departPos="260"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p2" depart="60" departPos="420"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p3" depart="75" departPos="150"><ride from="A" to="B" lines="taxi"/></person>
+</routes>

@@ -1,0 +1,18 @@
+<routes>
+    <!-- greedyClosest dispatched every 20 s; three taxis enter at different times; eight persons over 200 s. -->
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50">
+        <param key="has.taxi.device" value="true"/>
+    </vType>
+    <route id="AB" edges="A B"/>
+    <vehicle id="taxi0" type="taxi" depart="0" route="AB"/>
+    <vehicle id="taxi1" type="taxi" depart="30" route="AB"/>
+    <vehicle id="taxi2" type="taxi" depart="60" route="AB"/>
+    <person id="p0" depart="0" departPos="50"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p1" depart="25" departPos="300"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p2" depart="48" departPos="500"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p3" depart="70" departPos="150"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p4" depart="95" departPos="380"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p5" depart="120" departPos="210"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p6" depart="150" departPos="90"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p7" depart="200" departPos="440"><ride from="A" to="B" lines="taxi"/></person>
+</routes>

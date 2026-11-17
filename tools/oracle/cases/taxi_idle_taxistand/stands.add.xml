@@ -1,0 +1,9 @@
+<additional>
+    <parkingArea id="stand0" lane="A_0" startPos="20" endPos="60" roadsideCapacity="2"/>
+    <parkingArea id="stand1" lane="B_0" startPos="20" endPos="60" roadsideCapacity="2"/>
+    <rerouter id="rr0" edges="A">
+        <interval begin="0" end="600">
+            <parkingAreaReroute id="stand0"/>
+        </interval>
+    </rerouter>
+</additional>

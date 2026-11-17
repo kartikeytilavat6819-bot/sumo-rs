@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:14.249089-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/taxi_idle_random_circling/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/taxi_idle_random_circling/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_idle_random_circling/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_idle_random_circling/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_idle_random_circling/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.idle-algorithm value="randomCircling"/>
+    </taxi_device>
+
+    <random_number>
+        <seed value="42"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="5.00" type="DEFAULT_PEDTYPE" speedFactor="1.16" duration="199.00" waitingTime="84.00" timeLoss="10.45" traveltime="115.00">
+        <ride waitingTime="84.00" vehicle="taxi0" depart="89.00" arrival="204.00" arrivalPos="200.00" duration="115.00" routeLength="555.16" timeLoss="10.45"/>
+    </personinfo>
+    <personinfo id="p1" depart="20.00" type="DEFAULT_PEDTYPE" speedFactor="0.88" duration="217.00" waitingTime="107.00" timeLoss="10.64" traveltime="110.00">
+        <ride waitingTime="107.00" vehicle="taxi1" depart="127.00" arrival="237.00" arrivalPos="200.00" duration="110.00" routeLength="485.16" timeLoss="10.64"/>
+    </personinfo>
+    <personinfo id="p2" depart="90.00" type="DEFAULT_PEDTYPE" speedFactor="0.93" duration="326.00" waitingTime="207.00" timeLoss="12.71" traveltime="119.00">
+        <ride waitingTime="207.00" vehicle="taxi0" depart="297.00" arrival="416.00" arrivalPos="200.00" duration="119.00" routeLength="575.16" timeLoss="12.71"/>
+    </personinfo>
+</tripinfos>

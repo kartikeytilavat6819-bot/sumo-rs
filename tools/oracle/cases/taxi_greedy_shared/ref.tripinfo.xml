@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:11.579208-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/taxi_greedy_shared/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/taxi_greedy_shared/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_greedy_shared/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_greedy_shared/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_greedy_shared/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.dispatch-algorithm value="greedyShared"/>
+        <device.taxi.dispatch-algorithm.output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_greedy_shared/ref.dispatch.xml"/>
+    </taxi_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="10.00" type="DEFAULT_PEDTYPE" speedFactor="1.01" duration="240.00" waitingTime="70.00" timeLoss="21.03" traveltime="170.00">
+        <ride waitingTime="70.00" vehicle="taxi0" depart="80.00" arrival="250.00" arrivalPos="600.00" duration="170.00" routeLength="1100.10" timeLoss="21.03"/>
+    </personinfo>
+    <personinfo id="p1" depart="12.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="239.00" waitingTime="78.00" timeLoss="16.61" traveltime="161.00">
+        <ride waitingTime="78.00" vehicle="taxi0" depart="90.00" arrival="251.00" arrivalPos="600.00" duration="161.00" routeLength="1090.10" timeLoss="16.61"/>
+    </personinfo>
+    <personinfo id="p2" depart="15.00" type="DEFAULT_PEDTYPE" speedFactor="1.03" duration="241.00" waitingTime="72.00" timeLoss="16.95" traveltime="169.00">
+        <ride waitingTime="72.00" vehicle="taxi1" depart="87.00" arrival="256.00" arrivalPos="600.00" duration="169.00" routeLength="1080.10" timeLoss="16.95"/>
+    </personinfo>
+    <personinfo id="p3" depart="40.00" type="DEFAULT_PEDTYPE" speedFactor="0.83" duration="217.00" waitingTime="76.00" timeLoss="10.85" traveltime="141.00">
+        <ride waitingTime="76.00" vehicle="taxi1" depart="116.00" arrival="257.00" arrivalPos="600.00" duration="141.00" routeLength="900.10" timeLoss="10.85"/>
+    </personinfo>
+</tripinfos>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:17.618232-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/taxi_intermodal_modes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/taxi_intermodal_modes/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_intermodal_modes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_intermodal_modes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_intermodal_modes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="600"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p1" depart="30.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="186.00" waitingTime="68.00" timeLoss="6.07" traveltime="118.00">
+        <ride waitingTime="68.00" vehicle="taxi1" depart="98.00" arrival="216.00" arrivalPos="300.00" duration="118.00" routeLength="650.10" timeLoss="6.07"/>
+    </personinfo>
+    <personinfo id="p0" depart="5.00" type="DEFAULT_PEDTYPE" speedFactor="1.01" duration="220.00" waitingTime="75.00" timeLoss="25.38" traveltime="145.00">
+        <ride waitingTime="75.00" vehicle="taxi0" depart="80.00" arrival="225.00" arrivalPos="300.00" duration="145.00" routeLength="800.10" timeLoss="25.38"/>
+    </personinfo>
+</tripinfos>

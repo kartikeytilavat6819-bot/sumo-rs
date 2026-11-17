@@ -1,0 +1,12 @@
+<routes>
+    <!-- idle taxis drive random circles on the ring after their route ends (seeded RNG). -->
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50">
+        <param key="has.taxi.device" value="true"/>
+    </vType>
+    <route id="loop" edges="E0 E1 E2 E3"/>
+    <vehicle id="taxi0" type="taxi" depart="0" route="loop"/>
+    <vehicle id="taxi1" type="taxi" depart="15" route="loop"/>
+    <person id="p0" depart="5" departPos="50"><ride from="E0" to="E2" lines="taxi"/></person>
+    <person id="p1" depart="20" departPos="120"><ride from="E1" to="E3" lines="taxi"/></person>
+    <person id="p2" depart="90" departPos="30"><ride from="E3" to="E1" lines="taxi"/></person>
+</routes>

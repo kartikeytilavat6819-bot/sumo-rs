@@ -1,0 +1,1 @@
+--end 600 --device.taxi.idle-algorithm taxistand --additional-files tools/oracle/cases/taxi_idle_taxistand/stands.add.xml
