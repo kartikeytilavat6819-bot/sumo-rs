@@ -18,9 +18,9 @@ fn run_net_parser(handler: &mut RONetHandler, file: &str, isNet: bool) -> bool {
     utils::xml::xml_sub_sys::run_parser(handler, file, isNet, false, false, true).unwrap_or_else(|e| panic!("{e}"))
 }
 
-// shortcut: XMLSubSys::runParser needs RORouteHandler to implement SaxHandler, not ported yet
-fn run_route_parser_unwired(handler: Ptr<RORouteHandler>, file: &str) {
-    panic!("ROLoader: cannot parse route file '{}', RORouteHandler is not a SaxHandler yet", file);
+/// C++ `XMLSubSys::runParser(*handler, fileIt)`; false when the loading reported an error
+fn run_route_parser(handler: &mut RORouteHandler, file: &str) -> bool {
+    utils::xml::xml_sub_sys::run_parser(handler, file, false, false, false, true).unwrap_or_else(|e| std::panic::panic_any(e))
 }
 
 // shortcut: SAXWeightsHandler is not ported, weight files cannot be parsed yet
@@ -608,8 +608,10 @@ impl ROLoader {
                 }
             };
             if readAll {
-                // shortcut: RORouteHandler does not implement SaxHandler yet, so the file cannot be parsed here
-                run_route_parser_unwired(handler, fileIt);
+                if !run_route_parser(handler.m(), fileIt) {
+                    write_errorf!("Loading of % failed.", fileIt);
+                    return false;
+                }
             } else {
                 self.myLoaders.add(Ptr::from_raw(Box::into_raw(Box::new(SUMORouteLoader::new(Ptr::new(&handler.base))))));
             }

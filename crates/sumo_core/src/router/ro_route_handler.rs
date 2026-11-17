@@ -111,6 +111,20 @@ impl std::ops::DerefMut for RORouteHandler {
     }
 }
 
+impl utils::xml::generic_sax_handler::SaxHandler for RORouteHandler {
+    fn handler(&mut self) -> &mut utils::xml::generic_sax_handler::GenericSAXHandler {
+        &mut self.base.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        RORouteHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        SUMORouteHandler::my_end_element(&mut self.base, element);
+        Ok(())
+    }
+}
+
 // C++ virtual overrides of SUMORouteHandler, dispatched through SUMORouteHandler::vt
 fn ro_open_vehicle_type_distribution(d: &mut SUMORouteHandler, attrs: &SUMOSAXAttributes) {
     Ptr::from_mut(d).cast::<RORouteHandler>().m().open_vehicle_type_distribution(attrs)

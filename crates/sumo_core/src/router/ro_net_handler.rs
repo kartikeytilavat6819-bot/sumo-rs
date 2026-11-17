@@ -53,6 +53,20 @@ impl std::ops::DerefMut for RONetHandler {
     }
 }
 
+impl utils::xml::generic_sax_handler::SaxHandler for RONetHandler {
+    fn handler(&mut self) -> &mut GenericSAXHandler {
+        &mut self.base
+    }
+    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
+        RONetHandler::my_start_element(self, element, attrs);
+        Ok(())
+    }
+    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
+        RONetHandler::my_end_element(self, element);
+        Ok(())
+    }
+}
+
 /// C++ `throw` inside these void parsers: the Rust parsers return (), so the exception becomes a panic with the same message
 // shortcut: C++ exceptions should reach the SAX driver as ProcessError results, once the SUMOSAXHandler base is ported
 fn throw_error(e: ProcessError) -> ! {

@@ -69,6 +69,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "duarouter"
+version = "0.1.0"
+dependencies = [
+ "sumo_core",
+ "utils",
+]
+
+[[package]]
 name = "netconvert"
 version = "0.1.0"
 dependencies = [
