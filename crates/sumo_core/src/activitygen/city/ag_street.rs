@@ -132,13 +132,29 @@ impl AGStreet_Builder {
     // ROEdge* buildEdge(const std::string& name, RONode* from, RONode* to, const int priority, const std::string& type, const std::string& routingType) {
     //             return new AGStreet(name, from, to, getNextIndex(), priority, type, routingType);
     //         }
-    #[allow(unused_variables)]
-    pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        let index = self.get_next_index();
-        let street = Box::into_raw(Box::new(AGStreet::new(name, from, to, index, priority, type_, routingType)));
-        // base is the first field of AGStreet (repr(C)), so this is the C++ implicit upcast
-        Ptr::from_raw(street as *mut ROEdge)
+    /// C++ `AGStreet::Builder` constructor: installs the buildEdge override into the base's dispatch slot
+    pub fn new() -> Self {
+        let mut base = ROAbstractEdgeBuilder::new();
+        base.buildEdgeFn = ag_street_build_edge;
+        AGStreet_Builder { base }
     }
 
+    /// C++: `ROEdge * Builder::buildEdge(const std::string &, RONode *, RONode *, const int, const std::string &, const std::string &)` [virtual]
+    /// Builds an edge with the given name (dispatched through the base, as the C++ virtual call)
+    #[allow(unused_variables)]
+    pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+        self.base.build_edge(name, from, to, priority, type_, routingType)
+    }
+}
+
+/// C++ `Builder::buildEdge`: `new AGStreet(name, from, to, getNextIndex(), priority, type, routingType)`;
+/// the C++ ROEdge constructor also registers the edge in the global edge list (here done by the owner)
+fn ag_street_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+    let index = eb.get_next_index();
+    let street = Box::into_raw(Box::new(AGStreet::new(name, from, to, index, priority, type_, routingType)));
+    // base is the first field of AGStreet (repr(C)), so this is the C++ implicit upcast
+    let edge = Ptr::from_raw(street as *mut ROEdge);
+    ROEdge::register_in_all_edges(edge);
+    edge
 }
 
