@@ -7,21 +7,20 @@ export CARGO_TARGET_DIR=$CT
 export SCORE_OUT=/tmp/ub03score
 mkdir -p "$SCORE_OUT"
 echo "== build debug"
-cargo build -p sumo -p netconvert 2>&1 | tail -2
+cargo build -p sumo -p netconvert > /tmp/ub03_bd.txt 2>&1; echo "rc=$?"; grep -E '^error' /tmp/ub03_bd.txt | head -3
 echo "== build release"
-CARGO_TARGET_DIR=$CT-rel cargo build --release -p sumo -p netconvert 2>&1 | tail -2
-echo "rc=${PIPESTATUS[0]}"
-ls -l --time-style=+%T "$CT-rel/release/sumo" "$CT-rel/release/sumo.exe" 2>/dev/null
-echo "newest source: $(find crates -name '*.rs' -printf '%TT %p\n' | sort | tail -1)"
-echo "== run_all debug"
+CARGO_TARGET_DIR=$CT-rel cargo build --release -p sumo -p netconvert > /tmp/ub03_br.txt 2>&1; echo "rc=$?"; grep -E '^error' /tmp/ub03_br.txt | head -3; tail -1 /tmp/ub03_br.txt
+ls -l --time-style=+%T "$CT"/debug/sumo* "$CT"-rel/release/sumo* 2>&1 | head -6
 PROFILE=debug bash tools/oracle/run_all.sh > /tmp/ub03_debug.txt 2>&1
-echo "== run_all release"
 CARGO_TARGET_DIR=$CT-rel PROFILE=release bash tools/oracle/run_all.sh > /tmp/ub03_rel.txt 2>&1
 echo "debug:   $(tail -1 /tmp/ub03_debug.txt)"
 echo "release: $(tail -1 /tmp/ub03_rel.txt)"
-echo "== verdict diff (case kind verdict), empty means identical"
-VF='$2 ~ /^(net|net-.*|sim|sim-PANIC|variants|net-plain)$/'
-diff <(awk "$VF"'{print $1,$2,$3}' /tmp/ub03_debug.txt) <(awk "$VF"'{print $1,$2,$3}' /tmp/ub03_rel.txt) && echo SAME_VERDICTS
-echo "== FAIL rows (release)"
-awk '$3 ~ /FAIL|PANIC/ || $2 ~ /PANIC/ {print $1,$2,$3}' /tmp/ub03_rel.txt | head -20
+VF='$2 ~ /^(net|net-.*|sim|sim-PANIC|variants)$/'
+awk "$VF"'{print $1,$2,$3}' /tmp/ub03_debug.txt > /tmp/ub03_dv.txt
+awk "$VF"'{print $1,$2,$3}' /tmp/ub03_rel.txt > /tmp/ub03_rv.txt
+echo "verdict rows differing: $(diff /tmp/ub03_dv.txt /tmp/ub03_rv.txt | grep -c '^[<>]')"
+diff /tmp/ub03_dv.txt /tmp/ub03_rv.txt | head -8
+for d in $(ls -td "$SCORE_OUT"/run-* | head -2); do
+  echo "-- $d"; grep -h -m2 -E 'SUMMARY|panicked|rror' "$d/junction.net.log" 2>/dev/null | cut -c1-200
+done
 echo "AGENT RUN DONE"
