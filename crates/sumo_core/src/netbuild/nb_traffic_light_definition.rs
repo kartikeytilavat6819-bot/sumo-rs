@@ -246,7 +246,6 @@ impl NBTrafficLightDefinition {
         }
         // determinism: node ids are unique within a net, so this sort order is total
         myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
-        // shortcut: C++ calls node->addTrafficLight(this) here, but `this` is not stable in a by-value constructor, so the nodes are not registered (callers must register after boxing), upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
             vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
@@ -281,7 +280,6 @@ impl NBTrafficLightDefinition {
     // }
     #[allow(unused_variables)]
     pub fn new_2(id: &str, junction: Ptr<NBNode>, programID: &str, offset: SUMOTime, type_: TrafficLightType) -> Self {
-        // shortcut: C++ addNode(junction) also calls junction->addTrafficLight(this); `this` is not stable in a by-value constructor, so only the node list is filled, upgrade: construct the definition boxed/in place
         Self {
             base: Named::new(id),
             vt: &DEFAULT_NB_TRAFFIC_LIGHT_DEFINITION_VT,
@@ -423,6 +421,15 @@ impl NBTrafficLightDefinition {
             self.myControlledNodes.sort_by(|a, b| a.get_id().cmp(b.get_id()));
         }
         node.m().add_traffic_light(Ptr::from_mut(self));
+    }
+
+    /// C++ base constructor tail: `node->addTrafficLight(this)` for each junction. Called by the boxed
+    /// owner once its final address exists (see NBOwnTLDef::new), because `this` must be stable.
+    pub fn register_junctions(&mut self, junctions: &Vec<Ptr<NBNode>>) {
+        let this = Ptr::from_mut(self);
+        for node in junctions {
+            node.m().add_traffic_light(this);
+        }
     }
 
     /// C++: `void NBTrafficLightDefinition::removeNode(NBNode *)` [virtual]

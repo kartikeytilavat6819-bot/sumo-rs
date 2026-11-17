@@ -5,12 +5,6 @@ use utils::common::msg_handler::write_warning;
 use utils::options::options_cont::{get_bool, get_float};
 
 
-/// shortcut: NBPTStop is held as Rc but C++ mutates it in place; mutate through the Rc pointer until stop containers hold Ptr<NBPTStop>
-#[allow(clippy::mut_from_ref)]
-fn stop_mut(stop: &Rc<NBPTStop>) -> &mut NBPTStop {
-    unsafe { &mut *(Rc::as_ptr(stop) as *mut NBPTStop) }
-}
-
 pub const FWD: i32 = 1;
 pub const BWD: i32 = -1;
 
@@ -130,9 +124,9 @@ impl NBPTLineCont {
                 }
             }
             // fix circular line if necessary
-            let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+            let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
             if stops.len() > 1
-                    && Rc::ptr_eq(&stops[0], &stops[stops.len() - 1])
+                    && stops[0] == stops[stops.len() - 1]
                     && line.get_route().len() > 1
                     && line.get_route()[0] != line.get_route()[line.get_route().len() - 1] {
                 // we need to duplicate either the first or the last edge depending on the stop locations
@@ -309,7 +303,7 @@ impl NBPTLineCont {
         };
         for item in self.myPTLines.values() {
             let line = *item;
-            let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+            let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
             if stops.len() < 2 {
                 continue;
             }
@@ -326,12 +320,12 @@ impl NBPTLineCont {
             };
             let mut veh = NBVehicle::new(line.get_ref(), svc);
             let vehPtr: Ptr<NBVehicle> = Ptr::from_mut(&mut veh);
-            let mut newStops: Vec<Rc<NBPTStop>> = Vec::new();
-            let mut from: Option<Rc<NBPTStop>> = None;
+            let mut newStops: Vec<Ptr<NBPTStop>> = Vec::new();
+            let mut from: Option<Ptr<NBPTStop>> = None;
             let stopInfos: Vec<NBPTLine_PTStopInfo> = line.get_stop_edges(ec);
             for (it, stop) in stops.iter().enumerate() {
-                let mut to: Rc<NBPTStop> = stop.clone();
-                let mut used: Rc<NBPTStop> = stop.clone();
+                let mut to: Ptr<NBPTStop> = stop.clone();
+                let mut used: Ptr<NBPTStop> = stop.clone();
                 // C++ asserts stopInfos.size() == stops.size(); get_stop_edges skips stops without an edge, so a short list counts as not revised
                 let isRevised = stopInfos.get(it).map_or(false, |info| info.revised);
                 if let Some(mut to2) = to.get_bidi_stop() {
@@ -340,8 +334,8 @@ impl NBPTLineCont {
                         match from.clone() {
                             None => {
                                 if it + 1 != stops.len() {
-                                    let fromS: Rc<NBPTStop> = to.clone();
-                                    let from2: Rc<NBPTStop> = to2.clone();
+                                    let fromS: Ptr<NBPTStop> = to.clone();
+                                    let from2: Ptr<NBPTStop> = to2.clone();
                                     to = stops[it + 1].clone();
                                     let c1 = Self::get_cost(ec, &mut router, fromS.clone(), to.clone(), vehPtr);
                                     let c2 = Self::get_cost(ec, &mut router, from2.clone(), to.clone(), vehPtr);
@@ -606,7 +600,7 @@ impl NBPTLineCont {
             write_warning(&format!("Cannot revise pt stop localization for pt line '{}', which has no route edges. Ignoring!", line.get_line_id()));
             return;
         }
-        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
         let mut stopsRevised: Vec<bool> = Vec::new();
         for stop0 in stops {
             stopsRevised.push(false);
@@ -677,9 +671,9 @@ impl NBPTLineCont {
                 } else {
                     write_warning(&format!("PT stop '{}' has been moved to edge '{}'.", stop.get_id(), reverse.get_id()));
                 }
-                stop_mut(&stop).set_edge_id(reverse.get_id().to_string(), ec);
+                stop.m().set_edge_id(reverse.get_id().to_string(), ec);
             }
-            stop_mut(&stop).add_line(line.get_ref());
+            stop.m().add_line(line.get_ref());
             let lastIdx = stopsRevised.len() - 1;
             stopsRevised[lastIdx] = true;
         }
@@ -707,7 +701,7 @@ impl NBPTLineCont {
     #[allow(unused_variables)]
     pub fn revise_single_way_stops(&mut self, line: Ptr<NBPTLine>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) {
         let waysIds: Vec<String> = line.get_ways().clone();
-        let stops: Vec<Rc<NBPTStop>> = line.m().get_stops().clone();
+        let stops: Vec<Ptr<NBPTStop>> = line.m().get_stops().clone();
         for stop0 in stops {
             //get the corresponding and one of the two adjacent ways
             let stop = match self.find_way(line, stop0, ec, sc) {
@@ -717,7 +711,7 @@ impl NBPTLineCont {
             if !waysIds.iter().any(|w| *w == stop.get_orig_edge_id()) {
                 continue; // warning already given
             }
-            stop_mut(&stop).add_line(line.get_ref());
+            stop.m().add_line(line.get_ref());
         }
     }
 
@@ -805,7 +799,7 @@ impl NBPTLineCont {
     //     return stop;
     // }
     #[allow(unused_variables)]
-    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Rc<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Option<Rc<NBPTStop>> {
+    pub fn find_way(&self, line: Ptr<NBPTLine>, stop: Ptr<NBPTStop>, ec: &NBEdgeCont, sc: &mut NBPTStopCont) -> Option<Ptr<NBPTStop>> {
         let waysIds: Vec<String> = line.get_ways().clone();
         if stop.is_loose() {
             // find closest edge in route
@@ -821,27 +815,27 @@ impl NBPTLineCont {
             if minDist < get_float("ptline.match-dist") {
                 let wayID = Self::get_way_id(best.get_id());
                 if stop.get_edge_id().is_empty() {
-                    stop_mut(&stop).set_edge_id(best.get_id().to_string(), ec);
-                    stop_mut(&stop).set_orig_edge_id(&wayID);
+                    stop.m().set_edge_id(best.get_id().to_string(), ec);
+                    stop.m().set_orig_edge_id(&wayID);
                 } else if stop.get_edge_id() != best.get_id() {
                     // stop is used by multiple lines and mapped to different edges.
                     // check if an alternative stop already exists
                     // same lookup as NBPTStopCont::findStop(wayID, pos) with threshold 1
-                    let mut existing: Option<Rc<NBPTStop>> = None;
+                    let mut existing: Option<Ptr<NBPTStop>> = None;
                     for item in sc.myPTStops.values() {
                         if item.get_orig_edge_id() == wayID && item.get_position().distance_to2d(stop.get_position()) < 1.0 {
                             existing = Some(item.clone());
                             break;
                         }
                     }
-                    let newStop: Rc<NBPTStop> = match existing {
+                    let newStop: Ptr<NBPTStop> = match existing {
                         Some(ns) => ns,
                         None => {
                             let mut ns = NBPTStop::new(stop.get_element(), format!("{}@{}", stop.get_id(), line.get_line_id()), stop.get_position().clone(),
                                 best.get_id().to_string(), wayID.clone(), stop.get_length(), stop.get_name(), stop.get_permissions(),
                                 0.0, RGBColor::default(), -1.0);
                             ns.set_edge_id(best.get_id().to_string(), ec); // trigger lane assignment
-                            let ns = Rc::new(ns);
+                            let ns = Ptr::from_raw(Box::into_raw(Box::new(ns)));
                             sc.insert(ns.clone(), false);
                             ns
                         }
@@ -864,8 +858,8 @@ impl NBPTLineCont {
                 for (edgeCandFirst, edgeCandSecond) in stop.get_additional_edge_candidates().iter() {
                     for w in waysIds.iter() {
                         if w == edgeCandFirst {
-                            if stop_mut(&stop).set_edge_id(edgeCandSecond.clone(), ec) {
-                                stop_mut(&stop).set_orig_edge_id(edgeCandFirst);
+                            if stop.m().set_edge_id(edgeCandSecond.clone(), ec) {
+                                stop.m().set_orig_edge_id(edgeCandFirst);
                                 found = true;
                                 break;
                             }
@@ -1188,7 +1182,7 @@ impl NBPTLineCont {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Rc<NBPTStop>, to: Rc<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
+    pub fn get_cost(ec: &NBEdgeCont, router: &mut SUMOAbstractRouter<NBRouterEdge, NBVehicle>, from: Ptr<NBPTStop>, to: Ptr<NBPTStop>, veh: Ptr<NBVehicle>) -> f64 {
         let fromEdge: Ptr<NBEdge> = ec.get_by_id(from.get_edge_id());
         let toEdge: Ptr<NBEdge> = ec.get_by_id(to.get_edge_id());
         if fromEdge.is_null() || toEdge.is_null() {
