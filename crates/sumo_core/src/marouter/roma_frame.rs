@@ -37,7 +37,7 @@ impl ROMAFrame {
             oc.add_call_example("-c <CONFIGURATION>", "run routing with options from file");
 
             // insert options sub-topics
-            // shortcut: SystemFrame::addConfigurationOptions is not ported yet, its configuration options are missing, upgrade when system_frame is ported
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Processing");

@@ -220,7 +220,7 @@ impl RODFFrame {
     pub fn fill_options() {
         utils::options::options_cont::with_options(|oc| {
             // insert options sub-topics
-            // shortcut: SystemFrame::addConfigurationOptions is not ported yet, its configuration options are missing, upgrade when system_frame is ported
+            utils::common::system_frame::add_configuration_options(oc);
             oc.add_option_sub_topic("Input");
             oc.add_option_sub_topic("Output");
             oc.add_option_sub_topic("Processing");
@@ -243,7 +243,7 @@ impl RODFFrame {
             oc.add_description("measure-files", "Input", "Loads detector flows from FILE(s)");
 
             // need to do this here to be able to check for network and route input options
-            // shortcut: SystemFrame::addReportOptions is not ported yet, its report options are missing, upgrade when system_frame is ported
+            utils::common::system_frame::add_report_options(oc);
 
             // register output options
             oc.do_register_abbr("routes-output", 'o', SumoOption::file_name());

@@ -143,20 +143,6 @@ fn new_stop() -> SUMOVehicleParameter_Stop {
     }
 }
 
-impl SaxHandler for RONetHandler {
-    fn handler(&mut self) -> &mut GenericSAXHandler {
-        &mut self.base
-    }
-    fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
-        RONetHandler::my_start_element(self, element, attrs);
-        Ok(())
-    }
-    fn my_end_element(&mut self, element: i32) -> Result<(), ProcessError> {
-        RONetHandler::my_end_element(self, element);
-        Ok(())
-    }
-}
-
 impl RONetHandler {
     /// C++: `void RONetHandler::RONetHandler(RONet &, ROAbstractEdgeBuilder &, const bool, const double, double, double)`
     /// Constructor
@@ -966,8 +952,7 @@ impl RONetHandler {
     #[allow(unused_variables)]
     pub fn parse_stopping_place(&mut self, attrs: &SUMOSAXAttributes, element: SumoXMLTag) {
         let mut ok = true;
-        // shortcut: toString(SumoXMLTag) is not ported (no tag-name table), the numeric tag is used as the element name in messages and actType
-        let tagName = format!("{}", element);
+        let tagName = utils::xml::sumo_xml_definitions::Tags.get_string(element).to_string();
         let stopPtr = Ptr::from_raw(Box::into_raw(Box::new(new_stop())));
         self.myCurrentStoppingPlace = stopPtr;
         // get the id, throw if not given or empty...
