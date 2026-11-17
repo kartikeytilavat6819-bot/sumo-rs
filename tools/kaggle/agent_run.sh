@@ -46,7 +46,9 @@ rep(TR, "return dynamic_cast<MSParkingArea*>(rerouteStoppingPlace(destStoppingPl
     return dynamic_cast<MSParkingArea*>(resultSp);''')
 print("instrumented")
 PY
-(cd "$D/build" && make -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; grep -a -B6 'collect2' "$OUT/make.log" | cut -c1-400 | head -14; df -h "$D" | tail -1)
+# the copied build/ is configured for /home/gate/sumo-cpp, so configure a fresh build dir inside our copy
+cmake -S "$D" -B "$D/build-rc02" -DCMAKE_BUILD_TYPE=Release -DFOX_CONFIG= -DCHECK_OPTIONAL_LIBS=OFF -DENABLE_JAVA_BINDINGS=OFF -DENABLE_CS_BINDINGS=OFF -DCMAKE_CXX_COMPILER_LAUNCHER=ccache > "$OUT/cmake.log" 2>&1; echo "RC02 cmake rc=$?"
+(make -C "$D/build-rc02" -j8 sumo > "$OUT/make.log" 2>&1; echo "RC02 make rc=$?"; grep -a -B4 -iE 'error' "$OUT/make.log" | cut -c1-300 | head -12)
 echo "RC02 patched: $(grep -c RRTRACE "$D/src/microsim/trigger/MSTriggeredRerouter.cpp") trig, $(grep -c RRTRACE "$D/src/microsim/trigger/MSStoppingPlaceRerouter.cpp") spr"
 ls -l "$D/bin/sumo" | head -2
 echo "RC02 binary strings: $(strings "$D/bin/sumo" | grep -c RRTRACE)"
