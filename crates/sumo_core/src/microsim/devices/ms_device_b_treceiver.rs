@@ -86,7 +86,7 @@ fn boxes_overlap(amin: [f32; 2], amax: [f32; 2], bmin: [f32; 2], bmax: [f32; 2])
 /// Initialises the bt-system from the options the first time a device is built
 fn init_once_from_options() {
     if !MY_WAS_INITIALISED.with(|c| c.get()) {
-        // shortcut: C++ event control owns the update and its destructor (final cleanup and bt-output) runs at teardown; leaked here until MSEventControl owns commands as Box, so that final pass is not run
+        // shortcut: C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate (drop_: final pass + bt-output for vehicles still running); MSNet teardown here frees MSEventControl without deleting its commands, so that pass is not run; upgrade when MSEventControl deletes its commands on drop
         let _update = Box::leak(MSDevice_BTreceiver_BTreceiverUpdate::new());
         MY_WAS_INITIALISED.with(|c| c.set(true));
         MY_RANGE.with(|c| c.set(utils::options::options_cont::get_float("device.btreceiver.range")));
