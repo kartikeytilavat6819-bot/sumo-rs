@@ -35,6 +35,10 @@ for dir in tools/oracle/cases/*/; do
   if [ "$c" = depart ]; then
     line "$c" variants SKIP "15 variants: cases/depart/run_all_variants.sh"; SKIP=$((SKIP+1)); continue
   fi
+  # a PENDING marker file holds the reason a case is parked (e.g. a missing port)
+  if [ -f "$dir/PENDING" ]; then
+    line "$c" pending SKIP "$(head -1 "$dir/PENDING" | cut -c1-80)"; SKIP=$((SKIP+1)); continue
+  fi
   # --- net stage: regenerate the net with netconvert and compare element by element.
   # Cases with an OSM input use --osm-files; cases built from plain XML put their full input arguments
   # (--node-files/--edge-files/--connection-files) in net.args and are run without --osm-files.
@@ -85,11 +89,17 @@ for dir in tools/oracle/cases/*/; do
       if [ -f "$dir/$tag.stat.xml" ]; then
         python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
       fi
+      # edgeData output: the variant's additional file writes out_edgedata.xml next to itself (C++ resolves the path that way)
+      if [ -f "$dir/$tag.edge.xml" ]; then
+        python tools/oracle/compare_xml.py "$dir/$tag.edge.xml" "$dir/out_edgedata.xml" >"$OUT/$c.$tag.edge.log" 2>&1 || r="FAIL"
+        rm -f "$dir/out_edgedata.xml"
+      fi
       if [ "$r" = "PASS" ]; then
         line "$c/$tag" sim PASS; PASS=$((PASS+1))
       else
         d=$( (head -1 "$OUT/$c.$tag.ti.log"; head -1 "$OUT/$c.$tag.fcd.log"; tail -1 "$OUT/$c.$tag.stat.log") 2>/dev/null | grep -vE '^$' | head -1 | cut -c1-90)
-        line "$c/$tag" sim FAIL "$d"; FAIL=$((FAIL+1))
+        [ -f "$OUT/$c.$tag.edge.log" ] && d="$d | edge: $(grep -v '^$' "$OUT/$c.$tag.edge.log" | head -2 | tr '\n' ' ' | cut -c1-900)"
+        line "$c/$tag" sim "FAIL $d"; FAIL=$((FAIL+1))
       fi
     done
   else
