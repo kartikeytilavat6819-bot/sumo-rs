@@ -813,9 +813,9 @@ impl RORouteDef {
                 replaced = Some(self.myAlternatives[0].clone());
                 self.myAlternatives[0] = current.clone();
             }
-            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
             if !router.is_valid(current.get_edge_vector(), veh, utils::common::time::steps2time(begin)) {
-                panic!("Route '{}' (vehicle '{}') is not valid.", self.get_id(), veh.get_id());
+                // C++ throw ProcessError
+                std::panic::panic_any(ProcessError::new(format!("Route '{}' (vehicle '{}') is not valid.", self.get_id(), veh.get_id())));
             }
             let mut costs = router.recompute_costs(current.get_edge_vector(), veh, begin, Ptr::null());
             if veh.has_jumps() {
@@ -829,9 +829,9 @@ impl RORouteDef {
         // add the route when it's new
         let last = self.myAlternatives.len() - 1;
         if self.myAlternatives[last].get_probability() < 0.0 || !self.myAlternatives[last].is_permitted(veh, errorHandler) {
-            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
             if self.myAlternatives[last].get_probability() >= 0.0 && errorHandler == msg_instance(false) {
-                panic!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id());
+                // C++ throw ProcessError
+                std::panic::panic_any(ProcessError::new(format!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id())));
             }
             self.myAlternatives.pop();
         }
@@ -842,9 +842,9 @@ impl RORouteDef {
         let scale = (self.myAlternatives.len().wrapping_sub(1)) as f64 / (self.myAlternatives.len() as f64);
         for idx in 0..self.myAlternatives.len() {
             let alt = self.myAlternatives[idx].clone();
-            // shortcut: C++ throws ProcessError here, it panics instead, upgrade when add_alternative returns Result
             if !router.is_valid(alt.get_edge_vector(), veh, utils::common::time::steps2time(begin)) {
-                panic!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id());
+                // C++ throw ProcessError
+                std::panic::panic_any(ProcessError::new(format!("Route '{}' (vehicle '{}') is not valid.", current.get_id(), veh.get_id())));
             }
             // recompute the costs for all routes
             let newCosts = router.recompute_costs(alt.get_edge_vector(), veh, begin, Ptr::null());

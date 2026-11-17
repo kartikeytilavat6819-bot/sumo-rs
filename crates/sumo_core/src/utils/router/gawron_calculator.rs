@@ -27,13 +27,17 @@ impl<R, E, V> std::ops::DerefMut for GawronCalculator<R, E, V> {
     }
 }
 
-impl<R, E, V> GawronCalculator<R, E, V> {
+impl<R: RouteCostRoute<E>, E, V> GawronCalculator<R, E, V> {
     /// C++: `void GawronCalculator::GawronCalculator<R, E, V>(const double, const double)`
     /// Constructor
     // GawronCalculator(const double beta, const double a) : myBeta(beta), myA(a) {}
     #[allow(unused_variables)]
     pub fn new(beta: f64, a: f64) -> Self {
-        Self { base: RouteCostCalculator::new(), myBeta: beta, myA: a, _p: std::marker::PhantomData }
+        let mut base = RouteCostCalculator::new();
+        // C++ vtable: the base is the first field of this #[repr(C)] struct, so the cast is the C++ static_cast
+        base.vt_set_costs = Some(|b, route, costs, isActive| unsafe { &*(b as *const RouteCostCalculator<R, E, V> as *const Self) }.set_costs(route, costs, isActive));
+        base.vt_calculate_probabilities = Some(|b, alternatives, veh, time| unsafe { &mut *(b as *mut RouteCostCalculator<R, E, V> as *mut Self) }.calculate_probabilities(alternatives, veh, time));
+        Self { base, myBeta: beta, myA: a, _p: std::marker::PhantomData }
     }
 
     /// C++: `void GawronCalculator::~GawronCalculator<R, E, V>()` [virtual]
@@ -54,8 +58,11 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_costs(&self, route: Rc<R>, costs: f64, isActive: bool) {
-        // shortcut: needs router trait bounds (lead), R::setCosts and R::getCosts are not callable on generic R
-        panic!("shortcut: needs router trait bounds (lead), R::setCosts")
+        if isActive {
+            route.set_costs(costs);
+        } else {
+            route.set_costs(self.myBeta * costs + (1.0 - self.myBeta) * route.get_costs());
+        }
     }
 
     /// C++: `void GawronCalculator::calculateProbabilities(const std::vector<std::shared_ptr<R>> &, const V *const, const SUMOTime)`
@@ -87,8 +94,26 @@ impl<R, E, V> GawronCalculator<R, E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn calculate_probabilities(&mut self, alternatives: &Vec<Rc<R>>, arg1: Ptr<V>, arg2: SUMOTime) {
-        // shortcut: needs router trait bounds (lead), R::getCosts / R::getProbability / R::setProbability are not callable on generic R
-        panic!("shortcut: needs router trait bounds (lead), R::getCosts")
+        for i in 0..alternatives.len() - 1 {
+            let pR = &alternatives[i];
+            for j in i + 1..alternatives.len() {
+                let pS = &alternatives[j];
+                // see [Gawron, 1998] (4.2)
+                let delta = (pS.get_costs() - pR.get_costs()) / (pS.get_costs() + pR.get_costs());
+                // see [Gawron, 1998] (4.3a, 4.3b)
+                let mut newPR = self.gawron_f(pR.get_probability(), pS.get_probability(), delta);
+                let mut newPS = pR.get_probability() + pS.get_probability() - newPR;
+                if newPR.is_nan() || newPS.is_nan() {
+                    newPR = if pS.get_costs() > pR.get_costs() { 1.0 } else { 0.0 };
+                    newPS = if pS.get_costs() > pR.get_costs() { 0.0 } else { 1.0 };
+                }
+                // MIN2(MAX2(x, 0), 1)
+                newPR = min2(max2(newPR, 0.0), 1.0);
+                newPS = min2(max2(newPS, 0.0), 1.0);
+                pR.set_probability(newPR);
+                pS.set_probability(newPS);
+            }
+        }
     }
 
     /// C++: `double GawronCalculator::gawronF(const double, const double, const double) const` [const, private]
@@ -135,3 +160,12 @@ impl<R, E, V> GawronCalculator<R, E, V> {
 
 }
 
+/// C++ MIN2 (utils/common/StdDefs.h)
+fn min2(a: f64, b: f64) -> f64 {
+    if a < b { a } else { b }
+}
+
+/// C++ MAX2 (utils/common/StdDefs.h)
+fn max2(a: f64, b: f64) -> f64 {
+    if a > b { a } else { b }
+}
