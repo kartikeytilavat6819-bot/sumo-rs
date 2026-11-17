@@ -75,8 +75,27 @@ Reference: `C:\Users\karti\sumo-src\src\microsim\lcmodels` and `microsim` (1.28.
 
 | file | status | fix sha |
 |---|---|---|
-| MSLaneChanger.cpp | NOT AUDITED | |
+| MSLaneChanger.cpp | OK (per-function table below; one FIXED) | ea06e575 |
 | MSLaneChangerSublane.cpp | NOT AUDITED | |
+
+MSLaneChanger.cpp, function status:
+
+| function | status | fix sha |
+|---|---|---|
+| postloadInitLC (checkOpened) | FIXED (foe links compared by content, not by address) | ea06e575 |
+| checkOpened use in checkChange (unsafe-LC `opened()` check, C++ 1117–1135) | FIXED (was a `shortcut:` stub) | ea06e575 |
+| change() | OK | |
+| registerUnchanged / applyTraCICommands / startChange / continueChange | OK | |
+| getRealLeader / getRealFollower / getCloserFollower | OK | |
+| checkChangeWithinEdge / checkChange (incl. zipper, continuous-maneuver, critical-leader) | OK | |
+| checkChangeOpposite | OK | |
+| changeOpposite | OK | |
+| avoidDeadlock, yieldToDeadlockOncoming, yieldToOppositeWaiting, resolveDeadlock | OK | |
+| computeSafeOppositeLength | OK | |
+| getOncomingVehicle, getOncomingOppositeVehicle, computeSurplusGap, foundHilltop, computeOvertakingTime | OK | |
+| getColumnleader, getLaneAfter, getMaxOvertakingSpeed, getLastBlocked, hasOppositeStop, checkOppositeStop, getBestLanesOpposite | OK | |
+| mayChange, initChanger, updateChanger, updateLanes, findCandidate, laneChange, checkTraCICommands, applyTraCICommands | OK (laneChange try/catch lock-release is a documented `shortcut:` in the Rust; no ProcessError path) | |
+| constructor (lane length checks for mayChangeLeft/Right) | OK | |
 
 ## Findings
 
