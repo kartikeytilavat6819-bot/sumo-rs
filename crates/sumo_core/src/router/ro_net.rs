@@ -12,7 +12,7 @@ pub type RONet_LaneProhibitions = BTreeMap<Ptr<ROLane>, RouterProhibition>;
 pub type RONet_Prohibitions = BTreeMap<Ptr<ROEdge>, RouterProhibition>;
 
 /// C++ typedef `MapMatcher<ROEdge, ROLane, RONode> ROMapMatcher`
-pub type ROMapMatcher = Unmapped /* MapMatcher<ROEdge, ROLane, RONode> */;
+pub type ROMapMatcher = crate::utils::map_matcher::MapMatcher<ROEdge, ROLane, RONode>;
 
 /// C++ typedef `std::map<const SUMOTime, std::vector<RORoutable *>> RONet::RoutablesMap`
 pub type RONet_RoutablesMap = BTreeMap<SUMOTime, Vec<Ptr<RORoutable>>>;

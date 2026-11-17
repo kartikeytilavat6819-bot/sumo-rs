@@ -1,0 +1,6 @@
+<routes>
+    <!-- trips given by fromXY/viaXY/toXY on edges A (y=0) and B (x=400): mapped to edges by the MSRouteHandler map matcher -->
+    <trip id="x1" depart="0.00" fromXY="50,3" toXY="380,-2"/>
+    <trip id="x2" depart="5.00" fromXY="200,1" toXY="395,150"/>
+    <trip id="x3" depart="10.00" fromXY="30,0" viaXY="390,2" toXY="398,250"/>
+</routes>
