@@ -6893,6 +6893,13 @@ impl MSVehicle {
             startLane = self.myLane;
         }
         debug_assert!(!startLane.is_null());
+        if self.get_id() == "21" && (40000..=44000).contains(&MSNet::get_instance().get_current_time_step()) {
+            eprintln!("RB02 ubl t={} force={} start={} lane={} nb={}", MSNet::get_instance().get_current_time_step(), forceRebuild as i32, startLane.get_id(), self.myLane.get_id(), self.myBestLanes.len());
+            for (e, lanes) in self.myBestLanes.iter().enumerate() {
+                let s: Vec<String> = lanes.iter().map(|l| format!("{}:{}:{:.6}", l.lane.get_id(), l.bestLaneOffset, l.occupation)).collect();
+                eprintln!("RB02   e{} {}", e, s.join(" "));
+            }
+        }
         if self.myLaneChangeModel.is_opposite() {
             // depending on the calling context, startLane might be the forward lane
             // or the reverse-direction lane. In the latter case we need to

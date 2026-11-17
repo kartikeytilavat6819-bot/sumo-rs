@@ -1,5 +1,5 @@
 #!/bin/bash
-# rb02 diagnostic (removed before merge): city_paris_etoile FCD first diff + veh 21 neighbourhood
+# rb02 diagnostic (removed before merge): veh 21 best lanes at steps 40..44, Rust vs instrumented C++
 cd "$(dirname "$0")/../.." || exit 1
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/target}
 BIN="$CARGO_TARGET_DIR/debug"
@@ -8,11 +8,11 @@ O=/tmp/rb02; rm -rf $O; mkdir -p $O
 EXTRA=$(cat "$D/sim.args")
 "$BIN/sumo.exe" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --fcd-output "$O/fcd.xml" \
     --tripinfo-output "$O/ti.xml" --no-step-log true $EXTRA >"$O/sumo.log" 2>&1
-echo "exit=$? lines=$(wc -l < $O/fcd.xml)"
+echo "rust exit=$?"
+P=$(bash tools/gcloud/vm_cpp_trace.sh rb02 tools/kaggle/rb02_ubl.patch) || { echo "cpp trace build failed"; exit 1; }
+"$P" -n "$D/ref_simple.net.xml" -r "$D/routes.rou" --fcd-output "$O/cfcd.xml" \
+    --tripinfo-output "$O/cti.xml" --no-step-log true $EXTRA >"$O/cpp.log" 2>&1
+echo "cpp exit=$?"
+echo "== RUST RB02"; grep RB02 "$O/sumo.log" | head -60
+echo "== CPP RB02"; grep RB02 "$O/cpp.log" | head -60
 python tools/oracle/compare_sim.py --fcd "$D/ref.fcd.xml" "$O/fcd.xml" 2>&1 | head -3
-for f in "$D/ref.fcd.xml" "$O/fcd.xml"; do
-  echo "== $f veh21 t41-44"
-  awk 'match($0,/time="[^"]*"/){t=substr($0,RSTART+6,RLENGTH-7)+0} /id="21"/ && t>=41 && t<=44 {print t": "$0}' "$f"
-  echo "== $f on edge 566475377#4 t41-44"
-  awk 'match($0,/time="[^"]*"/){t=substr($0,RSTART+6,RLENGTH-7)+0} /lane="566475377#4_/ && t>=41 && t<=44 {print t": "$0}' "$f" | head -30
-done
