@@ -215,7 +215,7 @@ impl MSFullExport {
                 }
                 of.write_attr("angle", &navi_degree(p.get_angle()));
                 of.write_attr("speed", &p.get_speed());
-                of.write_attr("position", &p.get_edge_pos());
+                of.write_attr("pos", &p.get_edge_pos());
                 of.write_attr("edge", e.get_id());
                 of.write_attr("slope", &e.get_lanes()[0].get_shape_2().slope_degree_at_offset(p.get_edge_pos()));
                 if v.is_null() {
