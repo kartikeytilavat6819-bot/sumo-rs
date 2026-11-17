@@ -947,7 +947,7 @@ impl NLBuilder {
             stateDumpFiles,
             self.myXMLHandler.have_seen_internal_edge(),
             self.myXMLHandler.has_junction_higher_speeds(),
-            &(),
+            &self.myXMLHandler.network_version(),
         );
     }
 

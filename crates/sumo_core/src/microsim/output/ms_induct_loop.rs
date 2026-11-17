@@ -1012,7 +1012,7 @@ impl MSInductLoop {
         }
         let lane = self.myLane;
         if lane.has_pedestrians() {
-            for &p in lane.get_edge().get_persons() {
+            for &p in lane.get_edge().get_persons().iter() {
                 if p.get_lane() != lane || !self.base2.vehicle_applies(&p.base) {
                     continue;
                 }

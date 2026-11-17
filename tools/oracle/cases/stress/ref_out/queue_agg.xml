@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-16T23:11:46.279052-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/stress/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/stress/routes.rou"/>
+    </input>
+
+    <output>
+        <queue-output value="tools/oracle/cases/stress/ref_out/queue_agg.xml"/>
+        <queue-output.aggregation value="50"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<queue-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/queue_file.xsd">
+    <interval begin="0.00" end="50.00">
+        <edge id=":3974095829_0" samples="5" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="10.00" medianQueueLengthInMeters="9.67" percentileQueueLengthInMeters="9.94"/>
+        <edge id="682360554#0" samples="1" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.00" medianQueueLengthInMeters="5.00" percentileQueueLengthInMeters="5.00"/>
+        <edge id="682360554#1" samples="4" maxQueueLengthInVehicles="3.00" medianQueueLengthInVehicles="1.50" percentileQueueLengthInVehicles="2.85" maxQueueLengthInMeters="24.56" medianQueueLengthInMeters="13.05" percentileQueueLengthInMeters="23.37"/>
+        <edge id="682360554#2" samples="6" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="6.20" medianQueueLengthInMeters="6.01" percentileQueueLengthInMeters="6.16"/>
+    </interval>
+    <interval begin="50.00" end="100.00">
+        <edge id=":10224024816_0" samples="7" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.97" medianQueueLengthInMeters="5.81" percentileQueueLengthInMeters="5.93"/>
+        <edge id=":3974095829_0" samples="42" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="9.62" medianQueueLengthInMeters="9.62" percentileQueueLengthInMeters="9.62"/>
+        <edge id=":6597464486_0" samples="40" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="9.18" medianQueueLengthInMeters="7.12" percentileQueueLengthInMeters="8.18"/>
+        <edge id="682360554#0" samples="2" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.00" medianQueueLengthInMeters="5.00" percentileQueueLengthInMeters="5.00"/>
+        <edge id="682360554#1" samples="50" maxQueueLengthInVehicles="8.00" medianQueueLengthInVehicles="8.00" percentileQueueLengthInVehicles="8.00" maxQueueLengthInMeters="64.16" medianQueueLengthInMeters="61.09" percentileQueueLengthInMeters="61.59"/>
+        <edge id="682360554#2" samples="41" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="6.00" medianQueueLengthInMeters="6.00" percentileQueueLengthInMeters="6.00"/>
+    </interval>
+    <interval begin="100.00" end="150.00">
+        <edge id=":10224024816_0" samples="1" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.71" medianQueueLengthInMeters="5.71" percentileQueueLengthInMeters="5.71"/>
+        <edge id=":3974095829_0" samples="16" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="9.97" medianQueueLengthInMeters="9.62" percentileQueueLengthInMeters="9.78"/>
+        <edge id=":6597464486_0" samples="7" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="7.12" medianQueueLengthInMeters="7.12" percentileQueueLengthInMeters="7.12"/>
+        <edge id="1117867028" samples="1" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.00" medianQueueLengthInMeters="5.00" percentileQueueLengthInMeters="5.00"/>
+        <edge id="682360554#0" samples="2" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.00" medianQueueLengthInMeters="5.00" percentileQueueLengthInMeters="5.00"/>
+        <edge id="682360554#1" samples="19" maxQueueLengthInVehicles="8.00" medianQueueLengthInVehicles="5.00" percentileQueueLengthInVehicles="8.00" maxQueueLengthInMeters="67.81" medianQueueLengthInMeters="60.21" percentileQueueLengthInMeters="66.74"/>
+        <edge id="682360554#2" samples="17" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="6.08" medianQueueLengthInMeters="6.00" percentileQueueLengthInMeters="6.03"/>
+    </interval>
+    <interval begin="150.00" end="200.00">
+        <edge id=":10224024816_0" samples="3" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="6.16" medianQueueLengthInMeters="6.13" percentileQueueLengthInMeters="6.16"/>
+        <edge id=":3974095829_0" samples="31" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="9.62" medianQueueLengthInMeters="9.62" percentileQueueLengthInMeters="9.62"/>
+        <edge id=":6597464486_0" samples="46" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="9.05" medianQueueLengthInMeters="7.12" percentileQueueLengthInMeters="7.72"/>
+        <edge id="1117867028" samples="1" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="5.00" medianQueueLengthInMeters="5.00" percentileQueueLengthInMeters="5.00"/>
+        <edge id="682360554#1" samples="43" maxQueueLengthInVehicles="8.00" medianQueueLengthInVehicles="8.00" percentileQueueLengthInVehicles="8.00" maxQueueLengthInMeters="67.64" medianQueueLengthInMeters="61.09" percentileQueueLengthInMeters="61.10"/>
+        <edge id="682360554#2" samples="30" maxQueueLengthInVehicles="1.00" medianQueueLengthInVehicles="1.00" percentileQueueLengthInVehicles="1.00" maxQueueLengthInMeters="6.00" medianQueueLengthInMeters="6.00" percentileQueueLengthInMeters="6.00"/>
+    </interval>
+</queue-export>

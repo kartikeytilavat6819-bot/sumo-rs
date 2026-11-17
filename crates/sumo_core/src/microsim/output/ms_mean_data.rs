@@ -69,24 +69,6 @@ fn as_tracker(v: Ptr<MSMeanData_MeanDataValues>) -> Ptr<MSMeanData_MeanDataValue
     Ptr::from_raw(v.as_raw() as *mut MSMeanData_MeanDataValueTracker)
 }
 
-fn ms_mean_data_detector_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
-    Ptr::from_mut(d).cast::<MSMeanData>().m().write_xml_output(dev, startTime, stopTime)
-}
-fn ms_mean_data_detector_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
-    Ptr::new(d).cast::<MSMeanData>().m().write_xml_detector_prolog(dev)
-}
-fn ms_mean_data_detector_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
-    Ptr::from_mut(d).cast::<MSMeanData>().m().detector_update(step)
-}
-
-/// Virtual table of MSMeanData as MSDetectorFileOutput (inherited by all MSMeanData subclasses)
-static MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
-    write_xml_output: ms_mean_data_detector_write_xml_output,
-    write_xml_detector_prolog: ms_mean_data_detector_write_xml_detector_prolog,
-    detector_update: ms_mean_data_detector_detector_update,
-    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
-};
-
 /// Data collector for edges/lanes
 /// C++ class `MSMeanData` (microsim/output/MSMeanData.h)
 #[repr(C)]
@@ -147,6 +129,33 @@ impl std::ops::DerefMut for MSMeanData {
         &mut self.base
     }
 }
+
+// the MSDetectorFileOutput base is the first field, so the base pointer is the MSMeanData pointer
+fn ms_mean_data_of(d: &MSDetectorFileOutput) -> &MSMeanData {
+    unsafe { &*(d as *const MSDetectorFileOutput as *const MSMeanData) }
+}
+fn ms_mean_data_of_mut(d: &mut MSDetectorFileOutput) -> &mut MSMeanData {
+    unsafe { &mut *(d as *mut MSDetectorFileOutput as *mut MSMeanData) }
+}
+fn ms_mean_data_write_xml_output(d: &mut MSDetectorFileOutput, dev: &mut OutputDevice, startTime: SUMOTime, stopTime: SUMOTime) {
+    ms_mean_data_of_mut(d).write_xml_output(dev, startTime, stopTime)
+}
+fn ms_mean_data_write_xml_detector_prolog(d: &MSDetectorFileOutput, dev: &mut OutputDevice) {
+    ms_mean_data_of(d).write_xml_detector_prolog(dev)
+}
+// C++ MSMeanData does not override reset
+fn ms_mean_data_reset(_: &mut MSDetectorFileOutput) {}
+fn ms_mean_data_detector_update(d: &mut MSDetectorFileOutput, step: SUMOTime) {
+    ms_mean_data_of_mut(d).detector_update(step)
+}
+
+static MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT: MSDetectorFileOutputVt = MSDetectorFileOutputVt {
+    write_xml_output: ms_mean_data_write_xml_output,
+    write_xml_detector_prolog: ms_mean_data_write_xml_detector_prolog,
+    reset: ms_mean_data_reset,
+    detector_update: ms_mean_data_detector_update,
+    ..DEFAULT_MSDETECTOR_FILE_OUTPUT_VT
+};
 
 impl MSMeanData {
     /// C++: `void MSMeanData::MSMeanData(const std::string &, const SUMOTime, const SUMOTime, const bool, const std::string &, const bool, const bool, const int, const double, const double, const std::string &, const std::string &, const std::vector<MSEdge *> &, AggregateType)`
@@ -234,6 +243,7 @@ impl MSMeanData {
             // shortcut: C++ propagates non-bool exceptions out of the constructor; panics here instead
             Err(e) => panic!("{}", e),
         }
+        this.base.vt = &MS_MEAN_DATA_DETECTOR_FILE_OUTPUT_VT;
         this
     }
 

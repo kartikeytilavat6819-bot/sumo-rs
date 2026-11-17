@@ -237,6 +237,12 @@ impl fmt::Display for Boundary {
     }
 }
 
+impl crate::iodevices::output_device::OutputValue for Boundary {
+    fn to_output_string(&self, precision: i32) -> std::borrow::Cow<str> {
+        std::borrow::Cow::Owned(self.to_string_prec(precision))
+    }
+}
+
 impl AbstractPoly for Boundary {
     fn around(&self, p: &Position, offset: f64) -> bool {
         ((p.x() <= self.xmax + offset) && (p.x() >= self.xmin - offset))

@@ -58,6 +58,12 @@ fn smart_sk_set_headway_time(m: &mut MSCFModel, headwayTime: f64) {
 fn smart_sk_duplicate(m: &MSCFModel, vtype: Ptr<MSVehicleType>) -> Ptr<MSCFModel> {
     cf_cast::<MSCFModel_SmartSK>(m).duplicate(vtype)
 }
+fn smart_sk_save_vehicle_variables(m: &MSCFModel, vars: &MSCFModel_VehicleVariables, out: &mut OutputDevice) {
+    unsafe { &*(vars as *const MSCFModel_VehicleVariables as *const MSCFModel_SmartSK_SSKVehicleVariables) }.save_state(out, m)
+}
+fn smart_sk_load_vehicle_variables(_m: &MSCFModel, vars: &mut MSCFModel_VehicleVariables, attrs: &SUMOSAXAttributes) {
+    unsafe { &mut *(vars as *mut MSCFModel_VehicleVariables as *mut MSCFModel_SmartSK_SSKVehicleVariables) }.load_state(attrs).unwrap_or_else(|e| panic!("{}", e))
+}
 fn smart_sk_create_vehicle_variables(m: &MSCFModel) -> Ptr<MSCFModel_VehicleVariables> {
     cf_cast::<MSCFModel_SmartSK>(m).create_vehicle_variables()
 }
@@ -79,6 +85,8 @@ pub const SMART_SK_VT: MSCFModelVt = MSCFModelVt {
     set_headway_time: smart_sk_set_headway_time,
     duplicate: smart_sk_duplicate,
     create_vehicle_variables: smart_sk_create_vehicle_variables,
+    save_vehicle_variables: smart_sk_save_vehicle_variables,
+    load_vehicle_variables: smart_sk_load_vehicle_variables,
     ..DEFAULT_MSCF_MODEL_VT
 };
 
