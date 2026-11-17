@@ -170,6 +170,11 @@ use crate::prelude::*;
 // }
 #[allow(unused_variables)]
 use crate::router::ro_net::ROMapMatcher;
+use crate::utils::router::a_star_lookup_table::{AStarLookupTableKind, FullLookupTable, LandmarkLookupTable};
+use crate::utils::router::reversed_edge::ReversedEdge;
+use crate::router::ro_vehicle::ROVehicle;
+use utils::common::sumo_vehicle_class::DEFAULT_VTYPE_ID;
+use crate::utils::vehicle::sumo_vehicle_parameter::SUMOVehicleParameter;
 use crate::utils::router::a_star_router::AStarRouter;
 use crate::utils::router::ch_router::CHRouter;
 use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
@@ -208,11 +213,21 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
         if routingAlgorithm == "dijkstra" {
             leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), ignoreErrors, Some(op), None, false, Ptr::null(), net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "astar" {
-            // shortcut: the astar.all-distances and astar.landmark-distances lookup tables are not ported, upgrade when AStarRouter's lookup tables are
-            if oc.is_set("astar.all-distances", true).unwrap() || oc.is_set("astar.landmark-distances", true).unwrap() {
-                panic!("shortcut: astar lookup tables are not wired in duarouter yet");
+            let mut lookup: Option<std::rc::Rc<AStarLookupTableKind<ROEdge, ROVehicle, ROMapMatcher>>> = None;
+            if oc.is_set("astar.all-distances", true).unwrap() {
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Full(FullLookupTable::new(&oc.get_string("astar.all-distances").unwrap(), ROEdge::get_all_edges().len() as i32))));
+            } else if oc.is_set("astar.landmark-distances", true).unwrap() {
+                let forward = leak_router(DijkstraRouter::new(ROEdge::get_all_edges(), true, Some(ROEdge::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute());
+                let reversed: Vec<Ptr<ReversedEdge<ROEdge, ROVehicle>>> = ROEdge::get_all_edges().iter().map(|edge| edge.get_reversed_routing_edge()).collect();
+                for redge in reversed.iter() {
+                    redge.m().init();
+                }
+                let backward = Ptr::from_raw(Box::into_raw(Box::new(DijkstraRouter::new(&reversed, true, Some(ReversedEdge::<ROEdge, ROVehicle>::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute()))).cast::<SUMOAbstractRouter<ReversedEdge<ROEdge, ROVehicle>, ROVehicle>>();
+                let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
+                let saveFile = if oc.is_set("astar.save-landmark-distances", true).unwrap() { oc.get_string("astar.save-landmark-distances").unwrap() } else { String::new() };
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Landmark(LandmarkLookupTable::new(&oc.get_string("astar.landmark-distances").unwrap(), ROEdge::get_all_edges(), forward, backward, defaultVehicle, &saveFile, oc.get_int("routing-threads").unwrap(), Ptr::null()))));
             }
-            leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), None, net.has_permissions(), restrictionParams).with_compute())
+            leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), lookup, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CH" && !net.has_permissions() && !utils::common::std_defs::g_routing_preferences() && !net.has_speed_restrictions() {
             leak_router(CHRouter::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), SVC_IGNORING, weightPeriod, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CHWrapper" || routingAlgorithm == "CH" {
