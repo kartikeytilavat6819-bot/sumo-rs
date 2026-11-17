@@ -53,21 +53,26 @@ for c in $CASES; do
   o=$ROOT/$src
   [ -n "${DEST:-}" ] && o=$DEST/$c
   mkdir -p "$o"
+  # NEW_CASE marker: a brand-new case dir has no committed refs yet, so write every output and every sim_<v>.args variant
+  want() { [ -f "$1" ] || [ -f "$(dirname "$1")/NEW_CASE" ]; }
   outs="--tripinfo-output $(wp "$o")/ref.tripinfo.xml"
-  [ -f "$src/ref.fcd.xml" ] && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
-  [ -f "$src/ref.stat.xml" ] && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
+  want "$src/ref.fcd.xml" && outs="$outs --fcd-output $(wp "$o")/ref.fcd.xml"
+  want "$src/ref.stat.xml" && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
   flags=$(cat "$src/sim.args" 2>/dev/null)
   run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
   # Variants: run_all pairs ref_<v>.tripinfo.xml with sim_<v>.args, so each variant reference must be
   # regenerable the same way. Without this loop a variant reference can only be reproduced by hand.
-  for vf in "$src"/ref_*.tripinfo.xml; do
-    [ -f "$vf" ] || continue
-    v=$(basename "$vf" .tripinfo.xml); v=${v#ref_}
+  if [ -f "$src/NEW_CASE" ]; then
+    vlist=$(for f in "$src"/sim_*.args; do b=$(basename "$f" .args); echo "${b#sim_}"; done)
+  else
+    vlist=$(for vf in "$src"/ref_*.tripinfo.xml; do [ -f "$vf" ] || continue; b=$(basename "$vf" .tripinfo.xml); echo "${b#ref_}"; done)
+  fi
+  for v in $vlist; do
     vflags=$(cat "$src/sim_$v.args" 2>/dev/null)
     vouts="--tripinfo-output $(wp "$o")/ref_$v.tripinfo.xml"
-    [ -f "$src/ref_$v.fcd.xml" ] && vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"
-    [ -f "$src/ref_$v.stat.xml" ] && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
+    want "$src/ref_$v.fcd.xml" && vouts="$vouts --fcd-output $(wp "$o")/ref_$v.fcd.xml"
+    want "$src/ref_$v.stat.xml" && vouts="$vouts --statistic-output $(wp "$o")/ref_$v.stat.xml"
     run_ref "$LOG/ref_${c}_$v.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $vflags $vouts --no-step-log true" "$(echo "$vflags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" "ref_$v"
     echo "  $c/$v: exit $?  flags: ${vflags:-none}"
   done
