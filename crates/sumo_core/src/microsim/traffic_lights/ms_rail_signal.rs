@@ -457,6 +457,31 @@ fn rail_get_blocking_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MS
     Ptr::from_mut(l).cast::<MSRailSignal>().m().get_blocking_vehicles(linkIndex)
 }
 
+fn rail_get_rival_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_rival_vehicles(linkIndex)
+}
+
+fn rail_get_priority_vehicles(l: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_priority_vehicles(linkIndex)
+}
+
+fn rail_get_blocking_drive_ways(l: &mut MSTrafficLightLogic, linkIndex: i32) -> Vec<Ptr<MSDriveWay>> {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_blocking_drive_ways(linkIndex)
+}
+
+fn rail_get_requested_drive_way(l: &mut MSTrafficLightLogic, linkIndex: i32) -> String {
+    Ptr::from_mut(l).cast::<MSRailSignal>().m().get_requested_drive_way(linkIndex)
+}
+
+static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
+    get_rival_vehicles: rail_get_rival_vehicles,
+    get_priority_vehicles: rail_get_priority_vehicles,
+    get_blocking_drive_ways: rail_get_blocking_drive_ways,
+    get_requested_drive_way: rail_get_requested_drive_way,
+    get_detector_state: super::ms_traffic_light_logic::MSTrafficLightLogic::get_detector_state_base,
+    get_tl_queue_length: super::ms_traffic_light_logic::MSTrafficLightLogic::get_tl_queue_length_base,
+};
+
 static MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: rail_try_switch,
     get_phase_number: rail_get_phase_number,
@@ -503,6 +528,7 @@ impl MSRailSignal {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, delay: SUMOTime, parameters: &ParameterisedMap) -> Self {
         let mut base = MSTrafficLightLogic::new(tlcontrol, id, programID, 0, TrafficLightType::RAIL_SIGNAL, delay, parameters);
         base.vt = &MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_VT;
+        base.ext_vt = &MS_RAIL_SIGNAL_TRAFFIC_LIGHT_LOGIC_EXT_VT;
         let numerical_id = MY_RS_INDEX.with(|c| {
             let value = c.get();
             c.set(value + 1);

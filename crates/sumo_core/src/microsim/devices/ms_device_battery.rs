@@ -82,31 +82,61 @@ const DEFAULT_CHARGE_RATIO: f64 = 0.5;
 /// C++ `VTYPEPARS_EMISSIONCLASS_SET` bit (private in ms_vehicle_type.rs, same value)
 const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
 
-/// C++ `istringstream >> double`; shortcut: failbit state after a bad token is not modelled
+/// C++ failed `istringstream`: every later extraction is a no-op, so the rest of the tokens are dropped
+fn stream_fail(bis: &mut std::str::SplitWhitespace) {
+    while bis.next().is_some() {}
+}
+
+/// C++ `istringstream >> double`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_f64(bis: &mut std::str::SplitWhitespace, target: &mut f64) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<f64>().unwrap_or(0.);
+    match bis.next().map(|t| t.parse::<f64>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0.;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> SUMOTime`; shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> SUMOTime`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_i64(bis: &mut std::str::SplitWhitespace, target: &mut i64) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i64>().unwrap_or(0);
+    match bis.next().map(|t| t.parse::<i64>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> int`; shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> int`: a bad or missing token sets failbit (value 0 for a bad token)
 fn read_stream_i32(bis: &mut std::str::SplitWhitespace, target: &mut i32) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i32>().unwrap_or(0);
+    match bis.next().map(|t| t.parse::<i32>()) {
+        Some(Ok(v)) => *target = v,
+        Some(Err(_)) => {
+            *target = 0;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
-/// C++ `istringstream >> bool` (written by toString as 1/0); shortcut: failbit state after a bad token is not modelled
+/// C++ `istringstream >> bool` (written by toString as 1/0): 0 and 1 are read, other values set failbit and read as true
 fn read_stream_bool(bis: &mut std::str::SplitWhitespace, target: &mut bool) {
-    if let Some(t) = bis.next() {
-        *target = t.parse::<i32>().map(|v| v != 0).unwrap_or(false);
+    match bis.next().map(|t| t.parse::<i64>()) {
+        Some(Ok(0)) => *target = false,
+        Some(Ok(1)) => *target = true,
+        Some(Ok(_)) => {
+            *target = true;
+            stream_fail(bis);
+        }
+        Some(Err(_)) => {
+            *target = false;
+            stream_fail(bis);
+        }
+        None => stream_fail(bis),
     }
 }
 
@@ -339,7 +369,6 @@ impl MSDevice_Battery {
     // }
     #[allow(unused_variables)]
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes) {
-        // shortcut: C++ istringstream failbit semantics are not modelled (a malformed token is read as 0 or false); state strings are always written by saveState, upgrade if hand-written states must be rejected
         let state = attrs.get_string(SUMO_ATTR_STATE);
         let mut bis = state.split_whitespace();
         read_stream_f64(&mut bis, &mut self.myActualBatteryCapacity);

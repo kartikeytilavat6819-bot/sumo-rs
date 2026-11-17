@@ -66,31 +66,9 @@ fn distance_of_max_phero(map: &MSLaneId_PheromoneMap) -> (f64, f64) {
     (max_phero_val_current, temp_avg_other_lanes)
 }
 
-/// Owned copy of a phase. The generated countVehicles takes the phase by value, the C++ takes const&.
-// shortcut: copy only because MSSOTLTrafficLightLogic::count_vehicles takes MSPhaseDefinition by value, change it to &MSPhaseDefinition and drop this copy
+/// Owned copy of a phase (C++ passes MSPhaseDefinition by value to countVehicles).
 fn phase_copy(p: &MSPhaseDefinition) -> MSPhaseDefinition {
-    MSPhaseDefinition {
-        duration: p.duration,
-        lastDuration: p.lastDuration,
-        minDuration: p.minDuration,
-        maxDuration: p.maxDuration,
-        earliestEnd: p.earliestEnd,
-        latestEnd: p.latestEnd,
-        earlyTarget: p.earlyTarget.clone(),
-        finalTarget: p.finalTarget.clone(),
-        myLastSwitch: p.myLastSwitch,
-        myLastEnd: p.myLastEnd,
-        nextPhases: p.nextPhases.clone(),
-        name: p.name.clone(),
-        yellow: p.yellow,
-        red: p.red,
-        vehext: p.vehext,
-        myTransientNotDecisional: p.myTransientNotDecisional,
-        myCommit: p.myCommit,
-        myUndefined: p.myUndefined,
-        myTargetLaneSet: p.myTargetLaneSet.clone(),
-        myState: p.myState.clone(),
-    }
+    p.clone()
 }
 
 /// C++ class `CircularBuffer` (microsim/traffic_lights/MSSwarmTrafficLightLogic.h)
