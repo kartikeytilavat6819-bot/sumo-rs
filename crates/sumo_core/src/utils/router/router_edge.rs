@@ -52,6 +52,58 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     fn is_walking_area(&self) -> bool {
         panic!("shortcut: this edge type has no walking area flag")
     }
+    // shortcut: only MSEdge/ROEdge/NBRouterEdge carry a function class, upgrade when IntermodalNetwork runs on another edge type
+    fn is_normal(&self) -> bool {
+        panic!("shortcut: this edge type has no isNormal()")
+    }
+    fn function(&self) -> SumoXMLEdgeFunc {
+        panic!("shortcut: this edge type has no getFunction()")
+    }
+    fn other_taz_connector(&self) -> Ptr<Self> {
+        panic!("shortcut: this edge type has no getOtherTazConnector()")
+    }
+    fn stop_position(_stop: &SUMOVehicleParameter_Stop) -> Position
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no static getStopPosition()")
+    }
+    fn lane_edge(_lane: Ptr<Self::Lane>) -> Ptr<Self>
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no lane-to-edge accessor")
+    }
+    fn lane_outgoing_via_lanes(_lane: Ptr<Self::Lane>) -> Vec<(Ptr<Self::Lane>, Ptr<Self>)>
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no lane outgoing via lanes")
+    }
+    // C++ E::getTimePenalty() (traffic light penalty used by pedestrian crossings)
+    fn time_penalty(&self) -> f64 {
+        panic!("shortcut: this edge type has no getTimePenalty()")
+    }
+    // C++ L::getIncomingLinkState() used by pedestrian crossings
+    fn lane_incoming_link_state(_lane: Ptr<Self::Lane>) -> LinkState
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no lane getIncomingLinkState()")
+    }
+    // C++ L::getPermissions() / L::allowsVehicleClass() as used by getSidewalk
+    fn lane_permissions(_lane: Ptr<Self::Lane>) -> SVCPermissions
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no lane permissions")
+    }
+    fn lane_allows_vehicle_class(_lane: Ptr<Self::Lane>, _svc: SUMOVehicleClass) -> bool
+    where
+        Self: Sized,
+    {
+        panic!("shortcut: this edge type has no lane allowsVehicleClass()")
+    }
     // shortcut: only the network edge type provides a railway routing edge, upgrade when IntermodalEdge needs it
     fn railway_routing_edge(&self) -> Ptr<RailEdge<Self, V>>
     where
@@ -89,6 +141,18 @@ pub trait RouterVehicle {
     /// C++ `V::getID()` in warning text (owned string, unlike `get_id`).
     fn id(&self) -> String {
         self.get_id()
+    }
+    // shortcut: only SUMOVehicle exposes its vtype parameter to the router, upgrade when NBVehicle/ROVehicle are routed through IntermodalTrip
+    fn v_type_parameter(&self) -> &SUMOVTypeParameter {
+        panic!("shortcut: this vehicle type has no getVTypeParameter()")
+    }
+    /// C++ `V::getParameter().vtypeid`
+    fn vtype_id(&self) -> String {
+        panic!("shortcut: this vehicle type has no getParameter().vtypeid")
+    }
+    /// C++ `V::getVehicleType().getLength()`
+    fn vehicle_type_length(&self) -> f64 {
+        panic!("shortcut: this vehicle type has no getVehicleType().getLength()")
     }
 }
 

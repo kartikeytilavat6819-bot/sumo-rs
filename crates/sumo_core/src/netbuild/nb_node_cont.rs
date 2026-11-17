@@ -47,7 +47,6 @@ fn pc_get_or_insert(map: &mut BTreeMap<(Ptr<NBEdge>, Ptr<NBEdge>), SVCPermission
 
 /// C++ `addLane2LaneConnection(fromLane, dest, toLane, USER, false, mayDefinitelyPass)` with the header defaults filled in
 fn add_lane2_lane_connection_user(from: Ptr<NBEdge>, fromLane: i32, dest: Ptr<NBEdge>, toLane: i32, mayDefinitelyPass: bool) -> bool {
-    // shortcut: C++ default length is NBEdge::myDefaultConnectionLength (static, not ported); the unspecified default -1 is used
     from.m().add_lane2_lane_connection(fromLane, dest, toLane, NBEdge_Lane2LaneInfoType::USER, false, mayDefinitelyPass, KeepClear::KEEPCLEAR_UNSPECIFIED, -1., -1., -1., 1., crate::netbuild::nb_edge::my_default_connection_length(), &PositionVector::EMPTY, false, SVC_UNSPECIFIED, false, "", SVC_UNSPECIFIED, SVC_UNSPECIFIED, false)
 }
 
