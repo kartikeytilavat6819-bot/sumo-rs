@@ -13596,6 +13596,7 @@ impl MSVehicle {
                 let relativePos = lane.get_length() - seen;
                 let stopTime = max2(1.0, (self.get_speed() / cfModel.get_max_decel()).ceil());
                 let leader = lane.next_blocking(relativePos, self.get_right_side_on_lane_2(lane), self.get_right_side_on_lane_2(lane) + self.get_vehicle_type().get_width(), stopTime, false);
+                if std::env::var_os("CD01").is_some() && self.get_id() == "car8" && (MSNet::get_instance().get_current_time_step() >= 364000 && MSNet::get_instance().get_current_time_step() <= 367000) { eprintln!("CD01 PED t={} lane={} rel={} stopT={} null={} gap={} v={}", MSNet::get_instance().get_current_time_step(), lane.get_id(), relativePos, stopTime, leader.0.is_null(), leader.1, v); }
                 if !leader.0.is_null() {
                     let stopSpeed = cfModel.stop_speed(me, self.get_speed(), leader.1 - self.get_vehicle_type().get_min_gap(), MSCFModel_CalcReason::CURRENT);
                     v = min2(v, stopSpeed);

@@ -1,0 +1,6 @@
+diff --git a/src/microsim/MSVehicle.cpp b/src/microsim/MSVehicle.cpp
+--- a/src/microsim/MSVehicle.cpp
++++ b/src/microsim/MSVehicle.cpp
+@@ -2530,1 +2530,2 @@
++        if (getenv("CD01") && getID() == "car8" && MSNet::getInstance()->getCurrentTimeStep() >= 364000 && MSNet::getInstance()->getCurrentTimeStep() <= 367000) std::cerr << "CD01 PED t=" << MSNet::getInstance()->getCurrentTimeStep() << " lane=" << lane->getID() << " rel=" << relativePos << " stopT=" << stopTime << " null=" << (leader.first == nullptr) << " gap=" << leader.second << " v=" << v << "\n";
+             if (leader.first != 0) {
