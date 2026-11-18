@@ -66,7 +66,7 @@ PYEOF
   r 3; lat=$R; r 3; ttp=(300 -1 60); ttp=${ttp[$R]}
   r 6; local x=("" "" "--lanechange.duration 3" "--collision.action teleport" "--ignore-junction-blocker 5" "--sloppy-insert"); x=${x[$R]}
   local a="--end 300 --seed $s --step-length $step --time-to-teleport $ttp $x"
-  [ $lat = 0 ] && [ $lc = SL2015 ] && a="$a --lateral-resolution 0.8"
+  [ $lat = 0 ] && [ $lc = SL2015 ] && a="${a/--lanechange.duration 3/} --lateral-resolution 0.8"   # mutually exclusive
   echo "$a" > "$d/sim.args"
   echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc vc2=$vc2 | $a"
 }

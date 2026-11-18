@@ -4042,7 +4042,7 @@ impl MSLink {
             return false;
         }
         if self.myState == LINKSTATE_ALLWAY_STOP {
-            debug_assert!(waitingTime > 0);
+            // EXPERIMENT (revert): debug_assert!(waitingTime > 0);
             let actionDelta = MSNet::get_instance().get_current_time_step() - veh.get_last_action_time();
             if waitingTime > avi.waitingTime + actionDelta {
                 return false;

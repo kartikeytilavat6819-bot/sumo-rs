@@ -1,0 +1,15 @@
+<routes><vType id="v_passenger" vClass="passenger" laneChangeModel="SL2015" />
+    <vType id="w_bicycle" vClass="bicycle" laneChangeModel="SL2015" />
+    <vehicle id="w1" type="w_bicycle" depart="9.00">
+        <route edges="C1C0 C0B0 B0B1 B1B2" />
+    </vehicle>
+    <vehicle id="v2" type="v_passenger" depart="10.00">
+        <route edges="B1B0 B0C0 C0C1 C1C2 C2B2" />
+    </vehicle>
+    <vehicle id="w4" type="w_bicycle" depart="36.00">
+        <route edges="B2A2 A2A1 A1B1 B1C1 C1C2" />
+    </vehicle>
+    <vehicle id="v8" type="v_passenger" depart="40.00">
+        <route edges="A0B0 B0B1 B1C1 C1C0" />
+    </vehicle>
+</routes>
