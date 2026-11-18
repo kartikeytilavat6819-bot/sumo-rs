@@ -36,6 +36,8 @@ FCD_FIELDS = ("x", "y", "angle", "speed", "lane", "pos")
 def values_equal(a, b):
     if a is None or b is None:
         return a is b
+    if a == b:  # identical text, including 'nan' (float nan != nan)
+        return True
     try:
         fa = float(a)
         fb = float(b)
