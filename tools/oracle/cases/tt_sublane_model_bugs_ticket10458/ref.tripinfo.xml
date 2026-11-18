@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:58:59.130494-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_bugs_ticket10458/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_bugs_ticket10458/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket10458/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket10458/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket10458/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.8"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="b.0" depart="0.00" departLane="E0_0" departPos="17.97" departPosLat="-2.07" departSpeed="0.00" departDelay="0.00" arrival="21.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="-0.47" arrivalSpeed="5.38" duration="21.00" routeLength="57.42" waitingTime="7.00" waitingCount="1" stopTime="0.00" timeLoss="9.77" rerouteNo="0" devices="tripinfo_b.0 fcd_b.0" vType="bike" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="b.2" depart="1.00" departLane="E0_0" departPos="17.97" departPosLat="0.33" departSpeed="0.00" departDelay="0.67" arrival="21.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="0.47" arrivalSpeed="5.43" duration="20.00" routeLength="57.42" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="9.07" rerouteNo="0" devices="tripinfo_b.2 fcd_b.2" vType="bike" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="b.3" depart="1.00" departLane="E0_0" departPos="17.97" departPosLat="1.13" departSpeed="0.00" departDelay="0.50" arrival="21.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="1.20" arrivalSpeed="5.54" duration="20.00" routeLength="57.42" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="9.45" rerouteNo="0" devices="tripinfo_b.3 fcd_b.3" vType="bike" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="b.4" depart="1.00" departLane="E0_0" departPos="17.97" departPosLat="1.93" departSpeed="0.00" departDelay="0.34" arrival="21.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="2.00" arrivalSpeed="5.09" duration="20.00" routeLength="57.42" waitingTime="6.00" waitingCount="1" stopTime="0.00" timeLoss="9.45" rerouteNo="0" devices="tripinfo_b.4 fcd_b.4" vType="bike" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="b.1" depart="1.00" departLane="E0_0" departPos="17.97" departPosLat="-2.07" departSpeed="0.00" departDelay="0.83" arrival="24.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="-0.47" arrivalSpeed="5.46" duration="23.00" routeLength="57.42" waitingTime="9.00" waitingCount="1" stopTime="0.00" timeLoss="11.77" rerouteNo="0" devices="tripinfo_b.1 fcd_b.1" vType="bike" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="b.5" depart="9.00" departLane="E0_0" departPos="17.97" departPosLat="-2.07" departSpeed="0.00" departDelay="8.17" arrival="26.00" arrivalLane="E1_0" arrivalPos="31.54" arrivalPosLat="-0.47" arrivalSpeed="5.30" duration="17.00" routeLength="57.42" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="6.43" rerouteNo="0" devices="tripinfo_b.5 fcd_b.5" vType="bike" speedFactor="1.00" vaporized=""/>
+</tripinfos>

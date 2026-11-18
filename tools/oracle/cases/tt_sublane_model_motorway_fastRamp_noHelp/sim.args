@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -v --extrapolate-departpos --lanedata-output aggregated.xml --max-depart-delay 3 --lateral-resolution 0.8 -t

@@ -1079,12 +1079,18 @@ impl MSLaneChangerSublane {
         }
         let changerDirection: i32 = if vehicle.get_lane_change_model_2().is_opposite() { -direction } else { direction };
         let mut to: usize = fromIdx;
+        // C++ `to` is an iterator; in the opposite branch it points into the opposite
+        // edge's changer, which is not indexable via self.myChanger. Carry the lane.
+        let mut toLane: Ptr<MSLane> = source;
         if self.may_change(changerDirection) {
             to = ((fromIdx as i32) + changerDirection) as usize;
+            toLane = self.myChanger[to].lane;
         } else if changerDirection == 1 && !source.get_opposite().is_null() {
             // change to the opposite direction lane
             let opp = source.get_opposite();
-            to = opp.get_edge().myLaneChanger.m().get_changer().len() - 1;
+            let oppChanger = opp.get_edge().myLaneChanger.m().get_changer();
+            to = oppChanger.len() - 1;
+            toLane = oppChanger[to].lane;
         } else {
             // This may occur during maneuver continuation in non-actionsteps.
             self.abort_lc_maneuver(vehicle);
@@ -1125,7 +1131,7 @@ impl MSLaneChangerSublane {
 
         self.output_lc_started(vehicle, from, &mut to, direction, maneuverDist);
         vehicle.m().get_lane_change_model().set_maneuver_dist(maneuverDist - latDist);
-        let changedToNewLane = self.check_change_to_new_lane(vehicle, direction, fromIdx, to);
+        let changedToNewLane = self.check_change_to_new_lane(vehicle, direction, fromIdx, to, toLane);
 
         let oldShadowLane = vehicle.get_lane_change_model_2().get_shadow_lane();
         vehicle.m().get_lane_change_model().update_shadow_lane();
@@ -1168,7 +1174,7 @@ impl MSLaneChangerSublane {
             vehicle.m().get_influencer().set_sublane_change(remaining);
         }
         self.myChanger[fromIdx].lane.m().require_collision_check();
-        self.myChanger[to].lane.m().require_collision_check();
+        toLane.m().require_collision_check();
         changedToNewLane
     }
 
@@ -1208,19 +1214,21 @@ impl MSLaneChangerSublane {
     //     return changedToNewLane;
     // }
     #[allow(unused_variables)]
-    pub fn check_change_to_new_lane(&mut self, vehicle: Ptr<MSVehicle>, direction: i32, from: MSLaneChanger_ChangerIt, to: MSLaneChanger_ChangerIt) -> bool {
+    pub fn check_change_to_new_lane(&mut self, vehicle: Ptr<MSVehicle>, direction: i32, from: MSLaneChanger_ChangerIt, to: MSLaneChanger_ChangerIt, toLane: Ptr<MSLane>) -> bool {
         let oppositeSign: i32 = if vehicle.get_lane_change_model_2().is_opposite() { -1 } else { 1 };
-        let opposite: bool = (self.myChanger[from].lane.get_edge() as *const MSEdge) != (self.myChanger[to].lane.get_edge() as *const MSEdge);
-        let changedToNewLane: bool = self.myChanger[to].lane != self.myChanger[from].lane
+        let opposite: bool = (self.myChanger[from].lane.get_edge() as *const MSEdge) != (toLane.get_edge() as *const MSEdge);
+        let changedToNewLane: bool = toLane != self.myChanger[from].lane
             && vehicle.get_lateral_position_on_lane().abs() > 0.5 * vehicle.get_lane().get_width()
             && (self.may_change(direction * oppositeSign) || opposite);
         if changedToNewLane {
-            vehicle.m().myState.myPosLat -= (direction as f64) * 0.5 * (self.myChanger[from].lane.get_width() + self.myChanger[to].lane.get_width()) * (oppositeSign as f64);
+            vehicle.m().myState.myPosLat -= (direction as f64) * 0.5 * (self.myChanger[from].lane.get_width() + toLane.get_width()) * (oppositeSign as f64);
             if !opposite {
-                self.myChanger[to].lane.m().myTmpVehicles.insert(0, vehicle);
-                self.myChanger[to].dens += vehicle.get_vehicle_type().get_length_with_gap();
+                toLane.m().myTmpVehicles.insert(0, vehicle);
+                if to < self.myChanger.len() {
+                    self.myChanger[to].dens += vehicle.get_vehicle_type().get_length_with_gap();
+                }
             }
-            if MSAbstractLaneChangeModel::have_lc_output() {
+            if MSAbstractLaneChangeModel::have_lc_output() && to < self.myChanger.len() {
                 if !vehicle.is_active() {
                     // update leaders beyond the current edge for all lanes
                     // @note to->aheadNext and from->aheadNext are only needed for output in non-action steps.
@@ -1230,14 +1238,14 @@ impl MSLaneChangerSublane {
                     self.myChanger[from].aheadNext = fromLeaders;
                 }
                 let backPos = vehicle.get_back_position_on_lane_2();
-                let followers = self.myChanger[to].lane.get_followers_on_consecutive(vehicle, backPos, true, -1.0, MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
+                let followers = toLane.get_followers_on_consecutive(vehicle, backPos, true, -1.0, MSLane_MinorLinkMode::FOLLOW_ALWAYS, false);
                 let lcm = vehicle.m().get_lane_change_model();
                 lcm.set_leader_gaps_2(&self.myChanger[to].aheadNext);
                 lcm.set_follower_gaps_2(&followers);
                 lcm.set_orig_leader_gaps_2(&self.myChanger[from].aheadNext);
             }
-            let _ = vehicle.m().get_lane_change_model().start_lane_change_maneuver(self.myChanger[from].lane, self.myChanger[to].lane, direction);
-            if !opposite {
+            let _ = vehicle.m().get_lane_change_model().start_lane_change_maneuver(self.myChanger[from].lane, toLane, direction);
+            if !opposite && to < self.myChanger.len() {
                 self.myChanger[to].ahead.add_leader(vehicle, false, 0.0);
             }
         } else {

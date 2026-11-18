@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:52:30.344551-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_bidiEdge_emergency_braking_late_slow_down_within_crossing/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_bidiEdge_emergency_braking_late_slow_down_within_crossing/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_emergency_braking_late_slow_down_within_crossing/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_emergency_braking_late_slow_down_within_crossing/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_emergency_braking_late_slow_down_within_crossing/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="0.3"/>
+        <collision.action value="warn"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+        <pedestrian.striping.dawdling value="0.5"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="bike4" depart="0.00" departLane="c_0" departPos="7.63" departPosLat="-0.67" departSpeed="5.71" departDelay="0.00" arrival="0.20" arrivalLane="c_0" arrivalPos="8.78" arrivalPosLat="-0.67" arrivalSpeed="5.72" duration="0.20" routeLength="1.15" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_bike4 fcd_bike4" vType="bike_bicycle" speedFactor="1.04" vaporized=""/>
+    <tripinfo id="bike14" depart="2.80" departLane="a_0" departPos="36.99" departPosLat="-0.67" departSpeed="6.26" departDelay="2.80" arrival="13.30" arrivalLane="c_0" arrivalPos="8.78" arrivalPosLat="-0.67" arrivalSpeed="5.48" duration="10.50" routeLength="52.95" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.27" rerouteNo="0" devices="tripinfo_bike14 fcd_bike14" vType="bike_bicycle" speedFactor="1.16" vaporized=""/>
+    <personinfo id="ped13" depart="0.00" type="ped_pedestrian" speedFactor="1.11" duration="17.10" waitingTime="0.20" timeLoss="4.36" traveltime="17.10">
+        <walk depart="0.00" departPos="66.09" arrival="17.10" arrivalPos="4.39" duration="17.10" routeLength="19.65" timeLoss="4.36" maxSpeed="1.54" waitingTime="0.20"/>
+    </personinfo>
+</tripinfos>

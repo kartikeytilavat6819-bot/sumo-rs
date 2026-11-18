@@ -1,0 +1,1680 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:59:52.949736-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_bugs_ticket3613/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_bugs_ticket3613/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3613/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3613/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bugs_ticket3613/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.4"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="230.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="230.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="220.00" y="-2.65" angle="90.00" type="mc" speed="2.50" pos="220.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="140.00" y="-1.15" angle="90.00" type="mc2" speed="35.62" pos="140.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="0.00" y="-1.65" angle="90.00" type="car" speed="38.24" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="231.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="231.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="222.50" y="-2.65" angle="90.00" type="mc" speed="2.50" pos="222.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="175.62" y="-1.15" angle="90.00" type="mc2" speed="35.62" pos="175.62" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="38.24" y="-1.65" angle="90.00" type="car" speed="38.24" pos="38.24" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="232.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="232.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="223.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="223.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="201.58" y="-1.15" angle="90.00" type="mc2" speed="25.96" pos="201.58" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="76.19" y="-1.65" angle="90.00" type="car" speed="37.95" pos="76.19" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="233.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="233.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="224.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="224.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="218.04" y="-1.15" angle="90.00" type="mc2" speed="16.46" pos="218.04" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="109.77" y="-1.65" angle="90.00" type="car" speed="33.58" pos="109.77" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="234.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="234.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="225.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="225.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="225.50" y="-1.00" angle="88.84" type="mc2" speed="7.46" pos="225.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="138.99" y="-1.65" angle="90.00" type="car" speed="29.22" pos="138.99" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="235.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="235.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="226.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="226.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="226.50" y="-1.00" angle="89.37" type="mc2" speed="1.00" pos="226.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="163.87" y="-1.65" angle="90.00" type="car" speed="24.89" pos="163.87" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="236.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="236.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="227.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="227.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="227.50" y="-1.00" angle="89.65" type="mc2" speed="1.00" pos="227.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="184.46" y="-1.65" angle="90.00" type="car" speed="20.59" pos="184.46" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker" x="237.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="237.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="228.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="228.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="228.50" y="-1.00" angle="89.81" type="mc2" speed="1.00" pos="228.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="200.79" y="-1.65" angle="90.00" type="car" speed="16.34" pos="200.79" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker" x="238.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="238.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="229.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="229.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="229.50" y="-1.00" angle="89.90" type="mc2" speed="1.00" pos="229.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="212.96" y="-1.65" angle="90.00" type="car" speed="12.17" pos="212.96" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker" x="239.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="239.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="230.50" y="-2.65" angle="90.00" type="mc" speed="1.00" pos="230.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="230.50" y="-1.00" angle="89.94" type="mc2" speed="1.00" pos="230.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="221.13" y="-1.65" angle="90.00" type="car" speed="8.17" pos="221.13" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker" x="240.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="240.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="231.50" y="-2.70" angle="91.34" type="mc" speed="1.00" pos="231.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="231.50" y="-1.00" angle="89.97" type="mc2" speed="1.00" pos="231.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="225.71" y="-1.65" angle="90.00" type="car" speed="4.58" pos="225.71" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker" x="241.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="241.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="232.50" y="-2.70" angle="90.73" type="mc" speed="1.00" pos="232.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="232.50" y="-1.00" angle="89.98" type="mc2" speed="1.00" pos="232.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="226.80" y="-1.65" angle="90.00" type="car" speed="1.08" pos="226.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker" x="242.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="242.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="233.50" y="-2.70" angle="90.40" type="mc" speed="1.00" pos="233.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="233.50" y="-1.00" angle="89.99" type="mc2" speed="1.00" pos="233.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="227.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="227.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker" x="243.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="243.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="234.50" y="-2.70" angle="90.22" type="mc" speed="1.00" pos="234.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="234.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="234.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="228.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="228.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker" x="244.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="244.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="235.50" y="-2.70" angle="90.12" type="mc" speed="1.00" pos="235.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="235.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="235.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="229.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="229.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker" x="245.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="245.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="236.50" y="-2.70" angle="90.06" type="mc" speed="1.00" pos="236.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="236.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="236.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="230.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="230.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker" x="246.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="246.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="237.50" y="-2.70" angle="90.04" type="mc" speed="1.00" pos="237.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="237.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="237.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="231.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="231.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker" x="247.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="247.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="238.50" y="-2.70" angle="90.02" type="mc" speed="1.00" pos="238.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="238.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="238.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="232.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="232.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker" x="248.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="248.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="239.50" y="-2.70" angle="90.01" type="mc" speed="1.00" pos="239.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="239.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="239.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="233.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="233.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker" x="249.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="249.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="240.50" y="-2.70" angle="90.01" type="mc" speed="1.00" pos="240.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="240.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="240.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="234.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="234.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker" x="250.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="250.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="241.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="241.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="241.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="241.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="235.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="235.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker" x="251.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="251.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="242.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="242.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="242.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="242.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="236.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="236.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker" x="252.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="252.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="243.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="243.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="243.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="243.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="237.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="237.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker" x="253.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="253.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="244.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="244.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="244.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="244.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="238.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="238.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker" x="254.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="254.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="245.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="245.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="245.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="245.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="239.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="239.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker" x="255.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="255.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="246.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="246.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="246.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="246.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="240.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="240.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker" x="256.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="256.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="247.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="247.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="247.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="247.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="241.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="241.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker" x="257.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="257.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="248.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="248.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="248.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="248.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="242.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="242.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker" x="258.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="258.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="249.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="249.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="249.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="249.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="243.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="243.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker" x="259.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="259.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="250.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="250.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="250.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="250.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="244.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="244.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker" x="260.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="260.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="251.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="251.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="251.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="251.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="245.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="245.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker" x="261.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="261.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="252.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="252.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="252.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="252.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="246.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="246.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker" x="262.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="262.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="253.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="253.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="253.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="253.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="247.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="247.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker" x="263.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="263.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="254.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="254.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="254.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="254.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="248.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="248.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker" x="264.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="264.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="255.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="255.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="255.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="255.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="249.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="249.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocker" x="265.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="265.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="256.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="256.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="256.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="256.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="250.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="250.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocker" x="266.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="266.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="257.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="257.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="257.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="257.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="251.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="251.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocker" x="267.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="267.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="258.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="258.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="258.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="258.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="252.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="252.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocker" x="268.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="268.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="259.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="259.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="259.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="259.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="253.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="253.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocker" x="269.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="269.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="260.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="260.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="260.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="260.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="254.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="254.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocker" x="270.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="270.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="261.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="261.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="261.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="261.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="255.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="255.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocker" x="271.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="271.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="262.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="262.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="262.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="262.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="256.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="256.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocker" x="272.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="272.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="263.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="263.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="263.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="263.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="257.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="257.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocker" x="273.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="273.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="264.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="264.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="264.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="264.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="258.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="258.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocker" x="274.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="274.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="265.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="265.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="265.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="265.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="259.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="259.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocker" x="275.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="275.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="266.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="266.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="266.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="266.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="260.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="260.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocker" x="276.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="276.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="267.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="267.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="267.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="267.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="261.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="261.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="blocker" x="277.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="277.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="268.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="268.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="268.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="268.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="262.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="262.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="blocker" x="278.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="278.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="269.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="269.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="269.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="269.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="263.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="263.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="blocker" x="279.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="279.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="270.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="270.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="270.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="270.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="264.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="264.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="blocker" x="280.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="280.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="271.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="271.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="271.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="271.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="265.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="265.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="blocker" x="281.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="281.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="272.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="272.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="272.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="272.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="266.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="266.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="blocker" x="282.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="282.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="273.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="273.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="273.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="273.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="267.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="267.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="blocker" x="283.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="283.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="274.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="274.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="274.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="274.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="268.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="268.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="blocker" x="284.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="284.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="275.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="275.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="275.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="275.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="269.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="269.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="blocker" x="285.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="285.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="276.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="276.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="276.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="276.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="270.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="270.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="blocker" x="286.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="286.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="277.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="277.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="277.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="277.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="271.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="271.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="blocker" x="287.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="287.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="278.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="278.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="278.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="278.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="272.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="272.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="blocker" x="288.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="288.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="279.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="279.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="279.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="279.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="273.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="273.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="blocker" x="289.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="289.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="280.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="280.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="280.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="280.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="274.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="274.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="blocker" x="290.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="290.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="281.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="281.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="281.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="281.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="275.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="275.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="blocker" x="291.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="291.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="282.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="282.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="282.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="282.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="276.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="276.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="blocker" x="292.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="292.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="283.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="283.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="283.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="283.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="277.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="277.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="blocker" x="293.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="293.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="284.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="284.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="284.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="284.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="278.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="278.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="blocker" x="294.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="294.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="285.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="285.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="285.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="285.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="279.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="279.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="blocker" x="295.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="295.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="286.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="286.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="286.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="286.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="280.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="280.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="blocker" x="296.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="296.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="287.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="287.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="287.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="287.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="281.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="281.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="blocker" x="297.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="297.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="288.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="288.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="288.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="288.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="282.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="282.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="blocker" x="298.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="298.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="289.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="289.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="289.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="289.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="283.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="283.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="blocker" x="299.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="299.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="290.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="290.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="290.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="290.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="284.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="284.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="blocker" x="300.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="300.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="291.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="291.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="291.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="291.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="285.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="285.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="blocker" x="301.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="301.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="292.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="292.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="292.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="292.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="286.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="286.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="blocker" x="302.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="302.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="293.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="293.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="293.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="293.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="287.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="287.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="blocker" x="303.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="303.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="294.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="294.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="294.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="294.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="288.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="288.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="blocker" x="304.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="304.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="295.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="295.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="295.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="295.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="289.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="289.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="blocker" x="305.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="305.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="296.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="296.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="296.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="296.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="290.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="290.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="blocker" x="306.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="306.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="297.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="297.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="297.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="297.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="291.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="291.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="blocker" x="307.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="307.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="298.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="298.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="298.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="298.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="292.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="292.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="blocker" x="308.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="308.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="299.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="299.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="299.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="299.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="293.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="293.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="blocker" x="309.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="309.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="300.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="300.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="300.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="300.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="294.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="294.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="blocker" x="310.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="310.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="301.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="301.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="301.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="301.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="295.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="295.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="blocker" x="311.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="311.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="302.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="302.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="302.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="302.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="296.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="296.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="blocker" x="312.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="312.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="303.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="303.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="303.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="303.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="297.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="297.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="blocker" x="313.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="313.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="304.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="304.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="304.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="304.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="298.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="298.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="blocker" x="314.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="314.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="305.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="305.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="305.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="305.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="299.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="299.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="blocker" x="315.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="315.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="306.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="306.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="306.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="306.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="300.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="300.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="blocker" x="316.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="316.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="307.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="307.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="307.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="307.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="301.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="301.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="blocker" x="317.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="317.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="308.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="308.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="308.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="308.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="302.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="302.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="blocker" x="318.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="318.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="309.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="309.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="309.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="309.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="303.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="303.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="blocker" x="319.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="319.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="310.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="310.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="310.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="310.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="304.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="304.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="blocker" x="320.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="320.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="311.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="311.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="311.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="311.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="305.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="305.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="blocker" x="321.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="321.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="312.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="312.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="312.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="312.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="306.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="306.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="blocker" x="322.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="322.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="313.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="313.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="313.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="313.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="307.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="307.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="blocker" x="323.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="323.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="314.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="314.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="314.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="314.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="308.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="308.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="blocker" x="324.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="324.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="315.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="315.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="315.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="315.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="309.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="309.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="blocker" x="325.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="325.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="316.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="316.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="316.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="316.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="310.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="310.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="blocker" x="326.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="326.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="317.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="317.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="317.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="317.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="311.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="311.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="blocker" x="327.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="327.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="318.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="318.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="318.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="318.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="312.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="312.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="blocker" x="328.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="328.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="319.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="319.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="319.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="319.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="313.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="313.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="blocker" x="329.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="329.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="320.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="320.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="320.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="320.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="314.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="314.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="blocker" x="330.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="330.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="321.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="321.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="321.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="321.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="315.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="315.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="blocker" x="331.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="331.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="322.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="322.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="322.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="322.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="316.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="316.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="blocker" x="332.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="332.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="323.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="323.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="323.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="323.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="317.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="317.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="blocker" x="333.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="333.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="324.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="324.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="324.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="324.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="318.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="318.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="blocker" x="334.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="334.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="325.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="325.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="325.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="325.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="319.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="319.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="blocker" x="335.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="335.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="326.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="326.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="326.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="326.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="320.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="320.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="blocker" x="336.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="336.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="327.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="327.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="327.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="327.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="321.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="321.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="blocker" x="337.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="337.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="328.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="328.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="328.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="328.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="322.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="322.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="blocker" x="338.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="338.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="329.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="329.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="329.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="329.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="323.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="323.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="blocker" x="339.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="339.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="330.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="330.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="330.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="330.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="324.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="324.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="blocker" x="340.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="340.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="331.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="331.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="331.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="331.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="325.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="325.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="blocker" x="341.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="341.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="332.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="332.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="332.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="332.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="326.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="326.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="blocker" x="342.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="342.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="333.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="333.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="333.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="333.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="327.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="327.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="blocker" x="343.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="343.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="334.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="334.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="334.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="334.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="328.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="328.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="blocker" x="344.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="344.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="335.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="335.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="335.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="335.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="329.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="329.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="blocker" x="345.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="345.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="336.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="336.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="336.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="336.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="330.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="330.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="blocker" x="346.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="346.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="337.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="337.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="337.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="337.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="331.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="331.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="blocker" x="347.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="347.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="338.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="338.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="338.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="338.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="332.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="332.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="blocker" x="348.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="348.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="339.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="339.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="339.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="339.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="333.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="333.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="blocker" x="349.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="349.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="340.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="340.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="340.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="340.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="334.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="334.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="blocker" x="350.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="350.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="341.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="341.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="341.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="341.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="335.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="335.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="blocker" x="351.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="351.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="342.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="342.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="342.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="342.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="336.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="336.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="blocker" x="352.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="352.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="343.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="343.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="343.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="343.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="337.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="337.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="blocker" x="353.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="353.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="344.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="344.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="344.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="344.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="338.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="338.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="blocker" x="354.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="354.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="345.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="345.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="345.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="345.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="339.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="339.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="blocker" x="355.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="355.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="346.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="346.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="346.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="346.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="340.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="340.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="blocker" x="356.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="356.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="347.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="347.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="347.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="347.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="341.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="341.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="blocker" x="357.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="357.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="348.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="348.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="348.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="348.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="342.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="342.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="blocker" x="358.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="358.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="349.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="349.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="349.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="349.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="343.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="343.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="blocker" x="359.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="359.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="350.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="350.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="350.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="350.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="344.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="344.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="blocker" x="360.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="360.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="351.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="351.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="351.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="351.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="345.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="345.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="blocker" x="361.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="361.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="352.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="352.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="352.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="352.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="346.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="346.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="blocker" x="362.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="362.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="353.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="353.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="353.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="353.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="347.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="347.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="blocker" x="363.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="363.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="354.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="354.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="354.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="354.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="348.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="348.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="blocker" x="364.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="364.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="355.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="355.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="355.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="355.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="349.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="349.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="blocker" x="365.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="365.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="356.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="356.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="356.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="356.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="350.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="350.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="blocker" x="366.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="366.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="357.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="357.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="357.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="357.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="351.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="351.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="blocker" x="367.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="367.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="358.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="358.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="358.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="358.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="352.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="352.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="blocker" x="368.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="368.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="359.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="359.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="359.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="359.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="353.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="353.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="blocker" x="369.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="369.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="360.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="360.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="360.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="360.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="354.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="354.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="blocker" x="370.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="370.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="361.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="361.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="361.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="361.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="355.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="355.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="blocker" x="371.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="371.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="362.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="362.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="362.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="362.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="356.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="356.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="blocker" x="372.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="372.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="363.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="363.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="363.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="363.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="357.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="357.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="blocker" x="373.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="373.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="364.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="364.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="364.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="364.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="358.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="358.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="blocker" x="374.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="374.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="365.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="365.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="365.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="365.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="359.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="359.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00">
+        <vehicle id="blocker" x="375.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="375.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="366.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="366.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="366.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="366.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="360.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="360.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="146.00">
+        <vehicle id="blocker" x="376.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="376.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="367.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="367.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="367.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="367.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="361.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="361.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="147.00">
+        <vehicle id="blocker" x="377.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="377.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="368.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="368.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="368.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="368.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="362.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="362.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="148.00">
+        <vehicle id="blocker" x="378.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="378.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="369.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="369.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="369.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="369.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="363.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="363.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="149.00">
+        <vehicle id="blocker" x="379.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="379.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="370.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="370.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="370.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="370.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="364.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="364.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="150.00">
+        <vehicle id="blocker" x="380.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="380.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="371.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="371.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="371.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="371.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="365.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="365.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="151.00">
+        <vehicle id="blocker" x="381.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="381.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="372.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="372.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="372.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="372.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="366.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="366.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="152.00">
+        <vehicle id="blocker" x="382.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="382.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="373.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="373.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="373.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="373.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="367.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="367.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="153.00">
+        <vehicle id="blocker" x="383.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="383.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="374.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="374.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="374.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="374.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="368.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="368.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="154.00">
+        <vehicle id="blocker" x="384.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="384.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="375.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="375.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="375.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="375.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="369.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="369.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="155.00">
+        <vehicle id="blocker" x="385.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="385.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="376.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="376.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="376.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="376.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="370.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="370.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="156.00">
+        <vehicle id="blocker" x="386.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="386.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="377.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="377.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="377.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="377.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="371.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="371.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="157.00">
+        <vehicle id="blocker" x="387.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="387.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="378.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="378.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="378.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="378.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="372.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="372.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="158.00">
+        <vehicle id="blocker" x="388.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="388.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="379.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="379.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="379.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="379.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="373.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="373.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="159.00">
+        <vehicle id="blocker" x="389.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="389.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="380.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="380.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="380.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="380.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="374.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="374.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="160.00">
+        <vehicle id="blocker" x="390.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="390.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="381.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="381.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="381.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="381.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="375.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="375.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="161.00">
+        <vehicle id="blocker" x="391.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="391.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="382.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="382.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="382.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="382.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="376.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="376.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="162.00">
+        <vehicle id="blocker" x="392.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="392.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="383.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="383.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="383.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="383.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="377.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="377.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="163.00">
+        <vehicle id="blocker" x="393.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="393.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="384.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="384.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="384.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="384.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="378.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="378.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="164.00">
+        <vehicle id="blocker" x="394.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="394.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="385.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="385.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="385.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="385.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="379.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="379.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="165.00">
+        <vehicle id="blocker" x="395.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="395.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="386.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="386.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="386.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="386.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="380.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="380.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="166.00">
+        <vehicle id="blocker" x="396.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="396.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="387.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="387.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="387.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="387.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="381.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="381.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="167.00">
+        <vehicle id="blocker" x="397.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="397.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="388.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="388.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="388.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="388.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="382.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="382.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="168.00">
+        <vehicle id="blocker" x="398.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="398.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="389.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="389.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="389.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="389.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="383.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="383.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="169.00">
+        <vehicle id="blocker" x="399.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="399.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="390.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="390.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="390.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="390.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="384.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="384.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="170.00">
+        <vehicle id="blocker" x="400.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="400.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="391.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="391.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="391.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="391.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="385.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="385.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="171.00">
+        <vehicle id="blocker" x="401.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="401.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="392.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="392.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="392.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="392.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="386.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="386.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="172.00">
+        <vehicle id="blocker" x="402.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="402.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="393.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="393.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="393.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="393.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="387.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="387.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="173.00">
+        <vehicle id="blocker" x="403.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="403.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="394.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="394.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="394.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="394.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="388.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="388.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="174.00">
+        <vehicle id="blocker" x="404.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="404.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="395.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="395.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="395.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="395.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="389.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="389.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="175.00">
+        <vehicle id="blocker" x="405.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="405.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="396.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="396.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="396.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="396.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="390.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="390.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="176.00">
+        <vehicle id="blocker" x="406.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="406.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="397.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="397.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="397.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="397.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="391.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="391.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="177.00">
+        <vehicle id="blocker" x="407.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="407.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="398.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="398.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="398.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="398.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="392.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="392.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="178.00">
+        <vehicle id="blocker" x="408.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="408.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="399.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="399.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="399.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="399.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="393.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="393.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="179.00">
+        <vehicle id="blocker" x="409.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="409.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="400.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="400.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="400.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="400.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="394.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="394.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="180.00">
+        <vehicle id="blocker" x="410.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="410.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="401.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="401.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="401.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="401.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="395.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="395.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="181.00">
+        <vehicle id="blocker" x="411.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="411.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="402.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="402.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="402.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="402.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="396.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="396.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="182.00">
+        <vehicle id="blocker" x="412.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="412.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="403.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="403.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="403.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="403.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="397.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="397.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="183.00">
+        <vehicle id="blocker" x="413.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="413.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="404.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="404.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="404.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="404.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="398.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="398.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="184.00">
+        <vehicle id="blocker" x="414.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="414.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="405.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="405.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="405.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="405.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="399.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="399.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="185.00">
+        <vehicle id="blocker" x="415.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="415.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="406.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="406.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="406.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="406.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="400.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="400.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="186.00">
+        <vehicle id="blocker" x="416.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="416.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="407.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="407.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="407.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="407.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="401.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="401.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="187.00">
+        <vehicle id="blocker" x="417.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="417.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="408.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="408.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="408.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="408.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="402.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="402.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="188.00">
+        <vehicle id="blocker" x="418.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="418.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="409.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="409.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="409.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="409.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="403.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="403.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="189.00">
+        <vehicle id="blocker" x="419.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="419.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="410.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="410.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="410.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="410.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="404.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="404.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="190.00">
+        <vehicle id="blocker" x="420.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="420.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="411.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="411.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="411.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="411.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="405.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="405.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="191.00">
+        <vehicle id="blocker" x="421.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="421.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="412.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="412.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="412.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="412.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="406.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="406.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="192.00">
+        <vehicle id="blocker" x="422.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="422.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="413.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="413.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="413.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="413.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="407.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="407.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="193.00">
+        <vehicle id="blocker" x="423.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="423.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="414.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="414.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="414.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="414.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="408.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="408.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="194.00">
+        <vehicle id="blocker" x="424.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="424.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="415.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="415.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="415.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="415.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="409.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="409.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="195.00">
+        <vehicle id="blocker" x="425.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="425.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="416.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="416.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="416.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="416.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="410.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="410.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="196.00">
+        <vehicle id="blocker" x="426.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="426.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="417.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="417.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="417.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="417.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="411.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="411.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="197.00">
+        <vehicle id="blocker" x="427.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="427.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="418.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="418.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="418.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="418.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="412.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="412.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="198.00">
+        <vehicle id="blocker" x="428.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="428.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="419.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="419.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="419.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="419.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="413.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="413.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="199.00">
+        <vehicle id="blocker" x="429.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="429.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="420.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="420.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="420.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="420.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="414.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="414.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="200.00">
+        <vehicle id="blocker" x="430.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="430.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="421.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="421.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="421.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="421.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="415.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="415.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="201.00">
+        <vehicle id="blocker" x="431.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="431.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="422.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="422.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="422.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="422.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="416.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="416.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="202.00">
+        <vehicle id="blocker" x="432.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="432.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="423.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="423.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="423.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="423.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="417.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="417.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="203.00">
+        <vehicle id="blocker" x="433.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="433.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="424.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="424.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="424.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="424.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="418.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="418.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="204.00">
+        <vehicle id="blocker" x="434.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="434.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="425.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="425.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="425.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="425.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="419.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="419.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="205.00">
+        <vehicle id="blocker" x="435.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="435.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="426.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="426.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="426.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="426.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="420.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="420.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="206.00">
+        <vehicle id="blocker" x="436.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="436.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="427.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="427.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="427.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="427.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="421.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="421.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="207.00">
+        <vehicle id="blocker" x="437.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="437.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="428.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="428.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="428.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="428.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="422.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="422.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="208.00">
+        <vehicle id="blocker" x="438.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="438.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="429.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="429.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="429.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="429.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="423.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="423.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="209.00">
+        <vehicle id="blocker" x="439.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="439.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="430.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="430.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="430.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="430.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="424.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="424.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="210.00">
+        <vehicle id="blocker" x="440.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="440.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="431.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="431.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="431.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="431.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="425.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="425.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="211.00">
+        <vehicle id="blocker" x="441.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="441.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="432.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="432.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="432.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="432.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="426.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="426.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="212.00">
+        <vehicle id="blocker" x="442.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="442.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="433.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="433.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="433.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="433.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="427.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="427.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="213.00">
+        <vehicle id="blocker" x="443.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="443.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="434.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="434.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="434.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="434.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="428.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="428.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="214.00">
+        <vehicle id="blocker" x="444.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="444.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="435.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="435.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="435.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="435.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="429.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="429.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="215.00">
+        <vehicle id="blocker" x="445.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="445.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="436.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="436.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="436.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="436.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="430.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="430.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="216.00">
+        <vehicle id="blocker" x="446.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="446.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="437.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="437.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="437.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="437.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="431.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="431.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="217.00">
+        <vehicle id="blocker" x="447.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="447.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="438.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="438.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="438.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="438.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="432.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="432.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="218.00">
+        <vehicle id="blocker" x="448.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="448.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="439.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="439.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="439.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="439.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="433.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="433.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="219.00">
+        <vehicle id="blocker" x="449.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="449.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="440.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="440.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="440.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="440.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="434.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="434.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="220.00">
+        <vehicle id="blocker" x="450.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="450.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="441.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="441.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="441.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="441.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="435.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="435.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="221.00">
+        <vehicle id="blocker" x="451.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="451.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="442.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="442.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="442.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="442.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="436.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="436.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="222.00">
+        <vehicle id="blocker" x="452.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="452.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="443.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="443.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="443.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="443.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="437.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="437.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="223.00">
+        <vehicle id="blocker" x="453.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="453.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="444.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="444.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="444.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="444.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="438.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="438.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="224.00">
+        <vehicle id="blocker" x="454.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="454.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="445.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="445.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="445.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="445.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="439.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="439.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="225.00">
+        <vehicle id="blocker" x="455.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="455.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="446.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="446.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="446.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="446.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="440.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="440.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="226.00">
+        <vehicle id="blocker" x="456.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="456.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="447.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="447.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="447.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="447.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="441.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="441.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="227.00">
+        <vehicle id="blocker" x="457.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="457.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="448.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="448.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="448.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="448.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="442.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="442.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="228.00">
+        <vehicle id="blocker" x="458.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="458.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="449.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="449.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="449.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="449.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="443.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="443.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="229.00">
+        <vehicle id="blocker" x="459.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="459.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="450.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="450.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="450.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="450.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="444.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="444.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="230.00">
+        <vehicle id="blocker" x="460.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="460.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="451.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="451.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="451.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="451.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="445.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="445.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="231.00">
+        <vehicle id="blocker" x="461.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="461.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="452.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="452.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="452.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="452.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="446.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="446.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="232.00">
+        <vehicle id="blocker" x="462.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="462.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="453.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="453.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="453.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="453.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="447.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="447.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="233.00">
+        <vehicle id="blocker" x="463.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="463.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="454.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="454.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="454.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="454.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="448.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="448.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="234.00">
+        <vehicle id="blocker" x="464.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="464.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="455.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="455.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="455.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="455.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="449.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="449.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="235.00">
+        <vehicle id="blocker" x="465.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="465.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="456.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="456.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="456.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="456.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="450.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="450.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="236.00">
+        <vehicle id="blocker" x="466.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="466.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="457.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="457.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="457.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="457.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="451.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="451.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="237.00">
+        <vehicle id="blocker" x="467.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="467.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="458.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="458.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="458.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="458.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="452.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="452.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="238.00">
+        <vehicle id="blocker" x="468.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="468.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="459.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="459.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="459.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="459.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="453.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="453.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="239.00">
+        <vehicle id="blocker" x="469.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="469.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="460.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="460.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="460.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="460.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="454.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="454.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="240.00">
+        <vehicle id="blocker" x="470.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="470.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="461.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="461.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="461.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="461.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="455.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="455.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="241.00">
+        <vehicle id="blocker" x="471.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="471.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="462.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="462.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="462.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="462.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="456.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="456.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="242.00">
+        <vehicle id="blocker" x="472.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="472.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="463.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="463.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="463.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="463.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="457.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="457.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="243.00">
+        <vehicle id="blocker" x="473.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="473.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="464.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="464.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="464.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="464.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="458.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="458.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="244.00">
+        <vehicle id="blocker" x="474.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="474.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="465.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="465.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="465.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="465.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="459.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="459.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="245.00">
+        <vehicle id="blocker" x="475.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="475.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="466.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="466.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="466.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="466.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="460.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="460.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="246.00">
+        <vehicle id="blocker" x="476.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="476.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="467.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="467.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="467.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="467.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="461.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="461.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="247.00">
+        <vehicle id="blocker" x="477.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="477.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="468.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="468.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="468.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="468.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="462.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="462.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="248.00">
+        <vehicle id="blocker" x="478.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="478.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="469.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="469.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="469.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="469.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="463.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="463.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="249.00">
+        <vehicle id="blocker" x="479.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="479.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="470.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="470.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="470.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="470.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="464.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="464.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="250.00">
+        <vehicle id="blocker" x="480.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="480.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="471.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="471.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="471.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="471.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="465.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="465.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="251.00">
+        <vehicle id="blocker" x="481.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="481.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="472.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="472.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="472.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="472.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="466.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="466.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="252.00">
+        <vehicle id="blocker" x="482.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="482.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="473.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="473.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="473.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="473.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="467.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="467.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="253.00">
+        <vehicle id="blocker" x="483.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="483.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="474.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="474.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="474.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="474.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="468.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="468.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="254.00">
+        <vehicle id="blocker" x="484.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="484.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="475.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="475.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="475.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="475.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="469.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="469.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="255.00">
+        <vehicle id="blocker" x="485.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="485.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="476.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="476.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="476.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="476.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="470.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="470.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="256.00">
+        <vehicle id="blocker" x="486.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="486.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="477.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="477.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="477.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="477.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="471.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="471.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="257.00">
+        <vehicle id="blocker" x="487.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="487.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="478.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="478.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="478.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="478.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="472.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="472.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="258.00">
+        <vehicle id="blocker" x="488.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="488.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="479.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="479.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="479.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="479.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="473.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="473.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="259.00">
+        <vehicle id="blocker" x="489.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="489.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="480.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="480.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="480.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="480.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="474.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="474.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="260.00">
+        <vehicle id="blocker" x="490.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="490.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="481.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="481.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="481.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="481.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="475.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="475.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="261.00">
+        <vehicle id="blocker" x="491.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="491.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="482.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="482.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="482.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="482.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="476.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="476.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="262.00">
+        <vehicle id="blocker" x="492.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="492.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="483.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="483.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="483.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="483.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="477.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="477.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="263.00">
+        <vehicle id="blocker" x="493.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="493.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="484.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="484.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="484.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="484.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="478.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="478.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="264.00">
+        <vehicle id="blocker" x="494.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="494.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="485.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="485.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="485.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="485.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="479.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="479.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="265.00">
+        <vehicle id="blocker" x="495.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="495.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="486.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="486.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="486.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="486.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="480.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="480.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="266.00">
+        <vehicle id="blocker" x="496.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="496.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="487.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="487.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="487.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="487.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="481.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="481.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="267.00">
+        <vehicle id="blocker" x="497.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="497.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="488.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="488.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="488.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="488.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="482.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="482.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="268.00">
+        <vehicle id="blocker" x="498.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="498.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="489.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="489.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="489.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="489.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="483.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="483.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="269.00">
+        <vehicle id="blocker" x="499.00" y="-2.35" angle="90.00" type="slow" speed="1.00" pos="499.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="ego" x="490.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="490.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="490.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="490.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="484.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="484.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="270.00">
+        <vehicle id="ego" x="491.50" y="-2.70" angle="90.00" type="mc" speed="1.00" pos="491.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="491.50" y="-1.00" angle="90.00" type="mc2" speed="1.00" pos="491.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="485.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="485.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="271.00">
+        <vehicle id="ego" x="498.50" y="-2.70" angle="90.00" type="mc" speed="7.00" pos="498.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower" x="498.50" y="-1.00" angle="90.00" type="mc2" speed="7.00" pos="498.50" lane="beg_0" slope="0.00"/>
+        <vehicle id="follower2" x="486.80" y="-1.65" angle="90.00" type="car" speed="1.00" pos="486.80" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="272.00">
+        <vehicle id="follower2" x="490.40" y="-1.65" angle="90.00" type="car" speed="3.60" pos="490.40" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="273.00">
+        <vehicle id="follower2" x="496.60" y="-1.65" angle="90.00" type="car" speed="6.20" pos="496.60" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="274.00"/>
+</fcd-export>

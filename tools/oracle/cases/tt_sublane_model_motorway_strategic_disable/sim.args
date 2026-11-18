@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --lanechange-output.started --lanechange-output.ended --lateral-resolution 0.4

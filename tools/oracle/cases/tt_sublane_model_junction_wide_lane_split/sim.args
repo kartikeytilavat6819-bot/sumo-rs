@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --lateral-resolution 0.75 --duration-log.statistics --collision.stoptime 10 -a tools/oracle/cases/tt_sublane_model_junction_wide_lane_split/input_additional.add.xml
