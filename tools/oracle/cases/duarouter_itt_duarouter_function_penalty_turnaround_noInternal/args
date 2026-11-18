@@ -1,0 +1,1 @@
+--xml-validation never --write-license -r tools/oracle/cases/duarouter_itt_duarouter_function_penalty_turnaround_noInternal/input_routes.rou.xml --write-costs -o @DIR@/routes.rou.xml --alternatives-output NUL --weights.turnaround-penalty 10 --no-internal-links
