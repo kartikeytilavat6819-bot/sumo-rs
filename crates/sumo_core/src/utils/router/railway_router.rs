@@ -280,7 +280,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         E: RouterEdge<V>,
         V: RouterVehicle,
     {
-        let mut effort = self.base.recompute_costs(edges, v, msTime, lengthp);
+        let mut effort = self.base.recompute_costs_base(edges, v, msTime, lengthp);
         let mut prev: Ptr<E> = Ptr::null();
         // reversal corrections
         let mut timeCorrection = utils::common::time::steps2time(msTime);

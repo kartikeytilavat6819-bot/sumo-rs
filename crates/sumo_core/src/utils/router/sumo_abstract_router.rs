@@ -609,6 +609,12 @@ impl<E, V> SUMOAbstractRouter<E, V> {
         if let Some(f) = self.myRecomputeCosts {
             return f(self, edges, v, msTime, lengthp);
         }
+        self.recompute_costs_base(edges, v, msTime, lengthp)
+    }
+
+    /// The non-virtual base implementation (C++ `SUMOAbstractRouter::recomputeCosts` body).
+    /// Subclass overrides call this directly rather than re-entering the virtual slot.
+    pub fn recompute_costs_base(&self, edges: &Vec<Ptr<E>>, v: Ptr<V>, msTime: SUMOTime, lengthp: Ptr<f64>) -> f64 where E: RouterEdge<V>, V: RouterVehicle {
         let mut time = steps2time(msTime);
         let mut effort = 0.;
         let mut length = 0.;
