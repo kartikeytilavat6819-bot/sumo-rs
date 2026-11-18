@@ -1,0 +1,42 @@
+<routes>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rL1" edges="E0 E1"/>
+    <route id="rL2" edges="E1 E2"/>
+    <vehicle id="l1a" type="bus" route="rL1" line="L1" depart="0.00">
+        <stop busStop="bsA" until="45.00"/>
+        <stop busStop="bsM" until="75.00"/>
+    </vehicle>
+    <vehicle id="l1b" type="bus" route="rL1" line="L1" depart="60.00">
+        <stop busStop="bsA" until="105.00"/>
+        <stop busStop="bsM" until="135.00"/>
+    </vehicle>
+    <vehicle id="l1c" type="bus" route="rL1" line="L1" depart="120.00">
+        <stop busStop="bsA" until="165.00"/>
+        <stop busStop="bsM" until="195.00"/>
+    </vehicle>
+    <vehicle id="l2a" type="bus" route="rL2" line="L2" depart="30.00">
+        <stop busStop="bsM" until="85.00"/>
+        <stop busStop="bsZ" until="125.00"/>
+    </vehicle>
+    <vehicle id="l2b" type="bus" route="rL2" line="L2" depart="90.00">
+        <stop busStop="bsM" until="145.00"/>
+        <stop busStop="bsZ" until="185.00"/>
+    </vehicle>
+    <vehicle id="l2c" type="bus" route="rL2" line="L2" depart="150.00">
+        <stop busStop="bsM" until="205.00"/>
+        <stop busStop="bsZ" until="245.00"/>
+    </vehicle>
+    <person id="x0" type="ped" depart="10.00" departPos="10.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="x1" type="ped" depart="15.00" departPos="20.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="x2" type="ped" depart="75.00" departPos="10.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="x3" type="ped" depart="105.00" departPos="20.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+</routes>

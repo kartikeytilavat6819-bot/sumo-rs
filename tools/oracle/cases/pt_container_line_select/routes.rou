@@ -1,0 +1,28 @@
+<routes>
+    <vType id="carrier" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50" containerCapacity="4"/>
+    <route id="rAB" edges="E0 E1"/>
+    <vehicle id="c1_0" type="carrier" route="rAB" line="C1" depart="0.00">
+        <stop containerStop="cs0" duration="15.00"/>
+        <stop containerStop="cs1" duration="15.00"/>
+    </vehicle>
+    <vehicle id="c2_0" type="carrier" route="rAB" line="C2" depart="60.00">
+        <stop containerStop="cs0" duration="15.00"/>
+        <stop containerStop="cs1" duration="15.00"/>
+    </vehicle>
+    <vehicle id="c1_1" type="carrier" route="rAB" line="C1" depart="120.00">
+        <stop containerStop="cs0" duration="15.00"/>
+        <stop containerStop="cs1" duration="15.00"/>
+    </vehicle>
+    <container id="k0" depart="10.00" departPos="110.00">
+        <transport from="E0" to="E1" lines="C1" arrivalPos="120.00"/>
+    </container>
+    <container id="k1" depart="20.00" departPos="110.00">
+        <transport from="E0" to="E1" lines="C2" arrivalPos="120.00"/>
+    </container>
+    <container id="k2" depart="30.00" departPos="110.00">
+        <transport from="E0" to="E1" lines="ANY" arrivalPos="120.00"/>
+    </container>
+    <container id="k3" depart="130.00" departPos="110.00">
+        <transport from="E0" to="E1" lines="C1" arrivalPos="120.00"/>
+    </container>
+</routes>
