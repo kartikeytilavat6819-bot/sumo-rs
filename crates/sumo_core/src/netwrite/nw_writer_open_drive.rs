@@ -138,10 +138,49 @@ fn get_final_geo() -> GeoConvHelper {
 }
 
 /// C library ctime(&now): "Www Mmm dd hh:mm:ss yyyy\n" for a time in seconds since the epoch
-// shortcut: formats in UTC (no timezone database), C ctime() uses local time; add chrono if local time matters
 fn ctime_string(secs: i64) -> String {
     const WDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
     const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    // C ctime() converts through localtime(); call the same libc routine so the
+    // written date matches the official binary in any time zone.
+    #[cfg(unix)]
+    {
+        #[repr(C)]
+        struct Tm {
+            tm_sec: i32,
+            tm_min: i32,
+            tm_hour: i32,
+            tm_mday: i32,
+            tm_mon: i32,
+            tm_year: i32,
+            tm_wday: i32,
+            tm_yday: i32,
+            tm_isdst: i32,
+            tm_gmtoff: i64,
+            tm_zone: *const std::ffi::c_char,
+        }
+        unsafe extern "C" {
+            fn localtime_r(timep: *const i64, result: *mut Tm) -> *mut Tm;
+        }
+        let mut tm = Tm {
+            tm_sec: 0, tm_min: 0, tm_hour: 0, tm_mday: 0, tm_mon: 0, tm_year: 0,
+            tm_wday: 0, tm_yday: 0, tm_isdst: 0, tm_gmtoff: 0, tm_zone: std::ptr::null(),
+        };
+        let p = unsafe { localtime_r(&secs, &mut tm) };
+        if !p.is_null() && tm.tm_mon >= 0 && tm.tm_mon < 12 && tm.tm_wday >= 0 && tm.tm_wday < 7 {
+            return format!(
+                "{} {} {:>2} {:02}:{:02}:{:02} {}\n",
+                WDAYS[tm.tm_wday as usize],
+                MONTHS[tm.tm_mon as usize],
+                tm.tm_mday,
+                tm.tm_hour,
+                tm.tm_min,
+                tm.tm_sec,
+                tm.tm_year + 1900,
+            );
+        }
+    }
+    // fallback (non-Unix): UTC, as before
     let days = secs.div_euclid(86400);
     let rem = secs.rem_euclid(86400);
     let (h, mi, s) = (rem / 3600, (rem % 3600) / 60, rem % 60);
