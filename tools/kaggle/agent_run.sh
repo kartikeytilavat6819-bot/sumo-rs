@@ -9,7 +9,6 @@ CASES=${CASES:-"md_midinterval md_noperiod md_persons md_public md_stop md_telep
 for c in $CASES; do
   dir=tools/oracle/cases/$c
   sim=$(cat $dir/sim.args)
-  # list of output files from add_outputs.txt
   files=""
   while read -r af suf; do
     af=${af%$'\r'}; suf=${suf%$'\r'}
@@ -26,12 +25,11 @@ for c in $CASES; do
   done
   for af in $files; do
     if [ -f "$OUT/$c.ours.$af" ] && [ -f "$OUT/$c.pris.$af" ]; then
-      if diff -q "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" >/dev/null; then
-        echo "  $af: SAME"
-      else
-        echo "  $af: DIFF"
-        diff -u "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" | head -40
-      fi
+      echo "  $af: $(python3 tools/oracle/compare_xml.py "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" 2>&1 | head -1)"
+      # body-only diff (skip the generated config header comment)
+      sed -n '/<meandata/,$p' "$OUT/$c.pris.$af" > $OUT/p.xml
+      sed -n '/<meandata/,$p' "$OUT/$c.ours.$af" > $OUT/o.xml
+      diff -u $OUT/p.xml $OUT/o.xml | head -24
     fi
   done
 done
