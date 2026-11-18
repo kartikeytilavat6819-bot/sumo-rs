@@ -8,5 +8,5 @@ for s in elechybrid overheadwires substations; do
   diff <(sed '1,/-->/d' $c/ref.$s.xml) <(sed '1,/-->/d' $O/$s.xml) | cut -c1-400 | head -16
 done
 c=tools/oracle/cases/out_tls
-$B -n $c/ref_simple.net.xml -r $c/routes.rou --no-step-log true $(cat $c/sim.args) > /tmp/f03t.log 2>&1; tail -3 /tmp/f03t.log
-ls $c; grep -c "<tlLogic" $c/out_tls_prog.xml; grep -n "tlLogic" $c/out_tls_prog.xml; tail -5 $c/out_tls_prog.xml; git status --short | head
+$B -n $c/ref_simple.net.xml -r $c/routes.rou --no-step-log true $(cat $c/sim.args) > /tmp/f03t.log 2>&1; grep -a TRACE /tmp/f03t.log; tail -3 /tmp/f03t.log
+ls $c; grep -c "<tlLogic" $c/out_tls_prog.xml; grep -n "tlLogic" $c/out_tls_prog.xml; tail -c 300 $c/out_tls_prog.xml; tail -c 100 $c/out_tls_switch_times.xml; git status --short | head
