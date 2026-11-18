@@ -1,0 +1,3 @@
+out_ed_vt_car.xml ed_vt_car
+out_ed_vt_truck.xml ed_vt_truck
+out_ed_vt_both.xml ed_vt_both
