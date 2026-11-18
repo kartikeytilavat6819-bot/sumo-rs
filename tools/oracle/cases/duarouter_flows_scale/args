@@ -1,0 +1,1 @@
+--flow-files tools/oracle/cases/duarouter_flows/flows.xml --scale 2 --scale-suffix _s --seed 3 --output-file @DIR@/routes.rou.xml
