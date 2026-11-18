@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_zipper_vclass/junction.nod.xml --edge-files tools/oracle/cases/jt_zipper_vclass/junction.edg.xml --connection-files tools/oracle/cases/jt_zipper_vclass/junction.con.xml

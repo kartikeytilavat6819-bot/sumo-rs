@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/oc_insert_global/ocnet.nod.xml --edge-files tools/oracle/cases/oc_insert_global/ocnet.edg.xml

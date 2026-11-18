@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" vClass="passenger"/>
+    <vType id="truck" vClass="truck"/>
+    <route id="w" edges="E0 B E3"/>
+    <route id="s" edges="S B E3"/>
+    <flow id="fc" type="car" route="w" begin="0" end="200" period="6"/>
+    <flow id="fs" type="car" route="s" begin="1" end="200" period="5"/>
+    <flow id="ft" type="truck" route="w" begin="3" end="200" period="12"/>
+</routes>

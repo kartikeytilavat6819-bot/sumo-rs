@@ -232,7 +232,7 @@ impl ROMARouteHandler {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(s: &ROMARouteHandler) -> Self {
-        // shortcut: private copy constructor is declared in ROMARouteHandler.h but never defined; calling it is a link error in C++
+        // C++ note: private copy constructor is declared in ROMARouteHandler.h but never defined; calling it is a link error in C++
         panic!("ROMARouteHandler copy constructor is declared but not defined");
     }
 

@@ -1,0 +1,21 @@
+<routes>
+<vType id="car" vClass="passenger" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0.5"/>
+<vType id="bike" vClass="bicycle" length="2.00" width="0.80" maxSpeed="6.00" accel="1.50" decel="3.00" sigma="0.5"/>
+<vType id="truck" vClass="truck" length="10.00" maxSpeed="10.00" accel="1.00" decel="3.00" sigma="0.5"/>
+    <vehicle id="z00" depart="0.00" departSpeed="max" departLane="0" type="car"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z01" depart="0.00" departSpeed="max" departLane="1" type="truck"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z02" depart="3.00" departSpeed="max" departLane="0" type="bike"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z03" depart="3.00" departSpeed="max" departLane="1" type="car"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z04" depart="6.00" departSpeed="max" departLane="0" type="truck"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z05" depart="6.00" departSpeed="max" departLane="1" type="bike"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z06" depart="9.00" departSpeed="max" departLane="0" type="car"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z07" depart="9.00" departSpeed="max" departLane="1" type="truck"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z08" depart="12.00" departSpeed="max" departLane="0" type="bike"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z09" depart="12.00" departSpeed="max" departLane="1" type="car"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z10" depart="15.00" departSpeed="max" departLane="0" type="truck"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z11" depart="15.00" departSpeed="max" departLane="1" type="bike"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z12" depart="18.00" departSpeed="max" departLane="0" type="car"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z13" depart="18.00" departSpeed="max" departLane="1" type="truck"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z14" depart="21.00" departSpeed="max" departLane="0" type="bike"><route edges="IN OUT"/></vehicle>
+    <vehicle id="z15" depart="21.00" departSpeed="max" departLane="1" type="car"><route edges="IN OUT"/></vehicle>
+</routes>

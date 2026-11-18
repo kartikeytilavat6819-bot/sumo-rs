@@ -39,31 +39,13 @@ fn get_final_geo() -> GeoConvHelper {
 }
 
 /// GeoConvHelper::writeLocation(OutputDevice&)
-// shortcut: local copy until utils/geom/geo_conv_helper.rs ports writeLocation (it needs OutputDevice)
 pub fn write_location(into: &mut OutputDevice) {
-    let gch = get_final_geo();
-    into.open_tag_id(SUMO_TAG_LOCATION);
-    let prec = into.get_precision();
-    into.write_attr(SUMO_ATTR_NET_OFFSET, &gch.get_offset_base().to_string_prec(prec));
-    let prec = into.get_precision();
-    into.write_attr(SUMO_ATTR_CONV_BOUNDARY, &gch.get_conv_boundary().to_string_prec(prec));
-    if gch.using_geo_projection() {
-        into.set_precision(g_precision_geo());
-    }
-    let prec = into.get_precision();
-    into.write_attr(SUMO_ATTR_ORIG_BOUNDARY, &gch.get_orig_boundary().to_string_prec(prec));
-    if gch.using_geo_projection() {
-        into.set_precision(g_precision());
-    }
-    into.write_attr(SUMO_ATTR_ORIG_PROJ, &escape_xml(gch.get_proj_string(), false));
-    into.close_tag("");
-    into.lf();
+    get_final_geo().write_location(into);
 }
 
 /// writePreferences(OutputDevice&, SVCPermissions) (utils/common/SUMOVehicleClass.cpp)
-// shortcut: local copy until utils/common/sumo_vehicle_class.rs ports writePreferences
 fn write_preferences(into: &mut OutputDevice, preferred: SVCPermissions) {
-    into.write_optional_attr(SUMO_ATTR_PREFER, get_vehicle_class_names(preferred, false).as_str(), preferred == SVC_ALL || preferred == 0);
+    utils::common::sumo_vehicle_class::write_preferences(into, preferred);
 }
 
 /// Exporter writing networks using XML (native input) format

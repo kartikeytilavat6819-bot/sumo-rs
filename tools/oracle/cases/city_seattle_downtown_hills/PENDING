@@ -1,0 +1,4 @@
+official C++ OOB read of myConflicts (undefined behaviour, see sw01); replaced by city_seattle_first_hill
+The official C++ 1.28.0 reads foeExitLink->myConflicts[10] on a size-8 vector (17 times in this run); the bad
+foeConflictIndex is stored on the recheck_set_request_information path (branch worktree-agent-sw01). The reference
+therefore depends on undefined behaviour and is not reproducible. Refs are kept untouched.

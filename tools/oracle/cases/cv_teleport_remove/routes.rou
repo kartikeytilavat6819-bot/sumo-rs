@@ -1,0 +1,10 @@
+<routes>
+    <vehicle id="b0" depart="0.00" departSpeed="max"><route edges="E0 E1"/><stop lane="E1_0" endPos="290.00" duration="1000.00"/></vehicle>
+    <vehicle id="d0" depart="1.00"><route edges="X E1"/></vehicle>
+    <vehicle id="f0" depart="2" departSpeed="max"><route edges="E0 E1"/></vehicle>
+    <vehicle id="f1" depart="4" departSpeed="max"><route edges="E0 E1"/></vehicle>
+    <vehicle id="f2" depart="6" departSpeed="max"><route edges="E0 E1"/></vehicle>
+    <vehicle id="f3" depart="8" departSpeed="max"><route edges="E0 E1"/></vehicle>
+    <vehicle id="f4" depart="10" departSpeed="max"><route edges="E0 E1"/></vehicle>
+    <vehicle id="f5" depart="12" departSpeed="max"><route edges="E0 E1"/></vehicle>
+</routes>

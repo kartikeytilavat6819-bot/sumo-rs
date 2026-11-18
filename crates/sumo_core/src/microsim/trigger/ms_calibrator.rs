@@ -786,7 +786,7 @@ impl MSCalibrator {
                         }
                     }
                 };
-                // shortcut: dynamic_cast<MSVehicle*> is a plain cast here, the microsim vehicle control only builds MSVehicle for triggers
+                // dynamic_cast<MSVehicle*>: MSCalibrator::execute runs only in micro simulation (meso uses METriggeredCalibrator), where every built vehicle is an MSVehicle
                 let vehicle: Ptr<MSVehicle> = vehicleSV.cast::<MSVehicle>();
                 vehicle.m().reset_route_position(routeIndex, pars.departLaneProcedure);
                 let success: bool = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| self.myEdge.insert_vehicle(vehicleSV.m(), currentTime, false, false))) {
@@ -1534,8 +1534,8 @@ impl MSCalibrator {
             // VehicleRemover::notifyEnter so we do it here
             for id in self.myToRemove.iter() {
                 let vehicleSV: Ptr<SUMOVehicle> = vc.get_vehicle(id);
-                // shortcut: dynamic_cast<MSVehicle*> is a plain cast here, the microsim vehicle control only holds MSVehicle
-                let vehicle: Ptr<MSVehicle> = if vehicleSV.is_null() { Ptr::null() } else { vehicleSV.cast::<MSVehicle>() };
+                // dynamic_cast<MSVehicle*>: meso vehicles are MEVehicle (nullptr), micro ones MSVehicle
+                let vehicle: Ptr<MSVehicle> = if vehicleSV.is_null() || crate::microsim::ms_globals::use_meso_sim() { Ptr::null() } else { vehicleSV.cast::<MSVehicle>() };
                 if !vehicle.is_null() {
                     let lane: Ptr<MSLane> = vehicle.m().get_mutable_lane();
                     vehicle.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_CALIBRATOR);

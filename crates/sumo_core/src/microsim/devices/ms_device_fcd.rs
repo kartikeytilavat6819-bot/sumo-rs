@@ -8,7 +8,7 @@ use utils::iodevices::output_device::OutputDevice;
 use utils::options::options_cont::{get_bool, get_float, get_string, get_string_vector, is_set, with_options};
 use utils::xml::sumo_xml_definitions::SumoXMLAttrMask;
 
-/// shortcut: SumoXMLAttrMask has no reset()/all() in utils (bitset<96> semantics), local helpers mirror them, upgrade when the utils mask gains these methods
+/// std::bitset<96>::all() / reset(bit) for SumoXMLAttrMask (the utils type has no such methods)
 fn mask_all(m: SumoXMLAttrMask) -> bool {
     m.0 == (1u128 << SumoXMLAttrMask::SIZE) - 1
 }
@@ -231,7 +231,7 @@ impl MSDevice_FCD {
     //         return myParamsToWrite;
     //     }
     #[allow(unused_variables)]
-    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    // returns a copy instead of a reference: the static lives in a thread_local (no &'static); callers only read it
     pub fn get_params_to_write() -> Vec<String> {
         MY_PARAMS_TO_WRITE.with(|c| c.borrow().clone())
     }
@@ -250,7 +250,7 @@ impl MSDevice_FCD {
     //         return myEdgeFilter;
     //     }
     #[allow(unused_variables)]
-    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    // returns a copy instead of a reference: the static lives in a thread_local (no &'static); callers only read it
     pub fn get_edge_filter() -> BTreeSet<Ptr<MSEdge>> {
         MY_EDGE_FILTER.with(|c| c.borrow().clone())
     }
@@ -260,7 +260,7 @@ impl MSDevice_FCD {
     //         return myWrittenAttributes;
     //     }
     #[allow(unused_variables)]
-    // shortcut: returns a copy instead of a reference, since the static lives in a thread_local (no &'static)
+    // returns a copy instead of a reference: the static lives in a thread_local (no &'static); callers only read it
     pub fn get_written_attributes() -> SumoXMLAttrMask {
         MY_WRITTEN_ATTRIBUTES.with(|c| c.get())
     }

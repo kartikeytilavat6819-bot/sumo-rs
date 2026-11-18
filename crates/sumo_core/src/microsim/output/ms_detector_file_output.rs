@@ -234,7 +234,29 @@ impl MSDetectorFileOutput {
                 return false;
             }
         }
-        // shortcut: the nextEdges check (C++ dynamic_cast<const SUMOVehicle/MSTransportable&>(veh) to reach the route) is skipped, since SUMOTrafficObject has no downcast or route accessor here; upgrade when those exist
+        if !self.myNextEdges.is_empty() {
+            // the remaining route [it, end) as a copy (C++ iterates the route in place)
+            let route: ConstMSEdgeVector = if veh.is_vehicle() {
+                let v = Ptr::new(veh).cast::<SUMOVehicle>();
+                let edges = v.get_route().get_edges();
+                edges[*v.get_current_route_edge()..].to_vec()
+            } else if veh.is_person() {
+                let p = Ptr::new(veh).cast::<MSTransportable>();
+                let edges = p.get_current_stage().get_edges();
+                edges[p.get_route_position() as usize..].to_vec()
+            } else {
+                Vec::new()
+            };
+            let mut it: usize = 0;
+            for e in self.myNextEdges.iter() {
+                it = route[it..].iter().position(|x| x == e).map(|i| it + i).unwrap_or(route.len());
+                if it == route.len() {
+                    if *e != veh.get_next_edge_ptr() {
+                        return false;
+                    }
+                }
+            }
+        }
         true
     }
 

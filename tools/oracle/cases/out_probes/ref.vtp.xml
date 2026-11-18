@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:06:52.119520-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_probes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_probes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_probes/probes.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<vehicle-type-probes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/vtypeprobe_file.xsd">
+    <timestep time="0.00" id="vtp" vType="truck">
+        <vehicle id="fC.0" lane="--103227#2_0" pos="12.10" x="147.37" y="12.07" lat="-0.004989" lon="0.012828" speed="25.00"/>
+        <vehicle id="fG.0" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="20.00" id="vtp" vType="truck">
+        <vehicle id="fC.1" lane="--103227#1_0" pos="52.97" x="148.56" y="209.65" lat="-0.003211" lon="0.012839" speed="24.53"/>
+        <vehicle id="fG.0" lane="-103227#2_1" pos="59.06" x="141.40" y="83.26" lat="-0.004349" lon="0.012774" speed="19.81"/>
+        <vehicle id="fG.1" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="40.00" id="vtp" vType="truck">
+        <vehicle id="fC.3" lane="--103227#2_0" pos="102.38" x="147.92" y="102.35" lat="-0.004177" lon="0.012833" speed="18.46"/>
+        <vehicle id="fG.1" lane=":-137717_4_0" pos="12.51" x="143.17" y="276.85" lat="-0.002607" lon="0.012790" speed="4.18"/>
+        <vehicle id="fG.2" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="60.00" id="vtp" vType="truck">
+        <vehicle id="fC.4" lane="--103227#0_0" pos="18.35" x="149.15" y="307.59" lat="-0.002330" lon="0.012844" speed="24.45"/>
+        <vehicle id="fC.5" lane="--103227#2_0" pos="12.10" x="147.37" y="12.07" lat="-0.004989" lon="0.012828" speed="25.00"/>
+        <vehicle id="fG.2" lane="-103227#2_1" pos="67.67" x="141.35" y="74.65" lat="-0.004426" lon="0.012774" speed="19.99"/>
+        <vehicle id="fG.3" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="80.00" id="vtp" vType="truck">
+        <vehicle id="fC.6" lane="--103227#1_0" pos="53.08" x="148.56" y="209.76" lat="-0.003210" lon="0.012839" speed="24.90"/>
+        <vehicle id="fG.3" lane="-103227#1_1" pos="31.01" x="142.36" y="243.87" lat="-0.002904" lon="0.012783" speed="8.44"/>
+        <vehicle id="fG.4" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="100.00" id="vtp" vType="truck">
+        <vehicle id="fC.8" lane="--103227#2_0" pos="110.95" x="147.97" y="110.92" lat="-0.004100" lon="0.012833" speed="24.83"/>
+        <vehicle id="fG.4" lane="-103227#1_1" pos="79.03" x="142.08" y="195.85" lat="-0.003336" lon="0.012780" speed="12.41"/>
+        <vehicle id="fG.5" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="120.00" id="vtp" vType="truck">
+        <vehicle id="fC.10" lane="--103227#2_0" pos="12.10" x="147.37" y="12.07" lat="-0.004989" lon="0.012828" speed="25.00"/>
+        <vehicle id="fC.9" lane="--103227#0_0" pos="18.79" x="149.15" y="308.03" lat="-0.002326" lon="0.012844" speed="24.92"/>
+        <vehicle id="fG.5" lane="-103227#1_1" pos="60.61" x="142.19" y="214.27" lat="-0.003170" lon="0.012781" speed="10.92"/>
+        <vehicle id="fG.6" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="140.00" id="vtp" vType="truck">
+        <vehicle id="fC.11" lane="--103227#1_1" pos="52.18" x="145.35" y="208.88" lat="-0.003218" lon="0.012810" speed="24.58"/>
+        <vehicle id="fG.6" lane="-103227#2_1" pos="53.71" x="141.44" y="88.61" lat="-0.004301" lon="0.012775" speed="18.64"/>
+        <vehicle id="fG.7" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="160.00" id="vtp" vType="truck">
+        <vehicle id="fC.13" lane="--103227#2_0" pos="110.82" x="147.97" y="110.79" lat="-0.004101" lon="0.012833" speed="24.49"/>
+        <vehicle id="fG.7" lane="-103227#2_1" pos="73.78" x="141.31" y="68.54" lat="-0.004481" lon="0.012773" speed="21.00"/>
+        <vehicle id="fG.8" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="180.00" id="vtp" vType="truck">
+        <vehicle id="fC.14" lane="--103227#0_0" pos="18.92" x="149.15" y="308.16" lat="-0.002325" lon="0.012844" speed="24.74"/>
+        <vehicle id="fC.15" lane="--103227#2_0" pos="12.10" x="147.37" y="12.07" lat="-0.004989" lon="0.012828" speed="25.00"/>
+        <vehicle id="fG.8" lane="-103227#1_1" pos="62.26" x="142.18" y="212.62" lat="-0.003185" lon="0.012781" speed="11.52"/>
+        <vehicle id="fG.9" lane="-103228_1" pos="12.10" x="211.65" y="280.43" lat="-0.002575" lon="0.013405" speed="19.41"/>
+    </timestep>
+    <timestep time="200.00" id="vtp" vType="truck">
+        <vehicle id="fC.16" lane="--103227#1_0" pos="52.05" x="148.55" y="208.73" lat="-0.003220" lon="0.012839" speed="24.45"/>
+        <vehicle id="fG.9" lane="-103228_1" pos="69.04" x="154.71" y="280.43" lat="-0.002575" lon="0.012894" speed="0.00"/>
+    </timestep>
+    <timestep time="220.00" id="vtp" vType="truck">
+        <vehicle id="fG.9" lane=":-137721_0_1" pos="12.20" x="141.77" y="144.52" lat="-0.003798" lon="0.012778" speed="16.30"/>
+    </timestep>
+    <timestep time="240.00" id="vtp" vType="truck"/>
+</vehicle-type-probes>

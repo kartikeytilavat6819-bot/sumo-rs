@@ -11,9 +11,7 @@ use utils::geom::NUMERICAL_EPS;
 
 /// C++ `#define HAS_NOT_LEFT_DETECTOR -1` (MSInductLoop.cpp)
 const HAS_NOT_LEFT_DETECTOR: f64 = -1.;
-// shortcut: MSPModel statics are not ported yet; values copied from MSPModel.cpp, upgrade when msp_model.rs exports them
-const MSPMODEL_FORWARD: i32 = 1;
-const MSPMODEL_BACKWARD: i32 = -1;
+use crate::microsim::transportables::msp_model::{MSPMODEL_BACKWARD, MSPMODEL_FORWARD};
 
 
 /// C++ `SIMSTEP` macro
@@ -191,8 +189,8 @@ impl MSInductLoop {
         debug_assert!(positionInMeters >= 0. && positionInMeters + length <= lane.get_length());
         let mut s = Box::new(MSInductLoop {
             base: MSMoveReminder::new(id, lane, true),
-            // shortcut: C++ constructor throws ProcessError on an unknown vehicle type or edge; new() returns Self, so it panics instead, upgrade when constructors return Result
-            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap(),
+            // C++ throws ProcessError on an unknown vehicle type or edge
+            base2: MSDetectorFileOutput::new(id, vTypes, nextEdges, detectPersons).unwrap_or_else(|e| std::panic::panic_any(e)),
             myName: name,
             myPosition: positionInMeters,
             myEndPosition: positionInMeters + length,
@@ -434,8 +432,12 @@ impl MSInductLoop {
             return true;
         }
         if self.base2.myDetectPersons > PersonMode::WALK as i32 && !veh.is_person() {
-            // shortcut: dynamic_cast<MSBaseVehicle&>(veh).getPersons() needs a runtime type check on SUMOTrafficObject, which does not exist yet; the persons' keep flags are not computed and the vehicle is dropped
-            return false;
+            let mut keep = false;
+            let v = Ptr::from_mut(veh).cast::<MSBaseVehicle>();
+            for p in v.get_persons().clone() {
+                keep = self.notify_move(&mut p.m().base, oldPos, newPos, newSpeed);
+            }
+            return keep;
         }
         let key = Ptr::from_mut(veh);
         let oldSpeed = veh.get_previous_speed();

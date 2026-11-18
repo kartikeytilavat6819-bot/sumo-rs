@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_rbl_threshold/junction.nod.xml --edge-files tools/oracle/cases/jt_rbl_threshold/junction.edg.xml --connection-files tools/oracle/cases/jt_rbl_threshold/junction.con.xml --junctions.right-before-left.speed-threshold 2.0

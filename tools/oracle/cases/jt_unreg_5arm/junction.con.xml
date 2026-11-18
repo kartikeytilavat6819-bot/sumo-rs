@@ -1,0 +1,22 @@
+<connections>
+    <connection from="a0_in" to="a1_out" fromLane="0" toLane="0"/>
+    <connection from="a0_in" to="a2_out" fromLane="0" toLane="0"/>
+    <connection from="a0_in" to="a3_out" fromLane="0" toLane="0"/>
+    <connection from="a0_in" to="a4_out" fromLane="0" toLane="0"/>
+    <connection from="a1_in" to="a0_out" fromLane="0" toLane="0"/>
+    <connection from="a1_in" to="a2_out" fromLane="0" toLane="0"/>
+    <connection from="a1_in" to="a3_out" fromLane="0" toLane="0"/>
+    <connection from="a1_in" to="a4_out" fromLane="0" toLane="0"/>
+    <connection from="a2_in" to="a0_out" fromLane="0" toLane="0"/>
+    <connection from="a2_in" to="a1_out" fromLane="0" toLane="0"/>
+    <connection from="a2_in" to="a3_out" fromLane="0" toLane="0"/>
+    <connection from="a2_in" to="a4_out" fromLane="0" toLane="0"/>
+    <connection from="a3_in" to="a0_out" fromLane="0" toLane="0"/>
+    <connection from="a3_in" to="a1_out" fromLane="0" toLane="0"/>
+    <connection from="a3_in" to="a2_out" fromLane="0" toLane="0"/>
+    <connection from="a3_in" to="a4_out" fromLane="0" toLane="0"/>
+    <connection from="a4_in" to="a0_out" fromLane="0" toLane="0"/>
+    <connection from="a4_in" to="a1_out" fromLane="0" toLane="0"/>
+    <connection from="a4_in" to="a2_out" fromLane="0" toLane="0"/>
+    <connection from="a4_in" to="a3_out" fromLane="0" toLane="0"/>
+</connections>

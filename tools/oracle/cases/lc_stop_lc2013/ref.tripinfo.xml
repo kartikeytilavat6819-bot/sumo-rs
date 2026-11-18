@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:10:49.710442-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/lc_stop_lc2013/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/lc_stop_lc2013/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h12/tools/oracle/cases/lc_stop_lc2013/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h12/tools/oracle/cases/lc_stop_lc2013/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h12/tools/oracle/cases/lc_stop_lc2013/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="e2" depart="194.00" departLane="E0_2" departPos="5.10" departSpeed="13.89" departDelay="0.95" arrival="270.00" arrivalLane="E1_2" arrivalPos="492.80" arrivalSpeed="13.65" duration="76.00" routeLength="994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="3.76" rerouteNo="0" devices="tripinfo_e2 fcd_e2" vType="tC" speedFactor="1.08" vaporized=""/>
+    <tripinfo id="e0" depart="163.00" departLane="E0_2" departPos="5.10" departSpeed="13.89" departDelay="0.06" arrival="275.00" arrivalLane="E1_0" arrivalPos="492.80" arrivalSpeed="13.59" duration="112.00" routeLength="994.90" waitingTime="0.00" waitingCount="0" stopTime="20.00" timeLoss="16.26" rerouteNo="0" devices="tripinfo_e0 fcd_e0" vType="tA" speedFactor="1.01" vaporized=""/>
+</tripinfos>

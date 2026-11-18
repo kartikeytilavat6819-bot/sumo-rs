@@ -1,6 +1,7 @@
 //! Port of utils/router/PublicTransportEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::intermodal_edge::IntermodalEdgeKind;
 use crate::utils::router::router_edge::{RouterEdge, RouterVehicle};
 
 /// the public transport edge type connecting the stop edges
@@ -41,7 +42,7 @@ where
     pub fn new(id: String, numericalID: i32, entryStop: Ptr<IntermodalEdge<E, L, N, V>>, endEdge: Ptr<E>, line: &str, length: f64) -> Self {
         let base_id = format!("{}:{}", line, if id != "" { id } else { endEdge.id().to_string() });
         Self {
-            base: IntermodalEdge::new(base_id, numericalID, endEdge, line, length),
+            base: IntermodalEdge::new(base_id, numericalID, endEdge, line, length).with_kind(IntermodalEdgeKind::PublicTransport),
             mySchedules: BTreeMap::new(),
             myEntryStop: entryStop,
             _p: std::marker::PhantomData,

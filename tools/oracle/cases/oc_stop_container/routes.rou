@@ -1,0 +1,19 @@
+<routes>
+    <!-- triggered="container" with expectedContainers, and the legacy containerTriggered="true" -->
+    <vType id="truck" vClass="truck" length="10.00" maxSpeed="13.89" accel="1.30" decel="4.00" containerCapacity="2"/>
+    <route id="r" edges="A B C D"/>
+    <vehicle id="truck0" type="truck" line="ln" depart="0" route="r" departSpeed="max">
+        <stop containerStop="csIn" duration="10" triggered="container" expectedContainers="c0"/>
+        <stop containerStop="csOut" duration="15"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" line="ln2" depart="30" route="r" departSpeed="max">
+        <stop containerStop="csIn" duration="10" containerTriggered="true"/>
+        <stop containerStop="csOut" duration="15"/>
+    </vehicle>
+    <container id="c0" depart="15" departPos="120">
+        <transport from="B" to="C" lines="ln" arrivalPos="120"/>
+    </container>
+    <container id="c1" depart="45" departPos="120">
+        <transport from="B" to="C" lines="ln2" arrivalPos="120"/>
+    </container>
+</routes>

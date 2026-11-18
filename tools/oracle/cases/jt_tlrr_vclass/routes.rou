@@ -1,0 +1,26 @@
+<routes>
+<vType id="car" vClass="passenger" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0.5"/>
+<vType id="bike" vClass="bicycle" length="2.00" width="0.80" maxSpeed="6.00" accel="1.50" decel="3.00" sigma="0.5"/>
+<vType id="moto" vClass="motorcycle" length="2.50" maxSpeed="18.00" accel="3.00" decel="5.00" sigma="0.5"/>
+<vType id="truck" vClass="truck" length="10.00" maxSpeed="10.00" accel="1.00" decel="3.00" sigma="0.5"/>
+    <vehicle id="v00" depart="0.00" departSpeed="max" type="car"><route edges="N_in E_out"/></vehicle>
+    <vehicle id="v01" depart="0.00" departSpeed="max" type="bike"><route edges="E_in S_out"/></vehicle>
+    <vehicle id="v02" depart="6.00" departSpeed="max" type="moto"><route edges="S_in W_out"/></vehicle>
+    <vehicle id="v03" depart="6.00" departSpeed="max" type="truck"><route edges="W_in N_out"/></vehicle>
+    <vehicle id="v04" depart="12.00" departSpeed="max" type="car"><route edges="N_in S_out"/></vehicle>
+    <vehicle id="v05" depart="12.00" departSpeed="max" type="bike"><route edges="E_in W_out"/></vehicle>
+    <vehicle id="v06" depart="18.00" departSpeed="max" type="moto"><route edges="S_in N_out"/></vehicle>
+    <vehicle id="v07" depart="18.00" departSpeed="max" type="truck"><route edges="W_in E_out"/></vehicle>
+    <vehicle id="v08" depart="24.00" departSpeed="max" type="car"><route edges="N_in W_out"/></vehicle>
+    <vehicle id="v09" depart="24.00" departSpeed="max" type="bike"><route edges="E_in N_out"/></vehicle>
+    <vehicle id="v10" depart="30.00" departSpeed="max" type="moto"><route edges="S_in E_out"/></vehicle>
+    <vehicle id="v11" depart="30.00" departSpeed="max" type="truck"><route edges="W_in S_out"/></vehicle>
+    <vehicle id="v12" depart="36.00" departSpeed="max" type="car"><route edges="N_in E_out"/></vehicle>
+    <vehicle id="v13" depart="36.00" departSpeed="max" type="bike"><route edges="E_in S_out"/></vehicle>
+    <vehicle id="v14" depart="42.00" departSpeed="max" type="moto"><route edges="S_in W_out"/></vehicle>
+    <vehicle id="v15" depart="42.00" departSpeed="max" type="truck"><route edges="W_in N_out"/></vehicle>
+    <vehicle id="v16" depart="48.00" departSpeed="max" type="car"><route edges="N_in S_out"/></vehicle>
+    <vehicle id="v17" depart="48.00" departSpeed="max" type="bike"><route edges="E_in W_out"/></vehicle>
+    <vehicle id="v18" depart="54.00" departSpeed="max" type="moto"><route edges="S_in N_out"/></vehicle>
+    <vehicle id="v19" depart="54.00" departSpeed="max" type="truck"><route edges="W_in E_out"/></vehicle>
+</routes>

@@ -1,0 +1,62 @@
+<routes>
+    <vehicle id="v00" depart="0.00" departSpeed="max">
+        <route edges="a0_in a1_out"/>
+    </vehicle>
+    <vehicle id="v01" depart="0.00" departSpeed="max">
+        <route edges="a1_in a2_out"/>
+    </vehicle>
+    <vehicle id="v02" depart="6.00" departSpeed="max">
+        <route edges="a2_in a3_out"/>
+    </vehicle>
+    <vehicle id="v03" depart="6.00" departSpeed="max">
+        <route edges="a3_in a4_out"/>
+    </vehicle>
+    <vehicle id="v04" depart="12.00" departSpeed="max">
+        <route edges="a4_in a0_out"/>
+    </vehicle>
+    <vehicle id="v05" depart="12.00" departSpeed="max">
+        <route edges="a0_in a1_out"/>
+    </vehicle>
+    <vehicle id="v06" depart="18.00" departSpeed="max">
+        <route edges="a1_in a2_out"/>
+    </vehicle>
+    <vehicle id="v07" depart="18.00" departSpeed="max">
+        <route edges="a2_in a3_out"/>
+    </vehicle>
+    <vehicle id="v08" depart="24.00" departSpeed="max">
+        <route edges="a3_in a4_out"/>
+    </vehicle>
+    <vehicle id="v09" depart="24.00" departSpeed="max">
+        <route edges="a4_in a0_out"/>
+    </vehicle>
+    <vehicle id="v10" depart="30.00" departSpeed="max">
+        <route edges="a0_in a1_out"/>
+    </vehicle>
+    <vehicle id="v11" depart="30.00" departSpeed="max">
+        <route edges="a1_in a2_out"/>
+    </vehicle>
+    <vehicle id="v12" depart="36.00" departSpeed="max">
+        <route edges="a2_in a3_out"/>
+    </vehicle>
+    <vehicle id="v13" depart="36.00" departSpeed="max">
+        <route edges="a3_in a4_out"/>
+    </vehicle>
+    <vehicle id="v14" depart="42.00" departSpeed="max">
+        <route edges="a4_in a0_out"/>
+    </vehicle>
+    <vehicle id="v15" depart="42.00" departSpeed="max">
+        <route edges="a0_in a1_out"/>
+    </vehicle>
+    <vehicle id="v16" depart="48.00" departSpeed="max">
+        <route edges="a1_in a2_out"/>
+    </vehicle>
+    <vehicle id="v17" depart="48.00" departSpeed="max">
+        <route edges="a2_in a3_out"/>
+    </vehicle>
+    <vehicle id="v18" depart="54.00" departSpeed="max">
+        <route edges="a3_in a4_out"/>
+    </vehicle>
+    <vehicle id="v19" depart="54.00" departSpeed="max">
+        <route edges="a4_in a0_out"/>
+    </vehicle>
+</routes>

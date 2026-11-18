@@ -277,7 +277,7 @@ impl MSCFModel_PWag2009 {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn v(&self, veh: Ptr<MSVehicle>, speed: f64, gap: f64, predSpeed: f64) -> f64 {
-        // shortcut: C++ declares _v but never defines it and nothing calls it; reaching this is the C++ link error
+        // C++ declares _v but never defines it and nothing calls it; reaching this is the C++ link error
         panic!("MSCFModel_PWag2009::_v is declared in C++ but has no definition")
     }
 
@@ -286,7 +286,7 @@ impl MSCFModel_PWag2009 {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn dawdle(&self, speed: f64) -> f64 {
-        // shortcut: C++ declares dawdle but never defines it and nothing calls it; reaching this is the C++ link error
+        // C++ declares dawdle but never defines it and nothing calls it; reaching this is the C++ link error
         panic!("MSCFModel_PWag2009::dawdle is declared in C++ but has no definition")
     }
 
