@@ -1,0 +1,20 @@
+diff --git a/crates/sumo_core/src/utils/router/effort_calculator.rs b/crates/sumo_core/src/utils/router/effort_calculator.rs
+--- a/crates/sumo_core/src/utils/router/effort_calculator.rs
++++ b/crates/sumo_core/src/utils/router/effort_calculator.rs
+@@ -1,4 +1,6 @@
+ //! Port of utils/router/EffortCalculator.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
+ #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
+ use crate::prelude::*;
++// oc30: virtual dispatch to FareModul for combined intermodal routing (the C++ EffortCalculator is abstract).
++pub type EffortGetEffort = fn(&mut EffortCalculator, i32) -> f64;
++pub type EffortOutput = fn(&EffortCalculator, i32) -> String;
++pub type EffortInit = fn(&mut EffortCalculator, &Vec<String>);
+
++#[repr(C)]
++pub struct EffortCalculator {
++    pub kind: i32, // 0 = plain, 1 = FareModul
++    pub fare: Option<Box<crate::utils::router::fare_modul::FareModul>>,
++    pub get_effort_fn: EffortGetEffort,
++    pub output_fn: EffortOutput,
++    pub init_fn: EffortInit,
++}

@@ -53,8 +53,10 @@ fn constraint_type_from_int(type_: i32) -> MSRailSignalConstraint_ConstraintType
         2 => MSRailSignalConstraint_ConstraintType::FOE_INSERTION,
         3 => MSRailSignalConstraint_ConstraintType::INSERTION_ORDER,
         4 => MSRailSignalConstraint_ConstraintType::BIDI_PREDECESSOR,
-        // shortcut: C++ casts any int to the enum (undefined for values outside the enum), here an unknown type panics, upgrade if the C++ enum grows
-        _ => panic!("shortcut: unknown rail signal constraint type {}", type_),
+        // C++ stores the raw int in the enum and `getTag()` falls back to SUMO_TAG_PREDECESSOR for
+        // unrecognised values; the Rust enum cannot represent an out-of-range value, so use the same
+        // fallback instead of aborting the TraCI command.
+        _ => MSRailSignalConstraint_ConstraintType::PREDECESSOR,
     }
 }
 
