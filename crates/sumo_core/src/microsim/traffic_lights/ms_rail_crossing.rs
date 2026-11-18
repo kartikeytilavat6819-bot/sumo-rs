@@ -130,15 +130,14 @@ impl MSRailCrossing {
     #[allow(unused_variables)]
     pub fn init(&mut self, nb: &mut NLDetectorBuilder) {
         let _test = self.base.base.base2.get_parameters_map();
-        self.myTimeGap = string2time(&self.base.base.base2.get_parameter("time-gap", "15")).unwrap();
+        self.myTimeGap = string2time(&self.base.base.base2.get_parameter("time-gap", "15")).unwrap_or_else(|e| panic!("{}", e));
         // use time-gap by default
-        self.mySpaceGap = utils::common::string_utils::to_double(&self.base.base.base2.get_parameter("space-gap", "-1")).unwrap();
-        self.myMinGreenTime = string2time(&self.base.base.base2.get_parameter("min-green", "5")).unwrap();
-        self.myOpeningDelay = string2time(&self.base.base.base2.get_parameter("opening-delay", "3")).unwrap();
-        self.myOpeningTime = string2time(&self.base.base.base2.get_parameter("opening-time", "3")).unwrap(); // red-yellow while opening
+        self.mySpaceGap = utils::common::string_utils::to_double(&self.base.base.base2.get_parameter("space-gap", "-1")).unwrap_or_else(|e| panic!("{}", e));
+        self.myMinGreenTime = string2time(&self.base.base.base2.get_parameter("min-green", "5")).unwrap_or_else(|e| panic!("{}", e));
+        self.myOpeningDelay = string2time(&self.base.base.base2.get_parameter("opening-delay", "3")).unwrap_or_else(|e| panic!("{}", e));
+        self.myOpeningTime = string2time(&self.base.base.base2.get_parameter("opening-time", "3")).unwrap_or_else(|e| panic!("{}", e)); // red-yellow while opening
         // XXX compute reasonable time depending on link length
-        self.myYellowTime = string2time(&self.base.base.base2.get_parameter("yellow-time", "5")).unwrap();
-        // shortcut: C++ throws ProcessError on a malformed time/double here; unwrap panics instead, upgrade when init() can return Result
+        self.myYellowTime = string2time(&self.base.base.base2.get_parameter("yellow-time", "5")).unwrap_or_else(|e| panic!("{}", e));
         unsafe { drop(Box::from_raw(self.myPhases[0].as_raw())) };
         self.myPhases.clear();
         let n = self.myLinks.len();

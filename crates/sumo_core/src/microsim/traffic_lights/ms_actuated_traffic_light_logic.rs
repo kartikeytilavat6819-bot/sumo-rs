@@ -335,7 +335,16 @@ impl MSActuatedTrafficLightLogic {
             }
         }
         if this.base2.has_parameter("extra-detectors") {
-            // shortcut: retrieveDetExpression needs the typed detector containers (MSDetectorControl::getTypedDetectors is still Unmapped); extra-detectors are not resolved, upgrade when that container is mapped
+            let extraIDs = this.get_parameter("extra-detectors", String::new());
+            for customID in utils::common::string_tokenizer::StringTokenizer::new(&extraIDs).get_vector() {
+                match this.retrieve_det_expression_loop(&customID, true) {
+                    Some(loop_) => this.myExtraLoops.push(loop_),
+                    None => {
+                        let e2 = this.retrieve_det_expression_e2(&customID, true).unwrap_or_else(|| panic!("{}", ProcessError::new(format!("Unknown detector '{}' in expression '{}'", customID, extraIDs))));
+                        this.myExtraE2.push(e2);
+                    }
+                }
+            }
         }
         this.myStack.get_mut().push(BTreeMap::new());
         this
@@ -2526,9 +2535,23 @@ impl MSActuatedTrafficLightLogic {
             Some(pos) => {
                 let fun: &str = &expr[..pos];
                 let arg: &str = &expr[pos + 1..];
-                if fun == "z" || fun == "a" || fun == "w" || fun == "d" {
-                    // shortcut: detector expressions need the typed detector containers (MSDetectorControl::getTypedDetectors is still Unmapped), so they cannot be evaluated yet; upgrade when that container is mapped
-                    panic!("{}", ProcessError::new(format!("Unknown inductionLoop '{}' in expression '{}'", arg, expr)));
+                if fun == "z" {
+                    return self.retrieve_det_expression_loop_or_throw(arg, expr).get_time_since_last_detection();
+                } else if fun == "a" {
+                    if let Some(loop_) = self.retrieve_det_expression_loop(arg, true) {
+                        return if loop_.get_time_since_last_detection() == 0.0 { 1.0 } else { 0.0 };
+                    }
+                    return self.retrieve_det_expression_e2_or_throw(arg, expr).get_current_vehicle_number() as f64;
+                } else if fun == "w" {
+                    if let Some(loop_) = self.retrieve_det_expression_loop(arg, true) {
+                        return loop_.get_occupancy_time();
+                    }
+                    return self.retrieve_det_expression_e2_or_throw(arg, expr).get_current_jam_duration();
+                } else if fun == "d" {
+                    if let Some(loop_) = self.retrieve_det_expression_loop(arg, true) {
+                        return loop_.get_arrival_delay();
+                    }
+                    return self.retrieve_det_expression_e2_or_throw(arg, expr).get_arrival_delay();
                 } else if fun == "g" || fun == "r" {
                     if let Ok(linkIndex) = utils::common::string_utils::to_int(arg) {
                         if linkIndex >= 0 && linkIndex < self.myNumLinks {
@@ -3020,10 +3043,41 @@ impl MSActuatedTrafficLightLogic {
     //             return det;
     //         }
     //     }
-    #[allow(unused_variables)]
-    pub fn retrieve_det_expression(&self) -> Ptr<Unmapped /* T */> {
-        // shortcut: MSDetectorControl::getTypedDetectors is still Unmapped, so detectors cannot be looked up by id; upgrade when that container is mapped
-        panic!("MSActuatedTrafficLightLogic::retrieveDetExpression: detector lookup by id is not ported yet")
+    /// Returns None where the C++ template throws ProcessError (not found); the tag container only holds MSInductLoop, so the cast is exact.
+    pub fn retrieve_det_expression_loop(&self, arg: &str, tryPrefix: bool) -> Option<Ptr<MSInductLoop>> {
+        let key = if tryPrefix { format!("{}{}", self.myDetectorPrefix, arg) } else { arg.to_string() };
+        let det = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_INDUCTION_LOOP).get(&key).map(|d| crate::microsim::output::ms_induct_loop::induct_loop_of(*d)).unwrap_or(Ptr::null());
+        if !det.is_null() {
+            Some(det)
+        } else if tryPrefix {
+            // try again without prefix
+            self.retrieve_det_expression_loop(arg, false)
+        } else {
+            None
+        }
+    }
+
+    /// C++: `retrieveDetExpression<MSE2Collector, SUMO_TAG_LANE_AREA_DETECTOR>`, see retrieve_det_expression_loop
+    pub fn retrieve_det_expression_e2(&self, arg: &str, tryPrefix: bool) -> Option<Ptr<MSE2Collector>> {
+        let key = if tryPrefix { format!("{}{}", self.myDetectorPrefix, arg) } else { arg.to_string() };
+        let det = MSNet::get_instance().m().get_detector_control().get_typed_detectors(SUMO_TAG_LANE_AREA_DETECTOR).get(&key).map(|d| crate::microsim::output::mse2_collector::mse2_collector_of(*d)).unwrap_or(Ptr::null());
+        if !det.is_null() {
+            Some(det)
+        } else if tryPrefix {
+            self.retrieve_det_expression_e2(arg, false)
+        } else {
+            None
+        }
+    }
+
+    /// C++: `retrieveDetExpression<MSInductLoop, SUMO_TAG_INDUCTION_LOOP>(arg, expr, true)` (throws when unknown)
+    pub fn retrieve_det_expression_loop_or_throw(&self, arg: &str, expr: &str) -> Ptr<MSInductLoop> {
+        self.retrieve_det_expression_loop(arg, true).unwrap_or_else(|| panic!("{}", ProcessError::new(format!("Unknown detector '{}' in expression '{}'", arg, expr))))
+    }
+
+    /// C++: `retrieveDetExpression<MSE2Collector, SUMO_TAG_LANE_AREA_DETECTOR>(arg, expr, true)` (throws when unknown)
+    pub fn retrieve_det_expression_e2_or_throw(&self, arg: &str, expr: &str) -> Ptr<MSE2Collector> {
+        self.retrieve_det_expression_e2(arg, true).unwrap_or_else(|| panic!("{}", ProcessError::new(format!("Unknown detector '{}' in expression '{}'", arg, expr))))
     }
 
     /// C++: `std::set<int> MSActuatedTrafficLightLogic::getMultiNextTargets() const` [const, protected]
