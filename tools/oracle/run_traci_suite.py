@@ -26,7 +26,7 @@ TARGET = os.environ.get("CARGO_TARGET_DIR", "/tmp/target")
 OUR_SUMO = os.environ.get("OUR_SUMO", os.path.join(TARGET, "debug", "sumo"))
 PRISTINE = os.environ.get("SUMO_PRISTINE_BIN", "/usr/bin")
 OFF_SUMO = os.environ.get("OFFICIAL_SUMO", os.path.join(PRISTINE, "sumo"))
-CLIENT = os.environ.get("TRACI_CLIENT", os.path.join(PRISTINE, "TraCITestClient"))
+CLIENT = [sys.executable, os.path.join(HERE, "traci_client.py")]
 OUT = os.environ.get("TRACI_SUITE_OUT", "/tmp/traci_suite")
 LIMIT = int(os.environ.get("TRACI_LIMIT", "0"))
 ONLY = os.environ.get("TRACI_ONLY", "")
@@ -98,6 +98,7 @@ def norm_client(text):
         if ln.startswith("TraCITestClient output file. Date:"):
             ln = "TraCITestClient output file. Date: <DATE>"
         ln = re.sub(r"(getVersion: \d+, SUMO).*", r"\1", ln)
+        ln = re.sub(r"SUMO [vV]?\d+\.\d+[^\s]*", "SUMO <VERSION>", ln)
         if "Socket" in ln or "Broken pipe" in ln or "Connection reset" in ln:
             continue
         ln = re.sub(r"\d+\.\d+s(?:\b|$)", "(TIME)", ln)
@@ -156,7 +157,7 @@ def run_client(run_dir, port, tag):
     out = os.path.join(run_dir, "testclient_out.txt")
     if os.path.exists(out):
         os.remove(out)
-    args = [CLIENT, "-def", "testclient.prog", "-o", out, "-p", str(port)]
+    args = CLIENT + ["-def", "testclient.prog", "-o", out, "-p", str(port)]
     result = 2
     for retry in range(10):
         time.sleep(retry * 0.1)
@@ -233,8 +234,8 @@ def main():
     if not root:
         print("traci suite oracle: NO TESTS FOUND")
         return 2
-    if not os.path.isfile(CLIENT):
-        print("traci suite oracle: NO CLIENT at " + CLIENT)
+    if not os.path.isfile(CLIENT[1]):
+        print("traci suite oracle: NO CLIENT at " + CLIENT[1])
         return 2
     os.makedirs(OUT, exist_ok=True)
     work = os.path.join(OUT, "work")
