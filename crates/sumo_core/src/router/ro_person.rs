@@ -646,8 +646,8 @@ impl ROPerson_PlanItem {
     #[allow(unused_variables)]
     pub fn get_stop_dest(&self) -> &str {
         match self.kind {
-            1 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_PersonTrip>().m().get_stop_dest(),
-            2 => Ptr::from_raw(self as *const _ as *mut Self).cast::<ROPerson_Stop>().m().get_stop_dest(),
+            1 => unsafe { &*(self as *const Self as *const ROPerson_PersonTrip) }.get_stop_dest(),
+            2 => unsafe { &*(self as *const Self as *const ROPerson_Stop) }.get_stop_dest(),
             _ => UNDEFINED_STOPPING_PLACE,
         }
     }
