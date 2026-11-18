@@ -1,0 +1,1 @@
+parked: official sumo does not terminate (deadlock with --time-to-teleport -1, no --end; TextTest relies on a timeout)
