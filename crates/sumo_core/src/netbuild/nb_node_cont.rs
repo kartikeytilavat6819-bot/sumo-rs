@@ -1927,6 +1927,14 @@ impl NBNodeCont {
         let mut toRemove: Vec<Ptr<NBNode>> = Vec::new();
         for current in self.myNodes.values().copied() {
             let mut remove = false;
+            if std::env::var_os("OC63_DEBUG").is_some() {
+                let mut dbgreason = String::new();
+                let rem = current.m().check_is_removable_reporting(&mut dbgreason);
+                let pid = |p: Ptr<NBEdge>| if p.is_null() { "-".to_string() } else { p.m().get_id().to_string() };
+                let ins: Vec<String> = current.m().get_incoming_edges().iter().map(|e| format!("{}(td={},ptd={})", e.m().get_id(), pid(e.m().get_turn_destination(true)), pid(e.m().myPossibleTurnDestination))).collect();
+                let outs: Vec<String> = current.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
+                utils::common::msg_handler::write_message(&format!("OC63 node={} type={:?} in=[{}] out=[{}] rem={} reason={}", current.m().get_id(), current.m().myType, ins.join(","), outs.join(","), rem, dbgreason));
+            }
             // check for completely empty nodes and check for nodes which are only geometry nodes and ask the node whether to join
             if current.m().get_edges().is_empty() || (removeGeometryNodes && !self.mySplit.contains(&current) && current.m().check_is_removable()) {
                 remove = true;
