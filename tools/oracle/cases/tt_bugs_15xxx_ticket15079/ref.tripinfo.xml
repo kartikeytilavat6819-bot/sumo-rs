@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:11:59.713457-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_15xxx_ticket15079/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_15xxx_ticket15079/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15079/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15079/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_15xxx_ticket15079/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="WE.0" depart="1.00" departLane="WC_0" departPos="12.10" departSpeed="13.89" departDelay="0.42" arrival="59.00" arrivalLane="CE_0" arrivalPos="91.95" arrivalSpeed="13.77" duration="58.00" routeLength="187.90" waitingTime="34.00" waitingCount="1" stopTime="0.00" timeLoss="44.12" rerouteNo="0" devices="tripinfo_WE.0 routing_WE.0 fcd_WE.0" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.1" depart="3.00" departLane="WC_0" departPos="12.10" departSpeed="13.60" departDelay="0.73" arrival="59.00" arrivalLane="CE_1" arrivalPos="91.95" arrivalSpeed="13.57" duration="56.00" routeLength="187.90" waitingTime="32.00" waitingCount="1" stopTime="0.00" timeLoss="42.22" rerouteNo="0" devices="tripinfo_WE.1 routing_WE.1 fcd_WE.1" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.2" depart="18.00" departLane="WC_0" departPos="12.10" departSpeed="13.89" departDelay="0.28" arrival="61.00" arrivalLane="CE_0" arrivalPos="91.95" arrivalSpeed="13.80" duration="43.00" routeLength="187.90" waitingTime="19.00" waitingCount="1" stopTime="0.00" timeLoss="29.35" rerouteNo="0" devices="tripinfo_WE.2 routing_WE.2 fcd_WE.2" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.3" depart="22.00" departLane="WC_0" departPos="12.10" departSpeed="13.89" departDelay="0.72" arrival="62.00" arrivalLane="CE_1" arrivalPos="91.95" arrivalSpeed="13.36" duration="40.00" routeLength="187.90" waitingTime="15.00" waitingCount="1" stopTime="0.00" timeLoss="26.13" rerouteNo="0" devices="tripinfo_WE.3 routing_WE.3 fcd_WE.3" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="WE.4" depart="24.00" departLane="WC_0" departPos="12.10" departSpeed="13.59" departDelay="0.09" arrival="65.00" arrivalLane="CE_0" arrivalPos="91.95" arrivalSpeed="13.48" duration="41.00" routeLength="187.90" waitingTime="16.00" waitingCount="1" stopTime="0.00" timeLoss="26.65" rerouteNo="0" devices="tripinfo_WE.4 routing_WE.4 fcd_WE.4" vType="t0" speedFactor="1.00" vaporized=""/>
+</tripinfos>

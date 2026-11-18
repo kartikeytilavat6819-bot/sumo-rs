@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:13:59.532317-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_18xxx_ticket18246/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_18xxx_ticket18246/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_18xxx_ticket18246/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_18xxx_ticket18246/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_18xxx_ticket18246/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport value="600"/>
+        <max-depart-delay value="3"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v0" x="100.89" y="94.56" angle="351.85" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.01" lane=":C_10_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v0" x="100.12" y="96.07" angle="345.44" type="DEFAULT_VEHTYPE" speed="1.71" pos="1.71" lane=":C_18_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v0" x="97.98" y="98.97" angle="325.07" type="DEFAULT_VEHTYPE" speed="3.67" pos="5.39" lane=":C_18_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v0" x="92.37" y="101.20" angle="289.50" type="DEFAULT_VEHTYPE" speed="6.16" pos="11.55" lane=":C_18_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v0" x="84.85" y="101.60" angle="270.41" type="DEFAULT_VEHTYPE" speed="7.54" pos="4.75" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v0" x="76.01" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="8.84" pos="13.59" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="v0" x="65.51" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.50" pos="24.09" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="v0" x="53.04" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="12.47" pos="36.56" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="v0" x="39.84" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.20" pos="49.76" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="v0" x="26.08" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.76" pos="63.52" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="v0" x="13.25" y="101.60" angle="270.00" type="DEFAULT_VEHTYPE" speed="12.83" pos="76.35" lane="CW_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00"/>
+</fcd-export>

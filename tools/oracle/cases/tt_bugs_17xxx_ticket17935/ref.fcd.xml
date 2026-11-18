@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:13:52.873160-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_17xxx_ticket17935/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_17xxx_ticket17935/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_17xxx_ticket17935/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_17xxx_ticket17935/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_17xxx_ticket17935/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="v0" x="205.10" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="v0" x="206.54" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="1.44" pos="6.54" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="v0" x="209.66" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="3.12" pos="9.66" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="v0" x="215.31" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.66" pos="15.31" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="v0" x="222.93" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.62" pos="22.93" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="v0" x="232.38" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.45" pos="32.38" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="v0" x="244.38" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.99" pos="44.38" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="v0" x="257.30" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.92" pos="57.30" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="v0" x="270.87" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.57" pos="70.87" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="v0" x="284.05" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.18" pos="84.05" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="v0" x="296.97" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.92" pos="96.97" lane="Julius-Leber-Brücke_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="v0" x="310.85" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.88" pos="10.85" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="v0" x="324.74" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="24.74" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="v0" x="338.22" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.49" pos="38.22" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="v0" x="351.20" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.97" pos="51.20" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="v0" x="364.23" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.04" pos="64.23" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="v0" x="377.23" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="77.23" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="v0" x="389.89" y="398.40" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.66" pos="89.89" lane="Schöneweide_Bhf_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00"/>
+</fcd-export>

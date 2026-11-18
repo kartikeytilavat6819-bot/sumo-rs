@@ -59,9 +59,16 @@ OUTPUT_OPTS = (
     "--safety-output", "--battery-output", "--chargingstation-output",
     "--chargingstations-output", "--elechybrid-output", "--overheadwiresegments-output",
     "--substations-output", "--person-fcd-output", "--amitran-output",
-    "--rail-signal-output", "--person-route-output", "--link-output",
+    "--rail-signal-output", "--person-route-output", "--personroute-output", "--link-output",
     "--weights-output", "--deadlock-output", "--ssm-output", "--bh-output",
     "--save-state.files", "--save-state.times", "--movereminder-output",
+    "--all-pairs-output", "--bt-output", "--calibrator-output", "--detector-output",
+    "--detectors-poi-output", "--edgedata-output", "--emitters-output", "--emitters-poi-output",
+    "--end-reroute-output", "--flow-output", "--intermodal-network-output",
+    "--intermodal-weight-output", "--lanedata-output", "--matsim-output", "--netload-output",
+    "--parking-output", "--polygon-output", "--ptline-output", "--ptstop-output",
+    "--railsignal-block-output", "--railsignal-vehicle-output", "--routes-output",
+    "--street-sign-output", "--sum-output", "--variable-speed-sign-output", "--vtype-output",
 )
 ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
 

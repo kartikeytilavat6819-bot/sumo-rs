@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:11:36.381407-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_13xxx_ticket13108/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_13xxx_ticket13108/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_bugs_13xxx_ticket13108/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_13xxx_ticket13108/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_13xxx_ticket13108/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_13xxx_ticket13108/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pf1.0" depart="10.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="258.00" waitingTime="100.00" timeLoss="26.85" traveltime="154.00">
+        <walk depart="10.00" departPos="0.00" arrival="67.00" arrivalPos="4.00" duration="57.00" routeLength="70.92" timeLoss="5.94" maxSpeed="1.39" waitingTime="0.00"/>
+        <access stop="ts_E3" depart="67.00" arrival="96.00" duration="29.00" routeLength="41.58"/>
+        <stop duration="4.00" arrival="100.00" arrivalPos="105.00" actType="waiting"/>
+        <ride waitingTime="100.00" vehicle="LO286" depart="200.00" arrival="268.00" arrivalPos="34.08" duration="68.00" routeLength="377.54" timeLoss="20.91"/>
+    </personinfo>
+    <tripinfo id="LO286" depart="30.00" departLane="E1_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="268.00" arrivalLane="E8_0" arrivalPos="34.08" arrivalSpeed="9.64" duration="238.00" routeLength="561.68" waitingTime="0.00" waitingCount="0" stopTime="128.00" timeLoss="51.92" rerouteNo="1" devices="tripinfo_LO286 routing_LO286 person_LO286" vType="T1" speedFactor="1.00" vaporized=""/>
+</tripinfos>
