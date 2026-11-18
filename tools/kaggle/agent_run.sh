@@ -40,6 +40,11 @@ while IFS=$'\t' read -r case verdict rrc crc detail; do
   fi
   n=$((n+1))
 done < "$R"
+echo "--- rail + taxi diffs ---"
+for c in duarouter_itt_duarouter_trips_rail_reversal_cost duarouter_itt_duarouter_person_personTrip_taxi_walk_last duarouter_itt_duarouter_trips_bulk_routing_bulk_reset_after_trivial_trip; do
+  echo "=== $c ==="
+  cat "$OUT/dua/$c"/*.diff 2>/dev/null | head -30
+done
 echo "--- PANIC frames (first 3) ---"
 n=0
 grep -l 'panicked at' "$OUT/dua"/*/cand.log 2>/dev/null | while read -r f; do
