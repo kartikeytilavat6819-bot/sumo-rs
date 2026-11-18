@@ -8,6 +8,8 @@ pub type PersonDist = (Ptr<MSPerson>, f64);
 pub const MSPMODEL_FORWARD: i32 = 1;
 pub const MSPMODEL_BACKWARD: i32 = -1;
 pub const MSPMODEL_UNDEFINED_DIRECTION: i32 = 0;
+/// C++ `MSPModel::SAFETY_GAP` (MSPModel.cpp: `const double MSPModel::SAFETY_GAP(1.0)`)
+pub const MSPMODEL_SAFETY_GAP: f64 = 1.0;
 
 /// The pedestrian (and also sometimes container) movement model
 /// C++ class `MSPModel` (microsim/transportables/MSPModel.h)

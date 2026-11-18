@@ -792,6 +792,10 @@ impl MSTransportableControl {
         let mut devices = std::mem::take(&mut p.myDevices);
         MSDevice::build_transportable_devices(p, &mut devices);
         p.myDevices = devices;
+        // C++ constructor: stage->init(this) for every plan stage, after the devices are built
+        for stage in plan.m().iter() {
+            stage.m().init(person);
+        }
         person
     }
 
@@ -808,6 +812,10 @@ impl MSTransportableControl {
         let mut devices = std::mem::take(&mut c.myDevices);
         MSDevice::build_transportable_devices(c, &mut devices);
         c.myDevices = devices;
+        // C++ constructor: stage->init(this) for every plan stage, after the devices are built
+        for stage in plan.m().iter() {
+            stage.m().init(container);
+        }
         container
     }
 
