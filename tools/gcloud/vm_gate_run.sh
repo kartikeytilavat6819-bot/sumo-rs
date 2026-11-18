@@ -61,6 +61,12 @@ if [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrout
 fi
 # netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
 [ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
+# complex TraCI suite oracle: official vs our sumo over the bundled runner.py scripts
+if [ -f tools/oracle/run_complex_suite.sh ]; then
+  COMPLEX_OUT=/tmp/complex$slot COMPLEX_TIMEOUT=12 timeout 600 bash tools/oracle/run_complex_suite.sh > /tmp/complexlog$slot 2>&1
+  grep '^complex suite oracle:' /tmp/complexlog$slot
+  grep '^FAIL' /tmp/complexlog$slot | head -12
+fi
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
