@@ -908,8 +908,154 @@ impl Simulation {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn find_intermodal_route(fromEdge: &str, toEdge: &str, modes: &str, depart: f64, routingMode: i32, speed: f64, walkFactor: f64, departPos: f64, arrivalPos: f64, departPosLat: f64, pType: &str, vType: &str, destStop: &str) -> Vec<TraCIStage> {
-        // shortcut: findIntermodalRoute needs the intermodal router (MSNet intermodal routing), not ported yet
-        panic!("shortcut: Simulation::findIntermodalRoute needs the intermodal router, not ported yet");
+        // UNUSED_PARAMETER(departPosLat);
+        let mut result: Vec<TraCIStage> = Vec::new();
+        let fromEdgePtr = MSEdge::dictionary_2(fromEdge);
+        if fromEdgePtr.is_null() {
+            panic!("{}", format!("Unknown from edge '{}'.", fromEdge));
+        }
+        let toEdgePtr = MSEdge::dictionary_2(toEdge);
+        if toEdgePtr.is_null() {
+            panic!("{}", format!("Unknown to edge '{}'.", toEdge));
+        }
+        let mut modeSet: SVCPermissions = 0;
+        let mut pars: Vec<Option<SUMOVehicleParameter>> = Vec::new();
+        if !vType.is_empty() {
+            let mut p = SUMOVehicleParameter::new();
+            p.vtypeid = vType.to_string();
+            p.id = vType.to_string();
+            modeSet |= SVC_PASSENGER;
+            pars.push(Some(p));
+        }
+        let mut st = StringTokenizer::new(modes);
+        while st.has_next() {
+            let mode = st.next().unwrap_or_default();
+            if mode == "car" {
+                let mut p = SUMOVehicleParameter::new();
+                p.vtypeid = DEFAULT_VTYPE_ID.to_string();
+                p.id = mode.clone();
+                modeSet |= SVC_PASSENGER;
+                pars.push(Some(p));
+            } else if mode == "bicycle" {
+                let mut p = SUMOVehicleParameter::new();
+                p.vtypeid = DEFAULT_BIKETYPE_ID.to_string();
+                p.id = mode.clone();
+                modeSet |= SVC_BICYCLE;
+                pars.push(Some(p));
+            } else if mode == "taxi" {
+                let mut p = SUMOVehicleParameter::new();
+                p.vtypeid = DEFAULT_TAXITYPE_ID.to_string();
+                p.id = mode.clone();
+                p.line = mode.clone();
+                modeSet |= SVC_TAXI;
+                pars.push(Some(p));
+            } else if mode == "public" {
+                pars.push(None);
+                modeSet |= SVC_BUS;
+            } else if mode == "walk" {
+                // do nothing
+            } else {
+                panic!("{}", format!("Unknown person mode '{}'.", mode));
+            }
+        }
+        if pars.is_empty() {
+            pars.push(None);
+        }
+        // interpret default arguments
+        let net = MSNet::get_instance();
+        let pedType = {
+            let vc = net.m().get_vehicle_control();
+            let t = vc.get_v_type(pType, Ptr::null(), false);
+            if t.is_null() { vc.get_v_type(DEFAULT_PEDTYPE_ID, Ptr::null(), false) } else { t }
+        };
+        let mut departStep: SUMOTime = time2steps(depart);
+        if depart < 0. {
+            departStep = MSNet::get_instance().get_current_time_step();
+        }
+        let mut speed = speed;
+        if speed < 0. {
+            speed = pedType.get_max_speed().min(pedType.get_desired_max_speed());
+        }
+        let mut walkFactor = walkFactor;
+        if walkFactor < 0. {
+            walkFactor = utils::options::options_cont::get_float("persontrip.walkfactor");
+        }
+        let externalFactor = utils::common::string_utils::to_double(
+            &pedType.get_parameter().get_parameter("externalEffortFactor", "100"),
+        ).unwrap_or_else(|e| panic!("{}", e));
+        let mut departPos = departPos;
+        if departPos < 0. {
+            departPos += fromEdgePtr.get_length();
+        }
+        let mut arrivalPos = arrivalPos;
+        if arrivalPos == INVALID_DOUBLE_VALUE {
+            arrivalPos = toEdgePtr.get_length() / 2.;
+        } else if arrivalPos < 0. {
+            arrivalPos += toEdgePtr.get_length();
+        }
+        if departPos < 0. || departPos >= fromEdgePtr.get_length() {
+            panic!("{}", format!("Invalid depart position {} for edge '{}'.", utils::common::to_string::f64_to_string(departPos), fromEdge));
+        }
+        if arrivalPos < 0. || arrivalPos >= toEdgePtr.get_length() {
+            panic!("{}", format!("Invalid arrival position {} for edge '{}'.", utils::common::to_string::f64_to_string(arrivalPos), toEdge));
+        }
+        let mut minCost = f64::MAX;
+        let router = net.m().get_intermodal_router(0, routingMode, &Default::default());
+        for vehPar in pars {
+            let mut resultCand: Vec<TraCIStage> = Vec::new();
+            let mut vehicle: Ptr<SUMOVehicle> = Ptr::null();
+            if let Some(ref vehPar) = vehPar {
+                let net2 = MSNet::get_instance();
+                let vehControl2 = net2.m().get_vehicle_control();
+                let type_ = vehControl2.get_v_type(&vehPar.vtypeid, Ptr::null(), false);
+                let isTaxi = !type_.is_null() && type_.get_id() == DEFAULT_TAXITYPE_ID && vehPar.line == "taxi";
+                if type_.is_null() {
+                    panic!("{}", format!("Unknown vehicle type '{}'.", vehPar.vtypeid));
+                }
+                if type_.get_vehicle_class() != SVC_IGNORING && (fromEdgePtr.get_permissions() & type_.get_vehicle_class()) == 0 && !isTaxi {
+                    utils::common::msg_handler::write_warning(&format!("Ignoring vehicle type '{}' when performing intermodal routing because it is not allowed on the start edge '{}'.", type_.get_id(), fromEdge));
+                } else {
+                    let routeDummy = Rc::new(MSRoute::new(&vehPar.id, &vec![fromEdgePtr], false, Ptr::null(), &Vec::new(), -1, -1));
+                    vehicle = vehControl2.build_vehicle(Ptr::from_mut(Box::leak(Box::new(vehPar.clone()))), routeDummy, type_, !crate::microsim::ms_globals::check_routes(), MSVehicleControl_VehicleDefinitionSource::ROUTEFILE, true);
+                    // we need to fix the speed factor here for deterministic results
+                    vehicle.m().set_chosen_speed_factor(type_.get_speed_factor().get_parameter(0));
+                }
+            }
+            let mut items: Vec<IntermodalRouter_TripItem> = Vec::new();
+            if router.compute(fromEdgePtr, toEdgePtr, departPos, "", arrivalPos, destStop,
+                              speed * walkFactor, vehicle, pedType.get_parameter(), modeSet, departStep, &mut items, externalFactor) {
+                let mut cost = 0.;
+                for it in items.iter() {
+                    if !it.edges.is_empty() {
+                        resultCand.push(TraCIStage::new(if it.line.is_empty() { STAGE_WALKING } else { STAGE_DRIVING }, &it.vType, &it.line, &it.destStop, &Vec::new(), INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, "", INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, INVALID_DOUBLE_VALUE, ""));
+                        for e in it.edges.iter() {
+                            resultCand.last_mut().unwrap().edges.push((*e).cast::<MSEdge>().get_id().to_string());
+                        }
+                        let back = resultCand.last_mut().unwrap();
+                        back.travelTime = it.traveltime;
+                        back.cost = it.cost;
+                        back.length = it.length;
+                        back.intended = it.intended.clone();
+                        back.depart = it.depart;
+                        back.departPos = it.departPos;
+                        back.arrivalPos = it.arrivalPos;
+                        back.description = it.description.clone();
+                    }
+                    cost += it.cost;
+                }
+                if cost < minCost {
+                    minCost = cost;
+                    result = resultCand;
+                }
+            }
+            if !vehicle.is_null() {
+                let net3 = MSNet::get_instance();
+                let vehControl3 = net3.m().get_vehicle_control();
+                vehControl3.delete_vehicle(vehicle, true, false);
+                vehControl3.discount_routing_vehicle();
+            }
+        }
+        result
     }
 
     /// C++: `std::string Simulation::getParameter(const std::string &, const std::string &)` [static]
