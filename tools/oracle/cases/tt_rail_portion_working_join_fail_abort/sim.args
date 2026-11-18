@@ -1,0 +1,1 @@
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --railsignal-block-output railsignal_blocks.xml --time-to-teleport.railsignal-deadlock 200 --no-duration-log --tripinfo-output.write-unfinished --stop-output.write-unfinished -a tools/oracle/cases/tt_rail_portion_working_join_fail_abort/input_additional.add.xml
