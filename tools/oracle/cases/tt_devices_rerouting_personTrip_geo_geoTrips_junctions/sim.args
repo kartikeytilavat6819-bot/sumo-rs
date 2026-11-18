@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --vehroute-output.skip-ptlines --mapmatch.junctions --junction-taz -a tools/oracle/cases/tt_devices_rerouting_personTrip_geo_geoTrips_junctions/input_additional.add.xml

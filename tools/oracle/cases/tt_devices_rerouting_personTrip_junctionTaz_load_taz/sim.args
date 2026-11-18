@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --vehroute-output.skip-ptlines --no-duration-log -a tools/oracle/cases/tt_devices_rerouting_personTrip_junctionTaz_load_taz/input_additional.add.xml

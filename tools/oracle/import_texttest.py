@@ -45,7 +45,7 @@ DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
 # Option names (long and short) whose value is an input file.
 NET_OPTS = ("--net-file", "-n")
 ROUTE_OPTS = ("-r", "--route-files", "--routes")
-ADD_OPTS = ("-a", "--additional-files", "--a")
+ADD_OPTS = ("-a", "--additional-files", "--additional", "--a")
 # Input files named by a behaviour option rather than -n/-r/-a.  These stay in
 # sim.args but their value must be rewritten to the copied case-relative path.
 STATE_OPTS = ("--device.fcd-replay.file",)

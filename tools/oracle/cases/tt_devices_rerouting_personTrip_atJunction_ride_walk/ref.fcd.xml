@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:42:05.185436-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_personTrip_atJunction_ride_walk/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_atJunction_ride_walk/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_atJunction_ride_walk/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_atJunction_ride_walk/ref.tripinfo.xml"/>
+        <vehroute-output.skip-ptlines value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_atJunction_ride_walk/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <persontrip.transfer.car-walk value="allJunctions"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="person_0_0" x="9.94" y="87.80" angle="135.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="9.94" y="87.80" angle="135.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="5.10" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="person_0_0" x="11.29" y="86.45" angle="135.00" type="DEFAULT_VEHTYPE" speed="1.92" pos="7.02" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="11.29" y="86.45" angle="135.00" type="DEFAULT_PEDTYPE" speed="1.92" pos="7.02" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="person_0_0" x="13.87" y="83.87" angle="135.00" type="DEFAULT_VEHTYPE" speed="3.64" pos="10.66" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="13.87" y="83.87" angle="135.00" type="DEFAULT_PEDTYPE" speed="3.64" pos="10.66" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="person_0_0" x="17.86" y="79.88" angle="135.00" type="DEFAULT_VEHTYPE" speed="5.64" pos="16.30" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="17.86" y="79.88" angle="135.00" type="DEFAULT_PEDTYPE" speed="5.64" pos="16.30" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="person_0_0" x="23.58" y="74.16" angle="135.00" type="DEFAULT_VEHTYPE" speed="8.09" pos="24.39" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="23.58" y="74.16" angle="135.00" type="DEFAULT_PEDTYPE" speed="8.09" pos="24.39" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="person_0_0" x="30.85" y="66.89" angle="135.00" type="DEFAULT_VEHTYPE" speed="10.28" pos="34.67" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="30.85" y="66.89" angle="135.00" type="DEFAULT_PEDTYPE" speed="10.28" pos="34.67" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="person_0_0" x="39.45" y="58.29" angle="135.00" type="DEFAULT_VEHTYPE" speed="12.17" pos="46.84" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="39.45" y="58.29" angle="135.00" type="DEFAULT_PEDTYPE" speed="12.17" pos="46.84" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="person_0_0" x="49.04" y="48.70" angle="135.00" type="DEFAULT_VEHTYPE" speed="13.56" pos="60.40" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="49.04" y="48.70" angle="135.00" type="DEFAULT_PEDTYPE" speed="13.56" pos="60.40" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="person_0_0" x="58.36" y="39.38" angle="135.00" type="DEFAULT_VEHTYPE" speed="13.18" pos="73.57" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="58.36" y="39.38" angle="135.00" type="DEFAULT_PEDTYPE" speed="13.18" pos="73.57" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="person_0_0" x="68.12" y="29.62" angle="135.00" type="DEFAULT_VEHTYPE" speed="13.82" pos="87.39" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="68.12" y="29.62" angle="135.00" type="DEFAULT_PEDTYPE" speed="13.82" pos="87.39" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="person_0_0" x="77.33" y="20.41" angle="135.00" type="DEFAULT_VEHTYPE" speed="13.03" pos="100.41" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="77.33" y="20.41" angle="135.00" type="DEFAULT_PEDTYPE" speed="13.03" pos="100.41" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="person_0_0" x="86.56" y="11.18" angle="135.00" type="DEFAULT_VEHTYPE" speed="13.05" pos="113.46" lane="WS_1" slope="0.00"/>
+        <person id="person_0" x="86.56" y="11.18" angle="135.00" type="DEFAULT_PEDTYPE" speed="13.05" pos="113.46" edge="WS" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="person_0_0" x="96.41" y="2.14" angle="130.02" type="DEFAULT_VEHTYPE" speed="13.38" pos="6.53" lane=":S_1_0" slope="0.00"/>
+        <person id="person_0" x="96.41" y="2.14" angle="130.02" type="DEFAULT_PEDTYPE" speed="13.38" pos="6.53" edge=":S_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="person_0_0" x="104.56" y="6.25" angle="15.34" type="DEFAULT_VEHTYPE" speed="12.96" pos="19.48" lane=":S_1_0" slope="0.00"/>
+        <person id="person_0" x="104.56" y="6.25" angle="15.34" type="DEFAULT_PEDTYPE" speed="12.96" pos="19.48" edge=":S_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="person_0_0" x="104.80" y="19.89" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.65" pos="11.99" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="19.89" angle="0.00" type="DEFAULT_PEDTYPE" speed="13.65" pos="11.99" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="person_0_0" x="104.80" y="33.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.54" pos="25.52" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="33.42" angle="0.00" type="DEFAULT_PEDTYPE" speed="13.54" pos="25.52" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="person_0_0" x="104.80" y="46.58" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.15" pos="38.68" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="46.58" angle="0.00" type="DEFAULT_PEDTYPE" speed="13.15" pos="38.68" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="person_0_0" x="104.80" y="59.82" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.24" pos="51.92" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="59.82" angle="0.00" type="DEFAULT_PEDTYPE" speed="13.24" pos="51.92" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="person_0_0" x="104.80" y="73.70" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.88" pos="65.80" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="73.70" angle="0.00" type="DEFAULT_PEDTYPE" speed="13.88" pos="65.80" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="person_0_0" x="104.80" y="83.08" angle="0.00" type="DEFAULT_VEHTYPE" speed="9.38" pos="75.18" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="83.08" angle="0.00" type="DEFAULT_PEDTYPE" speed="9.38" pos="75.18" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="person_0_0" x="104.80" y="87.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="4.88" pos="80.06" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="87.96" angle="0.00" type="DEFAULT_PEDTYPE" speed="4.88" pos="80.06" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="person_0_0" x="104.80" y="88.84" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.89" pos="80.94" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="88.84" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.89" pos="80.94" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="person_0_0" x="104.80" y="89.46" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.62" pos="81.56" lane="SC_0" slope="0.00"/>
+        <person id="person_0" x="104.80" y="89.46" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.62" pos="81.56" edge="SC" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <person id="person_0" x="107.90" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="92.10" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <person id="person_0" x="109.04" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.14" pos="90.96" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <person id="person_0" x="110.23" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.19" pos="89.77" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <person id="person_0" x="111.61" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.38" pos="88.39" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <person id="person_0" x="112.86" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.25" pos="87.14" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <person id="person_0" x="114.09" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.23" pos="85.91" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <person id="person_0" x="115.46" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.38" pos="84.54" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <person id="person_0" x="116.65" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.18" pos="83.35" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <person id="person_0" x="117.97" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.32" pos="82.03" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <person id="person_0" x="119.20" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.24" pos="80.80" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <person id="person_0" x="120.38" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.18" pos="79.62" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <person id="person_0" x="121.77" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.39" pos="78.23" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <person id="person_0" x="122.97" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.20" pos="77.03" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <person id="person_0" x="124.23" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.26" pos="75.77" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <person id="person_0" x="125.50" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.26" pos="74.50" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <person id="person_0" x="126.73" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.23" pos="73.27" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <person id="person_0" x="128.04" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.32" pos="71.96" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <person id="person_0" x="129.42" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.37" pos="70.58" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <person id="person_0" x="130.56" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.15" pos="69.44" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <person id="person_0" x="131.86" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.30" pos="68.14" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <person id="person_0" x="133.06" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.20" pos="66.94" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <person id="person_0" x="134.44" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.38" pos="65.56" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <person id="person_0" x="135.68" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.25" pos="64.32" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <person id="person_0" x="136.99" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.30" pos="63.01" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <person id="person_0" x="138.20" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.21" pos="61.80" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <person id="person_0" x="139.33" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.13" pos="60.67" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <person id="person_0" x="140.49" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.16" pos="59.51" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <person id="person_0" x="141.63" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.14" pos="58.37" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <person id="person_0" x="142.91" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.28" pos="57.09" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <person id="person_0" x="144.15" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.24" pos="55.85" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <person id="person_0" x="145.47" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.32" pos="54.53" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <person id="person_0" x="146.85" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.38" pos="53.15" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <person id="person_0" x="148.15" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.31" pos="51.85" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <person id="person_0" x="149.33" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.18" pos="50.67" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <person id="person_0" x="150.67" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.34" pos="49.33" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <person id="person_0" x="151.80" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.12" pos="48.20" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <person id="person_0" x="153.18" y="102.88" angle="90.00" type="DEFAULT_PEDTYPE" speed="1.38" pos="46.82" edge="EC" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00"/>
+</fcd-export>

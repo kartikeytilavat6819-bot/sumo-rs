@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:43:27.943305-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/ref.tripinfo.xml"/>
+        <vehroute-output.skip-ptlines value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <persontrip.transfer.taxi-walk value="parkingAreas"/>
+        <persontrip.transfer.walk-taxi value="parkingAreas"/>
+        <persontrip.taxi.waiting-time value="30"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1795023807.97" clockEnd="1795023808.58" clockDuration="0.60" traciDuration="0.00" realTimeFactor="4831.13" vehicleUpdatesPerSecond="24149.01" personUpdatesPerSecond="960.26" begin="0.00" end="2918.00" duration="2918.00"/>
+    <vehicles loaded="5" inserted="5" running="4" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="1" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="1" routeLength="4386.85" speed="4.94" duration="2917.00" waitingTime="20.00" timeLoss="292.60" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="2917.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="3" routeLength="16.45" duration="13.33" timeLoss="1.49"/>
+    <rideStatistics number="3" waitingTime="82.33" routeLength="211.10" duration="86.67" bus="0" train="1" taxi="2" bike="0" aborted="0"/>
+    <transportStatistics number="0"/>
+</statistics>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:42:42.277843-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_personTrip_intermodal_car_walk_junction/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_intermodal_car_walk_junction/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_intermodal_car_walk_junction/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_intermodal_car_walk_junction/ref.tripinfo.xml"/>
+        <vehroute-output.skip-ptlines value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_intermodal_car_walk_junction/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <persontrip.transfer.car-walk value="allJunctions"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1795023762.29" clockEnd="1795023762.34" clockDuration="0.05" traciDuration="0.00" realTimeFactor="18629.63" vehicleUpdatesPerSecond="1925.93" personUpdatesPerSecond="24296.30" begin="0.00" end="1006.00" duration="1006.00"/>
+    <vehicles loaded="1" inserted="1" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="2" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="1" routeLength="1507.10" speed="14.49" duration="104.00" waitingTime="0.00" timeLoss="13.70" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="104.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="2" routeLength="753.75" duration="604.00" timeLoss="61.30"/>
+    <rideStatistics number="1" waitingTime="0.00" routeLength="1507.10" duration="104.00" bus="0" train="0" taxi="0" bike="0" aborted="0"/>
+    <transportStatistics number="0"/>
+</statistics>
