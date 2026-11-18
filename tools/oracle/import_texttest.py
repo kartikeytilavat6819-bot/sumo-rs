@@ -123,9 +123,6 @@ def collate_options(option_files, app="sumo"):
             if skip:
                 skip = False
                 continue
-            if o == "--xml-validation":
-                skip = True
-                continue
             if o == "{CLEAR}":
                 app_options = []
                 continue
@@ -260,6 +257,8 @@ def import_one(source, tests_sumo, force=False):
 
     sim, net, routes, additions, outputs = parse_file_options(tokens)
 
+    case_dir = join(CASES, name)
+
     net_path = resolve(net, potentials) if net else None
     if not net_path or not net_path.lower().endswith(".net.xml"):
         return None, "no plain .net.xml input"
@@ -286,7 +285,6 @@ def import_one(source, tests_sumo, force=False):
     if not route_path:
         return None, "no route input"
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
