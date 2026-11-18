@@ -10,7 +10,7 @@ while [ -z "$slot" ]; do
 done
 SRC=/home/gate/s$slot/src NEW=/home/gate/s$slot/new
 export SLOT_TARGET=/home/gate/s$slot/target
-rm -rf "$NEW"; mkdir -p "$NEW" "$SRC"; tar -xzf "$1" -C "$NEW"
+rm -rf "$NEW"; mkdir -p "$NEW" "$SRC"; tar -xzf "$1" -C "$NEW" || { echo "SNAPSHOT CORRUPT (truncated upload)"; exit 3; }  # no GATE DONE: vm_gate.ps1 retries the upload
 find "$NEW/tools" -type f \( -name '*.sh' -o -name '*.args' \) -exec sed -i 's/\r$//' {} +
 # no -t: changed files get a fresh mtime so cargo rebuilds them (git archive stamps the commit time)
 echo "$2"; echo "files changed: $(rsync -rc --delete --out-format='%n' "$NEW/" "$SRC/" | grep -vc '/$')"
