@@ -162,8 +162,8 @@ impl NIVissimDistrictConnection {
         if !Self::dictionary_2(id, Ptr::from_mut(&mut *o)) {
             return false; // o is dropped here, like C++ `delete o`
         }
-        // shortcut: the dictionary owns the connection for the rest of the run (C++ deletes it in clearDict), so leak the Box
-        Box::leak(o);
+        // the dictionary owns the connection until clear_dict (C++ delete in clearDict)
+        Box::into_raw(o);
         true
     }
 
@@ -509,8 +509,13 @@ impl NIVissimDistrictConnection {
     // }
     #[allow(unused_variables)]
     pub fn clear_dict() {
-        // shortcut: the connections are leaked by dictionary(), so clearing only drops the map entries, upgrade to Box::from_raw when ownership is settled
-        MY_DICT.with(|d| d.borrow_mut().clear());
+        MY_DICT.with(|d| {
+            for c in d.borrow().values() {
+                // SAFETY: every entry was allocated by dictionary() via Box::into_raw
+                drop(unsafe { Box::from_raw(c.as_raw()) });
+            }
+            d.borrow_mut().clear();
+        });
     }
 
     /// C++: `void NIVissimDistrictConnection::dict_BuildDistrictConnections()` [static]
