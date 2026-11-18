@@ -936,7 +936,7 @@ impl MSRouteHandler {
             MSEdge::parse_edges_list(&edges, &mut self.myActiveRoute, &rid);
         }
         self.myActiveRouteRefID = attrs.get_opt(SUMO_ATTR_REFID, &self.myActiveRouteID, &mut ok, String::new(), true);
-        if self.myActiveRouteRefID != "" && !MSRoute::has_route(&self.myActiveRouteRefID) {
+        if self.myActiveRouteRefID != "" && lookup_route(&self.myActiveRouteRefID).is_none() {
             throw_process_error(format!("Invalid reference to route '{}' in route {}.", self.myActiveRouteRefID, rid));
         }
         self.myActiveRouteProbability = attrs.get_opt(SUMO_ATTR_PROB, &self.myActiveRouteID, &mut ok, DEFAULT_VEH_PROB, true);
@@ -1148,8 +1148,7 @@ impl MSRouteHandler {
                 delete_ptr(self.myActiveRouteColor);
                 self.myActiveRouteColor = Ptr::null();
                 if !self.myActiveRouteRefID.is_empty() && !self.myCurrentRouteDistribution.is_null() {
-                    if MSRoute::has_route(&self.myActiveRouteRefID) {
-                        let route = MSRoute::dictionary_3(&self.myActiveRouteRefID, SUMORouteHandler::get_parsing_rng());
+                    if let Some(route) = lookup_route(&self.myActiveRouteRefID) {
                         self.myCurrentRouteDistribution.m().add(route, self.myActiveRouteProbability, false);
                     }
                     self.myActiveRouteID = String::new();
@@ -1363,7 +1362,7 @@ impl MSRouteHandler {
             let mut probIndex: i32 = 0;
             while st.has_next() {
                 let routeID = st.next().unwrap();
-                if !MSRoute::has_route(&routeID) {
+                if lookup_route(&routeID).is_none() {
                     throw_process_error(format!("Unknown route '{}' in distribution '{}'.", routeID, self.myCurrentRouteDistributionID));
                 }
                 let route = MSRoute::dictionary_3(&routeID, SUMORouteHandler::get_parsing_rng());
@@ -2056,7 +2055,7 @@ impl MSRouteHandler {
                 self.myVehicleParameter.vtypeid, self.myVehicleParameter.id
             ));
         }
-        if self.myVehicleParameter.routeid.starts_with('!') && !MSRoute::has_route(&self.myVehicleParameter.routeid) {
+        if self.myVehicleParameter.routeid.starts_with('!') && lookup_route(&self.myVehicleParameter.routeid).is_none() {
             self.myVehicleParameter.m().parametersSet |= VEHPARS_FORCE_REROUTE;
             self.close_route(true);
         }
@@ -2968,7 +2967,7 @@ impl MSRouteHandler {
                 let mut bs: Ptr<MSStoppingPlace> = Ptr::null();
                 if attrs.has_attribute(SUMO_ATTR_ROUTE) {
                     self.myActiveRouteID = attrs.get(SUMO_ATTR_ROUTE, &self.myVehicleParameter.id, &mut ok, true);
-                    if !MSRoute::has_route(&self.myActiveRouteID) {
+                    if lookup_route(&self.myActiveRouteID).is_none() {
                         throw_process_error(format!(
                             "The route '{}' for walk of person '{}' is not known.",
                             self.myActiveRouteID, self.myVehicleParameter.id
