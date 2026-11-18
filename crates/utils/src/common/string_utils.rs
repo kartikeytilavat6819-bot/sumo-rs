@@ -35,6 +35,22 @@ pub fn latin1_to_utf8(s: &[u8]) -> String {
     s.iter().map(|&b| b as char).collect()
 }
 
+/// Replacement for strings decoded from Latin-1 bytes (e.g. VISSIM): C++ sees the raw
+/// Latin-1 bytes and transliterates them, which is equivalent to replacing the code points.
+pub fn convert_umlaute_latin1(s: &str) -> String {
+    let mut s = replace(s, "\u{E4}", "ae");
+    s = replace(&s, "\u{C4}", "Ae");
+    s = replace(&s, "\u{F6}", "oe");
+    s = replace(&s, "\u{D6}", "Oe");
+    s = replace(&s, "\u{FC}", "ue");
+    s = replace(&s, "\u{DC}", "Ue");
+    s = replace(&s, "\u{DF}", "ss");
+    s = replace(&s, "\u{C9}", "E");
+    s = replace(&s, "\u{E9}", "e");
+    s = replace(&s, "\u{C8}", "E");
+    replace(&s, "\u{E8}", "e")
+}
+
 /// C++ StringUtils::convertUmlaute replaces single Latin-1 *bytes* in a byte string.
 /// XML input is decoded to UTF-8 first (e.g. 'ä' is C3 A4), so those bytes do not match
 /// and C++ leaves the characters intact. Operate on the UTF-8 bytes, not on code points.
@@ -787,7 +803,8 @@ mod tests {
         assert_eq!(trim("  x \n", " \t\n"), "x");
         assert_eq!(wrap_text("aa bb cc", 6), "aa bb\ncc");
         assert_eq!(adjust_decimal_value(1.2500, 4), "1.25");
-        assert_eq!(convert_umlaute("Grüße"), "Gruesse");
+        assert_eq!(convert_umlaute("Grüße"), "Grüße"); // UTF-8 bytes are untouched by C++
+        assert_eq!(convert_umlaute_latin1("Grüße"), "Gruesse"); // Latin-1 decoded bytes
         assert_eq!(latin1_to_utf8(b"\xe4"), "ä");
     }
 
