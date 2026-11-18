@@ -252,7 +252,12 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
                 let backward = Ptr::from_raw(Box::into_raw(Box::new(DijkstraRouter::new(&reversed, true, Some(ReversedEdge::<ROEdge, ROVehicle>::get_travel_time_static), None, false, Ptr::null(), false, false).with_compute()))).cast::<SUMOAbstractRouter<ReversedEdge<ROEdge, ROVehicle>, ROVehicle>>();
                 let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
                 let saveFile = if oc.is_set("astar.save-landmark-distances", true).unwrap() { oc.get_string("astar.save-landmark-distances").unwrap() } else { String::new() };
-                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Landmark(LandmarkLookupTable::new(&oc.get_string("astar.landmark-distances").unwrap(), ROEdge::get_all_edges(), forward, backward, defaultVehicle, &saveFile, oc.get_int("routing-threads").unwrap(), Ptr::null()))));
+                // C++ `ROMapMatcher* mapMatcher = dynamic_cast<ROMapMatcher*>(loader.getRouteHandler());`
+                // the route handler is both the MapMatcher (base2) and the host of its virtual hooks
+                let handler = loader.get_route_handler().cast::<crate::router::ro_route_handler::RORouteHandler>();
+                let mapMatcher: Ptr<ROMapMatcher> = Ptr::from_mut(&mut handler.m().base2);
+                let host: &dyn crate::utils::map_matcher::MapMatcherHost<ROEdge> = &*handler;
+                lookup = Some(std::rc::Rc::new(AStarLookupTableKind::Landmark(LandmarkLookupTable::new(&oc.get_string("astar.landmark-distances").unwrap(), ROEdge::get_all_edges(), forward, backward, defaultVehicle, &saveFile, oc.get_int("routing-threads").unwrap(), mapMatcher, host))));
             }
             leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), lookup, net.has_permissions(), restrictionParams).with_compute())
         } else if routingAlgorithm == "CH" && !net.has_permissions() && !utils::common::std_defs::g_routing_preferences() && !net.has_speed_restrictions() {

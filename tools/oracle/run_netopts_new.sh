@@ -117,8 +117,14 @@ run_row() {
       if [ "$lc" != "$lr" ]; then V=FAIL; D="output files differ: cpp=[$(echo $lc)] rust=[$(echo $lr)]"
       else
         for f in $lc; do
-          if ! cmp -s <(sed -e "$norm" "$d/cpp_out/$f") <(sed -e "$norm" "$d/rust_out/$f"); then
-            V=FAIL; D="$f differs: $(diff <(sed -e "$norm" "$d/cpp_out/$f") <(sed -e "$norm" "$d/rust_out/$f") | head -1)"; break
+          # OpenDRIVE writes the wall-clock time into <header date="..."> with second precision;
+          # cpp and rust are run seconds apart, so normalize it like the 'generated on' stamp
+          local fnorm=$norm
+          case "$f" in
+            *.xodr) fnorm="$fnorm; s/date=\"[^\"]*\"/date=\"TIME\"/g" ;;
+          esac
+          if ! cmp -s <(sed -e "$fnorm" "$d/cpp_out/$f") <(sed -e "$fnorm" "$d/rust_out/$f"); then
+            V=FAIL; D="$f differs: $(diff <(sed -e "$fnorm" "$d/cpp_out/$f") <(sed -e "$fnorm" "$d/rust_out/$f") | head -1)"; break
           fi
         done
       fi
