@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:59:53.951430-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_towards_right_lookahead/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="veh" x="-194.90" y="-1.60" angle="90.00" type="t0" speed="0.00" pos="5.10" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="veh" x="-192.30" y="-1.60" angle="90.00" type="t0" speed="2.60" pos="7.70" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="veh" x="-187.10" y="-1.60" angle="90.00" type="t0" speed="5.20" pos="12.90" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="veh" x="-179.30" y="-1.60" angle="90.00" type="t0" speed="7.80" pos="20.70" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="veh" x="-168.90" y="-1.60" angle="90.00" type="t0" speed="10.40" pos="31.10" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="veh" x="-155.90" y="-1.60" angle="90.00" type="t0" speed="13.00" pos="44.10" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="veh" x="-140.30" y="-1.60" angle="90.00" type="t0" speed="15.60" pos="59.70" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="veh" x="-122.10" y="-1.60" angle="90.00" type="t0" speed="18.20" pos="77.90" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="veh" x="-101.30" y="-1.60" angle="90.00" type="t0" speed="20.80" pos="98.70" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="veh" x="-78.78" y="-4.80" angle="90.00" type="t0" speed="23.40" pos="22.10" lane="beg2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="veh" x="-53.82" y="-8.00" angle="90.00" type="t0" speed="26.00" pos="48.10" lane="beg2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="veh" x="-26.37" y="-8.00" angle="90.00" type="t0" speed="28.60" pos="76.70" lane="beg2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="veh" x="5.15" y="-11.20" angle="104.43" type="t0" speed="24.88" pos="1.58" lane="middle_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="veh" x="19.99" y="-14.40" angle="90.00" type="t0" speed="20.38" pos="21.95" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="veh" x="36.73" y="-14.40" angle="90.00" type="t0" speed="22.98" pos="44.93" lane="middle_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="veh" x="66.29" y="-14.36" angle="90.10" type="t0" speed="25.58" pos="12.05" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="veh" x="93.66" y="-14.41" angle="90.10" type="t0" speed="28.18" pos="40.22" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="veh" x="123.55" y="-14.46" angle="90.10" type="t0" speed="30.78" pos="71.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="veh" x="155.97" y="-14.52" angle="90.10" type="t0" speed="33.38" pos="104.38" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="veh" x="190.91" y="-14.58" angle="90.10" type="t0" speed="35.98" pos="140.35" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00"/>
+</fcd-export>

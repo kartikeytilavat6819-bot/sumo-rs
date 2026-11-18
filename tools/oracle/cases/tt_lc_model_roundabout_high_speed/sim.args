@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --fcd-output.attributes acceleration -a tools/oracle/cases/tt_lc_model_roundabout_high_speed/input_additional.add.xml

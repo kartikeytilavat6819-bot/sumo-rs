@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T12:32:03.703582-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-18T12:59:35.982221-05:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -14,28 +14,25 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="tools/oracle/cases/tt_lc_model_ramps_on_ramp_fastRamp_someHelp/ref_simple.net.xml"/>
-        <route-files value="tools/oracle/cases/tt_lc_model_ramps_on_ramp_fastRamp_someHelp/routes.rou"/>
+        <net-file value="tools/oracle/cases/tt_lc_model_strategic_arbitrary_default_model/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_lc_model_strategic_arbitrary_default_model/routes.rou"/>
     </input>
 
     <output>
         <write-license value="true"/>
-        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_fastRamp_someHelp/ref.fcd.xml"/>
-        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_fastRamp_someHelp/ref.tripinfo.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_arbitrary_default_model/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_arbitrary_default_model/ref.tripinfo.xml"/>
         <lanedata-output value="aggregated.xml"/>
-        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_ramps_on_ramp_fastRamp_someHelp/ref.stat.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_lc_model_strategic_arbitrary_default_model/ref.stat.xml"/>
     </output>
 
     <processing>
-        <extrapolate-departpos value="true"/>
-        <max-depart-delay value="3"/>
         <default.departspeed value="0"/>
         <default.departlane value="first"/>
         <default.speeddev value="0"/>
     </processing>
 
     <report>
-        <verbose value="true"/>
         <duration-log.disable value="true"/>
         <duration-log.statistics value="true"/>
         <no-step-log value="true"/>
@@ -45,19 +42,12 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 -->
 
 <meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
-    <interval begin="0.00" end="479.00" id="DEFAULT_LANEDATA">
-        <edge id="main_beg">
-            <lane id="main_beg_0" sampledSeconds="2564.22" traveltime="12.79" overlapTraveltime="13.36" density="53.49" overlapDensity="55.87" laneDensity="53.49" occupancy="27.36" waitingTime="216.00" timeLoss="1597.00" speed="7.54" speedRelative="0.38" departed="190" arrived="0" entered="0" left="190" laneChangedFrom="0" laneChangedTo="0" flow="1442.78" distance="18394.51"/>
+    <interval begin="0.00" end="226.00" id="DEFAULT_LANEDATA">
+        <edge id="E0">
+            <lane id="E0_0" sampledSeconds="1336.42" traveltime="13.44" overlapTraveltime="14.05" density="56.45" overlapDensity="59.13" laneDensity="56.45" occupancy="28.90" waitingTime="0.00" timeLoss="564.25" speed="7.48" speedRelative="0.54" departed="100" arrived="0" entered="0" left="100" laneChangedFrom="0" laneChangedTo="0" flow="1511.68" distance="9490.00"/>
         </edge>
-        <edge id="main_end">
-            <lane id="main_end_0" sampledSeconds="2901.91" traveltime="11.11" overlapTraveltime="11.38" density="29.70" overlapDensity="30.29" laneDensity="29.70" occupancy="14.73" waitingTime="0.00" timeLoss="287.11" speed="18.02" speedRelative="0.90" departed="0" arrived="256" entered="256" left="0" laneChangedFrom="0" laneChangedTo="0" flow="1924.00" distance="51199.80"/>
-        </edge>
-        <edge id="merge">
-            <lane id="merge_0" sampledSeconds="4391.09" traveltime="116.56" overlapTraveltime="121.94" density="84.58" overlapDensity="84.58" laneDensity="84.58" occupancy="41.33" waitingTime="3434.00" timeLoss="4186.92" speed="0.93" speedRelative="0.05" departed="0" arrived="0" entered="66" left="0" laneChangedFrom="66" laneChangedTo="0" flow="283.14" distance="4083.35"/>
-            <lane id="merge_1" sampledSeconds="2811.49" traveltime="12.41" overlapTraveltime="12.78" density="52.18" overlapDensity="54.15" laneDensity="52.18" occupancy="25.98" waitingTime="331.00" timeLoss="1564.26" speed="8.87" speedRelative="0.44" departed="0" arrived="0" entered="190" left="256" laneChangedFrom="0" laneChangedTo="66" flow="1640.87" distance="23664.47"/>
-        </edge>
-        <edge id="ramp_beg">
-            <lane id="ramp_beg_0" sampledSeconds="4249.77" traveltime="62.96" overlapTraveltime="67.33" density="79.41" overlapDensity="85.01" laneDensity="79.41" occupancy="40.70" waitingTime="2659.00" timeLoss="3904.60" speed="1.62" speedRelative="0.08" departed="66" arrived="0" entered="0" left="66" laneChangedFrom="0" laneChangedTo="0" flow="473.89" distance="6580.87"/>
+        <edge id="E1">
+            <lane id="E1_0" sampledSeconds="1095.19" traveltime="10.63" overlapTraveltime="11.05" density="47.04" overlapDensity="48.46" laneDensity="47.04" occupancy="23.24" waitingTime="0.00" timeLoss="291.60" speed="9.50" speedRelative="0.68" departed="0" arrived="100" entered="100" left="0" laneChangedFrom="0" laneChangedTo="0" flow="1592.92" distance="10000.00"/>
         </edge>
     </interval>
 </meandata>
