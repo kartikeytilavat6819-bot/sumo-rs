@@ -8,7 +8,9 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 # the Kaggle gate only builds sumo + netconvert; duarouter cases need their binary
 export PATH=$HOME/.cargo/bin:$PATH
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/target}
-cargo build -p duarouter --message-format short >"$OUT/build.log" 2>&1 || tail -20 "$OUT/build.log"
+if [ ! -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then
+  timeout 300 cargo build -p duarouter --message-format short >"$OUT/build.log" 2>&1 || tail -10 "$OUT/build.log"
+fi
 
 mapfile -t NC < <(sed -n 's/^row \([^ ]*\) .*/\1/p' tools/oracle/import_texttest_net.rows)
 echo "IMPORTED NC ROWS: ${#NC[@]}"
