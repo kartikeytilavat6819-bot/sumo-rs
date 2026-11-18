@@ -1,0 +1,14 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="E0 E1 E2"/>
+    <vehicle id="s0" type="car" route="r" depart="0" departPos="stop" departSpeed="0">
+        <stop lane="E0_0" endPos="200.00" duration="10.00"/>
+    </vehicle>
+    <vehicle id="s1" type="car" route="r" depart="5" departPos="stop" departSpeed="0">
+        <stop lane="E0_0" endPos="150.00" duration="10.00"/>
+    </vehicle>
+    <vehicle id="s2" type="car" route="r" depart="10" departPos="stop" departSpeed="0">
+        <stop parkingArea="pa0" duration="10.00"/>
+    </vehicle>
+    <vehicle id="c0" type="car" route="r" depart="15" departSpeed="max"/>
+</routes>
