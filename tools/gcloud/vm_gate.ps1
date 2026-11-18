@@ -22,7 +22,7 @@ $id = (("$Branch-$sha".ToLower()) -replace '[^a-z0-9]+', '-').Trim('-')
 # Branches whose agent_run.sh needs instrumented C++ (vm_cpp_trace.sh, VM only) never go to Kaggle.
 $slots = 8
 $q = "$HOME\.kaggle\gateq"; $kreq = "$q\$id.req"; $kres = "$q\$id.result"
-$vmOnly = [bool]((git -C $Repo show "${sha}:tools/kaggle/agent_run.sh" 2>$null) -match 'vm_cpp_trace')
+$vmOnly = [bool]((git -C $Repo show "${sha}:tools/kaggle/agent_run.sh" 2>$null) -match 'vm_cpp_trace') -or ($Branch -eq 'wave2')  # wave2 decides main: the Kaggle runner skips the duarouter/netopts/tool oracles
 $queued = $false
 while (-not $Vm) {
     Get-ChildItem $mark -File | Where-Object { -not (Get-Process -Id ([int]($_.Name -split '_')[-1]) -ErrorAction SilentlyContinue) } | Remove-Item -ErrorAction SilentlyContinue
