@@ -50,6 +50,11 @@ pub struct MSTrafficLightLogicVt {
     pub decide_next_phase: fn(&mut MSTrafficLightLogic) -> i32,
     pub can_release: fn(&mut MSTrafficLightLogic) -> bool,
     pub compute_return_time: fn(&mut MSTrafficLightLogic) -> SUMOTime,
+    /// C++ virtuals `getMinDur/getMaxDur/getEarliestEnd/getLatestEnd` (overridden by actuated TLS)
+    pub get_min_dur: fn(&MSTrafficLightLogic, i32) -> SUMOTime,
+    pub get_max_dur: fn(&MSTrafficLightLogic, i32) -> SUMOTime,
+    pub get_earliest_end: fn(&MSTrafficLightLogic, i32) -> SUMOTime,
+    pub get_latest_end: fn(&MSTrafficLightLogic, i32) -> SUMOTime,
 }
 
 /// Virtual dispatch table for the rival/priority/driveway queries and detector queries; kept apart from
@@ -112,7 +117,7 @@ fn default_change_step_and_duration(_: &mut MSTrafficLightLogic, _: &mut MSTLLog
     panic!("MSTrafficLightLogic::changeStepAndDuration is pure virtual; call it on a concrete traffic light logic")
 }
 
-static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
+pub(crate) static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLightLogicVt {
     try_switch: default_try_switch,
     get_phase_number: default_get_phase_number,
     get_phases: default_get_phases,
@@ -137,6 +142,10 @@ static DEFAULT_MS_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLight
     decide_next_phase: default_decide_next_phase,
     can_release: default_can_release,
     compute_return_time: default_compute_return_time,
+    get_min_dur: MSTrafficLightLogic::get_min_dur_base,
+    get_max_dur: MSTrafficLightLogic::get_max_dur_base,
+    get_earliest_end: MSTrafficLightLogic::get_earliest_end_base,
+    get_latest_end: MSTrafficLightLogic::get_latest_end_base,
 };
 
 pub(crate) fn default_ext_get_rival_vehicles(logic: &mut MSTrafficLightLogic, linkIndex: i32) -> MSVehicleContainer_VehicleVector {
@@ -1290,8 +1299,13 @@ impl MSTrafficLightLogic {
     //     const MSPhaseDefinition& p = step < 0 ? getCurrentPhaseDef() : getPhase(step);
     //     return p.minDuration;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `getMinDur`: dispatches to the dynamic table
     pub fn get_min_dur(&self, step: i32) -> SUMOTime {
+        (self.vt.get_min_dur)(self, step)
+    }
+
+    #[allow(unused_variables)]
+    pub fn get_min_dur_base(&self, step: i32) -> SUMOTime {
         let p = if step < 0 { self.get_current_phase_def() } else { self.get_phase(step) };
         p.minDuration
     }
@@ -1302,8 +1316,13 @@ impl MSTrafficLightLogic {
     //     const MSPhaseDefinition& p = step < 0 ? getCurrentPhaseDef() : getPhase(step);
     //     return p.maxDuration;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `getMaxDur`: dispatches to the dynamic table
     pub fn get_max_dur(&self, step: i32) -> SUMOTime {
+        (self.vt.get_max_dur)(self, step)
+    }
+
+    #[allow(unused_variables)]
+    pub fn get_max_dur_base(&self, step: i32) -> SUMOTime {
         let p = if step < 0 { self.get_current_phase_def() } else { self.get_phase(step) };
         p.maxDuration
     }
@@ -1314,8 +1333,13 @@ impl MSTrafficLightLogic {
     //     const MSPhaseDefinition& p = step < 0 ? getCurrentPhaseDef() : getPhase(step);
     //     return p.earliestEnd;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `getEarliestEnd`: dispatches to the dynamic table
     pub fn get_earliest_end(&self, step: i32) -> SUMOTime {
+        (self.vt.get_earliest_end)(self, step)
+    }
+
+    #[allow(unused_variables)]
+    pub fn get_earliest_end_base(&self, step: i32) -> SUMOTime {
         let p = if step < 0 { self.get_current_phase_def() } else { self.get_phase(step) };
         p.earliestEnd
     }
@@ -1326,8 +1350,13 @@ impl MSTrafficLightLogic {
     //     const MSPhaseDefinition& p = step < 0 ? getCurrentPhaseDef() : getPhase(step);
     //     return p.latestEnd;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `getLatestEnd`: dispatches to the dynamic table
     pub fn get_latest_end(&self, step: i32) -> SUMOTime {
+        (self.vt.get_latest_end)(self, step)
+    }
+
+    #[allow(unused_variables)]
+    pub fn get_latest_end_base(&self, step: i32) -> SUMOTime {
         let p = if step < 0 { self.get_current_phase_def() } else { self.get_phase(step) };
         p.latestEnd
     }

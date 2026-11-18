@@ -219,13 +219,28 @@ fn actuated_ext_activate_program(l: &mut MSTrafficLightLogic) {
 fn actuated_ext_deactivate_program(l: &mut MSTrafficLightLogic) {
     Ptr::from_mut(l).cast::<MSActuatedTrafficLightLogic>().m().deactivate_program()
 }
+fn actuated_ext_get_detector_state(l: &MSTrafficLightLogic, laneID: String) -> f64 {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_detector_state(laneID)
+}
+fn actuated_get_min_dur(l: &MSTrafficLightLogic, step: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_min_dur(step)
+}
+fn actuated_get_max_dur(l: &MSTrafficLightLogic, step: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_max_dur(step)
+}
+fn actuated_get_earliest_end(l: &MSTrafficLightLogic, step: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_earliest_end(step)
+}
+fn actuated_get_latest_end(l: &MSTrafficLightLogic, step: i32) -> SUMOTime {
+    Ptr::new(l).cast::<MSActuatedTrafficLightLogic>().get().unwrap().get_latest_end(step)
+}
 
 static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_EXT_VT: super::ms_traffic_light_logic::MSTrafficLightLogicExtVt = super::ms_traffic_light_logic::MSTrafficLightLogicExtVt {
     get_rival_vehicles: super::ms_traffic_light_logic::default_ext_get_rival_vehicles,
     get_priority_vehicles: super::ms_traffic_light_logic::default_ext_get_priority_vehicles,
     get_blocking_drive_ways: super::ms_traffic_light_logic::default_ext_get_blocking_drive_ways,
     get_requested_drive_way: super::ms_traffic_light_logic::default_ext_get_requested_drive_way,
-    get_detector_state: super::ms_traffic_light_logic::default_ext_get_detector_state,
+    get_detector_state: actuated_ext_get_detector_state,
     get_tl_queue_length: super::ms_traffic_light_logic::default_ext_get_tl_queue_length,
     load_extra_state: actuated_load_extra_state,
     get_parameter: actuated_ext_get_parameter,
@@ -259,6 +274,10 @@ static MS_ACTUATED_TRAFFIC_LIGHT_LOGIC_VT: MSTrafficLightLogicVt = MSTrafficLigh
     decide_next_phase: super::ms_traffic_light_logic::default_decide_next_phase,
     can_release: super::ms_traffic_light_logic::default_can_release,
     compute_return_time: super::ms_traffic_light_logic::default_compute_return_time,
+    get_min_dur: actuated_get_min_dur,
+    get_max_dur: actuated_get_max_dur,
+    get_earliest_end: actuated_get_earliest_end,
+    get_latest_end: actuated_get_latest_end,
 };
 
 impl MSActuatedTrafficLightLogic {

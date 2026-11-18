@@ -47,6 +47,15 @@ fn my_vaporization_target() -> Ptr<MESegment> {
     MY_VAPORIZATION_TARGET.with(|p| *p)
 }
 
+/// Virtual dispatch table for the model-specific MESegment methods (C++ virtuals).
+/// MELSegment (meso-LTM) overrides all four; the base table holds the plain MESegment bodies.
+pub struct MESegmentVt {
+    pub send: fn(&mut MESegment, Ptr<MEVehicle>, Ptr<MESegment>, i32, SUMOTime, MSMoveReminder_Notification),
+    pub update_entry_block_time: fn(&mut MESegment, SUMOTime),
+    pub compute_headway: fn(&MESegment, &mut MESegment_Queue, &MESegment_Queue, Ptr<MESegment>, Ptr<MEVehicle>) -> SUMOTime,
+    pub has_space_for_insertion: fn(&MESegment, &MESegment_Queue, i32, f64, SUMOTime) -> bool,
+}
+
 /// A single mesoscopic segment (cell)
 /// C++ class `MESegment` (mesosim/MESegment.h)
 #[repr(C)]
@@ -98,6 +107,8 @@ pub struct MESegment {
     pub myMeanSpeed: Cell<f64>,
     /// the time at which myMeanSpeed was last updated (C++ `mutable`)
     pub myLastMeanSpeedUpdate: Cell<SUMOTime>,
+    /// Virtual dispatch table; installed by the most derived constructor
+    pub vt: &'static MESegmentVt,
 }
 
 impl std::ops::Deref for MESegment {
@@ -119,6 +130,14 @@ impl std::ops::DerefMut for MESegment {
 //   static MSEdge MESegment::myDummyParent;
 //   static MESegment MESegment::myVaporizationTarget;
 //   static SVCPermissions MESegment::myMultiModalWarnings;
+
+/// C++ base-class vtable: the plain MESegment bodies.
+static ME_SEGMENT_BASE_VT: MESegmentVt = MESegmentVt {
+    send: MESegment::send_base,
+    update_entry_block_time: MESegment::update_entry_block_time_base,
+    compute_headway: MESegment::compute_headway_base,
+    has_space_for_insertion: MESegment::has_space_for_insertion_base,
+};
 
 impl MESegment {
     /// C++: `void MESegment::MESegment(const std::string &, const MSEdge &, MESegment *, const double, const double, const int, const bool, const MesoEdgeType &)`
@@ -211,6 +230,7 @@ impl MESegment {
             myLastHeadway: time2steps(-1.0),
             myMeanSpeed: Cell::new(speed),
             myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
+            vt: &ME_SEGMENT_BASE_VT,
         };
 
         let lanes = parent.get_lanes();
@@ -506,11 +526,16 @@ impl MESegment {
         entryTime
     }
 
+    /// C++ virtual `MESegment::updateEntryBlockTime`: dispatches to the model table
+    pub fn update_entry_block_time(&mut self, arg0: SUMOTime) {
+        (self.vt.update_entry_block_time)(self, arg0)
+    }
+
     /// C++: `void MESegment::updateEntryBlockTime(SUMOTime)` [virtual]
     /// update entry blockTime for all queues
     // virtual void updateEntryBlockTime(SUMOTime /*time*/) {}
     #[allow(unused_variables)]
-    pub fn update_entry_block_time(&mut self, arg0: SUMOTime) {
+    pub fn update_entry_block_time_base(&mut self, arg0: SUMOTime) {
         // virtual hook with an empty base implementation
     }
 
@@ -976,8 +1001,13 @@ impl MESegment {
     //         MSGlobals::gMesoNet->addLeaderCar(lc, getLink(lc));
     //     }
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MESegment::send`: dispatches to the model table
     pub fn send(&mut self, veh: Ptr<MEVehicle>, next: Ptr<MESegment>, nextQIdx: i32, time: SUMOTime, reason: MSMoveReminder_Notification) {
+        (self.vt.send)(self, veh, next, nextQIdx, time, reason)
+    }
+
+    #[allow(unused_variables)]
+    pub fn send_base(&mut self, veh: Ptr<MEVehicle>, next: Ptr<MESegment>, nextQIdx: i32, time: SUMOTime, reason: MSMoveReminder_Notification) {
         let qi = veh.get_que_index() as usize;
         debug_assert!(Self::is_invalid(next) || time >= self.myQueues[qi].get_block_time());
         let link = self.get_link(veh, false);
@@ -1993,8 +2023,13 @@ impl MESegment {
     //     }
     //     return headway;
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MESegment::computeHeadway`: dispatches to the model table
     pub fn compute_headway(&self, q: &mut MESegment_Queue, qNext: &MESegment_Queue, next: Ptr<MESegment>, veh: Ptr<MEVehicle>) -> SUMOTime {
+        (self.vt.compute_headway)(self, q, qNext, next, veh)
+    }
+
+    #[allow(unused_variables)]
+    pub fn compute_headway_base(&self, q: &mut MESegment_Queue, qNext: &MESegment_Queue, next: Ptr<MESegment>, veh: Ptr<MEVehicle>) -> SUMOTime {
         let _ = q; // C++ parameter /*q*/ is unused
         let nextFree = qNext.get_occupancy() <= next.myJamThreshold;
         let tau = if !veh.was_jammed() {
@@ -2028,8 +2063,13 @@ impl MESegment {
     //         return newOccupancy <= jamThresholdForSpeed(getMeanSpeed(false), -1);
     //     }
     // }
-    #[allow(unused_variables)]
+    /// C++ virtual `MESegment::hasSpaceForInsertion`: dispatches to the model table
     pub fn has_space_for_insertion(&self, q: &MESegment_Queue, qIdx: i32, newOccupancy: f64, entryTime: SUMOTime) -> bool {
+        (self.vt.has_space_for_insertion)(self, q, qIdx, newOccupancy, entryTime)
+    }
+
+    #[allow(unused_variables)]
+    pub fn has_space_for_insertion_base(&self, q: &MESegment_Queue, qIdx: i32, newOccupancy: f64, entryTime: SUMOTime) -> bool {
         // - regular insertions must respect entryBlockTime
         // - initial insertions should not cause additional jamming
         // - inserted vehicle should be able to continue at the current speed
@@ -2097,6 +2137,7 @@ impl MESegment {
             myLastHeadway: 0,
             myMeanSpeed: Cell::new(0.),
             myLastMeanSpeedUpdate: Cell::new(SUMOTIME_MIN),
+            vt: &ME_SEGMENT_BASE_VT,
         }
     }
 

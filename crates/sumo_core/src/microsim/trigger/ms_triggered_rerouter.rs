@@ -2835,4 +2835,11 @@ static MS_TRIGGERED_REROUTER_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouter
     saw_blocked_stopping_place: ms_triggered_rerouter_saw_blocked_stopping_place,
     get_number_stopping_place_reroutes: ms_triggered_rerouter_get_number_stopping_place_reroutes,
     set_number_stopping_place_reroutes: ms_triggered_rerouter_set_number_stopping_place_reroutes,
+    // C++ MSTriggeredRerouter does not override these four; inherit the base bodies
+    evaluate_custom_components: MSStoppingPlaceRerouter::evaluate_custom_components_base,
+    valid_component_values: MSStoppingPlaceRerouter::valid_component_values_base,
+    use_stopping_place: MSStoppingPlaceRerouter::use_stopping_place_base,
+    collect_weights: MSStoppingPlaceRerouter::collect_weights_base,
+    // C++ MSTriggeredRerouter does not override getRouter; inherit the base body
+    get_router: MSStoppingPlaceRerouter::get_router_base,
 };

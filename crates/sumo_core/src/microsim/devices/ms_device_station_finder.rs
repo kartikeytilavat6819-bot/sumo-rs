@@ -349,10 +349,78 @@ impl MSDevice_StationFinder {
         static MS_MOVE_REMINDER_INTERNAL_VT: crate::microsim::ms_move_reminder::MSMoveReminderInternalVt = crate::microsim::ms_move_reminder::MSMoveReminderInternalVt {
             notify_move_internal: mr_notify_move_internal,
         };
+        // C++ MSDevice_StationFinder also inherits MSStoppingPlaceRerouter and overrides its pure
+        // virtuals; base2 is the second field so step back from it to the enclosing device.
+        use crate::microsim::trigger::ms_stopping_place_rerouter::MSStoppingPlaceRerouterVt;
+        fn sf_of(spr: &mut MSStoppingPlaceRerouter) -> &mut MSDevice_StationFinder {
+            let p = (spr as *mut MSStoppingPlaceRerouter as *mut u8)
+                .wrapping_sub(std::mem::offset_of!(MSDevice_StationFinder, base2)) as *mut MSDevice_StationFinder;
+            unsafe { &mut *p }
+        }
+        fn sf_get_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+            sf_of(spr).get_stopping_place_occupancy(sp, veh)
+        }
+        fn sf_get_last_step_occupancy(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>, veh: Ptr<SUMOVehicle>) -> f64 {
+            sf_of(spr).get_last_step_stopping_place_occupancy(sp, veh)
+        }
+        fn sf_get_capacity(spr: &mut MSStoppingPlaceRerouter, sp: Ptr<MSStoppingPlace>) -> f64 {
+            sf_of(spr).get_stopping_place_capacity(sp)
+        }
+        fn sf_remember_blocked(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, blocked: bool) {
+            sf_of(spr).remember_blocked_stopping_place(veh, sp, blocked)
+        }
+        fn sf_remember_score(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, score: &str) {
+            sf_of(spr).remember_stopping_place_score(veh, sp, score)
+        }
+        fn sf_reset_scores(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) {
+            sf_of(spr).reset_stopping_place_scores(veh)
+        }
+        fn sf_saw_blocked(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, sp: Ptr<MSStoppingPlace>, local: bool) -> SUMOTime {
+            sf_of(spr).saw_blocked_stopping_place(veh, sp, local)
+        }
+        fn sf_get_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) -> i32 {
+            sf_of(spr).get_number_stopping_place_reroutes(veh)
+        }
+        fn sf_set_reroutes(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, value: i32) {
+            sf_of(spr).set_number_stopping_place_reroutes(veh, value)
+        }
+        fn sf_evaluate_custom(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, brakeGap: f64, newDestination: bool, alternative: Ptr<MSStoppingPlace>, occupancy: f64, prob: f64, router: &mut SUMOAbstractRouter<MSEdge, SUMOVehicle>, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, newRoute: &mut ConstMSEdgeVector, stoppingPlaceApproach: &mut ConstMSEdgeVector, maxValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t, addInput: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
+            sf_of(spr).evaluate_custom_components(veh, brakeGap, newDestination, alternative, occupancy, prob, router, stoppingPlaceValues, newRoute, stoppingPlaceApproach, maxValues, addInput)
+        }
+        fn sf_valid_components(spr: &mut MSStoppingPlaceRerouter, stoppingPlaceValues: &mut MSStoppingPlaceRerouter_StoppingPlaceParamMap_t) -> bool {
+            sf_of(spr).valid_component_values(stoppingPlaceValues)
+        }
+        fn sf_use_stopping_place(spr: &mut MSStoppingPlaceRerouter, stoppingPlace: Ptr<MSStoppingPlace>) -> bool {
+            sf_of(spr).use_stopping_place(stoppingPlace)
+        }
+        fn sf_collect_weights(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle) -> MSStoppingPlaceRerouter_StoppingPlaceParamMap_t {
+            // C++ does not override collectWeights: use the base body to avoid re-dispatching
+            spr.collect_weights_base(veh)
+        }
+        fn sf_get_router(spr: &mut MSStoppingPlaceRerouter, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>> {
+            sf_of(spr).get_router(veh, prohibited)
+        }
+        static SF_STOPPING_PLACE_REROUTER_VT: MSStoppingPlaceRerouterVt = MSStoppingPlaceRerouterVt {
+            get_stopping_place_occupancy: sf_get_occupancy,
+            get_last_step_stopping_place_occupancy: sf_get_last_step_occupancy,
+            get_stopping_place_capacity: sf_get_capacity,
+            remember_blocked_stopping_place: sf_remember_blocked,
+            remember_stopping_place_score: sf_remember_score,
+            reset_stopping_place_scores: sf_reset_scores,
+            saw_blocked_stopping_place: sf_saw_blocked,
+            get_number_stopping_place_reroutes: sf_get_reroutes,
+            set_number_stopping_place_reroutes: sf_set_reroutes,
+            evaluate_custom_components: sf_evaluate_custom,
+            valid_component_values: sf_valid_components,
+            use_stopping_place: sf_use_stopping_place,
+            collect_weights: sf_collect_weights,
+            get_router: sf_get_router,
+        };
         let mut this = Self::new_device(holder);
         this.base.base.vt = &MS_MOVE_REMINDER_VT;
         this.base.base.idle_vt = &MS_MOVE_REMINDER_IDLE_VT;
         this.base.base.internal_vt = &MS_MOVE_REMINDER_INTERNAL_VT;
+        this.base2.vt = &SF_STOPPING_PLACE_REROUTER_VT;
         this
     }
 
@@ -1055,8 +1123,8 @@ impl MSDevice_StationFinder {
     //     return MSRoutingEngine::getRouterTT(veh.getRNGIndex(), veh.getVClass(), prohibited);
     // }
     #[allow(unused_variables)]
-    pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> &mut SUMOAbstractRouter<MSEdge, SUMOVehicle> {
-        MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited)
+    pub fn get_router(&mut self, veh: &mut SUMOVehicle, prohibited: &SUMOAbstractRouter_Prohibitions) -> Ptr<SUMOAbstractRouter<MSEdge, SUMOVehicle>> {
+        Ptr::from_mut(MSRoutingEngine::get_router_tt(veh.get_rng_index(), veh.get_v_class(), prohibited))
     }
 
     /// C++: `double MSDevice_StationFinder::getStoppingPlaceOccupancy(MSStoppingPlace *, const SUMOVehicle *)` [virtual]
