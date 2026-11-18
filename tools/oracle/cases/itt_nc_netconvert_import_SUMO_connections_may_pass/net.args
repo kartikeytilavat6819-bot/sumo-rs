@@ -1,0 +1,1 @@
+--write-license --sumo-net-file=tools/oracle/cases/itt_nc_netconvert_import_SUMO_connections_may_pass/input_net.net.xml --no-internal-links
