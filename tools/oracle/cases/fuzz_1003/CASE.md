@@ -1,0 +1,1 @@
+fuzz_sim.sh seed 1003 (net: fuzz_sim.sh --gen 1003 <dir>). personTrip modes=public with a bus flow stopping at busStops, on a net with sidewalks/crossings/walkingareas; also sublane bicycles (vc2=bicycle) at --step-length 0.2 and departLane variants. personinfo is compared as an extra output.

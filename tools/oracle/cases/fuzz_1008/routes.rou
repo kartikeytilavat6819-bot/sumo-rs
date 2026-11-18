@@ -1,0 +1,246 @@
+<routes><vType id="v_bus" vClass="bus" />
+    <vType id="w_bicycle" vClass="bicycle" />
+    <vehicle id="v0" type="v_bus" depart="0.00">
+        <route edges="-64 -36 -5 13 29 41 79" />
+    </vehicle>
+    <vehicle id="w0" type="w_bicycle" depart="0.00">
+        <route edges="-3 5" />
+    </vehicle>
+    <vehicle id="v1" type="v_bus" depart="3.50">
+        <route edges="-45 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="v2" type="v_bus" depart="7.00">
+        <route edges="29 -29 -13 5 36 -36" />
+    </vehicle>
+    <vehicle id="w1" type="w_bicycle" depart="9.00">
+        <route edges="-25 13 29 59" />
+    </vehicle>
+    <vehicle id="v3" type="v_bus" depart="10.50">
+        <route edges="-66 74" />
+    </vehicle>
+    <vehicle id="v4" type="v_bus" depart="14.00">
+        <route edges="-79 -41 59" />
+    </vehicle>
+    <vehicle id="v5" type="v_bus" depart="17.50">
+        <route edges="-25 5 36" />
+    </vehicle>
+    <vehicle id="w2" type="w_bicycle" depart="18.00">
+        <route edges="13 29 -29 -13 5 36 74" />
+    </vehicle>
+    <vehicle id="v6" type="v_bus" depart="21.00">
+        <route edges="-13 5 36 66" />
+    </vehicle>
+    <vehicle id="v7" type="v_bus" depart="24.50">
+        <route edges="-45 -29 -13 13 29" />
+    </vehicle>
+    <vehicle id="w3" type="w_bicycle" depart="27.00">
+        <route edges="-64 74" />
+    </vehicle>
+    <vehicle id="v8" type="v_bus" depart="28.00">
+        <route edges="-3 5 36 -36" />
+    </vehicle>
+    <vehicle id="v9" type="v_bus" depart="31.50">
+        <route edges="-3 13" />
+    </vehicle>
+    <vehicle id="v10" type="v_bus" depart="35.00">
+        <route edges="-3 5 36" />
+    </vehicle>
+    <vehicle id="w4" type="w_bicycle" depart="36.00">
+        <route edges="-79 -41 -29 -13 25" />
+    </vehicle>
+    <vehicle id="v11" type="v_bus" depart="38.50">
+        <route edges="-79 -41 -29 -13 25" />
+    </vehicle>
+    <vehicle id="v12" type="v_bus" depart="42.00">
+        <route edges="-3 3" />
+    </vehicle>
+    <vehicle id="w5" type="w_bicycle" depart="45.00">
+        <route edges="-25 25" />
+    </vehicle>
+    <vehicle id="v13" type="v_bus" depart="45.50">
+        <route edges="-3 5 36 74" />
+    </vehicle>
+    <vehicle id="v14" type="v_bus" depart="49.00">
+        <route edges="-59 45" />
+    </vehicle>
+    <vehicle id="v15" type="v_bus" depart="52.50">
+        <route edges="-45 41 79" />
+    </vehicle>
+    <vehicle id="w6" type="w_bicycle" depart="54.00">
+        <route edges="-64 64" />
+    </vehicle>
+    <vehicle id="v16" type="v_bus" depart="56.00">
+        <route edges="-59 45" />
+    </vehicle>
+    <vehicle id="v17" type="v_bus" depart="59.50">
+        <route edges="-64 64" />
+    </vehicle>
+    <vehicle id="v18" type="v_bus" depart="63.00">
+        <route edges="-66 -36 -5 13 29 41 79" />
+    </vehicle>
+    <vehicle id="w7" type="w_bicycle" depart="63.00">
+        <route edges="-3 5 36 66" />
+    </vehicle>
+    <vehicle id="v19" type="v_bus" depart="66.50">
+        <route edges="-64 -36 -5 13 29 45" />
+    </vehicle>
+    <vehicle id="v20" type="v_bus" depart="70.00">
+        <route edges="-45 59" />
+    </vehicle>
+    <vehicle id="w8" type="w_bicycle" depart="72.00">
+        <route edges="-64 -36 -5 13 29 45" />
+    </vehicle>
+    <vehicle id="v21" type="v_bus" depart="73.50">
+        <route edges="-36 -5 25" />
+    </vehicle>
+    <vehicle id="v22" type="v_bus" depart="77.00">
+        <route edges="-25 5" />
+    </vehicle>
+    <vehicle id="v23" type="v_bus" depart="80.50">
+        <route edges="-45 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="w9" type="w_bicycle" depart="81.00">
+        <route edges="-64 -36 -5 25" />
+    </vehicle>
+    <vehicle id="v24" type="v_bus" depart="84.00">
+        <route edges="-59 45" />
+    </vehicle>
+    <vehicle id="v25" type="v_bus" depart="87.50">
+        <route edges="-64 -36 -5 13 29 41 79" />
+    </vehicle>
+    <vehicle id="w10" type="w_bicycle" depart="90.00">
+        <route edges="-64 -36 -5 13 29 41 79" />
+    </vehicle>
+    <vehicle id="v26" type="v_bus" depart="91.00">
+        <route edges="-79 -41 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="v27" type="v_bus" depart="94.50">
+        <route edges="-25 5 36 66" />
+    </vehicle>
+    <vehicle id="v28" type="v_bus" depart="98.00">
+        <route edges="-41 -29 -13 5 36 -36 -5" />
+    </vehicle>
+    <vehicle id="w11" type="w_bicycle" depart="99.00">
+        <route edges="-29 -13 5 36 64" />
+    </vehicle>
+    <vehicle id="v29" type="v_bus" depart="101.50">
+        <route edges="-25 25" />
+    </vehicle>
+    <vehicle id="v30" type="v_bus" depart="105.00">
+        <route edges="-59 -29 -13 5 36 64" />
+    </vehicle>
+    <vehicle id="w12" type="w_bicycle" depart="108.00">
+        <route edges="-59 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="v31" type="v_bus" depart="108.50">
+        <route edges="-36 -5 5 36 74" />
+    </vehicle>
+    <vehicle id="v32" type="v_bus" depart="112.00">
+        <route edges="-64 64" />
+    </vehicle>
+    <vehicle id="v33" type="v_bus" depart="115.50">
+        <route edges="-3 5 36 66" />
+    </vehicle>
+    <vehicle id="w13" type="w_bicycle" depart="117.00">
+        <route edges="-59 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="v34" type="v_bus" depart="119.00">
+        <route edges="-45 45" />
+    </vehicle>
+    <vehicle id="v35" type="v_bus" depart="122.50">
+        <route edges="-25 5 36 64" />
+    </vehicle>
+    <vehicle id="v36" type="v_bus" depart="126.00">
+        <route edges="-66 -36 -5 13 29 59" />
+    </vehicle>
+    <vehicle id="w14" type="w_bicycle" depart="126.00">
+        <route edges="-59 -29 -13 3" />
+    </vehicle>
+    <vehicle id="v37" type="v_bus" depart="129.50">
+        <route edges="-3 13 29 45" />
+    </vehicle>
+    <vehicle id="v38" type="v_bus" depart="133.00">
+        <route edges="-3 5 36 74" />
+    </vehicle>
+    <vehicle id="w15" type="w_bicycle" depart="135.00">
+        <route edges="-41 45" />
+    </vehicle>
+    <vehicle id="v39" type="v_bus" depart="136.50">
+        <route edges="-45 41 79" />
+    </vehicle>
+    <vehicle id="v40" type="v_bus" depart="140.00">
+        <route edges="-74 66" />
+    </vehicle>
+    <vehicle id="v41" type="v_bus" depart="143.50">
+        <route edges="-64 -36 -5 3" />
+    </vehicle>
+    <vehicle id="w16" type="w_bicycle" depart="144.00">
+        <route edges="-79 -41 -29 -13 3" />
+    </vehicle>
+    <vehicle id="v42" type="v_bus" depart="147.00">
+        <route edges="-74 -36 -5 13 29 41 79" />
+    </vehicle>
+    <vehicle id="v43" type="v_bus" depart="150.50">
+        <route edges="-45 -29 -13 5 36 66" />
+    </vehicle>
+    <vehicle id="w17" type="w_bicycle" depart="153.00">
+        <route edges="-59 -29 -13 3" />
+    </vehicle>
+    <vehicle id="v44" type="v_bus" depart="154.00">
+        <route edges="-36 -5 5 36 74" />
+    </vehicle>
+    <vehicle id="v45" type="v_bus" depart="157.50">
+        <route edges="-36 -5 5 36 66" />
+    </vehicle>
+    <vehicle id="v46" type="v_bus" depart="161.00">
+        <route edges="-79 -41 45" />
+    </vehicle>
+    <vehicle id="w18" type="w_bicycle" depart="162.00">
+        <route edges="-3 5 36 74" />
+    </vehicle>
+    <vehicle id="v47" type="v_bus" depart="164.50">
+        <route edges="-13 5 36 64" />
+    </vehicle>
+    <vehicle id="v48" type="v_bus" depart="168.00">
+        <route edges="-3 13 29 45" />
+    </vehicle>
+    <vehicle id="w19" type="w_bicycle" depart="171.00">
+        <route edges="-29 -13 13 29 59" />
+    </vehicle>
+    <vehicle id="v49" type="v_bus" depart="171.50">
+        <route edges="-3 13 29" />
+    </vehicle>
+    <vehicle id="v50" type="v_bus" depart="175.00">
+        <route edges="-66 -36 -5 13 29 45" />
+    </vehicle>
+    <vehicle id="v51" type="v_bus" depart="178.50">
+        <route edges="-3 5 36 -36" />
+    </vehicle>
+    <vehicle id="w20" type="w_bicycle" depart="180.00">
+        <route edges="-66 -36 -5 3" />
+    </vehicle>
+    <vehicle id="v52" type="v_bus" depart="182.00">
+        <route edges="13 29 59" />
+    </vehicle>
+    <vehicle id="v53" type="v_bus" depart="185.50">
+        <route edges="-66 66" />
+    </vehicle>
+    <vehicle id="v54" type="v_bus" depart="189.00">
+        <route edges="36 -36 -5 25" />
+    </vehicle>
+    <vehicle id="w21" type="w_bicycle" depart="189.00">
+        <route edges="-74 66" />
+    </vehicle>
+    <vehicle id="v55" type="v_bus" depart="192.50">
+        <route edges="-25 5 36 66" />
+    </vehicle>
+    <vehicle id="v56" type="v_bus" depart="196.00">
+        <route edges="-79 -41 41 79" />
+    </vehicle>
+    <vehicle id="w22" type="w_bicycle" depart="198.00">
+        <route edges="-66 -36 -5 13 29 -29 -13" />
+    </vehicle>
+<vehicle id="v57" type="v_bus" depart="199.50">
+        <route edges="-79 -41 -29 -13 5 36 66" />
+    </vehicle>
+</routes>

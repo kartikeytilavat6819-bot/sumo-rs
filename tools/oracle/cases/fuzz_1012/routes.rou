@@ -1,0 +1,122 @@
+<routes><vType id="v_truck" vClass="truck" laneChangeModel="SL2015" />
+    <vType id="fz_bike" vClass="bicycle" laneChangeModel="SL2015" length="1.7" maxSpeed="6" /><vehicle id="v0" type="v_truck" depart="0.00" departLane="free" departSpeed="desired">
+        <route edges="B2B3 B3A1 A1B1 B1A1" />
+    </vehicle>
+    <vehicle id="v1" type="v_truck" depart="5.00" departLane="free" departSpeed="desired">
+        <route edges="B1B4 B4A1 A1B1" />
+    </vehicle>
+    <vehicle id="v2" type="v_truck" depart="10.00" departLane="free" departSpeed="desired">
+        <route edges="B2A1 A1B3 B3C3 C3C2" />
+    </vehicle>
+    <vehicle id="v3" type="v_truck" depart="15.00">
+        <route edges="B4B1 B1B4" />
+    </vehicle>
+    <vehicle id="fz_b0" type="fz_bike" depart="15"><route edges="B2B3 B3A1 A1B1 B1A1" /></vehicle><vehicle id="v4" type="v_truck" depart="20.00">
+        <route edges="B1A1 A1B3 B3B2" />
+    </vehicle>
+    <vehicle id="v5" type="v_truck" depart="25.00">
+        <route edges="B3A1 A1B4 B4C4 C4B4" />
+    </vehicle>
+    <vehicle id="v6" type="v_truck" depart="30.00">
+        <route edges="B3C3 C3C4" />
+    </vehicle>
+    <vehicle id="v7" type="v_truck" depart="35.00">
+        <route edges="C4C1 C1B1 B1A1 A1B3 B3C3" />
+    </vehicle>
+    <vehicle id="v8" type="v_truck" depart="40.00">
+        <route edges="B2C2 C2B2 B2B1 B1B2" />
+    </vehicle>
+    <vehicle id="v9" type="v_truck" depart="45.00">
+        <route edges="B4C4 C4C3 C3C4" />
+    </vehicle>
+    <vehicle id="v10" type="v_truck" depart="50.00">
+        <route edges="B4B1 B1A1" />
+    </vehicle>
+    <vehicle id="v11" type="v_truck" depart="55.00">
+        <route edges="C1B1 B1B4 B4B1" />
+    </vehicle>
+    <vehicle id="fz_b1" type="fz_bike" depart="55"><route edges="B2B3 B3A1 A1B1 B1A1" /></vehicle><vehicle id="v12" type="v_truck" depart="60.00">
+        <route edges="B1C1 C1C2 C2B2" />
+    </vehicle>
+    <vehicle id="v13" type="v_truck" depart="65.00">
+        <route edges="C4C3 C3C2" />
+    </vehicle>
+    <vehicle id="v14" type="v_truck" depart="70.00">
+        <route edges="C4C1 C1B1 B1A1 A1B3 B3C3 C3C4" />
+    </vehicle>
+    <vehicle id="v15" type="v_truck" depart="75.00">
+        <route edges="C4B4 B4A1" />
+    </vehicle>
+    <vehicle id="v16" type="v_truck" depart="80.00">
+        <route edges="B1C1 C1B1 B1B4 B4A1" />
+    </vehicle>
+    <vehicle id="v17" type="v_truck" depart="85.00">
+        <route edges="B2C2 C2B2 B2B1 B1B4" />
+    </vehicle>
+    <vehicle id="v18" type="v_truck" depart="90.00">
+        <route edges="C4B4 B4B3 B3C3 C3C4" />
+    </vehicle>
+    <vehicle id="v19" type="v_truck" depart="95.00">
+        <route edges="C2C1 C1C2 C2C3" />
+    </vehicle>
+    <vehicle id="fz_b2" type="fz_bike" depart="95"><route edges="B2B3 B3A1 A1B1 B1A1" /></vehicle><vehicle id="v20" type="v_truck" depart="100.00">
+        <route edges="B4A1 A1B3 B3C3 C3C2" />
+    </vehicle>
+    <vehicle id="v21" type="v_truck" depart="105.00">
+        <route edges="B4C4 C4B4 B4A1" />
+    </vehicle>
+    <vehicle id="v22" type="v_truck" depart="110.00">
+        <route edges="C3C4 C4B4 B4B1" />
+    </vehicle>
+    <vehicle id="v23" type="v_truck" depart="115.00">
+        <route edges="C1C2 C2B2 B2B3" />
+    </vehicle>
+    <vehicle id="v24" type="v_truck" depart="120.00">
+        <route edges="B4A1 A1B3 B3A1" />
+    </vehicle>
+    <vehicle id="v25" type="v_truck" depart="125.00">
+        <route edges="A1B4 B4A1 A1B2 B2C2 C2C3" />
+    </vehicle>
+    <vehicle id="v26" type="v_truck" depart="130.00">
+        <route edges="B4C4 C4B4 B4B1 B1A1" />
+    </vehicle>
+    <vehicle id="v27" type="v_truck" depart="135.00">
+        <route edges="C2C3 C3B3 B3A1 A1B1 B1C1 C1C4" />
+    </vehicle>
+    <vehicle id="v28" type="v_truck" depart="140.00">
+        <route edges="A1B1 B1C1 C1C4" />
+    </vehicle>
+    <vehicle id="v29" type="v_truck" depart="145.00">
+        <route edges="C4B4 B4B1 B1C1" />
+    </vehicle>
+    <vehicle id="v30" type="v_truck" depart="150.00">
+        <route edges="C1C4 C4C3 C3B3" />
+    </vehicle>
+    <vehicle id="v31" type="v_truck" depart="155.00">
+        <route edges="A1B2 B2B3 B3C3 C3C4" />
+    </vehicle>
+    <vehicle id="v32" type="v_truck" depart="160.00">
+        <route edges="B4B1 B1B2 B2C2 C2C1" />
+    </vehicle>
+    <vehicle id="v33" type="v_truck" depart="165.00">
+        <route edges="B4C4 C4B4 B4A1 A1B2 B2C2 C2B2" />
+    </vehicle>
+    <vehicle id="v34" type="v_truck" depart="170.00">
+        <route edges="C1C4 C4C1" />
+    </vehicle>
+    <vehicle id="v35" type="v_truck" depart="175.00">
+        <route edges="B4A1 A1B3" />
+    </vehicle>
+    <vehicle id="v36" type="v_truck" depart="180.00">
+        <route edges="B4B3 B3A1 A1B1 B1C1 C1B1" />
+    </vehicle>
+    <vehicle id="v37" type="v_truck" depart="185.00">
+        <route edges="C1C2 C2B2 B2B3 B3A1" />
+    </vehicle>
+    <vehicle id="v38" type="v_truck" depart="190.00">
+        <route edges="B1A1 A1B2 B2B1" />
+    </vehicle>
+    <vehicle id="v39" type="v_truck" depart="195.00">
+        <route edges="B1B2 B2B1" />
+    </vehicle>
+</routes>
