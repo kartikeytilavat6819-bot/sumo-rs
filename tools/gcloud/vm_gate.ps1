@@ -61,6 +61,14 @@ git -C $Repo update-ref "refs/gate/$id" $full
 $st = gcloud compute instances describe $Vm --zone $Zone --format "value(status)" 2>$null
 if ($st -ne "RUNNING") { gcloud compute instances start $Vm --zone $Zone --quiet 2>&1 | Out-Null; Start-Sleep 30 }
 $run = Join-Path $PSScriptRoot "vm_gate_run.sh"
+$ra = Join-Path $PSScriptRoot "..\oracle\run_all.sh"   # lead's sharded/filtered run_all, used when the branch's copy predates it
+# official-suite tt_ cases this branch adds or changes: an agent gate runs only these, wave2 runs all of them
+$ttf = Join-Path $env:TEMP "$id.ttf"
+if ($Branch -ne 'wave2') {
+    $mb = (git -C $Repo merge-base main $full).Trim()
+    $tt = @(git -C $Repo diff --name-only $mb $full -- tools/oracle/cases/ | ForEach-Object { if ($_ -match '^tools/oracle/cases/(tt_[^/]+)/') { $Matches[1] } } | Sort-Object -Unique)
+    [IO.File]::WriteAllText($ttf, ($tt -join "`n"))
+}
 # an ssh/scp drop (many agents connect at once) loses the whole run: retry until the run script reports an end
 for ($try = 1; $try -le 3; $try++) {
     $known = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "git -C ~/gaterepo.git for-each-ref --sort=-creatordate --count=80 --format='%(objectname)' 2>/dev/null" 2>$null) |
@@ -68,10 +76,10 @@ for ($try = 1; $try -le 3; $try++) {
     $not = @($known | Where-Object { git -C $Repo cat-file -e "$_^{commit}" 2>$null; $LASTEXITCODE -eq 0 } | ForEach-Object { "^$_" })
     Remove-Item $bdl -ErrorAction SilentlyContinue
     git -C $Repo bundle create $bdl "refs/gate/$id" @not 2>$null | Out-Null   # no file = the VM already has the commit
-    $up = @($run) + @(Get-Item $bdl -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
+    $up = @($run, $ra) + @(Get-Item $bdl, $ttf -ErrorAction SilentlyContinue | ForEach-Object { $_.FullName })
     gcloud compute scp @up "${Vm}:/tmp/" --zone $Zone --quiet 2>&1 | Out-Null
     $prep = "R=~/gaterepo.git; [ -d `$R ] || git init -q --bare `$R; if [ -f /tmp/$id.bundle ]; then git -C `$R fetch -q /tmp/$id.bundle '+refs/gate/*:refs/gate/*' && rm -f /tmp/$id.bundle; fi; git -C `$R archive --format=tar.gz -o /tmp/$id.tgz $full || echo 'SNAPSHOT CORRUPT (missing commit)';"
-    $out = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "$prep while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha'; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh /tmp/$id.tgz" 2>&1 |
+    $out = @(gcloud compute ssh $Vm --zone $Zone --quiet --command "$prep while [ ! -f /opt/gate_ready ]; do sleep 10; done; sudo cp /tmp/run_all.sh /home/gate/lead_run_all.sh; [ -f /tmp/$id.ttf ] && sudo cp /tmp/$id.ttf /home/gate/ttf_$id; sudo cp /tmp/$id.tgz /home/gate/ && sudo cp /tmp/vm_gate_run.sh /home/gate/run_$id.sh && sudo sed -i 's/\r$//' /home/gate/run_$id.sh && sudo chown gate /home/gate/$id.tgz /home/gate/run_$id.sh && sudo -iu gate bash /home/gate/run_$id.sh /home/gate/$id.tgz '$Branch $sha' /home/gate/ttf_$id; sudo rm -f /home/gate/$id.tgz /home/gate/run_$id.sh /home/gate/ttf_$id /tmp/$id.tgz /tmp/$id.ttf" 2>&1 |
         Where-Object { $_ -notmatch '^(Updating|Warning: Permanently|External IP|Writing|.*NativeCommandError|.*CategoryInfo|.*At .*gcloud\.ps1|\s*\+|\s*~)' })
     if (($out -join "`n") -match 'GATE DONE|BUILD FAILED') { $out; break }
     "vm_gate: attempt $try ended without a result (ssh/scp drop); retrying"
@@ -79,4 +87,4 @@ for ($try = 1; $try -le 3; $try++) {
     Start-Sleep (15 * $try)
 }
 git -C $Repo update-ref -d "refs/gate/$id"
-Remove-Item $bdl, $markFile -ErrorAction SilentlyContinue
+Remove-Item $bdl, $ttf, $markFile -ErrorAction SilentlyContinue

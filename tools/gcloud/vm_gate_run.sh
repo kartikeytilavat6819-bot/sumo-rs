@@ -14,6 +14,8 @@ rm -rf "$NEW"; mkdir -p "$NEW" "$SRC"; tar -xzf "$1" -C "$NEW" || { echo "SNAPSH
 find "$NEW/tools" -type f \( -name '*.sh' -o -name '*.args' \) -exec sed -i 's/\r$//' {} +
 # no -t: changed files get a fresh mtime so cargo rebuilds them (git archive stamps the commit time)
 echo "$2"; echo "files changed: $(rsync -rc --delete --out-format='%n' "$NEW/" "$SRC/" | grep -vc '/$')"
+# a branch whose run_all predates sharding/tt filtering gets the lead's copy (vm_gate.ps1 ships it)
+grep -q RUN_SHARDS "$SRC/tools/oracle/run_all.sh" 2>/dev/null || { [ -f /home/gate/lead_run_all.sh ] && sed 's/\r$//' /home/gate/lead_run_all.sh > "$SRC/tools/oracle/run_all.sh"; }
 export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOBS=8 SCORE_OUT=/tmp/score$slot \
        SUMO_HOME=/home/gate/sumo_pkg/sumo SUMO_PRISTINE_BIN=/home/gate/sumo_pkg/sumo/bin
 cd "$SRC"
@@ -30,6 +32,9 @@ grep -aE ': error|^error' /tmp/build$slot.log | head -40
 # a failed build leaves the previous snapshot's binary behind: never test it
 if [ $rc -ne 0 ]; then echo "BUILD FAILED"; exit 1; fi
 (cd "$CARGO_TARGET_DIR/debug" && ln -sf sumo sumo.exe && ln -sf netconvert netconvert.exe)
+# official-suite tt_ cases: wave2 runs all of them; an agent branch only the ones it adds/changes ($3 = list file)
+[ -n "${3:-}" ] && [ -f "$3" ] && export TT_FILTER="$(cat "$3")"
+case "$2" in wave2\ *) export RUN_SHARDS=8;; *) export RUN_SHARDS=2;; esac
 bash tools/oracle/run_all.sh 2>&1 | grep -E 'FAIL|PANIC|TIMEOUT|PASS=|STALE|MISSING'
 bash tools/oracle/cases/depart/run_all_variants.sh 2>&1 | tail -1
 if [ -f tools/oracle/run_duarouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/duarouter" ]; then

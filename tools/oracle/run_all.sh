@@ -30,14 +30,31 @@ PASS=0; FAIL=0; SKIP=0
 
 line() { printf '%-22s %-10s %s\n' "$1" "$2" "$3"; }
 
+# RUN_SHARDS=N: run N copies in parallel (case i goes to shard i%N), then merge their rows and totals
+if [ -n "${RUN_SHARDS:-}" ] && [ -z "${RUN_SHARD:-}" ]; then
+  tmp=$(mktemp -d)
+  for s in $(seq 0 $((RUN_SHARDS - 1))); do RUN_SHARD=$s bash "$PWD/tools/oracle/run_all.sh" > "$tmp/$s" 2>&1 & done
+  wait
+  grep -hvE '^PASS=|^-+$' "$tmp"/* | sort -u
+  echo "-------------------------------------------"
+  awk -F'[= ]' '/^PASS=/{p+=$2; f+=$4; s+=$6} END{print "PASS=" p " FAIL=" f " SKIP=" s}' "$tmp"/*
+  rm -rf "$tmp"; exit 0
+fi
+n=-1
+
 for dir in tools/oracle/cases/*/; do
   c=$(basename "$dir")
+  n=$((n + 1))
+  [ -n "${RUN_SHARD:-}" ] && [ $((n % RUN_SHARDS)) -ne "$RUN_SHARD" ] && continue
+  # TT_FILTER (newline list, set by the gate for agent branches): official-suite tt_ cases outside it are not run
+  case $c in tt_*) [ -n "${TT_FILTER+x}" ] && ! grep -qxF "$c" <<<"$TT_FILTER" && continue;; esac
   # depart needs one sim per route file (15 references): run_all_variants.sh, not this loop
   if [ "$c" = depart ]; then
     line "$c" variants SKIP "15 variants: cases/depart/run_all_variants.sh"; SKIP=$((SKIP+1)); continue
   fi
   # a PENDING marker file holds the reason a case is parked (e.g. a missing port)
-  if [ -f "$dir/PENDING" ]; then
+  # "parked: gate runtime budget" (oc49 importer) is obsolete: the gate now shards and filters tt_ cases
+  if [ -f "$dir/PENDING" ] && ! grep -q '^parked: gate runtime budget' "$dir/PENDING"; then
     line "$c" pending SKIP "$(head -1 "$dir/PENDING" | cut -c1-80)"; SKIP=$((SKIP+1)); continue
   fi
   # --- net stage: regenerate the net with netconvert and compare element by element.
