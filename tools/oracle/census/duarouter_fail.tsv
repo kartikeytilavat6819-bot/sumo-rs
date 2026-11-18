@@ -1,0 +1,60 @@
+duarouter_itt_duarouter_bugs_ticket13506	PANIC	thread 'main' (1775026) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_bugs_ticket646_vehspeed_ignored	ERROR	cand exit 1: Error: File 'input_routes.rou.xml' is not accessible (No such file or directory).
+duarouter_itt_duarouter_bugs_ticket6579	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_bugs_ticket7627	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_filter_files	ERROR	cand exit 1: Error: No output specified.
+duarouter_itt_duarouter_flows_1s_interval_keep_trips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_flows_vtypecheck	REFERR	ref exit 1: Error: value 'normc(0.9)' does not match any member types of the union
+duarouter_itt_duarouter_function_measure_dijkstra_edge_priority_rail	PANIC	thread 'main' (1779551) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_function_routing_astar_landmark_save_geo_parallel	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_function_routing_astar_landmark_save_parallel	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_function_routing_chrouter_weights_parallel	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_meta_noop	ERROR	cand exit 1: Error: No output specified.
+duarouter_itt_duarouter_personFlow_basic_keep_trips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_personFlow_edges	FAIL	routes.rou.alt.xml: 33,34c33,34
+duarouter_itt_duarouter_personFlow_walk_poisson	PANIC	thread 'main' (1783095) panicked at crates/utils/src/common/ptr.rs:50:9: null Ptr dereference 
+duarouter_itt_duarouter_person_edges	FAIL	routes.rou.alt.xml: 40c40
+duarouter_itt_duarouter_person_personTrip_geoTrips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_person_personTrip_intermodal_train_bus_walk	PANIC	thread 'main' (1785376) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_pt_looped_need_transfer	PANIC	thread 'main' (1786127) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_pt_looped_need_transfer2	PANIC	thread 'main' (1786156) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_ride_from_stop	PANIC	thread 'main' (1786397) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_ride_trip	PANIC	thread 'main' (1786423) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_ride_trip_access	PANIC	thread 'main' (1786455) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_stop_access_stop	PANIC	thread 'main' (1786485) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_basic	PANIC	thread 'main' (1786517) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_longTaxiWait	PANIC	thread 'main' (1786541) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_walk_first	PANIC	thread 'main' (1786634) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_walk_first_longTaxiWait	PANIC	thread 'main' (1786648) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_walk_first_transferTaxi	PANIC	thread 'main' (1786675) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_walk_last	PANIC	thread 'main' (1786705) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_taxi_walk_last_transferTaxi	PANIC	thread 'main' (1786731) panicked at crates/sumo_core/src/router/ro_loader.rs:323:21: The additional file 'input_additional.add.xml' is not accessible. 
+duarouter_itt_duarouter_person_personTrip_trip_output	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_person_personTrip_trip_output_geo	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_person_ride_write_trips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_person_routeID	FAIL	routes.rou.alt.xml: 40c40
+duarouter_itt_duarouter_person_unconnected_ignored	ERROR	cand exit 1: Error: No connection between edge 'beg' and edge 'left' found.
+duarouter_itt_duarouter_person_walk_write_trips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_bulkSame_rail	PANIC	thread 'main' (1789533) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_bulk_parallel	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_trips_bulk_parallel_warn	ERROR	cand exit 1: Error: Parallel routing is only possible when compiled with Fox.
+duarouter_itt_duarouter_trips_bulk_rail_fromEqualTo	PANIC	thread 'main' (1789607) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_geo_geoTrips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_junctions	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_junctions_internalLanes	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_junctions_stop	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_junctions_writeGeo	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_junctions_writeJunctions	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_taz	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_taz_ignore	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_geo_geoTrips_taz_multi	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_rail_long_train	PANIC	thread 'main' (1792330) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_reversal_cost	PANIC	thread 'main' (1792367) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_reversal_detour	PANIC	thread 'main' (1792405) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_reversal_penalty	PANIC	thread 'main' (1792451) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_reversal_possible	PANIC	thread 'main' (1792491) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_reversal_stop_possible	PANIC	thread 'main' (1792540) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_rail_stop_reverse_stop	PANIC	thread 'main' (1792566) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:385:21: pure virtual method called 
+duarouter_itt_duarouter_trips_write_trips	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_write_trips_geo	ERROR	cand exit 1: Error: While processing option 'write-trips':
+duarouter_itt_duarouter_trips_write_trips_junctions	ERROR	cand exit 1: Error: While processing option 'write-trips':

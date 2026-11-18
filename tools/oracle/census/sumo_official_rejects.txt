@@ -1,0 +1,397 @@
+tt_basic_containerFlow_tranship_containersPerHour|parked: gate runtime budget; importer can re-enable
+tt_basic_container_abort_impossible_transport|parked: gate runtime budget; importer can re-enable
+tt_basic_container_leaving_vehicle_at_stop|parked: gate runtime budget; importer can re-enable
+tt_basic_container_transfer|parked: gate runtime budget; importer can re-enable
+tt_basic_container_transfer_unconnected_fromto|parked: gate runtime budget; importer can re-enable
+tt_basic_container_triggered|parked: gate runtime budget; importer can re-enable
+tt_basic_container_trip_chain|parked: gate runtime budget; importer can re-enable
+tt_basic_dynamics_approach_slow_lane|parked: gate runtime budget; importer can re-enable
+tt_basic_dynamics_deadlock_time-to-teleport.disconnected|parked: gate runtime budget; importer can re-enable
+tt_basic_dynamics_deadlock_time-to-teleport_custom|parked: gate runtime budget; importer can re-enable
+tt_basic_dynamics_insertion_high_flow1|parked: gate runtime budget; importer can re-enable
+tt_basic_dynamics_short_edge_arrival|parked: gate runtime budget; importer can re-enable
+tt_basic_networks_internal_net_internal_sim|official sumo exit 1: Error: value '-1,-1,-1' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_networks_internal_net_internal_s
+tt_basic_networks_internal_net_plain_sim|official sumo exit 1: network contains internal links; error-exit test
+tt_basic_networks_internal_net_plain_sim_allCustom|official sumo exit 1: Error: value '-1,-1,-1' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_networks_internal_net_plain_sim_
+tt_basic_networks_plain_net_internal_sim|official sumo exit 1: Error: value '-1,-1,-1' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_networks_plain_net_internal_sim/
+tt_basic_networks_plain_net_plain_sim|official sumo exit 1: Error: value '-1,-1,-1' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_networks_plain_net_plain_sim/rou
+tt_basic_personFlow_busStop_ride_busStop_capacity|parked: gate runtime budget; importer can re-enable
+tt_basic_personFlow_ride_triggeredFlow|official sumo exit 1: Error: value 'triggered' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_personFlow_ride_triggeredFlow/r
+tt_basic_personFlow_ride_triggeredPersonFlow2|parked: gate runtime budget; importer can re-enable
+tt_basic_personFlow_triggered|parked: gate runtime budget; importer can re-enable
+tt_basic_personFlow_walk_maxPersonNumber|parked: gate runtime budget; importer can re-enable
+tt_basic_personFlow_walk_routeDist2|parked: gate runtime budget; importer can re-enable
+tt_basic_person_errors_duplicate_container_id|parked: gate runtime budget; importer can re-enable
+tt_basic_person_person_inserted_departPos|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_access_ride_access_busstop|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_boarding_duration_extension_limited_no_persons|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_leaving_vehicle_at_stop_subsecond|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_public|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_ride_and_stop|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_ride_stoppingPlace|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_two_busstops_at_one_edge|parked: gate runtime budget; importer can re-enable
+tt_basic_person_riding_veh_is_triggered_triggered_discard|parked: gate runtime budget; importer can re-enable
+tt_basic_person_scale_personFlow_number_scale3|parked: gate runtime budget; importer can re-enable
+tt_basic_person_stop_edge|parked: gate runtime budget; importer can re-enable
+tt_basic_person_trip_chain|parked: gate runtime budget; importer can re-enable
+tt_basic_person_walking_walk_routeDist|parked: gate runtime budget; importer can re-enable
+tt_basic_person_walking_walk_unconnected|parked: gate runtime budget; importer can re-enable
+tt_basic_routes_parsing_nested_ref|parked: gate runtime budget; importer can re-enable
+tt_basic_routes_parsing_old_style|official sumo exit 1: Error: value '-1,-1,-1' does not match any member types of the union In file 'tools/oracle/cases/tt_basic_routes_parsing_old_style/routes.
+tt_basic_routes_parsing_repeat_flow_busstop|parked: gate runtime budget; importer can re-enable
+tt_basic_routes_parsing_repeat_stops_no_period|parked: gate runtime budget; importer can re-enable
+tt_basic_routes_simtime_fractional_b0_e50_01|parked: gate runtime budget; importer can re-enable
+tt_basic_routes_simtime_same_b50_e100|parked: gate runtime budget; importer can re-enable
+tt_basic_simple_nets_cross_cross1ltl|parked: gate runtime budget; importer can re-enable
+tt_basic_stops_stop_edge|parked: gate runtime budget; importer can re-enable
+tt_basic_stops_stop_queued3|parked: gate runtime budget; importer can re-enable
+tt_basic_vtypes_no_type_with_new_default|parked: gate runtime budget; importer can re-enable
+tt_basic_vtypes_vclass_specific_speed_limit_internal_2types_higherSpeed|parked: gate runtime budget; importer can re-enable
+tt_cf_model_ACC_collisionAvoidanceOverride|parked: gate runtime budget; importer can re-enable
+tt_cf_model_CACC_follow_slow_follow_slow_0.1|parked: gate runtime budget; importer can re-enable
+tt_cf_model_EIDM_ticket17317|parked: gate runtime budget; importer can re-enable
+tt_cf_model_IDM_insertion_speed_step0.2|parked: gate runtime budget; importer can re-enable
+tt_cf_model_IDM_stop_exact|parked: gate runtime budget; importer can re-enable
+tt_cf_model_IDM_ticket11498|unsupported projection +proj=merc in net location; Rust port only supports +proj=utm and +proj=tmerc with lat_0=0
+tt_cf_model_KraussPS_bike_uphill_level_downhill|parked: gate runtime budget; importer can re-enable
+tt_cf_model_Krauss_sigma1_step0.1_sigmaStep0.75|parked: gate runtime budget; importer can re-enable
+tt_cf_model_Krauss_startupDelay0.5_low_accel|parked: gate runtime budget; importer can re-enable
+tt_cf_model_apparentDecel_emergencyDecel_apparentDecel_lower|parked: gate runtime budget; importer can re-enable
+tt_cf_model_apparentDecel_emergencyDecel_emergencyInsertion2|parked: gate runtime budget; importer can re-enable
+tt_cf_model_collisions_pileup|parked: gate runtime budget; importer can re-enable
+tt_cf_model_drive_in_circles_W99|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_cf_model_drive_in_circles_W99/ref_simple.net.xml' ... done (4ms). Loading additional-files 
+tt_cf_model_drive_in_circles_circle_actionsteplength|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_cf_model_drive_in_circles_circle_actionsteplength/ref_simple.net.xml' ... done (7ms). Loadi
+tt_cf_model_drive_in_circles_circle_stop_and_go|parked: gate runtime budget; importer can re-enable
+tt_cf_model_drive_in_circles_circle_two_lanes_actionsteplength|official sumo exit 124: Integration method was set to 'ballistic', since a default action step length was specified. Loading net-file from 'tools/oracle/cases/t
+tt_cf_model_errors_stepsize2|parked: gate runtime budget; importer can re-enable
+tt_cf_model_follow_slow_idm|parked: gate runtime budget; importer can re-enable
+tt_cf_model_fundamental_2lane_krauss_t0.8_s0.5|parked: gate runtime budget; importer can re-enable
+tt_cf_model_fundamental_circle_ramp_krauss_d50_s0.8|parked: gate runtime budget; importer can re-enable
+tt_cf_model_jam_resolution_high_flow|parked: gate runtime budget; importer can re-enable
+tt_cf_model_queue_stop_start_EIDM|parked: gate runtime budget; importer can re-enable
+tt_cf_model_queue_stop_start_krauss|parked: gate runtime budget; importer can re-enable
+tt_cf_model_rail_accel_Freight_custom|parked: gate runtime budget; importer can re-enable
+tt_cf_model_rail_accel_NGT400|parked: gate runtime budget; importer can re-enable
+tt_cf_model_rail_accel_custom_missingValues|official sumo exit 1: network contains internal links; error-exit test
+tt_cf_model_stop_at_position_idm|parked: gate runtime budget; importer can re-enable
+tt_cf_model_stop_at_position_slack_EIDM|parked: gate runtime budget; importer can re-enable
+tt_cf_model_stop_at_position_slack_wiedemann|parked: gate runtime budget; importer can re-enable
+tt_cf_model_stop_at_position_with_follower_idm|parked: gate runtime budget; importer can re-enable
+tt_cf_model_stop_driveOff_Rail_startupDelay5|parked: gate runtime budget; importer can re-enable
+tt_cf_model_tau_step1.0_tau0.5_IDM|parked: gate runtime budget; importer can re-enable
+tt_cf_model_tau_step1.0_tau1.0_krauss|parked: gate runtime budget; importer can re-enable
+tt_cf_model_tls_driveOff_default_startupDelay2_noPatchLC|parked: gate runtime budget; importer can re-enable
+tt_cf_model_vehs_per_hour_free_flow_krauss|official sumo exit 1: network contains internal links; error-exit test
+tt_devices_battery_actualBatteryCapacity|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_braunschweig|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargeLevelDist|official sumo exit 1: Error: The parameter '4' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Qu
+tt_devices_battery_chargeLevelDist_error|official sumo exit 1: Error: The parameter '4' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Qu
+tt_devices_battery_chargingCurve|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingCurve_custom|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_internalLanes|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_output|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_output_aggregated|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: The parameter 'true' is not allowed in this context. Swi
+tt_devices_battery_chargingStations_output_aggregated_unfinished|official sumo exit 1: Error: The parameter '4' is not allowed in this context. Switch or parameter name expected. Error: The parameter 'true' is not allowed in 
+tt_devices_battery_chargingStations_output_subseconds|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_parked|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_parked_explicit|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_parkingCapacity|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_totalPower|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_chargingStations_totalPower2|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_load_unload_persons|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_stoppingThreshold|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_trackFuel|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_trackFuel_elec|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_trackFuel_truck|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_battery_tripinfo_emission|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_fcd-replay_gap|official sumo exit 1: Error: Cannot read file 'input_state.xml'! Quitting (on error).
+tt_devices_fcd-replay_persons|official sumo exit 1: Error: Cannot read file 'input_state.xml'! Quitting (on error).
+tt_devices_fcd-replay_plain|official sumo exit 1: Error: Cannot read file 'input_state.xml'! Quitting (on error).
+tt_devices_fcd-replay_speed_only|official sumo exit 1: Error: Cannot read file 'input_state.xml'! Quitting (on error).
+tt_devices_rerouting_assignment_astar_landmark_random_weights|official sumo exit 1: Warning: The option --weights.random-factor should not be used together with astar and precomputed distances. Error: strict_fstream: open(
+tt_devices_rerouting_assignment_bike-speeds|official sumo exit 1: Error: attribute 'egin' is not declared for element 'flow' In file 'tools/oracle/cases/tt_devices_rerouting_assignment_bike-speeds/routes.
+tt_devices_rerouting_assignment_taz_astar_landmark|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_assignment_taz_astar_landmark/ref_simple.net.xml' ... done (293ms). Loading
+tt_devices_rerouting_assignment_taz_astar_landmark_empty|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_assignment_taz_astar_landmark_empty/ref_simple.net.xml' ... done (243ms). L
+tt_devices_rerouting_assignment_taz_astar_landmark_missing|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_assignment_taz_astar_landmark_missing/ref_simple.net.xml' ... done (346ms).
+tt_devices_rerouting_parallel_public_walk|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_parallel_public_walk/ref_simple.net.xml' ... done (1ms). Error: File 'input
+tt_devices_rerouting_parallel_taz_astar_landmark_parallel|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_parallel_taz_astar_landmark_parallel/ref_simple.net.xml' ... done (174ms). 
+tt_devices_rerouting_personTrip_access|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_access_length|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_access_random|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_access_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_bike_public_walk|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_devices_rerouting_personTrip_bike_public_walk/ref_simple.net.xml' ... done (2ms). Error: File
+tt_devices_rerouting_personTrip_busstop|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_busstop_early|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_busstop_too_late|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_busstop_too_late2|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_busstop_twice|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_busstop_unmatched|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk2|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk3|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk4|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk5|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk_internal|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk_parkingAreas|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_car_public_walk_transfer_forbidden|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_early_ending_flow|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_early_pt|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_errors_flow_without_end|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_errors_unreachable_rides|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_geo_geoTrips|official sumo exit 1: Error: attribute 'x' is not declared for element 'stop' In file 'tools/oracle/cases/tt_devices_rerouting_personTrip_geo_geoTrips/routes.ro
+tt_devices_rerouting_personTrip_geo_geoTrips_junctions|official sumo exit 1: Error: attribute 'x' is not declared for element 'stop' In file 'tools/oracle/cases/tt_devices_rerouting_personTrip_geo_geoTrips_junctions
+tt_devices_rerouting_personTrip_intermodal_car_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_intermodal_car_walk_ptstop|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_late_pt|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_missed_bus_reroute|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_prefer_walking|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_prefer_walking2|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_pt_looped_need_transfer|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Error: File 'input_additional2.add.xml' is not acces
+tt_devices_rerouting_personTrip_ptline_routing|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_any_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_line_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_walk_human_readable_step2|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_walk_human_readable_time|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_walk_singleveh|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_public_walk_speedfactor|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_ride_from_stop|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Error: File 'input_additional2.add.xml' is not acces
+tt_devices_rerouting_personTrip_ride_trip|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Error: File 'input_additional2.add.xml' is not acces
+tt_devices_rerouting_personTrip_ride_trip_access|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Error: File 'input_additional2.add.xml' is not acces
+tt_devices_rerouting_personTrip_sameStops|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_stop_access_stop|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_taxi_public_taxi_anywhere|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_personTrip_walk_access_walk|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_person_missed_bus|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_rerouting_trips_geo_geoTrips|official sumo exit 1: Error: attribute 'x' is not declared for element 'stop' In file 'tools/oracle/cases/tt_devices_rerouting_trips_geo_geoTrips/routes.rou' At
+tt_devices_rerouting_trips_geo_geoTrips_junctions_stop|official sumo exit 1: Error: attribute 'x' is not declared for element 'stop' In file 'tools/oracle/cases/tt_devices_rerouting_trips_geo_geoTrips_junctions_stop
+tt_devices_rerouting_weights_init_with_loaded_weights|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_devices_ssm_bugs_ticket5231|official sumo exit 1: Error: The parameter 'DRAC' is not allowed in this context. Switch or parameter name expected. Error: The parameter '3' is not allowed in 
+tt_devices_ssm_config_filter_edges_no_conflict|official sumo exit 1: Warning: No measures specified for ssm device of vehicle 'ego'. Registering all available SSMs. Error: Could not load names of edges for f
+tt_devices_ssm_config_filter_edges_with_conflict|official sumo exit 1: Warning: No measures specified for ssm device of vehicle 'ego'. Registering all available SSMs. Error: Could not load names of edges for f
+tt_devices_ssm_errors_filter_edges_cannot_interpret_line|official sumo exit 1: Warning: No measures specified for ssm device of vehicle 'ego'. Registering all available SSMs. Error: Could not load names of edges for f
+tt_devices_ssm_errors_filter_edges_edge_not_found|official sumo exit 1: Warning: No measures specified for ssm device of vehicle 'ego'. Registering all available SSMs. Error: Could not load names of edges for f
+tt_devices_ssm_errors_filter_edges_junction_not_found|official sumo exit 1: Warning: No measures specified for ssm device of vehicle 'ego'. Registering all available SSMs. Error: Could not load names of edges for f
+tt_devices_stationfinder_breakdown|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_breakdown_teleport_backwards|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_chargeType|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_charging|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_notFound|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_occupied|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_opportunistic|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_searching|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_targetFunction|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_devices_stationfinder_zeroPower|official sumo exit 1: Error: While processing option 'no-duration-log': '4' is not a valid bool. Error: Could not parse commandline options. Quitting (on error)
+tt_errors_action_step_negative_warning|official sumo exit 1: Warning: The parameter action-step-length must be a non-negative multiple of the simulation step-length. Ignoring given value (=-1.10 s.) 
+tt_errors_routes_stops_too_short|official sumo exit 1: Warning: Found root element 'additional' in file 'tools/oracle/cases/tt_errors_routes_stops_too_short/routes.rou' (expected 'routes'). Err
+tt_extended_calibrator_2day_sim|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_2day_sim/input_definition.def.xml'! Warning: No flow intervals in calib
+tt_extended_calibrator_flowbug|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_flowbug/input_definition.def.xml'! Warning: No flow intervals in calibr
+tt_extended_calibrator_simple|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_simple/input_definition.def.xml'! Warning: No flow intervals in calibra
+tt_extended_calibrator_simple_output|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_simple_output/input_definition.def.xml'! Warning: No flow intervals in 
+tt_extended_calibrator_simple_remove|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_simple_remove/input_definition.def.xml'! Warning: No flow intervals in 
+tt_extended_calibrator_speed_-1|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_speed_-1/input_definition.def.xml'! Warning: No flow intervals in calib
+tt_extended_calibrator_speed_0|official sumo exit 1: Error: Cannot read file 'tools/oracle/cases/tt_extended_calibrator_speed_0/input_definition.def.xml'! Warning: No flow intervals in calibr
+tt_extended_rerouter_cyclic_route_stops_in_route|official sumo exit 1: Error: rerouter 'rerouter': Alternative route '1' does not exist. Quitting (on error).
+tt_extended_rerouter_cyclic_route_stops_in_route_until|official sumo exit 1: Error: rerouter 'rerouter': Alternative route '1' does not exist. Quitting (on error).
+tt_extended_rerouter_cyclic_route_stops_in_veh|official sumo exit 1: Error: rerouter 'rerouter': Alternative route '1' does not exist. Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_all_visible|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_all_visible_brakeGap|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_frustration_10|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_frustration_100|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_knowledge_1|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_opposite|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_opposite2|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_parkAnywhere_0|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_parkAnywhere_0_probability|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_parkAnywhere_1|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_parkAnywhere_1_visible|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_rerouter_parking_parkingSearch_parkAnywhere_default|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_extended_stops_stress|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_extended_stops_stress/ref_simple.net.xml' ... done (1ms). Loading route-files incrementally
+tt_extended_variable_speed_signs_b0_offset_100|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b0_offset_100/input_definition.def.xml'! Error: Process Err
+tt_extended_variable_speed_signs_b0_offset_100_doubleTime|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b0_offset_100_doubleTime/input_definition.def.xml'! Error: 
+tt_extended_variable_speed_signs_b100_offset_0|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b100_offset_0/input_definition.def.xml'! Error: Process Err
+tt_extended_variable_speed_signs_b100_offset_100|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b100_offset_100/input_definition.def.xml'! Error: Process E
+tt_extended_variable_speed_signs_b100_offset_200|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b100_offset_200/input_definition.def.xml'! Error: Process E
+tt_extended_variable_speed_signs_b100_offset_50|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_b100_offset_50/input_definition.def.xml'! Error: Process Er
+tt_extended_variable_speed_signs_begin_0|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_begin_0/input_definition.def.xml'! Error: Process Error
+tt_extended_variable_speed_signs_speed0|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_speed0/input_definition.def.xml'! Error: Process Error
+tt_extended_variable_speed_signs_vclass|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_extended_variable_speed_signs_vclass/input_definition.def.xml'! Error: Process Error
+tt_gui_visualization_aircraft|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_gui_visualization_paradeContainers|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_gui_visualization_paradePersons|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_gui_visualization_trueZ|official sumo exit 1: Error: File 'settings.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_meso_bugs_ticket1502|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_meso_bugs_ticket1502b|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_meso_bugs_ticket8931|official sumo exit 124: Warning: Teleporting vehicle 'always_right.139'; waited too long (yield), lane='3si_2', time=4351.00. Warning: Vehicle 'always_right.139
+tt_meso_ignore_lanes_remove_bus|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_ignore_lanes_remove_bus/ref_simple.net.xml' ... done (1ms). Loading route-files increm
+tt_meso_ignore_lanes_remove_none|official sumo exit 1: Error: The parameter 'tools/oracle/cases/tt_meso_ignore_lanes_remove_none/ref.tripinfo.xml' is not allowed in this context. Switch or para
+tt_meso_junction_control_multique|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_multique/ref_simple.net.xml' ... done (8ms). Loading route-files incr
+tt_meso_junction_control_no_control|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_control/ref_simple.net.xml' ... done (5ms). Loading route-files in
+tt_meso_junction_control_no_control_flowPenalty0|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_control_flowPenalty0/ref_simple.net.xml' ... done (2ms). Loading r
+tt_meso_junction_control_no_control_flowPenalty0.5|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_control_flowPenalty0.5/ref_simple.net.xml' ... done (2ms). Loading
+tt_meso_junction_control_no_control_flowPenalty1|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_control_flowPenalty1/ref_simple.net.xml' ... done (8ms). Loading r
+tt_meso_junction_control_no_tls|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_tls/ref_simple.net.xml' ... done (11ms). Loading additional-files 
+tt_meso_junction_control_no_tls_multique|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_no_tls_multique/ref_simple.net.xml' ... done (2ms). Loading additiona
+tt_meso_junction_control_plain|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_junction_control_plain/ref_simple.net.xml' ... done (8ms). Loading route-files increme
+tt_meso_tau_tau_ff|official sumo exit 124: 
+tt_meso_tau_tau_fj|official sumo exit 124: 
+tt_meso_tau_tau_jf|official sumo exit 124: 
+tt_meso_tau_tau_jj|official sumo exit 124: 
+tt_meso_tau_vehicle_tau|official sumo exit 124: 
+tt_meso_teleport_jump_to_end|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_teleport_jump_to_end/ref_simple.net.xml' ... done (3ms). Loading additional-files from
+tt_meso_teleport_multiple_jumps|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_teleport_multiple_jumps/ref_simple.net.xml' ... done (3ms). Loading additional-files f
+tt_meso_teleport_single_jump|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_teleport_single_jump/ref_simple.net.xml' ... done (8ms). Loading additional-files from
+tt_meso_teleport_single_jump_to_end|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_meso_teleport_single_jump_to_end/ref_simple.net.xml' ... done (2ms). Loading additional-fil
+tt_meta_write_config|official sumo wrote an unreadable reference
+tt_output_e3_errors_entryexit_empty|official sumo exit 1: Error: empty content is not valid for content model '(param*,(detEntry+|detExit+),param*)' In file 'tools/oracle/cases/tt_output_e3_errors
+tt_output_emission-output_MMPEVEM_BMW_i3|official sumo exit 1: Error: The vehicle type 'BMW_i3' for vehicle 'BMW_i3' is not known. Quitting (on error).
+tt_output_emission-output_MMPEVEM_SUV|official sumo exit 1: Error: The vehicle type 'SUV' for vehicle 'SUV' is not known. Quitting (on error).
+tt_output_emission-output_MMPEVEM_VW_ID3|official sumo exit 1: Error: The vehicle type 'VW_ID3' for vehicle 'VW_ID3' is not known. Quitting (on error).
+tt_output_emission-output_MMPEVEM_VW_ID4|official sumo exit 1: Error: The vehicle type 'VW_ID4' for vehicle 'VW_ID4' is not known. Quitting (on error).
+tt_output_emission-output_MMPEVEM_VW_eUp|official sumo exit 1: Error: The vehicle type 'VW_eUp' for vehicle 'VW_eUp' is not known. Quitting (on error).
+tt_output_emission-output_attributes|official sumo exit 1: Error: The parameter 'CO2,PMx,route,waiting' is not allowed in this context. Switch or parameter name expected. Error: Could not parse com
+tt_output_emission-output_one_vehicle_subsecond|official sumo exit 1: Error: The parameter '5' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Qu
+tt_output_emission-output_one_vehicle_subsecond_scaled|official sumo exit 1: Error: The parameter '5' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Qu
+tt_output_examples_cross3ltl_prefixed_meandata_and_tripinfo_and_log|official sumo wrote an unreadable reference
+tt_output_examples_cross3ltl_prefixed_nul|official sumo wrote an unreadable reference
+tt_output_examples_cross3ltl_prefixed_suffix|official sumo wrote an unreadable reference
+tt_output_examples_cross3ltl_suffix|official sumo wrote an unreadable reference
+tt_output_fcd-output_edge_filter|official sumo exit 1: Error: Could not load names of edges for filtering fcd-output from 'input_selection.txt'. Quitting (on error).
+tt_output_meandata_edgebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_edgebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_edgebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_edgebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_edgebased_maxtraveltime|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_edgebased_maxtraveltime/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_edgebased_teleporting|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_edgebased_teleporting/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_edgebased_two_same_vehicles_interval60s_edgesFile|official sumo exit 1: Error: Could not load names of edges for edgeData definition 'dump_60' from 'input_selection.txt'. Quitting (on error).
+tt_output_meandata_lanebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_lanebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_lanebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_lanebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_lanebased_jam3|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_lanebased_jam3/input_definition2.def.xml'! Error: Process Error
+tt_output_meandata_lanebased_maxtraveltime|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meandata_lanebased_maxtraveltime/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_edgebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_edgebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_edgebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_edgebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_edgebased_maxtraveltime|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_edgebased_maxtraveltime/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_lanebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_lanebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_lanebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_lanebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_meanhbefa_lanebased_maxtraveltime|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meanhbefa_lanebased_maxtraveltime/input_definition2.def.xml'! Error: Process Error
+tt_output_meannoise_edgebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meannoise_edgebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meannoise_edgebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meannoise_edgebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_meannoise_lanebased_jam1|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meannoise_lanebased_jam1/input_definition2.def.xml'! Error: Process Error
+tt_output_meannoise_lanebased_jam2|official sumo exit -11: Error: Cannot read file 'tools/oracle/cases/tt_output_meannoise_lanebased_jam2/input_definition2.def.xml'! Error: Process Error
+tt_output_queue-output_aggregation_no_vehicles|official sumo exit 1: Error: The parameter '30' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Q
+tt_output_queue-output_aggregation_percentile|official sumo exit 1: Error: The parameter '30' is not allowed in this context. Switch or parameter name expected. Error: The parameter '80' is not allowed in t
+tt_output_queue-output_aggregation_period|official sumo exit 1: Error: The parameter '30' is not allowed in this context. Switch or parameter name expected. Error: The parameter '60' is not allowed in t
+tt_output_queue-output_aggregation_small_jam|official sumo exit 1: Error: The parameter '30' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Q
+tt_output_queue-output_period|official sumo exit 1: Error: The parameter '5' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options. Qu
+tt_output_summary_period_100|official sumo exit 1: Error: While processing option 'no-duration-log': '100' is not a valid bool. Error: Could not parse commandline options. Quitting (on erro
+tt_output_vehroutes_disable_some_by_option|official sumo exit 1: Error: Output device '' for option 'vehroute-output' has not been created. Quitting (on error).
+tt_output_vehroutes_no_pt_lines_sorted|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_one_vehicle_no_speedfactor|official sumo exit 1: Error: The parameter 'false' is not allowed in this context. Switch or parameter name expected. Error: Could not parse commandline options
+tt_output_vehroutes_transportable_container_exit_times|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_exit_times|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_ride_parkingArea|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_route_length|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_route_length_unfinished|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_stoppingPlaces|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_output_vehroutes_transportable_person_write_unfinished|official sumo exit 1: Error: File 'input_additional.add.xml' is not accessible (No such file or directory). Quitting (on error).
+tt_pedestrian_model_jupedsim_crossing_noPrio_walking_backward|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_noPrio_walking_backward/ref_simple.net.xml' ... done (2m
+tt_pedestrian_model_jupedsim_crossing_noPrio_walking_forward_between|official sumo exit 124: Loading net-file from 'tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_noPrio_walking_forward_between/ref_simple.net.xml' ... d
+tt_pedestrian_model_jupedsim_geometry_check|official sumo exit -11: 
+tt_pedestrian_model_jupedsim_identical_start_pos|official sumo exit -11: 
+tt_pedestrian_model_jupedsim_rerouter_cleanup|official sumo exit 124: Warning: The pedestrian model uses infrastructure which is not in the network, timeLoss and routeLength may be invalid.
+tt_pedestrian_model_jupedsim_rerouter_optional|official sumo exit 124: Warning: No connection between edge 'E1' and edge 'E2' found. Warning: Invalid arrivalPos 101.94 given for person 'pS5_4.2' walking to e
+tt_pedestrian_model_jupedsim_speed_change|official sumo exit -11: 
+tt_pedestrian_model_jupedsim_speed_change_poly|official sumo exit -11: 
+tt_pedestrian_model_jupedsim_tls_backward|official sumo exit -11: Warning: Polygon ':J1_c1' at junction 'J1' has been replaced by its convex hull as it is not simple. Warning: Polygon ':J1_c2' at juncti
+tt_pedestrian_model_jupedsim_two_edges|official sumo exit -11: 
+tt_rail_rail_signal_siding_deadend|official sumo exit 1: Warning: No connection between edge 'gneE2' and edge '-gneE0' found. Warning: No route for vehicle 't0' found. Error: Vehicle 't0' has no 
+tt_rail_rerouter_overtaking_follower_arrival_delay_high|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_rerouter_overtaking_follower_arrival_delay_low|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_rerouter_overtaking_follower_delay_high|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_default|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_rerouter_overtaking_follower_delay_high_maxDelay_high|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_rerouter_overtaking_follower_delay_low|official sumo exit 1: Error: The vehicle type 'train' for vehicle 'v_0' is not known. Quitting (on error).
+tt_rail_routing_reverse_on_short_start|official sumo exit 1: Warning: No connection between edge 'gneE2' and edge '-gneE0' found. Warning: No route for vehicle 't0' found. Error: Vehicle 't0' has no 
+tt_spec_arrival_errors_lane_given10|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_arrival_errors_speed_given100|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_allowed_3veh|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_best_3veh|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_default|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_default_3veh_bus|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_default_3veh_passenger|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_default_option2|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_default_option_best|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_free|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_free_3veh|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_free_occupancy|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_given0|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_given1|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_option2_override|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departLane_lane_random|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_default|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_free|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_free_3veh|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_free_3veh_10ms|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_free_3veh_vmax|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_given-10|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_given0|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_given10|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_last_speed_given|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departPos_pos_last_speed_given/ref_simple.net.xml' ... done (1ms). Loading add
+tt_spec_departure_departPos_pos_last_speed_max|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departPos_pos_last_speed_max/ref_simple.net.xml' ... done (9ms). Loading addit
+tt_spec_departure_departPos_pos_random|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_random_3veh|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departPos_pos_stop|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_avg|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_avg/ref_simple.net.xml' ... done (0ms). Loading additional-f
+tt_spec_departure_departSpeed_speed_avg_stop|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_avg_stop/ref_simple.net.xml' ... done (0ms). Loading additio
+tt_spec_departure_departSpeed_speed_default|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_default_option_max|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_desired|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_desired/ref_simple.net.xml' ... done (0ms). Loading addition
+tt_spec_departure_departSpeed_speed_desired_stop|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_desired_stop/ref_simple.net.xml' ... done (0ms). Loading add
+tt_spec_departure_departSpeed_speed_given0|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given10|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given10_laneSpeed|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given_30_speedFactor|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given_defaultMax_speedFactor|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given_deviation|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given_deviation_low|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_given_speedFactor_roundUp|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_last|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_last/ref_simple.net.xml' ... done (1ms). Loading additional-
+tt_spec_departure_departSpeed_speed_last_stop|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_last_stop/ref_simple.net.xml' ... done (1ms). Loading additi
+tt_spec_departure_departSpeed_speed_max__lanelimit|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_max__leader|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_max__leader/ref_simple.net.xml' ... done (1ms). Loading addi
+tt_spec_departure_departSpeed_speed_max__vehlimit|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_random__lanelimit|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_random__vehlimit|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_departSpeed_speed_speedLimit|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_speedLimit/ref_simple.net.xml' ... done (1ms). Loading addit
+tt_spec_departure_departSpeed_speed_speedLimit_stop|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_departure_departSpeed_speed_speedLimit_stop/ref_simple.net.xml' ... done (0ms). Loading 
+tt_spec_departure_errors_lane_given10_ignore|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_errors_speed_given100_ignore|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_errors_speed_given50_ignore|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_departure_posLat_beyondLane|official sumo exit 1: Error: The route '1' for vehicle '1' is not known. Quitting (on error).
+tt_spec_flow_2flows_scaled|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_early_begin|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_early_end|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_many_per_step|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_nested_route|official sumo exit 1: Error: Another vehicle type (or distribution) with the id 'DEFAULT_VEHTYPE' exists. Quitting (on error).
+tt_spec_flow_nested_route_stops|official sumo exit 1: Error: Another vehicle type (or distribution) with the id 'DEFAULT_VEHTYPE' exists. Quitting (on error).
+tt_spec_flow_nested_stops|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_no|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_number_instant|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_number_instant/ref_simple.net.xml' ... done (2ms). Loading additional-files from 't
+tt_spec_flow_number_instant2|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_number_instant2/ref_simple.net.xml' ... done (2ms). Loading additional-files from '
+tt_spec_flow_number_no_end|official sumo exit 1: Warning: Undefined end for flow 'f1', defaulting to 24hour duration. Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_period|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_period_end|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_period_end_high|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_period_end_high/ref_simple.net.xml' ... done (2ms). Loading additional-files from '
+tt_spec_flow_period_no|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_poisson_0.0001|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_poisson_0.0001/ref_simple.net.xml' ... done (2ms). Loading additional-files from 't
+tt_spec_flow_poisson_0.1|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_poisson_0.1/ref_simple.net.xml' ... done (2ms). Loading additional-files from 'tool
+tt_spec_flow_poisson_0.1_number|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_poisson_0.1_number/ref_simple.net.xml' ... done (1ms). Loading additional-files fro
+tt_spec_flow_poisson_1|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_poisson_1/ref_simple.net.xml' ... done (3ms). Loading additional-files from 'tools/
+tt_spec_flow_probability_0.1|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_probability_0.1/ref_simple.net.xml' ... done (5ms). Loading additional-files from '
+tt_spec_flow_probability_0.1_begin_100|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_probability_0.1_begin_100/ref_simple.net.xml' ... done (2ms). Loading additional-fi
+tt_spec_flow_probability_0.1_step-length_0.2|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_probability_0.1_step-length_0.2/ref_simple.net.xml' ... done (2ms). Loading additio
+tt_spec_flow_probability_0.5|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_probability_0.5/ref_simple.net.xml' ... done (6ms). Loading additional-files from '
+tt_spec_flow_probability_0.5_start_1000|official sumo exit 1: Loading net-file from 'tools/oracle/cases/tt_spec_flow_probability_0.5_start_1000/ref_simple.net.xml' ... done (1ms). Loading additional-f
+tt_spec_flow_vehs_per_hour|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_vehs_per_hour_none|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).
+tt_spec_flow_zero_period|official sumo exit 1: Error: The route '1' for flow 'f1' is not known. Quitting (on error).

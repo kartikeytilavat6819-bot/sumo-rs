@@ -1,0 +1,22 @@
+itt_nc_netconvert_bugs_5xxx_ticket6497	FAIL	lane ':gneJ8_5_0' length: ref='13.35' cand='4.21' | SUMMARY: 9 differences in 9 groups (ref 192 elements, cand 196 elements)
+itt_nc_netconvert_function_railway_repair_beyond_stops	FAIL	edge ':gneJ45_0' bidi: ref=':gneJ45_1' cand=':gneJ45_2' | SUMMARY: 17 differences in 17 groups (ref 32 elements, cand 40 elements)
+itt_nc_netconvert_function_railway_repair_road_connections	PANIC	thread 'main' (1743690) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_bidiPenalty	PANIC	thread 'main' (1743843) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_1bidi_extend	PANIC	thread 'main' (1743821) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops	FAIL	edge ':gneJ39_0' bidi: ref=':gneJ39_1' cand=':gneJ39_2' | SUMMARY: 17 differences in 17 groups (ref 40 elements, cand 48 elements)
+itt_nc_netconvert_function_railway_repair_stops_buffer	PANIC	thread 'main' (1743863) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_1bidi	PANIC	thread 'main' (1743721) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_reverse_en_route	PANIC	thread 'main' (1744080) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_ptline_flows	FAIL	edge ':gneJ39_0' bidi: ref=':gneJ39_1' cand=':gneJ39_2' | SUMMARY: 17 differences in 17 groups (ref 40 elements, cand 48 elements)
+itt_nc_netconvert_function_railway_repair_stops_minimal	PANIC	thread 'main' (1743889) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_repair_stops_reversed	FAIL	edge ':gneJ39_0' bidi: ref=':gneJ39_1' cand=':gneJ39_2' | SUMMARY: 17 differences in 17 groups (ref 40 elements, cand 48 elements)
+itt_nc_netconvert_function_railway_repair_stops_ptline_trips	FAIL	edge ':gneJ39_0' bidi: ref=':gneJ39_1' cand=':gneJ39_2' | SUMMARY: 17 differences in 17 groups (ref 40 elements, cand 48 elements)
+itt_nc_netconvert_function_railway_repair_stops_bidi_between	PANIC	thread 'main' (1743851) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_function_railway_signals_guess_by_stops_split	FAIL	edge ':-E1_-ts_0_0' bidi: ref=':-E1_-ts_0_1' cand='absent' | SUMMARY: 45 differences in 45 groups (ref 125 elements, cand 132 elements)
+itt_nc_netconvert_function_renaming_joinedTLS_renumber	PANIC	thread 'main' (1745431) panicked at crates/utils/src/common/ptr.rs:50:9: null Ptr dereference 
+itt_nc_netconvert_function_renaming_prefix_joinedTLS	PANIC	thread 'main' (1745562) panicked at crates/utils/src/common/ptr.rs:50:9: null Ptr dereference 
+itt_nc_netconvert_import_OSM_public_transport_bus_stops_from_line_platforms	FAIL	./additional.xml differs: 37,38c37,38
+itt_nc_netconvert_import_OSM_railway_inconsistent_directions	PANIC	thread 'main' (1752871) panicked at crates/sumo_core/src/utils/router/sumo_abstract_router.rs:529:23: index out of bounds: the len is 0 but the index is 0 
+itt_nc_netconvert_import_OSM_public_transport_bus_stop_mix_stops_platforms	FAIL	./additional.xml differs: 49c49
+itt_nc_netconvert_import_OSM_public_transport_bus_stop_mix_stops_platforms_lefthand	FAIL	./additional.xml differs: 53c53
+itt_nc_netconvert_import_XML_special_chars	FAIL	edge 'CE:ä' -: ref='present' cand='absent' | SUMMARY: 139 differences in 139 groups (ref 158 elements, cand 158 elements)
