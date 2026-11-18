@@ -38,13 +38,10 @@ fn panic_text(payload: &(dyn Any + Send)) -> Option<String> {
 
 /// C++ `main`: returns the process exit code
 fn sumo_main(args: Vec<String>) -> i32 {
-    // ProcessError is control flow here (like C++ exceptions), so its panic message is not printed
-    let default_hook = std::panic::take_hook();
-    std::panic::set_hook(Box::new(move |info| {
-        if !info.payload().is::<ProcessError>() {
-            default_hook(info);
-        }
-    }));
+    // C++ has no panic hook: exceptions are caught and reported through write_error by the
+    // catch_unwind below (or answered as a TraCI error status). Rust's default hook would print
+    // an extra "thread ... panicked at ..." line to stderr that the reference never emits.
+    std::panic::set_hook(Box::new(|_info| {}));
     with_options(|oc| {
         oc.set_application_description("A microscopic, multi-modal traffic simulation.");
         oc.set_application_name("sumo", &format!("Eclipse SUMO sumo {VERSION_STRING}"));
