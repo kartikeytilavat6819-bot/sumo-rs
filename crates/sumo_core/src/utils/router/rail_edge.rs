@@ -551,6 +551,32 @@ where
     fn bidi_edge(&self) -> Ptr<Self> {
         Ptr::null()
     }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        let original = edge.m().myOriginal;
+        if original.is_null() {
+            0.0
+        } else {
+            E::travel_time_static(original, veh, time)
+        }
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        let original = edge.m().myOriginal;
+        if original.is_null() {
+            0.0
+        } else {
+            E::travel_time_aggregated(original, veh, time)
+        }
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool {
+        let _ = check_restrictions;
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.restricts(veh)
+    }
 }
 
 #[cfg(test)]
