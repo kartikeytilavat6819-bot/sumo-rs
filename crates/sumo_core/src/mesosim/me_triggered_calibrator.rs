@@ -48,6 +48,10 @@ impl METriggeredCalibrator {
         let base = MSCalibrator::new(id, edge, Ptr::null(), Ptr::null(), pos, aXMLFilename, outputFilename, freq, length, probe, invalidJamThreshold, vTypes, false, false);
         let mySegment = if edge.is_null() { Ptr::null() } else { meso_net().m().get_segment_for_edge(&edge, pos) };
         let mut b = Box::new(METriggeredCalibrator { base, mySegment });
+        // C++ registers a virtual CalibratorCommand in MSCalibrator::init(); point it at the derived
+        // object so its execute() reaches METriggeredCalibrator::execute, not the microsim base.
+        let this: Ptr<METriggeredCalibrator> = Ptr::from_mut(&mut *b);
+        b.base.myMesoThis = this;
         let desc = format!("meandata_calibrator_{}", b.base3.get_id());
         b.base.myEdgeMeanData.base.base.set_description(&desc);
         if !b.mySegment.is_null() {
