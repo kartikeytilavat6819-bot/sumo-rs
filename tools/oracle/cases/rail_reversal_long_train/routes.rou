@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="train" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="to_e_back" edges="w_r1 r1_j j_e e_j j_r1 r1_w"/>
+    <route id="from_e" edges="e_j j_r1 r1_w w_r1 r1_j j_e"/>
+    <route id="fwd" edges="w_r1 r1_j j_e"/>
+    <vType id="long" vClass="rail" length="150" accel="0.5" decel="0.5" maxSpeed="20" minGap="5"/>
+    <vehicle id="lng_e" type="long" route="to_e_back" depart="0"/>
+    <vehicle id="sht_w" type="train" route="from_e" depart="20"/>
+    <vehicle id="lng_w" type="long" route="from_e" depart="50"/>
+</routes>

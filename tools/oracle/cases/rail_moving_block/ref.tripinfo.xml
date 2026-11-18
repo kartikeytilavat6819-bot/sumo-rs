@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:55.334862-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_moving_block/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_moving_block/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_moving_block/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_moving_block/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_moving_block/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+        <railsignal-moving-block value="true"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="e1" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="42.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_e1 fcd_e1" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="e2" depart="20.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="64.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="44.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.71" rerouteNo="0" devices="tripinfo_e2 fcd_e2" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="e3" depart="45.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="0.00" arrival="88.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.26" rerouteNo="0" devices="tripinfo_e3 fcd_e3" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="e4" depart="70.00" departLane="w_r1_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="113.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="43.00" routeLength="1261.97" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_e4 fcd_e4" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="w1" depart="113.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="110.00" arrival="155.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="42.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_w1 fcd_w1" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="w3" depart="119.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="72.00" arrival="164.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="45.00" routeLength="1250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.22" rerouteNo="0" devices="tripinfo_w3 fcd_w3" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="w2" depart="116.00" departLane="e_r2_0" departPos="50.10" departSpeed="30.00" departDelay="91.00" arrival="193.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="77.00" routeLength="1261.97" waitingTime="20.00" waitingCount="1" stopTime="0.00" timeLoss="34.00" rerouteNo="0" devices="tripinfo_w2 fcd_w2" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="w4" depart="122.00" departLane="e_r2_0" departPos="50.10" departSpeed="21.86" departDelay="32.00" arrival="195.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="73.00" routeLength="1261.97" waitingTime="5.00" waitingCount="1" stopTime="0.00" timeLoss="30.90" rerouteNo="0" devices="tripinfo_w4 fcd_w4" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>

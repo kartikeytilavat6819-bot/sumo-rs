@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="train" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="east" edges="w_r1 r1_j1 j1_j2_main j2_r2 r2_e"/>
+    <route id="east_loop" edges="w_r1 r1_j1 j1_j2_loop j2_r2 r2_e"/>
+    <route id="west" edges="e_r2 r2_j2 j2_j1_main j1_r1 r1_w"/>
+    <route id="west_loop" edges="e_r2 r2_j2 j2_j1_loop j1_r1 r1_w"/>
+    <vType id="short" vClass="rail" length="20" accel="1.2" decel="1.2" maxSpeed="25" minGap="2"/>
+    <vType id="mid" vClass="rail" length="80" accel="0.8" decel="0.8" maxSpeed="30" minGap="3"/>
+    <vType id="long" vClass="rail" length="250" accel="0.5" decel="0.5" maxSpeed="20" minGap="5"/>
+    <vehicle id="s1" type="short" route="east" depart="0"/>
+    <vehicle id="l1" type="long" route="west" depart="4"/>
+    <vehicle id="m1" type="mid" route="east_loop" depart="15"/>
+    <vehicle id="l2" type="long" route="east" depart="40"/>
+    <vehicle id="m2" type="mid" route="west_loop" depart="45"/>
+    <vehicle id="s2" type="short" route="west" depart="60"/>
+</routes>

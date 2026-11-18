@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:24.146545-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_stops_until/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_stops_until/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_stops_until/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_stops_until/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h14/tools/oracle/cases/rail_stops_until/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="s_dur" depart="0.00" departLane="w_r1_0" departPos="50.10" departSpeed="29.78" departDelay="0.00" arrival="86.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="86.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="15.00" timeLoss="0.01" rerouteNo="0" devices="tripinfo_s_dur fcd_s_dur" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="s_until" depart="104.00" departLane="e_r2_0" departPos="50.10" departSpeed="21.86" departDelay="99.00" arrival="177.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="73.00" routeLength="1250.10" waitingTime="0.00" waitingCount="0" stopTime="1.00" timeLoss="0.97" rerouteNo="0" devices="tripinfo_s_until fcd_s_until" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="s_opp" depart="116.00" departLane="e_r2_0" departPos="50.10" departSpeed="21.86" departDelay="86.00" arrival="218.00" arrivalLane="r1_w_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="102.00" routeLength="1261.97" waitingTime="31.00" waitingCount="1" stopTime="0.00" timeLoss="59.20" rerouteNo="0" devices="tripinfo_s_opp fcd_s_opp" vType="train" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="s_park" depart="20.00" departLane="w_r1_0" departPos="50.10" departSpeed="21.86" departDelay="0.00" arrival="249.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="229.00" routeLength="1261.97" waitingTime="114.00" waitingCount="2" stopTime="103.00" timeLoss="59.67" rerouteNo="0" devices="tripinfo_s_park fcd_s_park" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>
