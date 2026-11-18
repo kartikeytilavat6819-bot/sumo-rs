@@ -195,6 +195,15 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn lane_permissions(lane: Ptr<ROLane>) -> SVCPermissions {
         lane.get_permissions()
     }
+    fn lane_incoming_link_state(lane: Ptr<ROLane>) -> LinkState {
+        lane.get_incoming_link_state()
+    }
+    fn priority(&self) -> i32 {
+        self.get_priority()
+    }
+    fn travel_time_static_randomized(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+        ROEdge::get_travel_time_static_randomized(edge, veh, time)
+    }
     fn lane_allows_vehicle_class(lane: Ptr<ROLane>, svc: SUMOVehicleClass) -> bool {
         lane.allows_vehicle_class(svc)
     }

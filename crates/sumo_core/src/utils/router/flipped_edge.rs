@@ -35,9 +35,15 @@ impl<E, N, V> std::ops::DerefMut for FlippedEdge<E, N, V> {
     }
 }
 
+/// C++ `N::getFlippedRoutingNode()` as called by the FlippedEdge constructor (only RONode has it)
+pub trait FlippedRoutingNode<E, V>: Sized {
+    fn flipped_routing_node(&self) -> Ptr<FlippedNode<E, Self, V>>;
+}
+
 impl<E, N, V> FlippedEdge<E, N, V>
 where
     E: RouterEdge<V, Node = N>,
+    N: FlippedRoutingNode<E, V>,
 {
     /// C++: `void FlippedEdge::FlippedEdge<E, N, V>(const E *)`
     /// Constructor
@@ -48,9 +54,21 @@ where
     //     {}
     #[allow(unused_variables)]
     pub fn new(originalEdge: Ptr<E>) -> Self {
-        // shortcut: needs router trait bounds (lead), E::getToJunction/getFromJunction and N::getFlippedRoutingNode are not callable on generic E/N
-        panic!("shortcut: needs router trait bounds (lead), E::getToJunction")
+        Self {
+            base: ReversedEdge::new(originalEdge),
+            myFromJunction: originalEdge.to_junction().flipped_routing_node(),
+            myToJunction: originalEdge.from_junction().flipped_routing_node(),
+            myClassesViaSuccessorMap: StableCache::new(),
+            myViaSuccessors: Vec::new(),
+            _p: std::marker::PhantomData,
+        }
     }
+}
+
+impl<E, N, V> FlippedEdge<E, N, V>
+where
+    E: RouterEdge<V, Node = N>,
+{
 
     /// C++: `void FlippedEdge::~FlippedEdge<E, N, V>()`
     /// Destructor
@@ -134,8 +152,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_travel_time_static_randomized(edge: Ptr<FlippedEdge<E, N, V>>, veh: Ptr<V>, time: f64) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTravelTimeStaticRandomized is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTravelTimeStaticRandomized")
+        <E as RouterEdge<V>>::travel_time_static_randomized(edge.get_original_edge(), veh, time)
     }
 
     /// C++: `const ConstFlippedEdgePairVector & FlippedEdge::getViaSuccessors(SUMOVehicleClass, bool) const` [const]
@@ -259,8 +276,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_priority(&self) -> i32 {
-        // shortcut: needs router trait bounds (lead), E::getPriority is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getPriority")
+        self.get_original_edge().priority()
     }
 
 }
