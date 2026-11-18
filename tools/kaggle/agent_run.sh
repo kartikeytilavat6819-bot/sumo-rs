@@ -1,22 +1,25 @@
 #!/bin/bash
-# Gate helper for oc68: show netconvert/function imported-row results and first diffs.
+# Gate helper for oc68: locate netopts_new output wherever the gate put it and print panic details.
 set -u
-B=$(cd "$(dirname "$0")/.." && pwd)/oracle
-OUT=${NETOPTS2_OUT:-/tmp/netopts2}
-S="$OUT/summary.tsv"
-echo "=== FUNCTION ROW VERDICTS ==="
-if [ ! -f "$S" ]; then echo "no summary at $S"; exit 0; fi
-grep 'itt_nc_netconvert_function_' "$S" | cut -f2 | sort | uniq -c
-echo "=== NON-PASS FUNCTION ROWS ==="
-grep 'itt_nc_netconvert_function_' "$S" | grep -v $'\tPASS\t' | head -100
-echo "=== FIRST FAIL DIFFS ==="
-n=0
-while IFS=$'\t' read -r name verdict detail; do
-  case "$name" in itt_nc_netconvert_function_*) ;; *) continue;; esac
-  [ "$verdict" = PASS ] && continue
-  echo "### $name ($verdict) $detail"
-  d="$OUT/$name"
-  [ -f "$d/net.log" ] && head -12 "$d/net.log"
-  n=$((n+1)); [ $n -ge 6 ] && break
-done < "$S"
+S=""
+for root in /tmp /var/tmp /workspace "$HOME" /root /home /mnt /data .; do
+  [ -d "$root" ] || continue
+  f=$(find "$root" -maxdepth 7 -name summary.tsv 2>/dev/null | head -1)
+  if [ -n "$f" ]; then S="$f"; break; fi
+done
+echo "SUMMARY=$S"
+if [ -n "$S" ]; then
+  echo "=== NON-PASS ROWS ==="
+  grep -v $'\tPASS\t' "$S" | head -60
+  echo "=== COUNTS ==="
+  cut -f2 "$S" | sort | uniq -c
+fi
+echo "=== PANIC LOGS ==="
+for row in itt_nc_netconvert_function_renaming_joinedTLS_renumber itt_nc_netconvert_function_renaming_prefix_joinedTLS; do
+  for root in /tmp /var/tmp /workspace "$HOME" /root /home .; do
+    [ -d "$root" ] || continue
+    f=$(find "$root" -maxdepth 9 -type f -path "*/$row/rust.log" 2>/dev/null | head -1)
+    if [ -n "$f" ]; then echo "--- $row : $f"; grep -m1 -A6 panicked "$f"; fi
+  done
+done
 echo "=== DONE ==="
