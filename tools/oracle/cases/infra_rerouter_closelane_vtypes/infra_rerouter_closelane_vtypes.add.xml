@@ -1,0 +1,7 @@
+<additional>
+    <rerouter id="rrLane" edges="E0" vTypes="bus">
+        <interval begin="0.00" end="200.00">
+            <closingLaneReroute id="E1_1" disallow="bus"/>
+        </interval>
+    </rerouter>
+</additional>

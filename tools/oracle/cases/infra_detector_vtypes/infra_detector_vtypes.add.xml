@@ -1,0 +1,10 @@
+<additional>
+    <inductionLoop id="il_car" lane="E0_0" pos="50.00" period="30.00" vTypes="car" friendlyPos="true" file="out_il.xml"/>
+    <inductionLoop id="il_fp" lane="E1_0" pos="130.00" period="30.00" friendlyPos="true" file="out_il.xml"/>
+    <laneAreaDetector id="lad_bus" lane="E0_1" pos="20.00" endPos="200.00" period="30.00" vTypes="bus" file="out_lad.xml"/>
+    <laneAreaDetector id="lad_fp" lane="E1_0" pos="-5.00" endPos="100.00" period="30.00" friendlyPos="true" file="out_lad.xml"/>
+    <entryExitDetector id="e3_car" period="30.00" vTypes="car" file="out_e3.xml">
+        <detEntry lane="E0_0" pos="10.00"/>
+        <detExit lane="E2_0" pos="50.00"/>
+    </entryExitDetector>
+</additional>

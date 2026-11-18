@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/infra_vaporizer/infra_vaporizer.nod.xml --edge-files tools/oracle/cases/infra_vaporizer/infra_vaporizer.edg.xml
