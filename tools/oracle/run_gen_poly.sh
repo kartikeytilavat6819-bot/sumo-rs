@@ -34,11 +34,11 @@ pc xmlPruneBoundary "--xml-files $SH -n $RN --prune.boundary 0,0,500,500 -o @D/o
 pc xmlFlatten "--xml-files $SH -n $RN --flatten true --poi-layer-offset 2 --prefix x_ -o @D/out.xml"
 
 run_ng() { # idx
-  read -r n opts <<< "${NG[$1]}"; local d=$OUT/ng/$n; mkdir -p "$d"
+  local n opts; read -r n opts <<< "${NG[$1]}"; local d=$OUT/ng/$n; mkdir -p "$d"
   local -a a; read -ra a <<< "$opts"
   timeout 300 "$CARGO_TARGET_DIR/debug/netgenerate" "${a[@]}" -o "$d/rust.net.xml" > "$d/rust.log" 2>&1; local rr=$?
   timeout 300 "$SUMO_PRISTINE_BIN/netgenerate" "${a[@]}" -o "$d/cpp.net.xml" > "$d/cpp.log" 2>&1; local cr=$?
-  local V=PASS D=ok LN="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; s/$//"
+  local V=PASS D=ok; local LN="s#$d/cpp#OUT#g; s#$d/rust#OUT#g; //s///"
   if grep -q panicked "$d/rust.log"; then V=FAIL; D="PANIC $(grep -m1 -A1 panicked "$d/rust.log" | tr '\n' ' ')"
   elif [ $rr -ne $cr ]; then V=FAIL; D="exit rust=$rr cpp=$cr: $(grep -m1 -i error "$d/rust.log")"
   elif [ $cr -eq 0 ]; then
@@ -48,7 +48,7 @@ run_ng() { # idx
   printf '%s\t%s\t%s\n' "$n" "$V" "$D" >> "$OUT/ng.tsv"
 }
 run_pc() {
-  read -r n opts <<< "${PC[$1]}"; local d=$OUT/pc/$n; mkdir -p "$d"
+  local n opts; read -r n opts <<< "${PC[$1]}"; local d=$OUT/pc/$n; mkdir -p "$d"
   local -a ca ra
   eval "ca=(${opts//@D/$d/cpp})"; eval "ra=(${opts//@D/$d/rust})"
   mkdir -p "$d/cpp" "$d/rust"
