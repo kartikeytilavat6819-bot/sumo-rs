@@ -561,6 +561,9 @@ impl MSTransportable {
             } else if next.get_stage_type() == MSStageType::WAITING && prior.get_stage_type() == MSStageType::WAITING && prior.get_destination() != next.get_from_edge() {
                 self.check_access(prior, false);
             }
+            // C++ re-reads *myStep after checkAccess: it may have inserted an access stage
+            // at myStep, which is then the stage that proceeds (not the stale `next`).
+            let next = self.myPlan[self.myStep];
             if next.m().proceed(net, Ptr::from_mut(self), time, prior) {
                 return true;
             } else {
