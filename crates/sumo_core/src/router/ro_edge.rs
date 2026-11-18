@@ -77,6 +77,8 @@ pub struct ROEdge {
     /// An extended version of the reversed edge for backward routing (used for the arc flag router)
     pub myFlippedRoutingEdge: std::cell::Cell<Ptr<FlippedEdge<ROEdge, RONode, ROVehicle>>>,
     pub myRailwayRoutingEdge: std::cell::Cell<Ptr<RailEdge<ROEdge, ROVehicle>>>,
+    /// subclass override of the virtual addSuccessor (ROJTREdge); None = ROEdge::addSuccessor
+    pub addSuccessorFn: Option<fn(&mut ROEdge, Ptr<ROEdge>, Ptr<ROEdge>, String)>,
 }
 
 impl std::ops::Deref for ROEdge {
@@ -456,6 +458,7 @@ impl ROEdge {
             myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
             myFlippedRoutingEdge: std::cell::Cell::new(Ptr::null()),
             myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            addSuccessorFn: None,
         };
         // shortcut: C++ also does myEdges[index] = this here; Rust returns the edge by value, so the owner must call ROEdge::register_in_all_edges once it is at its final address
         if from.is_null() && to.is_null() {
@@ -525,6 +528,7 @@ impl ROEdge {
             myReversedRoutingEdge: std::cell::Cell::new(Ptr::null()),
             myFlippedRoutingEdge: std::cell::Cell::new(Ptr::null()),
             myRailwayRoutingEdge: std::cell::Cell::new(Ptr::null()),
+            addSuccessorFn: None,
         }
     }
 
@@ -617,6 +621,14 @@ impl ROEdge {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
+        match self.addSuccessorFn {
+            Some(f) => f(self, s, via, dir),
+            None => self.add_successor_base(s, via, dir),
+        }
+    }
+
+    /// the non-virtual body of ROEdge::addSuccessor (what `ROEdge::addSuccessor(...)` calls from a subclass)
+    pub fn add_successor_base(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
         let this = Ptr::from_mut(self);
         if self.is_internal() {
             // for internal edges after an internal junction,
