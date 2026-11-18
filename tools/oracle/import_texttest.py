@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import collections
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -127,6 +128,7 @@ def collate_options(option_files, app="sumo"):
     for f in files:
         with open(f, encoding="utf-8", errors="replace") as fh:
             text = fh.read()
+        clear_options = None
         for o in shlex.split(text):
             if skip:
                 skip = False
@@ -136,6 +138,21 @@ def collate_options(option_files, app="sumo"):
                 continue
             if o == "{CLEAR}":
                 app_options = []
+                continue
+            if o == "{CLEAR":
+                clear_options = []
+                continue
+            if clear_options is not None:
+                if o[-1] == "}":
+                    clear_options.append(o[:-1])
+                    num_clear = len(clear_options)
+                    for idx in range(len(app_options) - num_clear + 1):
+                        if app_options[idx:idx + num_clear] == clear_options:
+                            del app_options[idx:idx + num_clear]
+                            clear_options = None
+                            break
+                else:
+                    clear_options.append(o)
                 continue
             if o == "-" and o in app_options:  # never happens, kept for parity
                 continue
@@ -240,14 +257,17 @@ def copy_inputs(test_dir, potentials, config_files, chosen):
 
 
 def is_route_file(path: str) -> bool:
-    """Cheap check: a route file has a <routes>/<trip> root or .rou/.rou.xml suffix."""
+    """Cheap check: a route file has a <routes> root or .rou/.rou.xml suffix."""
     name = os.path.basename(path).lower()
     if name.endswith(".rou.xml") or name.endswith(".rou") or ".rou." in name:
         return True
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
-            head = fh.read(2048)
-        return "<routes" in head or "<trip" in head or "<vehicle" in head
+            head = fh.read(4096)
+        # skip the XML declaration and comments before looking at the root element
+        body = re.sub(r"<\?.*?\?>|<!--.*?-->", "", head, flags=re.S)
+        m = re.search(r"<([A-Za-z_][\w.-]*)", body)
+        return bool(m) and m.group(1) == "routes"
     except OSError:
         return False
 
@@ -302,13 +322,19 @@ def import_one(source, tests_sumo, force=False):
             # use "tools/oracle/cases/<case>/<file>" for the same reason).
             kept_additions.append(os.path.relpath(
                 join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
+    empty_route = False
     if not route_path:
-        return None, "no route input"
+        # Some tests define their vehicles only inside an additional file. The
+        # harness always passes -r, so give it an empty route file in that case.
+        if kept_additions:
+            empty_route = True
+        else:
+            return None, "no route input"
 
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
-    chosen = [net, os.path.basename(route_path)]
+    chosen = [net] + ([] if empty_route else [os.path.basename(route_path)])
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
@@ -321,7 +347,11 @@ def import_one(source, tests_sumo, force=False):
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
-    shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    if empty_route:
+        with open(join(case_dir, "routes.rou"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write('<?xml version="1.0" encoding="UTF-8"?>\n<routes/>\n')
+    else:
+        shutil.copy2(route_path, join(case_dir, "routes.rou"))
 
     sim_args = list(sim)
     if kept_additions:
@@ -346,7 +376,7 @@ def import_one(source, tests_sumo, force=False):
     return name, {
         "source": rel,
         "net": os.path.basename(net_path),
-        "route": os.path.basename(route_path),
+        "route": "(empty)" if empty_route else os.path.basename(route_path),
         "additions": sorted(set(kept_additions)),
         "outputs": [n for n, _ in outputs],
         "sim_args": sim_args,

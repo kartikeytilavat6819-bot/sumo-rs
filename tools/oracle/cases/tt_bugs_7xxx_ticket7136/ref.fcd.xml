@@ -1,0 +1,349 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:07:48.066226-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_7xxx_ticket7136/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_7xxx_ticket7136/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7136/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7136/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_7xxx_ticket7136/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker1" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.03" y="92.94" angle="358.41" type="side" speed="0.00" pos="92.93" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker1" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.90" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker1" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker1" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="blocker2" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker1" x="118.07" y="99.37" angle="82.09" type="long" speed="10.40" pos="7.23" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker2" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker1" x="125.30" y="100.17" angle="85.51" type="long" speed="7.29" pos="1.21" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="2.79" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="blocker3" x="92.11" y="98.47" angle="89.96" type="long" speed="0.00" pos="92.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="116.24" y="99.02" angle="84.42" type="long" speed="8.53" pos="5.36" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="94.71" y="98.47" angle="89.98" type="long" speed="2.60" pos="1.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="4.03" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="99.92" y="98.47" angle="90.04" type="long" speed="5.20" pos="6.80" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="107.73" y="98.46" angle="90.04" type="long" speed="7.80" pos="14.60" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="99.00" y="93.84" angle="358.41" type="side" speed="0.00" pos="93.83" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.31" y="98.60" angle="88.51" type="long" speed="4.58" pos="1.41" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="98.99" y="96.39" angle="359.08" type="side" speed="2.60" pos="2.50" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.08" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="103.66" y="98.07" angle="71.10" type="side" speed="5.20" pos="7.70" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="2.34" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="73.11" y="98.45" angle="89.96" type="collider" speed="5.00" pos="73.11" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="80.71" y="98.46" angle="89.96" type="collider" speed="7.60" pos="80.71" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="90.91" y="98.47" angle="89.96" type="collider" speed="10.20" pos="90.91" lane="WC_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="97.69" y="98.47" angle="90.03" type="collider" speed="6.78" pos="4.58" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="2.28" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocker1" x="128.08" y="100.16" angle="89.00" type="long" speed="0.00" pos="4.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocker1" x="130.68" y="100.16" angle="90.13" type="long" speed="2.60" pos="6.60" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="120.20" y="99.80" angle="79.19" type="long" speed="0.00" pos="9.40" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocker1" x="135.88" y="100.14" angle="90.13" type="long" speed="5.20" pos="11.80" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="122.78" y="100.07" angle="81.28" type="long" speed="2.60" pos="12.00" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="blocker3" x="112.40" y="98.61" angle="88.44" type="long" speed="0.00" pos="1.50" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocker1" x="143.68" y="100.13" angle="90.13" type="long" speed="7.80" pos="19.60" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="127.98" y="100.16" angle="88.91" type="long" speed="5.20" pos="3.90" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="114.99" y="98.79" angle="86.63" type="long" speed="2.60" pos="4.10" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="105.99" y="98.25" angle="85.51" type="side" speed="0.00" pos="10.04" lane=":cluster_C_gneJ0_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocker1" x="154.08" y="100.10" angle="90.13" type="long" speed="10.40" pos="30.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="135.78" y="100.14" angle="90.13" type="long" speed="7.80" pos="11.70" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="120.10" y="99.78" angle="79.32" type="long" speed="5.20" pos="9.30" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="collider" x="99.97" y="98.47" angle="90.04" type="collider" speed="0.00" pos="6.85" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="108.58" y="98.46" angle="85.44" type="side" speed="2.60" pos="0.02" lane="CC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocker1" x="167.08" y="100.07" angle="90.13" type="long" speed="13.00" pos="43.00" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="146.18" y="100.12" angle="90.13" type="long" speed="10.40" pos="22.10" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="127.88" y="100.16" angle="88.83" type="long" speed="7.80" pos="3.80" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="102.57" y="98.46" angle="90.04" type="collider" speed="2.60" pos="9.45" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="113.75" y="98.93" angle="84.60" type="side" speed="5.20" pos="2.88" lane=":C2_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocker1" x="180.97" y="100.04" angle="90.13" type="long" speed="13.89" pos="56.89" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="159.18" y="100.09" angle="90.13" type="long" speed="13.00" pos="35.10" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="138.28" y="100.14" angle="90.13" type="long" speed="10.40" pos="14.20" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="107.78" y="98.46" angle="90.04" type="collider" speed="5.20" pos="14.65" lane=":cluster_C_gneJ0_2_0" slope="0.00"/>
+        <vehicle id="side" x="118.96" y="104.15" angle="33.87" type="side" speed="7.80" pos="10.68" lane=":C2_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocker1" x="194.86" y="100.01" angle="90.13" type="long" speed="13.89" pos="70.78" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker2" x="173.07" y="100.06" angle="90.13" type="long" speed="13.89" pos="48.99" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="151.28" y="100.11" angle="90.13" type="long" speed="13.00" pos="27.20" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="115.56" y="98.90" angle="85.39" type="collider" speed="7.80" pos="4.68" lane=":C2_0_0" slope="0.00"/>
+        <vehicle id="side" x="120.49" y="114.42" angle="6.82" type="side" speed="10.40" pos="8.23" lane="C2N_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocker2" x="186.96" y="100.03" angle="90.13" type="long" speed="13.89" pos="62.88" lane="C2E_0" slope="0.00"/>
+        <vehicle id="blocker3" x="165.17" y="100.08" angle="90.13" type="long" speed="13.89" pos="41.09" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="125.86" y="100.17" angle="87.32" type="collider" speed="10.40" pos="1.78" lane="C2E_0" slope="0.00"/>
+        <vehicle id="side" x="122.03" y="127.33" angle="6.82" type="side" speed="13.00" pos="21.23" lane="C2N_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocker3" x="179.06" y="100.05" angle="90.13" type="long" speed="13.89" pos="54.98" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="138.86" y="100.14" angle="90.13" type="collider" speed="13.00" pos="14.78" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocker3" x="192.95" y="100.02" angle="90.13" type="long" speed="13.89" pos="68.87" lane="C2E_0" slope="0.00"/>
+        <vehicle id="collider" x="152.75" y="100.11" angle="90.13" type="collider" speed="13.89" pos="28.67" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="collider" x="166.64" y="100.07" angle="90.13" type="collider" speed="13.89" pos="42.56" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="collider" x="180.53" y="100.04" angle="90.13" type="collider" speed="13.89" pos="56.45" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="collider" x="194.42" y="100.01" angle="90.13" type="collider" speed="13.89" pos="70.34" lane="C2E_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00"/>
+</fcd-export>
