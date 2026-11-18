@@ -562,7 +562,7 @@ where
                         panic!("shortcut: IntermodalRouter astar routing needs AStarRouter lookup table and MapMatcher");
                     } else {
                         // C++ gWeightsRandomFactor > 1 selects the randomized travel time
-                        let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::options::options_cont::get_float("weights.random-factor") > 1. {
+                        let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::common::std_defs::g_weights_random_factor() > 1. {
                             IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized
                         } else {
                             IntermodalEdge::<E, L, N, V>::get_travel_time_static

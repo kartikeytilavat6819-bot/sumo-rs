@@ -40,8 +40,10 @@ impl ROJTREdge {
     // {}
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
+        let mut base = ROEdge::new(id, from, to, index, priority, type_, routingType);
+        base.addSuccessorFn = Some(|e, s, via, dir| Ptr::from_mut(e).cast::<ROJTREdge>().m().add_successor(s, via, dir));
         ROJTREdge {
-            base: ROEdge::new(id, from, to, index, priority, type_, routingType),
+            base,
             myFollowingDefs: BTreeMap::new(),
             myParsedTurnings: Vec::new(),
             mySourceFlows: 0,
@@ -73,7 +75,7 @@ impl ROJTREdge {
     // }
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
-        self.base.add_successor(s, via, dir);
+        self.base.add_successor_base(s, via, dir);
         let js = s.cast::<ROJTREdge>();
         let key = js.get_id().to_string();
         if !self.myFollowingDefs.contains_key(&key) {
@@ -151,7 +153,7 @@ impl ROJTREdge {
         for (_, (follower, tl)) in self.myFollowingDefs.iter() {
             if !avoid.contains(&follower.cast::<ROEdge>()) {
                 if (veh.is_null() || !follower.prohibits(veh, true)) && tl.describes_time(time) {
-                    dist.add(*follower, tl.get_value(time), false);
+                    dist.add(*follower, tl.get_value(time), true);
                 }
             }
         }
@@ -160,7 +162,7 @@ impl ROJTREdge {
             for i in 0..self.myParsedTurnings.len() {
                 if !avoid.contains(&self.myFollowingEdges[i]) {
                     if veh.is_null() || !self.myFollowingEdges[i].prohibits(veh, true) {
-                        dist.add(self.myFollowingEdges[i].cast::<ROJTREdge>(), self.myParsedTurnings[i], false);
+                        dist.add(self.myFollowingEdges[i].cast::<ROJTREdge>(), self.myParsedTurnings[i], true);
                     }
                 }
             }

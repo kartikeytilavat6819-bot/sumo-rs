@@ -142,3 +142,28 @@ pub fn load_jtr_definitions(net: &mut RONet, oc: &mut OptionsCont) {
     }
 }
 
+
+/// C++: `void computeRoutes(RONet&, ROLoader&, OptionsCont&)`
+pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCont) {
+    use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
+    // initialise the loader
+    loader.open_routes(net);
+    // prepare the output
+    net.open_output(oc);
+    // build the router
+    let max_edges = (((net.get_edge_number() as i32) as f64) * utils::options::options_cont::get_float("max-edges-factor")) as i32;
+    let router = crate::jtrrouter::rojtr_router::ROJTRRouter::new(
+        oc.get_bool("ignore-errors").unwrap(), oc.get_bool("accept-all-destinations").unwrap(), max_edges,
+        oc.get_bool("ignore-vclasses").unwrap(), oc.get_bool("allow-loops").unwrap(), oc.get_bool("discount-sources").unwrap()).with_compute();
+    // C++ `new`: the routers live until the process exits
+    let router: Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> = crate::duarouter::duarouter_main::leak_router(router);
+    RORouteDef::set_using_jtrr();
+    // shortcut: ROIntermodalRouter is not ported (same as duarouter), the intermodal router is null
+    let ped_router: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));
+    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, ped_router, Ptr::null(), Ptr::null());
+    let end = if oc.is_default("end") { SUMOTIME_MAX } else { string2time(&oc.get_string("end").unwrap()).unwrap_or_else(|e| panic!("{e}")) };
+    let begin = string2time(&oc.get_string("begin").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+    let step = string2time(&oc.get_string("route-steps").unwrap()).unwrap_or_else(|e| panic!("{e}"));
+    loader.process_routes(begin, end, step, net, &provider);
+    net.cleanup();
+}

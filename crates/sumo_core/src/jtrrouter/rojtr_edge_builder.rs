@@ -4,6 +4,13 @@ use crate::prelude::*;
 
 /// Interface for building instances of jtrrouter-edges
 /// C++ class `ROJTREdgeBuilder` (jtrrouter/ROJTREdgeBuilder.h)
+fn rojtr_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+    let edge = Box::into_raw(Box::new(ROJTREdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType)));
+    let e = Ptr::from_raw(unsafe { &raw mut (*edge).base });
+    ROEdge::register_in_all_edges(e);
+    e
+}
+
 #[repr(C)]
 pub struct ROJTREdgeBuilder {
     /// C++ base class `ROAbstractEdgeBuilder`
@@ -28,7 +35,9 @@ impl ROJTREdgeBuilder {
     // ROJTREdgeBuilder::ROJTREdgeBuilder() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        ROJTREdgeBuilder { base: ROAbstractEdgeBuilder::new() }
+        let mut base = ROAbstractEdgeBuilder::new();
+        base.buildEdgeFn = rojtr_build_edge;
+        ROJTREdgeBuilder { base }
     }
 
     /// C++: `void ROJTREdgeBuilder::~ROJTREdgeBuilder() noexcept` [virtual]
@@ -47,8 +56,7 @@ impl ROJTREdgeBuilder {
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
         // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
-        let edge = Box::into_raw(Box::new(ROJTREdge::new(name, from, to, self.get_next_index(), priority, type_, routingType)));
-        Ptr::from_raw(unsafe { &raw mut (*edge).base })
+        rojtr_build_edge(&mut self.base, name, from, to, priority, type_, routingType)
     }
 
 }
