@@ -1,0 +1,8 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="3.00"/>
+    <vehicle id="v0" type="car" depart="0.00"><route edges="e01 e12 e23"/><stop busStop="bs0" duration="10.00"/></vehicle>
+    <vehicle id="b0" type="bus" depart="5.00"><route edges="e01 e12 e23"/><stop busStop="bs0" duration="15.00"/></vehicle>
+    <vehicle id="v1" type="car" depart="20.00"><route edges="e01 e12 e23"/><stop lane="e23_0" endPos="50.00" duration="8.00"/></vehicle>
+    <vehicle id="v2" type="car" depart="40.00"><route edges="e12 e23"/><stop busStop="bs0" duration="6.00"/></vehicle>
+</routes>

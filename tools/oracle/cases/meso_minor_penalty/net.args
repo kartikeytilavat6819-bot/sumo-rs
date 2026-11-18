@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/meso_minor_penalty/meso_minor_penalty.nod.xml --edge-files tools/oracle/cases/meso_minor_penalty/meso_minor_penalty.edg.xml
