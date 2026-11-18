@@ -1,0 +1,17 @@
+<additional>
+    <variableSpeedSign id="vss0" lanes="E0_0" pos="200.00">
+        <step time="0.00" speed="10.00"/>
+        <step time="40.00" speed="25.00"/>
+        <step time="80.00" speed="12.00"/>
+    </variableSpeedSign>
+    <variableSpeedSign id="vss1" lanes="E0_1" pos="200.00">
+        <step time="0.00" speed="15.00"/>
+        <step time="40.00" speed="20.00"/>
+        <step time="80.00" speed="8.00"/>
+    </variableSpeedSign>
+    <variableSpeedSign id="vss2" lanes="E0_2" pos="200.00">
+        <step time="0.00" speed="20.00"/>
+        <step time="40.00" speed="10.00"/>
+        <step time="80.00" speed="25.00"/>
+    </variableSpeedSign>
+</additional>

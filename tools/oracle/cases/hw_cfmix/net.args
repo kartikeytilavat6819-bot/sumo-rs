@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_cfmix/hw_cfmix.nod.xml --edge-files tools/oracle/cases/hw_cfmix/hw_cfmix.edg.xml

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_vss_segment/hw_vss_segment.nod.xml --edge-files tools/oracle/cases/hw_vss_segment/hw_vss_segment.edg.xml

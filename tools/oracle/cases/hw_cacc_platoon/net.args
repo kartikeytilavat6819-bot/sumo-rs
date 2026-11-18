@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_cacc_platoon/hw_cacc_platoon.nod.xml --edge-files tools/oracle/cases/hw_cacc_platoon/hw_cacc_platoon.edg.xml

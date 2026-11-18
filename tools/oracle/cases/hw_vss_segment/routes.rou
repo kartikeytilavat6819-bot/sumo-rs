@@ -1,0 +1,28 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="E0 E1"/>
+    <vehicle id="c0" type="car" route="r0" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c1" type="car" route="r0" depart="2.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c2" type="car" route="r0" depart="4.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c3" type="car" route="r0" depart="6.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c4" type="car" route="r0" depart="8.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c5" type="car" route="r0" depart="10.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c6" type="car" route="r0" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c7" type="car" route="r0" depart="14.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c8" type="car" route="r0" depart="16.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c9" type="car" route="r0" depart="18.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c10" type="car" route="r0" depart="20.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c11" type="car" route="r0" depart="22.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c12" type="car" route="r0" depart="24.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c13" type="car" route="r0" depart="26.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c14" type="car" route="r0" depart="28.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c15" type="car" route="r0" depart="30.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c16" type="car" route="r0" depart="32.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c17" type="car" route="r0" depart="34.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c18" type="car" route="r0" depart="36.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c19" type="car" route="r0" depart="38.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c20" type="car" route="r0" depart="40.00" departLane="2" departSpeed="max"/>
+    <vehicle id="c21" type="car" route="r0" depart="42.00" departLane="0" departSpeed="max"/>
+    <vehicle id="c22" type="car" route="r0" depart="44.00" departLane="1" departSpeed="max"/>
+    <vehicle id="c23" type="car" route="r0" depart="46.00" departLane="2" departSpeed="max"/>
+</routes>
