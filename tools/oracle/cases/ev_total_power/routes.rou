@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <vehicle id="ev0" type="EV" route="r0" depart="0"/>
+  <vehicle id="ev1" type="EV" route="r0" depart="1"/>
+  <vehicle id="ev2" type="EV" route="r0" depart="2"/>
+</routes>

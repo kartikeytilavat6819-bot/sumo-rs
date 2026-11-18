@@ -1,0 +1,7 @@
+<additional>
+    <vType id="DEFAULT_VEHTYPE" emissionClass="Energy/unknown" mass="1400" frontSurfaceArea="2.0" airDragCoefficient="0.30" rollDragCoefficient="0.010" radialDragCoefficient="0.05" maximumPower="80000" recuperationEfficiency="0.6">
+        <param key="has.battery.device" value="true"/>
+        <param key="device.battery.capacity" value="30000"/>
+        <param key="device.battery.chargeLevel" value="20000"/>
+    </vType>
+</additional>

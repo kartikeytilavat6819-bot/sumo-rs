@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <vehicle id="gas" type="GAS" route="r0" depart="0">
+    <stop chargingStation="cs_fuel" duration="30"/>
+  </vehicle>
+  <vehicle id="ev" type="EV" route="r0" depart="40">
+    <stop chargingStation="cs_fuel" duration="30"/>
+  </vehicle>
+</routes>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:56:06.223350-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_downhill_recuperation/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_downhill_recuperation/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_downhill_recuperation/vt.add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1794981366.23" clockEnd="1794981366.26" clockDuration="0.03" traciDuration="0.00" realTimeFactor="4285.71" vehicleUpdatesPerSecond="3000.00" personUpdatesPerSecond="0.00" begin="0.00" end="120.00" duration="120.00"/>
+    <vehicles loaded="2" inserted="2" running="0" waiting="0"/>
+    <teleports total="0" jam="0" yield="0" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="0" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="2" routeLength="799.00" speed="19.12" duration="42.00" waitingTime="0.00" timeLoss="1.42" departDelay="0.00" departDelayWaiting="-1.00" totalTravelTime="84.00" totalDepartDelay="0.00"/>
+    <pedestrianStatistics number="0" routeLength="0.00" duration="0.00" timeLoss="0.00"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:23:49.933221-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_stop_parking/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_stop_parking/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_stop_parking/add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_stop_parking/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_stop_parking/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_stop_parking/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_stop_parking/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_stop_parking/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="park" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="22.22" departDelay="0.00" arrival="66.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="19.21" duration="66.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="40.00" timeLoss="6.75" rerouteNo="0" devices="tripinfo_park battery_park fcd_park" vType="EV" speedFactor="1.06" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="8519.79" totalEnergyConsumed="184.31" totalEnergyRegenerated="176.32"/>
+    </tripinfo>
+    <tripinfo id="nopark" depart="20.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.85" departDelay="0.00" arrival="87.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="20.77" duration="67.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="40.00" timeLoss="6.37" rerouteNo="0" devices="tripinfo_nopark battery_nopark fcd_nopark" vType="EV" speedFactor="0.94" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="8489.67" totalEnergyConsumed="186.10" totalEnergyRegenerated="147.99"/>
+    </tripinfo>
+</tripinfos>

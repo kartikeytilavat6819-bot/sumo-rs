@@ -1,0 +1,1 @@
+--additional-files tools/oracle/cases/ev_charge_type_fuel/add.xml --end 120 --device.battery.track-fuel true --battery-output.precision 4

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="r0" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+  <route id="r1" edges="-103227#0 -103227#1 -103227#2"/>
+  <vehicle id="v0" route="r0" depart="0"/>
+  <vehicle id="v1" route="r1" depart="1"/>
+  <vehicle id="v2" route="r0" depart="2"/>
+  <vehicle id="v3" route="r1" depart="3"/>
+</routes>

@@ -1,0 +1,232 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:58:32.242520-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_total_power/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_total_power/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_total_power/add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="ev0" x="5.09" y="148.75" angle="90.35" type="EV" speed="22.22" pos="5.10" lane="-103224#0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="ev0" x="28.40" y="148.61" angle="90.35" type="EV" speed="23.31" pos="28.41" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="ev1" x="5.09" y="148.75" angle="90.35" type="EV" speed="20.85" pos="5.10" lane="-103224#0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="ev0" x="50.72" y="148.47" angle="90.35" type="EV" speed="22.32" pos="50.73" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="ev1" x="24.96" y="148.63" angle="90.35" type="EV" speed="19.87" pos="24.97" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="ev2" x="5.11" y="151.95" angle="90.35" type="EV" speed="22.22" pos="5.10" lane="-103224#0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="ev0" x="73.39" y="148.34" angle="90.32" type="EV" speed="22.68" pos="0.52" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev1" x="44.94" y="148.50" angle="90.35" type="EV" speed="19.98" pos="44.95" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="ev2" x="27.51" y="151.81" angle="90.35" type="EV" speed="22.40" pos="27.50" lane="-103224#0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="ev0" x="94.27" y="148.21" angle="90.35" type="EV" speed="20.88" pos="21.40" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev1" x="65.46" y="148.38" angle="90.32" type="EV" speed="20.52" pos="7.01" lane=":-137720_7_0" slope="0.00"/>
+        <vehicle id="ev2" x="49.57" y="151.67" angle="90.35" type="EV" speed="22.06" pos="49.56" lane="-103224#0_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="ev0" x="110.65" y="148.11" angle="90.35" type="EV" speed="16.38" pos="37.78" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev1" x="85.92" y="148.26" angle="90.35" type="EV" speed="20.46" pos="13.05" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev2" x="71.83" y="151.55" angle="90.32" type="EV" speed="22.27" pos="13.37" lane=":-137720_7_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="ev0" x="122.53" y="148.03" angle="90.35" type="EV" speed="11.88" pos="49.66" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev1" x="102.49" y="148.16" angle="90.35" type="EV" speed="16.57" pos="29.62" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev2" x="92.23" y="151.42" angle="90.35" type="EV" speed="20.41" pos="19.34" lane="-103224#1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="ev0" x="129.92" y="147.99" angle="90.35" type="EV" speed="7.38" pos="57.05" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev1" x="114.56" y="148.08" angle="90.35" type="EV" speed="12.07" pos="41.69" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev2" x="108.22" y="151.32" angle="90.35" type="EV" speed="15.98" pos="35.33" lane="-103224#1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="ev0" x="138.96" y="147.94" angle="90.33" type="EV" speed="9.04" pos="5.97" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="ev1" x="122.13" y="148.04" angle="90.35" type="EV" speed="7.57" pos="49.26" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev2" x="120.24" y="151.25" angle="90.35" type="EV" speed="12.02" pos="47.35" lane="-103224#1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="ev0" x="150.47" y="147.87" angle="90.33" type="EV" speed="11.51" pos="17.48" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="ev1" x="129.37" y="147.99" angle="90.35" type="EV" speed="7.24" pos="56.50" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="ev2" x="128.08" y="151.20" angle="90.35" type="EV" speed="7.84" pos="55.19" lane="-103224#1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="ev0" x="163.50" y="147.79" angle="90.35" type="EV" speed="13.03" pos="9.71" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="139.04" y="147.94" angle="90.33" type="EV" speed="9.67" pos="6.05" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="ev2" x="131.61" y="151.18" angle="90.35" type="EV" speed="3.54" pos="58.72" lane="-103224#1_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="ev0" x="178.63" y="147.70" angle="90.35" type="EV" speed="15.13" pos="24.84" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="150.76" y="147.87" angle="90.33" type="EV" speed="11.72" pos="17.77" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="ev2" x="137.63" y="151.14" angle="90.33" type="EV" speed="6.02" pos="4.62" lane=":-137721_9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="ev0" x="195.37" y="147.60" angle="90.35" type="EV" speed="16.74" pos="41.58" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="164.44" y="147.79" angle="90.35" type="EV" speed="13.68" pos="10.65" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="145.57" y="151.10" angle="90.33" type="EV" speed="7.94" pos="12.56" lane=":-137721_9_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="ev0" x="214.46" y="147.48" angle="90.35" type="EV" speed="19.09" pos="60.67" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="180.38" y="147.69" angle="90.35" type="EV" speed="15.94" pos="26.59" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="155.23" y="151.04" angle="90.34" type="EV" speed="9.66" pos="1.42" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="ev0" x="235.38" y="147.35" angle="90.35" type="EV" speed="20.92" pos="81.59" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="198.81" y="147.58" angle="90.35" type="EV" speed="18.43" pos="45.02" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="166.78" y="150.97" angle="90.35" type="EV" speed="11.55" pos="12.97" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="ev0" x="257.73" y="147.22" angle="90.35" type="EV" speed="22.35" pos="103.94" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev1" x="219.25" y="147.45" angle="90.35" type="EV" speed="20.44" pos="65.46" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="180.68" y="150.89" angle="90.35" type="EV" speed="13.89" pos="26.87" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="ev0" x="280.50" y="147.09" angle="90.35" type="EV" speed="22.78" pos="5.62" lane="-103224#3_0" slope="0.00"/>
+        <vehicle id="ev1" x="239.83" y="147.33" angle="90.35" type="EV" speed="20.58" pos="86.04" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="195.89" y="150.79" angle="90.35" type="EV" speed="15.22" pos="42.08" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="ev0" x="303.57" y="146.94" angle="90.35" type="EV" speed="23.08" pos="28.69" lane="-103224#3_0" slope="0.00"/>
+        <vehicle id="ev1" x="259.85" y="147.20" angle="90.35" type="EV" speed="20.02" pos="106.06" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="ev2" x="212.50" y="150.69" angle="90.35" type="EV" speed="16.61" pos="58.69" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="ev1" x="280.22" y="147.09" angle="90.35" type="EV" speed="20.38" pos="5.34" lane="-103224#3_0" slope="0.00"/>
+        <vehicle id="ev2" x="231.60" y="150.58" angle="90.35" type="EV" speed="19.10" pos="77.79" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="ev1" x="300.80" y="146.96" angle="90.35" type="EV" speed="20.58" pos="25.92" lane="-103224#3_0" slope="0.00"/>
+        <vehicle id="ev2" x="253.24" y="150.44" angle="90.35" type="EV" speed="21.64" pos="99.43" lane="-103224#2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="ev2" x="275.18" y="150.32" angle="90.31" type="EV" speed="21.95" pos="0.28" lane="-103224#3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="ev2" x="297.23" y="150.18" angle="90.35" type="EV" speed="22.06" pos="22.33" lane="-103224#3_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00"/>
+    <timestep time="23.00"/>
+    <timestep time="24.00"/>
+    <timestep time="25.00"/>
+    <timestep time="26.00"/>
+    <timestep time="27.00"/>
+    <timestep time="28.00"/>
+    <timestep time="29.00"/>
+    <timestep time="30.00"/>
+    <timestep time="31.00"/>
+    <timestep time="32.00"/>
+    <timestep time="33.00"/>
+    <timestep time="34.00"/>
+    <timestep time="35.00"/>
+    <timestep time="36.00"/>
+    <timestep time="37.00"/>
+    <timestep time="38.00"/>
+    <timestep time="39.00"/>
+    <timestep time="40.00"/>
+    <timestep time="41.00"/>
+    <timestep time="42.00"/>
+    <timestep time="43.00"/>
+    <timestep time="44.00"/>
+    <timestep time="45.00"/>
+    <timestep time="46.00"/>
+    <timestep time="47.00"/>
+    <timestep time="48.00"/>
+    <timestep time="49.00"/>
+    <timestep time="50.00"/>
+    <timestep time="51.00"/>
+    <timestep time="52.00"/>
+    <timestep time="53.00"/>
+    <timestep time="54.00"/>
+    <timestep time="55.00"/>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00"/>
+    <timestep time="91.00"/>
+    <timestep time="92.00"/>
+    <timestep time="93.00"/>
+    <timestep time="94.00"/>
+    <timestep time="95.00"/>
+    <timestep time="96.00"/>
+    <timestep time="97.00"/>
+    <timestep time="98.00"/>
+    <timestep time="99.00"/>
+    <timestep time="100.00"/>
+    <timestep time="101.00"/>
+    <timestep time="102.00"/>
+    <timestep time="103.00"/>
+    <timestep time="104.00"/>
+    <timestep time="105.00"/>
+    <timestep time="106.00"/>
+    <timestep time="107.00"/>
+    <timestep time="108.00"/>
+    <timestep time="109.00"/>
+    <timestep time="110.00"/>
+    <timestep time="111.00"/>
+    <timestep time="112.00"/>
+    <timestep time="113.00"/>
+    <timestep time="114.00"/>
+    <timestep time="115.00"/>
+    <timestep time="116.00"/>
+    <timestep time="117.00"/>
+    <timestep time="118.00"/>
+    <timestep time="119.00"/>
+</fcd-export>

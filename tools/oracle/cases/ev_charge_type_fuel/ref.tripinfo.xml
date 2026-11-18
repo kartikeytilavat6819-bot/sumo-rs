@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:34:48.545573-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_charge_type_fuel/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_charge_type_fuel/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_charge_type_fuel/add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_type_fuel/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_type_fuel/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_type_fuel/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_type_fuel/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_type_fuel/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.battery.track-fuel value="true"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="gas" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="22.22" departDelay="0.00" arrival="56.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="20.73" duration="56.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="30.00" timeLoss="6.24" rerouteNo="0" devices="tripinfo_gas battery_gas fcd_gas" vType="GAS" speedFactor="1.06" vaporized="">
+        <battery depleted="1" actualBatteryCapacity="7422.04" totalEnergyConsumed="69382.78" totalEnergyRegenerated="0.00"/>
+    </tripinfo>
+    <tripinfo id="ev" depart="40.00" departLane="-103224#0_0" departPos="5.10" departSpeed="20.85" departDelay="0.00" arrival="97.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="20.06" duration="57.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="30.00" timeLoss="6.99" rerouteNo="0" devices="tripinfo_ev battery_ev fcd_ev" vType="EV" speedFactor="0.94" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="9969.53" totalEnergyConsumed="187.83" totalEnergyRegenerated="157.36"/>
+    </tripinfo>
+</tripinfos>

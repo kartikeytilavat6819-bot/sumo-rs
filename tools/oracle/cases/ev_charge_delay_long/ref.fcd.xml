@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:25:33.860185-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_charge_delay_long/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_charge_delay_long/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_charge_delay_long/add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_delay_long/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_delay_long/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_delay_long/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_delay_long/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_charge_delay_long/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="short_stop" x="5.09" y="148.75" angle="90.35" type="EV" speed="22.22" pos="5.10" lane="-103224#0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="short_stop" x="28.40" y="148.61" angle="90.35" type="EV" speed="23.31" pos="28.41" lane="-103224#0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="short_stop" x="50.72" y="148.47" angle="90.35" type="EV" speed="22.32" pos="50.73" lane="-103224#0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="short_stop" x="73.28" y="148.34" angle="90.32" type="EV" speed="22.57" pos="0.41" lane="-103224#1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="short_stop" x="94.19" y="148.21" angle="90.35" type="EV" speed="20.90" pos="21.32" lane="-103224#1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="short_stop" x="110.59" y="148.11" angle="90.35" type="EV" speed="16.40" pos="37.72" lane="-103224#1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="short_stop" x="122.49" y="148.03" angle="90.35" type="EV" speed="11.90" pos="49.62" lane="-103224#1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="short_stop" x="129.92" y="147.99" angle="90.35" type="EV" speed="7.43" pos="57.05" lane="-103224#1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="short_stop" x="139.58" y="147.93" angle="90.33" type="EV" speed="9.66" pos="6.59" lane=":-137721_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="short_stop" x="151.71" y="147.86" angle="90.33" type="EV" speed="12.13" pos="18.72" lane=":-137721_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="short_stop" x="165.36" y="147.78" angle="90.35" type="EV" speed="13.65" pos="11.57" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="short_stop" x="181.10" y="147.68" angle="90.35" type="EV" speed="15.75" pos="27.31" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="short_stop" x="195.04" y="147.60" angle="90.35" type="EV" speed="13.94" pos="41.25" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="short_stop" x="205.54" y="147.53" angle="90.35" type="EV" speed="10.50" pos="51.75" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="short_stop" x="211.58" y="147.50" angle="90.35" type="EV" speed="6.04" pos="57.79" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="short_stop" x="213.13" y="147.49" angle="90.35" type="EV" speed="1.55" pos="59.34" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="short_stop" x="213.76" y="147.48" angle="90.35" type="EV" speed="0.63" pos="59.97" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.01" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="long_stop" x="5.09" y="148.75" angle="90.35" type="EV" speed="20.85" pos="5.10" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="long_stop" x="25.07" y="148.63" angle="90.35" type="EV" speed="19.98" pos="25.08" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="long_stop" x="45.05" y="148.50" angle="90.35" type="EV" speed="19.98" pos="45.06" lane="-103224#0_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="long_stop" x="65.56" y="148.38" angle="90.32" type="EV" speed="20.52" pos="7.12" lane=":-137720_7_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="long_stop" x="86.02" y="148.26" angle="90.35" type="EV" speed="20.46" pos="13.15" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="long_stop" x="103.33" y="148.15" angle="90.35" type="EV" speed="17.31" pos="30.46" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="long_stop" x="116.53" y="148.07" angle="90.35" type="EV" speed="13.20" pos="43.66" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="long_stop" x="125.46" y="148.02" angle="90.35" type="EV" speed="8.93" pos="52.59" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="long_stop" x="131.04" y="147.98" angle="90.35" type="EV" speed="5.58" pos="58.17" lane="-103224#1_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="long_stop" x="139.04" y="147.94" angle="90.33" type="EV" speed="8.00" pos="6.05" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="long_stop" x="149.09" y="147.88" angle="90.33" type="EV" speed="10.05" pos="16.10" lane=":-137721_9_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="long_stop" x="161.10" y="147.81" angle="90.35" type="EV" speed="12.01" pos="7.31" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="213.78" y="147.48" angle="90.35" type="EV" speed="0.00" pos="59.99" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="long_stop" x="175.62" y="147.72" angle="90.35" type="EV" speed="14.52" pos="21.83" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="216.14" y="147.47" angle="90.35" type="EV" speed="2.36" pos="62.35" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="long_stop" x="190.47" y="147.63" angle="90.35" type="EV" speed="14.84" pos="36.68" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="219.85" y="147.45" angle="90.35" type="EV" speed="3.70" pos="66.06" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="long_stop" x="202.18" y="147.56" angle="90.35" type="EV" speed="11.72" pos="48.39" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="225.74" y="147.41" angle="90.35" type="EV" speed="5.89" pos="71.95" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="long_stop" x="209.40" y="147.51" angle="90.35" type="EV" speed="7.22" pos="55.61" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="233.59" y="147.36" angle="90.35" type="EV" speed="7.85" pos="79.80" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="long_stop" x="213.15" y="147.49" angle="90.35" type="EV" speed="3.75" pos="59.36" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="242.96" y="147.31" angle="90.35" type="EV" speed="9.37" pos="89.17" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="long_stop" x="213.70" y="147.49" angle="90.35" type="EV" speed="0.55" pos="59.91" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="253.72" y="147.24" angle="90.35" type="EV" speed="10.76" pos="99.93" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.09" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="266.75" y="147.16" angle="90.33" type="EV" speed="13.02" pos="2.97" lane=":-137719_1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="281.72" y="147.08" angle="90.35" type="EV" speed="14.98" pos="6.84" lane="-103224#3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+        <vehicle id="short_stop" x="298.83" y="146.97" angle="90.35" type="EV" speed="17.11" pos="23.95" lane="-103224#3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="long_stop" x="213.79" y="147.48" angle="90.35" type="EV" speed="0.00" pos="60.00" lane="-103224#2_0" slope="0.00"/>
+    </timestep>
+</fcd-export>
