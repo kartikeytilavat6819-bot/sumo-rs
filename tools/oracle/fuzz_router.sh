@@ -170,7 +170,7 @@ PYEOF
   fi
   [ $taz = 0 ] && a="$a --additional-files $d/taz.add.xml --with-taz true"
   echo "$a" > "$d/dua.args"
-  echo "mode=$mode lanes=$lanes jt=$jt nil=$nil sidewalk=$sidewalks p=$p e=$e ff=$ff algo=$algo rf=$rf rep=$rep rmloop=$rmloop taz=$taz unsorted=$unsorted maxalt=$maxalt rcm=$rcm wf=$wf vt=$vt flows=$flows igerr=$igerr randflow=$randflow seed=$seed"
+  echo "mode=$mode lanes=$lanes jt=$jt nil=$nil sidewalk=$sidewalks p=$p e=$e ff=$ff algo=$algo rf=$rf rep=$rep rmloop=$rmloop taz=$taz unsorted=$unsorted maxalt=$maxalt rcm=$rcm wf=$wf vt=$vt flows=$flows igerr=$igerr randflow=$randflow person=$person seed=$seed"
 }
 
 run_cmp() {  # run_cmp <dir>; sets DIFF; 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT, 3 REFFAIL

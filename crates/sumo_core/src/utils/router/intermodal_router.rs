@@ -558,8 +558,14 @@ where
             match self.myRoutingMode {
                 0 => {
                     if self.myRoutingAlgorithm == "astar" {
-                        // shortcut: _InternalAStar needs the AStarRouter lookup table and MapMatcher, which are not ported
-                        panic!("shortcut: IntermodalRouter astar routing needs AStarRouter lookup table and MapMatcher");
+                        // C++ _InternalAStar(edges, true, gWeightsRandomFactor > 1 ? randomized : static, nullptr, true)
+                        let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::common::std_defs::g_weights_random_factor() > 1. {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized
+                        } else {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static
+                        };
+                        let internal = AStarRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>, Unmapped>::new(&edges, true, Some(effort), None, true, false).with_compute();
+                        self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
                     } else {
                         // C++ gWeightsRandomFactor > 1 selects the randomized travel time
                         let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::common::std_defs::g_weights_random_factor() > 1. {
