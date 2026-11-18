@@ -21,10 +21,14 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   local s=$1 d=$2 mode lanes jt nil p e sidewalks feat algo rf rep rmloop taz unsorted
   local maxalt rcm wf vt flows igerr randflow seed input
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up
+  r 6; algo=(dijkstra astar CH CHWrapper CCH arcflag); algo=${algo[$R]}
   r 3; mode=(grid grid spider rand); mode=${mode[$R]}
+  local gnum=$((R + 2))
+  if [ $algo = arcflag ]; then mode=grid; gnum=6; fi   # arcflag's KD-tree needs enough nodes
   r 3; lanes=$((R + 1))
   r 3; jt=(priority traffic_light right_before_left); jt=${jt[$R]}
   r 2; nil=$R
+  if [ $algo = arcflag ]; then nil=0; fi
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
   [ $nil = 1 ] && net="$net --no-internal-links"
   r 3; sidewalks=$R
@@ -33,7 +37,7 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
     [ $nil = 0 ] && net="$net --crossings.guess"   # crossings.guess conflicts with --no-internal-links
   fi
   case $mode in
-    grid)   r 3; net="--grid --grid.number $((R + 2)) --grid.length 150 $net";;
+    grid)   r 3; net="--grid --grid.number $gnum --grid.length 150 $net";;
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
     rand)   net="--rand --rand.iterations 12 --rand.max-distance 300 --rand.grid $net";;
   esac
@@ -47,7 +51,6 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
       -o "$d/trips.xml" >"$d/rt.log" 2>&1 || { echo "GENERR(trips): $(grep -m1 -iE 'error' "$d/rt.log" | tr -d '\r' | cut -c1-140)"; return 1; }
 
   # ---- random option draws ----
-  r 6; algo=(dijkstra astar CH CHWrapper CCH arcflag); algo=${algo[$R]}
   r 4; local rfi=$R; local rfs=(1.0 1.3 2.0 3.5); rf=${rfs[$rfi]}
   r 4; rep=$R      # 0 => --repair
   r 4; rmloop=$R   # 0 => --remove-loops
