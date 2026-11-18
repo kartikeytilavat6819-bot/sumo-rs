@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics -a tools/oracle/cases/tt_tls_delay_based_minDur0/input_additional.add.xml

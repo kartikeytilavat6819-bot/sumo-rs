@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:14:21.188196-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio//ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio//routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio/input_additional.add.xml,tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio//ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio//ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc59/tools/oracle/cases/tt_tls_actuated_conditions_bus_delay_prio//ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="bSN.0" depart="3.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="3.00" arrival="64.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="61.00" routeLength="587.90" waitingTime="3.00" waitingCount="1" stopTime="1.00" timeLoss="14.93" rerouteNo="0" devices="tripinfo_bSN.0 fcd_bSN.0" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.1" depart="70.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="133.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.1 fcd_bSN.1" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.2" depart="140.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="203.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.2 fcd_bSN.2" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.3" depart="210.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="275.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.3 fcd_bSN.3" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.4" depart="283.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="3.00" arrival="348.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.4 fcd_bSN.4" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.5" depart="350.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="413.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.5 fcd_bSN.5" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.6" depart="420.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="483.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.6 fcd_bSN.6" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.7" depart="490.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="555.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.7 fcd_bSN.7" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.8" depart="563.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="3.00" arrival="628.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.8 fcd_bSN.8" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.9" depart="630.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="693.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.9 fcd_bSN.9" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.10" depart="700.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="763.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.10 fcd_bSN.10" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.11" depart="770.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="835.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.11 fcd_bSN.11" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.12" depart="843.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="3.00" arrival="908.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="65.00" routeLength="587.90" waitingTime="6.00" waitingCount="1" stopTime="1.00" timeLoss="18.47" rerouteNo="0" devices="tripinfo_bSN.12 fcd_bSN.12" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.13" depart="910.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="973.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.13 fcd_bSN.13" vType="busType" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bSN.14" depart="980.00" departLane="SC_0" departPos="12.10" departSpeed="0.00" departDelay="0.00" arrival="1043.00" arrivalLane="CN_0" arrivalPos="289.60" arrivalSpeed="1.20" duration="63.00" routeLength="587.90" waitingTime="5.00" waitingCount="1" stopTime="1.00" timeLoss="16.93" rerouteNo="0" devices="tripinfo_bSN.14 fcd_bSN.14" vType="busType" speedFactor="1.00" vaporized=""/>
+</tripinfos>

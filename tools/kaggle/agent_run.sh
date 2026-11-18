@@ -5,7 +5,7 @@ set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
 SUMO="$BIN/sumo.exe"; [ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc59-tls
+OUT=/tmp/oc59-tls
 rm -rf "$OUT"; mkdir -p "$OUT"
 pass=0; fail=0; pending=0
 for d in tools/oracle/cases/tt_tls_*/; do
@@ -38,3 +38,13 @@ for d in tools/oracle/cases/tt_tls_*/; do
   fi
 done
 echo "TOTAL pass=$pass fail=$fail pending=$pending"
+
+# --- extra diagnostic: TLS switch timeline for NEMA_basic (root-cause of NEMA delays) ---
+d=tools/oracle/cases/tt_tls_NEMA_basic
+flags=$(cat "$d/sim.args")
+"$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
+    --tripinfo-output "$OUT/nema_ti.xml" --no-step-log true >"$OUT/nema_diag.log" 2>&1
+echo "--- NEMA_basic our tls_switch.xml (first 24) ---"
+grep '<tlsSwitch' "$d/tls_switch.xml" 2>/dev/null | head -24
+echo "--- NEMA_basic our tripinfo (first 12) ---"
+grep '<tripinfo' "$OUT/nema_ti.xml" 2>/dev/null | head -12
