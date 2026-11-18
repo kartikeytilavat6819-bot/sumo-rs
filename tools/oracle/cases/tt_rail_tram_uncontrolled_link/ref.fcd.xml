@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:49:51.694322-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_rail_tram_uncontrolled_link/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_rail_tram_uncontrolled_link/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_tram_uncontrolled_link/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_tram_uncontrolled_link/ref.tripinfo.xml"/>
+        <railsignal-block-output value="railsignal_blocks.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc56/tools/oracle/cases/tt_rail_tram_uncontrolled_link/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        <time-to-teleport.railsignal-deadlock value="200"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="t_0" x="-177.90" y="0.00" angle="90.00" type="tram" speed="0.00" pos="22.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="t_0" x="-176.90" y="0.00" angle="90.00" type="tram" speed="1.00" pos="23.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="t_0" x="-174.90" y="0.00" angle="90.00" type="tram" speed="2.00" pos="25.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="t_0" x="-171.90" y="0.00" angle="90.00" type="tram" speed="3.00" pos="28.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="t_0" x="-167.90" y="0.00" angle="90.00" type="tram" speed="4.00" pos="32.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="t_0" x="-162.90" y="0.00" angle="90.00" type="tram" speed="5.00" pos="37.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="t_0" x="-156.90" y="0.00" angle="90.00" type="tram" speed="6.00" pos="43.10" lane="E5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="t_0" x="-149.90" y="0.00" angle="90.00" type="tram" speed="7.00" pos="50.10" lane="E5_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="77.90" angle="180.00" type="tram" speed="0.00" pos="22.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="t_0" x="-141.90" y="0.00" angle="90.00" type="tram" speed="8.00" pos="58.10" lane="E5_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="76.90" angle="180.00" type="tram" speed="1.00" pos="23.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="t_0" x="-132.90" y="0.00" angle="90.00" type="tram" speed="9.00" pos="67.10" lane="E5_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="74.90" angle="180.00" type="tram" speed="2.00" pos="25.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="t_0" x="-122.90" y="0.00" angle="90.00" type="tram" speed="10.00" pos="77.10" lane="E5_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="71.90" angle="180.00" type="tram" speed="3.00" pos="28.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="t_0" x="-111.90" y="0.00" angle="90.00" type="tram" speed="11.00" pos="88.10" lane="E5_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="67.90" angle="180.00" type="tram" speed="4.00" pos="32.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="t_0" x="-100.00" y="0.00" angle="90.00" type="tram" speed="12.00" pos="0.10" lane=":J0_0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="62.90" angle="180.00" type="tram" speed="5.00" pos="37.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="t_0" x="-87.00" y="0.00" angle="90.00" type="tram" speed="13.00" pos="13.00" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="56.90" angle="180.00" type="tram" speed="6.00" pos="43.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="t_0" x="-73.11" y="0.00" angle="90.00" type="tram" speed="13.89" pos="26.89" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="49.90" angle="180.00" type="tram" speed="7.00" pos="50.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="t_0" x="-59.22" y="0.00" angle="90.00" type="tram" speed="13.89" pos="40.78" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="41.90" angle="180.00" type="tram" speed="8.00" pos="58.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="t_0" x="-45.33" y="0.00" angle="90.00" type="tram" speed="13.89" pos="54.67" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="32.90" angle="180.00" type="tram" speed="9.00" pos="67.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="t_0" x="-31.44" y="0.00" angle="90.00" type="tram" speed="13.89" pos="68.56" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="22.90" angle="180.00" type="tram" speed="10.00" pos="77.10" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="t_0" x="-17.55" y="0.00" angle="90.00" type="tram" speed="13.89" pos="82.45" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="13.70" angle="180.00" type="tram" speed="9.20" pos="86.30" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="t_0" x="-3.66" y="0.00" angle="90.00" type="tram" speed="13.89" pos="96.34" lane="E0_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="7.50" angle="180.00" type="tram" speed="6.20" pos="92.50" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="t_0" x="10.23" y="0.00" angle="90.00" type="tram" speed="13.89" pos="7.13" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="4.30" angle="180.00" type="tram" speed="3.20" pos="95.70" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="t_0" x="24.12" y="0.00" angle="90.00" type="tram" speed="13.89" pos="21.02" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="4.10" angle="180.00" type="tram" speed="0.20" pos="95.90" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="t_0" x="38.01" y="0.00" angle="90.00" type="tram" speed="13.89" pos="34.91" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="4.10" angle="180.00" type="tram" speed="0.00" pos="95.90" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="t_0" x="51.90" y="0.00" angle="90.00" type="tram" speed="13.89" pos="48.80" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="3.10" angle="180.00" type="tram" speed="1.00" pos="96.90" lane="E3_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="t_0" x="65.79" y="0.00" angle="90.00" type="tram" speed="13.89" pos="62.69" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="1.10" angle="180.00" type="tram" speed="2.00" pos="2.00" lane=":J1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="t_0" x="79.68" y="0.00" angle="90.00" type="tram" speed="13.89" pos="76.58" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-1.90" angle="180.00" type="tram" speed="3.00" pos="5.00" lane=":J1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="t_0" x="93.57" y="0.00" angle="90.00" type="tram" speed="13.89" pos="90.47" lane="E1_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-5.90" angle="180.00" type="tram" speed="4.00" pos="2.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="t_0" x="107.36" y="0.00" angle="90.00" type="tram" speed="13.89" pos="7.36" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-10.90" angle="180.00" type="tram" speed="5.00" pos="7.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="t_0" x="121.25" y="0.00" angle="90.00" type="tram" speed="13.89" pos="21.25" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-16.90" angle="180.00" type="tram" speed="6.00" pos="13.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="t_0" x="135.14" y="0.00" angle="90.00" type="tram" speed="13.89" pos="35.14" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-23.90" angle="180.00" type="tram" speed="7.00" pos="20.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="t_0" x="149.03" y="0.00" angle="90.00" type="tram" speed="13.89" pos="49.03" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-31.90" angle="180.00" type="tram" speed="8.00" pos="28.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="t_0" x="162.92" y="0.00" angle="90.00" type="tram" speed="13.89" pos="62.92" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-40.90" angle="180.00" type="tram" speed="9.00" pos="37.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="t_0" x="176.81" y="0.00" angle="90.00" type="tram" speed="13.89" pos="76.81" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-50.90" angle="180.00" type="tram" speed="10.00" pos="47.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="t_0" x="190.70" y="0.00" angle="90.00" type="tram" speed="13.89" pos="90.70" lane="E2_0" slope="0.00"/>
+        <vehicle id="t_1" x="0.00" y="-61.90" angle="180.00" type="tram" speed="11.00" pos="58.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="t_1" x="0.00" y="-73.90" angle="180.00" type="tram" speed="12.00" pos="70.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="t_1" x="0.00" y="-86.90" angle="180.00" type="tram" speed="13.00" pos="83.80" lane="E4_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00"/>
+</fcd-export>
