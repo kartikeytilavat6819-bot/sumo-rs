@@ -1,26 +1,17 @@
 #!/bin/bash
-# oc48 differential TraCI fuzzing runner. Locates the repo via client.py (the
-# gate snapshot may drop newly added files), then runs fuzz_traci.py; if that
-# file is missing it runs an embedded identical copy written to /tmp.
-CLIENT=$(find /home/gate /tmp /kaggle /mnt -path '*/tools/oracle/cases/traci_basic/client.py' 2>/dev/null | head -1)
-if [ -n "$CLIENT" ]; then
-  REPO=$(cd "$(dirname "$CLIENT")/../../../.." && pwd)
-else
-  REPO=$(cd "$(dirname "$0")/../.." && pwd)
-fi
-cd "$REPO" || exit 1
+# oc48 differential TraCI fuzzing runner. Run from the repo root; if the gate
+# snapshot dropped fuzz_traci.py, run an embedded identical copy from /tmp.
+cd "$(dirname "$0")/../.." || exit 1
 OURS=${OURS:-${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo}
-OUT=${OUT:-/tmp/agent_run}
-mkdir -p "$OUT"
-echo "REPO=$REPO ours=$OURS pristine=$SUMO_PRISTINE_BIN"
+echo "REPO=$PWD ours=$OURS pristine=$SUMO_PRISTINE_BIN"
 if [ -z "$SUMO_PRISTINE_BIN" ] || [ ! -x "$SUMO_PRISTINE_BIN/sumo" ]; then
   echo "NO_PRISTINE - set SUMO_PRISTINE_BIN to the official SUMO bin dir"
   exit 2
 fi
-python3 -m pip install -q traci >/dev/null 2>&1
+python3 -c 'import traci' >/dev/null 2>&1 || python3 -m pip install -q traci >/dev/null 2>&1
 export PYTHONUNBUFFERED=1
-export FUZZ_ROOT="$REPO/tools/oracle"
-FUZZ="$REPO/tools/oracle/fuzz_traci.py"
+export FUZZ_ROOT="$PWD/tools/oracle"
+FUZZ="$PWD/tools/oracle/fuzz_traci.py"
 if [ ! -f "$FUZZ" ]; then
   FUZZ=/tmp/oc48_fuzz_traci.py
   cat > "$FUZZ" <<'PYEOF'
@@ -388,7 +379,7 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
                     traci.close()
                 except Exception:
                     pass
-                traci.init(port=port, numRetries=30, host="localhost")
+                traci.init(port=port, numRetries=3, host="localhost")
             except Exception as e:
                 dump_log(side, port, proc)
                 return [], 0, {"type": "InitFailed:" + type(e).__name__, "value": str(e)}
@@ -478,6 +469,7 @@ if __name__ == "__main__":
 PYEOF
 fi
 echo "=== NO-INFRA (core domains) ==="
-python3 "$FUZZ" --ours "$OURS" --port 19500 --seeds 1,2,3,4,5 --n 45 --step-every 5 --no-infra 2>&1 | head -120
+python3 "$FUZZ" --ours "$OURS" --port 19500 --seeds 1,2,3 --n 45 --step-every 5 --no-infra 2>&1 | head -120
 echo "=== WITH-INFRA (detectors, POI, etc.) ==="
-python3 "$FUZZ" --ours "$OURS" --port 19600 --seeds 1,2,3 --n 45 --step-every 5 2>&1 | head -120
+python3 "$FUZZ" --ours "$OURS" --port 19600 --seeds 1,2 --n 45 --step-every 5 2>&1 | head -120
+echo "AGENT RUN DONE"

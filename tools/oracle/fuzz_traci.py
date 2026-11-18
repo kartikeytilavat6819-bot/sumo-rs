@@ -362,7 +362,7 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
                     traci.close()
                 except Exception:
                     pass
-                traci.init(port=port, numRetries=30, host="localhost")
+                traci.init(port=port, numRetries=3, host="localhost")
             except Exception as e:
                 dump_log(side, port, proc)
                 return [], 0, {"type": "InitFailed:" + type(e).__name__, "value": str(e)}
