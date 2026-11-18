@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/taxi_person_group/net.nod.xml --edge-files tools/oracle/cases/taxi_person_group/net.edg.xml

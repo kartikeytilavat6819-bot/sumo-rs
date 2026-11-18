@@ -1,0 +1,25 @@
+<routes>
+    <!-- 4 taxis, 14 persons over 260 s, greedy with dispatch every 30 s. -->
+    <vType id="taxi" vClass="taxi" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50">
+        <param key="has.taxi.device" value="true"/>
+    </vType>
+    <route id="AB" edges="A B"/>
+    <vehicle id="taxi0" type="taxi" depart="0" route="AB"/>
+    <vehicle id="taxi1" type="taxi" depart="25" route="AB"/>
+    <vehicle id="taxi2" type="taxi" depart="50" route="AB"/>
+    <vehicle id="taxi3" type="taxi" depart="75" route="AB"/>
+    <person id="p0" depart="3" departPos="131"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p1" depart="18" departPos="186"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p2" depart="33" departPos="241"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p3" depart="47" departPos="259"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p4" depart="61" departPos="277"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p5" depart="72" departPos="184"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p6" depart="88" departPos="276"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p7" depart="105" departPos="405"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p8" depart="121" departPos="497"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p9" depart="140" departPos="200"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p10" depart="166" departPos="162"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p11" depart="190" departPos="50"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p12" depart="225" departPos="345"><ride from="A" to="B" lines="taxi"/></person>
+    <person id="p13" depart="260" departPos="140"><ride from="A" to="B" lines="taxi"/></person>
+</routes>

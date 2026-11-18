@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:15.857743-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/taxi_person_group/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/taxi_person_group/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_person_group/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_person_group/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_person_group/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="500"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="10.00" type="DEFAULT_PEDTYPE" speedFactor="1.01" duration="230.00" waitingTime="70.00" timeLoss="17.56" traveltime="160.00">
+        <ride waitingTime="70.00" vehicle="taxi0" depart="80.00" arrival="240.00" arrivalPos="600.00" duration="160.00" routeLength="1100.10" timeLoss="17.56"/>
+    </personinfo>
+    <personinfo id="p1" depart="12.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="229.00" waitingTime="68.00" timeLoss="17.56" traveltime="161.00">
+        <ride waitingTime="68.00" vehicle="taxi0" depart="80.00" arrival="241.00" arrivalPos="600.00" duration="161.00" routeLength="1100.10" timeLoss="17.56"/>
+    </personinfo>
+    <personinfo id="p2" depart="40.00" type="DEFAULT_PEDTYPE" speedFactor="1.03" duration="207.00" waitingTime="66.00" timeLoss="10.92" traveltime="141.00">
+        <ride waitingTime="66.00" vehicle="taxi1" depart="106.00" arrival="247.00" arrivalPos="600.00" duration="141.00" routeLength="900.10" timeLoss="10.92"/>
+    </personinfo>
+    <personinfo id="p3" depart="41.00" type="DEFAULT_PEDTYPE" speedFactor="0.83" duration="207.00" waitingTime="65.00" timeLoss="10.92" traveltime="142.00">
+        <ride waitingTime="65.00" vehicle="taxi1" depart="106.00" arrival="248.00" arrivalPos="600.00" duration="142.00" routeLength="900.10" timeLoss="10.92"/>
+    </personinfo>
+</tripinfos>

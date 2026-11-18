@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:38:13.400996-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/taxi_closest_period/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/taxi_closest_period/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_closest_period/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_closest_period/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h13/tools/oracle/cases/taxi_closest_period/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="700"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.dispatch-algorithm value="greedyClosest"/>
+        <device.taxi.dispatch-period value="20"/>
+    </taxi_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.08" duration="165.00" waitingTime="11.00" timeLoss="7.35" traveltime="154.00">
+        <ride waitingTime="11.00" vehicle="taxi0" depart="11.00" arrival="165.00" arrivalPos="600.00" duration="154.00" routeLength="1150.10" timeLoss="7.35"/>
+    </personinfo>
+    <personinfo id="p1" depart="25.00" type="DEFAULT_PEDTYPE" speedFactor="1.03" duration="187.00" waitingTime="49.00" timeLoss="7.92" traveltime="138.00">
+        <ride waitingTime="49.00" vehicle="taxi1" depart="74.00" arrival="212.00" arrivalPos="600.00" duration="138.00" routeLength="900.10" timeLoss="7.92"/>
+    </personinfo>
+    <personinfo id="p2" depart="48.00" type="DEFAULT_PEDTYPE" speedFactor="0.83" duration="174.00" waitingTime="56.00" timeLoss="4.68" traveltime="118.00">
+        <ride waitingTime="56.00" vehicle="taxi2" depart="104.00" arrival="222.00" arrivalPos="600.00" duration="118.00" routeLength="700.10" timeLoss="4.68"/>
+    </personinfo>
+</tripinfos>
