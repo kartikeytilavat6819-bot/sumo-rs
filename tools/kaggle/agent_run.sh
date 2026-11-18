@@ -12,7 +12,7 @@ for d in tools/oracle/cases/tt_devices_*/; do
   c=$(basename "$d")
   [ -f "$d/ref.tripinfo.xml" ] || continue
   flags=$(cat "$d/sim.args" 2>/dev/null)
-  timeout 120 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
+  timeout 25 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
       --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \
       --statistic-output "$OUT/stat.xml" --no-step-log true $flags \
       >"$OUT/$c.log" 2>&1
