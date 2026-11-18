@@ -1,0 +1,1 @@
+--flow-files tools/oracle/cases/duarouter_flows/flows.xml --keep-flows true --seed 11 --output-file @DIR@/routes.rou.xml

@@ -96,8 +96,8 @@ fn remquo(x: f64, y: f64) -> (f64, i32) {
     (r, if (x < 0.0) != (y < 0.0) { -q } else { q })
 }
 
-// shortcut: the DEBUG_AWARENESS / DEBUG_PERCEPTION_ERRORS / DEBUG_OUPROCESS trace output is
-// #ifdef-gated off in SUMO and is not ported, add it when debugging driver state.
+// C++ DEBUG_AWARENESS / DEBUG_PERCEPTION_ERRORS / DEBUG_OUPROCESS trace output is #ifdef-gated off
+// (the macros are commented out in MSDriverState.cpp), so it is not ported.
 impl MSSimpleDriverState {
     /// C++: `void MSSimpleDriverState::MSSimpleDriverState(MSVehicle *)`
     // MSSimpleDriverState::MSSimpleDriverState(MSVehicle* veh) :

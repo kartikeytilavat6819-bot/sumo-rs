@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trips>
+  <!-- zone-to-zone demand: duarouter picks the edges from the TAZ definitions -->
+  <trip id="z1" depart="0" fromTaz="za" toTaz="zb"/>
+  <trip id="z2" depart="3" fromTaz="zb" toTaz="za"/>
+  <trip id="z3" depart="6" fromTaz="za" toTaz="zb"/>
+</trips>

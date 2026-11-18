@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T13:10:26.811492-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/person_ride_triggered/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/person_ride_triggered/routes.rou"/>
+        <additional-files value="tools/oracle/cases/person_ride_triggered/person_ride_triggered.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-h09/tools/oracle/cases/person_ride_triggered/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pa0" depart="5.00" type="ped" speedFactor="1.06" duration="69.00" waitingTime="1.00" timeLoss="8.03" traveltime="68.00">
+        <walk depart="5.00" departPos="0.00" arrival="44.00" arrivalPos="60.00" duration="39.00" routeLength="60.00" timeLoss="3.62" maxSpeed="1.70" waitingTime="0.00"/>
+        <ride waitingTime="1.00" vehicle="bus0" depart="45.00" arrival="74.00" arrivalPos="120.00" duration="29.00" routeLength="250.14" timeLoss="4.40"/>
+    </personinfo>
+    <personinfo id="pa2" depart="35.00" type="ped" speedFactor="1.01" duration="82.00" waitingTime="11.00" timeLoss="7.27" traveltime="71.00">
+        <walk depart="35.00" departPos="0.00" arrival="76.00" arrivalPos="60.00" duration="41.00" routeLength="60.00" timeLoss="3.89" maxSpeed="1.62" waitingTime="0.00"/>
+        <ride waitingTime="11.00" vehicle="bus1" depart="87.00" arrival="117.00" arrivalPos="120.00" duration="30.00" routeLength="250.15" timeLoss="3.38"/>
+    </personinfo>
+    <personinfo id="pa4" depart="65.00" type="ped" speedFactor="1.03" duration="114.00" waitingTime="42.00" timeLoss="10.28" traveltime="72.00">
+        <walk depart="65.00" departPos="0.00" arrival="106.00" arrivalPos="60.00" duration="41.00" routeLength="60.00" timeLoss="4.60" maxSpeed="1.65" waitingTime="0.00"/>
+        <ride waitingTime="42.00" vehicle="bus2" depart="148.00" arrival="179.00" arrivalPos="119.99" duration="31.00" routeLength="250.13" timeLoss="5.67"/>
+    </personinfo>
+    <personinfo id="pa6" depart="95.00" type="ped" speedFactor="1.05" duration="84.00" waitingTime="12.00" timeLoss="10.82" traveltime="72.00">
+        <walk depart="95.00" departPos="0.00" arrival="136.00" arrivalPos="60.00" duration="41.00" routeLength="60.00" timeLoss="5.14" maxSpeed="1.67" waitingTime="0.00"/>
+        <ride waitingTime="12.00" vehicle="bus2" depart="148.00" arrival="179.00" arrivalPos="119.99" duration="31.00" routeLength="250.13" timeLoss="5.67"/>
+    </personinfo>
+</tripinfos>

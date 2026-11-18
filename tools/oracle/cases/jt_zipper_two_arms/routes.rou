@@ -1,0 +1,18 @@
+<routes>
+    <vehicle id="z00" depart="0.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z01" depart="0.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z02" depart="3.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z03" depart="3.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z04" depart="6.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z05" depart="6.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z06" depart="9.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z07" depart="9.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z08" depart="12.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z09" depart="12.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z10" depart="15.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z11" depart="15.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z12" depart="18.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z13" depart="18.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+    <vehicle id="z14" depart="21.00" departSpeed="max"><route edges="A_in OUT"/></vehicle>
+    <vehicle id="z15" depart="21.00" departSpeed="max"><route edges="B_in OUT"/></vehicle>
+</routes>

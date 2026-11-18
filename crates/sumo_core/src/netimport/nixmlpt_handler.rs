@@ -11,16 +11,9 @@ use utils::common::sumo_vehicle_class::{SVC_BUS, SVC_SHIP, SVC_TAXI, get_vehicle
 use utils::options::options_cont::get_bool;
 use utils::xml::sumo_xml_definitions::get_edge_id_from_lane;
 
-/// shortcut: SUMOSAXAttributes has no FromAttr impl for RGBColor, so getOpt<RGBColor> is emulated here, upgrade when utils implements FromAttr for RGBColor
+// C++ attrs.getOpt<RGBColor>(attr, objectid, ok, RGBColor(false)); utils now implements FromAttr for RGBColor
 fn get_opt_color(attrs: &SUMOSAXAttributes, attr: i32, objectid: &str, ok: &mut bool) -> RGBColor {
-    if !attrs.has_attribute(attr) {
-        return RGBColor::new_valid(false);
-    }
-    let value = attrs.get_string(attr);
-    match RGBColor::parse_color(&value) {
-        Ok(c) => c,
-        Err(_) => RGBColor::parse_color_reporting(&value, attrs.get_object_type(), Some(objectid), true, ok).unwrap_or_default(),
-    }
+    attrs.get_opt::<RGBColor>(attr, objectid, ok, RGBColor::new_valid(false), true)
 }
 
 /// Importer for network edges stored in XML

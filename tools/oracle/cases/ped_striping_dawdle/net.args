@@ -1,0 +1,1 @@
+-n tools/oracle/cases/ped_striping_dawdle/ped_striping_dawdle.nod.xml -e tools/oracle/cases/ped_striping_dawdle/ped_striping_dawdle.edg.xml --sidewalks.guess

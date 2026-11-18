@@ -3469,12 +3469,9 @@ impl NLHandler {
             }
             source.m().base2.set_parameter("taz", &id);
             sink.m().base2.set_parameter("taz", &id);
-            // shortcut: getOpt<RGBColor> is not in the SUMOSAXAttributes FromAttr set, so the color is parsed directly; a bad color is not reported as a broken district
-            let color = if attrs.has_attribute(SUMO_ATTR_COLOR) {
-                unwrap_or_throw(utils::common::rgb_color::RGBColor::parse_color(&attrs.get_string(SUMO_ATTR_COLOR)))
-            } else {
-                unwrap_or_throw(utils::common::rgb_color::RGBColor::parse_color("1.0,.33,.33"))
-            };
+            let color = attrs.get_opt::<utils::common::rgb_color::RGBColor>(
+                SUMO_ATTR_COLOR, &id, &mut ok,
+                unwrap_or_throw(utils::common::rgb_color::RGBColor::parse_color("1.0,.33,.33")), true);
             source.m().base2.set_parameter("tazColor", &color.to_string());
             sink.m().base2.set_parameter("tazColor", &color.to_string());
 
