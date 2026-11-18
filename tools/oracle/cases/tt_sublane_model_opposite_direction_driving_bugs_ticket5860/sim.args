@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --lateral-resolution 0.8 -v -a tools/oracle/cases/tt_sublane_model_opposite_direction_driving_bugs_ticket5860/input_additional.add.xml

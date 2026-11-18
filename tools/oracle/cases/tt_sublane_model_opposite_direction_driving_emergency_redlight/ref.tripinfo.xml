@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:47:14.034855-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_opposite_direction_driving_emergency_redlight/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_opposite_direction_driving_emergency_redlight/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_opposite_direction_driving_emergency_redlight/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_opposite_direction_driving_emergency_redlight/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_opposite_direction_driving_emergency_redlight/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.8"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="overtaking" depart="1.00" departLane="WC_0" departPos="0.00" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="43.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="42.00" routeLength="200.00" waitingTime="21.00" waitingCount="1" stopTime="0.00" timeLoss="27.04" rerouteNo="0" devices="tripinfo_overtaking fcd_overtaking" vType="emergency" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.0" depart="0.00" departLane="WC_0" departPos="95.15" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="54.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="54.00" routeLength="104.85" waitingTime="44.00" waitingCount="1" stopTime="0.00" timeLoss="46.19" rerouteNo="0" devices="tripinfo_blockers.0 fcd_blockers.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.1" depart="0.00" departLane="WC_0" departPos="87.55" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="56.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="56.00" routeLength="112.45" waitingTime="45.00" waitingCount="1" stopTime="0.00" timeLoss="47.19" rerouteNo="0" devices="tripinfo_blockers.1 fcd_blockers.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.2" depart="0.00" departLane="WC_0" departPos="79.95" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="57.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="57.00" routeLength="120.05" waitingTime="46.00" waitingCount="1" stopTime="0.00" timeLoss="48.18" rerouteNo="0" devices="tripinfo_blockers.2 fcd_blockers.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.3" depart="0.00" departLane="WC_0" departPos="72.35" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="59.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="59.00" routeLength="127.65" waitingTime="47.00" waitingCount="1" stopTime="0.00" timeLoss="49.17" rerouteNo="0" devices="tripinfo_blockers.3 fcd_blockers.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.4" depart="0.00" departLane="WC_0" departPos="64.75" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="60.00" arrivalLane="CE_0" arrivalPos="95.25" arrivalPosLat="0.00" arrivalSpeed="13.89" duration="60.00" routeLength="135.25" waitingTime="48.00" waitingCount="1" stopTime="0.00" timeLoss="50.16" rerouteNo="0" devices="tripinfo_blockers.4 fcd_blockers.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

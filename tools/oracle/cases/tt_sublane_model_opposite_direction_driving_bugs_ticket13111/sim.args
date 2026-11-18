@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --step-length 0.2 --fcd-output.attributes posLat,lane --device.fcd.period 1 -e 100 -t --lateral-resolution 0.75 --tripinfo-output.write-unfinished -a tools/oracle/cases/tt_sublane_model_opposite_direction_driving_bugs_ticket13111/input_additional.add.xml

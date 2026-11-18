@@ -62,6 +62,11 @@ OUTPUT_OPTS = (
 )
 ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
 
+# Sub-options of outputs that run_all never compares (the parent output option is
+# stripped from sim.args, so keeping them makes the C++ reference run fail or adds a
+# spurious device to the tripinfo "devices" field).
+DROPPED_SUBOPTS = ("--vehroute-output.", "--vehroutes.", "--person-route-output.")
+
 # run_all.sh / make_sim_refs.sh always pass these; a duplicate is a hard error.
 HARNESS_FLAGS = ("--no-step-log",)
 
@@ -165,6 +170,9 @@ def parse_file_options(tokens):
                 matched = (hit, group, val)
                 break
         if matched is None:
+            if any(t.startswith(p) for p in DROPPED_SUBOPTS):
+                i += 1
+                continue
             if t in HARNESS_FLAGS or any(t.startswith(f + "=") for f in HARNESS_FLAGS):
                 i += 1
                 if i < len(tokens) and tokens[i] in ("true", "false", "1", "0"):
