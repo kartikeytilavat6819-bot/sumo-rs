@@ -1,0 +1,1 @@
+fuzz_sim.sh seed 5003 (net: fuzz_sim.sh --gen 5003 <dir>). personTrip public with a bus flow stopping at busStops combined with --ignore-junction-blocker 5, motorcycles and a spider network. personinfo is compared as an extra output.
