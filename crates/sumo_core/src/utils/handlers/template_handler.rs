@@ -69,7 +69,7 @@ impl TemplateHandler {
     // }
     #[allow(unused_variables)]
     pub fn parse_template(options: &mut OptionsCont, templateString: &str) {
-        // shortcut: the XML parser (quick-xml) lives in the utils crate and sumo_core cannot reach it, so the template text cannot be read, upgrade when utils exposes a SAX entry point that accepts this handler
+        // shortcut: TemplateHandler is not a SaxHandler yet (its start_element takes (name, value) pairs, not SUMOSAXAttributes), so utils::xml::sumo_sax_reader::parse_string cannot be driven with it; upgrade with an attribute adapter
         panic!("TemplateHandler::parseTemplate: cannot parse template '{}' yet", templateString);
     }
 

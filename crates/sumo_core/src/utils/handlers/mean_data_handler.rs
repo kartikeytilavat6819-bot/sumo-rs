@@ -51,7 +51,7 @@ impl MeanDataHandler {
     //     CommonHandler(fileBucket) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
+    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
         Self { base: CommonHandler::new(fileBucket) }
     }
 

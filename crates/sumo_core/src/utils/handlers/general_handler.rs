@@ -27,8 +27,8 @@ impl GeneralHandler {
     // GeneralHandler::GeneralHandler(FileBucket* fileBucket) :
     //     SUMOSAXHandler(fileBucket->getFilename()) {
     // }
-    // shortcut: FileBucket is not ported yet, so the caller passes fileBucket->getFilename() directly, upgrade when FileBucket exists
-    pub fn new(file_name: &str) -> Self {
+    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
+        let file_name = fileBucket.get().expect("GeneralHandler: null FileBucket").get_filename();
         GeneralHandler { base: utils::xml::sumo_sax_handler::new(file_name, "") }
     }
 

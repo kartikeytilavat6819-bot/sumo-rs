@@ -44,7 +44,7 @@ pub(crate) fn attr_str(attr: SumoXMLAttr) -> String {
 /// C++ class `CommonHandler` (utils/handlers/CommonHandler.h)
 pub struct CommonHandler {
     /// fileBucket
-    pub myFileBucket: Ptr<Unmapped /* FileBucket */>,
+    pub myFileBucket: Ptr<utils::common::file_bucket::FileBucket>,
     /// common XML Structure
     pub myCommonXMLStructure: CommonXMLStructure,
     /// flag for mark if a element wasn't created
@@ -64,7 +64,7 @@ impl CommonHandler {
     //     myFileBucket(fileBucket) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
+    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
         Self { myFileBucket: fileBucket, myCommonXMLStructure: CommonXMLStructure::default(), myErrorCreatingElement: false, myOverwriteElements: false, myRemainElements: false, myAbortLoading: false }
     }
 

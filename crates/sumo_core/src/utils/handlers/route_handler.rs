@@ -133,7 +133,7 @@ impl RouteHandler {
     //     myFlowEndDefault(string2time(OptionsCont::getOptions().getString("end"))) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>, hardFail: bool) -> Self {
+    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>, hardFail: bool) -> Self {
         Self {
             base: CommonHandler::new(fileBucket),
             myHardFail: hardFail,
@@ -1206,8 +1206,8 @@ impl RouteHandler {
     #[allow(unused_variables)]
     pub fn parse_v_type(&mut self, attrs: &SUMOSAXAttributes) {
         // parse vehicleType
-        // shortcut: myFileBucket->getFilename() is unavailable (FileBucket is not ported), the file name passed to beginVTypeParsing is empty
-        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, "", Ptr::null());
+        let file_name = self.myFileBucket.get().expect("RouteHandler: null FileBucket").get_filename();
+        let vehicleTypeParameter = SUMOVehicleParserHelper::begin_v_type_parsing(attrs, self.myHardFail, file_name, Ptr::null());
         if !vehicleTypeParameter.is_null() {
             let id = vehicleTypeParameter.id.clone();
             // set tag

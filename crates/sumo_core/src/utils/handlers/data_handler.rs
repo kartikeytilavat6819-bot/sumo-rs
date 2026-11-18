@@ -50,11 +50,11 @@ impl DataHandler {
     //     SUMOSAXHandler(fileBucket->getFilename()) {
     // }
     #[allow(unused_variables)]
-    pub fn new(fileBucket: Ptr<Unmapped /* FileBucket */>) -> Self {
-        // shortcut: FileBucket is not ported, so getFilename() is unavailable and SUMOSAXHandler gets "", upgrade when FileBucket is ported
+    pub fn new(fileBucket: Ptr<utils::common::file_bucket::FileBucket>) -> Self {
+        let file_name = fileBucket.get().expect("DataHandler: null FileBucket").get_filename();
         Self {
             base: CommonHandler::new(fileBucket),
-            base2: utils::xml::sumo_sax_handler::new("", ""),
+            base2: utils::xml::sumo_sax_handler::new(file_name, ""),
         }
     }
 
