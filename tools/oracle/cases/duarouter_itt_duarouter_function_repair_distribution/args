@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v -r tools/oracle/cases/duarouter_itt_duarouter_function_repair_distribution/input_routes.rou.xml -o @DIR@/routes.rou.xml --repair

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_function_routing_astar_landmark_save/input_trips.trips.xml -o @DIR@/routes.rou.xml --astar.landmark-distances tools/oracle/cases/duarouter_itt_duarouter_function_routing_astar_landmark_save/lookuptable --astar.save-landmark-distances landmarks.csv -v
