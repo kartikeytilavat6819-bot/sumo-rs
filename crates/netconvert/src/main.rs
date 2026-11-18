@@ -19,7 +19,7 @@ use utils::xml::xml_sub_sys;
 
 // C++ VERSION_STRING is generated into version.h as `<git describe>-<commit-ish>`; the port has no
 // generated version info, so it uses the exact string the reference build reports.
-const VERSION_STRING: &str = "v1.28.0-0000000000";
+const VERSION_STRING: &str = "1.28.0";
 
 // ===========================================================================
 // method definitions

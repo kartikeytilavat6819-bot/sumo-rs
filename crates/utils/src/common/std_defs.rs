@@ -2,7 +2,7 @@
 use std::sync::atomic::{AtomicBool, AtomicI32, AtomicU64, Ordering::Relaxed};
 
 // shortcut: C++ VERSION_STRING is generated (version.h); this is the stamp of the reference build, shared by all binaries
-pub const VERSION_STRING: &str = "v1.28.0-0000000000";
+pub const VERSION_STRING: &str = "1.28.0";
 pub const SUMO_MAX_CONNECTIONS: usize = 256;
 pub const SUMO_CONST_LANE_WIDTH: f64 = 3.2;
 pub const SUMO_CONST_HALF_LANE_WIDTH: f64 = SUMO_CONST_LANE_WIDTH / 2.;

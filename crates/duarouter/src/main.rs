@@ -15,7 +15,7 @@ use utils::xml::xml_sub_sys;
 
 // C++ VERSION_STRING is generated into version.h as `<git describe>-<commit-ish>`; the port has no
 // generated version info, so it uses the exact string the reference build reports.
-const VERSION_STRING: &str = "v1.28.0-0000000000";
+const VERSION_STRING: &str = "1.28.0";
 
 /// C++: `int main(int argc, char** argv)` try block; Ok(false) when a meta option ended the run
 fn run(argv: &[String]) -> Result<bool, ProcessError> {
