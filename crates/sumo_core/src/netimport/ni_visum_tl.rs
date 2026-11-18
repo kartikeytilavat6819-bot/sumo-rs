@@ -31,6 +31,20 @@ pub struct NIVisumTL {
     pub mySignalGroups: BTreeMap<String, Ptr<NIVisumTL_SignalGroup>>,
 }
 
+/// C++ `NIVisumTL::~NIVisumTL()`: deletes the phases and signal groups
+impl Drop for NIVisumTL {
+    fn drop(&mut self) {
+        for p in self.myPhases.values() {
+            // SAFETY: every phase was allocated by add_phase via Box::into_raw
+            drop(unsafe { Box::from_raw(p.as_raw()) });
+        }
+        for g in self.mySignalGroups.values() {
+            // SAFETY: every signal group was allocated by add_signal_group via Box::into_raw
+            drop(unsafe { Box::from_raw(g.as_raw()) });
+        }
+    }
+}
+
 impl NIVisumTL {
     /// C++: `void NIVisumTL::NIVisumTL(const std::string &, SUMOTime, SUMOTime, SUMOTime, bool)`
     /// Constructor
@@ -86,8 +100,9 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn add_signal_group(&mut self, name: &str, startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) {
-        // shortcut: C++ deletes these in ~NIVisumTL; they are leaked here until that destructor is ported
-        self.mySignalGroups.insert(name.to_string(), Ptr::from_mut(Box::leak(Box::new(NIVisumTL_SignalGroup::new(name, startTime, endTime, yellowTime)))));
+        // owned by this NIVisumTL, freed in its Drop (C++ ~NIVisumTL)
+        let sg = Box::into_raw(Box::new(NIVisumTL_SignalGroup::new(name, startTime, endTime, yellowTime)));
+        self.mySignalGroups.insert(name.to_string(), Ptr::from_raw(sg));
     }
 
     /// C++: `void NIVisumTL::addPhase(const std::string &, SUMOTime, SUMOTime, SUMOTime)`
@@ -98,8 +113,9 @@ impl NIVisumTL {
     // }
     #[allow(unused_variables)]
     pub fn add_phase(&mut self, name: &str, startTime: SUMOTime, endTime: SUMOTime, yellowTime: SUMOTime) {
-        // shortcut: C++ deletes these in ~NIVisumTL; they are leaked here until that destructor is ported
-        self.myPhases.insert(name.to_string(), Ptr::from_mut(Box::leak(Box::new(NIVisumTL_Phase::new(startTime, endTime, yellowTime)))));
+        // owned by this NIVisumTL, freed in its Drop (C++ ~NIVisumTL)
+        let ph = Box::into_raw(Box::new(NIVisumTL_Phase::new(startTime, endTime, yellowTime)));
+        self.myPhases.insert(name.to_string(), Ptr::from_raw(ph));
     }
 
     /// C++: `std::map<std::string, Phase *> & NIVisumTL::getPhases()`

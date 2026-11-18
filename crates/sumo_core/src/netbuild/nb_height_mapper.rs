@@ -13,12 +13,16 @@ thread_local! {
 /// C++ typedef `std::vector<const Triangle *> NBHeightMapper::Triangles`
 pub type NBHeightMapper_Triangles = Vec<Ptr<NBHeightMapper_Triangle>>;
 
+/// C++ `TRIANGLE_RTREE_QUAL` (netbuild/NBHeightMapper.h): 2D RTree over triangle pointers with the
+/// `Float2DVolume` specialization, default node sizes 8/4
+pub type NBHeightMapper_TriangleRTree = foreign::rtree::rtree::RTree<Ptr<NBHeightMapper_Triangle>, f32, 2, f32, 8, 4, foreign::rtree::rtree::Float2DVolume>;
+
 /// Set z-values for all network positions based on data from a height map
 /// C++ class `NBHeightMapper` (netbuild/NBHeightMapper.h)
 pub struct NBHeightMapper {
     pub myTriangles: NBHeightMapper_Triangles,
     /// The RTree for spatial queries
-    pub myRTree: Unmapped /* RTree<NBHeightMapper::Triangle *, NBHeightMapper::Triangle, float, 2, NBHeightMapper::QueryResult>: use foreign::rtree::rtree::RTree with its 6 generic parameters */,
+    pub myRTree: NBHeightMapper_TriangleRTree,
     /// raster height information in m for all loaded files
     pub myRasters: Vec<NBHeightMapper_RasterData>,
     /// dimensions of one pixel in raster data
@@ -227,8 +231,14 @@ impl NBHeightMapper {
             }
         }
         // coordinates in degrees hence a small search window
-        // shortcut: C++ queries myRTree with a 1e-5 window; the RTree is not wired (triangles only come from GDAL shapefiles), so all triangles are scanned in insertion order
-        for triangle in self.myTriangles.iter() {
+        let min_b: [f32; 2] = [geo.x() as f32 - 0.00001f32, geo.y() as f32 - 0.00001f32];
+        let max_b: [f32; 2] = [geo.x() as f32 + 0.00001f32, geo.y() as f32 + 0.00001f32];
+        let mut query_result = NBHeightMapper_QueryResult::new();
+        // C++ Triangle::addSelf, passed as the search callback
+        let hits = self.myRTree.search(&min_b, &max_b, &(), |t, _| query_result.add(*t));
+        let result = query_result.triangles;
+        debug_assert_eq!(hits as usize, result.len());
+        for triangle in result.iter() {
             if triangle.contains(geo) {
                 return triangle.get_z(geo);
             }
@@ -246,7 +256,7 @@ impl NBHeightMapper {
     pub fn new() -> Self {
         NBHeightMapper {
             myTriangles: Vec::new(),
-            myRTree: (), // shortcut: RTree not ported, see addTriangle
+            myRTree: NBHeightMapper_TriangleRTree::new(),
             myRasters: Vec::new(),
             mySizeOfPixel: Position::default(),
             myBoundary: Boundary::default(),
@@ -275,8 +285,12 @@ impl NBHeightMapper {
     // }
     #[allow(unused_variables)]
     pub fn add_triangle(&mut self, corners: PositionVector) {
-        // shortcut: C++ also inserts the triangle's box into myRTree; the RTree is not wired because triangles only come from GDAL shapefiles (not ported), getZ scans myTriangles instead
-        self.myTriangles.push(Ptr::from_raw(Box::into_raw(Box::new(NBHeightMapper_Triangle::new(&corners)))));
+        let triangle = Ptr::from_raw(Box::into_raw(Box::new(NBHeightMapper_Triangle::new(&corners))));
+        self.myTriangles.push(triangle);
+        let b = corners.get_box_boundary();
+        let cmin: [f32; 2] = [b.xmin() as f32, b.ymin() as f32];
+        let cmax: [f32; 2] = [b.xmax() as f32, b.ymax() as f32];
+        self.myRTree.insert(&cmin, &cmax, &triangle);
     }
 
     /// C++: `int NBHeightMapper::loadShapeFile(const std::string &)` [private]
@@ -501,6 +515,8 @@ impl NBHeightMapper {
         for t in self.myTriangles.drain(..) {
             drop(unsafe { Box::from_raw(t.as_raw()) });
         }
+        // deviation: C++ leaves the stale entries in myRTree (dangling after the delete above); they are removed here
+        self.myRTree.remove_all();
         // myRasters is only filled with GDAL, so there is nothing to free here
         self.myBoundary.reset();
     }
