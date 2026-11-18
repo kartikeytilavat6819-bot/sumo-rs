@@ -70,7 +70,12 @@ pub fn load_net(toFill: &mut RONet, eb: &mut ROAbstractEdgeBuilder) {
     } else {
         progress_done_message();
     }
-    // shortcut: C++ global deprecatedVehicleClassesSeen (utils/common/SUMOVehicleClass.cpp) is not ported, the deprecated-class warning is skipped until it is
+    if !utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner()).is_empty() {
+        let mut seen = utils::common::sumo_vehicle_class::DEPRECATED_VEHICLE_CLASSES_SEEN.lock().unwrap_or_else(|e| e.into_inner());
+        let names = utils::common::to_string::to_string_prec(&*seen, utils::common::std_defs::g_precision());
+        write_warningf!("Deprecated vehicle classes '%' in input network.", names);
+        seen.clear();
+    }
 }
 
 /// C++: `int (int, char **) main`
@@ -144,6 +149,26 @@ pub fn load_net(toFill: &mut RONet, eb: &mut ROAbstractEdgeBuilder) {
 //     }
 //     return ret;
 // }
+/// C++ `catch` blocks at the end of `main`: report the throw the way the MsgHandler does.
+fn report_panic(payload: Box<dyn std::any::Any + Send>) {
+    use utils::common::msg_handler::{with_instance, write_error, MsgType};
+    let msg: Option<String> = if let Some(e) = payload.downcast_ref::<ProcessError>() {
+        let w = e.to_string();
+        if w == "Process Error" || w.is_empty() { None } else { Some(w) }
+    } else if let Some(s) = payload.downcast_ref::<String>() {
+        if s.as_str() == "Process Error" || s.is_empty() { None } else { Some(s.clone()) }
+    } else if let Some(s) = payload.downcast_ref::<&str>() {
+        if *s == "Process Error" || s.is_empty() { None } else { Some((*s).to_string()) }
+    } else {
+        with_instance(MsgType::Error, |h| h.inform("Quitting (on unknown error).", false));
+        return;
+    };
+    if let Some(m) = msg {
+        write_error(&m);
+    }
+    with_instance(MsgType::Error, |h| h.inform("Quitting (on error).", false));
+}
+
 #[allow(unused_variables)]
 pub fn main(argc: i32, argv: &[String]) -> i32 {
     with_options(|oc| {
@@ -151,50 +176,60 @@ pub fn main(argc: i32, argv: &[String]) -> i32 {
         oc.set_application_name("activitygen", "Eclipse SUMO activitygen 1.28.0"); // config.h VERSION_STRING is 1.28.0 for this release; the port has no config.h
         oc.add_copyright_notice("Copyright (C) 2010-2012 Technische Universitaet Muenchen");
     });
-    // shortcut: C++ try/catch that reports "Quitting (on error)" and returns 1 is not reproduced, errors panic; upgrade when the error path of the frame lands
-    xml_sub_sys::init();
-    AGFrame::fill_options();
-    set_args_argv(argv); // C++ OptionsIO::setArgs(argc, argv)
-    get_options(false).unwrap_or_else(|e| panic!("{}", e));
-    if with_options(|oc| oc.process_meta_options(argc < 2)).unwrap_or_else(|e| panic!("{}", e)) {
-        utils::common::system_frame::close();
-        return 0;
-    }
-    xml_sub_sys::set_validation(&get_string("xml-validation"), &get_string("xml-validation.net"), "never").unwrap_or_else(|e| panic!("{}", e));
-    MsgHandler::init_output_options().unwrap_or_else(|e| panic!("{}", e));
-    init_rand(None, get_bool("random"), get_int("seed")); // RandHelper::initRandGlobal()
-    with_options(|oc| {
-        utils::common::system_frame::check_options(oc);
-    });
+    // C++ throws reach main as exceptions without an uncaught-exception message; the no-op hook mirrors that.
+    std::panic::set_hook(Box::new(|_| {}));
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        xml_sub_sys::init();
+        AGFrame::fill_options();
+        set_args_argv(argv); // C++ OptionsIO::setArgs(argc, argv)
+        get_options(false).unwrap_or_else(|e| panic!("{}", e));
+        if with_options(|oc| oc.process_meta_options(argc < 2)).unwrap_or_else(|e| panic!("{}", e)) {
+            utils::common::system_frame::close();
+            return false;
+        }
+        xml_sub_sys::set_validation(&get_string("xml-validation"), &get_string("xml-validation.net"), "never").unwrap_or_else(|e| panic!("{}", e));
+        MsgHandler::init_output_options().unwrap_or_else(|e| panic!("{}", e));
+        init_rand(None, get_bool("random"), get_int("seed")); // RandHelper::initRandGlobal()
+        with_options(|oc| {
+            utils::common::system_frame::check_options(oc);
+        });
 
-    // Load network
-    let mut net = RONet::new();
-    let mut builder = AGStreet_Builder::new();
-    load_net(&mut net, &mut builder.base);
-    write_message(&format!("Loaded {} edges.", net.get_edge_number()));
-    if get_bool("debug") {
-        write_message("\n\t ---- begin ActivityGen ----\n");
-    }
+        // Load network
+        let mut net = RONet::new();
+        let mut builder = AGStreet_Builder::new();
+        load_net(&mut net, &mut builder.base);
+        write_message(&format!("Loaded {} edges.", net.get_edge_number()));
+        if get_bool("debug") {
+            write_message("\n\t ---- begin ActivityGen ----\n");
+        }
 
-    let statFile = get_string("stat-file");
-    OutputDevice::create_device_by_option("output-file", "routes", "routes_file.xsd", -1).unwrap_or_else(|e| panic!("{}", e));
-    let mut duration = AGTime::new_3(get_int("duration-d"), 0, 0);
-    let mut begin = AGTime::new(get_int("begin") % 86400);
-    let mut end = AGTime::new(get_int("end") % 86400);
-    let outDevice = OutputDevice::get_device(&get_string("output-file"), true).unwrap_or_else(|e| panic!("{}", e));
-    let mut actiGen = AGActivityGen::new(statFile, &mut *outDevice.borrow_mut(), Ptr::from_mut(&mut net));
-    actiGen.import_info_city();
-    actiGen.make_activity_trips(duration.get_day(), begin.get_time(), end.get_time());
+        let statFile = get_string("stat-file");
+        OutputDevice::create_device_by_option("output-file", "routes", "routes_file.xsd", -1).unwrap_or_else(|e| panic!("{}", e));
+        let mut duration = AGTime::new_3(get_int("duration-d"), 0, 0);
+        let mut begin = AGTime::new(get_int("begin") % 86400);
+        let mut end = AGTime::new(get_int("end") % 86400);
+        let outDevice = OutputDevice::get_device(&get_string("output-file"), true).unwrap_or_else(|e| panic!("{}", e));
+        let mut actiGen = AGActivityGen::new(statFile, &mut *outDevice.borrow_mut(), Ptr::from_mut(&mut net));
+        actiGen.import_info_city();
+        actiGen.make_activity_trips(duration.get_day(), begin.get_time(), end.get_time());
 
-    if get_bool("debug") {
-        write_message("\n\t ---- end of ActivityGen ----\n");
-    }
-    let ret = 0;
-
+        if get_bool("debug") {
+            write_message("\n\t ---- end of ActivityGen ----\n");
+        }
+        true
+    }));
+    let ret: u8 = match result {
+        Ok(false) => return 0, // meta option path already closed the system frame
+        Ok(true) => 0,
+        Err(payload) => {
+            report_panic(payload);
+            1
+        }
+    };
     utils::common::system_frame::close();
     if ret == 0 {
         println!("Success.");
     }
-    ret
+    ret as i32
 }
 

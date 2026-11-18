@@ -326,9 +326,22 @@ impl AGActivityGenHandler {
     pub fn parse_city_gates(&mut self, attrs: &SUMOSAXAttributes) {
         let edge = attrs.get_string(SUMO_ATTR_EDGE);
         let positionOnEdge = fail(AGEN_TAG_ENTRANCE, attrs.get_float(SUMO_ATTR_POSITION));
-        // shortcut: AGCity::getStreet's ProcessError is raised directly, not re-wrapped with the element-name message
         let city = self.myCity.m();
-        let posi = AGPosition::new(city.get_street(&edge), positionOnEdge);
+        // C++ wraps the whole parse in try/catch(std::exception); getStreet is the throwing call here.
+        let street = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Ptr::new(city.get_street(&edge)))) {
+            Ok(s) => s,
+            Err(payload) => {
+                let msg = if let Some(s) = payload.downcast_ref::<String>() {
+                    s.clone()
+                } else if let Some(s) = payload.downcast_ref::<&str>() {
+                    (*s).to_string()
+                } else {
+                    String::new()
+                };
+                parse_error(AGEN_TAG_CITYGATES, &msg);
+            }
+        };
+        let posi = AGPosition::new(&*street, positionOnEdge);
         let key = city.cityGates.len() as i32;
         let incoming = fail(AGEN_TAG_ENTRANCE, attrs.get_float(AGEN_ATTR_INCOMING));
         city.statData.m().incoming.insert(key, incoming);
