@@ -8,6 +8,21 @@ use crate::utils::router::intermodal_router::IntermodalRouter_TripItem;
 /// C++ typedef `std::map<const MSEdge *, RouterProhibition> MSTriggeredRerouter::Prohibitions`
 pub type MSTriggeredRerouter_Prohibitions = BTreeMap<Ptr<MSEdge>, RouterProhibition>;
 
+/// C++ `MAX2(a, b)`: `a < b ? b : a`
+fn max2<T: PartialOrd>(a: T, b: T) -> T {
+    if a < b { b } else { a }
+}
+
+/// C++ `MIN2(a, b)`: `a < b ? a : b`
+fn min2<T: PartialOrd>(a: T, b: T) -> T {
+    if a < b { a } else { b }
+}
+
+/// the same C++ Prohibitions map, keyed for the router (SUMOAbstractRouter<MSEdge, ...>::Prohibitions)
+fn router_prohibitions(p: &MSTriggeredRerouter_Prohibitions) -> SUMOAbstractRouter_Prohibitions {
+    p.iter().map(|(e, rp)| (e.cast(), rp.clone())).collect()
+}
+
 /// C++ `WrappingCommand<MSTriggeredRerouter>(this, &MSTriggeredRerouter::setPermissions)`
 pub struct MSTriggeredRerouter_SetPermissionsCommand {
     pub rerouter: Ptr<MSTriggeredRerouter>,
@@ -22,6 +37,10 @@ impl Command for MSTriggeredRerouter_SetPermissionsCommand {
 // C++ static members of MSTriggeredRerouter (see the comment block below the struct)
 /// C++ `MSTriggeredRerouter::DEFAULT_MAXDELAY`
 pub const MSTriggeredRerouter_DEFAULT_MAXDELAY: f64 = 7200.0;
+/// C++ `#define DEFAULT_PRIO_OVERTAKER 1` (MSTriggeredRerouter.cpp)
+const MSTriggeredRerouter_DEFAULT_PRIO_OVERTAKER: f64 = 1.0;
+/// C++ `#define DEFAULT_PRIO_OVERTAKEN 0.001` (MSTriggeredRerouter.cpp)
+const MSTriggeredRerouter_DEFAULT_PRIO_OVERTAKEN: f64 = 0.001;
 
 thread_local! {
     /// C++ `MSTriggeredRerouter::mySpecialDest_keepDestination` (a sentinel MSEdge, compared by address)
@@ -184,9 +203,11 @@ impl MSTriggeredRerouter {
         // C++ `myInstances[id] = this` and `lane->addMoveReminder(this)`; the box keeps the address stable
         let this_ptr = Ptr::from_box(&b);
         MY_INSTANCES.with(|m| m.borrow_mut().insert(b.base.get_id().to_string(), this_ptr));
-        // shortcut: the meso segment registration (gUseMesoSim) is skipped, meso is not ported
         let rem = Ptr::from_mut(&mut b.base2);
         for e in b.myEdges.iter() {
+            if MSGlobals::use_meso_sim() {
+                crate::microsim::ms_globals::meso_net().m().get_segment_for_edge(e, 0.).m().add_detector(rem, -1);
+            }
             for lane in e.get_lanes().iter() {
                 lane.m().add_move_reminder(rem, true);
             }
@@ -622,7 +643,6 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn trigger_routing(&mut self, veh: &mut SUMOTrafficObject, reason: MSMoveReminder_Notification) -> bool {
-        // shortcut: router prohibitions (SUMOAbstractRouter_Prohibitions) are Unmapped (`()`), so every router lookup receives `&()` instead of the closed-edge prohibitions; upgrade when that alias is ported
         let tObject = veh;
         let net = MSNet::get_instance();
         if !self.applies(tObject) {
@@ -648,17 +668,14 @@ impl MSTriggeredRerouter {
             return false;
         }
         // if we have a closingLaneReroute it may still affect the network topology (i.e. by closing a turning lane).
-        // shortcut: C++ tObject.getDevice(typeid(MSDevice_Routing)); get_device takes an Unmapped type_info, so this is only a presence check on `&()`; upgrade when type-keyed device lookup is ported
-        // C++ uses tObject.getDevice(typeid(MSDevice_Routing)) != nullptr. Our get_device takes an
-        // Unmapped type_info and always yields null, so check the device by name instead (the name
-        // MSBaseVehicle::createDevice compares against is "rerouting"). Without this the rerouter
-        // believed no vehicle had a routing device and rerouted vehicles where C++ would not.
-        let hasReroutingDevice = if tObject.is_vehicle() {
-            let bv = Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>();
-            bv.get().map(|x| x.has_rerouting_device()).unwrap_or(false)
+        // C++ tObject.getDevice(typeid(MSDevice_Routing)) != nullptr: only vehicles carry an
+        // MSDevice_Routing (persons have MSTransportableDevice_Routing, a different typeid)
+        let routingDevice: Ptr<MSVehicleDevice> = if tObject.is_vehicle() {
+            Ptr::from_mut(tObject).cast::<crate::microsim::ms_base_vehicle::MSBaseVehicle>().get_device("rerouting")
         } else {
-            false
+            Ptr::default()
         };
+        let hasReroutingDevice = !routingDevice.is_null();
         let lastEdge = tObject.get_reroute_destination();
 
         if rerouteDef.parkProbs.get_overall_prob() > 0.0 {
@@ -687,10 +704,11 @@ impl MSTriggeredRerouter {
                     v.replace_parameter(Ptr::from_raw(Box::leak(Box::new(newParameter))));
                 }
 
+                let closedP = router_prohibitions(&rerouteDef.get_closed());
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &closedP)
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &Default::default())
+                    net.get_router_tt(v.get_rng_index(), &closedP)
                 };
                 let routeCost = router.recompute_costs(&newRoute, Ptr::from_mut(v), now, Ptr::default());
                 let routeEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
@@ -770,10 +788,11 @@ impl MSTriggeredRerouter {
                 if oloc.defer {
                     return false;
                 }
+                let closedP = router_prohibitions(&rerouteDef.get_closed());
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &closedP)
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &Default::default())
+                    net.get_router_tt(v.get_rng_index(), &closedP)
                 };
                 let mut newEdges: ConstMSEdgeVector = Vec::new();
                 newEdges.extend_from_slice(&oldEdges[pos..bestMainStart]);
@@ -835,20 +854,21 @@ impl MSTriggeredRerouter {
         let mut items: Vec<IntermodalRouter_TripItem> = Vec::new();
         // we have a new destination, let's replace the route (if it is affected)
         let prohibited = rerouteDef.get_closed();
+        let routerProhibited = router_prohibitions(&prohibited);
         if rerouteDef.closed.is_empty() || destUnreachable || Self::affected(&tObject.get_upcoming_edge_i_ds(), &closed) {
             if tObject.ignore_transient_permissions() {
                 // after learning about network changes, the driver must no longer forget them
                 if !self.myHaveClosingUntil {
                     tObject.set_routing_mode(tObject.get_routing_mode() & !ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS);
+                } else if hasReroutingDevice && routingDevice.cast::<MSDevice_Routing>().get_period() > 0 {
+                    utils::common::msg_handler::write_warning(&utils::tlf!("Periodic rerouting and rerouting mode 8 for vehicle '%' are incompatible with closingReroute attribute 'until' in rerouter (vehicle may return to an invalid route.", tObject.get_id(), self.base.get_id()));
                 }
-                // shortcut: C++ warns when hasReroutingDevice has a periodic rerouting period > 0 (MSDevice_Routing lookup by type is not ported); that warning is skipped
             }
             if tObject.is_vehicle() {
                 let vehp: Ptr<SUMOVehicle> = Ptr::from_raw(tObject as *mut SUMOTrafficObject as *mut SUMOVehicle);
                 let v = vehp.m();
                 let prevEdges: ConstMSEdgeVector = v.get_route().get_edges().clone();
                 let canChangeDest = rerouteDef.edgeProbs.get_overall_prob() > 0.0;
-                let routerProhibited: SUMOAbstractRouter_Prohibitions = prohibited.iter().map(|(e, p)| (e.cast(), p.clone())).collect();
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
                     MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
@@ -892,9 +912,9 @@ impl MSTriggeredRerouter {
             } else {
                 // person rerouting here
                 let router: &mut MSTransportableRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &Default::default())
+                    MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &routerProhibited)
                 } else {
-                    net.get_intermodal_router(tObject.get_rng_index(), 0, &Default::default())
+                    net.get_intermodal_router(tObject.get_rng_index(), 0, &routerProhibited)
                 };
                 let person = Ptr::from_raw(tObject as *mut SUMOTrafficObject as *mut MSPerson);
                 let success = router.compute(tObject.get_edge(), newEdge, tObject.get_position_on_lane(), "",
@@ -930,9 +950,9 @@ impl MSTriggeredRerouter {
                     edges.pop();
                 }
                 let router: &mut MSVehicleRouter = if hasReroutingDevice {
-                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &Default::default())
+                    MSRoutingEngine::get_router_tt(v.get_rng_index(), v.get_v_class(), &routerProhibited)
                 } else {
-                    net.get_router_tt(v.get_rng_index(), &Default::default())
+                    net.get_router_tt(v.get_rng_index(), &routerProhibited)
                 };
                 router.compute(newEdge, lastEdge, Ptr::from_mut(v), now, &mut edges, false);
                 let routeCost = router.recompute_costs(&edges, Ptr::from_mut(v), now, Ptr::default());
@@ -951,9 +971,9 @@ impl MSTriggeredRerouter {
                 let mut success = !items.is_empty();
                 if success {
                     let router: &mut MSTransportableRouter = if hasReroutingDevice {
-                        MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &Default::default())
+                        MSRoutingEngine::get_intermodal_router_tt(tObject.get_rng_index(), &routerProhibited)
                     } else {
-                        net.get_intermodal_router(tObject.get_rng_index(), 0, &Default::default())
+                        net.get_intermodal_router(tObject.get_rng_index(), 0, &routerProhibited)
                     };
                     success = router.compute(newEdge, lastEdge, newEdge.get_length() / 2., "",
                         tObject.get_parameter().arrivalPos, "",
@@ -1363,9 +1383,8 @@ impl MSTriggeredRerouter {
             }
         }
         let mut addInput: MSStoppingPlaceRerouter_StoppingPlaceParamMap_t = BTreeMap::new();
-        // shortcut: closed-edge prohibitions (rerouteDef->getClosed()) are not forwarded, since SUMOAbstractRouter_Prohibitions is still Unmapped (`()`); upgrade when that alias is ported
         let probs = rerouteDef.parkProbs.get_probs().to_vec();
-        let dest = self.base4.reroute_stopping_place(destStoppingPlace, &parks, &probs, veh, newDestination, newRoute, &mut addInput, &Default::default(), 0, true);
+        let dest = self.base4.reroute_stopping_place(destStoppingPlace, &parks, &probs, veh, newDestination, newRoute, &mut addInput, &router_prohibitions(&rerouteDef.get_closed()), 0, true);
         if !dest.is_null() && dest.get_element() == SUMO_TAG_PARKING_AREA {
             Ptr::from_raw(dest.as_raw() as *mut MSParkingArea)
         } else {
@@ -1498,8 +1517,107 @@ impl MSTriggeredRerouter {
     // }
     #[allow(unused_variables)]
     pub fn overtaking_train(&mut self, veh: &SUMOVehicle, mainStart: usize, oloc: &MSTriggeredRerouter_OvertakeLocation, netSaving: &mut f64) -> (Ptr<SUMOVehicle>, Ptr<MSRailSignal>) {
-        // shortcut: the C++ loop over MSVehicleControl::loadedVehBegin()..loadedVehEnd() cannot be written yet (MSVehicleControl_constVehIt is Unmapped and no loaded-vehicle iterator exists), so no overtaking train is found; the candidate evaluation (timeToMain, common-edge savings, findSignal) is not ported, upgrade with the loaded-vehicle iterator
-        let _ = (veh, mainStart, oloc, netSaving);
+        let route: &ConstMSEdgeVector = veh.get_route().get_edges();
+        let main = &oloc.main;
+        let vMax = veh.get_max_speed();
+        let tag = Tags.get_string(SUMO_TAG_OVERTAKING_REROUTE);
+        let prio = veh.get_float_param(&format!("{}.prio", tag), false, MSTriggeredRerouter_DEFAULT_PRIO_OVERTAKEN, false);
+        let vehPtr: Ptr<SUMOVehicle> = Ptr::new(veh);
+        let vehCur = *veh.get_current_route_edge();
+        let mut net = MSNet::get_instance();
+        // std::map<std::string, SUMOVehicle*>: id order
+        let loaded: Vec<Ptr<SUMOVehicle>> = net.m().get_vehicle_control().myVehicleDict.values().copied().collect();
+        for veh2p in loaded {
+            let veh2 = veh2p.cast::<MSBaseVehicle>();
+            if veh2p.is_on_road() && veh2p.get_max_speed() > vMax {
+                let arrivalDelay = veh2.get_stop_arrival_delay();
+                let delay = max2(veh2.get_stop_delay(), if arrivalDelay == utils::common::std_defs::INVALID_DOUBLE { 0.0 } else { arrivalDelay });
+                if delay > veh2p.get_float_param(&format!("{}.maxDelay", tag), false, MSTriggeredRerouter_DEFAULT_MAXDELAY, false) {
+                    continue;
+                }
+                let route2: &ConstMSEdgeVector = veh2p.get_route().get_edges();
+                let cur2 = *veh2p.get_current_route_edge();
+                let mut itOnMain2 = route2.len();
+                let mut mainIndex: i32 = 0;
+                for m in main.iter() {
+                    itOnMain2 = route2[cur2..].iter().position(|e| *e == *m).map(|i| cur2 + i).unwrap_or(route2.len());
+                    if itOnMain2 != route2.len() {
+                        break;
+                    }
+                    mainIndex += 1;
+                }
+                if itOnMain2 != route2.len() && itOnMain2 > cur2 {
+                    let mut itOnMain = mainStart + mainIndex as usize;
+                    let mut timeToMain: f64 = 0.0;
+                    for it in vehCur..itOnMain {
+                        timeToMain += route[it].get_minimum_travel_time(vehPtr);
+                    }
+                    // veh2 may be anywhere on the current edge so we have to discount
+                    let edge2 = veh2p.get_edge();
+                    let mut timeToMain2 = -edge2.get_minimum_travel_time(veh2p) * veh2p.get_position_on_lane() / edge2.get_length();
+                    let mut timeToLastSignal2 = timeToMain2;
+                    for it in cur2..itOnMain2 {
+                        timeToMain2 += route2[it].get_minimum_travel_time(veh2p);
+                        let signal = Self::get_rail_signal(route2[it]);
+                        if !signal.is_null() {
+                            timeToLastSignal2 = timeToMain2;
+                        }
+                    }
+                    let mut exitMainTime = timeToMain;
+                    let mut exitMainBlockTime2 = timeToMain2;
+                    let mut commonTime: f64 = 0.0;
+                    let mut commonTime2: f64 = 0.0;
+                    let mut nCommon: i32 = 0;
+                    let mut exitMain2 = itOnMain2;
+                    let mut firstAfterMain: Ptr<MSRailSignal> = Ptr::default();
+                    let mut common: Ptr<MSEdge> = Ptr::default();
+                    let mut vMinCommon = route[itOnMain].get_vehicle_max_speed(vehPtr.cast());
+                    let mut vMinCommon2 = route2[itOnMain2].get_vehicle_max_speed(veh2p.cast());
+                    while itOnMain2 != route2.len() && itOnMain != route.len() && route[itOnMain] == route2[itOnMain2] {
+                        common = route[itOnMain];
+                        commonTime += common.get_minimum_travel_time(vehPtr);
+                        commonTime2 += common.get_minimum_travel_time(veh2p);
+                        vMinCommon = min2(vMinCommon, common.get_vehicle_max_speed(vehPtr.cast()));
+                        vMinCommon2 = min2(vMinCommon2, common.get_vehicle_max_speed(veh2p.cast()));
+                        let onMain = nCommon < main.len() as i32 - mainIndex;
+                        if onMain {
+                            exitMainTime = timeToMain + commonTime;
+                        }
+                        if firstAfterMain.is_null() {
+                            exitMainBlockTime2 = timeToMain2 + commonTime2;
+                        }
+                        let signal = Self::get_rail_signal(common);
+                        if !signal.is_null() {
+                            if !onMain && firstAfterMain.is_null() {
+                                firstAfterMain = signal;
+                            }
+                        }
+                        nCommon += 1;
+                        itOnMain += 1;
+                        itOnMain2 += 1;
+                    }
+                    let vMaxLast = common.get_vehicle_max_speed(vehPtr.cast());
+                    let vMaxLast2 = common.get_vehicle_max_speed(veh2p.cast());
+                    commonTime += veh.get_length() / vMaxLast;
+                    exitMainBlockTime2 += veh2p.get_length() / vMaxLast2;
+                    exitMain2 += min2(nCommon, main.len() as i32 - mainIndex) as usize;
+                    let timeLoss2 = max2(0.0, timeToMain + veh.get_length() / oloc.siding[0].get_vehicle_max_speed(vehPtr.cast()) - timeToLastSignal2);
+                    let saving = timeToMain + commonTime - (timeToMain2 + commonTime2) - timeLoss2;
+                    let loss = exitMainBlockTime2 - exitMainTime;
+                    let prio2 = veh2p.get_float_param(&format!("{}.prio", tag), false, MSTriggeredRerouter_DEFAULT_PRIO_OVERTAKER, false);
+                    // losses from acceleration after stopping at a signal
+                    let accelTimeLoss = if loss > 0.0 { 0.5 * vMinCommon / veh.get_vehicle_type().get_car_follow_model().get_max_accel() } else { 0.0 };
+                    let accelTimeLoss2 = if timeLoss2 > 0.0 { 0.5 * vMinCommon2 / veh2p.get_vehicle_type().get_car_follow_model().get_max_accel() } else { 0.0 };
+                    *netSaving = prio2 * (saving - accelTimeLoss2) - prio * (loss + accelTimeLoss);
+                    if *netSaving > oloc.minSaving {
+                        let s = Self::find_signal(&route2[cur2..exitMain2]);
+                        if !s.is_null() {
+                            return (veh2p, s);
+                        }
+                    }
+                }
+            }
+        }
         (Ptr::default(), Ptr::default())
     }
 
@@ -1678,7 +1796,28 @@ impl MSTriggeredRerouter {
         let stopped: Vec<Ptr<SUMOVehicle>> = cur.get_stopped_vehicles();
         let mut stoppedDuration: SUMOTime = -1;
         if stopped.is_empty() {
-            // shortcut: C++ looks upstream for vehicles stopping on the same lane, which needs the loaded-vehicle iterator (MSVehicleControl_constVehIt is Unmapped); no upstream vehicle is considered, upgrade with that iterator
+            // look upstream for vehicles that stop on this lane before ego arrives
+            let stopLaneId = cur.get_lane().get_id().to_string();
+            let mut net = MSNet::get_instance();
+            // std::map<std::string, SUMOVehicle*>: id order
+            let loaded: Vec<Ptr<SUMOVehicle>> = net.m().get_vehicle_control().myVehicleDict.values().copied().collect();
+            for vp in loaded {
+                let veh = vp.cast::<MSBaseVehicle>();
+                if vp.is_on_road() && veh.has_stops() {
+                    let vehStop = veh.get_next_stop();
+                    if vehStop.pars.lane == stopLaneId {
+                        self.myBlockedStoppingPlaces.insert(cur);
+                        if veh.is_stopped() {
+                            // stopped somewhere else on the same lane
+                            stoppedDuration = max2(max2(0, stoppedDuration), veh.get_stop_duration());
+                        } else {
+                            let timeDist = veh.estimate_time_to_next_stop();
+                            let timeTo = time2steps(timeDist.0);
+                            stoppedDuration = max2(max2(0, stoppedDuration), timeTo + vehStop.get_min_duration(now + timeTo));
+                        }
+                    }
+                }
+            }
         } else {
             stoppedDuration = 0;
             for v in &stopped {
@@ -1787,8 +1926,8 @@ impl MSTriggeredRerouter {
             for link in edge.get_lanes()[0].get_link_cont() {
                 let tl = link.get_tl_logic();
                 if !tl.is_null() {
-                    // shortcut: C++ dynamic_cast<MSRailSignal*> has no runtime type tag on MSTrafficLightLogic yet; a TL logic on a rail-signal junction is taken to be the MSRailSignal, upgrade when MSTrafficLightLogic exposes its type
-                    return Ptr::from_raw(tl.as_raw() as *mut MSRailSignal);
+                    // dynamic_cast<MSRailSignal*>: the logic type is the runtime tag (MSRailSignal has no subclass)
+                    return if tl.get_logic_type() == TrafficLightType::RAIL_SIGNAL { tl.cast::<MSRailSignal>() } else { Ptr::default() };
                 }
             }
         }
@@ -2112,8 +2251,8 @@ impl MSTriggeredRerouter {
     pub fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) {
         // C++ `throw ProcessError(...)` becomes a panic carrying the same text (ProcessError Display)
         let rid = self.base.get_id().to_string();
-        // shortcut: MSEdge::dictionary(id) getter is unported (MSEdge::dictionary_2 takes an Unmapped string_view, dictionary_hint is todo); lookup_edge returns the result of dictionary_hint, upgrade with MSEdge::dictionary
-        let lookup_edge = |id: &str| -> Ptr<MSEdge> { MSEdge::dictionary_hint(id, -1) };
+        // C++ MSEdge::dictionary(id)
+        let lookup_edge = |id: &str| -> Ptr<MSEdge> { MSEdge::dictionary_2(id) };
         if element == SUMO_TAG_INTERVAL {
             let mut ok = true;
             self.myParsedRerouteInterval = MSTriggeredRerouter_RerouteInterval {

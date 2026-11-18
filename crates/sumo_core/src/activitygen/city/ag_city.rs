@@ -9,7 +9,7 @@ pub struct AGCity {
     pub passengerStreets: Vec<Ptr<AGStreet>>,
     pub workPositions: Vec<AGWorkPosition>,
     pub schools: VecDeque<AGSchool>,
-    pub busLines: VecDeque<AGBusLine>,
+    pub busLines: std::collections::LinkedList<AGBusLine>,
     pub households: VecDeque<AGHousehold>,
     pub cityGates: Vec<AGPosition>,
     pub peopleIncoming: VecDeque<AGAdult>,
@@ -33,7 +33,7 @@ impl AGCity {
             passengerStreets: Vec::new(),
             workPositions: Vec::new(),
             schools: VecDeque::new(),
-            busLines: VecDeque::new(),
+            busLines: std::collections::LinkedList::new(),
             households: VecDeque::new(),
             cityGates: Vec::new(),
             peopleIncoming: VecDeque::new(),
@@ -588,11 +588,9 @@ impl AGCity {
         let sd = self.statData;
         sd.m().hhFarFromPT = 0;
         self.nbrCars = 0;
-        // shortcut: the std::map overload of isCloseFromPubTransport is not ported; the bus stations are copied in map order and the list overload is used
-        let mut busStations: VecDeque<AGPosition> = sd.m().busStations.values().copied().collect();
-        let busStationsPtr = Ptr::from_mut(&mut busStations);
+        let busStationsPtr = Ptr::from_mut(&mut sd.m().busStations);
         for it in self.households.iter_mut() {
-            if !it.is_close_from_pub_transport(busStationsPtr) {
+            if !it.is_close_from_pub_transport_2(busStationsPtr) {
                 sd.m().hhFarFromPT += 1;
                 self.nbrCars += 1;
                 it.add_a_car();

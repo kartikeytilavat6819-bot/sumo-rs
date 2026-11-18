@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/cv_teleport_remove/cv_teleport_remove.nod.xml --edge-files tools/oracle/cases/cv_teleport_remove/cv_teleport_remove.edg.xml

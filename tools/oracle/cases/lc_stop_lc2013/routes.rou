@@ -1,0 +1,23 @@
+<routes>
+    <vType id="slow" length="5.00" maxSpeed="4.00" accel="2.60" decel="4.50"/>
+    <vType id="tA" laneChangeModel="LC2013" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="1" lcCooperative="1" lcSpeedGain="1" lcKeepRight="1" lcLookaheadLeft="2"/>
+    <vType id="tB" laneChangeModel="LC2013" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="0.5" lcCooperative="0.2" lcSpeedGain="2" lcKeepRight="0" lcLookaheadLeft="3"/>
+    <vType id="tC" laneChangeModel="LC2013" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="3" lcCooperative="0" lcSpeedGain="0" lcKeepRight="2" lcImpatience="1" lcTimeToImpatience="10"/>
+    <route id="r0" edges="E0 E1"/>
+    <route id="rr" edges="ramp E1"/>
+    <vehicle id="s0" type="slow" route="r0" depart="21.02" departLane="1" departSpeed="max"/>
+    <vehicle id="s1" type="slow" route="r0" depart="2.23" departLane="0" departSpeed="max"/>
+    <vehicle id="s2" type="slow" route="r0" depart="34.14" departLane="1" departSpeed="max"/>
+    <vehicle id="e0" type="tA" route="r0" depart="162.94" departLane="2" departSpeed="max"><stop lane="E1_0" endPos="400.00" duration="20"/></vehicle>
+    <vehicle id="e1" type="tB" route="r0" depart="69.01" departLane="2" departSpeed="max"/>
+    <vehicle id="e2" type="tC" route="r0" depart="193.05" departLane="2" departSpeed="max"/>
+    <vehicle id="e3" type="tA" route="r0" depart="121.08" departLane="2" departSpeed="max"><stop lane="E1_0" endPos="400.00" duration="20"/></vehicle>
+    <vehicle id="e4" type="tB" route="r0" depart="48.65" departLane="0" departSpeed="max"/>
+    <vehicle id="e5" type="tC" route="r0" depart="80.12" departLane="2" departSpeed="max"/>
+    <vehicle id="e6" type="tA" route="r0" depart="239.74" departLane="2" departSpeed="max"><stop lane="E1_0" endPos="400.00" duration="20"/></vehicle>
+    <vehicle id="e7" type="tB" route="r0" depart="81.21" departLane="1" departSpeed="max"/>
+    <vehicle id="e8" type="tC" route="r0" depart="161.03" departLane="0" departSpeed="max"/>
+    <vehicle id="e9" type="tA" route="r0" depart="160.8" departLane="2" departSpeed="max"><stop lane="E1_0" endPos="400.00" duration="20"/></vehicle>
+    <vehicle id="e10" type="tB" route="r0" depart="144.8" departLane="0" departSpeed="max"/>
+    <vehicle id="e11" type="tC" route="r0" depart="15.59" departLane="2" departSpeed="max"/>
+</routes>

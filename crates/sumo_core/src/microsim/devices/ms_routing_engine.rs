@@ -1,7 +1,7 @@
 //! Port of microsim/devices/MSRoutingEngine.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER};
+use utils::common::sumo_vehicle_class::{SVC_BICYCLE, SVC_IGNORING, SVC_PASSENGER, SVC_PEDESTRIAN};
 use utils::common::time::{steps2time, string2time};
 use utils::options::options_cont::{get_bool, get_float, get_int, get_string, is_default, is_set, OptionsCont};
 use utils::common::util_exceptions::ProcessError;
@@ -11,7 +11,7 @@ use crate::utils::router::ch_router::CHRouter;
 use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
 use crate::utils::router::railway_router::RailwayRouter;
 use crate::utils::router::router_provider::RouterProvider;
-use crate::microsim::ms_router_defs::{MSMapMatcher, MSRouterProvider};
+use crate::microsim::ms_router_defs::{MSMapMatcher, MSRouterProvider, MSTransportableRouter};
 
 /// C++ `StaticCommand<MSRoutingEngine>` (utils/common/StaticCommand.h): runs a static function at a time step
 pub struct MSRoutingEngine_StaticCommand {
@@ -299,7 +299,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_cached_route(key: &(Ptr<MSEdge>, Ptr<MSEdge>)) -> Option<ConstMSRoutePtr> {
-        // shortcut: myCachedRoutes is never populated in this port (its writers are not ported), so a miss is the only answer, upgrade with RoutingTask
+        // C++ fills myCachedRoutes only in RoutingTask::run (thread pool); synchronous rerouting (see reroute) never caches, so this is always a miss
         let _ = key;
         None
     }
@@ -375,7 +375,7 @@ impl MSRoutingEngine {
         if veh.is_null() {
             return Ptr::null();
         }
-        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portthe routing-mode and vehicle-specific checks and the creation of myCCHFreeflow need the CCH graph
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH port; the routing-mode and vehicle-specific checks and the creation of myCCHFreeflow need the CCH graph
         let _ = (vClass, time);
         panic!("shortcut: getFreeflowCCHMetric needs the CCH graph (ensureCCHGraph)")
     }
@@ -391,7 +391,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn ensure_cch_graph() -> Ptr<MSCCHGraph> {
-        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portensureCCHGraph builds the shared CCH topology
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH port; ensureCCHGraph builds the shared CCH topology
         panic!("shortcut: ensureCCHGraph is not ported")
     }
 
@@ -495,11 +495,10 @@ impl MSRoutingEngine {
             let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(edges, true, Some(effort), None, false, Ptr::null(), true, false).with_compute();
             Ptr::from_raw(Box::into_raw(Box::new(router))).cast()
         } else if routingAlgorithm == "astar" {
-            // shortcut: the astar.all-distances lookup table (FullLookupTable) is not wired here, a run that sets it panics instead of routing without it
-            if is_set("astar.all-distances") {
-                panic!("shortcut: astar.all-distances lookup table is not ported")
-            }
-            let lookup = if is_set("astar.landmark-distances") && !vehicle.is_null() {
+            let lookup = if is_set("astar.all-distances") {
+                let flt = crate::utils::router::a_star_lookup_table::FullLookupTable::<MSEdge, SUMOVehicle>::new(&get_string("astar.all-distances"), edges.len() as i32);
+                Some(std::rc::Rc::new(crate::utils::router::a_star_lookup_table::AStarLookupTableKind::Full(flt)))
+            } else if is_set("astar.landmark-distances") && !vehicle.is_null() {
                 let speedFactor = vehicle.m().base.get_chosen_speed_factor();
                 // we need an exemplary vehicle with speedFactor 1
                 vehicle.m().set_chosen_speed_factor(1.);
@@ -534,8 +533,11 @@ impl MSRoutingEngine {
         } else {
             Ptr::null()
         };
-        // shortcut: MSTransportableRouter (pedestrian and intermodal routing) is not ported, the provider holds no pedestrian or intermodal router, upgrade with the transportable port
-        let provider: MSRouterProvider = RouterProvider::new(router, Ptr::null(), Ptr::null(), railRouter);
+        let hasTaxi = MSDevice_Taxi::has_fleet() || MSNet::get_instance().m().get_insertion_control().has_taxi_flow();
+        let carWalk = utils::options::options_cont::with_options(|oc| SUMOVehicleParserHelper::parse_car_walk_transfer(oc, hasTaxi));
+        let taxiWait = steps2time(string2time(&get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| std::panic::panic_any(e)));
+        let transRouter = MSTransportableRouter::new(MSNet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, 0, Ptr::null());
+        let provider: MSRouterProvider = RouterProvider::new(router, Ptr::null(), Ptr::from_raw(Box::into_raw(Box::new(transRouter))), railRouter);
         ROUTER_PROVIDER.with(|p| p.set(Some(Ptr::from_raw(Box::into_raw(Box::new(provider))))));
     }
 
@@ -584,10 +586,22 @@ impl MSRoutingEngine {
         if !prohibited.is_empty() {
             router.prohibit(prohibited);
         }
-        // shortcut: C++ hands the task to the thread pool when one is configured; this port always routes synchronously, and a silent reroute does not swallow ProcessError (no ported caller passes silent=true), upgrade with the thread pool
-        vehicle.reroute(currentTime, info, router, onInit, Self::with_taz(), silent, Ptr::default());
+        // shortcut: C++ hands the task to the thread pool when one is configured (device.rerouting.threads > 0); this port always routes synchronously, upgrade with the thread pool
+        let routerPtr = Ptr::from_mut(router);
+        // C++ try { ... } catch (ProcessError&): a ProcessError travels as a panic payload
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            vehicle.reroute(currentTime, info, routerPtr.m(), onInit, Self::with_taz(), silent, Ptr::default());
+        }));
+        if let Err(payload) = res {
+            if !payload.is::<ProcessError>() || !silent {
+                if payload.is::<ProcessError>() && !prohibited.is_empty() {
+                    routerPtr.m().prohibit(&Default::default());
+                }
+                std::panic::resume_unwind(payload);
+            }
+        }
         if !prohibited.is_empty() {
-            router.prohibit(&Default::default());
+            routerPtr.m().prohibit(&Default::default());
         }
     }
 
@@ -625,9 +639,26 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn reroute_2(t: &mut MSTransportable, currentTime: SUMOTime, info: &str, onInit: bool, silent: bool, prohibited: &SUMOAbstractRouter_Prohibitions) {
-        // shortcut: MSRouterProvider and the router types are not ported yet, upgrade with MSRouterProviderreroute needs getIntermodalRouterTT and MSTransportable::reroute
-        let _ = (t, currentTime, info, onInit, silent, prohibited);
-        panic!("shortcut: reroute (person) needs MSTransportableRouter")
+        let router = Self::get_intermodal_router_tt(t.get_rng_index(), prohibited);
+        if !prohibited.is_empty() {
+            router.prohibit(prohibited);
+        }
+        let routerPtr = Ptr::from_mut(router);
+        // C++ try { ... } catch (ProcessError&): a ProcessError travels as a panic payload
+        let res = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            t.reroute(currentTime, info, routerPtr.m(), onInit, Self::with_taz(), silent, Ptr::default());
+        }));
+        if let Err(payload) = res {
+            if !payload.is::<ProcessError>() || !silent {
+                if payload.is::<ProcessError>() && !prohibited.is_empty() {
+                    routerPtr.m().prohibit(&Default::default());
+                }
+                std::panic::resume_unwind(payload);
+            }
+        }
+        if !prohibited.is_empty() {
+            routerPtr.m().prohibit(&Default::default());
+        }
     }
 
     /// C++: `void MSRoutingEngine::setEdgeTravelTime(const MSEdge *const, const double)` [static]
@@ -790,9 +821,15 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn get_intermodal_router_tt(rngIndex: i32, prohibited: &SUMOAbstractRouter_Prohibitions) -> &'static mut MSTransportableRouter {
-        // shortcut: myRouterProvider is never constructed (initRouter is a stub), so there is no MSTransportableRouter to return; upgrade when initRouter builds the RouterProvider
-        let _ = (rngIndex, prohibited);
-        panic!("shortcut: getIntermodalRouterTT needs myRouterProvider, which initRouter never builds")
+        if ROUTER_PROVIDER.with(|p| p.get()).is_none() {
+            Self::init_weight_update(-1);
+            Self::init_edge_weights(SVC_PEDESTRIAN, -1, -1);
+            Self::init_router(Ptr::null());
+        }
+        let provider = ROUTER_PROVIDER.with(|p| p.get()).unwrap();
+        let router = provider.get_mut().unwrap().get_intermodal_router();
+        router.prohibit(prohibited);
+        router
     }
 
     /// C++: `bool MSRoutingEngine::hasBikeSpeeds()` [static]
@@ -1428,7 +1465,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn build_cch_ref_vehicle(type_: Ptr<MSVehicleType>, slot: i32) -> Ptr<SUMOVehicle> {
-        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portbuildCCHRefVehicle builds the CCH reference vehicle (MSRoute and MEVehicle/MSVehicle construction)
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH port; buildCCHRefVehicle builds the CCH reference vehicle (MSRoute and MEVehicle/MSVehicle construction)
         let _ = (type_, slot);
         panic!("shortcut: buildCCHRefVehicle needs the CCH port")
     }
@@ -1471,7 +1508,7 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_cch() {
-        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH portinitCCH builds the live CCH metric family
+        // shortcut: CCH graph and metric families are not ported yet, upgrade with the CCH port; initCCH builds the live CCH metric family
         panic!("shortcut: initCCH needs the CCH port")
     }
 

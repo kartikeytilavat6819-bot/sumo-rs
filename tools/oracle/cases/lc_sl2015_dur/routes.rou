@@ -1,0 +1,18 @@
+<routes>
+    <vType id="slow" length="5.00" maxSpeed="4.00" accel="2.60" decel="4.50"/>
+    <vType id="lcA" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="1" lcCooperative="1" lcSpeedGain="1" lcKeepRight="1" lcOpposite="1" lcLookaheadLeft="2" lcSpeedGainRight="0.1" lcSublane="1" lcPushy="0.5" lcPushyGap="0.5"/>
+    <vType id="lcB" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="0.5" lcCooperative="0.2" lcSpeedGain="2" lcKeepRight="0" lcOpposite="0.5" lcLookaheadLeft="3" lcSpeedGainRight="0.5" lcAssertive="2" lcImpatience="0.5" lcTimeToImpatience="5" lcAccelLat="2" lcSigma="0.5" lcMaxSpeedLatStanding="0.5" lcMaxSpeedLatFactor="0.5" lcTurnAlignmentDistance="100" lcLaneDiscipline="0.5" lcOvertakeRight="1" lcCooperativeRoundabout="0.5" lcCooperativeSpeed="0.5" lcOvertakeDeltaSpeedFactor="0.1" lcSublane="0.5" lcPushy="0.8" lcPushyGap="0.2"/>
+    <vType id="lcC" laneChangeModel="SL2015" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" lcStrategic="3" lcCooperative="0" lcSpeedGain="0" lcKeepRight="2" lcSublane="0.5" lcPushy="0.8" lcPushyGap="0.2" lcAccelLat="1.5" lcSigma="0.2" lcMaxSpeedLatStanding="1.2" lcMaxSpeedLatFactor="2" lcImpatience="1" lcTimeToImpatience="10"/>
+    <route id="r0" edges="E0 E1"/>
+    <route id="rr" edges="ramp E1"/>
+    <vehicle id="s0" type="slow" route="r0" depart="0.00" departLane="1" departSpeed="max"/>
+    <vehicle id="s1" type="slow" route="r0" depart="30.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a0" type="lcA" route="r0" depart="5.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a1" type="lcB" route="r0" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a2" type="lcA" route="r0" depart="20.00" departLane="2" departSpeed="max"/>
+    <vehicle id="a3" type="lcB" route="r0" depart="35.00" departLane="1" departSpeed="max"/>
+    <vehicle id="a4" type="lcC" route="r0" depart="45.00" departLane="0" departSpeed="max"/>
+    <vehicle id="m0" type="lcA" route="rr" depart="15.00" departLane="0" departSpeed="max"/>
+    <vehicle id="m1" type="lcB" route="rr" depart="25.00" departLane="0" departSpeed="max"/>
+    <vehicle id="m2" type="lcC" route="rr" depart="50.00" departLane="0" departSpeed="max"/>
+</routes>

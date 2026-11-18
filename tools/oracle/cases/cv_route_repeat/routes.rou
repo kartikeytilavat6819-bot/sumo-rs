@@ -1,0 +1,12 @@
+<routes>
+    <route id="loop" edges="a b c d" repeat="2" cycleTime="120">
+        <stop edge="b" endPos="150" until="40"/>
+    </route>
+    <route id="loop2" edges="a b c d" repeat="3">
+        <stop edge="c" endPos="100" duration="8"/>
+    </route>
+    <vehicle id="v0" route="loop" depart="0"/>
+    <vehicle id="w0" route="loop2" depart="5"/>
+    <vehicle id="v1" route="loop" depart="15"/>
+    <flow id="f" route="loop2" begin="30" end="90" period="20"/>
+</routes>

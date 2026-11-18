@@ -184,30 +184,30 @@ use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 // C++ `&ROEdge::getEmissionEffort<PollutantsInterface::X>`: one fn item per template instantiation
-fn effort_co(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_co(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO, edge, veh, time)
 }
-fn effort_co2(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_co2(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::CO2, edge, veh, time)
 }
-fn effort_pm_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_pm_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::PM_X, edge, veh, time)
 }
-fn effort_hc(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_hc(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::HC, edge, veh, time)
 }
-fn effort_no_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_no_x(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::NO_X, edge, veh, time)
 }
-fn effort_fuel(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_fuel(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::FUEL, edge, veh, time)
 }
-fn effort_elec(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
+pub(crate) fn effort_elec(edge: Ptr<ROEdge>, veh: Ptr<ROVehicle>, time: f64) -> f64 {
     ROEdge::get_emission_effort(PollutantsInterface_EmissionType::ELEC, edge, veh, time)
 }
 
 /// C++ `new` of a router, held as its SUMOAbstractRouter base (the routers live until the process exits)
-fn leak_router<R>(r: R) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
+pub(crate) fn leak_router<R>(r: R) -> Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> {
     Ptr::from_raw(Box::into_raw(Box::new(r))).cast::<SUMOAbstractRouter<ROEdge, ROVehicle>>()
 }
 
@@ -289,11 +289,12 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     };
     let carWalk = crate::utils::vehicle::sumo_vehicle_parser_helper::SUMOVehicleParserHelper::parse_car_walk_transfer(oc, true);
     let taxiWait = utils::common::time::steps2time(string2time(&utils::options::options_cont::get_string("persontrip.taxi.waiting-time")).unwrap_or_else(|e| panic!("{e}")));
-    // shortcut: the RailwayRouter is not wired in duarouter yet (its effort operation is not a typed fn pointer), upgrade when railway routing is ported here
-    let mut railRouter: Ptr<crate::utils::router::railway_router::RailwayRouter<ROEdge, ROVehicle>> = Ptr::null();
-    if net.has_bidi_edges() {
-        panic!("shortcut: the railway router is not wired in duarouter yet");
-    }
+    // C++ RailwayRouter, built only when the net has bidirectional edges (C++ `new`, so leaked)
+    let railRouter: Ptr<crate::utils::router::railway_router::RailwayRouter<ROEdge, ROVehicle>> = if net.has_bidi_edges() {
+        Ptr::from_raw(Box::into_raw(Box::new(crate::utils::router::railway_router::RailwayRouter::new(ROEdge::get_all_edges(), true, Some(op), Some(ttFunction), false, net.has_permissions(), restrictionParams, oc.get_float("railway.max-train-length").unwrap_or_else(|e| panic!("{e}")), oc.get_float("weights.reversal-penalty").unwrap_or_else(|e| panic!("{e}"))).with_compute())))
+    } else {
+        Ptr::null()
+    };
     // shortcut: ROIntermodalRouter is not ported, so the intermodal router is null and net.write_intermodal writes nothing
     let _ = (carWalk, taxiWait);
     let pedRouter: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));

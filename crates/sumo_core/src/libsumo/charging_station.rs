@@ -382,12 +382,12 @@ impl ChargingStation {
             VAR_CS_TOTAL_POWER => wrapper.m().wrap_double(objID, variable, Self::get_total_power(objID)),
             VAR_PARAMETER => {
                 paramData.m().read_unsigned_byte();
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
             }
             VAR_PARAMETER_WITH_KEY => {
                 paramData.m().read_unsigned_byte();
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
             }
             _ => false,

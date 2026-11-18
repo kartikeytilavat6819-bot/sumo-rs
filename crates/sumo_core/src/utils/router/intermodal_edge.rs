@@ -4,6 +4,8 @@ use crate::prelude::*;
 use crate::utils::router::access_edge::AccessEdge;
 use crate::utils::router::car_edge::CarEdge;
 use crate::utils::router::pedestrian_edge::PedestrianEdge;
+use crate::utils::router::public_transport_edge::PublicTransportEdge;
+use crate::utils::router::stop_edge::StopEdge;
 use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo, RouterVehicle};
 
 /// the base edge type that is given to the internal router (SUMOAbstractRouter)
@@ -31,13 +33,15 @@ pub struct IntermodalEdge<E, L, N, V> {
     _p: std::marker::PhantomData<(E, L, N, V,)>,
 }
 
-/// The C++ subclasses of IntermodalEdge that override its virtual methods. PublicTransportEdge and StopEdge are not ported yet (shortcut).
+/// The C++ subclasses of IntermodalEdge that override its virtual methods.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum IntermodalEdgeKind {
     Base,
     Access,
     Pedestrian,
     Car,
+    Stop,
+    PublicTransport,
 }
 
 impl<E, L, N, V> std::ops::Deref for IntermodalEdge<E, L, N, V> {
@@ -183,6 +187,14 @@ where
         assert!(self.myKind == IntermodalEdgeKind::Car);
         unsafe { &*(self as *const Self as *const CarEdge<E, L, N, V>) }
     }
+    pub fn as_stop(&self) -> &StopEdge<E, L, N, V> {
+        assert!(self.myKind == IntermodalEdgeKind::Stop);
+        unsafe { &*(self as *const Self as *const StopEdge<E, L, N, V>) }
+    }
+    pub fn as_public_transport(&self) -> &PublicTransportEdge<E, L, N, V> {
+        assert!(self.myKind == IntermodalEdgeKind::PublicTransport);
+        unsafe { &*(self as *const Self as *const PublicTransportEdge<E, L, N, V>) }
+    }
 
     /// C++: `void IntermodalEdge::~IntermodalEdge<E, L, N, V>()` [virtual]
     // virtual ~IntermodalEdge() {}
@@ -200,6 +212,8 @@ where
         match self.myKind {
             IntermodalEdgeKind::Base => false,
             IntermodalEdgeKind::Access => false,
+            IntermodalEdgeKind::Stop => self.as_stop().include_in_route(arg0),
+            IntermodalEdgeKind::PublicTransport => self.as_public_transport().include_in_route(arg0),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().include_in_route(arg0),
             IntermodalEdgeKind::Car => self.as_car().include_in_route(arg0),
         }
@@ -325,10 +339,11 @@ where
     #[allow(unused_variables)]
     pub fn prohibits(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> bool {
         match self.myKind {
-            IntermodalEdgeKind::Base => false,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Stop => false,
             IntermodalEdgeKind::Access => self.as_access().prohibits(arg0),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().prohibits(arg0),
             IntermodalEdgeKind::Car => self.as_car().prohibits(arg0),
+            IntermodalEdgeKind::PublicTransport => self.as_public_transport().prohibits(arg0),
         }
     }
 
@@ -348,7 +363,7 @@ where
     #[allow(unused_variables)]
     pub fn get_partial_length(&self, arg0: Ptr<IntermodalTrip<E, N, V>>) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::Stop | IntermodalEdgeKind::PublicTransport => self.myLength,
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_partial_length(arg0),
             IntermodalEdgeKind::Car => self.as_car().get_partial_length(arg0),
         }
@@ -361,10 +376,11 @@ where
     #[allow(unused_variables)]
     pub fn get_travel_time(&self, arg0: Ptr<IntermodalTrip<E, N, V>>, arg1: f64) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base => 0.,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Stop => 0.,
             IntermodalEdgeKind::Access => self.as_access().get_travel_time(arg0, arg1),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_travel_time(arg0, arg1),
             IntermodalEdgeKind::Car => self.as_car().get_travel_time(arg0, arg1),
+            IntermodalEdgeKind::PublicTransport => self.as_public_transport().get_travel_time(arg0, arg1),
         }
     }
 
@@ -387,7 +403,10 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_intended(&self, arg0: f64, arg1: &mut String) -> f64 {
-        0.
+        match self.myKind {
+            IntermodalEdgeKind::PublicTransport => self.as_public_transport().get_intended(arg0, arg1),
+            _ => 0.,
+        }
     }
 
     /// C++: `double IntermodalEdge::getTravelTimeStatic(const IntermodalEdge<E, L, N, V> *const, const IntermodalTrip<E, N, V> *const, double)` [static]
@@ -517,7 +536,8 @@ where
     #[allow(unused_variables)]
     pub fn get_start_pos(&self) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => 0.,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::PublicTransport => 0.,
+            IntermodalEdgeKind::Stop => self.as_stop().get_start_pos(),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_start_pos(),
             IntermodalEdgeKind::Car => self.as_car().get_start_pos(),
         }
@@ -530,7 +550,8 @@ where
     #[allow(unused_variables)]
     pub fn get_end_pos(&self) -> f64 {
         match self.myKind {
-            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access => self.myLength,
+            IntermodalEdgeKind::Base | IntermodalEdgeKind::Access | IntermodalEdgeKind::PublicTransport => self.myLength,
+            IntermodalEdgeKind::Stop => self.as_stop().get_end_pos(),
             IntermodalEdgeKind::Pedestrian => self.as_pedestrian().get_end_pos(),
             IntermodalEdgeKind::Car => self.as_car().get_end_pos(),
         }

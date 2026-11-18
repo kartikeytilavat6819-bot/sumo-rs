@@ -567,10 +567,9 @@ impl MSFCDExport {
     // }
     #[allow(unused_variables)]
     pub fn has_own_output(veh: Ptr<SUMOVehicle>, filter: bool, shapeFilter: bool, isInRadius: bool) -> bool {
-        // shortcut: getDevice(typeid(MSDevice_FCD)) has no type-keyed lookup, the FCD device is found by its "fcd_" id prefix set in MSDevice_FCD::build_vehicle_devices, upgrade when getDevice takes a type key
         (!filter || MSDevice_FCD::get_edge_filter().contains(&veh.get_edge()))
             && (!shapeFilter || MSDevice_FCD::shape_filter(veh.cast::<SUMOTrafficObject>()))
-            && (veh.get_devices().iter().any(|dev| dev.m().base2.get_id().starts_with("fcd_")) || isInRadius)
+            && (!veh.get_device("fcd").is_null() || isInRadius)
     }
 
     /// C++: `bool MSFCDExport::hasOwnOutput(const MSTransportable *, bool, bool, bool)` [static, private]

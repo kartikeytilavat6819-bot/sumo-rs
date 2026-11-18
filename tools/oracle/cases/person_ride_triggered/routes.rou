@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <route id="rL" edges="AB BC"/>
+  <vehicle id="bus0" type="bus" route="rL" line="L1" depart="0">
+    <stop busStop="bsA" triggered="person" duration="5"/>
+    <stop busStop="bsB" duration="5"/>
+  </vehicle>
+  <vehicle id="bus1" type="bus" route="rL" line="L1" depart="60">
+    <stop busStop="bsA" triggered="person" duration="5"/>
+    <stop busStop="bsB" duration="5"/>
+  </vehicle>
+  <vehicle id="bus2" type="bus" route="rL" line="L1" depart="120">
+    <stop busStop="bsA" triggered="person" duration="5"/>
+    <stop busStop="bsB" duration="5"/>
+  </vehicle>
+  <person id="pa0" type="ped" depart="5">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa1" type="ped" depart="20">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa2" type="ped" depart="35">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa3" type="ped" depart="50">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa4" type="ped" depart="65">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa5" type="ped" depart="80">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa6" type="ped" depart="95">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa7" type="ped" depart="110">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa8" type="ped" depart="125">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa9" type="ped" depart="140">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa10" type="ped" depart="155">
+    <walk from="AB" busStop="bsA"/>
+    <ride busStop="bsB" lines="L1"/>
+  </person>
+  <person id="pa11" type="ped" depart="170">
+    <ride from="AB" busStop="bsB" lines="L1"/>
+  </person>
+</routes>

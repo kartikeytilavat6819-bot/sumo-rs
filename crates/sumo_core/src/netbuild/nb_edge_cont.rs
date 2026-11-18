@@ -1478,7 +1478,8 @@ impl NBEdgeCont {
                 }
                 let node = nc.retrieve(&nodeID);
                 let n = edge.get_num_lanes();
-                self.split_at_2(dc, edge, node, &id, &nodeID, n, n, -1.0, UNSPECIFIED_FRICTION, 0);
+                // C++ passes edge->getID() (the current edge), not the captured original id.
+                self.split_at_2(dc, edge, node, edge.get_id(), &nodeID, n, n, -1.0, UNSPECIFIED_FRICTION, 0);
                 edge = self.retrieve(&nodeID, false);
             }
         }
