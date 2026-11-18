@@ -273,7 +273,13 @@ def rewrite(tokens: list[str], app: str, copied: dict[str, Path], case: Path,
             continue
 
         # Input operands: match the longest copied relative path, then the basename.
+        # Options such as --additional-files take a comma-separated list of files.
         if val and (had_eq or key in VALUE_OPTS):
+            if "," in val:
+                parts = [_find_copied(p, copied) for p in val.split(",")]
+                if all(p is not None for p in parts):
+                    result.append(fmt(key, ",".join(case_path(p) for p in parts)))
+                    continue
             target = _find_copied(val, copied)
             if target is not None:
                 result.append(fmt(key, case_path(target)))
