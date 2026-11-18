@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 25 --emission-output rawdump.xml -a tools/oracle/cases/tt_bugs_2xxx_ticket2109/input_additional2.add.xml

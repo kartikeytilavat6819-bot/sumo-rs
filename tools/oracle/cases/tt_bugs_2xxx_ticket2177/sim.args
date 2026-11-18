@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --seed 23 --fcd-output.signals --begin=0 --end=60

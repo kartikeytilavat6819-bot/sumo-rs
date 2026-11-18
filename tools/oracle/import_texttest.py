@@ -65,6 +65,12 @@ ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
 # run_all.sh / make_sim_refs.sh always pass these; a duplicate is a hard error.
 HARNESS_FLAGS = ("--no-step-log",)
 
+# run_all.sh only writes tripinfo/fcd/statistic. Sub-options of any other output
+# whose file option we strip would make sumo error (e.g. "A vehroute-output file
+# is needed for exit times"), so they are dropped from sim.args.
+HARNESS_OUTPUTS = ("--tripinfo-output", "--fcd-output", "--statistic-output")
+OUTPUT_CANON = {"--vehroutes": "--vehroute-output", "--summary": "--summary-output"}
+
 # A token containing any of these means the test cannot run headless with sumo.
 SKIP_MARKERS = (
     ".py", "--python-script", "--traci", "--remote-port", "--gui",
@@ -182,6 +188,8 @@ def parse_file_options(tokens):
             additions.extend(x for x in val.split(",") if x)
         else:
             outputs.append((name, val))
+    stripped = {OUTPUT_CANON.get(n, n) for n, _ in outputs} - set(HARNESS_OUTPUTS)
+    sim = [t for t in sim if not any(t.startswith(o + ".") for o in stripped)]
     return sim, net, routes, additions, outputs
 
 

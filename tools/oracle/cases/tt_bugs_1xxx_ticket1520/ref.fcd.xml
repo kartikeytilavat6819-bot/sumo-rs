@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:02:03.083358-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1520/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1520/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1520/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1520/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1520/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <time-to-teleport value="10"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blocker" x="5.10" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="5.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blocker" x="7.70" y="-1.65" angle="90.00" type="t0" speed="2.60" pos="7.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocker" x="12.90" y="-1.65" angle="90.00" type="t0" speed="5.20" pos="12.90" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="5.10" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="5.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocker" x="20.70" y="-1.65" angle="90.00" type="t0" speed="7.80" pos="20.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="6.10" y="-1.65" angle="90.00" type="t0" speed="1.00" pos="6.10" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocker" x="31.10" y="-1.65" angle="90.00" type="t0" speed="10.40" pos="31.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="9.70" y="-1.65" angle="90.00" type="t0" speed="3.60" pos="9.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocker" x="44.10" y="-1.65" angle="90.00" type="t0" speed="13.00" pos="44.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="15.90" y="-1.65" angle="90.00" type="t0" speed="6.20" pos="15.90" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocker" x="57.99" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="57.99" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="24.70" y="-1.65" angle="90.00" type="t0" speed="8.80" pos="24.70" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocker" x="71.88" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="71.88" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="36.09" y="-1.65" angle="90.00" type="t0" speed="11.40" pos="36.09" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocker" x="85.77" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="85.77" lane="beg_0" slope="0.00"/>
+        <vehicle id="teleport" x="49.98" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="49.98" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocker" x="99.66" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="1.11" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="teleport" x="63.88" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="63.88" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocker" x="110.06" y="-1.65" angle="90.00" type="t0" speed="10.40" pos="11.51" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="teleport" x="77.77" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="77.77" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocker" x="115.95" y="-1.65" angle="90.00" type="t0" speed="5.90" pos="4.60" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="91.66" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="91.66" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="1.40" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="102.22" y="-1.65" angle="90.00" type="t0" speed="10.56" pos="3.67" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="108.28" y="-1.65" angle="90.00" type="t0" speed="6.06" pos="9.73" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="1.56" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="109.85" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="11.30" lane=":gneJ1_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="124.95" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="13.60" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="138.84" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="27.49" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="152.73" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="41.38" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="166.62" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="55.27" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="180.51" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="69.16" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+        <vehicle id="teleport" x="194.40" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="83.05" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="blocker" x="117.35" y="-1.65" angle="90.00" type="t0" speed="0.00" pos="6.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="blocker" x="119.95" y="-1.65" angle="90.00" type="t0" speed="2.60" pos="8.60" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="blocker" x="125.15" y="-1.65" angle="90.00" type="t0" speed="5.20" pos="13.80" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="blocker" x="132.95" y="-1.65" angle="90.00" type="t0" speed="7.80" pos="21.60" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="blocker" x="143.35" y="-1.65" angle="90.00" type="t0" speed="10.40" pos="32.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="blocker" x="156.35" y="-1.65" angle="90.00" type="t0" speed="13.00" pos="45.00" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="blocker" x="170.24" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="58.89" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="blocker" x="184.13" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="72.78" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="blocker" x="198.02" y="-1.65" angle="90.00" type="t0" speed="13.89" pos="86.67" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00"/>
+</fcd-export>

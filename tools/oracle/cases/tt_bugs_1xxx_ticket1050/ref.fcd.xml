@@ -1,0 +1,576 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:00:27.912829-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1050/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1050/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1050/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1050/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1050/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <ignore-junction-blocker value="5"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="sudden_stop" x="743.40" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="2si_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="sudden_stop" x="740.80" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.70" lane="2si_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blocked_on_junction1" x="743.40" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="2si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="735.60" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="12.90" lane="2si_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blocked_on_junction1" x="742.40" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.00" pos="6.10" lane="2si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="727.80" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="20.70" lane="2si_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blocked_on_junction1" x="738.80" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="3.60" pos="9.70" lane="2si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="717.40" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="31.10" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blocked_on_junction1" x="732.60" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="6.20" pos="15.90" lane="2si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="704.40" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="44.10" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blocked_on_junction1" x="723.80" y="508.25" angle="270.00" type="DEFAULT_VEHTYPE" speed="8.80" pos="24.70" lane="2si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="690.51" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="57.99" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blocked_on_junction1" x="712.40" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="11.40" pos="36.09" lane="2si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="676.62" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="71.88" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blocked_on_junction1" x="698.51" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="49.98" lane="2si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="662.73" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="85.77" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blocked_on_junction1" x="684.62" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="63.88" lane="2si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="648.84" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="99.66" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blocked_on_junction1" x="670.74" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="77.77" lane="2si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="634.95" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="113.55" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blocked_on_junction1" x="656.85" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="91.66" lane="2si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="621.06" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="127.44" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blocked_on_junction1" x="642.96" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="105.55" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="508.25" y="256.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="3si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="607.17" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="141.33" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blocked_on_junction1" x="629.07" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="119.44" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="508.25" y="259.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.70" lane="3si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="593.28" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="155.22" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blocked_on_junction1" x="615.18" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="133.32" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="508.25" y="264.40" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="12.90" lane="3si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="579.39" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="169.11" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blocked_on_junction1" x="601.29" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="147.21" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="508.25" y="272.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="20.70" lane="3si_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="256.60" y="491.75" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="1si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="565.50" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="183.00" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blocked_on_junction1" x="587.40" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="161.10" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="282.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="31.10" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="259.20" y="491.75" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.70" lane="1si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="551.61" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="196.89" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blocked_on_junction1" x="573.51" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="174.99" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="295.60" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="44.10" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="264.40" y="491.75" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="12.90" lane="1si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="537.72" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="210.78" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blocked_on_junction1" x="559.62" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="188.88" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="309.49" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="57.99" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="272.20" y="491.75" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="20.70" lane="1si_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="524.46" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.26" pos="224.04" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blocked_on_junction1" x="545.73" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="202.77" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="323.38" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="71.88" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="282.60" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="31.10" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="515.71" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="8.76" pos="232.79" lane="2si_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blocked_on_junction1" x="532.30" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.42" pos="216.20" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="337.27" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="85.77" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="295.60" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="44.10" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="504.37" y="504.48" angle="266.13" type="DEFAULT_VEHTYPE" speed="11.36" pos="7.00" lane=":0_5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blocked_on_junction1" x="520.85" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="11.45" pos="227.65" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="351.16" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="99.66" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="309.49" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="57.99" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="492.10" y="502.09" angle="257.64" type="DEFAULT_VEHTYPE" speed="12.50" pos="19.50" lane=":0_5_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blocked_on_junction1" x="513.90" y="504.95" angle="270.00" type="DEFAULT_VEHTYPE" speed="6.95" pos="234.60" lane="2si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="365.05" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="113.55" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="323.38" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="71.88" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="483.64" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="8.49" pos="5.01" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blocked_on_junction1" x="504.37" y="504.48" angle="266.13" type="DEFAULT_VEHTYPE" speed="9.55" pos="7.00" lane=":0_5_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="378.94" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="127.44" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="337.27" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="85.77" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="3.99" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blocked_on_junction1" x="494.23" y="502.53" angle="257.76" type="DEFAULT_VEHTYPE" speed="10.33" pos="17.33" lane=":0_5_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="392.83" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="141.33" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="351.16" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="99.66" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blocked_on_junction1" x="488.48" y="501.65" angle="262.06" type="DEFAULT_VEHTYPE" speed="5.83" pos="0.17" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="406.72" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="155.22" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="365.05" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="113.55" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="1.33" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="420.61" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="169.11" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="378.94" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="127.44" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="434.50" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="183.00" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="392.83" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="141.33" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="448.39" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="196.89" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="406.72" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="155.22" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="462.28" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="210.78" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="420.61" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="169.11" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="476.17" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="224.67" lane="3si_1" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="434.50" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="183.00" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="504.95" y="488.67" angle="359.98" type="DEFAULT_VEHTYPE" speed="12.50" pos="0.02" lane=":0_9_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="448.39" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="196.89" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="503.55" y="501.07" angle="349.74" type="DEFAULT_VEHTYPE" speed="12.50" pos="12.52" lane=":0_9_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="462.28" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="210.78" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="512.00" angle="353.30" type="DEFAULT_VEHTYPE" speed="11.11" pos="0.65" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="475.54" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.26" pos="224.04" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="523.11" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="11.76" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="484.29" y="495.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.76" pos="232.79" lane="1si_1" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="534.22" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="22.87" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="495.63" y="495.52" angle="86.13" type="DEFAULT_VEHTYPE" speed="11.36" pos="7.00" lane=":0_13_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="545.33" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="33.98" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="507.90" y="497.91" angle="77.64" type="DEFAULT_VEHTYPE" speed="12.50" pos="19.50" lane=":0_13_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="556.44" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="45.09" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="518.98" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="7.63" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="567.55" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="56.20" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="530.09" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="18.74" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="578.66" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="67.31" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="541.20" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="29.85" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="589.77" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="78.42" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="552.31" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="40.96" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="600.88" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="89.53" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="563.42" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="52.07" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="611.99" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="100.64" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="574.53" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="63.18" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="623.10" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="111.75" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="585.64" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="74.29" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="634.21" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="122.86" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="596.75" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="85.40" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="645.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="133.97" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="607.86" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="96.51" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="656.43" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="145.08" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="618.97" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="107.62" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="667.54" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="156.19" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="630.08" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="118.73" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="678.65" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="167.30" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="641.19" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="129.84" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="689.76" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="178.41" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="652.30" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="140.95" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="700.87" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="189.52" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="663.41" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="152.06" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="711.98" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="200.63" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="674.52" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="163.17" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="723.09" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="211.74" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="685.63" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="174.28" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="734.20" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="222.85" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="696.74" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="185.39" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="745.31" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="233.96" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="707.85" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="196.50" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="756.42" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="245.07" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="718.96" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="207.61" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="767.53" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="256.18" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="730.07" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="218.72" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="778.64" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="267.29" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="741.18" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="229.83" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="789.75" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="278.40" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="752.29" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="240.94" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="800.86" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="289.51" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="763.40" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="252.05" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="811.97" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="300.62" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="774.51" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="263.16" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="823.08" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="311.73" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="785.62" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="274.27" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="834.19" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="322.84" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="796.73" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="285.38" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="845.30" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="333.95" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="807.84" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="296.49" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="856.41" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="345.06" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="818.95" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="307.60" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="867.52" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="356.17" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="830.06" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="318.71" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="878.63" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="367.28" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="841.17" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="329.82" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="889.74" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="378.39" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="852.28" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="340.93" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="900.85" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="389.50" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="863.39" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="352.04" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="911.96" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="400.61" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="874.50" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="363.15" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="923.07" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="411.72" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="885.61" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="374.26" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="934.18" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="422.83" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="896.72" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="385.37" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="945.29" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="433.94" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="907.83" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="396.48" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="956.40" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="445.05" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="918.94" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="407.59" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="967.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="456.16" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="930.05" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="418.70" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="978.62" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="467.27" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="941.16" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="429.81" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction2" x="501.65" y="989.73" angle="0.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="478.38" lane="4o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="952.27" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="440.92" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="963.38" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="452.03" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="974.49" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="463.14" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="985.60" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="474.25" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="blocked_on_junction3" x="996.71" y="498.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.11" pos="485.36" lane="2o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="blocked_on_junction1" x="487.15" y="501.65" angle="264.86" type="DEFAULT_VEHTYPE" speed="0.00" pos="1.50" lane="1o_0" slope="0.00"/>
+        <vehicle id="sudden_stop" x="479.65" y="501.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="9.00" lane="1o_0" slope="0.00"/>
+    </timestep>
+</fcd-export>

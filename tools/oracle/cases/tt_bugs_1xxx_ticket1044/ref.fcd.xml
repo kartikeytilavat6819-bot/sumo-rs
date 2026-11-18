@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:00:26.927596-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_bugs_1xxx_ticket1044/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_bugs_1xxx_ticket1044/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1044/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1044/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc57/tools/oracle/cases/tt_bugs_1xxx_ticket1044/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="change_left" x="500.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="500.00" lane="main_0" slope="0.00"/>
+        <vehicle id="change_right" x="500.00" y="-1.65" angle="90.00" type="want_change" speed="40.00" pos="500.00" lane="main_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="change_left" x="540.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="540.00" lane="main_0" slope="0.00"/>
+        <vehicle id="change_right" x="540.00" y="-1.65" angle="90.00" type="want_change" speed="40.00" pos="540.00" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="5.10" y="-4.95" angle="90.00" type="default" speed="0.00" pos="5.10" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="change_left" x="580.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="580.00" lane="main_0" slope="0.00"/>
+        <vehicle id="change_right" x="580.00" y="-1.65" angle="90.00" type="want_change" speed="40.00" pos="580.00" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="7.70" y="-4.95" angle="90.00" type="default" speed="2.60" pos="7.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="change_left" x="617.66" y="-4.95" angle="90.00" type="want_change" speed="37.66" pos="617.66" lane="main_0" slope="0.00"/>
+        <vehicle id="change_right" x="620.00" y="-1.65" angle="90.00" type="want_change" speed="40.00" pos="620.00" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="12.90" y="-4.95" angle="90.00" type="default" speed="5.20" pos="12.90" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="change_left" x="653.03" y="-4.95" angle="90.00" type="want_change" speed="35.37" pos="653.03" lane="main_0" slope="0.00"/>
+        <vehicle id="change_right" x="660.00" y="-1.65" angle="90.00" type="want_change" speed="40.00" pos="660.00" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="20.70" y="-4.95" angle="90.00" type="default" speed="7.80" pos="20.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="change_left" x="686.17" y="-1.65" angle="90.00" type="want_change" speed="33.14" pos="686.17" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="700.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="700.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="31.10" y="-4.95" angle="90.00" type="default" speed="10.40" pos="31.10" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="change_left" x="719.41" y="-1.65" angle="90.00" type="want_change" speed="33.24" pos="719.41" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="740.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="740.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="44.10" y="-4.95" angle="90.00" type="default" speed="13.00" pos="44.10" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="change_left" x="752.75" y="-1.65" angle="90.00" type="want_change" speed="33.34" pos="752.75" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="780.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="780.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="59.70" y="-4.95" angle="90.00" type="default" speed="15.60" pos="59.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="change_left" x="786.19" y="-1.65" angle="90.00" type="want_change" speed="33.44" pos="786.19" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="820.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="820.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="77.90" y="-4.95" angle="90.00" type="default" speed="18.20" pos="77.90" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="change_left" x="819.73" y="-1.65" angle="90.00" type="want_change" speed="33.54" pos="819.73" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="860.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="860.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="98.70" y="-4.95" angle="90.00" type="default" speed="20.80" pos="98.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="change_left" x="853.37" y="-1.65" angle="90.00" type="want_change" speed="33.64" pos="853.37" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="900.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="900.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="122.10" y="-4.95" angle="90.00" type="default" speed="23.40" pos="122.10" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="change_left" x="887.11" y="-1.65" angle="90.00" type="want_change" speed="33.74" pos="887.11" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="940.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="940.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="148.10" y="-4.95" angle="90.00" type="default" speed="26.00" pos="148.10" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="change_left" x="920.95" y="-1.65" angle="90.00" type="want_change" speed="33.84" pos="920.95" lane="main_1" slope="0.00"/>
+        <vehicle id="change_right" x="980.00" y="-4.95" angle="90.00" type="want_change" speed="40.00" pos="980.00" lane="main_0" slope="0.00"/>
+        <vehicle id="needless_wait" x="176.70" y="-4.95" angle="90.00" type="default" speed="28.60" pos="176.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="change_left" x="954.89" y="-1.65" angle="90.00" type="want_change" speed="33.94" pos="954.89" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="207.90" y="-4.95" angle="90.00" type="default" speed="31.20" pos="207.90" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="change_left" x="988.93" y="-1.65" angle="90.00" type="want_change" speed="34.04" pos="988.93" lane="main_1" slope="0.00"/>
+        <vehicle id="needless_wait" x="241.70" y="-4.95" angle="90.00" type="default" speed="33.80" pos="241.70" lane="main_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00"/>
+</fcd-export>

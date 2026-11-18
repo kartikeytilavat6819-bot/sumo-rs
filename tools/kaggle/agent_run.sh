@@ -7,8 +7,8 @@ export PATH="$HOME/.cargo/bin:$PATH"
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
 SUMO="$BIN/sumo.exe"
 [ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc57-scan
-rm -rf "$OUT"; mkdir -p "$OUT"
+OUT=/tmp/oc57-scan
+rm -rf "$OUT"; mkdir -p "$OUT" || exit 1
 n=0; ok=0; bad=0
 for d in tools/oracle/cases/tt_bugs_*/; do
   c=$(basename "$d")
