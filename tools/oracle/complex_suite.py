@@ -39,9 +39,11 @@ def normalize(data: bytes, paths: list[str]) -> bytes:
     for p in paths:
         s = s.replace(p, "<PATH>")
     s = re.sub(r"Starting server on port \d+", "Starting server on port <PORT>", s)
+    s = re.sub(r"<remote-port value=\"\d+\"/>", '<remote-port value="<PORT>"/>', s)
     s = re.sub(r"\b\d+\s?ms\b", "<TIME> ms", s)
-    s = re.sub(r"<!--\s*generated on [^>]*?-->", "<!-- generated on <DATE> -->", s)
-    s = re.sub(r'(\bversion=")[^"]*(")', r"\1<VERSION>\2", s)
+    s = re.sub(r"Real time factor: [0-9.]+", "Real time factor: <RATE>", s)
+    s = re.sub(r"<!--\s*generated on .*?-->", "<!-- generated on <DATE> -->", s, flags=re.S)
+    s = re.sub(r"<performance\s+[^>]*/>", "<performance/>", s)
     s = re.sub(r'(\bversion=")[^"]*(")', r"\1<VERSION>\2", s)
     return s.encode("utf-8")
 
