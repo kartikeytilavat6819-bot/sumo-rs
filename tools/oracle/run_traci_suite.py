@@ -115,6 +115,7 @@ def norm_log(text):
             continue
         ln = re.sub(r"\d+\.\d+ms", "(TIME)", ln)
         ln = re.sub(r"\d+\.\d+s", "(TIME)", ln)
+        ln = re.sub(r'<remote-port value="\d+"/>', '<remote-port value="<PORT>"/>', ln)
         ln = re.sub(r"Starting server on port \d+", "Starting server on port <PORT>", ln)
         ln = re.sub(r"output:port \d+", "output:port <PORT>", ln)
         out.append(ln.rstrip())
@@ -126,6 +127,7 @@ def norm_xml(text):
     for ln in text.splitlines():
         if ln.lstrip().startswith("<!--"):
             continue
+        ln = re.sub(r'<remote-port value="\d+"/>', '<remote-port value="<PORT>"/>', ln)
         out.append(ln.rstrip())
     return "\n".join(out)
 
@@ -266,6 +268,16 @@ def main():
         for rel, diffs in results:
             f.write("%s\t%s\n" % (rel, "PASS" if not diffs else "FAIL"))
     npass = sum(1 for _, d in results if not d)
+    with open(os.path.join(OUT, "diffs.txt"), "w", encoding="utf-8") as f:
+        for rel, diffs in results:
+            if diffs:
+                f.write("FAIL %s\n%s\n" % (rel, "\n".join(diffs)))
+    cats = {}
+    for rel, diffs in results:
+        if diffs:
+            key = "/".join(rel.split("/")[:2])
+            cats[key] = cats.get(key, 0) + 1
+    print("FAIL categories: " + ", ".join("%s=%d" % kv for kv in sorted(cats.items())))
     show = int(os.environ.get("TRACI_SHOW", "80"))
     nshown = 0
     for rel, diffs in results:
