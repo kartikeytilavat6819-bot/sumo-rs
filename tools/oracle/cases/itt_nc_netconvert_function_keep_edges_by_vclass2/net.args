@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_keep_edges_by_vclass2/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_keep_edges_by_vclass2/input_plain.nod.xml --keep-edges.by-vclass passenger --no-internal-links

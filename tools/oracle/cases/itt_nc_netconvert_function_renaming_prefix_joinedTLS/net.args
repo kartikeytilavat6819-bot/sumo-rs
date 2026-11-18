@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v -s tools/oracle/cases/itt_nc_netconvert_function_renaming_prefix_joinedTLS/input_net.net.xml --prefix foo_

@@ -1,0 +1,1 @@
+--write-license --edge-files tools/oracle/cases/itt_nc_netconvert_function_tls_guessing_guess_joining_join/input_plain.edg.xml --node-files tools/oracle/cases/itt_nc_netconvert_function_tls_guessing_guess_joining_join/input_plain.nod.xml --tls.guess.joining --tls.join --tls.guess --ignore-errors.edge-type --no-internal-links --tls.join-dist 30 --tls.guess.threshold 50

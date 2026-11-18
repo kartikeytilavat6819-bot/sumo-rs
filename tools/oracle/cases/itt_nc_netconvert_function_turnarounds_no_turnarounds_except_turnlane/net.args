@@ -1,0 +1,1 @@
+--write-license --no-internal-links --edge-files=tools/oracle/cases/itt_nc_netconvert_function_turnarounds_no_turnarounds_except_turnlane/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_turnarounds_no_turnarounds_except_turnlane/input_plain.nod.xml --no-turnarounds.except-turnlane

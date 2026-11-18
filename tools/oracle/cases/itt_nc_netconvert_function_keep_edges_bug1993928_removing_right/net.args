@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v --keep-edges.explicit 1fi,1si,1o,3fi,3si,3o,4fi,4si,4o --edge-files=tools/oracle/cases/itt_nc_netconvert_function_keep_edges_bug1993928_removing_right/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_keep_edges_bug1993928_removing_right/input_nodes.nod.xml
