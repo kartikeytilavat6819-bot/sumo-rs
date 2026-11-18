@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -t --edgedata-output aggregated.xml --max-depart-delay 3 -e 3600 -a tools/oracle/cases/tt_tls_actuated_merge_proportions/input_additional.add.xml

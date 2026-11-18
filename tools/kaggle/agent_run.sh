@@ -48,3 +48,9 @@ echo "--- NEMA_basic our tls_switch.xml (first 24) ---"
 grep '<tlsSwitch' "$d/tls_switch.xml" 2>/dev/null | head -24
 echo "--- NEMA_basic our tripinfo (first 12) ---"
 grep '<tripinfo' "$OUT/nema_ti.xml" 2>/dev/null | head -12
+echo "--- NEMA_basic candidate SB_R.0 ---"
+grep 'id="SB_R.0"' "$OUT/nema_ti.xml" 2>/dev/null | head -1
+echo "--- NEMA_basic our tls_state at t=25,30,60,70,80,90,100,130 ---"
+grep -E '<tlsState time="(25|30|60|70|80|90|100|130)\.00"' "$d/tls_state.xml" 2>/dev/null
+echo "--- NEMA_basic our tls_switch header ---"
+head -4 "$d/tls_switch.xml" 2>/dev/null | tail -2
