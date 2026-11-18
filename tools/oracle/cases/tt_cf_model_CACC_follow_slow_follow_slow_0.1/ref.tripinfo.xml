@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T08:35:24.748688-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="ref_simple.net.xml"/>
+        <route-files value="routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="ref.fcd.xml"/>
+        <fcd-output.params value="caccVehicleMode"/>
+        <fcd-output.attributes value="acceleration"/>
+        <tripinfo-output value="ref.tripinfo.xml"/>
+        <statistic-output value="ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="CACC"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="slow" depart="0.00" departLane="gneE0_0" departPos="100.00" departSpeed="19.45" departDelay="0.00" arrival="97.80" arrivalLane="gneE0_0" arrivalPos="2000.00" arrivalSpeed="19.45" duration="97.80" routeLength="1900.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_slow" vType="slow" speedFactor="0.70" vaporized=""/>
+    <tripinfo id="f.0" depart="0.00" departLane="gneE0_0" departPos="5.10" departSpeed="29.45" departDelay="0.00" arrival="99.00" arrivalLane="gneE0_0" arrivalPos="2000.00" arrivalSpeed="22.57" duration="99.00" routeLength="1994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="31.25" rerouteNo="0" devices="tripinfo_f.0 fcd_f.0" vType="default" speedFactor="1.06" vaporized=""/>
+    <tripinfo id="f.1" depart="2.00" departLane="gneE0_0" departPos="5.10" departSpeed="26.07" departDelay="0.00" arrival="100.30" arrivalLane="gneE0_0" arrivalPos="2000.00" arrivalSpeed="23.46" duration="98.30" routeLength="1994.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="21.77" rerouteNo="0" devices="tripinfo_f.1 fcd_f.1" vType="default" speedFactor="0.94" vaporized=""/>
+</tripinfos>
