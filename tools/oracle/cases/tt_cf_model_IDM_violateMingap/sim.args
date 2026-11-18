@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --step-length 0.1 --collision.action warn --device.fcd.explicit ego --device.fcd.begin 5 --fcd-output.max-leader-distance 100 --fcd-output.attributes speed,acceleration,leaderGap,x -e 10 -a tools/oracle/cases/tt_cf_model_IDM_violateMingap/input_additional.add.xml

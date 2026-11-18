@@ -1,1 +1,0 @@
---write-license --default.departspeed 0 --default.departlane first {CLEAR --default.speeddev 0} --no-duration-log --max-depart-delay 1 --time-to-teleport 0 --carfollow.model KraussOrig1 -a tools/oracle/cases/tt_cf_model_vehs_per_hour_stopped_kraussOrig1/input_additional.add.xml

@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 14400 --extrapolate-departpos --max-depart-delay 2 --max-num-vehicles 50 --tripinfo-output.write-unfinished -t -a tools/oracle/cases/tt_cf_model_fundamental_circle_krauss_d50_t0.8/input_additional4.add.xml

@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model nonInteracting --verbose -a tools/oracle/cases/tt_basic_person_trip_chain_chargingstations/input_additional.add.xml

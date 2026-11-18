@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --verbose -e 240 --fcd-output.attributes angle,speed,pos,lane,edge,vehicle,stage,containerNumber -a tools/oracle/cases/tt_basic_container_container_number/input_additional.add.xml

@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 3600 --lateral-resolution 0.8 --extrapolate-departpos --max-depart-delay 60 --max-num-vehicles 60 --tripinfo-output.write-unfinished -t -a tools/oracle/cases/tt_cf_model_fundamental_circle_krauss_bikes_sublane/input_additional4.add.xml

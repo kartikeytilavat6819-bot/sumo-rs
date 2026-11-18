@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 1800 --extrapolate-departpos --max-depart-delay 450 --collision.mingap-factor 0 --emergencydecel.warning-threshold 1.1 -t --seed 1 -a tools/oracle/cases/tt_cf_model_fundamental_2lane_IDM/input_additional.add.xml

@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.tripinfo.explicit 0 --step-length 0.1

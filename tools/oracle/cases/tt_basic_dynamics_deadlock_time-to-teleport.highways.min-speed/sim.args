@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --time-to-teleport.highways 5 --time-to-teleport.highways.min-speed 13.88

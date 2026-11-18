@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 600 --extrapolate-departpos --max-depart-delay 3 --collision.mingap-factor 0 --lateral-resolution 0.8 -t -a tools/oracle/cases/tt_cf_model_fundamental_krauss_bikes_sublane/input_additional.add.xml

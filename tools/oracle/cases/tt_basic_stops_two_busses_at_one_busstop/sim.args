@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 1000 -a tools/oracle/cases/tt_basic_stops_two_busses_at_one_busstop/input_additional.add.xml

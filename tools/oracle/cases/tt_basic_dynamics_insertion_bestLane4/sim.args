@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --max-depart-delay 2 -e 3600

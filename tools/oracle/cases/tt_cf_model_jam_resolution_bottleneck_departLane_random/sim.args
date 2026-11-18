@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --end 1440 --duration-log.statistics -a tools/oracle/cases/tt_cf_model_jam_resolution_bottleneck_departLane_random/input_additional.add.xml

@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 1000 --fcd-output.attributes speed,pos,lane,edge -a tools/oracle/cases/tt_basic_stops_ship_at_containerstop/input_additional.add.xml

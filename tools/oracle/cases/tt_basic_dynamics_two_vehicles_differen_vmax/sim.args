@@ -1,1 +1,0 @@
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 1000 --fcd-output.attributes speed,pos,lane,edge -a tools/oracle/cases/tt_basic_dynamics_two_vehicles_differen_vmax/input_additional2.add.xml
