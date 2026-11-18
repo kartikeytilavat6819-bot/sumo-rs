@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 1 --no-duration-log --fcd-output.attributes location,misc -a tools/oracle/cases/tt_spec_departure_posLat_beyondLane/input_routes.rou.xml,tools/oracle/cases/tt_spec_departure_posLat_beyondLane/input_additional.add.xml

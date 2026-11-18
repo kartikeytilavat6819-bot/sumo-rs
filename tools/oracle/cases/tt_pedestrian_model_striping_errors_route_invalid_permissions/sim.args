@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model striping --pedestrian.striping.dawdling 0.0

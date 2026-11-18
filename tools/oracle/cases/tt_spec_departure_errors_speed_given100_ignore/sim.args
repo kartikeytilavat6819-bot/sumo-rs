@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 -e 5 --no-duration-log --tripinfo-output.write-unfinished --ignore-route-errors -a tools/oracle/cases/tt_spec_departure_errors_speed_given100_ignore/input_routes.rou.xml,tools/oracle/cases/tt_spec_departure_errors_speed_given100_ignore/input_additional.add.xml

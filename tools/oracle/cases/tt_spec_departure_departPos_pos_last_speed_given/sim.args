@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 360 --duration-log.statistics -a tools/oracle/cases/tt_spec_departure_departPos_pos_last_speed_given/input_routes.rou.xml,tools/oracle/cases/tt_spec_departure_departPos_pos_last_speed_given/input_additional.add.xml

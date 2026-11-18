@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 -e 1 --no-duration-log --fcd-output.attributes angle,pos,edge,stage

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:46:47.348965-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_Prio_walking_forward/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_Prio_walking_forward/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_Prio_walking_forward/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_Prio_walking_forward/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_jupedsim_crossing_Prio_walking_forward/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="2000"/>
+    </time>
+
+    <processing>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+        <pedestrian.model value="jupedsim"/>
+        <pedestrian.striping.dawdling value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<statistics xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/statistic_file.xsd">
+    <performance clockBegin="1795024007.36" clockEnd="1795024008.81" clockDuration="1.46" traciDuration="0.00" realTimeFactor="1373.63" vehicleUpdatesPerSecond="4105.77" personUpdatesPerSecond="1936.81" begin="0.00" end="2000.00" duration="2000.00"/>
+    <vehicles loaded="43" inserted="43" running="0" waiting="0"/>
+    <teleports total="1" jam="0" yield="1" wrongLane="0"/>
+    <safety collisions="0" emergencyStops="0" emergencyBraking="0"/>
+    <persons loaded="60" running="0" jammed="0"/>
+    <personTeleports total="0" abortWait="0" wrongDest="0"/>
+    <vehicleTripStatistics count="43" routeLength="194.28" speed="5.27" duration="139.02" waitingTime="119.42" timeLoss="124.80" departDelay="48.65" departDelayWaiting="-1.00" totalTravelTime="5978.00" totalDepartDelay="2092.00"/>
+    <pedestrianStatistics number="60" routeLength="66.80" duration="47.00" timeLoss="-1.10"/>
+    <rideStatistics number="0"/>
+    <transportStatistics number="0"/>
+</statistics>

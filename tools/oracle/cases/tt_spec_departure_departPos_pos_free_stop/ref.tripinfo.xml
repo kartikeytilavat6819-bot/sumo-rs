@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:14:52.868807-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_spec_departure_departPos_pos_free_stop/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="2" depart="0.00" departLane="E0_0" departPos="7.60" departSpeed="0.00" departDelay="0.00" arrival="19.00" arrivalLane="E0_0" arrivalPos="100.00" arrivalSpeed="20.80" duration="19.00" routeLength="92.40" waitingTime="0.00" waitingCount="0" stopTime="10.00" timeLoss="0.91" rerouteNo="0" devices="tripinfo_2 fcd_2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="1" depart="0.00" departLane="E0_0" departPos="0.00" departSpeed="0.00" departDelay="0.00" arrival="33.00" arrivalLane="E0_0" arrivalPos="100.00" arrivalSpeed="20.80" duration="33.00" routeLength="100.00" waitingTime="11.00" waitingCount="2" stopTime="10.00" timeLoss="13.65" rerouteNo="0" devices="tripinfo_1 fcd_1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="3" depart="14.00" departLane="E0_0" departPos="0.00" departSpeed="0.00" departDelay="14.00" arrival="47.00" arrivalLane="E0_0" arrivalPos="100.00" arrivalSpeed="20.80" duration="33.00" routeLength="100.00" waitingTime="11.00" waitingCount="1" stopTime="10.00" timeLoss="13.65" rerouteNo="0" devices="tripinfo_3 fcd_3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="4" depart="28.00" departLane="E0_0" departPos="0.00" departSpeed="0.00" departDelay="28.00" arrival="61.00" arrivalLane="E0_0" arrivalPos="100.00" arrivalSpeed="20.80" duration="33.00" routeLength="100.00" waitingTime="11.00" waitingCount="1" stopTime="10.00" timeLoss="13.65" rerouteNo="0" devices="tripinfo_4 fcd_4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="5" depart="42.00" departLane="E0_0" departPos="0.00" departSpeed="0.00" departDelay="42.00" arrival="75.00" arrivalLane="E0_0" arrivalPos="100.00" arrivalSpeed="20.80" duration="33.00" routeLength="100.00" waitingTime="11.00" waitingCount="1" stopTime="10.00" timeLoss="13.65" rerouteNo="0" devices="tripinfo_5 fcd_5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

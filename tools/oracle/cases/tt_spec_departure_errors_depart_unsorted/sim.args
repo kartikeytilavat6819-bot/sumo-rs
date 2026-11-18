@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -v false --log log.txt --time-to-teleport 50 -a tools/oracle/cases/tt_spec_departure_errors_depart_unsorted/input_routes.rou.xml

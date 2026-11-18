@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 -e 1 --no-duration-log --fcd-output.attributes speed,pos,lane,edge -a tools/oracle/cases/tt_spec_flow_errors_repetition_missing/input_routes.rou.xml,tools/oracle/cases/tt_spec_flow_errors_repetition_missing/input_additional.add.xml

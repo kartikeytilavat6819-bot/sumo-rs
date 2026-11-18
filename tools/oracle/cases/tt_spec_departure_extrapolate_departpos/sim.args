@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -t --extrapolate-departpos -a tools/oracle/cases/tt_spec_departure_extrapolate_departpos/input_additional.add.xml

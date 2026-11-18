@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 360 --duration-log.statistics --extrapolate-departpos --tripinfo-output.write-unfinished -a tools/oracle/cases/tt_spec_departure_departSpeed_speed_speedLimit_stop/input_routes.rou.xml,tools/oracle/cases/tt_spec_departure_departSpeed_speed_speedLimit_stop/input_additional.add.xml
