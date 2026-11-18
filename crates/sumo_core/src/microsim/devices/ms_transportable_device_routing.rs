@@ -4,6 +4,13 @@ use crate::prelude::*;
 use utils::common::string_utils::to_double;
 use utils::common::time::{time2steps, time2string, SUMOTIME_MIN};
 use utils::options::options_cont::with_options;
+use crate::utils::wrapping_command::WrappingCommand;
+use crate::microsim::ms_event_control::Command;
+
+/// C++ macro `SIMSTEP`
+fn sim_step() -> SUMOTime {
+    MSNet::get_instance().get_current_time_step()
+}
 
 /// A device that performs person rerouting based on current edge speeds
 /// C++ class `MSTransportableDevice_Routing` (microsim/devices/MSTransportableDevice_Routing.h)
@@ -16,7 +23,7 @@ pub struct MSTransportableDevice_Routing {
     /// The last time a routing took place
     pub myLastRouting: SUMOTime,
     /// The (optional) command responsible for rerouting
-    pub myRerouteCommand: Ptr<Unmapped /* WrappingCommand<MSTransportableDevice_Routing> */>,
+    pub myRerouteCommand: Ptr<WrappingCommand<MSTransportableDevice_Routing>>,
     /// The range of the plan which shall be replaced
     pub myScope: String,
 }
@@ -102,7 +109,7 @@ impl MSTransportableDevice_Routing {
                 // build the device
                 let id = format!("routing_{}", p.get_id());
                 // shortcut: device is leaked; the person's device list will own it once person device ownership is ported, upgrade then
-                let device: &mut MSTransportableDevice_Routing = Box::leak(Box::new(MSTransportableDevice_Routing::new(p, &id, period)));
+                let device: &mut MSTransportableDevice_Routing = Box::leak(MSTransportableDevice_Routing::new(p, &id, period));
                 into.push(Ptr::from_mut(&mut device.base));
             }
         }
@@ -118,8 +125,9 @@ impl MSTransportableDevice_Routing {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
+        // make the rerouting command invalid if there is one
         if !self.myRerouteCommand.is_null() {
-            // shortcut: Command/WrappingCommand is not ported, so there is no event to deschedule; upgrade when Command exists
+            self.myRerouteCommand.m().deschedule();
         }
     }
 
@@ -189,7 +197,6 @@ impl MSTransportableDevice_Routing {
             return;
         }
         self.myLastRouting = currentTime;
-        // shortcut: MSRoutingEngine::reroute_2 panics until MSRouterProvider and MSTransportableRouter are ported
         MSRoutingEngine::reroute_2(holder, currentTime, "person-device.rerouting", onInit, false, &Default::default());
     }
 
@@ -243,9 +250,11 @@ impl MSTransportableDevice_Routing {
             let oldPeriod = self.myPeriod;
             self.myPeriod = time2steps(doubleValue);
             if self.myPeriod <= 0 {
-                // shortcut: Command deschedule skipped (no Command type); upgrade when Command exists
+                self.myRerouteCommand.m().deschedule();
             } else if oldPeriod <= 0 {
-                // shortcut: re-scheduling the WrappingCommand insertion event is not ported; upgrade when Command and MSEventControl take commands
+                // re-schedule routing command (C++ does not keep this new command in myRerouteCommand)
+                let raw = Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(self), MSTransportableDevice_Routing::wrapped_reroute_command_execute)));
+                MSNet::get_instance().m().get_insertion_events().m().add_event(Ptr::from_raw(raw as *mut dyn Command), sim_step() + self.myPeriod);
             }
         } else {
             return Err(ProcessError::InvalidArgument(format!("Setting parameter '{}' is not supported for device of type '{}'", key, self.device_name())));
@@ -264,17 +273,22 @@ impl MSTransportableDevice_Routing {
     //     // the event will deschedule and destroy itself so it does not need to be stored
     // }
     #[allow(unused_variables)]
-    pub fn new(holder: &mut MSTransportable, id: &str, period: SUMOTime) -> Self {
+    pub fn new(holder: &mut MSTransportable, id: &str, period: SUMOTime) -> Box<Self> {
         // C++ reads the scope from the holder before the base device is built
         let myScope = holder.get_string_param("person-device.rerouting.scope", false, "");
-        // shortcut: the WrappingCommand reroute event is not scheduled (no Command type); upgrade when Command and MSEventControl take commands
-        MSTransportableDevice_Routing {
+        let mut dev = Box::new(MSTransportableDevice_Routing {
             base: MSTransportableDevice::new(holder, id),
             myPeriod: period,
             myLastRouting: -1,
             myRerouteCommand: Ptr::default(),
             myScope,
-        }
+        });
+        // no need for initial routing here, personTrips trigger it themselves
+        let raw = Box::into_raw(Box::new(WrappingCommand::new(Ptr::from_mut(&mut *dev), MSTransportableDevice_Routing::wrapped_reroute_command_execute)));
+        dev.myRerouteCommand = Ptr::from_raw(raw);
+        MSNet::get_instance().m().get_insertion_events().m().add_event(Ptr::from_raw(raw as *mut dyn Command), sim_step() + period);
+        // the event will deschedule and destroy itself so it does not need to be stored
+        dev
     }
 
     /// C++: `SUMOTime MSTransportableDevice_Routing::wrappedRerouteCommandExecute(SUMOTime)` [private]

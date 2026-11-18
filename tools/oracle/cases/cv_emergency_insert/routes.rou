@@ -1,0 +1,8 @@
+<routes>
+    <vType id="slow" maxSpeed="3.00"/>
+    <route id="r" edges="E0 E1 E2"/>
+    <vehicle id="l0" type="slow" route="r" depart="0" departPos="40"/>
+    <flow id="f" route="r" begin="1" end="40" period="3" departSpeed="13.89"/>
+    <vehicle id="l1" type="slow" route="r" depart="60" departPos="30"/>
+    <vehicle id="g0" route="r" depart="61" departSpeed="10" departPos="5"/>
+</routes>

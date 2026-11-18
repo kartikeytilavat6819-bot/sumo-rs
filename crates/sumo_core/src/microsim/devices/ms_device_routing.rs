@@ -280,7 +280,7 @@ impl MSDevice_Routing {
             write_error("The value for device.rerouting.adaptation-weight must be between 0 and 1!");
             ok = false;
         }
-        // shortcut: the "not HAVE_FOX" thread-count error is omitted, this port is always built with threads, upgrade if a non-threaded build is needed
+        // the "#ifndef HAVE_FOX" thread-count error is not part of the reference build (SUMO 1.28.0 is built with FOX)
         if oc.get_int("threads").unwrap() > 1 && oc.get_int("device.rerouting.threads").unwrap() > 1 && oc.get_int("threads").unwrap() != oc.get_int("device.rerouting.threads").unwrap() {
             write_warning("Adapting number of routing threads to number of simulation threads.");
         }

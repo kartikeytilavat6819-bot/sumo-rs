@@ -1662,25 +1662,36 @@ impl MSDevice_StationFinder {
     #[allow(unused_variables)]
     pub fn estimate_consumption(&self, target: Ptr<MSEdge>, includeEmptySoC: bool, stopDiscount: f64) -> f64 {
         let now = MSNet::get_instance().m().get_current_time_step();
-        let router = MSRoutingEngine::get_router_tt(self.myHolder.m().get_rng_index(), self.myHolder.m().get_v_class(), &Default::default());
-        // shortcut: the remaining-route cost (router.recomputeCosts over ConstMSEdgeVector up to the target) is not computed because route iterators are unmapped; remainingTime is taken as 0 until they are ported
-        let remainingTime = 0.;
-        let _ = router;
-        if now > self.myHolder.m().get_departure() {
+        let holder = self.myHolder.m();
+        let router = MSRoutingEngine::get_router_tt(holder.get_rng_index(), holder.get_v_class(), &Default::default());
+        let route: &ConstMSEdgeVector = holder.get_route().get_edges();
+        let targetIt = if target.is_null() { route.len() } else { route.iter().position(|e| *e == target).map(|i| i + 1).unwrap_or(route.len() + 1) };
+        let remainingRoute: ConstMSEdgeVector = route[holder.get_route_position() as usize..targetIt].to_vec();
+        let remainingTime = router.recompute_costs(&remainingRoute, self.myHolder, now, Ptr::default());
+        if now > holder.get_departure() {
             let battery = self.myBattery.m();
             let totalConsumption = battery.get_total_consumption();
             let mut expectedConsumption = 0.;
-            let passedTime = steps2time(now - self.myHolder.m().get_departure());
+            let passedTime = steps2time(now - holder.get_departure());
             if totalConsumption > 0. && passedTime - stopDiscount > DEFAULT_CONSUMPTION_ESTIMATE_HISTORY {
                 expectedConsumption = totalConsumption / (passedTime - stopDiscount) * remainingTime;
             } else {
                 // fallback consumption rate for vehicles starting with low battery
-                // shortcut: the emission-class fallback (PollutantsInterface::compute) is not ported, so the fallback consumption is 0
+                if !holder.get_vehicle_type().get_parameter().was_set(super::ms_device_battery::VTYPEPARS_EMISSIONCLASS_SET) {
+                    write_errorf!("The stationfinder device needs emission parameters for range estimation but no emission class has been set for the vehicle '%'", holder.get_id());
+                }
+                let maxSpeed = holder.get_max_speed();
+                let limit = holder.get_lane().get_speed_limit();
+                let speed = if maxSpeed < limit { maxSpeed } else { limit }; // MIN2
+                let params = holder.get_emission_parameters();
+                let emType = if battery.tracks_fuel() { PollutantsInterface_EmissionType::FUEL } else { PollutantsInterface_EmissionType::ELEC };
+                expectedConsumption = PollutantsInterface::compute(self.myVeh.get_vehicle_type().get_emission_class(), emType,
+                    speed * 0.8, 0., 0., params) * (remainingTime - passedTime);
             }
             if includeEmptySoC {
                 expectedConsumption += f64::max(0., self.myEmptySoC * battery.get_maximum_battery_capacity() - battery.get_actual_battery_capacity());
             }
-            // shortcut: the propulsion-efficiency division (EnergyParams) is not ported; upgrade with the emission parameters
+            expectedConsumption /= holder.get_emission_parameters().get_double_optional(SUMO_ATTR_PROPULSIONEFFICIENCY, 1.);
             return expectedConsumption;
         }
         0.

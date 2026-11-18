@@ -1,0 +1,8 @@
+<additional>
+    <routeProbe id="rp0" edge="E0" period="50" file="/dev/null"/>
+    <calibrator id="cal0" edge="E1" pos="100.00" routeProbe="rp0" jamThreshold="0.6">
+        <flow begin="0" end="100" vehsPerHour="600"/>
+        <flow begin="100" end="200" vehsPerHour="2400"/>
+        <flow begin="200" end="300" speed="8"/>
+    </calibrator>
+</additional>

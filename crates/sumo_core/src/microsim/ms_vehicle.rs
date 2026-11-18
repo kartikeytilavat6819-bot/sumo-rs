@@ -289,7 +289,7 @@ impl Influencer_GapControlState {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // implicit C++ destructor: no members need explicit cleanup
+        self.deactivate();
     }
 
     /// C++: `void GapControlState::init()` [static]
@@ -424,6 +424,17 @@ impl Influencer_GapControlState {
         }
     }
 
+}
+
+/// Whether `listener` is GapControlState's static GapControlVehStateListener (MSNet dispatches listeners by identity)
+pub fn is_gap_control_listener(listener: *mut MSNet_VehicleStateListener) -> bool {
+    let l = MY_VEH_STATE_LISTENER.with(|l| l.get());
+    !l.is_null() && listener == l.as_raw().cast::<MSNet_VehicleStateListener>()
+}
+
+/// Forwards to GapControlVehStateListener::vehicleStateChanged of GapControlState's static listener
+pub fn gap_control_vehicle_state_changed(vehicle: Ptr<SUMOVehicle>, to: MSNet_VehicleState, info: &str) {
+    MY_VEH_STATE_LISTENER.with(|l| l.get()).m().vehicle_state_changed(vehicle, to, info);
 }
 
 /// A static instance of this class in GapControlState deactivates gap control for vehicles whose reference vehicle is removed from the road network
@@ -627,8 +638,10 @@ impl MSVehicle_Influencer {
     // MSVehicle::Influencer::~Influencer() {}
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // implicit C++ destructor body is empty; the shared_ptr<GapControlState> member is not released here
-        // shortcut: myGapControlState is a raw Ptr with no owner-side delete, freed never (leaks one GapControlState per influencer), upgrade with Rc/owned box when gap control is exercised
+        // the shared_ptr<GapControlState> member is its only owner (refVehMap holds raw pointers): ~GapControlState runs
+        if !self.myGapControlState.is_null() {
+            self.myGapControlState.m().drop_();
+        }
     }
 
     /// C++: `void Influencer::cleanup()` [static]
@@ -677,7 +690,7 @@ impl MSVehicle_Influencer {
     #[allow(unused_variables)]
     pub fn activate_gap_controller(&mut self, originalTau: f64, newTimeHeadway: f64, newSpaceHeadway: f64, duration: f64, changeRate: f64, maxDecel: f64, refVeh: Ptr<MSVehicle>) {
         if self.myGapControlState.is_null() {
-            // shortcut: std::make_shared<GapControlState> owned via Box::into_raw, never freed (see Influencer destructor)
+            // std::make_shared<GapControlState>; its destructor side effect runs in Influencer::drop_, the memory stays leaked
             self.myGapControlState = Ptr::from_raw(Box::into_raw(Box::new(Influencer_GapControlState::new())));
             self.init(); // only does things on first call
         }
@@ -1647,7 +1660,7 @@ impl MSVehicle_Influencer {
                 v.m().myState.myPos = self.myRemotePos;
                 v.m().myState.myPosLat = self.myRemotePosLat;
                 if needFurtherUpdate {
-                    // shortcut: furtherLanes are moved out of the vehicle during the call to avoid aliasing &mut
+                    // updateFurtherLanes modifies myFurtherLanes(+PosLat) in place: move them out to avoid aliasing &mut self
                     let mut furtherLanes = std::mem::take(&mut v.m().myFurtherLanes);
                     let mut furtherLanesPosLat = std::mem::take(&mut v.m().myFurtherLanesPosLat);
                     let backPos = v.m().update_further_lanes(&mut furtherLanes, &mut furtherLanesPosLat, &Vec::new());
@@ -2733,10 +2746,14 @@ impl MSVehicle {
     pub fn drop_(&mut self) {
         self.cleanup_parking_reservation();
         self.cleanup_further_lanes();
-        // shortcut: delete myLaneChangeModel, delete myInfluencer and delete myCFVariables are not performed, the raw owners are not modelled yet
+        // delete myLaneChangeModel: ~MSLCM_*() only calls changed(), which resets the model's own members
         if self.myType.is_vehicle_specific() {
             MSNet::get_instance().get_vehicle_control().remove_v_type(self.myType);
         }
+        if !self.myInfluencer.is_null() {
+            self.myInfluencer.m().drop_();
+        }
+        // delete myCFVariables: the car-following variable destructors have no side effects
     }
 
     /// C++: `void MSVehicle::initDevices()` [virtual]
@@ -3597,7 +3614,7 @@ impl MSVehicle {
         // Determine vNext = speed after current sim step (ballistic), resp. in current simstep (euler)
         // Call to finalizeSpeed applies speed reduction due to dawdling / lane changing but ensures minimum safe speed
         let mut vNext = vSafe;
-        // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
+        // the car-following model is owned by the vehicle type, not the vehicle: the raw deref only detaches the borrow from &mut self
         let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
         let rawAccel = speed2accel(max2(vNext, 0.0) - self.myState.mySpeed);
         if vNext <= utils::common::std_defs::SUMO_CONST_HALTING_SPEED * TS && self.myWaitingTime > crate::microsim::ms_globals::startup_wait_threshold() && rawAccel <= self.accel_threshold_for_waiting() && self.myActionStep {
@@ -3643,7 +3660,27 @@ impl MSVehicle {
         // Check for speed advices from the traci client
         vNext = self.process_tra_ci_speed_control(vSafe, vNext);
 
-        // shortcut: the elecHybrid acceleration limit (MSDevice_ElecHybrid via getDevice(typeid(...))) is skipped, typeid device lookup is Unmapped, upgrade when get_device takes a typed key
+        // the acceleration of a vehicle equipped with the elecHybrid device is restricted by the maximal power of the electric drive as well
+        let elecHybridOfVehicle = MSDevice::get_device_by_name(&self.myDevices, "elecHybrid").cast::<MSDevice_ElecHybrid>();
+        if !elecHybridOfVehicle.is_null() {
+            let sv: &mut SUMOVehicle = unsafe { &mut *(self as *mut MSVehicle as *mut SUMOVehicle) };
+            // this is the consumption given by the car following model-computed acceleration
+            let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+            elecHybridOfVehicle.m().set_consum(c);
+            // but the maximum power of the electric motor may be lower
+            // it needs to be converted from [W] to [Wh/s] (3600s / 1h) so that TS can be taken into account
+            let maxPower = self.get_emission_parameters().get_double_optional(SUMO_ATTR_MAXIMUMPOWER, 100000.) / 3600.;
+            if elecHybridOfVehicle.get_consum() / ts() > maxPower {
+                // no, we cannot accelerate that fast, recompute the maximum possible acceleration
+                let accel = elecHybridOfVehicle.m().acceleration(sv, maxPower, self.get_speed());
+                // and update the speed of the vehicle
+                vNext = min2(vNext, self.get_speed() + accel * ts());
+                vNext = max2(vNext, 0.);
+                // and set the vehicle consumption to reflect this
+                let c = elecHybridOfVehicle.m().consumption(sv, (vNext - self.get_speed()) / ts(), vNext);
+                elecHybridOfVehicle.m().set_consum(c);
+            }
+        }
         self.set_braking_signals(vNext);
 
         // update position and speed
@@ -8369,7 +8406,7 @@ impl MSVehicle {
 
             if stop.duration <= 0 && !stop.pars.join.is_empty() {
                 // join this train (part) to another one
-                // shortcut: dynamic_cast<MSVehicle*> is unchecked, the vehicle control only holds MSVehicle instances here
+                // dynamic_cast<MSVehicle*>: in a microsim run the vehicle control only holds MSVehicles, so the cast is exact (null stays null)
                 let joinVeh: Ptr<MSVehicle> = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.join).cast::<MSVehicle>();
                 if !joinVeh.is_null() && joinVeh.has_departed() && (joinVeh.m().join_train_part(me) || joinVeh.m().join_train_part_front(me)) {
                     stop.m().joinTriggered = false;
@@ -8596,7 +8633,7 @@ impl MSVehicle {
                     }
                     if stop.pars.split != "" {
                         // split the train
-                        // shortcut: dynamic_cast<MSVehicle*> is unchecked, the vehicle control only holds MSVehicle instances here
+                        // dynamic_cast<MSVehicle*>: in a microsim run the vehicle control only holds MSVehicles, so the cast is exact (null stays null)
                         let splitVeh: Ptr<MSVehicle> = MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.split).cast::<MSVehicle>();
                         if splitVeh.is_null() {
                             utils::common::msg_handler::write_warning(&format!("Vehicle '{}' to split from vehicle '{}' is not known. time={}.", stop.pars.split, self.get_id(), time2string(MSNet::get_instance().get_current_time_step())));
@@ -9435,7 +9472,9 @@ impl MSVehicle {
         let mut newFurther: Vec<Ptr<MSLane>> = Vec::new();
         let mut newFurtherPosLat: Vec<f64> = Vec::new();
         let mut backPosOnPreviousLane: f64 = self.myState.myPos - self.get_length();
-        let widthShift = self.myFurtherLanesPosLat.len() > self.myFurtherLanes.len();
+        // C++ reads the members myFurtherLanesPosLat / myFurtherLanes here; both callers pass exactly those (moved out
+        // into the arguments to avoid aliasing &mut self), so read the arguments
+        let widthShift = furtherLanesPosLat.len() > furtherLanes.len();
         if passedLanes.len() > 1 {
             // There are candidates for further lanes. (passedLanes[-1] is the current lane, or current shadow lane in context of updateShadowLanes())
             let mut fi: usize = 0;
@@ -9463,7 +9502,7 @@ impl MSVehicle {
                     // we assign the last known lateral position.
                     if newFurtherPosLat.len() == 0 {
                         if widthShift {
-                            newFurtherPosLat.push(*self.myFurtherLanesPosLat.last().unwrap());
+                            newFurtherPosLat.push(*furtherLanesPosLat.last().unwrap());
                         } else {
                             newFurtherPosLat.push(self.myState.myPosLat);
                         }
@@ -9683,7 +9722,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn get_influencer(&mut self) -> &mut MSVehicle_Influencer {
         if self.myInfluencer.is_null() {
-            // shortcut: C++ owns myInfluencer and deletes it in the destructor; Box::leak keeps it alive for the process, upgrade with an owned field
+            // C++ owns myInfluencer and deletes it in ~MSVehicle: drop_ runs that destructor's side effects, the memory itself stays leaked
             self.myInfluencer = Ptr::from_mut(Box::leak(Box::new(MSVehicle_Influencer::new())));
         }
         self.myInfluencer.m()
@@ -10841,7 +10880,7 @@ impl MSVehicle {
     #[allow(unused_variables)]
     pub fn process_link_approaches(&mut self, vSafe: &mut f64, vSafeMin: &mut f64, vSafeMinDist: &mut f64) {
         let TS = ts();
-        // shortcut: the car-following model is owned by the vehicle type, the raw deref lets it be used alongside &mut self calls as in C++
+        // the car-following model is owned by the vehicle type, not the vehicle: the raw deref only detaches the borrow from &mut self
         let cfModel: &MSCFModel = unsafe { &*(self.get_car_follow_model() as *const MSCFModel) };
         let this: Ptr<MSVehicle> = Ptr::from_mut(self);
         // Speed limit due to zipper merging
@@ -13407,7 +13446,7 @@ impl MSVehicle {
     // }
     #[allow(unused_variables)]
     pub fn plan_move_internal(&self, t: SUMOTime, ahead: &MSLeaderInfo, lfLinks: &mut MSVehicle_DriveItemVector, myStopDist: &mut f64, newStopSpeed: &mut f64, myNextTurn: &mut (f64, Ptr<MSLink>)) {
-        // shortcut: DEBUG_PLAN_MOVE output is not ported
+        // DEBUG_PLAN_MOVE output is compiled out of the release C++ (the macro is not defined)
         const CRLL_LOOK_AHEAD: f64 = 5.0;
         const DIST_TO_STOPLINE_EXPECT_PRIORITY: f64 = 1.0;
         const SUMO_const_haltingSpeed: f64 = 0.1;
@@ -15037,8 +15076,7 @@ impl MSVehicle {
         if !self.get_parameter().was_set(VEHPARS_CFMODEL_PARAMS_SET) {
             return false;
         }
-        // shortcut: foe is always an MSVehicle here (SUMOTrafficObject::getVehicleType is not ported), the cast reads the vehicle type of the vehicle
-        let foeType = foe.cast::<MSBaseVehicle>().get_vehicle_type().get_id().to_string();
+        let foeType = foe.get_vehicle_type().get_id().to_string();
         for typeID in StringTokenizer::new(&self.get_parameter().get_parameter("carFollowModel.ignoreTypes", "")).get_vector() {
             if typeID == foeType {
                 return true;
@@ -16066,7 +16104,7 @@ impl MSVehicle {
             }
             let laneName = if lane.is_null() { "NULL".to_string() } else { lane.get_id().to_string() };
             utils::common::msg_handler::write_warning(&format!("Request backPos of vehicle '{}' for invalid lane '{}' time={}.", self.get_id(), laneName, utils::common::time::time2string(MSNet::get_instance().get_current_time_step())));
-            // shortcut: SOFT_ASSERT(false) is not ported, it is a debug-only check
+            // SOFT_ASSERT(false) is assert(false): compiled out of the release C++ (NDEBUG)
             self.myState.myBackPos
         }
     }

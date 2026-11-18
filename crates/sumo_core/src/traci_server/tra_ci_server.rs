@@ -3502,8 +3502,8 @@ impl TraCIServer {
             FILTER_TYPE_VCLASS => {
                 self.myInputStorage.read_byte().expect("readByte"); // read type stringlist
                 let classes = self.myInputStorage.read_string_list().expect("readStringList");
-                // shortcut: the C++ overload can throw on unknown class names; the ported parser returns a Result, which is dropped here
-                let vClasses = parse_vehicle_classes_vec(&classes).ok().expect("parseVehicleClasses");
+                // C++ parseVehicleClasses throws invalid_argument on unknown classes, rethrown as ProcessError by processCommands; propagate it so dispatch_command re-raises it
+                let vClasses = parse_vehicle_classes_vec(&classes).unwrap_or_else(|e| std::panic::panic_any(e));
                 self.add_subscription_filter_v_class(vClasses);
             }
             FILTER_TYPE_VTYPE => {

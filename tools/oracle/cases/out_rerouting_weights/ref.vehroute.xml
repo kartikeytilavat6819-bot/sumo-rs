@@ -1,0 +1,593 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:03:00.216873-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_rerouting_weights/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_rerouting_weights/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_rerouting_weights/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_rerouting_weights/ref.tripinfo.xml"/>
+        <vehroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_rerouting_weights/ref.vehroute.xml"/>
+        <vehroute-output.exit-times value="true"/>
+        <vehroute-output.cost value="true"/>
+        <vehroute-output.route-length value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_rerouting_weights/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <routing>
+        <device.rerouting.probability value="1"/>
+        <device.rerouting.period value="15"/>
+        <device.rerouting.adaptation-steps value="6"/>
+        <device.rerouting.adaptation-interval value="5"/>
+        <device.rerouting.output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_rerouting_weights/ref.rerouting.xml"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vehicle id="fD.0" type="car" depart="0.00" departSpeed="15.0387" speedFactor="1.0827" arrival="11.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="5.00 11.00"/>
+    </vehicle>
+
+    <vehicle id="fH.0" type="car" depart="0.00" departSpeed="12.3065" speedFactor="0.8860" arrival="12.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="6.00 12.00"/>
+    </vehicle>
+
+    <vehicle id="fB.0" type="car" depart="0.00" departLane="1" departSpeed="26.066" speedFactor="0.9383" arrival="13.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="1.00 6.00 13.00"/>
+    </vehicle>
+
+    <vehicle id="fC.0" type="truck" depart="0.00" departSpeed="25.00" speedFactor="1.0052" arrival="13.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="6.00 11.00 13.00"/>
+    </vehicle>
+
+    <vehicle id="fF.0" type="car" depart="1.00" departSpeed="23.0852" speedFactor="0.8310" arrival="22.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="10.00 20.00 22.00"/>
+    </vehicle>
+
+    <vehicle id="fG.0" type="truck" depart="0.00" departSpeed="19.4078" speedFactor="1.0229" arrival="25.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="5.00 17.00 25.00"/>
+    </vehicle>
+
+    <vehicle id="fC.1" type="truck" depart="12.00" departSpeed="25.00" speedFactor="1.0131" arrival="25.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="18.00 23.00 25.00"/>
+    </vehicle>
+
+    <vehicle id="fB.1" type="car" depart="8.00" departLane="1" departSpeed="16.1236" speedFactor="0.8569" arrival="26.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="10.00 19.00 26.00"/>
+    </vehicle>
+
+    <vehicle id="fB.2" type="car" depart="16.00" departLane="0" departSpeed="27.5355" speedFactor="0.9912" arrival="28.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="17.00 22.00 28.00"/>
+    </vehicle>
+
+    <vehicle id="fD.1" type="car" depart="15.00" departSpeed="15.5971" speedFactor="1.1229" arrival="29.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="22.00 29.00"/>
+    </vehicle>
+
+    <vehicle id="fH.1" type="car" depart="20.00" departSpeed="13.0038" speedFactor="0.9362" arrival="32.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="26.00 32.00"/>
+    </vehicle>
+
+    <vehicle id="fF.1" type="car" depart="16.00" departSpeed="25.7465" speedFactor="0.9268" arrival="35.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="24.00 33.00 35.00"/>
+    </vehicle>
+
+    <vehicle id="fB.3" type="car" depart="24.00" departLane="1" departSpeed="28.2828" speedFactor="1.0181" arrival="36.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="25.00 30.00 36.00"/>
+    </vehicle>
+
+    <vehicle id="fA.1" type="car" depart="6.00" departLane="1" departSpeed="19.6718" speedFactor="0.9379" arrival="38.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="9.00 25.00 36.00 38.00"/>
+    </vehicle>
+
+    <vehicle id="fC.2" type="truck" depart="24.00" departSpeed="25.00" speedFactor="1.0051" arrival="39.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="31.00 37.00 39.00"/>
+    </vehicle>
+
+    <vehicle id="fD.2" type="car" depart="30.00" departSpeed="11.469" speedFactor="0.8257" arrival="43.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="36.00 43.00"/>
+    </vehicle>
+
+    <vehicle id="fA.2" type="car" depart="12.00" departLane="1" departSpeed="24.2354" speedFactor="1.0907" arrival="45.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="15.00 33.00 43.00 45.00"/>
+    </vehicle>
+
+    <vehicle id="fG.1" type="truck" depart="20.00" departSpeed="19.4078" speedFactor="0.9707" arrival="47.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="26.00 39.00 47.00"/>
+    </vehicle>
+
+    <vehicle id="fB.4" type="car" depart="32.00" departLane="1" departSpeed="20.1102" speedFactor="0.8726" arrival="49.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="33.00 41.00 49.00"/>
+    </vehicle>
+
+    <vehicle id="fH.2" type="car" depart="40.00" departSpeed="16.0346" speedFactor="1.1544" arrival="51.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="46.00 51.00"/>
+    </vehicle>
+
+    <vehicle id="fF.2" type="car" depart="32.00" departSpeed="25.4798" speedFactor="0.9172" arrival="52.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="40.00 50.00 52.00"/>
+    </vehicle>
+
+    <vehicle id="fC.3" type="truck" depart="36.00" departSpeed="25.00" speedFactor="1.0659" arrival="53.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="43.00 51.00 53.00"/>
+    </vehicle>
+
+    <vehicle id="fB.5" type="car" depart="40.00" departLane="1" departSpeed="25.8715" speedFactor="0.9313" arrival="53.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="41.00 46.00 53.00"/>
+    </vehicle>
+
+    <vehicle id="fA.0" type="car" depart="0.00" departLane="0" departSpeed="23.5532" speedFactor="1.0600" arrival="59.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="3.00 47.00 57.00 59.00"/>
+    </vehicle>
+
+    <vehicle id="fA.3" type="car" depart="18.00" departLane="0" departSpeed="19.518" speedFactor="0.8784" arrival="60.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="21.00 47.00 58.00 60.00"/>
+    </vehicle>
+
+    <vehicle id="fD.3" type="car" depart="45.00" departSpeed="13.8178" speedFactor="0.9948" arrival="60.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="52.00 60.00"/>
+    </vehicle>
+
+    <vehicle id="fE.0" type="car" depart="1.00" departSpeed="21.9775" speedFactor="1.0303" arrival="61.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="4.00 50.00 61.00"/>
+    </vehicle>
+
+    <vehicle id="fC.4" type="truck" depart="48.00" departSpeed="25.00" speedFactor="1.0898" arrival="61.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="54.00 59.00 61.00"/>
+    </vehicle>
+
+    <vehicle id="fE.1" type="car" depart="14.00" departSpeed="23.2666" speedFactor="1.0471" arrival="63.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="17.00 53.00 63.00"/>
+    </vehicle>
+
+    <vehicle id="fG.2" type="truck" depart="40.00" departSpeed="19.4078" speedFactor="1.0893" arrival="63.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="45.00 56.00 63.00"/>
+    </vehicle>
+
+    <vehicle id="fB.6" type="car" depart="48.00" departLane="1" departSpeed="16.8053" speedFactor="0.9732" arrival="65.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="50.00 58.00 65.00"/>
+    </vehicle>
+
+    <vehicle id="fB.7" type="car" depart="56.00" departLane="1" departSpeed="28.6245" speedFactor="1.0304" arrival="67.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="57.00 62.00 67.00"/>
+    </vehicle>
+
+    <vehicle id="fF.3" type="car" depart="49.00" departSpeed="23.2152" speedFactor="1.1023" arrival="68.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="57.00 66.00 68.00"/>
+    </vehicle>
+
+    <vehicle id="fD.4" type="car" depart="60.00" departSpeed="14.4928" speedFactor="1.0434" arrival="71.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="65.00 71.00"/>
+    </vehicle>
+
+    <vehicle id="fC.5" type="truck" depart="60.00" departSpeed="25.00" speedFactor="1.0189" arrival="74.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="66.00 72.00 74.00"/>
+    </vehicle>
+
+    <vehicle id="fH.3" type="car" depart="60.00" departSpeed="13.8539" speedFactor="0.9974" arrival="74.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="68.00 74.00"/>
+    </vehicle>
+
+    <vehicle id="fE.2" type="car" depart="28.00" departSpeed="21.6645" speedFactor="0.9750" arrival="75.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="31.00 63.00 75.00"/>
+    </vehicle>
+
+    <vehicle id="fE.3" type="car" depart="42.00" departSpeed="26.0374" speedFactor="1.1718" arrival="77.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="45.00 66.00 77.00"/>
+    </vehicle>
+
+    <vehicle id="fB.8" type="car" depart="64.00" departLane="0" departSpeed="25.0159" speedFactor="0.9005" arrival="78.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="65.00 71.00 78.00"/>
+    </vehicle>
+
+    <vehicle id="fF.4" type="car" depart="64.00" departSpeed="24.3603" speedFactor="0.8769" arrival="85.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="72.00 82.00 85.00"/>
+    </vehicle>
+
+    <vehicle id="fA.4" type="car" depart="24.00" departLane="0" departSpeed="19.6718" speedFactor="1.1582" arrival="86.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="27.00 73.00 84.00 86.00"/>
+    </vehicle>
+
+    <vehicle id="fC.6" type="truck" depart="72.00" departSpeed="25.00" speedFactor="1.0479" arrival="86.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="79.00 85.00 86.00"/>
+    </vehicle>
+
+    <vehicle id="fG.3" type="truck" depart="60.00" departSpeed="19.4078" speedFactor="1.0440" arrival="87.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="66.00 79.00 87.00"/>
+    </vehicle>
+
+    <vehicle id="fB.9" type="car" depart="72.00" departLane="0" departSpeed="28.2467" speedFactor="1.0168" arrival="88.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="73.00 80.00 88.00"/>
+    </vehicle>
+
+    <vehicle id="fD.5" type="car" depart="75.00" departSpeed="13.9344" speedFactor="1.0032" arrival="90.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="82.00 90.00"/>
+    </vehicle>
+
+    <vehicle id="fH.4" type="car" depart="80.00" departSpeed="13.4664" speedFactor="0.9695" arrival="92.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="86.00 92.00"/>
+    </vehicle>
+
+    <vehicle id="fB.10" type="car" depart="80.00" departLane="0" departSpeed="24.9714" speedFactor="0.8989" arrival="93.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="81.00 87.00 93.00"/>
+    </vehicle>
+
+    <vehicle id="fF.5" type="car" depart="80.00" departSpeed="31.7387" speedFactor="1.1425" arrival="97.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="87.00 95.00 97.00"/>
+    </vehicle>
+
+    <vehicle id="fC.7" type="truck" depart="84.00" departSpeed="25.00" speedFactor="1.0597" arrival="98.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="90.00 96.00 98.00"/>
+    </vehicle>
+
+    <vehicle id="fD.6" type="car" depart="90.00" departSpeed="12.2551" speedFactor="0.8823" arrival="101.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="95.00 101.00"/>
+    </vehicle>
+
+    <vehicle id="fA.8" type="car" depart="48.00" departLane="1" departSpeed="22.6577" speedFactor="1.0197" arrival="105.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="51.00 92.00 103.00 105.00"/>
+    </vehicle>
+
+    <vehicle id="fA.5" type="car" depart="30.00" departLane="1" departSpeed="19.7669" speedFactor="0.8896" arrival="106.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="33.00 92.00 104.00 106.00"/>
+    </vehicle>
+
+    <vehicle id="fE.4" type="car" depart="56.00" departSpeed="21.2668" speedFactor="0.9571" arrival="106.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="59.00 95.00 106.00"/>
+    </vehicle>
+
+    <vehicle id="fA.6" type="car" depart="36.00" departLane="1" departSpeed="18.9517" speedFactor="0.9488" arrival="108.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="39.00 95.00 105.00 108.00"/>
+    </vehicle>
+
+    <vehicle id="fG.4" type="truck" depart="80.00" departSpeed="19.4078" speedFactor="1.0118" arrival="109.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="86.00 101.00 109.00"/>
+    </vehicle>
+
+    <vehicle id="fC.8" type="truck" depart="96.00" departSpeed="25.00" speedFactor="1.0200" arrival="109.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="102.00 107.00 109.00"/>
+    </vehicle>
+
+    <vehicle id="fB.11" type="car" depart="88.00" departLane="1" departSpeed="7.7418" speedFactor="0.9870" arrival="111.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="91.00 103.00 111.00"/>
+    </vehicle>
+
+    <vehicle id="fB.12" type="car" depart="96.00" departLane="1" departSpeed="21.3808" speedFactor="0.9146" arrival="112.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="97.00 105.00 112.00"/>
+    </vehicle>
+
+    <vehicle id="fH.5" type="car" depart="100.00" departSpeed="13.058" speedFactor="0.9401" arrival="112.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="106.00 112.00"/>
+    </vehicle>
+
+    <vehicle id="fF.6" type="car" depart="97.00" departSpeed="23.5748" speedFactor="1.0221" arrival="116.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="105.00 114.00 116.00"/>
+    </vehicle>
+
+    <vehicle id="fB.13" type="car" depart="104.00" departLane="1" departSpeed="26.5327" speedFactor="0.9551" arrival="116.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="105.00 110.00 116.00"/>
+    </vehicle>
+
+    <vehicle id="fD.7" type="car" depart="105.00" departSpeed="13.6803" speedFactor="0.9849" arrival="120.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="112.00 120.00"/>
+    </vehicle>
+
+    <vehicle id="fC.9" type="truck" depart="108.00" departSpeed="25.00" speedFactor="0.9910" arrival="121.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="114.00 119.00 121.00"/>
+    </vehicle>
+
+    <vehicle id="fB.14" type="car" depart="112.00" departLane="0" departSpeed="10.5797" speedFactor="1.0073" arrival="127.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="114.00 121.00 127.00"/>
+    </vehicle>
+
+    <vehicle id="fD.8" type="car" depart="120.00" departSpeed="13.5553" speedFactor="0.9759" arrival="131.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="125.00 131.00"/>
+    </vehicle>
+
+    <vehicle id="fH.6" type="car" depart="120.00" departSpeed="14.4845" speedFactor="1.0428" arrival="131.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="126.00 131.00"/>
+    </vehicle>
+
+    <vehicle id="fF.7" type="car" depart="112.00" departSpeed="28.7384" speedFactor="1.0345" arrival="132.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="120.00 130.00 132.00"/>
+    </vehicle>
+
+    <vehicle id="fC.10" type="truck" depart="120.00" departSpeed="25.00" speedFactor="1.0739" arrival="133.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="126.00 131.00 133.00"/>
+    </vehicle>
+
+    <vehicle id="fG.5" type="truck" depart="100.00" departSpeed="19.4078" speedFactor="0.9865" arrival="134.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="108.00 125.00 134.00"/>
+    </vehicle>
+
+    <vehicle id="fB.15" type="car" depart="120.00" departLane="0" departSpeed="26.8633" speedFactor="0.9670" arrival="135.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="121.00 128.00 135.00"/>
+    </vehicle>
+
+    <vehicle id="fA.7" type="car" depart="42.00" departLane="1" departSpeed="22.3355" speedFactor="1.0052" arrival="141.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="45.00 129.00 139.00 141.00"/>
+    </vehicle>
+
+    <vehicle id="fG.6" type="truck" depart="120.00" departSpeed="19.4078" speedFactor="1.0009" arrival="144.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="125.00 136.00 144.00"/>
+    </vehicle>
+
+    <vehicle id="fB.16" type="car" depart="128.00" departLane="0" departSpeed="28.2439" speedFactor="1.0167" arrival="145.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="129.00 137.00 145.00"/>
+    </vehicle>
+
+    <vehicle id="fC.11" type="truck" depart="132.00" departSpeed="25.00" speedFactor="0.9607" arrival="145.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="138.00 143.00 145.00"/>
+    </vehicle>
+
+    <vehicle id="fD.9" type="car" depart="135.00" departSpeed="15.154" speedFactor="1.0910" arrival="146.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="140.00 146.00"/>
+    </vehicle>
+
+    <vehicle id="fB.17" type="car" depart="136.00" departLane="1" departSpeed="29.3579" speedFactor="1.0568" arrival="147.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="137.00 142.00 147.00"/>
+    </vehicle>
+
+    <vehicle id="fF.8" type="car" depart="128.00" departSpeed="24.7742" speedFactor="0.8918" arrival="148.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="136.00 146.00 148.00"/>
+    </vehicle>
+
+    <vehicle id="fH.7" type="car" depart="140.00" departSpeed="15.2401" speedFactor="1.0972" arrival="152.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="147.00 152.00"/>
+    </vehicle>
+
+    <vehicle id="fA.11" type="car" depart="66.00" departLane="1" departSpeed="18.8959" speedFactor="0.8504" arrival="156.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="69.00 143.00 153.00 156.00"/>
+    </vehicle>
+
+    <vehicle id="fA.10" type="car" depart="60.00" departLane="0" departSpeed="24.262" speedFactor="1.0919" arrival="157.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="63.00 143.00 154.00 157.00"/>
+    </vehicle>
+
+    <vehicle id="fC.12" type="truck" depart="144.00" departSpeed="25.00" speedFactor="0.9841" arrival="157.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="150.00 155.00 157.00"/>
+    </vehicle>
+
+    <vehicle id="fD.10" type="car" depart="150.00" departSpeed="14.8998" speedFactor="1.0727" arrival="161.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="155.00 161.00"/>
+    </vehicle>
+
+    <vehicle id="fG.7" type="truck" depart="140.00" departSpeed="19.4078" speedFactor="1.0608" arrival="164.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="145.00 156.00 164.00"/>
+    </vehicle>
+
+    <vehicle id="fB.18" type="car" depart="145.00" departLane="1" departSpeed="7.7171" speedFactor="0.9567" arrival="166.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="148.00 158.00 166.00"/>
+    </vehicle>
+
+    <vehicle id="fF.9" type="car" depart="145.00" departSpeed="23.1916" speedFactor="0.9525" arrival="166.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="153.00 163.00 166.00"/>
+    </vehicle>
+
+    <vehicle id="fB.19" type="car" depart="152.00" departLane="0" departSpeed="28.1689" speedFactor="1.0140" arrival="167.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="153.00 160.00 167.00"/>
+    </vehicle>
+
+    <vehicle id="fC.13" type="truck" depart="156.00" departSpeed="25.00" speedFactor="0.9798" arrival="169.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="162.00 167.00 169.00"/>
+    </vehicle>
+
+    <vehicle id="fH.8" type="car" depart="160.00" departSpeed="14.015" speedFactor="1.0090" arrival="171.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="166.00 171.00"/>
+    </vehicle>
+
+    <vehicle id="fB.20" type="car" depart="160.00" departLane="0" departSpeed="25.7715" speedFactor="0.9277" arrival="173.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="161.00 167.00 173.00"/>
+    </vehicle>
+
+    <vehicle id="fD.11" type="car" depart="165.00" departSpeed="12.8066" speedFactor="0.9220" arrival="176.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="170.00 176.00"/>
+    </vehicle>
+
+    <vehicle id="fF.10" type="car" depart="160.00" departSpeed="24.0547" speedFactor="0.8659" arrival="180.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="168.00 178.00 180.00"/>
+    </vehicle>
+
+    <vehicle id="fA.12" type="car" depart="72.00" departLane="0" departSpeed="20.2605" speedFactor="1.1689" arrival="182.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="75.00 169.00 180.00 182.00"/>
+    </vehicle>
+
+    <vehicle id="fC.14" type="truck" depart="168.00" departSpeed="25.00" speedFactor="0.9957" arrival="183.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="175.00 181.00 183.00"/>
+    </vehicle>
+
+    <vehicle id="fD.12" type="car" depart="180.00" departSpeed="16.0124" speedFactor="1.1528" arrival="190.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="185.00 190.00"/>
+    </vehicle>
+
+    <vehicle id="fG.8" type="truck" depart="160.00" departSpeed="19.4078" speedFactor="1.0493" arrival="193.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="168.00 185.00 193.00"/>
+    </vehicle>
+
+    <vehicle id="fH.9" type="car" depart="180.00" departSpeed="11.419" speedFactor="0.8221" arrival="193.00" routeLength="101.97">
+        <route cost="-1.00" savings="0.00" edges="-103230 -103224#3" exitTimes="187.00 193.00"/>
+    </vehicle>
+
+    <vehicle id="fB.21" type="car" depart="168.00" departLane="1" departSpeed="4.2151" speedFactor="1.0043" arrival="194.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="174.00 186.00 194.00"/>
+    </vehicle>
+
+    <vehicle id="fB.22" type="car" depart="176.00" departLane="1" departSpeed="12.0961" speedFactor="1.1032" arrival="195.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="178.00 187.00 195.00"/>
+    </vehicle>
+
+    <vehicle id="fF.11" type="car" depart="176.00" departSpeed="28.6523" speedFactor="1.0314" arrival="195.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="184.00 193.00 195.00"/>
+    </vehicle>
+
+    <vehicle id="fC.15" type="truck" depart="180.00" departSpeed="25.00" speedFactor="1.0304" arrival="195.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="187.00 194.00 195.00"/>
+    </vehicle>
+
+    <vehicle id="fB.23" type="car" depart="184.00" departLane="1" departSpeed="28.0106" speedFactor="1.0083" arrival="196.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="185.00 190.00 196.00"/>
+    </vehicle>
+
+    <vehicle id="fA.14" type="car" depart="84.00" departLane="1" departSpeed="19.6268" speedFactor="1.0825" arrival="204.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="87.00 192.00 202.00 204.00"/>
+    </vehicle>
+
+    <vehicle id="fA.9" type="car" depart="54.00" departLane="1" departSpeed="19.6658" speedFactor="0.9006" arrival="205.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="57.00 192.00 203.00 205.00"/>
+    </vehicle>
+
+    <vehicle id="fC.16" type="truck" depart="192.00" departSpeed="25.00" speedFactor="1.0187" arrival="205.00" routeLength="300.51">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 --103227#1 --103227#0" exitTimes="198.00 204.00 205.00"/>
+    </vehicle>
+
+    <vehicle id="fE.5" type="car" depart="70.00" departSpeed="18.9959" speedFactor="0.8549" arrival="206.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="73.00 195.00 206.00"/>
+    </vehicle>
+
+    <vehicle id="fG.9" type="truck" depart="180.00" departSpeed="19.4078" speedFactor="1.0161" arrival="206.00" routeLength="346.49">
+        <route cost="-1.00" savings="0.00" edges="-103228 -103227#1 -103227#2" exitTimes="186.00 198.00 206.00"/>
+    </vehicle>
+
+    <vehicle id="fB.24" type="car" depart="192.00" departLane="0" departSpeed="26.6605" speedFactor="0.9597" arrival="208.00" routeLength="307.51">
+        <route cost="-1.00" savings="0.00" edges="-103227#0 -103227#1 -103227#2" exitTimes="193.00 200.00 208.00"/>
+    </vehicle>
+
+    <vehicle id="fF.12" type="car" depart="193.00" departSpeed="23.2315" speedFactor="1.2260" arrival="212.00" routeLength="303.08">
+        <route cost="-1.00" savings="0.00" edges="--103227#2 -103224#2 -103224#3" exitTimes="201.00 210.00 212.00"/>
+    </vehicle>
+
+    <vehicle id="fA.15" type="car" depart="90.00" departLane="0" departSpeed="20.8335" speedFactor="0.9376" arrival="215.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="93.00 202.00 213.00 215.00"/>
+    </vehicle>
+
+    <vehicle id="fA.13" type="car" depart="78.00" departLane="0" departSpeed="22.1311" speedFactor="0.9960" arrival="216.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="81.00 202.00 213.00 216.00"/>
+    </vehicle>
+
+    <vehicle id="fE.6" type="car" depart="84.00" departSpeed="18.9846" speedFactor="1.0158" arrival="216.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="87.00 205.00 216.00"/>
+    </vehicle>
+
+    <vehicle id="fA.17" type="car" depart="102.00" departLane="1" departSpeed="23.4577" speedFactor="1.0557" arrival="217.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="105.00 205.00 215.00 217.00"/>
+    </vehicle>
+
+    <vehicle id="fA.18" type="car" depart="108.00" departLane="0" departSpeed="22.9421" speedFactor="1.0325" arrival="218.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="111.00 208.00 216.00 218.00"/>
+    </vehicle>
+
+    <vehicle id="fA.16" type="car" depart="96.00" departLane="0" departSpeed="19.6718" speedFactor="0.9068" arrival="219.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="99.00 208.00 216.00 219.00"/>
+    </vehicle>
+
+    <vehicle id="fA.19" type="car" depart="114.00" departLane="1" departSpeed="19.6718" speedFactor="0.9981" arrival="220.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="117.00 210.00 218.00 220.00"/>
+    </vehicle>
+
+    <vehicle id="fE.7" type="car" depart="98.00" departSpeed="22.3263" speedFactor="1.0230" arrival="221.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="102.00 211.00 221.00"/>
+    </vehicle>
+
+    <vehicle id="fA.20" type="car" depart="120.00" departLane="1" departSpeed="22.502" speedFactor="1.0169" arrival="222.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="137.00 212.00 220.00 222.00"/>
+    </vehicle>
+
+    <vehicle id="fE.8" type="car" depart="112.00" departSpeed="17.1513" speedFactor="1.0869" arrival="224.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="116.00 213.00 224.00"/>
+    </vehicle>
+
+    <vehicle id="fA.22" type="car" depart="132.00" departLane="1" departSpeed="17.9645" speedFactor="0.8336" arrival="227.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="151.00 215.00 225.00 227.00"/>
+    </vehicle>
+
+    <vehicle id="fA.21" type="car" depart="126.00" departLane="0" departSpeed="19.6718" speedFactor="1.0071" arrival="228.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="151.00 216.00 225.00 228.00"/>
+    </vehicle>
+
+    <vehicle id="fE.9" type="car" depart="127.00" departSpeed="17.5265" speedFactor="1.0220" arrival="229.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="200.00 218.00 229.00"/>
+    </vehicle>
+
+    <vehicle id="fA.23" type="car" depart="138.00" departLane="1" departSpeed="16.4397" speedFactor="1.0099" arrival="229.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="177.00 217.00 226.00 229.00"/>
+    </vehicle>
+
+    <vehicle id="fA.24" type="car" depart="144.00" departLane="0" departSpeed="14.0891" speedFactor="1.0650" arrival="231.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="200.00 220.00 229.00 231.00"/>
+    </vehicle>
+
+    <vehicle id="fE.10" type="car" depart="140.00" departSpeed="16.0892" speedFactor="0.9065" arrival="233.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="203.00 221.00 233.00"/>
+    </vehicle>
+
+    <vehicle id="fA.25" type="car" depart="150.00" departLane="1" departSpeed="14.1876" speedFactor="0.8939" arrival="234.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="210.00 223.00 232.00 234.00"/>
+    </vehicle>
+
+    <vehicle id="fE.11" type="car" depart="154.00" departSpeed="15.0417" speedFactor="1.0345" arrival="235.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="206.00 224.00 235.00"/>
+    </vehicle>
+
+    <vehicle id="fD.13" type="car" depart="195.00" departSpeed="14.0525" speedFactor="1.0117" arrival="235.00" routeLength="118.45">
+        <route cost="-1.00" savings="0.00" edges="-103226#0 -103226#1" exitTimes="226.00 235.00"/>
+    </vehicle>
+
+    <vehicle id="fA.26" type="car" depart="156.00" departLane="1" departSpeed="13.7692" speedFactor="1.0648" arrival="236.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="214.00 225.00 234.00 236.00"/>
+    </vehicle>
+
+    <vehicle id="fA.29" type="car" depart="174.00" departLane="1" departSpeed="11.9516" speedFactor="0.9415" arrival="237.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="216.00 227.00 235.00 237.00"/>
+    </vehicle>
+
+    <vehicle id="fA.27" type="car" depart="162.00" departLane="0" departSpeed="14.2047" speedFactor="1.0964" arrival="238.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="208.00 227.00 236.00 238.00"/>
+    </vehicle>
+
+    <vehicle id="fA.28" type="car" depart="168.00" departLane="0" departSpeed="11.9398" speedFactor="1.1771" arrival="239.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="214.00 229.00 237.00 239.00"/>
+    </vehicle>
+
+    <vehicle id="fA.30" type="car" depart="180.00" departLane="0" departSpeed="5.9263" speedFactor="1.0234" arrival="241.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="218.00 230.00 239.00 241.00"/>
+    </vehicle>
+
+    <vehicle id="fE.12" type="car" depart="169.00" departSpeed="8.6332" speedFactor="1.0709" arrival="242.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="217.00 232.00 242.00"/>
+    </vehicle>
+
+    <vehicle id="fA.31" type="car" depart="186.00" departLane="1" departSpeed="9.285" speedFactor="1.0322" arrival="243.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="220.00 232.00 240.00 243.00"/>
+    </vehicle>
+
+    <vehicle id="fE.13" type="car" depart="182.00" departSpeed="5.9264" speedFactor="1.1184" arrival="244.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="220.00 234.00 244.00"/>
+    </vehicle>
+
+    <vehicle id="fA.32" type="car" depart="192.00" departLane="1" departSpeed="5.9192" speedFactor="1.0683" arrival="244.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="223.00 234.00 242.00 244.00"/>
+    </vehicle>
+
+    <vehicle id="fE.14" type="car" depart="206.00" departSpeed="0.0178" speedFactor="1.1195" arrival="247.00" routeLength="279.25">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103227#2" exitTimes="223.00 237.00 247.00"/>
+    </vehicle>
+
+    <vehicle id="fA.33" type="car" depart="206.00" departLane="1" departSpeed="0.1522" speedFactor="1.0152" arrival="248.00" routeLength="305.55">
+        <route cost="-1.00" savings="0.00" edges="-103224#0 -103224#1 -103224#2 -103224#3" exitTimes="225.00 237.00 246.00 248.00"/>
+    </vehicle>
+
+</routes>

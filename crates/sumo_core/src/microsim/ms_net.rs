@@ -1111,7 +1111,7 @@ impl MSNet {
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().update_signals(self.myStep);
         }
-        // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) is not ported yet
+        // shortcut: MSRoutingEngine::waitForAll() (HAVE_FOX) only waits for the routing thread pool (device.rerouting.threads > 0), which is not ported; a no-op without it
         if MSGlobals::check4_accidents() && !MSGlobals::use_meso_sim() {
             self.myEdges.m().detect_collisions(self.myStep, STAGE_EVENTS);
         }
@@ -1152,7 +1152,7 @@ impl MSNet {
         if !self.myContainerControl.is_null() && self.myContainerControl.has_transportables() {
             self.myContainerControl.m().check_waiting(net, self.myStep);
         }
-        // shortcut: processPendingRouting() of person/container controls (HAVE_FOX) is not ported yet
+        // shortcut: processPendingRouting() (HAVE_FOX) only handles person trips queued on the routing thread pool (device.rerouting.threads > 0), which is not ported; a no-op without it
         if MSRailSignalControl::has_instance() {
             MSRailSignalControl::get_instance().reset_wait_relations();
             // preserve waitRelation from insertion for the next step
@@ -2228,10 +2228,30 @@ impl MSNet {
 
         // elecHybrid dumps
         if is_set("elechybrid-output") {
+            let output = get_string("elechybrid-output");
             if get_bool("elechybrid-output.aggregated") {
                 MSElecHybridExport::write_aggregated(&mut device_by_option("elechybrid-output").borrow_mut(), self.myStep, get_int("elechybrid-output.precision"));
+            } else {
+                // build a separate xml file for each vehicle equipped with device.elechybrid
+                let vehs: Vec<Ptr<SUMOVehicle>> = self.myVehicleControl.myVehicleDict.values().copied().collect();
+                for veh in vehs {
+                    if !veh.is_on_road() {
+                        continue;
+                    }
+                    let elecHybrid = veh.cast::<MSBaseVehicle>().get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+                    if !elecHybrid.is_null() {
+                        let vehID = veh.get_id().to_string();
+                        let filename2 = format!("{}_{}.xml", output, vehID);
+                        let dev = OutputDevice::get_device(&filename2, true).unwrap_or_else(|e| panic!("{e}"));
+                        let mut attrs: BTreeMap<SumoXMLAttr, String> = BTreeMap::new();
+                        attrs.insert(SUMO_ATTR_VEHICLE, vehID);
+                        attrs.insert(SUMO_ATTR_MAXIMUMBATTERYCAPACITY, utils::common::to_string::to_string(&elecHybrid.get_maximum_battery_capacity()));
+                        attrs.insert(SUMO_ATTR_RECUPERATIONENABLE, utils::common::to_string::to_string(&MSGlobals::overhead_wire_recuperation()));
+                        dev.borrow_mut().write_xml_header("elecHybrid-export", "", attrs, true);
+                        MSElecHybridExport::write(&mut dev.borrow_mut(), veh, self.myStep, get_int("elechybrid-output.precision"));
+                    }
+                }
             }
-            // shortcut: the per-vehicle elecHybrid files need the loaded-vehicle iteration and the typeid device lookup, upgrade when MSNet::writeOutput can iterate MSVehicleControl's loaded vehicles
         }
         // check full dumps
         if is_set("full-output") {
@@ -2935,7 +2955,19 @@ impl MSNet {
         let oc_begin = opt_time("begin");
         self.clear_state(oc_begin, true);
         NLBuilder::init_randomness();
-        // shortcut: the additional-files reload (MSRouteHandler + XMLSubSys::runParser) is not wired yet, upgrade when quickReload loads them
+        // load traffic from additional files
+        if !get_bool("ignore.additionalelements") {
+            for file in utils::options::options_cont::get_string_vector("additional-files") {
+                // ignore failure on parsing calibrator flow
+                let mut rh = MSRouteHandler::new(&file, true);
+                utils::common::msg_handler::progress_begin_message(&format!("Loading traffic from '{}'", file));
+                let before = get_current_millis();
+                if !utils::xml::xml_sub_sys::run_parser(&mut rh, &file, false, false, false, true).unwrap_or(false) {
+                    std::panic::panic_any(ProcessError::new(utils::tlf!("Loading of % failed.", file)));
+                }
+                utils::common::msg_handler::progress_time_message(get_current_millis() - before);
+            }
+        }
         delete_ptr(self.myRouteLoaders);
         self.myRouteLoaders = utils::options::options_cont::with_options(|oc| NLBuilder::build_route_loader_control(oc));
         self.update_gui();
@@ -2988,7 +3020,8 @@ impl MSNet {
         // shortcut: listener mutex (HAVE_FOX, gNumThreads > 1) is not needed, the simulation is single-threaded here
         let dsu = self.get_dynamic_shape_updater();
         for listener in self.myVehicleStateListeners.iter() {
-            // shortcut: no vtable on MSNet_VehicleStateListener, so the Helper and TraCIServer overrides are reached by identity; other overrides still hit the base no-op, upgrade when listeners are trait objects
+            // MSNet_VehicleStateListener has no vtable: the overrides of all six C++ subclasses (libsumo Helper, TraCIServer,
+            // MSDynamicShapeUpdater, MSDevice_Vehroutes::StateListener, MSRailSignalControl, GapControlVehStateListener) are reached by identity
             if crate::libsumo::helper::Helper::is_vehicle_state_listener(listener.as_raw()) {
                 crate::libsumo::helper::Helper::vehicle_state_changed(vehicle, to, info);
             } else if !TraCIServer::get_instance().is_null() && listener.as_raw() == &mut TraCIServer::get_instance().m().base as *mut MSNet_VehicleStateListener {
@@ -2999,6 +3032,8 @@ impl MSNet {
                 crate::microsim::devices::ms_device_vehroutes::state_listener_vehicle_state_changed(vehicle, to, info);
             } else if crate::microsim::traffic_lights::ms_rail_signal_control::is_listener(listener.as_raw()) {
                 crate::microsim::traffic_lights::ms_rail_signal_control::MSRailSignalControl::get_instance().vehicle_state_changed(vehicle, to, info);
+            } else if crate::microsim::ms_vehicle::is_gap_control_listener(listener.as_raw()) {
+                crate::microsim::ms_vehicle::gap_control_vehicle_state_changed(vehicle, to, info);
             } else {
                 listener.m().vehicle_state_changed(vehicle, to, info);
             }
@@ -3273,7 +3308,7 @@ impl MSNet {
                 let router = DijkstraRouter::<MSEdge, SUMOVehicle>::new(MSEdge::get_all_edges(), true, Some(MSNet::get_travel_time), None, false, Ptr::null(), true, false).with_compute();
                 Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<MSVehicleRouter>()
             } else if routingAlgorithm == "CCH" {
-                // shortcut: CCHRouter over MSCCHGraph is not ported, upgrade with the CCH port
+                // shortcut: needs MSRoutingEngine::ensureCCHGraph / getFreeflowCCHMetric (devices/ms_routing_engine.rs, still panicking stubs), upgrade with them
                 panic!("shortcut: routing algorithm 'CCH' for TraCI and triggers is not ported")
             } else {
                 if routingAlgorithm != "astar" {
@@ -3377,7 +3412,7 @@ impl MSNet {
             let carWalk = utils::options::options_cont::with_options(|oc| SUMOVehicleParserHelper::parse_car_walk_transfer(oc, hasTaxi));
             let routingAlgorithm = get_string("routing-algorithm");
             let taxiWait = utils::common::time::steps2time(utils::common::time::string2time(&get_string("persontrip.taxi.waiting-time")).unwrap());
-            // shortcut: FareModul (the effort calculator of ROUTING_MODE_COMBINED) is not ported, so combined routing cannot be built yet
+            // shortcut: FareModul exists (utils/router/fare_modul.rs) but EffortCalculator has no virtual dispatch to it (every method panics as pure virtual), upgrade with that vtable
             let calc: Ptr<EffortCalculator> = if routingMode == 3 { panic!("shortcut: FareModul is not ported, combined intermodal routing is unsupported") } else { Ptr::null() };
             let router = IntermodalRouter::new(MSNet::adapt_intermodal_router, carWalk, taxiWait, &routingAlgorithm, routingMode, calc);
             me.myIntermodalRouter.borrow_mut().insert(key, Ptr::from_raw(Box::into_raw(Box::new(router))));
@@ -3610,8 +3645,18 @@ impl MSNet {
     // }
     #[allow(unused_variables)]
     pub fn get_map_matcher(&self) -> Ptr<MSMapMatcher> {
-        // shortcut: MSMapMatcher is Unmapped and the route loader's route handler is not ported yet
-        Ptr::null()
+        let loader = self.myRouteLoaders.get_first_loader();
+        if !loader.is_null() {
+            // dynamic_cast<MSMapMatcher*>: every route loader of a simulation holds an MSRouteHandler (NLBuilder::buildRouteLoaderControl);
+            // MapMatcher is its second base, so take the base2 field address, not a plain pointer cast
+            let handler = loader.m().get_route_handler();
+            if handler.is_null() {
+                return Ptr::null();
+            }
+            Ptr::from_mut(&mut handler.cast::<MSRouteHandler>().m().base2)
+        } else {
+            Ptr::null()
+        }
     }
 
     /// C++: `MSTractionSubstation * MSNet::findTractionSubstation(const std::string &)`
@@ -3792,7 +3837,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(arg0: &MSNet) -> Self {
-        // shortcut: copy construction of a network is not allowed in C++ either (MSNet(const MSNet&) is private)
+        // MSNet(const MSNet&) is private and never defined: C++ cannot call it either
         panic!("MSNet cannot be copy-constructed");
     }
 
@@ -3801,7 +3846,7 @@ impl MSNet {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, arg0: &MSNet) -> &mut MSNet {
-        // shortcut: assignment of a network is not allowed in C++ either (operator= is private)
+        // operator= is private and never defined: C++ cannot call it either
         panic!("MSNet cannot be assigned");
     }
 

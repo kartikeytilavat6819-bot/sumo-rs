@@ -945,13 +945,13 @@ impl VehicleType {
             VAR_IMPATIENCE => wrapper.m().wrap_double(objID, variable, Self::get_impatience(typeID)),
             VAR_SCALE => wrapper.m().wrap_double(objID, variable, Self::get_scale(typeID)),
             VAR_PARAMETER => {
-                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                paramData.m().read_unsigned_byte().unwrap_or_else(|e| std::panic::panic_any(e));
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
             }
             VAR_PARAMETER_WITH_KEY => {
-                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                paramData.m().read_unsigned_byte().unwrap_or_else(|e| std::panic::panic_any(e));
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
             }
             _ => false,

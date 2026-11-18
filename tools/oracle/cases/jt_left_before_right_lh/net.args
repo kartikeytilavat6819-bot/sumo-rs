@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_left_before_right_lh/junction.nod.xml --edge-files tools/oracle/cases/jt_left_before_right_lh/junction.edg.xml --connection-files tools/oracle/cases/jt_left_before_right_lh/junction.con.xml --lefthand

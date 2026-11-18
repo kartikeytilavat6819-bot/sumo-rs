@@ -9,6 +9,8 @@ pub struct MSSOTLPolicyDesirability {
     /// C++ base class `Parameterised`
     pub base: Parameterised,
     pub myKeyPrefix: String,
+    /// virtual dispatch tag: true for MSSOTLPolicy5DFamilyStimulus, false for MSSOTLPolicy5DStimulus (and its MSSOTLPolicy3DStimulus subclass)
+    pub myIsFamily: bool,
 }
 
 impl std::ops::Deref for MSSOTLPolicyDesirability {
@@ -35,6 +37,7 @@ impl MSSOTLPolicyDesirability {
         MSSOTLPolicyDesirability {
             base: Parameterised::from_map(parameters.clone()),
             myKeyPrefix: keyPrefix,
+            myIsFamily: false,
         }
     }
 
@@ -49,27 +52,42 @@ impl MSSOTLPolicyDesirability {
     /// C++: `double MSSOTLPolicyDesirability::computeDesirability(double, double)` [virtual, pure virtual]
     /// Calculates the desirability of the policy
     // (pure virtual: no C++ body; subclasses implement it)
-    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
+    // dispatched to the most derived override (the only concrete subclasses are the 5D stimulus and the 5D family)
     #[allow(unused_variables)]
     pub fn compute_desirability(&mut self, vehInMeasure: f64, vehOutMeasure: f64) -> f64 {
-        panic!("MSSOTLPolicyDesirability::computeDesirability is pure virtual; call it on a subclass")
+        let me = Ptr::from_mut(self);
+        if self.myIsFamily {
+            me.cast::<MSSOTLPolicy5DFamilyStimulus>().m().compute_desirability(vehInMeasure, vehOutMeasure)
+        } else {
+            me.cast::<MSSOTLPolicy5DStimulus>().m().compute_desirability(vehInMeasure, vehOutMeasure)
+        }
     }
 
     /// C++: `double MSSOTLPolicyDesirability::computeDesirability(double, double, double, double)` [virtual, pure virtual]
     /// Calculates the desirability of the policy
     // (pure virtual: no C++ body; subclasses implement it)
-    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
+    // dispatched to the most derived override
     #[allow(unused_variables)]
     pub fn compute_desirability_2(&mut self, vehInMeasure: f64, vehOutMeasure: f64, vehInDispersionMeasure: f64, vehOutDispersionMeasure: f64) -> f64 {
-        panic!("MSSOTLPolicyDesirability::computeDesirability is pure virtual; call it on a subclass")
+        let me = Ptr::from_mut(self);
+        if self.myIsFamily {
+            me.cast::<MSSOTLPolicy5DFamilyStimulus>().m().compute_desirability_2(vehInMeasure, vehOutMeasure, vehInDispersionMeasure, vehOutDispersionMeasure)
+        } else {
+            me.cast::<MSSOTLPolicy5DStimulus>().m().compute_desirability_2(vehInMeasure, vehOutMeasure, vehInDispersionMeasure, vehOutDispersionMeasure)
+        }
     }
 
     /// C++: `std::string MSSOTLPolicyDesirability::getMessage()` [virtual, pure virtual]
     // (pure virtual: no C++ body; subclasses implement it)
-    // shortcut: no desirability subclasses are ported yet, so this base method cannot dispatch; it panics like a C++ pure virtual call would, upgrade when the subclasses are ported
+    // dispatched to the most derived override
     #[allow(unused_variables)]
     pub fn get_message(&mut self) -> String {
-        panic!("MSSOTLPolicyDesirability::getMessage is pure virtual; call it on a subclass")
+        let me = Ptr::from_mut(self);
+        if self.myIsFamily {
+            me.cast::<MSSOTLPolicy5DFamilyStimulus>().m().get_message()
+        } else {
+            me.cast::<MSSOTLPolicy5DStimulus>().m().get_message()
+        }
     }
 
     /// C++: `void MSSOTLPolicyDesirability::setKeyPrefix(std::string)`
@@ -92,3 +110,27 @@ impl MSSOTLPolicyDesirability {
 
 }
 
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // C++ calls computeDesirability/getMessage through MSSOTLPolicyDesirability*: the base must reach the subclass override
+    #[test]
+    fn base_pointer_dispatches_to_stimulus_and_family() {
+        let params = ParameterisedMap::new();
+        let mut stim = MSSOTLPolicy5DStimulus::new("PLATOON".to_string(), &params);
+        let direct = stim.compute_desirability_2(3., 2., 0.5, 0.25);
+        let base = Ptr::from_mut(&mut stim).cast::<MSSOTLPolicyDesirability>();
+        assert!(!base.myIsFamily);
+        assert_eq!(base.m().compute_desirability_2(3., 2., 0.5, 0.25), direct);
+        assert_eq!(base.m().get_message(), stim.get_message());
+
+        let mut fam = MSSOTLPolicy5DFamilyStimulus::new("PLATOON".to_string(), &params);
+        let direct = fam.compute_desirability(3., 2.);
+        let base = Ptr::from_mut(&mut fam).cast::<MSSOTLPolicyDesirability>();
+        assert!(base.myIsFamily);
+        assert_eq!(base.m().compute_desirability(3., 2.), direct);
+        assert_eq!(base.m().get_message(), fam.get_message());
+    }
+}

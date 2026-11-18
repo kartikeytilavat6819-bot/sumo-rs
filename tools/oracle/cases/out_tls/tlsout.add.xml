@@ -1,0 +1,6 @@
+<additional>
+    <timedEvent type="SaveTLSStates" source="nC" dest="out_tls_states.xml" saveDetectors="true"/>
+    <timedEvent type="SaveTLSSwitchTimes" source="nC" dest="out_tls_switch_times.xml"/>
+    <timedEvent type="SaveTLSSwitchStates" source="nC" dest="out_tls_switch_states.xml"/>
+    <timedEvent type="SaveTLSProgram" source="nC" dest="out_tls_prog.xml"/>
+</additional>

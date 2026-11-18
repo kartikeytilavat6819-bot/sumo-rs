@@ -320,6 +320,12 @@ impl MSTransportableControl {
             let state = if transportable.is_person() { MSNet_TransportableState::PERSON_ARRIVED } else { MSNet_TransportableState::CONTAINER_ARRIVED };
             MSNet::get_instance().m().inform_transportable_state_listener(transportable, state, "");
             self.myTransportables.remove(&id);
+            // C++ `delete` runs ~MSTransportable, whose device destructors have side effects: the routing device deschedules its reroute command
+            for dev in stored.get_devices().clone() {
+                if dev.base.device_name() == "rerouting" {
+                    dev.cast::<MSTransportableDevice_Routing>().m().drop_();
+                }
+            }
             // shortcut: C++ `delete i->second` is skipped; MSTransportable subclasses have no virtual drop in the port, so the object is leaked, upgrade with transportable ownership
         }
     }

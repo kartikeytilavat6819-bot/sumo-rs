@@ -80,7 +80,7 @@ const DEFAULT_MAX_CAPACITY: f64 = 35000.;
 /// C++ `DEFAULT_CHARGE_RATIO` (MSDevice_Battery.cpp)
 const DEFAULT_CHARGE_RATIO: f64 = 0.5;
 /// C++ `VTYPEPARS_EMISSIONCLASS_SET` bit (private in ms_vehicle_type.rs, same value)
-const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
+pub(crate) const VTYPEPARS_EMISSIONCLASS_SET: i64 = 1 << 5;
 
 /// C++ failed `istringstream`: every later extraction is a no-op, so the rest of the tokens are dropped
 fn stream_fail(bis: &mut std::str::SplitWhitespace) {

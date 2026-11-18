@@ -1,0 +1,8 @@
+<additional>
+    <rerouter id="viaClosed" edges="A0B0">
+        <interval begin="0" end="300">
+            <closingReroute id="C2D2"/>
+            <viaProbReroute id="B1B2"/>
+        </interval>
+    </rerouter>
+</additional>

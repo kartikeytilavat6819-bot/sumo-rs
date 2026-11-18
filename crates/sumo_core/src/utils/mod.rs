@@ -6,4 +6,5 @@ pub mod vehicle;
 pub mod map_matcher;
 pub mod named_rtree;
 pub mod parametrised_wrapping_command;
+pub mod value_source;
 pub mod wrapping_command;

@@ -1,0 +1,19 @@
+<routes>
+    <!-- insertionChecks attribute values under contested insertion at one lane position -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="nc" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="none"/>
+    <vType id="lg" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="leaderGap"/>
+    <vType id="fg" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="followerGap"/>
+    <vType id="cl" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="collision"/>
+    <vType id="mix" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" insertionChecks="collision leaderGap followerGap"/>
+    <route id="r" edges="A B C D"/>
+    <flow id="fCar" type="car" route="r" begin="0" end="6" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <flow id="fNc" type="nc" route="r" begin="0" end="6" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <flow id="fLg" type="lg" route="r" begin="10" end="16" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <flow id="fFg" type="fg" route="r" begin="20" end="26" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <flow id="fCl" type="cl" route="r" begin="30" end="36" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <flow id="fMix" type="mix" route="r" begin="40" end="46" period="1" departLane="0" departPos="10" departSpeed="0"/>
+    <vehicle id="vAll" type="car" route="r" depart="50" departLane="0" departPos="10" departSpeed="0" insertionChecks="all"/>
+    <vehicle id="vNone" type="car" route="r" depart="50" departLane="0" departPos="10" departSpeed="0" insertionChecks="none"/>
+    <vehicle id="vGap" type="car" route="r" depart="60" departLane="0" departPos="10" departSpeed="0" insertionChecks="leaderGap followerGap"/>
+</routes>

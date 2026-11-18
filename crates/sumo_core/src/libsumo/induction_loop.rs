@@ -586,13 +586,13 @@ impl InductionLoop {
             VAR_LAST_INTERVAL_IDS => wrapper.m().wrap_string_list(objID, variable, &Self::get_last_interval_vehicle_i_ds(objID)),
             LAST_STEP_VEHICLE_DATA => wrapper.m().wrap_vehicle_data_vector(objID, variable, &Self::get_vehicle_data(objID)),
             VAR_PARAMETER => {
-                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                paramData.m().read_unsigned_byte().unwrap_or_else(|e| std::panic::panic_any(e));
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
             }
             VAR_PARAMETER_WITH_KEY => {
-                paramData.m().read_unsigned_byte().expect("shortcut: malformed TraCI parameter header");
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                paramData.m().read_unsigned_byte().unwrap_or_else(|e| std::panic::panic_any(e));
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
             }
             _ => false,

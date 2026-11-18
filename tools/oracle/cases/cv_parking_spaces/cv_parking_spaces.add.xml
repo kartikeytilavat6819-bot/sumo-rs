@@ -1,0 +1,8 @@
+<additional>
+    <parkingArea id="paS" lane="E0_0" startPos="100.00" endPos="180.00" roadsideCapacity="0" angle="45">
+        <space x="110.00" y="-6.00" width="2.50" length="5.00" angle="45"/>
+        <space x="130.00" y="-6.00" width="2.50" length="5.00" angle="45"/>
+        <space x="150.00" y="-6.00" width="2.50" length="5.00" angle="45"/>
+    </parkingArea>
+    <parkingArea id="paR" lane="E1_0" startPos="60.00" endPos="120.00" roadsideCapacity="3" onRoad="true"/>
+</additional>

@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" vClass="passenger" maxSpeed="40.00"/>
+    <vType id="truck" vClass="truck" maxSpeed="30.00"/>
+    <vType id="bus" vClass="bus" maxSpeed="30.00"/>
+    <route id="r" edges="E0 E1 E2"/>
+    <flow id="fc" type="car" route="r" begin="0" end="100" period="6" departLane="best" departSpeed="max"/>
+    <flow id="ft" type="truck" route="r" begin="2" end="100" period="9" departLane="best" departSpeed="max"/>
+    <flow id="fb" type="bus" route="r" begin="4" end="100" period="15" departLane="best" departSpeed="max"/>
+</routes>
