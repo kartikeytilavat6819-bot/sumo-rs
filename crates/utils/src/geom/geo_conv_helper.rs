@@ -45,7 +45,7 @@ pub struct GeoConvHelper {
     orig_boundary: Boundary,
     conv_boundary: Boundary,
     /// C++ `myProjection`: set once the projection is known (`None` until initialised)
-    projection: Option<Etmerc>,
+    projection: Option<Projection>,
     /// C++ `myInverseProjection`: DHDN Gauss-Krueger projection used by DHDN_UTM to turn the input
     /// easting/northing into lon/lat before the WGS84 UTM forward projection is applied
     dhdn_inverse: Option<Etmerc>,
@@ -116,7 +116,7 @@ impl GeoConvHelper {
             "DHDN_UTM" => ProjectionMethod::DhdnUtm,
             _ => ProjectionMethod::Proj,
         };
-        let projection = if projection_method == ProjectionMethod::Proj { Etmerc::from_proj(&proj_string) } else { None };
+        let projection = if projection_method == ProjectionMethod::Proj { Projection::from_proj(&proj_string) } else { None };
         GeoConvHelper {
             proj_string,
             projection,
@@ -351,12 +351,12 @@ impl GeoConvHelper {
                     let lon = ((x - 500000.) / 1000000.) * 3.;
                     let utm_zone = (lon + 180.) as i32 / 6 + 1;
                     self.proj_string = format!("+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = Projection::from_proj(&self.proj_string);
                 }
                 ProjectionMethod::Utm => {
                     let zone = (x + 180.) as i32 / 6 + 1;
                     self.proj_string = format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = Projection::from_proj(&self.proj_string);
                 }
                 ProjectionMethod::Dhdn => {
                     let zone = (x / 3.) as i32;
@@ -365,7 +365,7 @@ impl GeoConvHelper {
                         return false;
                     }
                     self.proj_string = dhdn_proj_string(zone);
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = Projection::from_proj(&self.proj_string);
                 }
                 _ => {}
             }
@@ -640,6 +640,100 @@ impl Etmerc {
     }
 }
 
+/// PROJ projections supported by this port. `+proj=merc` (Web Mercator) is handled as the spherical
+/// case; all other supported strings use the `etmerc` port above.
+#[derive(Clone, Copy, Debug)]
+enum Projection {
+    Etmerc(Etmerc),
+    Merc(Merc),
+}
+
+impl Projection {
+    /// Mirrors the proj strings recognised by `GeoConvHelper::initProj`; None makes
+    /// `x2cartesian_const` report the projection as unsupported, as C++ does when PROJ is absent.
+    fn from_proj(proj: &str) -> Option<Self> {
+        if let Some(merc) = Merc::from_proj(proj) {
+            return Some(Projection::Merc(merc));
+        }
+        Etmerc::from_proj(proj).map(Projection::Etmerc)
+    }
+
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        match self {
+            Projection::Etmerc(p) => p.fwd(lon, lat),
+            Projection::Merc(p) => p.fwd(lon, lat),
+        }
+    }
+
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        match self {
+            Projection::Etmerc(p) => p.inv(x, y),
+            Projection::Merc(p) => p.inv(x, y),
+        }
+    }
+}
+
+/// Spherical Mercator (`+proj=merc`), the projection used by Web Mercator / EPSG:3857 nets.
+/// PROJ's `merc` forward is `x = a * (lon - lon_0) * k + x_0`,
+/// `y = a * ln(tan(pi/4 + lat/2)) * k + y_0` (also written `a * asinh(tan(lat))`).
+#[derive(Clone, Copy, Debug)]
+struct Merc {
+    a: f64,
+    lon0: f64,
+    x0: f64,
+    y0: f64,
+    k: f64,
+}
+
+impl Merc {
+    fn from_proj(proj: &str) -> Option<Merc> {
+        let mut kind = None;
+        let mut a = None;
+        let mut b = None;
+        let mut lon0 = 0.;
+        let mut x0 = 0.;
+        let mut y0 = 0.;
+        let mut k = 1.;
+        let mut lat_ts = 0.;
+        for tok in proj.split_whitespace() {
+            let body = tok.strip_prefix('+')?;
+            let (key, val) = body.split_once('=').unwrap_or((body, ""));
+            match key {
+                "proj" => kind = Some(val),
+                "a" => a = Some(val.parse::<f64>().ok()?),
+                "b" => b = Some(val.parse::<f64>().ok()?),
+                "lon_0" => lon0 = val.parse::<f64>().ok()?,
+                "lat_ts" => lat_ts = val.parse::<f64>().ok()?,
+                "k" | "k_0" => k = val.parse::<f64>().ok()?,
+                "x_0" => x0 = val.parse::<f64>().ok()?,
+                "y_0" => y0 = val.parse::<f64>().ok()?,
+                _ => {}
+            }
+        }
+        if kind? != "merc" || lat_ts != 0. {
+            // ellipsoidal merc / non-equatorial standard parallel: not covered by this port
+            return None;
+        }
+        let a = a?;
+        if b.is_some_and(|b| b != a) {
+            return None;
+        }
+        Some(Merc { a, lon0: deg2rad(lon0), x0, y0, k })
+    }
+
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        let x = self.a * (lon - self.lon0);
+        let y = self.a * (0.5 * (0.5 * PI + lat)).tan().ln();
+        (x * self.k + self.x0, y * self.k + self.y0)
+    }
+
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        let lon = (x - self.x0) / (self.a * self.k) + self.lon0;
+        let lat = 2. * ((y - self.y0) / (self.a * self.k)).exp().atan() - 0.5 * PI;
+        (lon, lat)
+    }
+}
+
 fn dhdn_proj_string(zone: i32) -> String {
     format!(
         "+proj=tmerc +lat_0=0 +lon_0={} +k=1 +x_0={} +y_0=0 +ellps=bessel +datum=potsdam +units=m +no_defs",
@@ -700,6 +794,21 @@ mod tests {
 
         oc.set("proj.utm", "true", false).unwrap();
         assert!(!GeoConvHelper::init_from_options(&oc).unwrap());
+    }
+
+    /// The net of tt_basic_person_person_inserted_departPos: Web Mercator of its origBoundary corner.
+    #[test]
+    fn merc_matches_proj() {
+        let proj = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs";
+        let mut h = GeoConvHelper::new(proj, Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(15.566128, 58.386126);
+        assert!(h.x2cartesian_const(&mut p));
+        // PROJ's spherical merc forward: x = a * lon, y = a * ln(tan(pi/4 + lat/2))
+        assert!((p.x() - 6378137. * 15.566128 * PI / 180.).abs() < 1e-6);
+        assert!((p.y() - 8048871.742765347).abs() < 1e-5);
+        h.cartesian2geo(&mut p);
+        assert!((p.x() - 15.566128).abs() < 1e-9);
+        assert!((p.y() - 58.386126).abs() < 1e-9);
     }
 
     fn utm_proj(zone: i32) -> String {
