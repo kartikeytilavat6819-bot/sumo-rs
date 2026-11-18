@@ -514,6 +514,63 @@ impl<E: crate::utils::router::router_edge::RouterEdgeInfo, V> crate::utils::rout
     }
 }
 
+// RailEdge is the edge type of the RailwayRouter's internal DijkstraRouter. C++ RailEdge
+// exposes the accessors the router template needs (id/numerical id/length/via successors/
+// isInternal/prohibits/restricts); the rest would not compile in C++ either.
+impl<E, V> RouterEdge<V> for RailEdge<E, V>
+where
+    E: RouterEdge<V>,
+    V: RouterVehicle,
+{
+    type Node = <E as RouterEdge<V>>::Node;
+    type Lane = <E as RouterEdge<V>>::Lane;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        panic!("C++ RailEdge has no getLengthGeometryFactor")
+    }
+    fn distance_to(&self, _other: Ptr<Self>, _do_boundary_estimate: bool) -> f64 {
+        panic!("C++ RailEdge has no getDistanceTo")
+    }
+    fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("C++ RailEdge has no getSuccessors")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        &self.get_via_successors(vclass, ignore_transient)[..]
+    }
+    fn speed_limit(&self) -> f64 {
+        panic!("C++ RailEdge has no getSpeedLimit")
+    }
+    fn minimum_travel_time(&self, _veh: Ptr<V>) -> f64 {
+        panic!("C++ RailEdge has no getMinimumTravelTime")
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        panic!("C++ RailEdge has no getBidiEdge")
+    }
+    fn travel_time_static(_edge: Ptr<Self>, _veh: Ptr<V>, _time: f64) -> f64 {
+        panic!("C++ RailEdge has no static getTravelTimeStatic")
+    }
+    fn travel_time_aggregated(_edge: Ptr<Self>, _veh: Ptr<V>, _time: f64) -> f64 {
+        panic!("C++ RailEdge has no static getTravelTimeAggregated")
+    }
+    fn is_internal(&self) -> bool {
+        self.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, _check_restrictions: bool) -> bool {
+        self.prohibits(veh)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.restricts(veh)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
