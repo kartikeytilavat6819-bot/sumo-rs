@@ -666,8 +666,9 @@ impl Vehicle {
                         let foeExitLink = foeLane.get_link_cont()[0];
                         let distToCrossing = curDist - distBehindCrossing;
                         let foeDistBehindCrossing = ci.get_foe_length_behind_crossing(foeExitLink);
-                        // determinism: C++ std::map is keyed by SUMOVehicle*, BTreeMap<Ptr<SUMOVehicle>> iterates in the same address order
-                        for (foe, item) in foeExitLink.myApproachingVehicles.iter() {
+                        // ApproachInfos is a std::map sorted by ComparatorNumericalIdLess; the Rust map is keyed by NumIdKey, so iteration order matches C++.
+                        for (k, item) in foeExitLink.myApproachingVehicles.iter() {
+                            let foe = k.1;
                             // approach information is from the start of the previous step
                             // but the foe vehicle then moved within that steop
                             let prevFoeDist = speed2dist(if MSGlobals::semi_implicit_euler_update() {

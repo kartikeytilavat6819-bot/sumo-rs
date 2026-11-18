@@ -1886,7 +1886,8 @@ impl Helper {
                 }
                 // Check vehicles approaching the entry link corresponding to this lane
                 let foeLink = foeLane.get_entry_link();
-                for (veh, vi) in foeLink.myApproachingVehicles.iter() {
+                for (k, vi) in foeLink.myApproachingVehicles.iter() {
+                    let veh = k.1;
                     if vi.dist <= s.filterFoeDistToJunction {
                         // shortcut: C++ dynamic_cast<const MSVehicle*> is not checked, approaching links only hold MSVehicles
                         vehs.insert(veh.cast::<SUMOTrafficObject>());

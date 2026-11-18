@@ -138,7 +138,8 @@ pub enum MSLink_LinkLeaderFlag {
 }
 
 /// C++ typedef `std::map<const SUMOVehicle *, const ApproachingVehicleInformation, ComparatorNumericalIdLess> MSLink::ApproachInfos`
-pub type MSLink_ApproachInfos = BTreeMap<Ptr<SUMOVehicle>, MSLink_ApproachingVehicleInformation>;
+/// Keyed by numerical id (not address) so iteration order matches C++.
+pub type MSLink_ApproachInfos = BTreeMap<NumIdKey<SUMOVehicle>, MSLink_ApproachingVehicleInformation>;
 
 /// C++ typedef `std::vector<const SUMOTrafficObject *> MSLink::BlockingFoes`
 pub type MSLink_BlockingFoes = Vec<Ptr<SUMOTrafficObject>>;
@@ -1378,11 +1379,11 @@ impl MSLink {
             // explicit erasure is necessary because emplace does nothing if the key already exists
             // - in micro, double registration only happens on looped routes. Here, we only wish to keep the first arrival and thus emplace has the correct behavior
             //   (on meso, only the next upcoming link is registered so nothing gets overwritten on looped routes)
-            self.myApproachingVehicles.remove(&approaching);
+            self.myApproachingVehicles.remove(&NumIdKey::new(approaching, approaching.get_numerical_id()));
         }
         let info = MSLink_ApproachingVehicleInformation::new(arrivalTime, leaveTime, arrivalSpeed, leaveSpeed, setRequest, arrivalSpeedBraking, waitingTime, dist, approaching.get_speed(), latOffset);
         // emplace does not overwrite an existing entry
-        self.myApproachingVehicles.entry(approaching).or_insert(info);
+        self.myApproachingVehicles.entry(NumIdKey::new(approaching, approaching.get_numerical_id())).or_insert(info);
     }
 
     /// C++: `void MSLink::setApproaching(const SUMOVehicle *, ApproachingVehicleInformation)`
@@ -1406,7 +1407,7 @@ impl MSLink {
     #[allow(unused_variables)]
     pub fn set_approaching_2(&mut self, approaching: Ptr<SUMOVehicle>, ai: MSLink_ApproachingVehicleInformation) {
         // emplace does not overwrite an existing entry
-        self.myApproachingVehicles.entry(approaching).or_insert(ai);
+        self.myApproachingVehicles.entry(NumIdKey::new(approaching, approaching.get_numerical_id())).or_insert(ai);
     }
 
     /// C++: `void MSLink::setApproachingPerson(const MSPerson *, const SUMOTime, const SUMOTime)`
@@ -1447,7 +1448,7 @@ impl MSLink {
     // }
     #[allow(unused_variables)]
     pub fn remove_approaching(&mut self, veh: Ptr<SUMOVehicle>) {
-        self.myApproachingVehicles.remove(&veh);
+        self.myApproachingVehicles.remove(&NumIdKey::new(veh, veh.get_numerical_id()));
     }
 
     /// C++: `void MSLink::removeApproachingPerson(const MSPerson *)`
@@ -1482,7 +1483,7 @@ impl MSLink {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_approaching(&self, veh: Ptr<SUMOVehicle>) -> MSLink_ApproachingVehicleInformation {
-        match self.myApproachingVehicles.get(&veh) {
+        match self.myApproachingVehicles.get(&NumIdKey::new(veh, veh.get_numerical_id())) {
             Some(i) => MSLink_ApproachingVehicleInformation::new(i.arrivalTime, i.leavingTime, i.arrivalSpeed, i.leaveSpeed, i.willPass, i.arrivalSpeedBraking, i.waitingTime, i.dist, i.speed, i.latOffset),
             None => MSLink_ApproachingVehicleInformation::new(INVALID_TIME, INVALID_TIME, 0., 0., false, 0., 0, 0., 0., 0.),
         }
@@ -1492,7 +1493,7 @@ impl MSLink {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_approaching_ptr(&self, veh: Ptr<SUMOVehicle>) -> Ptr<MSLink_ApproachingVehicleInformation> {
-        match self.myApproachingVehicles.get(&veh) {
+        match self.myApproachingVehicles.get(&NumIdKey::new(veh, veh.get_numerical_id())) {
             Some(i) => Ptr::new(i),
             None => Ptr::null(),
         }
@@ -1508,11 +1509,9 @@ impl MSLink {
         &self.myApproachingVehicles
     }
 
-    /// C++ ApproachInfos iterates in ComparatorNumericalIdLess order; the map here is keyed by address, so sort by numerical id.
+    /// ApproachInfos is keyed by NumIdKey, so its iteration already is in ComparatorNumericalIdLess order.
     pub fn approach_iter_by_id(&self) -> Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> {
-        let mut v: Vec<(Ptr<SUMOVehicle>, &MSLink_ApproachingVehicleInformation)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (veh, it)).collect();
-        v.sort_by_key(|(veh, _)| veh.get_numerical_id());
-        v
+        self.myApproachingVehicles.iter().map(|(k, it)| (k.1, it)).collect()
     }
 
     /// C++: `const PersonApproachInfos * MSLink::getApproachingPersons() const` [const]
@@ -3162,11 +3161,11 @@ impl MSLink {
             od.write_attr(SUMO_ATTR_VIA, &via);
             od.write_attr(SUMO_ATTR_TO, &(if self.get_lane().is_null() { String::new() } else { self.get_lane().get_id().to_string() }));
             // stabilize output: sort by arrival time, then by vehicle address (as std::pair does)
-            let mut toSort: Vec<(SUMOTime, Ptr<SUMOVehicle>)> = self.myApproachingVehicles.iter().map(|(&veh, it)| (it.arrivalTime, veh)).collect();
+            let mut toSort: Vec<(SUMOTime, Ptr<SUMOVehicle>)> = self.myApproachingVehicles.iter().map(|(k, it)| (it.arrivalTime, k.1)).collect();
             toSort.sort();
             for &(_, veh) in toSort.iter() {
                 od.open_tag("approaching");
-                let avi = self.myApproachingVehicles.get(&veh).unwrap();
+                let avi = self.myApproachingVehicles.get(&NumIdKey::new(veh, veh.get_numerical_id())).unwrap();
                 od.write_attr(SUMO_ATTR_ID, &veh.get_id().to_string());
                 od.write_attr(SUMO_ATTR_IMPATIENCE, &veh.get_impatience());
                 od.write_attr("arrivalTime", &time2string(avi.arrivalTime));
@@ -3500,14 +3499,14 @@ impl MSLink {
         // C++ asserts a non-empty approach list; an empty map is undefined behaviour in C++
         let mut closestIt = self.myApproachingVehicles.iter().next().expect("MSLink::getClosest on empty approach list");
         let mut minDist = f64::MAX;
-        for (veh, it) in self.myApproachingVehicles.iter() {
+        for (k, it) in self.myApproachingVehicles.iter() {
             if it.dist < minDist {
                 minDist = it.dist;
-                closestIt = (veh, it);
+                closestIt = (k, it);
             }
         }
-        let (&veh, it) = closestIt;
-        (veh, MSLink_ApproachingVehicleInformation::new(it.arrivalTime, it.leavingTime, it.arrivalSpeed, it.leaveSpeed, it.willPass, it.arrivalSpeedBraking, it.waitingTime, it.dist, it.speed, it.latOffset))
+        let (k, it) = closestIt;
+        (k.1, MSLink_ApproachingVehicleInformation::new(it.arrivalTime, it.leavingTime, it.arrivalSpeed, it.leaveSpeed, it.willPass, it.arrivalSpeedBraking, it.waitingTime, it.dist, it.speed, it.latOffset))
     }
 
     /// C++: `bool MSLink::hasFoeCrossing() const` [const]
@@ -3535,8 +3534,8 @@ impl MSLink {
     #[allow(unused_variables)]
     pub fn rail_signal_was_passed(&self) -> bool {
         if !self.myJunction.is_null() && self.myJunction.get_type() == SumoXMLNodeType::RAIL_SIGNAL {
-            for (&veh, item) in self.myApproachingVehicles.iter() {
-                if item.dist < speed2dist(veh.get_speed()) {
+            for (k, item) in self.myApproachingVehicles.iter() {
+                if item.dist < speed2dist(k.1.get_speed()) {
                     return true;
                 }
             }

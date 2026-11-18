@@ -7557,7 +7557,8 @@ impl MSLane {
                     if link.get_approaching_2().len() > 0 {
                         out.open_tag_id(SUMO_TAG_LINK);
                         out.write_attr(SUMO_ATTR_TO, link.get_via_lane_or_lane().get_id());
-                        for (item_first, item_second) in link.get_approaching_2() {
+                        for (k, item_second) in link.get_approaching_2() {
+                            let item_first = k.1;
                             out.open_tag_id(SUMO_TAG_APPROACHING);
                             out.write_attr(SUMO_ATTR_ID, item_first.get_id());
                             out.write_attr(SUMO_ATTR_ARRIVALTIME, &item_second.arrivalTime);
