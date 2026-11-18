@@ -28,9 +28,65 @@ fn find_from(hay: &[u8], needle: i8, pos: usize) -> usize {
 pub trait ParBufferValue: Sized {
     /// What `std::stringstream << v` writes
     fn to_buffer_string(&self) -> String;
-    /// What `std::stringstream >> v` extracts from `token`; None when extraction fails
-    // shortcut: the whole token must parse, iostream stops at the first bad character, upgrade if a CC payload carries trailing junk
+    /// What `std::stringstream >> v` leaves in v for `token`; None when nothing is read (v keeps its value)
     fn from_buffer_token(token: &str) -> Option<Self>;
+}
+
+/// libstdc++ `num_get` for a float: skips leading blanks and reads the longest numeric prefix, so trailing junk is
+/// ignored. A prefix that does not convert (e.g. "abc", "1e", "inf") stores 0, as C++11 does.
+fn float_from_token(token: &str) -> Option<f64> {
+    let s = token.trim_start();
+    if s.is_empty() {
+        return None;
+    }
+    let b = s.as_bytes();
+    let mut i = 0;
+    if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+        i += 1;
+    }
+    while i < b.len() && b[i].is_ascii_digit() {
+        i += 1;
+    }
+    if i < b.len() && b[i] == b'.' {
+        i += 1;
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+    }
+    if i < b.len() && (b[i] == b'e' || b[i] == b'E') {
+        i += 1;
+        if i < b.len() && (b[i] == b'+' || b[i] == b'-') {
+            i += 1;
+        }
+        while i < b.len() && b[i].is_ascii_digit() {
+            i += 1;
+        }
+    }
+    match s[..i].parse::<f64>() {
+        // libstdc++ stores +-max and sets failbit on overflow
+        Ok(v) if v.is_infinite() => Some(if v > 0. { f64::MAX } else { -f64::MAX }),
+        Ok(v) => Some(v),
+        Err(_) => Some(0.),
+    }
+}
+
+/// libstdc++ `num_get` for an integer: optional sign, then decimal digits (the rest is ignored). Returns
+/// (negative, magnitude capped at 2^100, has digits); None when the token is blank.
+fn int_token_parts(token: &str) -> Option<(bool, u128, bool)> {
+    let s = token.trim_start();
+    if s.is_empty() {
+        return None;
+    }
+    let b = s.as_bytes();
+    let neg = b[0] == b'-';
+    let mut i = if b[0] == b'-' || b[0] == b'+' { 1 } else { 0 };
+    let start = i;
+    let mut mag: u128 = 0;
+    while i < b.len() && b[i].is_ascii_digit() {
+        mag = (mag * 10 + (b[i] - b'0') as u128).min(1 << 100);
+        i += 1;
+    }
+    Some((neg, mag, i > start))
 }
 
 impl ParBufferValue for f64 {
@@ -38,7 +94,7 @@ impl ParBufferValue for f64 {
         utils::common::to_string::f64_to_string_default(*self)
     }
     fn from_buffer_token(token: &str) -> Option<Self> {
-        token.trim_start().parse::<f64>().ok()
+        float_from_token(token)
     }
 }
 
@@ -50,7 +106,18 @@ macro_rules! impl_par_buffer_int {
                     self.to_string()
                 }
                 fn from_buffer_token(token: &str) -> Option<Self> {
-                    token.trim_start().parse::<$t>().ok()
+                    let (neg, mag, digits) = int_token_parts(token)?;
+                    if !digits {
+                        // libstdc++ stores 0 when no digits follow the sign
+                        return Some(0);
+                    }
+                    if <$t>::MIN == 0 {
+                        // unsigned: "-n" is read as an unsigned long and then truncated to the type's range
+                        let u = if neg { (mag as u64).wrapping_neg() } else { mag.min(u64::MAX as u128) as u64 };
+                        return Some(if u > <$t>::MAX as u64 { <$t>::MAX } else { u as $t });
+                    }
+                    let v: i128 = if neg { -(mag as i128) } else { mag as i128 };
+                    Some(v.clamp(<$t>::MIN as i128, <$t>::MAX as i128) as $t)
                 }
             }
         )*
@@ -359,6 +426,28 @@ mod tests {
         assert_eq!(pb.escape(String::new()), "\"\"");
         assert_eq!(pb.unescape("a\\:é".to_string()), "a:é");
         assert_eq!(pb.unescape("\"\"".to_string()), "");
+    }
+
+    /// Expected values measured with libstdc++ `std::stringstream >> v` (g++ probe, 2026-11-17)
+    #[test]
+    fn token_extraction_matches_libstdcpp() {
+        assert_eq!(f64::from_buffer_token("1.5abc"), Some(1.5));
+        assert_eq!(f64::from_buffer_token("abc"), Some(0.));
+        assert_eq!(f64::from_buffer_token("1e"), Some(0.));
+        assert_eq!(f64::from_buffer_token("inf"), Some(0.));
+        assert_eq!(f64::from_buffer_token("1e5"), Some(100000.));
+        assert_eq!(f64::from_buffer_token(" 12"), Some(12.));
+        assert_eq!(f64::from_buffer_token("-.5"), Some(-0.5));
+        assert_eq!(f64::from_buffer_token("1.2.3"), Some(1.2));
+        assert_eq!(f64::from_buffer_token("0x1A"), Some(0.));
+        assert_eq!(f64::from_buffer_token(""), None);
+        assert_eq!(f64::from_buffer_token("  "), None);
+        assert_eq!(i32::from_buffer_token("1.5abc"), Some(1));
+        assert_eq!(i32::from_buffer_token("1e"), Some(1));
+        assert_eq!(i32::from_buffer_token("-.5"), Some(0));
+        assert_eq!(i32::from_buffer_token("+3"), Some(3));
+        assert_eq!(i32::from_buffer_token("abc"), Some(0));
+        assert_eq!(i32::from_buffer_token(""), None);
     }
 }
 
