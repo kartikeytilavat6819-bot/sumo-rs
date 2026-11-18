@@ -1,0 +1,4 @@
+<additional>
+    <poi id="pOnLane" lane="e0_0" pos="50"/>
+    <poi id="pOnLaneLat" lane="e0_0" pos="-5" posLat="1.5"/>
+</additional>
