@@ -3819,9 +3819,9 @@ impl MSLane {
             return;
         }
 
-        // determinism: C++ std::set<const MSVehicle*, ComparatorNumericalIdLess> orders by numerical ID; BTreeSet here orders by pointer
-        let mut toRemove: BTreeSet<Ptr<MSVehicle>> = BTreeSet::new();
-        let mut toTeleport: BTreeSet<Ptr<MSVehicle>> = BTreeSet::new();
+        // C++ std::set<const MSVehicle*, ComparatorNumericalIdLess> orders by numerical ID.
+        let mut toRemove: BTreeSet<NumIdKey<MSVehicle>> = BTreeSet::new();
+        let mut toTeleport: BTreeSet<NumIdKey<MSVehicle>> = BTreeSet::new();
         if self.must_check_junction_collisions() {
             self.myNeedsCollisionCheck = true; // always check
             debug_assert!(self.myLinks.len() == 1);
@@ -3995,11 +3995,11 @@ impl MSLane {
             }
         }
 
-        // determinism: iteration order follows Ptr ordering here, C++ uses numerical ID order
-        for veh in toRemove.iter().copied().collect::<Vec<Ptr<MSVehicle>>>() {
+        for k in toRemove.iter().copied().collect::<Vec<NumIdKey<MSVehicle>>>() {
+            let veh = k.1;
             let vehLane = veh.get_mutable_lane();
             vehLane.m().remove_vehicle(veh, MSMoveReminder_Notification::NOTIFICATION_TELEPORT, false);
-            if toTeleport.contains(&veh) {
+            if toTeleport.contains(&k) {
                 MSVehicleTransfer::get_instance().m().add(timestep, veh);
             } else {
                 veh.m().on_removal_from_net(MSMoveReminder_Notification::NOTIFICATION_VAPORIZED_COLLISION);
@@ -7557,7 +7557,8 @@ impl MSLane {
                     if link.get_approaching_2().len() > 0 {
                         out.open_tag_id(SUMO_TAG_LINK);
                         out.write_attr(SUMO_ATTR_TO, link.get_via_lane_or_lane().get_id());
-                        for (item_first, item_second) in link.get_approaching_2() {
+                        for (k, item_second) in link.get_approaching_2() {
+                            let item_first = k.1;
                             out.open_tag_id(SUMO_TAG_APPROACHING);
                             out.write_attr(SUMO_ATTR_ID, item_first.get_id());
                             out.write_attr(SUMO_ATTR_ARRIVALTIME, &item_second.arrivalTime);
@@ -7992,7 +7993,7 @@ impl MSLane {
     //     }
     // }
     #[allow(unused_variables)]
-    pub fn detect_pedestrian_junction_collision(&mut self, collider: Ptr<MSVehicle>, colliderBoundary: &PositionVector, foeLane: Ptr<MSLane>, timestep: SUMOTime, stage: &str, toRemove: &mut BTreeSet<Ptr<MSVehicle>>, toTeleport: &mut BTreeSet<Ptr<MSVehicle>>) {
+    pub fn detect_pedestrian_junction_collision(&mut self, collider: Ptr<MSVehicle>, colliderBoundary: &PositionVector, foeLane: Ptr<MSLane>, timestep: SUMOTime, stage: &str, toRemove: &mut BTreeSet<NumIdKey<MSVehicle>>, toTeleport: &mut BTreeSet<NumIdKey<MSVehicle>>) {
         if MSLane::get_intermodal_collision_action() != MSLane_CollisionAction::COLLISION_ACTION_NONE && foeLane.get_edge().get_persons().len() > 0 && foeLane.has_pedestrians() {
             let persons = foeLane.get_edge().get_sorted_persons(timestep, false);
             for p in persons {
@@ -8120,7 +8121,7 @@ impl MSLane {
     //     return false;
     // }
     #[allow(unused_variables)]
-    pub fn detect_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSVehicle>, toRemove: &mut BTreeSet<Ptr<MSVehicle>>, toTeleport: &mut BTreeSet<Ptr<MSVehicle>>) -> bool {
+    pub fn detect_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSVehicle>, toRemove: &mut BTreeSet<NumIdKey<MSVehicle>>, toTeleport: &mut BTreeSet<NumIdKey<MSVehicle>>) -> bool {
         let (mut collider, mut victim) = (collider, victim);
         if MSLane::get_collision_action() == MSLane_CollisionAction::COLLISION_ACTION_TELEPORT
             && ((victim.has_influencer() && victim.get_influencer_2().is_remote_affected(timestep))
@@ -8342,7 +8343,7 @@ impl MSLane {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn handle_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSVehicle>, gap: f64, latGap: f64, toRemove: &mut BTreeSet<Ptr<MSVehicle>>, toTeleport: &mut BTreeSet<Ptr<MSVehicle>>) {
+    pub fn handle_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSVehicle>, gap: f64, latGap: f64, toRemove: &mut BTreeSet<NumIdKey<MSVehicle>>, toTeleport: &mut BTreeSet<NumIdKey<MSVehicle>>) {
         if collider.ignore_collision() || victim.ignore_collision() {
             return;
         }
@@ -8425,8 +8426,9 @@ impl MSLane {
                 MSLane_CollisionAction::COLLISION_ACTION_WARN => {}
                 MSLane_CollisionAction::COLLISION_ACTION_TELEPORT => {
                     prefix = utils::tlf!("Teleporting vehicle '%'; % with vehicle '%", collider.get_id(), collisionText, victim.get_id());
-                    toRemove.insert(collider);
-                    toTeleport.insert(collider);
+                    let k = NumIdKey::new(collider, collider.get_numerical_id());
+                    toRemove.insert(k);
+                    toTeleport.insert(k);
                 }
                 MSLane_CollisionAction::COLLISION_ACTION_REMOVE => {
                     prefix = utils::tlf!("Removing % participants: vehicle '%', vehicle '%", collisionText, collider.get_id(), victim.get_id());
@@ -8435,10 +8437,10 @@ impl MSLane {
                     removeVictim = !(victim.has_influencer() && victim.get_influencer_2().is_remote_affected(timestep));
                     removeCollider = !(collider.has_influencer() && collider.get_influencer_2().is_remote_affected(timestep));
                     if removeVictim {
-                        toRemove.insert(victim);
+                        toRemove.insert(NumIdKey::new(victim, victim.get_numerical_id()));
                     }
                     if removeCollider {
-                        toRemove.insert(collider);
+                        toRemove.insert(NumIdKey::new(collider, collider.get_numerical_id()));
                     }
                     if !removeVictim {
                         if !removeCollider {
@@ -8548,7 +8550,7 @@ impl MSLane {
     // #endif
     // }
     #[allow(unused_variables)]
-    pub fn handle_intermodal_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSTransportable>, gap: f64, collisionType: &str, toRemove: &mut BTreeSet<Ptr<MSVehicle>>, toTeleport: &mut BTreeSet<Ptr<MSVehicle>>) {
+    pub fn handle_intermodal_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSTransportable>, gap: f64, collisionType: &str, toRemove: &mut BTreeSet<NumIdKey<MSVehicle>>, toTeleport: &mut BTreeSet<NumIdKey<MSVehicle>>) {
         if collider.ignore_collision() {
             return;
         }
@@ -8585,8 +8587,9 @@ impl MSLane {
                 MSLane_CollisionAction::COLLISION_ACTION_WARN => {}
                 MSLane_CollisionAction::COLLISION_ACTION_TELEPORT => {
                     prefix = utils::tlf!("Teleporting vehicle '%' after", collider.get_id());
-                    toRemove.insert(collider);
-                    toTeleport.insert(collider);
+                    let k = NumIdKey::new(collider, collider.get_numerical_id());
+                    toRemove.insert(k);
+                    toTeleport.insert(k);
                 }
                 MSLane_CollisionAction::COLLISION_ACTION_REMOVE => {
                     prefix = utils::tlf!("Removing vehicle '%' after", collider.get_id());
@@ -8595,7 +8598,7 @@ impl MSLane {
                     if !removeCollider {
                         prefix = utils::tlf!("Keeping remote-controlled vehicle '%' after", collider.get_id());
                     } else {
-                        toRemove.insert(collider);
+                        toRemove.insert(NumIdKey::new(collider, collider.get_numerical_id()));
                     }
                 }
                 _ => {}

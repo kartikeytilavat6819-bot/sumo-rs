@@ -52,7 +52,7 @@ pub struct MSStoppingPlace {
     /// The list of lines that are assigned to this stop
     pub myLines: Vec<String>,
     /// A map from objects (vehicles) to the areas they acquire after entering the stop
-    pub myEndPositions: BTreeMap<Ptr<SUMOVehicle>, (f64, f64)>, // C++: std::map<const SUMOVehicle *, std::pair<double, double>, ComparatorNumericalIdLess>
+    pub myEndPositions: BTreeMap<NumIdKey<SUMOVehicle>, (f64, f64)>, // C++: std::map<const SUMOVehicle *, std::pair<double, double>, ComparatorNumericalIdLess>
     /// The lane this bus stop is located at
     pub myLane: Ptr<MSLane>,
     /// The begin position this bus stop is located at
@@ -253,7 +253,7 @@ impl MSStoppingPlace {
         let factor = if parking { self.myParkingFactor } else { 1.0 };
         let beg = veh.get_position_on_lane() + veh.get_vehicle_type().get_min_gap() * factor;
         let end = beg - veh.get_vehicle_type().get_length_with_gap() * factor;
-        self.myEndPositions.insert(veh, (beg, end));
+        self.myEndPositions.insert(NumIdKey::new(veh, veh.get_numerical_id()), (beg, end));
         self.compute_last_free_pos();
     }
 
@@ -274,7 +274,7 @@ impl MSStoppingPlace {
     /// C++ body of `MSStoppingPlace::leaveFrom`, the base entry of `MSStoppingPlaceVt::leave_from`
     #[allow(unused_variables)]
     pub fn leave_from_base(&mut self, what: Ptr<SUMOVehicle>) {
-        self.myEndPositions.remove(&what);
+        self.myEndPositions.remove(&NumIdKey::new(what, what.get_numerical_id()));
         self.compute_last_free_pos();
     }
 
@@ -353,7 +353,7 @@ impl MSStoppingPlace {
                 let mut spaces: Vec<(f64, (f64, Ptr<SUMOVehicle>))> = self
                     .myEndPositions
                     .iter()
-                    .map(|(veh, (beg, end))| (*beg, (*end, *veh)))
+                    .map(|(k, (beg, end))| (*beg, (*end, k.1)))
                     .collect();
                 // sorted from myEndPos towars myBegPos
                 spaces.sort_by(|a, b| a.partial_cmp(b).unwrap());
@@ -487,7 +487,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_stopping_position(&self, veh: Ptr<SUMOVehicle>) -> f64 {
-        if let Some((_, end)) = self.myEndPositions.get(&veh) {
+        if let Some((_, end)) = self.myEndPositions.get(&NumIdKey::new(veh, veh.get_numerical_id())) {
             return *end;
         }
         self.get_last_free_pos(&veh, 0.0)
@@ -767,7 +767,7 @@ impl MSStoppingPlace {
     // }
     #[allow(unused_variables)]
     pub fn get_stopped_vehicles(&self) -> Vec<Ptr<SUMOVehicle>> {
-        self.myEndPositions.keys().copied().collect()
+        self.myEndPositions.keys().map(|k| k.1).collect()
     }
 
     /// C++: `int MSStoppingPlace::getNumWaitingPersons() const` [const]
@@ -900,12 +900,13 @@ impl MSStoppingPlace {
     pub fn compute_last_free_pos(&mut self) {
         self.myLastFreePos = self.myEndPos;
         self.myLastParking = Ptr::null();
-        for (veh, (_beg, end)) in self.myEndPositions.iter() {
+        for (k, (_beg, end)) in self.myEndPositions.iter() {
             // vehicle might be stopped beyond myEndPos
             if self.myLastFreePos >= *end || self.myLastFreePos == self.myEndPos {
                 self.myLastFreePos = *end;
+                let veh = k.1;
                 if veh.is_stopped_parking() {
-                    self.myLastParking = *veh;
+                    self.myLastParking = veh;
                 }
             }
         }

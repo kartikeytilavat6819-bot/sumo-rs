@@ -46,7 +46,7 @@ pub use foreign::phemlight::v5::veh::FullLoadDragData;
 pub use utils::xml::generic_sax_handler::GenericSAXHandler;
 pub use utils::geom::geo_conv_helper::GeoConvHelper;
 pub use foreign::routingkit::nested_dissection::GraphFragment;
-pub use utils::common::named::HasId;
+pub use utils::common::named::{HasId, IdKey, NumIdKey};
 pub use foreign::phemlight::helpers::Helpers;
 pub use foreign::routingkit::id_set_queue::IDSetMinQueue;
 pub use foreign::phemlight::v5::veh::IceData;
