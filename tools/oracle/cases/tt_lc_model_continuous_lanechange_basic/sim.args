@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --step-length 0.5 --lanechange.duration 3 --fcd-output.signals --fcd-output.attributes location,misc --lanechange-output.xy

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departlane first --collision.action warn --collision.check-junctions -t --default.departspeed avg
