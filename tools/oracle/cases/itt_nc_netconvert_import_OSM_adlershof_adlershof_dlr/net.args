@@ -1,0 +1,1 @@
+--write-license --no-internal-links --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_adlershof_adlershof_dlr/osm2.xml -v --proj.utm --output.street-names --proj.plain-geo --tls.red.time 10

@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_adlershof_adlershof_dlr_sidewalks_option/osm.xml -v --tls.discard-simple --tls.guess-signals --geometry.remove --junctions.join --no-internal-links --osm.sidewalks

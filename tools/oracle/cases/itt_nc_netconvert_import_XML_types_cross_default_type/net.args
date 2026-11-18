@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_types_cross_default_type/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_types_cross_default_type/input_nodes.nod.xml --type-files=tools/oracle/cases/itt_nc_netconvert_import_XML_types_cross_default_type/input_types.typ.xml --default.type b

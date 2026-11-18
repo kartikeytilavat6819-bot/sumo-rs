@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_adlershof_numerical_ids/osm2.xml -v --junctions.join --ramps.guess --numerical-ids --output.street-names

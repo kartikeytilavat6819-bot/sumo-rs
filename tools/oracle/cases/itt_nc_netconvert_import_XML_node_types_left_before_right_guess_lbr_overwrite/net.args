@@ -1,0 +1,1 @@
+--write-license --junctions.left-before-right -e tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_left_before_right_guess_lbr_overwrite/input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_left_before_right_guess_lbr_overwrite/input_nodes.nod.xml -v

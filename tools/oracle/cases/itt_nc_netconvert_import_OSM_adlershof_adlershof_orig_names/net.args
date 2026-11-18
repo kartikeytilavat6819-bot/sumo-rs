@@ -1,0 +1,1 @@
+--write-license --no-internal-links --osm-files tools/oracle/cases/itt_nc_netconvert_import_OSM_adlershof_adlershof_orig_names/osm2.xml -v --proj.utm --geometry.remove --output.original-names --osm.annotate-defaults --output.removed-nodes
