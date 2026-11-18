@@ -1,0 +1,1 @@
+--write-license --no-internal-links -v --edge-files=tools/oracle/cases/itt_nc_netconvert_function_renaming_prefix_junctions/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_function_renaming_prefix_junctions/input_nodes.nod.xml --prefix.junction foo

@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_railway_repair_synthetic_connectStraight/input_net.net.xml -v --railway.topology.repair --railway.topology.repair.connect-straight

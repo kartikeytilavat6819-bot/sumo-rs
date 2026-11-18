@@ -526,7 +526,11 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             *time += self.get_travel_time(viaEdge, v, *time, viaEffortDelta);
             *effort += viaEffortDelta;
             *length += viaEdge.length();
-            viaEdge = viaEdge.via_successors(SVC_IGNORING, false)[0].1;
+            let vs = viaEdge.via_successors(SVC_IGNORING, false);
+            if vs.is_empty() {
+                break;
+            }
+            viaEdge = vs[0].1;
         }
     }
 
