@@ -3,7 +3,8 @@
 //! UTM and DHDN use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ to
 //! well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
 //! shortcut: DHDN_UTM needs the potsdam datum shift to WGS84 (7-parameter Helmert), not ported; other
-//! explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
+//! explicit proj strings are projected only when they are +proj=utm, +proj=tmerc with lat_0=0 or
+//! +proj=merc (spherical / Web Mercator).
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
@@ -46,7 +47,86 @@ pub struct GeoConvHelper {
     orig_boundary: Boundary,
     conv_boundary: Boundary,
     /// C++ `myProjection`: set once the projection is known (`None` until initialised)
-    projection: Option<Etmerc>,
+    projection: Option<Projection>,
+}
+
+/// The explicit-proj projections this build can initialize (mirrors PROJ's `pj_init_plus` for the
+/// subset the official tests exercise).
+#[derive(Clone, Copy, Debug)]
+enum Projection {
+    Tmerc(Etmerc),
+    Merc(Mercator),
+}
+
+impl Projection {
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        match self { Projection::Tmerc(p) => p.fwd(lon, lat), Projection::Merc(p) => p.fwd(lon, lat) }
+    }
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        match self { Projection::Tmerc(p) => p.inv(x, y), Projection::Merc(p) => p.inv(x, y) }
+    }
+}
+
+/// Spherical (Web) Mercator: `+proj=merc +a=<r> +b=<r> +lat_ts=0 +k=<k> ...`. With a==b and
+/// lat_ts=0 PROJ's forward is x = a*k*(lon-lon0), y = a*k*ln(tan(pi/4 + lat/2)).
+#[derive(Clone, Copy, Debug)]
+struct Mercator {
+    a: f64,
+    k: f64,
+    lon0: f64,
+    x0: f64,
+    y0: f64,
+}
+
+impl Mercator {
+    fn new(a: f64, k: f64, lon0: f64, x0: f64, y0: f64) -> Mercator {
+        Mercator { a, k, lon0: deg2rad(lon0), x0, y0 }
+    }
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        let x = self.x0 + self.a * self.k * adjlon(lon - self.lon0);
+        let y = self.y0 + self.a * self.k * (PI / 4. + lat / 2.).tan().ln();
+        (x, y)
+    }
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        let lon = self.lon0 + (x - self.x0) / (self.a * self.k);
+        let lat = 2. * ((y - self.y0) / (self.a * self.k)).exp().atan() - PI / 2.;
+        (adjlon(lon), lat)
+    }
+}
+
+/// Builds the projection for an explicit proj string. Extends `Etmerc::from_proj` (utm/tmerc) with
+/// spherical Mercator, returning None for anything else (the C++ PROJ library handles more).
+fn build_projection(proj: &str) -> Option<Projection> {
+    let mut kind = None;
+    let mut a = None;
+    let mut b = None;
+    let mut k = 1.;
+    let mut lon0 = 0.;
+    let mut x0 = 0.;
+    let mut y0 = 0.;
+    for tok in proj.split_whitespace() {
+        let body = tok.strip_prefix('+')?;
+        let (key, val) = body.split_once('=').unwrap_or((body, ""));
+        match key {
+            "proj" => kind = Some(val),
+            "a" => a = Some(val.parse::<f64>().ok()?),
+            "b" => b = Some(val.parse::<f64>().ok()?),
+            "lon_0" => lon0 = val.parse::<f64>().ok()?,
+            "k" | "k_0" => k = val.parse::<f64>().ok()?,
+            "x_0" => x0 = val.parse::<f64>().ok()?,
+            "y_0" => y0 = val.parse::<f64>().ok()?,
+            _ => {}
+        }
+    }
+    if kind == Some("merc") {
+        let a = a?;
+        // Web Mercator uses a spherical ellipsoid (a == b) and lat_ts = 0.
+        if b.is_some() && b != Some(a) {
+            return None;
+        }
+        return Some(Projection::Merc(Mercator::new(a, k, lon0, x0, y0)));
+    }
+    Etmerc::from_proj(proj).map(Projection::Tmerc)
 }
 
 impl PartialEq for GeoConvHelper {
@@ -114,7 +194,7 @@ impl GeoConvHelper {
             "DHDN_UTM" => ProjectionMethod::DhdnUtm,
             _ => ProjectionMethod::Proj,
         };
-        let projection = if projection_method == ProjectionMethod::Proj { Etmerc::from_proj(&proj_string) } else { None };
+        let projection = if projection_method == ProjectionMethod::Proj { build_projection(&proj_string) } else { None };
         GeoConvHelper {
             proj_string,
             projection,
@@ -348,7 +428,7 @@ impl GeoConvHelper {
                 ProjectionMethod::Utm => {
                     let zone = (x + 180.) as i32 / 6 + 1;
                     self.proj_string = format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = build_projection(&self.proj_string);
                 }
                 ProjectionMethod::Dhdn => {
                     let zone = (x / 3.) as i32;
@@ -357,7 +437,7 @@ impl GeoConvHelper {
                         return false;
                     }
                     self.proj_string = dhdn_proj_string(zone);
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = build_projection(&self.proj_string);
                 }
                 _ => {}
             }
@@ -746,5 +826,21 @@ mod tests {
         let mut q = Position::new(12.5, 52.3);
         assert!(d.x2cartesian_const(&mut q));
         assert!((q.x() - 4534104.708578545).abs() < 1e-6 && (q.y() - 5796245.650255103).abs() < 1e-6);
+    }
+
+    /// Web Mercator: reference values are the `netOffset` of lc_model/bugs/ticket11468's net.xml
+    /// (origBoundary min corner lon=15.566128 lat=58.386126 -> 1732813.44, 8048871.74), which the
+    /// official sumo's PROJ build produced.
+    #[test]
+    fn merc_matches_web_mercator() {
+        let s = "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs";
+        let h = GeoConvHelper::new(s, Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(15.566128, 58.386126);
+        assert!(h.x2cartesian_const(&mut p));
+        assert!((p.x() - 1732813.4425829179).abs() < 1e-6, "x {}", p.x());
+        assert!((p.y() - 8048871.742765347).abs() < 1e-5, "y {}", p.y());
+        let mut q = p;
+        h.cartesian2geo(&mut q);
+        assert!((q.x() - 15.566128).abs() < 1e-9 && (q.y() - 58.386126).abs() < 1e-9, "inverse {q:?}");
     }
 }
