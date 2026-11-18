@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 600 --tls.all-off -a tools/oracle/cases/tt_tls_off_allwayStop_all_off_left_oncoming/input_additional.add.xml

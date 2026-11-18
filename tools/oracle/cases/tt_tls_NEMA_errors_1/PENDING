@@ -1,0 +1,1 @@
+Official sumo exits 1: "At NEMA tlLogic '2881', Ring 1 does not add to cycle length." Error-only test with no tripinfo/fcd output, so it cannot be an oracle row.
