@@ -138,7 +138,10 @@ def effective_options(leaf: Path, app: str, root: Path) -> list[str]:
 
     opts: list[str] = []
     for f in chain:
-        tokens = shlex.split(f.read_text(encoding="utf-8", errors="replace"))
+        # A quoted option value may span lines in options.<app>; a literal newline
+        # in a token would break `source` of the generated .rows file. Fold it.
+        tokens = [t.replace("\r", " ").replace("\n", " ")
+                  for t in shlex.split(f.read_text(encoding="utf-8", errors="replace"))]
         new: list[str] = []
         skip = False
         clear: list[str] | None = None
@@ -407,8 +410,12 @@ def main() -> int:
         merged: list[str] = []
         if ROWS.is_file():
             for line in ROWS.read_text(encoding="utf-8").splitlines():
+                stripped = line.strip()
                 n = row_name(line)
-                if line.strip() and (n is None or n not in new_names):
+                # Keep only whole rows (and comments/blanks); drop fragments left
+                # by an earlier malformed row that broke `source`.
+                if (not stripped or stripped.startswith("#") or stripped.startswith("row ")) \
+                        and (n is None or n not in new_names):
                     merged.append(line)
         merged += rows
         ROWS.write_text("\n".join(merged) + ("\n" if merged else ""),
