@@ -1,0 +1,3 @@
+# scripts run on the Linux gate VMs: never convert them to CRLF on Windows checkouts
+*.sh text eol=lf
+*.py text eol=lf
