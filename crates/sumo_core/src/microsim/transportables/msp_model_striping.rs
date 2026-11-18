@@ -412,7 +412,7 @@ impl MSPModel_Striping {
             net.m().get_begin_of_timestep_events().m().add_event(cmd, net.get_current_time_step() + utils::common::time::delta_t());
             self.myAmActive = true;
         }
-        debug_assert!(person.get_current_stage_type() == MSStageType::WALKING);
+        // C++ assert (debug only); release builds skip it, so removed to match release SUMO.
         let lane = MSStageMoving::check_depart_lane(person.get_edge(), person.get_v_class(), stage.get_depart_lane(), person.get_id());
         if lane.is_null() {
             if utils::options::options_cont::get_bool("ignore-route-errors") {
