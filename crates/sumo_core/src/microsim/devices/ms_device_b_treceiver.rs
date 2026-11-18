@@ -257,19 +257,17 @@ impl MSDevice_BTreceiver_BTreceiverUpdate {
             b.grow(v.range);
             let cmin = [b.xmin() as f32, b.ymin() as f32];
             let cmax = [b.xmax() as f32, b.ymax() as f32];
-            // determinism: C++ std::set<const Named*> orders surrounding vehicles by address; here they are visited in creation order (VehicleInformation::seq)
-            let mut surrounding: Vec<(String, Ptr<MSDevice_BTsender_VehicleInformation>)> = rt
+            // determinism: C++ std::set<const Named*> orders surrounding vehicles by address; here they are visited in ID order
+            let surrounding: Vec<(String, Ptr<MSDevice_BTsender_VehicleInformation>)> = rt
                 .iter()
                 .filter(|e| boxes_overlap(e.2, e.3, cmin, cmax))
                 .map(|e| (e.0.clone(), e.1))
                 .collect();
-            surrounding.sort_by_key(|e| e.1.seq);
             for (vid, svi) in surrounding {
                 if id == vid {
                     // seeing oneself? skip
                     continue;
                 }
-                eprintln!("V {:.2} {} {}", simtime(), id, vid);
                 self.update_visibility(v, svi.m());
             }
 
