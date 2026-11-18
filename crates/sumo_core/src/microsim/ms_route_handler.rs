@@ -2968,13 +2968,14 @@ impl MSRouteHandler {
                 let mut bs: Ptr<MSStoppingPlace> = Ptr::null();
                 if attrs.has_attribute(SUMO_ATTR_ROUTE) {
                     self.myActiveRouteID = attrs.get(SUMO_ATTR_ROUTE, &self.myVehicleParameter.id, &mut ok, true);
-                    if !MSRoute::has_route(&self.myActiveRouteID) {
-                        throw_process_error(format!(
+                    // C++ MSRoute::dictionary(id, &myParsingRNG) resolves both plain routes and route distributions.
+                    let route = match lookup_route(&self.myActiveRouteID) {
+                        Some(r) => r,
+                        None => throw_process_error(format!(
                             "The route '{}' for walk of person '{}' is not known.",
                             self.myActiveRouteID, self.myVehicleParameter.id
-                        ));
-                    }
-                    let route = MSRoute::dictionary_3(&self.myActiveRouteID, SUMORouteHandler::get_parsing_rng());
+                        )),
+                    };
                     self.myActiveRoute = route.get_edges().clone();
                 } else {
                     let edges: String = attrs.get(SUMO_ATTR_EDGES, &self.myVehicleParameter.id, &mut ok, true);
