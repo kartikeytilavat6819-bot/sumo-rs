@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:20:22.046182-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/fuzz_3003/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/fuzz_3003/routes.rou"/>
+        <additional-files value="tools/oracle/cases/fuzz_3003/fuzz.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_3003/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_3003/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_3003/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_3003/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+        <step-length value="0.2"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="60"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1"/>
+    </emissions>
+
+    <random_number>
+        <seed value="3003"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="fz_p1" depart="60.00" type="fz_ped" speedFactor="0.95" duration="122.80" waitingTime="13.00" timeLoss="45.96" traveltime="109.80">
+        <walk depart="60.00" departPos="0.00" arrival="82.00" arrivalPos="30.00" duration="22.00" routeLength="30.00" timeLoss="2.24" maxSpeed="1.52" waitingTime="0.00"/>
+        <ride waitingTime="13.00" vehicle="fz_L1.1" depart="95.00" arrival="156.20" arrivalPos="40.00" duration="61.20" routeLength="208.25" timeLoss="40.87"/>
+        <walk depart="156.20" departPos="40.00" arrival="182.80" arrivalPos="76.06" duration="26.60" routeLength="36.06" timeLoss="2.85" maxSpeed="1.52" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

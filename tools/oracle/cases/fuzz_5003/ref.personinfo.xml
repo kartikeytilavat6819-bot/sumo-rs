@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:40:50.586250-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/fuzz_5003/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/fuzz_5003/routes.rou"/>
+        <additional-files value="tools/oracle/cases/fuzz_5003/fuzz.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_5003/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_5003/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_5003/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_5003/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+        <step-length value="1"/>
+    </time>
+
+    <processing>
+        <ignore-junction-blocker value="5"/>
+        <time-to-teleport value="60"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="5003"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="fz_p1" depart="60.00" type="fz_ped" speedFactor="0.94" duration="114.00" waitingTime="13.00" timeLoss="44.58" traveltime="101.00">
+        <walk depart="60.00" departPos="0.00" arrival="82.00" arrivalPos="30.00" duration="22.00" routeLength="30.00" timeLoss="2.11" maxSpeed="1.51" waitingTime="0.00"/>
+        <ride waitingTime="13.00" vehicle="fz_L1.1" depart="95.00" arrival="158.00" arrivalPos="40.00" duration="63.00" routeLength="190.65" timeLoss="40.48"/>
+        <walk depart="158.00" departPos="40.00" arrival="174.00" arrivalPos="61.12" duration="16.00" routeLength="21.12" timeLoss="2.00" maxSpeed="1.51" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="fz_p2" depart="100.00" type="fz_ped" speedFactor="0.84" duration="78.00" waitingTime="13.00" timeLoss="19.30" traveltime="78.00">
+        <walk depart="100.00" departPos="0.00" arrival="178.00" arrivalPos="61.12" duration="78.00" routeLength="79.17" timeLoss="19.30" maxSpeed="1.35" waitingTime="13.00"/>
+    </personinfo>
+    <personinfo id="fz_p0" depart="20.00" type="fz_ped" speedFactor="1.11" duration="166.00" waitingTime="0.00" timeLoss="16.20" traveltime="166.00">
+        <walk depart="20.00" departPos="0.00" arrival="186.00" arrivalPos="61.12" duration="166.00" routeLength="264.95" timeLoss="16.20" maxSpeed="1.77" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

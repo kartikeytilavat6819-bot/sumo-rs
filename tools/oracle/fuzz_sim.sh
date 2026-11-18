@@ -6,7 +6,10 @@
 #   fuzz_sim.sh --gen <seed> <dir>    only (re)generate the case for <seed> into <dir>: ref_simple.net.xml,
 #                                     routes.rou, sim.args  (deterministic: same pristine tools => same files)
 # Env: FUZZ_BUDGET (s, default 1500: total wall clock for fuzz+shrink), FUZZ_OUT (work dir), FUZZ_FIRST (first seed).
-# Comparison = run_all's: compare_sim.py tripinfo + fcd, compare_stat.py statistics.
+# Comparison = run_all's: compare_sim.py tripinfo (+personinfo, +emissions) + fcd, compare_stat.py statistics.
+# oc22 extension: mesosim, actuated/delay_based TLS, personTrip public + bus stops, parking stops,
+# device.rerouting.probability, sublane bicycles, departLane/departSpeed variants, step-length 0.2/0.5,
+# device.emissions.probability (emissions compared as emissions.* inside tripinfo).
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 ORA=tools/oracle
@@ -19,13 +22,19 @@ r() { R=$(( RANDOM % $1 )); }   # bash RANDOM is deterministic after RANDOM=<see
 gen_case() {  # gen_case <seed> <dir>; prints the parameter string
   local s=$1 d=$2 mode lanes jt nil p ff vc step lc lat ttp ped
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up: first draws after seeding track the seed
+  r 6; local feat=(none meso pt parking bikes reroute emis); feat=${feat[$R]}
   r 4; mode=(grid grid spider rand); mode=${mode[$R]}
   r 3; lanes=$((R + 1))
   r 5; jt=(priority traffic_light right_before_left allway_stop traffic_light); jt=${jt[$R]}
   r 2; nil=$R
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
+  [ "$feat" = pt ] && net="$net --sidewalks.guess --crossings.guess --walkingareas"  # persons need a walking area
   [ $nil = 1 ] && net="$net --no-internal-links"
-  [ $jt = traffic_light ] && { r 2; [ $R = 1 ] && net="$net --tls.default-type actuated"; }
+  local tls=""
+  if [ $jt = traffic_light ]; then
+    r 3; local tl=(static actuated delay_based); tls=${tl[$R]}
+    [ "$tls" != static ] && net="$net --tls.default-type $tls"
+  fi
   case $mode in
     grid)   r 3; net="--grid --grid.number $((R + 2)) --grid.length 150 $net";;
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
@@ -62,13 +71,88 @@ items.sort(key=lambda e: float(e.get("depart", e.get("begin", "0"))))
 r = ET.Element("routes"); r.extend(types); r.extend(items)
 ET.ElementTree(r).write(sys.argv[2])
 PYEOF
-  r 2; step=(1 0.5); step=${step[$R]}
+  r 3; step=(1 0.5 0.2); step=${step[$R]}
   r 3; lat=$R; r 3; ttp=(300 -1 60); ttp=${ttp[$R]}
   r 6; local x=("" "" "--lanechange.duration 3" "--collision.action teleport" "--ignore-junction-blocker 5" "--sloppy-insert"); x=${x[$R]}
   local a="--end 300 --seed $s --step-length $step --time-to-teleport $ttp $x"
   [ $lat = 0 ] && [ $lc = SL2015 ] && a="${a/--lanechange.duration 3/} --lateral-resolution 0.8"   # mutually exclusive
+
+  # ---- oc22 extension draws ----
+  r 4; local depv=$R
+  r 3; local dev=$R
+  [ "$feat" = meso ] && a=$(echo "$a" | sed 's/ --lateral-resolution [0-9.]*//g; s/ --lanechange.duration [0-9.]*//g')" --mesosim true"
+  [ "$feat" = bikes ] && a=$(echo "$a" | sed 's/ --lateral-resolution [0-9.]*//g')" --lateral-resolution 0.8"
+  [ "$feat" = reroute ] && a="$a --device.rerouting.probability 0.5"
+  [ "$dev" = 0 ] && a="$a --device.emissions.probability 1"
+  # augment routes + additional file with the feature's infrastructure
+  "$PY" - "$d/ref_simple.net.xml" "$d/routes.rou" "$d" "$feat" "$depv" <<'PYEOF'
+import sys, xml.etree.ElementTree as ET
+net, rou, d, feat, depv = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4], int(sys.argv[5])
+N = ET.parse(net).getroot()
+edge_el = {e.get('id'): e for e in N.findall('edge') if e.get('id') and not e.get('id').startswith(':')}
+T = ET.parse(rou); root = T.getroot()
+seq = None   # reuse a valid edge sequence from randomTrips: arbitrary edges may not be connected
+for rr in root.iter('route'):   # inline vehicle routes are valid edge sequences too
+    if rr.get('edges') and len(rr.get('edges').split()) >= 2:
+        seq = rr.get('edges').split(); break
+if seq is None:
+    seq = list(edge_el)[:3]
+def lane_for(edge):
+    for l in edge_el.get(edge, ET.Element('x')).findall('lane'):
+        if float(l.get('length', '0')) >= 45 and (l.get('allow') is None or 'passenger' in l.get('allow')):
+            return l.get('id')
+    return None
+add = ET.Element('additional')
+if feat == 'pt':
+    stops = [(e, lane_for(e)) for e in seq[:5] if lane_for(e)][:2]
+    if len(stops) == 2:
+        for i, (e, ln) in enumerate(stops):
+            ET.SubElement(add, 'busStop', {'id': 'bs%d' % i, 'lane': ln,
+                          'startPos': '20', 'endPos': '40', 'lines': 'L1'})
+        ET.SubElement(root, 'vType', {'id': 'fz_bus', 'vClass': 'bus', 'length': '12', 'maxSpeed': '13.89'})
+        ET.SubElement(root, 'route', {'id': 'fz_busR', 'edges': ' '.join(seq)})
+        fl = ET.SubElement(root, 'flow', {'id': 'fz_L1', 'type': 'fz_bus', 'route': 'fz_busR',
+                          'line': 'L1', 'begin': '5', 'end': '250', 'period': '60', 'departSpeed': 'max'})
+        ET.SubElement(fl, 'stop', {'busStop': 'bs0', 'until': '35', 'duration': '5'})
+        ET.SubElement(fl, 'stop', {'busStop': 'bs1', 'until': '150'})
+        ET.SubElement(root, 'vType', {'id': 'fz_ped', 'vClass': 'pedestrian', 'length': '0.25', 'width': '0.5', 'maxSpeed': '1.6'})
+        for i, (a, b) in enumerate(((seq[0], seq[-1]), (seq[0], seq[1]), (seq[1], seq[-1]))):
+            p = ET.SubElement(root, 'person', {'id': 'fz_p%d' % i, 'type': 'fz_ped', 'depart': str(20 + i * 40)})
+            ET.SubElement(p, 'personTrip', {'from': a, 'to': b, 'modes': 'public'})
+elif feat == 'parking':
+    ln = next((lane_for(e) for e in seq if lane_for(e)), None)
+    if ln is not None:
+        ET.SubElement(add, 'parkingArea', {'id': 'pa0', 'lane': ln, 'startPos': '20', 'endPos': '40'})
+        ET.SubElement(root, 'route', {'id': 'fz_parkR', 'edges': ' '.join(seq)})
+        v = ET.SubElement(root, 'vehicle', {'id': 'fz_park', 'depart': '30', 'route': 'fz_parkR'})
+        ET.SubElement(v, 'stop', {'parkingArea': 'pa0', 'duration': '30'})
+elif feat == 'bikes':
+    for t in root.findall('vType') + [e for d in root.findall('vTypeDistribution') for e in d]:
+        t.set('laneChangeModel', 'SL2015')   # sublane requires SL2015
+    ET.SubElement(root, 'vType', {'id': 'fz_bike', 'vClass': 'bicycle', 'laneChangeModel': 'SL2015',
+                  'length': '1.7', 'maxSpeed': '6'})
+    for i in range(3):
+        v = ET.SubElement(root, 'vehicle', {'id': 'fz_b%d' % i, 'type': 'fz_bike', 'depart': str(15 + i * 40)})
+        ET.SubElement(v, 'route', {'edges': ' '.join(seq)})
+if feat in ('pt', 'parking'):
+    ET.ElementTree(add).write(d + '/fuzz.add.xml')
+vs = [e for e in root.findall('vehicle')]
+for i, v in enumerate(vs[:3]):
+    if depv == 1:
+        v.set('departLane', 'best'); v.set('departSpeed', 'max')
+    elif depv == 2:
+        v.set('departLane', 'free'); v.set('departSpeed', 'desired')
+    elif depv == 3:
+        v.set('departSpeed', '0')
+types = [e for e in root if e.tag in ('vType', 'vTypeDistribution')]
+items = [e for e in root if e.tag not in ('vType', 'vTypeDistribution')]
+items.sort(key=lambda e: float(e.get('depart', e.get('begin', '0'))))
+new = ET.Element('routes'); new.extend(types); new.extend(items)   # SUMO ignores out-of-order route items
+ET.ElementTree(new).write(rou)
+PYEOF
+  if [ "$feat" = pt ] || [ "$feat" = parking ]; then a="$a --additional-files $d/fuzz.add.xml"; fi
   echo "$a" > "$d/sim.args"
-  echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc vc2=$vc2 | $a"
+  echo "mode=$mode lanes=$lanes jt=$jt tls=$tls nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc vc2=$vc2 step=$step feat=$feat depv=$depv dev=$dev | $a"
 }
 
 if [ "${1:-}" = "--gen" ]; then gen_case "$2" "$3"; exit $?; fi
@@ -82,14 +166,27 @@ run_cmp() {  # run_cmp <dir>; sets DIFF; returns 0 PASS, 1 FAIL, 2 PANIC/TIMEOUT
   for w in ref cand; do
     bin=$OFF; [ $w = cand ] && bin=$OURS
     timeout 120 "$bin/sumo" $args --tripinfo-output "$d/$w.ti.xml" --fcd-output "$d/$w.fcd.xml" \
-        --statistic-output "$d/$w.stat.xml" >"$d/$w.log" 2>&1
+        --personinfo-output "$d/$w.pi.xml" --statistic-output "$d/$w.stat.xml" >"$d/$w.log" 2>&1
     rc=$?
     if [ $rc -ne 0 ]; then
       [ $w = ref ] && { DIFF="REFFAIL rc=$rc $(grep -m1 -E 'Error' "$d/ref.log" | cut -c1-80)"; return 3; }
       DIFF="rc=$rc $(grep -m1 -E 'panicked at|Error:' "$d/cand.log" | cut -c1-100)"; return 2
     fi
   done
-  DIFF=$("$PY" $ORA/compare_sim.py --tripinfo "$d/ref.ti.xml" "$d/cand.ti.xml" | grep -v '^MATCH' | head -1)
+  # personinfo is a separate SUMO output; fold its <personinfo> elements into a tripinfo copy so
+  # compare_sim.py's --tripinfo mode checks persons and rides as well as vehicles.
+  for w in ref cand; do
+    "$PY" - "$d/$w.ti.xml" "$d/$w.pi.xml" "$d/$w.tip.xml" <<'PYEOF'
+import sys, xml.etree.ElementTree as ET
+tip = ET.parse(sys.argv[1]).getroot()
+try: pi = ET.parse(sys.argv[2]).getroot()
+except Exception: pi = []
+for e in pi:
+    if e.tag == 'personinfo': tip.append(e)
+ET.ElementTree(tip).write(sys.argv[3])
+PYEOF
+  done
+  DIFF=$("$PY" $ORA/compare_sim.py --tripinfo "$d/ref.tip.xml" "$d/cand.tip.xml" | grep -v '^MATCH' | head -1)
   [ -n "$DIFF" ] && { DIFF="tripinfo $DIFF"; return 1; }
   DIFF=$("$PY" $ORA/compare_sim.py --fcd "$d/ref.fcd.xml" "$d/cand.fcd.xml" | grep -v '^MATCH' | head -1)
   [ -n "$DIFF" ] && { DIFF="fcd $DIFF"; return 1; }
@@ -110,18 +207,21 @@ shrink() {  # shrink <dir> <signature>: smaller --end, then fewer vehicles/perso
   done
   n=$("$PY" -c "import xml.etree.ElementTree as ET;print(sum(e.tag not in('vType','vTypeDistribution') for e in ET.parse('$d/routes.rou').getroot()))")
   ch=$(( (n + 1) / 2 ))
-  while [ $ch -ge 1 ]; do
+  while [ $ch -ge 1 ] && [ $n -gt 1 ]; do
     i=0
     while [ $i -lt $n ] && [ $(( $(date +%s) - START )) -lt $(( BUDGET + 250 )) ]; do   # try deleting items [i, i+ch)
+      c=$ch; [ $(( i + c )) -gt $n ] && c=$(( n - i ))   # never delete past the end (or the last item)
+      [ $c -ge $n ] && c=$(( n - 1 ))
+      [ $c -lt 1 ] && break
       cp "$d/routes.rou" "$d/routes.keep"
-      "$PY" - "$d/routes.rou" $i $ch <<'PYEOF'
+      "$PY" - "$d/routes.rou" $i $c <<'PYEOF'
 import sys, xml.etree.ElementTree as ET
 t = ET.parse(sys.argv[1]); r = t.getroot(); i, c = int(sys.argv[2]), int(sys.argv[3])
 it = [e for e in r if e.tag not in ("vType", "vTypeDistribution")]
 for e in it[i:i + c]: r.remove(e)
 t.write(sys.argv[1])
 PYEOF
-      if still; then n=$(( n - ch )); else cp "$d/routes.keep" "$d/routes.rou"; i=$(( i + ch )); fi
+      if still; then n=$(( n - c )); else cp "$d/routes.keep" "$d/routes.rou"; i=$(( i + c )); fi
     done
     ch=$(( ch / 2 ))
   done
