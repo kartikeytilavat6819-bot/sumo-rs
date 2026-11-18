@@ -441,7 +441,13 @@ impl MSVehicleTransfer {
     #[allow(unused_variables)]
     // Returns Result: C++ attrs.getLong() throws ProcessError, which must propagate to the SAX handler.
     pub fn load_state(&mut self, attrs: &SUMOSAXAttributes, offset: SUMOTime, vc: &mut MSVehicleControl) -> Result<(), ProcessError> {
-        // shortcut: dynamic_cast<MSVehicle*> has no runtime check here; a null result still means "deleted" as in C++
+        // C++ `dynamic_cast<MSVehicle*>(...)` yields nullptr for mesoscopic vehicles (MEVehicle is
+        // not an MSVehicle), which is treated as "deleted". A Rust Ptr cast has no runtime check,
+        // so use the global simulation-kind flag, the exact discriminator in this port (MSBaseVehicle
+        // likewise dispatches on use_meso_sim), to reproduce that null result.
+        if MSGlobals::use_meso_sim() {
+            return Ok(());
+        }
         let veh: Ptr<MSVehicle> = vc.get_vehicle(attrs.get_string(SUMO_ATTR_ID).as_str()).cast::<MSVehicle>();
         if veh.is_null() {
             // deleted

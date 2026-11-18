@@ -2201,7 +2201,7 @@ pub struct SUMOVehicleParameter_Stop {
     pub arrival: SUMOTime,
     /// The stopping duration
     pub duration: SUMOTime,
-    pub durationDist: Unmapped /* Distribution_Parameterized */,
+    pub durationDist: DistributionParameterized,
     /// The time at which the vehicle may continue its journey
     pub until: SUMOTime,
     /// The maximum time extension for boarding / loading
@@ -2280,7 +2280,7 @@ impl Default for SUMOVehicleParameter_Stop {
             endPos: 0.,
             arrival: -1,
             duration: -1,
-            durationDist: (),
+            durationDist: DistributionParameterized::default(),
             until: -1,
             extension: -1,
             waitUntil: -1,

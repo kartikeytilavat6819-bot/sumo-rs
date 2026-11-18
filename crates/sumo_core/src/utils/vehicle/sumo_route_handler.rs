@@ -1447,9 +1447,8 @@ impl SUMORouteHandler {
                 errorOutput.m().inform(&utils::tlf!("Invalid duration for a stop% (%).", errorSuffix.clone(), error.clone()), true);
                 return false;
             }
-            // shortcut: SUMOVehicleParameter_Stop::durationDist is Unmapped, so the parsed distribution is not stored here, upgrade when that field is typed as DistributionParameterized
-            let durationDist = utils::distribution::distribution_parameterized::DistributionParameterized::from_description(&durationStr).unwrap_or_else(|e| panic!("{}", e));
-            stop.duration = utils::common::time::time2steps(durationDist.sample(Some(Self::get_parsing_rng().m())).unwrap_or_else(|e| panic!("{}", e)));
+            stop.durationDist = utils::distribution::distribution_parameterized::DistributionParameterized::from_description(&durationStr).unwrap_or_else(|e| panic!("{}", e));
+            stop.duration = utils::common::time::time2steps(stop.durationDist.sample(Some(Self::get_parsing_rng().m())).unwrap_or_else(|e| panic!("{}", e)));
         }
         stop.until = attrs.get_opt_sumo_time_reporting(SUMO_ATTR_UNTIL, "", &mut ok, -1, true);
         if !expectTrigger && (!ok || (stop.duration < 0 && stop.until < 0 && stop.speed == 0.0)) {
