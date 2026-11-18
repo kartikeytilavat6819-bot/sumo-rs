@@ -77,6 +77,10 @@ impl MSCalibrator_CalibratorCommand {
     //         }
     #[allow(unused_variables)]
     pub fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        // C++ `myCalibrator->execute(currentTime)` is virtual; dispatch to the meso override when present
+        if !self.myCalibrator.myMesoThis.is_null() {
+            return self.myCalibrator.myMesoThis.m().execute(currentTime);
+        }
         self.myCalibrator.m().execute(currentTime)
     }
 
@@ -101,7 +105,7 @@ impl MSCalibrator_CalibratorCommand {
 impl Command for MSCalibrator_CalibratorCommand {
     /// C++ `CalibratorCommand::execute` (the virtual override)
     fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
-        self.myCalibrator.m().execute(currentTime)
+        MSCalibrator_CalibratorCommand::execute(self, currentTime)
     }
     /// C++ `CalibratorCommand::shiftTime` (the virtual override)
     fn shift_time(&mut self, currentTime: SUMOTime, execTime: SUMOTime, newTime: SUMOTime) -> SUMOTime {
@@ -169,6 +173,9 @@ pub struct MSCalibrator {
     pub myAmLocal: bool,
     /// whether the calibrator has registered an invalid jam in the last execution step
     pub myHaveInvalidJam: bool,
+    /// C++ virtual `execute` dispatch: for METriggeredCalibrator this points at the derived object
+    /// so the CalibratorCommand calls the meso override instead of MSCalibrator::execute.
+    pub myMesoThis: Ptr<crate::mesosim::me_triggered_calibrator::METriggeredCalibrator>,
 }
 
 impl std::ops::Deref for MSCalibrator {
@@ -373,6 +380,7 @@ impl MSCalibrator {
             myInvalidJamThreshold: invalidJamThreshold,
             myAmLocal: local,
             myHaveInvalidJam: false,
+            myMesoThis: Ptr::null(),
         });
         // myEdgeMeanData's parent is myMeanDataParent inside the box, so its address is only final now
         b.myEdgeMeanData = MSMeanData_Net_MSLaneMeanDataValues::new(Ptr::null(), length, false, Ptr::from_mut(&mut b.myMeanDataParent));
