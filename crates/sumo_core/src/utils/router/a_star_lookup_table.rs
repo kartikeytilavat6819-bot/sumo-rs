@@ -6,6 +6,7 @@ use utils::common::msg_handler::{write_message, write_warning};
 use utils::common::to_string::format_g;
 use utils::common::util_exceptions::ProcessError;
 use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::map_matcher::{MapEdge, MapLane, MapMatcher, MapMatcherHost, MapNode};
 
 /// Computes the shortest path through a network using the A* algorithm.
 /// C++ class `AbstractLookupTable` (utils/router/AStarLookupTable.h)
@@ -403,7 +404,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
     //         }
     //     }
     #[allow(unused_variables)]
-    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>) -> Self where E: RouterEdge<V> {
+    pub fn new(filename: &str, edges: &Vec<Ptr<E>>, router: Ptr<SUMOAbstractRouter<E, V>>, reverseRouter: Ptr<SUMOAbstractRouter<ReversedEdge<E, V>, V>>, defaultVehicle: Ptr<V>, outfile: &str, maxNumThreads: i32, mapMatcher: Ptr<M>, host: &dyn MapMatcherHost<E>) -> Self where E: RouterEdge<V> + MapEdge, M: GeoLandmarkMatcher<E> {
         let mut s = Self {
             base: AbstractLookupTable { _p: std::marker::PhantomData },
             myLandmarks: BTreeMap::new(),
@@ -470,7 +471,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle, M> LandmarkLookupTable<E, V, M> {
                     Ok(v) => v,
                     Err(_) => panic!("{}", ProcessError::new(format!("Broken landmark file, could not parse '{}' as coordinates.", line))),
                 };
-                let mapped: Vec<Ptr<E>> = e_geo_landmark_edges(mapMatcher, lon, lat);
+                let mapped: Vec<Ptr<E>> = e_geo_landmark_edges(mapMatcher, host, lon, lat);
                 if mapped.len() != 1 {
                     panic!("{}", ProcessError::new(format!("Invalid coordinate in landmark file, could not find edge at '{}'", line)));
                 }
@@ -789,7 +790,33 @@ fn e_distance_to<E, V>(from: Ptr<E>, to: Ptr<E>) -> f64 where E: RouterEdge<V> {
     from.distance_to(to, false)
 }
 
-// shortcut: geo (lon,lat) landmarks need M::parseGeoEdges, but the Rust MapMatcher needs its host route handler (C++ passes the RORouteHandler itself) and duarouter passes no map matcher; upgrade by passing the handler as a MapMatcherHost
-fn e_geo_landmark_edges<E, M>(_mapMatcher: Ptr<M>, _lon: f64, _lat: f64) -> Vec<Ptr<E>> {
-    panic!("shortcut: needs map-matcher trait bounds (lead), M::parseGeoEdges")
+// C++ `M::parseGeoEdges(PositionVector({Position(lon, lat)}), true, SVC_IGNORING, mapped, "LMLT", false, ok, true);`
+// M (ROMapMatcher / MSMapMatcher) is a MapMatcher<E, L, N> and inherits parseGeoEdges from the base,
+// but that Rust method needs the derived route handler (C++ passes it implicitly via M*) for its
+// virtual initLaneTree/retrieveEdge hooks. This trait bridges the two: the caller passes the host.
+pub trait GeoLandmarkMatcher<E: MapEdge> {
+    fn parse_geo_landmark(&self, host: &dyn MapMatcherHost<E>, lon: f64, lat: f64) -> Vec<Ptr<E>>;
+}
+
+impl<E, L, N> GeoLandmarkMatcher<E> for MapMatcher<E, L, N>
+where
+    E: MapEdge<Node = N>,
+    L: MapLane<E>,
+    N: MapNode,
+{
+    fn parse_geo_landmark(&self, host: &dyn MapMatcherHost<E>, lon: f64, lat: f64) -> Vec<Ptr<E>> {
+        let positions = PositionVector::from(vec![Position::new(lon, lat)]);
+        let mut mapped: Vec<Ptr<E>> = Vec::new();
+        let mut ok = true;
+        self.parse_geo_edges(host, &positions, true, SVC_IGNORING, &mut mapped, "LMLT", false, &mut ok, true);
+        mapped
+    }
+}
+
+fn e_geo_landmark_edges<E, M>(mapMatcher: Ptr<M>, host: &dyn MapMatcherHost<E>, lon: f64, lat: f64) -> Vec<Ptr<E>>
+where
+    E: MapEdge,
+    M: GeoLandmarkMatcher<E>,
+{
+    mapMatcher.m().parse_geo_landmark(host, lon, lat)
 }

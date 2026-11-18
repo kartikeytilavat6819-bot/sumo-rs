@@ -503,7 +503,14 @@ impl MSRoutingEngine {
                 // we need an exemplary vehicle with speedFactor 1
                 vehicle.m().set_chosen_speed_factor(1.);
                 let chrouter = Box::new(CHRouterWrapper::<MSEdge, SUMOVehicle>::new(edges, true, Some(MSNet::get_travel_time), string2time(&get_string("begin")).unwrap_or_else(|e| std::panic::panic_any(e)), string2time(&get_string("end")).unwrap_or_else(|e| std::panic::panic_any(e)), utils::common::time::SUMOTIME_MAX, hasPermissions, 1).with_compute());
-                let lm = crate::utils::router::a_star_lookup_table::LandmarkLookupTable::<MSEdge, SUMOVehicle, MSMapMatcher>::new(&get_string("astar.landmark-distances"), edges, Ptr::from_box(&chrouter).cast(), Ptr::null(), vehicle, "", get_int("device.rerouting.threads"), MSNet::get_instance().m().get_map_matcher());
+                // C++ passes MSNet::getInstance()->getMapMatcher() (the MSRouteHandler cast to its
+                // MSMapMatcher base) as M*; that same object is the host of the virtual map-match hooks.
+                let net = MSNet::get_instance();
+                let mapMatcher = net.m().get_map_matcher();
+                let loader = net.m().myRouteLoaders.get_first_loader();
+                let handler = loader.m().get_route_handler().cast::<crate::microsim::ms_route_handler::MSRouteHandler>();
+                let host: &dyn crate::utils::map_matcher::MapMatcherHost<MSEdge> = &*handler;
+                let lm = crate::utils::router::a_star_lookup_table::LandmarkLookupTable::<MSEdge, SUMOVehicle, MSMapMatcher>::new(&get_string("astar.landmark-distances"), edges, Ptr::from_box(&chrouter).cast(), Ptr::null(), vehicle, "", get_int("device.rerouting.threads"), mapMatcher, host);
                 vehicle.m().set_chosen_speed_factor(speedFactor);
                 Some(std::rc::Rc::new(crate::utils::router::a_star_lookup_table::AStarLookupTableKind::Landmark(lm)))
             } else {
