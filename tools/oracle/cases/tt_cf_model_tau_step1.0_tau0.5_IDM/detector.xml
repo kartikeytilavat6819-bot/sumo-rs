@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T08:56:48.480513-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-18T14:55:08.203649+00:00 by Eclipse SUMO sumo v1.28.0-0000000000
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -14,17 +14,17 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="ref_simple.net.xml"/>
-        <route-files value="routes.rou"/>
-        <additional-files value="input_additional.add.xml,input_additional2.add.xml"/>
+        <net-file value="tools/oracle/cases\tt_cf_model_tau_step1.0_tau0.5_IDM\ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases\tt_cf_model_tau_step1.0_tau0.5_IDM\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_cf_model_tau_step1.0_tau0.5_IDM/input_additional.add.xml,tools/oracle/cases/tt_cf_model_tau_step1.0_tau0.5_IDM/input_additional2.add.xml"/>
     </input>
 
     <output>
         <write-license value="true"/>
-        <fcd-output value="ref.fcd.xml"/>
+        <fcd-output value="C:\Users\karti\AppData\Local\Temp\oc49slow\fcd.xml"/>
         <fcd-output.attributes value="speed,pos,lane,edge"/>
-        <tripinfo-output value="ref.tripinfo.xml"/>
-        <statistic-output value="ref.stat.xml"/>
+        <tripinfo-output value="C:\Users\karti\AppData\Local\Temp\oc49slow\ti.xml"/>
+        <statistic-output value="C:\Users\karti\AppData\Local\Temp\oc49slow\stat.xml"/>
     </output>
 
     <time>
@@ -46,8 +46,8 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 -->
 
 <instantE1 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/instant_e1_file.xsd">
-    <instantOut id="beg_end" time="23.65" state="enter" vehID="leader" speed="19.78" length="5.00" type="leader"/>
-    <instantOut id="beg_end" time="23.91" state="leave" vehID="leader" speed="19.78" length="5.00" type="leader" occupancy="0.25"/>
-    <instantOut id="beg_end" time="24.53" state="enter" vehID="follower" speed="20.00" length="5.00" type="follower" gap="0.62"/>
-    <instantOut id="beg_end" time="24.78" state="leave" vehID="follower" speed="20.00" length="5.00" type="follower" occupancy="0.25"/>
+    <instantOut id="beg_end" time="23.6541" state="enter" vehID="leader" speed="19.7848" length="5" type="leader"/>
+    <instantOut id="beg_end" time="23.9068" state="leave" vehID="leader" speed="19.7848" length="5" type="leader" occupancy="0.252719"/>
+    <instantOut id="beg_end" time="24.5309" state="enter" vehID="follower" speed="19.9974" length="5" type="follower" gap="0.624101"/>
+    <instantOut id="beg_end" time="24.781" state="leave" vehID="follower" speed="19.9974" length="5" type="follower" occupancy="0.250033"/>
 </instantE1>

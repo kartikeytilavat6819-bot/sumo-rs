@@ -1,30 +1,32 @@
 #!/bin/bash
-# Gate diagnostic for oc49: run the oracle scoreboard, report imported TextTest
-# rows and the first few failure diffs.  Invoked by the gate after the tests.
+# Gate diagnostic for oc49: spot-check a few imported TextTest rows directly.
+# Deliberately does NOT re-run the whole scoreboard (the gate already does that).
 set -u
 cd "$(dirname "$0")/../.." || exit 1
-export PATH="/c/Users/karti/.cargo/bin:$PATH"
-export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}
-export SCORE_OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc49-score
-rm -rf "$SCORE_OUT"; mkdir -p "$SCORE_OUT"
+BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
+SUMO="$BIN/sumo.exe"
+[ -x "$SUMO" ] || SUMO="$BIN/sumo"
+OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc49-spot
+rm -rf "$OUT"; mkdir -p "$OUT"
 
-bash tools/oracle/run_all.sh > "$SCORE_OUT/all.txt" 2>&1
+total=$(find tools/oracle/cases -maxdepth 1 -type d -name 'tt_*' | wc -l)
+pending=$(find tools/oracle/cases -maxdepth 2 -type f -name PENDING -path '*tt_*' | wc -l)
+echo "imported=$total active=$((total - pending))"
 
-echo "=== imported TextTest rows (first 120) ==="
-grep -E '^tt_' "$SCORE_OUT/all.txt" | head -120
-echo "=== summary ==="
-grep -E '^(PASS=|STALE|MISSING)' "$SCORE_OUT/all.txt" | tail -5
-
-echo "=== first 8 failing imported rows with diff ==="
-n=0
-while read -r row; do
-  c=$(echo "$row" | awk '{print $1}')
-  [ -z "$c" ] && continue
-  # strip a /ref suffix used by variant rows
-  base=${c%%/*}
-  echo "--- $row"
-  for f in "$SCORE_OUT/$c.ti.log" "$SCORE_OUT/$base.ref.ti.log" "$SCORE_OUT/$c.fcd.log" "$SCORE_OUT/$c.stat.log" "$SCORE_OUT/$base.ref.stat.log"; do
-    [ -f "$f" ] && { echo "[$(basename "$f")]"; head -4 "$f"; }
-  done
-  n=$((n+1)); [ "$n" -ge 8 ] && break
-done < <(grep -E '^tt_' "$SCORE_OUT/all.txt" | grep -E 'FAIL|PANIC|TIMEOUT' | head -8)
+for d in tools/oracle/cases/tt_*/; do
+  c=$(basename "$d")
+  [ -f "$d/PENDING" ] && continue
+  [ -f "$d/ref.tripinfo.xml" ] || continue
+  flags=$(cat "$d/sim.args")
+  timeout 30 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
+      --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \
+      --statistic-output "$OUT/stat.xml" --no-step-log true >"$OUT/$c.log" 2>&1
+  rc=$?
+  printf '%-60s rc=%s ' "$c" "$rc"
+  if [ "$rc" -ne 0 ]; then
+    grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-90
+  else
+    diff=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)
+    echo "ti:${diff:-MATCH}"
+  fi
+done
