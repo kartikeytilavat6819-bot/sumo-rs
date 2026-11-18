@@ -27,9 +27,9 @@
     `bash tools/gcloud/vm_cpp_trace.sh <ID> <patch-file> [sumo|netconvert]` prints the path of an instrumented binary
     (patch = `git diff` against the official src/ tree, paths src/...). Never use it for references.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
-- Do NOT run gates on `main`. Main's numbers (eb1c4aa8, gated 2026-11-18): run_all PASS=1228 FAIL=11 SKIP=462,
+- Do NOT run gates on `main`. Main's numbers (2be57fb57, gated 2026-11-18): run_all PASS=1511 FAIL=14 SKIP=1066,
   depart 15/15, duarouter oracle 55/55, netopts_new 55/55, dfrouter 6/6, activitygen 5/5, od2trips 8/8, marouter 7/7, jtrrouter 10/10, netgenerate 11/11, polyconvert 9/9, unit tests ok. Known failing rows (each has an owner; NOT
-  your regressions unless they are your target): out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_stop/ref md_vtypes/ref, and 5 newly imported official tests tt_basic_personFlow_walk_routeDist2/ref tt_basic_person_person_inserted_departPos/ref tt_basic_person_walking_walk_routeDist/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref.
+  your regressions unless they are your target): out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_stop/ref md_vtypes/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref tt_bugs_13xxx_ticket13108/ref tt_bugs_15xxx_ticket15030/ref tt_bugs_16xxx_ticket16641/ref tt_bugs_17xxx_ticket17583/ref tt_bugs_4xxx_ticket4299/ref tt_bugs_7xxx_ticket7149/ref.
   run_all has a per-case sim timeout (SIM_TIMEOUT, default 600 s).
 - New case references: put an empty NEW_CASE file in the case dir, run tools/oracle/make_sim_refs.sh <case> (it then
   writes tripinfo+fcd+stat, all outputs run_all compares), delete NEW_CASE before committing. Merge main into your branch often.
@@ -43,3 +43,6 @@
   (use the `*_of` helpers, UB_AUDIT.md); `Box::leak` skipping C++ destructor side effects.
 - Forbidden: todo!(), weakening tests, editing refs to match ours (refs are regenerated only from pristine).
 - Commit on your branch, never push. Final report < 100 words: measured cause, fix, gate result, sha.
+
+- Reference files: GitHub rejects files over 100 MB and warns over 50 MB. Never commit a ref file over 40 MB:
+  drop that output (usually ref.fcd.xml) from the case, or shorten the simulation (-e) for that case.

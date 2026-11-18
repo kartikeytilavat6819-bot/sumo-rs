@@ -14,8 +14,8 @@ MODEL=${OC_MODEL:-opencode-go/beam-free}
 MODELS=" $MODEL ${OC_FALLBACKS:-opencode/beam-free} "
 next_model() { local rest=${MODELS#* $1 }; [ "$rest" = "$MODELS" ] && rest=$MODELS; set -- $rest; echo "${1:-}"; }
 LOG=$REPO/.claude/oc-$ID.log
-# rows failing on main eb1c4aa8: not regressions
-KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_noperiod/ref md_persons/ref md_public/ref md_stop/ref md_vtypes/ref md_window/ref tt_basic_personFlow_walk_routeDist2/ref tt_basic_person_person_inserted_departPos/ref tt_basic_person_walking_walk_routeDist/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref "
+# rows failing on main 2be57fb57: not regressions
+KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_stop/ref md_vtypes/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref tt_bugs_13xxx_ticket13108/ref tt_bugs_15xxx_ticket15030/ref tt_bugs_16xxx_ticket16641/ref tt_bugs_17xxx_ticket17583/ref tt_bugs_4xxx_ticket4299/ref tt_bugs_7xxx_ticket7149/ref "
 
 say() { echo "$(date +%H:%M) $*" | tee -a "$LOG"; }
 # every failing line whose row is not a known main FAIL, plus build/test/harness failures
