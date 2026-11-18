@@ -1,6 +1,6 @@
 #!/bin/bash
-# oc38 diagnostic: compare activitygen behaviour on a bad cityGate edge (the
-# parseCityGates try/catch path) against the official binary.
+# oc38 diagnostics: (1) activitygen bad cityGate error path vs official;
+# (2) the netopts_new opendriveOutput row flagged as a regression.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN=${CARGO_TARGET_DIR:-/tmp/target}/debug/activitygen
@@ -16,9 +16,15 @@ for side in ref cand; do
       >"$D/$side.out" 2>"$D/$side.err"
   echo "$side rc=$?"
 done
-echo "=== ref stdout ==="; cat "$D/ref.out"
-echo "=== cand stdout ==="; cat "$D/cand.out"
-echo "=== ref stderr ==="; cat "$D/ref.err"
-echo "=== cand stderr ==="; cat "$D/cand.err"
-echo "=== stdout diff ==="; diff "$D/ref.out" "$D/cand.out" | head -30
-echo "=== stderr diff ==="; diff "$D/ref.err" "$D/cand.err" | head -30
+echo "=== activitygen stderr diff (ref vs cand) ==="
+diff "$D/ref.err" "$D/cand.err" | head -30
+
+echo "=== netopts opendriveOutput ==="
+mkdir -p "$D/netopts"
+NETOPTS2_OUT="$D/netopts" bash tools/oracle/run_netopts_new.sh opendriveOutput 2>&1 | tail -20
+echo "--- summary ---"
+cat "$D/netopts/summary.tsv" 2>/dev/null | head -10
+echo "--- net.log ---"
+head -40 "$D/netopts/opendriveOutput/net.log" 2>/dev/null
+echo "--- xodr diff (first 25) ---"
+diff "$D/netopts/opendriveOutput/cpp_out/net.xodr" "$D/netopts/opendriveOutput/rust_out/net.xodr" 2>/dev/null | head -25

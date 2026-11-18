@@ -736,8 +736,10 @@ impl AGActivityGenHandler {
 }
 
 /// C++ catch-block pattern: WRITE_ERROR("Error while parsing the element <tag>: <msg>"); throw ProcessError();
+/// XMLSubSys::runParser then catches that ProcessError and WRITE_ERRORs its "Process Error" message.
 fn parse_error(tag: i32, msg: &str) -> ! {
     write_error(&format!("Error while parsing the element {}: {}", Tags.get_string(tag), msg));
+    write_error("Process Error");
     panic!("{}", ProcessError::new("Process Error"));
 }
 
