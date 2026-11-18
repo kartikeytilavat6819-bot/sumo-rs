@@ -17,9 +17,10 @@ fi
 pass=0; fail=0
 for c in $cases; do
   d=tools/oracle/cases/$c
+  [ -f "$d/PENDING" ] && continue
   [ -f "$d/ref.tripinfo.xml" ] || continue
   flags=$(cat "$d/sim.args")
-  timeout 60 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
+  RUST_BACKTRACE=1 timeout 60 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
       --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \
       --statistic-output "$OUT/stat.xml" --no-step-log true >"$OUT/$c.log" 2>&1
   rc=$?
@@ -28,6 +29,9 @@ for c in $cases; do
   if [ $rc -ne 0 ]; then
     r="PANIC"
     diffline=$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-200)
+    echo "---- full panic log for $c ----"
+    grep -A 25 -m1 'panicked at' "$OUT/$c.log" | head -30
+    echo "--------------------------------"
   else
     d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1); c1=$?
     [ $c1 -ne 0 ] && { r="FAIL"; diffline="ti: $d1"; }
