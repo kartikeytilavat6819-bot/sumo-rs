@@ -3452,7 +3452,7 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
     //     std::string msg;
     //     if (!veh->hasValidRoute(msg, r)) {
     //         WRITE_WARNINGF(TL("Invalid route replacement for vehicle '%'. %"), veh->getID(), msg);
-    //         if (false /* shortcut: MSGlobals::gCheckRoutes not ported yet (ms_globals.rs empty), upgrade when MSGlobals is filled */) {
+    //         if (MSGlobals::gCheckRoutes) {
     //             throw TraCIException("Route replacement failed for " + veh->getID());
     //         }
     //     }
@@ -3470,10 +3470,11 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
         }
         let r = MSRoute::dictionary_3(routeID, Ptr::null());
         if SUMOVehicleParserHelper::is_internal_route_id(routeID) {
-            write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is referenced.", routeID));
+            write_warning(&format!("Internal routes receive an ID starting with '!' and must not be referenced in other vehicle or flow definitions. Please remove all references to route '{}' in case it is internal.", routeID));
         }
         let mut msg = String::new();
         if !veh.has_valid_route(&mut msg, r.clone()) {
+            write_warning(&format!("Invalid route replacement for vehicle '{}'. {}", veh.get_id(), msg));
             if crate::microsim::ms_globals::check_routes() {
                 panic!("{}", format!("Route replacement failed for {}", veh.get_id()));
             }

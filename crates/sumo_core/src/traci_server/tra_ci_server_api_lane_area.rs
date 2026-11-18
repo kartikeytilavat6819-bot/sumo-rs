@@ -62,7 +62,7 @@ impl TraCIServerAPI_LaneArea {
         // id
         let id = inputStorage.read_string().expect("readString");
         // process
-        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
+        // C++ catch (writeErrorStatusCmd) is reproduced by TraCIServer::dispatch_command, which turns the TraCIException panic into an error status
         match variable {
             VAR_VIRTUAL_DETECTION => {
                 let vehNum = StorageHelper::read_typed_int(inputStorage, "Overriding the number of detected vehicles requires an integer");
