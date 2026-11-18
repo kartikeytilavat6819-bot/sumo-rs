@@ -81,6 +81,8 @@ SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",
     "java", "--gui", "--xdot", "--gdal", "xdot.py", "python",
     "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output",
+    # CSV/Parquet formatters are not ported (shortcut in utils/iodevices/output_formatter.rs)
+    "--output.format",
 )
 
 
