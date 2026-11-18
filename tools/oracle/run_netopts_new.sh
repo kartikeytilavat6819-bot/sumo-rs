@@ -76,6 +76,10 @@ row streetSignOutput osm:signal "--street-sign-output @D/signs.xml"
 row parkingOutput osm:city_plano_mall_parking "--parking-output @D/parking.xml"
 row polygonOutput "args:--opendrive-files tools/oracle/cases/vtypes/fmt/junction.xodr" "--polygon-output @D/poly.xml"
 row outputStreetNamesOff osm:city_plano "--output.street-names false"
+# geometry.remove of a 2-in/2-out junction whose incoming edges have a dedicated bicycle lane.
+# C++ getConnectionLanes() defaults withBikes/withBusLanes to true, so both lanes count as connected
+# and the junction is removable; passing false drops the bike lane and prevents the join.
+row geomRemoveBikeLanes "args:--sumo-net-file tools/oracle/cases/geomremove_bike/ref.net.xml" "--geometry.remove true"
 
 # run_row NAME INPUT OPTIONS
 run_row() {

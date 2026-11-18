@@ -5492,7 +5492,8 @@ impl NBEdge {
                     return false;
                 }
                 // all lanes must go to the possible continuation
-                let conns = self.get_connection_lanes(pc, false, false);
+                // C++ getConnectionLanes defaults: withBikes=true, withBusLanes=true
+                let conns = self.get_connection_lanes(pc, true, true);
                 let offset = self.get_first_non_pedestrian_lane_index(1, true).max(0); // NBNode::FORWARD
                 // size_t arithmetic in C++: myLanes.size() - offset wraps around when offset is larger
                 if (conns.len() as u64) < (self.myLanes.len() as u64).wrapping_sub(offset as u64) {

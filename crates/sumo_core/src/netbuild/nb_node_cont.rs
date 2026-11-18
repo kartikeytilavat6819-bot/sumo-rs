@@ -1927,14 +1927,6 @@ impl NBNodeCont {
         let mut toRemove: Vec<Ptr<NBNode>> = Vec::new();
         for current in self.myNodes.values().copied() {
             let mut remove = false;
-            if std::env::var_os("OC63_DEBUG").is_some() {
-                let mut dbgreason = String::new();
-                let rem = current.m().check_is_removable_reporting(&mut dbgreason);
-                let pid = |p: Ptr<NBEdge>| if p.is_null() { "-".to_string() } else { p.m().get_id().to_string() };
-                let ins: Vec<String> = current.m().get_incoming_edges().iter().map(|e| format!("{}(td={},ptd={})", e.m().get_id(), pid(e.m().get_turn_destination(true)), pid(e.m().myPossibleTurnDestination))).collect();
-                let outs: Vec<String> = current.m().get_outgoing_edges().iter().map(|e| e.m().get_id().to_string()).collect();
-                eprintln!("OC63 node={} type={:?} in=[{}] out=[{}] rem={} reason={}", current.m().get_id(), current.m().myType, ins.join(","), outs.join(","), rem, dbgreason);
-            }
             // check for completely empty nodes and check for nodes which are only geometry nodes and ask the node whether to join
             if current.m().get_edges().is_empty() || (removeGeometryNodes && !self.mySplit.contains(&current) && current.m().check_is_removable()) {
                 remove = true;
@@ -1953,9 +1945,6 @@ impl NBNodeCont {
             for j in current.m().get_edges_to_join() {
                 let begin = j.0;
                 let continuation = j.1;
-                if std::env::var_os("OC63_DEBUG").is_some() {
-                    eprintln!("OC63 join at {} begin={} cont={}", current.m().get_id(), begin.m().get_id(), continuation.m().get_id());
-                }
                 begin.m().append(continuation);
                 continuation.m().get_to_node().m().replace_incoming(continuation, begin, 0);
                 if let Some(itTL) = tlsLookup.get(&continuation).cloned() {
@@ -1977,14 +1966,6 @@ impl NBNodeCont {
         // erase all
         for n in toRemove.iter().copied() {
             self.extract(n, true);
-        }
-        if std::env::var_os("OC63_DEBUG").is_some() {
-            for id in ["A1A0", "A0B0", "B0A0"] {
-                let e = ec.retrieve(id, false);
-                if !e.is_null() {
-                    eprintln!("OC63 after {} to={} geom={}", id, e.m().get_to_node().m().get_id(), e.m().get_geometry().len());
-                } else { eprintln!("OC63 after {} absent", id); }
-            }
         }
         toRemove.len() as i32
     }

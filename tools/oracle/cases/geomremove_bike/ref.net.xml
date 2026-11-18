@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,100.00,100.00" origBoundary="0.00,0.00,100.00,100.00" projParameter="!"/>
+
+    <type id="bikeAndCar" priority="1" numLanes="2" speed="13.89" allow="bicycle passenger" oneway="0"/>
+
+    <edge id="eAM" from="A" to="M" priority="1" type="bikeAndCar" shape="0.00,100.00 0.00,0.00">
+        <lane id="eAM_0" index="0" allow="bicycle" speed="8.33" length="100.00" width="1.00" shape="1.00,100.00 1.00,0.00"/>
+        <lane id="eAM_1" index="1" allow="passenger" speed="13.89" length="100.00" shape="-1.00,100.00 -1.00,0.00"/>
+    </edge>
+    <edge id="eMA" from="M" to="A" priority="1" type="bikeAndCar" shape="0.00,0.00 0.00,100.00">
+        <lane id="eMA_0" index="0" allow="bicycle" speed="8.33" length="100.00" width="1.00" shape="-1.00,0.00 -1.00,100.00"/>
+        <lane id="eMA_1" index="1" allow="passenger" speed="13.89" length="100.00" shape="1.00,0.00 1.00,100.00"/>
+    </edge>
+    <edge id="eMB" from="M" to="B" priority="1" type="bikeAndCar" shape="0.00,0.00 100.00,0.00">
+        <lane id="eMB_0" index="0" allow="bicycle" speed="8.33" length="100.00" width="1.00" shape="0.00,1.00 100.00,1.00"/>
+        <lane id="eMB_1" index="1" allow="passenger" speed="13.89" length="100.00" shape="0.00,-1.00 100.00,-1.00"/>
+    </edge>
+    <edge id="eBM" from="B" to="M" priority="1" type="bikeAndCar" shape="100.00,0.00 0.00,0.00">
+        <lane id="eBM_0" index="0" allow="bicycle" speed="8.33" length="100.00" width="1.00" shape="100.00,-1.00 0.00,-1.00"/>
+        <lane id="eBM_1" index="1" allow="passenger" speed="13.89" length="100.00" shape="100.00,1.00 0.00,1.00"/>
+    </edge>
+
+    <junction id="A" type="priority" x="0.00" y="100.00" incLanes="eMA_0 eMA_1" intLanes="" shape="0.00,100.00 0.00,100.00"/>
+    <junction id="M" type="priority" x="0.00" y="0.00" incLanes="eAM_0 eAM_1 eBM_0 eBM_1" intLanes="" shape="2.00,2.00 2.00,-2.00 -2.00,-2.00 -2.00,2.00"/>
+    <junction id="B" type="priority" x="100.00" y="0.00" incLanes="eMB_0 eMB_1" intLanes="" shape="100.00,0.00 100.00,0.00"/>
+
+    <connection from="eMA" to="eAM" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from="eMA" to="eAM" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from="eAM" to="eMB" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="eAM" to="eMB" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from="eBM" to="eMA" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="eBM" to="eMA" fromLane="1" toLane="1" dir="s" state="M"/>
+    <connection from="eAM" to="eMA" fromLane="1" toLane="1" dir="t" state="M"/>
+    <connection from="eBM" to="eMB" fromLane="1" toLane="1" dir="t" state="M"/>
+    <connection from="eMB" to="eBM" fromLane="0" toLane="0" dir="t" state="M"/>
+    <connection from="eMB" to="eBM" fromLane="1" toLane="1" dir="s" state="M"/>
+
+</net>
