@@ -158,9 +158,9 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
     // C++ `new`: the routers live until the process exits
     let router: Ptr<SUMOAbstractRouter<ROEdge, ROVehicle>> = crate::duarouter::duarouter_main::leak_router(router);
     RORouteDef::set_using_jtrr();
-    // shortcut: ROIntermodalRouter is not ported (same as duarouter), the intermodal router is null
+    let interRouter: Ptr<crate::router::ro_routable::ROIntermodalRouter> = Ptr::from_raw(Box::into_raw(Box::new(crate::router::ro_routable::ROIntermodalRouter::new(RONet::adapt_intermodal_router, 0, 0., "dijkstra", 0, Ptr::null()))));
     let ped_router: Ptr<crate::utils::router::pedestrian_router::PedestrianRouter<ROEdge, ROLane, RONode, ROVehicle>> = Ptr::from_mut(Box::leak(Box::new(crate::utils::router::pedestrian_router::PedestrianRouter::new())));
-    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, ped_router, Ptr::null(), Ptr::null());
+    let provider: crate::router::ro_routable::RORouterProvider = crate::utils::router::router_provider::RouterProvider::new(router, ped_router, interRouter, Ptr::null());
     let end = if oc.is_default("end") { SUMOTIME_MAX } else { string2time(&oc.get_string("end").unwrap()).unwrap_or_else(|e| panic!("{e}")) };
     let begin = string2time(&oc.get_string("begin").unwrap()).unwrap_or_else(|e| panic!("{e}"));
     let step = string2time(&oc.get_string("route-steps").unwrap()).unwrap_or_else(|e| panic!("{e}"));
