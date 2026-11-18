@@ -19,7 +19,7 @@ export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOB
 cd "$SRC"
 # run_all writes a new run-$$ dir per run; the slot is locked, so its old results can go (they filled the disk)
 rm -rf "$SCORE_OUT"; find /tmp -maxdepth 1 -name '*.tgz' -mmin +60 -delete 2>/dev/null
-PKGS="-p sumo -p netconvert"; [ -d crates/duarouter ] && PKGS="$PKGS -p duarouter"
+PKGS="-p sumo -p netconvert"; [ -d crates/duarouter ] && PKGS="$PKGS -p duarouter"; for t in dfrouter activitygen; do [ -d crates/$t ] && PKGS="$PKGS -p $t"; done
 cargo build $PKGS --message-format short > /tmp/build$slot.log 2>&1; rc=$?
 # a stale incremental cache can crash rustc (ICE): drop it and build once more
 if [ $rc -ne 0 ] && grep -aqE 'internal compiler error|incremental' /tmp/build$slot.log; then
@@ -42,6 +42,12 @@ if [ -f tools/oracle/run_netopts_new.sh ]; then
   T=/tmp/netopts2_$slot/summary.tsv
   echo "netopts_new: PASS=$(grep -c $'\tPASS\t' $T 2>/dev/null) of $(cat $T 2>/dev/null | wc -l); not passing: $(grep -v $'\tPASS\t' $T 2>/dev/null | cut -f1,2 | tr '\t\n' ': ')"
 fi
+for t in dfrouter activitygen; do
+  if [ -f tools/oracle/run_dfag.sh ] && [ -x "$CARGO_TARGET_DIR/debug/$t" ]; then
+    TOOL=$t OUT=/tmp/${t}_o$slot timeout 600 bash tools/oracle/run_dfag.sh >/dev/null 2>&1
+    echo "$t oracle: PASS=$(grep -c $'	PASS	' /tmp/${t}_o$slot/results.tsv) of $(($(wc -l < /tmp/${t}_o$slot/results.tsv) - 1))"; grep -v $'	PASS	' /tmp/${t}_o$slot/results.tsv | tail -n +2 | cut -f1,2,5 | head -10
+  fi
+done
 cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target

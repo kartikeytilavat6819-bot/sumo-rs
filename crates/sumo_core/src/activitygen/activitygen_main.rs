@@ -5,7 +5,7 @@ use utils::common::file_helpers::is_readable;
 use utils::common::msg_handler::{progress_begin_message, progress_done_message, progress_failed_message, write_message};
 use utils::common::rand_helper::init_rand;
 use utils::options::options_cont::{get_bool, get_int, get_string, with_options};
-use utils::options::options_io::{get_options, set_args};
+use utils::options::options_io::{get_options, set_args_argv};
 use utils::xml::xml_sub_sys;
 use crate::activitygen::city::ag_street::AGStreet_Builder;
 
@@ -154,7 +154,7 @@ pub fn main(argc: i32, argv: &[String]) -> i32 {
     // shortcut: C++ try/catch that reports "Quitting (on error)" and returns 1 is not reproduced, errors panic; upgrade when the error path of the frame lands
     xml_sub_sys::init();
     AGFrame::fill_options();
-    set_args(argv);
+    set_args_argv(argv); // C++ OptionsIO::setArgs(argc, argv)
     get_options(false).unwrap_or_else(|e| panic!("{}", e));
     if with_options(|oc| oc.process_meta_options(argc < 2)).unwrap_or_else(|e| panic!("{}", e)) {
         utils::common::system_frame::close();

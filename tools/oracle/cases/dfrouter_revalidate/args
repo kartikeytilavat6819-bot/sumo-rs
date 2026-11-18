@@ -1,0 +1,1 @@
+--net-file tools/oracle/cases/dfrouter_data/input_tri.net.xml --detector-files tools/oracle/cases/dfrouter_data/input_tri.det.xml --revalidate-detectors --revalidate-routes --measure-files tools/oracle/cases/dfrouter_data/tri_flows_more_left.txt --routes-output @DIR@/routes.rou.xml --emitters-output @DIR@/emitters.add.xml --detector-output @DIR@/det.xml -e 60 --scale 0.5

@@ -1,0 +1,1 @@
+--net-file tools/oracle/cases/dfrouter_data/input_tri.net.xml --detector-files tools/oracle/cases/dfrouter_data/input_tri.det.xml --include-unused-routes --measure-files tools/oracle/cases/dfrouter_data/tri_flows_equal.txt --keep-longer-routes --routes-output @DIR@/routes.rou.xml --emitters-output @DIR@/emitters.add.xml -e 60

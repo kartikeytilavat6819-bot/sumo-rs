@@ -22,13 +22,24 @@ impl std::ops::DerefMut for RODFEdgeBuilder {
     }
 }
 
+/// C++ `RODFEdgeBuilder::buildEdge` body, the target of the virtual dispatch in ROAbstractEdgeBuilder
+fn rodf_build_edge(eb: &mut ROAbstractEdgeBuilder, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
+    // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
+    let edge = Box::into_raw(Box::new(RODFEdge::new(name, from, to, eb.get_next_index(), priority, type_, routingType)));
+    let base = Ptr::from_raw(unsafe { &raw mut (*edge).base });
+    ROEdge::register_in_all_edges(base);
+    base
+}
+
 impl RODFEdgeBuilder {
     /// C++: `void RODFEdgeBuilder::RODFEdgeBuilder()`
     /// Constructor
     // RODFEdgeBuilder::RODFEdgeBuilder() {}
     #[allow(unused_variables)]
     pub fn new() -> Self {
-        RODFEdgeBuilder { base: ROAbstractEdgeBuilder::new() }
+        let mut base = ROAbstractEdgeBuilder::new();
+        base.buildEdgeFn = rodf_build_edge;
+        RODFEdgeBuilder { base }
     }
 
     /// C++: `void RODFEdgeBuilder::~RODFEdgeBuilder() noexcept` [virtual]
@@ -46,9 +57,7 @@ impl RODFEdgeBuilder {
     // }
     #[allow(unused_variables)]
     pub fn build_edge(&mut self, name: &str, from: Ptr<RONode>, to: Ptr<RONode>, priority: i32, type_: &str, routingType: &str) -> Ptr<ROEdge> {
-        // C++ implicit derived-to-base conversion: point at the embedded ROEdge sub-object
-        let edge = Box::into_raw(Box::new(RODFEdge::new(name, from, to, self.get_next_index(), priority, type_, routingType)));
-        Ptr::from_raw(unsafe { &raw mut (*edge).base })
+        rodf_build_edge(&mut self.base, name, from, to, priority, type_, routingType)
     }
 
 }
