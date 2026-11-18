@@ -1,0 +1,6 @@
+<tazs>
+    <taz id="src" edges="10"/>
+    <taz id="top" edges="11"/>
+    <taz id="bottom" edges="12"/>
+    <taz id="dst" edges="13"/>
+</tazs>

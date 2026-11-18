@@ -1,0 +1,1 @@
+--end 200 --weight-files tools/oracle/cases/rr_weight_files/weights.xml --device.rerouting.init-with-loaded-weights --device.rerouting.probability 1 --device.rerouting.period 10

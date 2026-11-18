@@ -1,0 +1,1 @@
+--end 200 --device.rerouting.with-taz --device.rerouting.probability 1 --device.rerouting.period 10 --additional-files tools/oracle/cases/rr_with_taz/taz.add.xml,tools/oracle/cases/rr_with_taz/closing.add.xml
