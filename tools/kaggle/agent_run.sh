@@ -18,5 +18,7 @@ echo "=== DBG process_next_stop (first 40) ==="
 grep 'DBG process_next_stop' "$OUT/$c.log" | head -40
 echo "=== DBG process_next_stop (last 40) ==="
 grep 'DBG process_next_stop' "$OUT/$c.log" | tail -40
+echo "=== DBG intermodal WE.1 (all) ==="
+grep 'DBG intermodal' "$OUT/$c.log" | head -80
 echo "=== DBG collision_stop_time (t=45..85, dedup by t) ==="
 grep 'DBG collision_stop_time' "$OUT/$c.log" | awk '{print $4, $5, $6, $7, $8, $9, $10, $11}' | sort -u -k1,1 | head -60

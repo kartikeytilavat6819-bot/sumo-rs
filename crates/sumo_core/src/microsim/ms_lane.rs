@@ -8549,6 +8549,11 @@ impl MSLane {
     // }
     #[allow(unused_variables)]
     pub fn handle_intermodal_collision_between(&self, timestep: SUMOTime, stage: &str, collider: Ptr<MSVehicle>, victim: Ptr<MSTransportable>, gap: f64, collisionType: &str, toRemove: &mut BTreeSet<Ptr<MSVehicle>>, toTeleport: &mut BTreeSet<Ptr<MSVehicle>>) {
+        let dbg = collider.get_id() == "WE.1";
+        if dbg {
+            let t = MSNet::get_instance().get_current_time_step();
+            eprintln!("DBG intermodal WE.1 t={} stage={} type={} victim={} ignore={} jammed={} collStop={}", t, stage, collisionType, victim.get_id(), collider.ignore_collision(), victim.is_jammed(), collider.collision_stop_time());
+        }
         if collider.ignore_collision() {
             return;
         }
