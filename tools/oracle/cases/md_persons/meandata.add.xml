@@ -1,0 +1,5 @@
+<additional>
+    <edgeData id="ed_ped" period="60" detectPersons="walk" file="out_ed_ped.xml"/>
+    <edgeData id="ed_pedall" period="60" detectPersons="walk bicycle car public" file="out_ed_pedall.xml"/>
+    <laneData id="ld_ped" period="60" detectPersons="walk" file="out_ld_ped.xml"/>
+</additional>
