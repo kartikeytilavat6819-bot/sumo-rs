@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:39:25.628524-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_inc-dua_step10/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_inc-dua_step10/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_inc-dua_step10/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_inc-dua_step10/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_inc-dua_step10/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+    </time>
+
+    <processing>
+        <scale value="1"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="horizontal01" depart="100.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="0.00" arrival="296.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="196.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.13" rerouteNo="0" devices="tripinfo_horizontal01 fcd_horizontal01" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal02" depart="102.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="2.00" arrival="299.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="197.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.86" rerouteNo="0" devices="tripinfo_horizontal02 fcd_horizontal02" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal03" depart="105.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="5.00" arrival="301.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="196.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.13" rerouteNo="0" devices="tripinfo_horizontal03 fcd_horizontal03" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal04" depart="107.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="7.00" arrival="304.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="197.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.86" rerouteNo="0" devices="tripinfo_horizontal04 fcd_horizontal04" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal05" depart="110.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="10.00" arrival="306.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="196.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.13" rerouteNo="0" devices="tripinfo_horizontal05 fcd_horizontal05" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal06" depart="112.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="12.00" arrival="309.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="197.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.86" rerouteNo="0" devices="tripinfo_horizontal06 fcd_horizontal06" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal07" depart="115.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="15.00" arrival="311.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="196.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.13" rerouteNo="0" devices="tripinfo_horizontal07 fcd_horizontal07" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal08" depart="117.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="17.00" arrival="314.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="197.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.86" rerouteNo="0" devices="tripinfo_horizontal08 fcd_horizontal08" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal09" depart="120.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="20.00" arrival="316.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="196.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.13" rerouteNo="0" devices="tripinfo_horizontal09 fcd_horizontal09" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="horizontal10" depart="122.00" departLane="2fi_0" departPos="0.00" departSpeed="0.00" departDelay="22.00" arrival="319.00" arrivalLane="2fi_0" arrivalPos="250.00" arrivalSpeed="11.11" duration="197.00" routeLength="2250.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.86" rerouteNo="0" devices="tripinfo_horizontal10 fcd_horizontal10" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

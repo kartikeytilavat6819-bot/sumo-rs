@@ -32,6 +32,7 @@ from __future__ import annotations
 import argparse
 import collections
 import os
+import re
 import shlex
 import shutil
 import sys
@@ -242,11 +243,26 @@ def is_route_file(path: str) -> bool:
         return False
 
 
+def is_additional_file(path: str) -> bool:
+    """An <additional> file may define vehicles AND infrastructure (busStops, vTypes).
+
+    SUMO registers those only when the file is passed with -a, so when such a
+    file supplies the vehicles we pass it as -a and give run_all an empty route.
+    """
+    try:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            head = fh.read(2048)
+        return "<additional" in head
+    except OSError:
+        return False
+
+
 def import_one(source, tests_sumo, force=False):
     """Import a single TextTest leaf. Returns (name, info-dict) or (None, skip-reason)."""
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
     name = "tt_" + rel.replace(os.sep, "_")
+    case_dir = join(CASES, name)
 
     option_files, config_files, potentials = collect_files_and_config(source, tests_sumo)
     tokens = collate_options(option_files, "sumo")
@@ -270,6 +286,7 @@ def import_one(source, tests_sumo, force=False):
         if p:
             route_path = p
             break
+    route_from_additional = bool(route_path and is_additional_file(route_path))
     kept_additions = []
     for a in additions:
         p = resolve(a, potentials)
@@ -277,16 +294,20 @@ def import_one(source, tests_sumo, force=False):
             continue
         if route_path is None and is_route_file(p):
             route_path = p
-        else:
-            # run_all.sh and make_sim_refs.sh both run from the repo root, so
-            # additional files must be addressed relative to it (existing cases
-            # use "tools/oracle/cases/<case>/<file>" for the same reason).
+            route_from_additional = is_additional_file(p)
+        # run_all.sh and make_sim_refs.sh both run from the repo root, so
+        # additional files must be addressed relative to it (existing cases
+        # use "tools/oracle/cases/<case>/<file>" for the same reason).
+        if p != route_path or route_from_additional:
             kept_additions.append(os.path.relpath(
                 join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
     if not route_path:
         return None, "no route input"
+    if route_from_additional and route_path not in additions:
+        # -r pointed at an <additional> file: it must still be registered via -a.
+        kept_additions.append(os.path.relpath(
+            join(case_dir, os.path.basename(route_path)), REPO).replace(os.sep, "/"))
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
@@ -299,11 +320,37 @@ def import_one(source, tests_sumo, force=False):
         shutil.rmtree(case_dir)
     os.makedirs(case_dir)
 
-    copy_inputs(case_dir, potentials, config_files, chosen)
+    copied = copy_inputs(case_dir, potentials, config_files, chosen)
+
+    # Nested files referenced from an input (e.g. <variableSpeedSign file="..."/>).
+    # TextTest copies these via copy_test_path; resolve them through the same
+    # parent-chain lookup so the case is self-contained.
+    for fname in sorted(copied):
+        try:
+            with open(join(case_dir, fname), encoding="utf-8", errors="replace") as fh:
+                text = fh.read()
+        except OSError:
+            continue
+        for m in re.finditer(r'\b(?:file|files)="([^"]+)"', text):
+            for ref in m.group(1).split(","):
+                ref = ref.strip()
+                if not ref or "$" in ref:
+                    continue
+                src = resolve(ref, potentials)
+                if src and os.path.isfile(src):
+                    dst = join(case_dir, os.path.basename(ref))
+                    if not os.path.exists(dst):
+                        shutil.copy2(src, dst)
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
-    shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    if route_from_additional:
+        # Vehicles come from the -a file; the empty route keeps run_all's -r happy
+        # without loading the vehicles twice.
+        with open(join(case_dir, "routes.rou"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write('<?xml version="1.0" encoding="UTF-8"?>\n<routes/>\n')
+    else:
+        shutil.copy2(route_path, join(case_dir, "routes.rou"))
 
     sim_args = list(sim)
     if kept_additions:
