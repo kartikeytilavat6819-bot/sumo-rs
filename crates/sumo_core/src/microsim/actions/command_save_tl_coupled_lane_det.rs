@@ -47,6 +47,8 @@ impl Command_SaveTLCoupledLaneDet {
             myLastState: LINKSTATE_TL_RED,
             myHadOne: false,
         };
+        // the derived class overrides the base's virtual `execute`
+        this.base.base.execute_fn = Some(exec_save_tlc_lane_det);
         this.execute();
         this
     }
@@ -116,5 +118,11 @@ impl Command_SaveTLCoupledLaneDet {
         panic!("Command_SaveTLCoupledLaneDet assignment operator is private and invalidated in C++")
     }
 
+}
+
+/// Virtual `OnSwitchAction::execute` dispatch for this concrete command.
+unsafe fn exec_save_tlc_lane_det(p: Ptr<MSTLLogicControl_OnSwitchAction>) {
+    let this: Ptr<Command_SaveTLCoupledLaneDet> = p.cast();
+    this.m().execute();
 }
 

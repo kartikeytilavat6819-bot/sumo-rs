@@ -45,7 +45,7 @@ impl Command_SaveTLCoupledDet {
         // shortcut: C++ calls tlls.addSwitchCommand(this); a by-value constructor has no stable address yet, so the caller must register the boxed object with tlls.add_switch_command(Ptr::from_mut(..)); upgrade when constructors return Box<Self>
         dtf.write_xml_detector_prolog(device);
         Self {
-            base: MSTLLogicControl_OnSwitchAction {},
+            base: MSTLLogicControl_OnSwitchAction { execute_fn: Some(exec_save_tlc_det) },
             myDevice: Ptr::from_mut(device),
             myLogics: Ptr::from_mut(tlls),
             myDetector: dtf,
@@ -97,5 +97,11 @@ impl Command_SaveTLCoupledDet {
         panic!("Command_SaveTLCoupledDet assignment operator is private and invalidated in C++")
     }
 
+}
+
+/// Virtual `OnSwitchAction::execute` dispatch for this concrete command.
+unsafe fn exec_save_tlc_det(p: Ptr<MSTLLogicControl_OnSwitchAction>) {
+    let this: Ptr<Command_SaveTLCoupledDet> = p.cast();
+    this.m().execute();
 }
 
