@@ -9,9 +9,9 @@ ID=$1 TASK=$2 ROUNDS=${3:-10}
 REPO=/c/Users/karti/sumo-rs WT=$REPO/.claude/worktrees/agent-$ID BR=worktree-agent-$ID
 OC="$APPDATA/npm/node_modules/@opencode/cli/bin/opencode.exe"
 MODEL=${OC_MODEL:-opencode-go/beam-free}
-# free-limit fallbacks, in order (user: free OpenCode models only); benchmarked 2026-11-18, all answered a
-# known-answer debugging task correctly. The opencode/ provider shares one free limit across its models.
-MODELS=" $MODEL ${OC_FALLBACKS:-opencode-go/hy4-flash-free opencode-go/longcat-2.5-free opencode/hy4-flash-free opencode/beam-free} "
+# user (2026-11-18): only beam-free from now on; the opencode/ copy of beam is the fallback when the opencode-go one
+# hits its free limit (beam was the fastest correct model in the known-answer benchmark).
+MODELS=" $MODEL ${OC_FALLBACKS:-opencode/beam-free} "
 next_model() { local rest=${MODELS#* $1 }; [ "$rest" = "$MODELS" ] && rest=$MODELS; set -- $rest; echo "${1:-}"; }
 LOG=$REPO/.claude/oc-$ID.log
 # rows failing on main eb1c4aa8: not regressions
