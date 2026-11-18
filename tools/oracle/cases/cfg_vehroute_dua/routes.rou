@@ -1,0 +1,8 @@
+<routes>
+    <!-- A few departures; the vehroute output is stopped mid-run so write-unfinished matters. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <route id="r" edges="A"/>
+    <vehicle id="v0" type="car" route="r" depart="0" departSpeed="max"/>
+    <vehicle id="v1" type="car" route="r" depart="30" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="40.00" end="80.00" period="10.00" departSpeed="max"/>
+</routes>

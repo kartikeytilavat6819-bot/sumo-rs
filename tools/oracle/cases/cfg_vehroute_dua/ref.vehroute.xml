@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T02:50:29.502886-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/cfg_vehroute_dua/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/cfg_vehroute_dua/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc27/tools/oracle/cases/cfg_vehroute_dua/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc27/tools/oracle/cases/cfg_vehroute_dua/ref.tripinfo.xml"/>
+        <vehroute-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc27/tools/oracle/cases/cfg_vehroute_dua/ref.vehroute.xml"/>
+        <vehroute-output.sorted value="true"/>
+        <vehroute-output.dua value="true"/>
+        <vehroute-output.write-unfinished value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc27/tools/oracle/cases/cfg_vehroute_dua/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="60"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+    <vehicle id="v0" type="car" depart="0.00" departSpeed="13.89" speedFactor="1.0600" arrival="43.00">
+        <route cost="-1.00" edges="A"/>
+    </vehicle>
+
+    <vehicle id="v1" type="car" depart="30.00" departSpeed="13.033" speedFactor="0.9383">
+        <route cost="-1.00" edges="A"/>
+    </vehicle>
+
+    <vehicle id="f.0" type="car" depart="40.00" departSpeed="13.89" speedFactor="1.0104">
+        <route cost="-1.00" edges="A"/>
+    </vehicle>
+
+    <vehicle id="f.1" type="car" depart="50.00" departSpeed="13.89" speedFactor="1.0827">
+        <route cost="-1.00" edges="A"/>
+    </vehicle>
+
+</routes>

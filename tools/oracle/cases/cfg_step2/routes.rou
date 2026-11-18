@@ -1,0 +1,8 @@
+<routes>
+    <!-- Whole-second step of 2 s: departures and fcd sampling only happen on even seconds. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <route id="r" edges="A"/>
+    <vehicle id="v0" type="car" route="r" depart="1" departSpeed="max"/>
+    <vehicle id="v1" type="car" route="r" depart="5" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="10.00" end="40.00" period="4.00" departSpeed="max"/>
+</routes>

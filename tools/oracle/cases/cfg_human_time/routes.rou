@@ -1,0 +1,9 @@
+<routes>
+    <!-- Several departures so times appear in tripinfo, fcd and summary/stat output. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <route id="r" edges="A"/>
+    <vehicle id="v0" type="car" route="r" depart="0" departSpeed="max"/>
+    <vehicle id="v1" type="car" route="r" depart="15" departSpeed="max"/>
+    <vehicle id="v2" type="car" route="r" depart="37" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="50.00" end="75.00" period="5.00" departSpeed="max"/>
+</routes>
