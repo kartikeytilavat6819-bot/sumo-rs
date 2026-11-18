@@ -1,5 +1,5 @@
 #!/bin/bash
-# Gate diagnostic for oc58: spot-check a sample of imported sublane_model rows.
+# Gate diagnostic for oc58: locate first FCD divergence for the two moped arrival-diff rows.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/tmp/target}/debug"
@@ -7,29 +7,35 @@ SUMO="$BIN/sumo.exe"
 [ -x "$SUMO" ] || SUMO="$BIN/sumo"
 OUT=/tmp/oc58-spot
 rm -rf "$OUT"; mkdir -p "$OUT"
-total=$(find tools/oracle/cases -maxdepth 1 -type d -name 'tt_sublane*' | wc -l)
-echo "sublane_cases=$total"
-for c in \
-  tt_sublane_model_bugs_ticket12581 \
-  tt_sublane_model_bugs_ticket17483 \
-  tt_sublane_model_lateral_speed_lcSigma \
-  tt_sublane_model_roundabout_high_traffic \
-  tt_sublane_model_bidiEdge_TWLT_TWLT_overtaking \
-  tt_sublane_model_motorway_push_for_merge \
-  tt_sublane_model_junction_wide_lane_merge2; do
+for spec in "junction_indirect_left_moped flow_0.15" "junction_turnAlignment_moped_indirect_left flow_0.16"; do
+  set -- $spec; c=tt_sublane_model_$1; vid=$2
   d=tools/oracle/cases/$c
-  [ -d "$d" ] || { echo "$c MISSING"; continue; }
   flags=$(cat "$d/sim.args")
-  timeout 60 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
-      --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \
-      --statistic-output "$OUT/stat.xml" --no-step-log true >"$OUT/$c.log" 2>&1
-  rc=$?
-  printf '%-62s rc=%s ' "$c" "$rc"
-  if [ "$rc" -ne 0 ]; then
-    grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-100
-  else
-    d1=$(python tools/oracle/compare_sim.py --tripinfo "$d/ref.tripinfo.xml" "$OUT/ti.xml" 2>&1 | head -1)
-    d2=$(python tools/oracle/compare_sim.py --fcd "$d/ref.fcd.xml" "$OUT/fcd.xml" 2>&1 | head -1)
-    echo "ti:${d1:-MATCH} fcd:${d2:-MATCH}"
-  fi
+  timeout 120 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
+      --fcd-output "$OUT/$c.fcd.xml" --tripinfo-output "$OUT/$c.ti.xml" \
+      --no-step-log true >"$OUT/$c.log" 2>&1
+  echo "=== $c ($vid) rc=$? ==="
+  python3 - "$d/ref.fcd.xml" "$OUT/$c.fcd.xml" "$vid" <<'PY'
+import sys, xml.etree.ElementTree as ET
+ref, cand, vid = sys.argv[1], sys.argv[2], sys.argv[3]
+def load(p):
+    out = {}
+    root = ET.parse(p).getroot()
+    for ts in root.iter('timestep'):
+        t = ts.get('time')
+        for v in ts.iter('vehicle'):
+            if v.get('id') == vid:
+                out[t] = dict(v.attrib)
+    return out
+a, b = load(ref), load(cand)
+keys = ['x','y','angle','type','speed','pos','lane','posLat','slope']
+for t in sorted(set(a)|set(b), key=float):
+    if a.get(t) != b.get(t):
+        print('t=',t)
+        print('  ref ', {k:a.get(t,{}).get(k) for k in keys})
+        print('  cand', {k:b.get(t,{}).get(k) for k in keys})
+        break
+else:
+    print('no FCD difference for', vid)
+PY
 done
