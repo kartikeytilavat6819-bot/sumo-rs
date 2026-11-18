@@ -329,7 +329,7 @@ impl MSRoutingEngine {
         }
         // read the family pointer under the state lock, then release it before calling into the
         // family (published() may fill metrics through getEffort, which locks the state again)
-        let live = state().myCCHLive;
+        let live = state().myCCHLive.0;
         if live.is_null() {
             return Ptr::null();
         }
@@ -338,7 +338,7 @@ impl MSRoutingEngine {
             return Ptr::null();
         }
         let _ = (vClass, time);
-        Ptr::from_raw(live).m().published(type_, veh.get_id())
+        live.m().published(type_, veh.get_id())
     }
 
     /// C++: `const RoutingKit::CustomizableContractionHierarchyMetric * MSRoutingEngine::getFreeflowCCHMetric(SUMOVehicleClass, SUMOTime, const SUMOVehicle *)` [static]
@@ -404,18 +404,18 @@ impl MSRoutingEngine {
             return Ptr::null();
         }
         // read/create the family under the state lock, release before get() (which may fill metrics)
-        let mut freeflow = state().myCCHFreeflow;
+        let mut freeflow = state().myCCHFreeflow.0;
         if freeflow.is_null() {
             let graph = Self::ensure_cch_graph();
             let fam = Box::new(MSCCHMetricFamily::new(
                 graph, MSNet::get_travel_time, 0, utils::common::time::SUMOTIME_MAX,
                 Some(MSRoutingEngine::build_cch_ref_vehicle), None));
             freeflow = Ptr::from_raw(Box::into_raw(fam));
-            state().myCCHFreeflow = freeflow;
+            state().myCCHFreeflow = SendPtr(freeflow);
         }
         let _ = (vClass, time);
-        Ptr::from_raw(freeflow).m().get(type_, type_.get_vehicle_class(),
-                                        MSNet::get_instance().m().get_current_time_step(), veh)
+        freeflow.m().get(type_, type_.get_vehicle_class(),
+                         MSNet::get_instance().m().get_current_time_step(), veh)
     }
 
     /// C++: `MSCCHGraph * MSRoutingEngine::ensureCCHGraph()` [static]
@@ -430,11 +430,11 @@ impl MSRoutingEngine {
     #[allow(unused_variables)]
     pub fn ensure_cch_graph() -> Ptr<MSCCHGraph> {
         let mut st = state();
-        if st.myCCHGraph.is_null() {
+        if st.myCCHGraph.0.is_null() {
             // union topology; class masks prime at first fill
-            st.myCCHGraph = Ptr::from_raw(Box::into_raw(Box::new(MSCCHGraph::new(&MSEdge::get_all_edges()))));
+            st.myCCHGraph = SendPtr(Ptr::from_raw(Box::into_raw(Box::new(MSCCHGraph::new(&MSEdge::get_all_edges())))));
         }
-        st.myCCHGraph
+        st.myCCHGraph.0
     }
 
     /// C++: `void MSRoutingEngine::initRouter(SUMOVehicle *)` [static]
@@ -572,7 +572,7 @@ impl MSRoutingEngine {
                 let router = AStarRouter::<MSEdge, SUMOVehicle, MSMapMatcher>::new(edges, true, Some(effort), None, true, false).with_compute();
                 Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<SUMOAbstractRouter<MSEdge, SUMOVehicle>>()
             };
-            let graph = state().myCCHGraph;
+            let graph = state().myCCHGraph.0;
             let router = crate::utils::router::cch_router::CCHRouter::<MSEdge, SUMOVehicle, MSCCHGraph>::new(
                 graph, MSRoutingEngine::get_published_cch_metric, Some(effort), true, fallback, None, None);
             Ptr::from_raw(Box::into_raw(Box::new(router))).cast::<SUMOAbstractRouter<MSEdge, SUMOVehicle>>()
@@ -1579,12 +1579,12 @@ impl MSRoutingEngine {
     // }
     #[allow(unused_variables)]
     pub fn init_cch() {
-        if !state().myCCHLive.is_null() {
+        if !state().myCCHLive.0.is_null() {
             return;  // device-side state built once (the graph alone may already exist for MSNet's free-flow router)
         }
         // One LIVE metric per vehicle TYPE known when routing starts; all types share ONE topology.
         Self::ensure_cch_graph();
-        let graph = state().myCCHGraph;
+        let graph = state().myCCHGraph.0;
         let factor = get_float("device.rerouting.cch-update-threshold.factor");
         let constant = steps2time(string2time(&get_string("device.rerouting.cch-update-threshold.constant")).unwrap_or_else(|e| std::panic::panic_any(e)));
         let ensemble = get_int("device.rerouting.cch-ensemble");
@@ -1592,7 +1592,7 @@ impl MSRoutingEngine {
             graph, effort_func, MSRoutingEngine::get_effort, factor, constant,
             Some(MSRoutingEngine::build_cch_ref_vehicle), ensemble));
         let live = Ptr::from_raw(Box::into_raw(fam));
-        state().myCCHLive = live;
+        state().myCCHLive = SendPtr(live);
         let mut vtypeIDs: Vec<String> = Vec::new();
         MSNet::get_instance().m().get_vehicle_control().insert_v_type_i_ds(&mut vtypeIDs);
         for id in vtypeIDs.iter() {
@@ -1602,13 +1602,13 @@ impl MSRoutingEngine {
             }
             let vt = MSNet::get_instance().m().get_vehicle_control().get_v_type(id, Ptr::null(), true);
             if !vt.is_null() && !vt.is_vehicle_specific() {
-                Ptr::from_raw(live).m().seed_key(vt);
+                live.m().seed_key(vt);
             }
         }
         // publish initial metrics so the first queries succeed; fill goes through getEffort,
         // which locks the state again, so no state lock is held here
         let now = steps2time(MSNet::get_instance().m().get_current_time_step());
-        Ptr::from_raw(live).m().customize(now);
+        live.m().customize(now);
     }
 
     /// C++: `void MSRoutingEngine::invalidateCCHEdge(const MSEdge *)` [static]
@@ -1635,18 +1635,18 @@ impl MSRoutingEngine {
     pub fn invalidate_cch_edge(e: Ptr<MSEdge>) {
         let (graph, freeflow, live) = {
             let st = state();
-            (st.myCCHGraph, st.myCCHFreeflow, st.myCCHLive)
+            (st.myCCHGraph.0, st.myCCHFreeflow.0, st.myCCHLive.0)
         };
         if graph.is_null() {
             return;
         }
         // the primed connection masks reflect the OLD successor lists; the next fill re-primes them
-        Ptr::from_raw(graph).m().invalidate_class_masks();
+        graph.m().invalidate_class_masks();
         if !freeflow.is_null() {
-            Ptr::from_raw(freeflow).m().flag_permissions_stale();
+            freeflow.m().flag_permissions_stale();
         }
         if !live.is_null() {
-            Ptr::from_raw(live).m().invalidate_edge(e);
+            live.m().invalidate_edge(e);
         }
     }
 
@@ -1695,12 +1695,17 @@ struct RoutingEngineState {
     /// C++ `myEdgeWeightSettingCommand != nullptr` (the command itself is owned by the end-of-timestep event queue)
     myEdgeWeightSettingCommand: bool,
     /// C++ static `MSRoutingEngine::myCCHGraph`: the process-lifetime shared CCH topology
-    myCCHGraph: Ptr<MSCCHGraph>,
+    myCCHGraph: SendPtr<MSCCHGraph>,
     /// C++ static `MSRoutingEngine::myCCHLive`: the device's live per-type metric family
-    myCCHLive: Ptr<MSCCHMetricFamily>,
+    myCCHLive: SendPtr<MSCCHMetricFamily>,
     /// C++ static `MSRoutingEngine::myCCHFreeflow`: MSNet's free-flow per-type metric family
-    myCCHFreeflow: Ptr<MSCCHMetricFamily>,
+    myCCHFreeflow: SendPtr<MSCCHMetricFamily>,
 }
+
+/// A raw owning pointer in the global state. The C++ statics are process-global; in this port
+/// they are only ever touched on the routing thread, so the Send bound the Mutex needs is safe.
+struct SendPtr<T>(Ptr<T>);
+unsafe impl<T> Send for SendPtr<T> {}
 
 // determinism: all routing-engine statics live behind one lock; callers must not hold it across another call that locks it
 static ROUTING_ENGINE_STATE: std::sync::Mutex<RoutingEngineState> = std::sync::Mutex::new(RoutingEngineState {
@@ -1723,9 +1728,9 @@ static ROUTING_ENGINE_STATE: std::sync::Mutex<RoutingEngineState> = std::sync::M
     myHaveExtras: false,
     myEffortFuncIsExtra: false,
     myEdgeWeightSettingCommand: false,
-    myCCHGraph: Ptr::null(),
-    myCCHLive: Ptr::null(),
-    myCCHFreeflow: Ptr::null(),
+    myCCHGraph: SendPtr(Ptr::null()),
+    myCCHLive: SendPtr(Ptr::null()),
+    myCCHFreeflow: SendPtr(Ptr::null()),
 });
 
 thread_local! {
