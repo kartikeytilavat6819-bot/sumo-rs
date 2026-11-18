@@ -1,0 +1,7 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <flow id="f0" type="car" begin="0" end="250" period="6"><route edges="e01 e12 e23"/></flow>
+    <person id="p0" depart="5.00"><walk edges="e01 e12 e23"/></person>
+    <person id="p1" depart="30.00"><walk edges="e12 e23"/></person>
+    <person id="p2" depart="60.00"><walk edges="e01 e12"/></person>
+</routes>

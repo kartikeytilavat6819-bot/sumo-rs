@@ -1,0 +1,6 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="truck" length="8.00" maxSpeed="5.00" accel="1.00" decel="2.00"/>
+    <flow id="ft" type="truck" begin="0" end="250" period="15"><route edges="e01 e12 e23"/></flow>
+    <flow id="fc" type="car" begin="5" end="250" period="4"><route edges="e01 e12 e23"/></flow>
+</routes>

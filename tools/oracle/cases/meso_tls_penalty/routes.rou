@@ -1,0 +1,7 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <flow id="f1" type="car" begin="0" end="250" period="4"><route edges="WJ JE"/></flow>
+    <flow id="f2" type="car" begin="1" end="250" period="5"><route edges="NJ JS"/></flow>
+    <flow id="f3" type="car" begin="2" end="250" period="6"><route edges="WJ JS"/></flow>
+    <flow id="f4" type="car" begin="3" end="250" period="7"><route edges="NJ JE"/></flow>
+</routes>

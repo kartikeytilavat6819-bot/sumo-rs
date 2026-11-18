@@ -1,0 +1,8 @@
+<additional>
+    <calibrator id="cal0" edge="e12" pos="50.00">
+        <flow begin="0.00" end="150.00" vehsPerHour="900" speed="10.00" route="rc"/>
+        <flow begin="150.00" end="300.00" vehsPerHour="1200" speed="8.00" route="rc"/>
+    </calibrator>
+    <edgeData id="ed0" freq="60" file="ed0.xml"/>
+    <laneData id="ld0" freq="60" file="ld0.xml"/>
+</additional>

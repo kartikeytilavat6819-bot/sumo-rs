@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/meso_persons/meso_persons.nod.xml --edge-files tools/oracle/cases/meso_persons/meso_persons.edg.xml --sidewalks.guess true --sidewalks.guess.min-speed 5
