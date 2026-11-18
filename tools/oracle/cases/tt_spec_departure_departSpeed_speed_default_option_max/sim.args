@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departlane first -b 0 -e 0 --no-duration-log --default.departspeed max --fcd-output.attributes speed,pos,lane,edge -a tools/oracle/cases/tt_spec_departure_departSpeed_speed_default_option_max/input_routes.rou.xml,tools/oracle/cases/tt_spec_departure_departSpeed_speed_default_option_max/input_additional.add.xml

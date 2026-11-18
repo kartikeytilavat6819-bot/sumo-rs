@@ -272,12 +272,17 @@ def import_one(source, tests_sumo, force=False):
         if p:
             route_path = p
             break
+    # With no -r, a route given among several -a files must stay in -a: SUMO
+    # loads those files in order, and a later -a file may reference a route
+    # declared in an earlier one. run_all.sh always passes -r routes.rou, so
+    # hand it an empty file and keep every -a file, in its original order.
+    route_from_additions = route_path is None
     kept_additions = []
     for a in additions:
         p = resolve(a, potentials)
         if not p:
             continue
-        if route_path is None and is_route_file(p):
+        if not route_from_additions and route_path is None and is_route_file(p):
             route_path = p
         else:
             # run_all.sh and make_sim_refs.sh both run from the repo root, so
@@ -285,13 +290,15 @@ def import_one(source, tests_sumo, force=False):
             # use "tools/oracle/cases/<case>/<file>" for the same reason).
             kept_additions.append(os.path.relpath(
                 join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
-    if not route_path:
+    if route_path is None and not kept_additions:
         return None, "no route input"
 
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
-    chosen = [net, os.path.basename(route_path)]
+    chosen = [net]
+    if route_path:
+        chosen.append(os.path.basename(route_path))
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
@@ -304,11 +311,17 @@ def import_one(source, tests_sumo, force=False):
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
-    shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    if route_path:
+        shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    else:
+        with open(join(case_dir, "routes.rou"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("<routes/>\n")
 
     sim_args = list(sim)
     if kept_additions:
-        sim_args += ["-a", ",".join(sorted(set(kept_additions)))]
+        # dict.fromkeys de-duplicates without re-ordering: SUMO loads -a files
+        # left to right and route references may point backwards.
+        sim_args += ["-a", ",".join(dict.fromkeys(kept_additions))]
 
     with open(join(case_dir, "sim.args"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(" ".join(sim_args) + "\n")
@@ -329,7 +342,7 @@ def import_one(source, tests_sumo, force=False):
     return name, {
         "source": rel,
         "net": os.path.basename(net_path),
-        "route": os.path.basename(route_path),
+        "route": os.path.basename(route_path) if route_path else "(in -a)",
         "additions": sorted(set(kept_additions)),
         "outputs": [n for n, _ in outputs],
         "sim_args": sim_args,
