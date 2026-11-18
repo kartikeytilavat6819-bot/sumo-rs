@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_uncontrolled_links_joinedTls/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_uncontrolled_links_joinedTls/input_plain.nod.xml -x tools/oracle/cases/itt_nc_netconvert_import_XML_tl_types_uncontrolled_links_joinedTls/input_plain.con.xml

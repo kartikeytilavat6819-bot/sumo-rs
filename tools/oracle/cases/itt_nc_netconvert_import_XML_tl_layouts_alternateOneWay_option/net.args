@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_alternateOneWay_option/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_tl_layouts_alternateOneWay_option/input_plain.nod.xml --tls.layout alternateOneWay
