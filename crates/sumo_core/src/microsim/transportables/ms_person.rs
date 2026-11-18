@@ -378,6 +378,7 @@ impl MSPerson {
         }
         if prior.get_jump_duration() > 0 {
             // negative distance indicates jump
+            eprintln!("DEBUG 16641 jump prior={} simstep={}", prior.get_jump_duration(), MSNet::get_instance().get_current_time_step());
             let simstep = MSNet::get_instance().get_current_time_step();
             let startP = prior.get_position(simstep);
             let endP = self.get_current_stage().get_position(simstep);
