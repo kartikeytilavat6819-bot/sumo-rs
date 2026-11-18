@@ -24,6 +24,7 @@ sys.path.insert(0, str(HERE / "cases" / "traci_basic"))
 import client as C  # noqa: E402  (sumo_command / kill_cpp / PRISTINE_BIN)
 
 import traci  # noqa: E402
+import traci.connection as TCONN  # noqa: E402
 from traci.exceptions import FatalTraCIError, TraCIException  # noqa: E402
 
 CASES = HERE / "cases"
@@ -357,11 +358,14 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
         dead_from = None
         try:
             try:
-                # a previous failed init can leave traci's singleton connection registered
+                # a crashed previous session can leave a stale connection registered even
+                # when close() itself raises; clear the pool unconditionally before reconnecting
+                TCONN._connections.clear()
                 try:
                     traci.close()
                 except Exception:
                     pass
+                TCONN._connections.clear()
                 traci.init(port=port, numRetries=3, host="localhost")
             except Exception as e:
                 dump_log(side, port, proc)
@@ -387,6 +391,7 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
                     traci.close()
                 except Exception:
                     pass
+                TCONN._connections.clear()
         finally:
             try:
                 proc.wait(timeout=10)
@@ -416,8 +421,10 @@ def main():
         cpp_res, cpp_dead, cpp_init = run_session("cpp", port + 2, a.ours, calls, a.step_every, not a.no_infra)
         C.kill_cpp(port + 2)
 
-        print(f"FUZZ seed={seed} infra={not a.no_infra}: ours={len(ours_res)} calls (dead={ours_dead}, init={ours_init}) "
-              f"official={len(cpp_res)} calls (dead={cpp_dead}, init={cpp_init})")
+        dead_label = calls[ours_dead][0] if ours_dead is not None and ours_dead < len(calls) else "-"
+        dead_res = ours_res[ours_dead] if ours_dead is not None and ours_dead < len(ours_res) else "-"
+        print(f"FUZZ seed={seed} infra={not a.no_infra}: ours={len(ours_res)} calls (dead={ours_dead}@{dead_label}, init={ours_init}) "
+              f"official={len(cpp_res)} calls (dead={cpp_dead}, init={cpp_init}) our_dead_result={dead_res}")
         if ours_init or cpp_init:
             # an init failure on either side is itself a finding (unless official just died)
             if not cpp_init:
