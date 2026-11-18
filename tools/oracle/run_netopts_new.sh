@@ -110,7 +110,6 @@ run_row() {
     elif [ $cr -eq 2 ]; then V=FAIL; D="net unparseable: $(head -1 "$d/net.log")"
     else V=FAIL; D="$(head -1 "$d/net.log") | $(grep SUMMARY "$d/net.log")"; fi
     if [ "$V" = PASS ]; then
-      local norm='s#'"$d"'/cpp.net.xml#NET#g; s#'"$d"'/rust.net.xml#NET#g; s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; /generated on/d; s/\r$//'
       # the -o net path is echoed into some extra files (netconvert configuration): cpp/rust names differ, normalize them
       local norm='s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; s#'"$d"'/cpp.net.xml#NET#g; s#'"$d"'/rust.net.xml#NET#g; /generated on/d; s/\r$//'
       local lc lr
