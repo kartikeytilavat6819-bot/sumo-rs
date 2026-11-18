@@ -1406,8 +1406,10 @@ impl NIImporter_SUMO {
                                 if !tlDef.is_null() {
                                     tlDef.m().add_connection(nbe, toEdge, fromLaneIndex, c.toLaneIdx, c.tlLinkIndex, c.tlLinkIndex2, false);
                                 } else {
-                                    // shortcut: C++ throws ProcessError out of this void function; panic until load_network returns a Result
-                                    panic!("Corrupt traffic light definition '{}' (program '{}')", c.tlID, progID);
+                                    // C++ throws ProcessError out of this void function (NIImporter_SUMO.cpp:235)
+                                    std::panic::panic_any(ProcessError::new(format!(
+                                        "Corrupt traffic light definition '{}' (program '{}')", c.tlID, progID
+                                    )));
                                 }
                             }
                         } else {

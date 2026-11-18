@@ -1,0 +1,1 @@
+-n nodes.nod.xml -e edges.edg.xml --polygon-files poi.add.xml --output net.net.xml

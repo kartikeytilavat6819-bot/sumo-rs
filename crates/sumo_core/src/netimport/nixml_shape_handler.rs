@@ -3,6 +3,18 @@
 use crate::prelude::*;
 use utils::common::msg_handler::{write_error, write_warning};
 
+/// Trampoline for the C++ virtual `NIXMLShapeHandler::getLanePos`.
+fn get_lane_pos_virtual(base: &mut ShapeHandler, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
+    // SAFETY: NIXMLShapeHandler is #[repr(C)] and base is its first field.
+    let this = unsafe { &mut *(base as *mut ShapeHandler as *mut NIXMLShapeHandler) };
+    NIXMLShapeHandler::get_lane_pos(this, poiID, laneID, lanePos, friendlyPos, lanePosLat)
+}
+
+/// Trampoline for the C++ virtual `NIXMLShapeHandler::addLanePosParams` (always true).
+fn add_lane_pos_params_virtual(_base: &mut ShapeHandler) -> bool {
+    true
+}
+
 /// The XML-Handler for shapes loading network loading
 /// C++ class `NIXMLShapeHandler` (netimport/NIXMLShapeHandler.h)
 #[repr(C)]
@@ -32,8 +44,11 @@ impl NIXMLShapeHandler {
     // {}
     #[allow(unused_variables)]
     pub fn new(sc: &mut ShapeContainer, ec: &NBEdgeCont) -> Self {
+        let mut base = ShapeHandler::new("polgyon - file", sc, if GeoConvHelper::get_num_loaded() == 0 { Ptr::null() } else { GeoConvHelper::with_loaded(|g| Ptr::from_mut(g)) });
+        base.get_lane_pos_override = Some(get_lane_pos_virtual);
+        base.add_lane_pos_params_override = Some(add_lane_pos_params_virtual);
         Self {
-            base: ShapeHandler::new("polgyon - file", sc, if GeoConvHelper::get_num_loaded() == 0 { Ptr::null() } else { GeoConvHelper::with_loaded(|g| Ptr::from_mut(g)) }),
+            base,
             myEdgeCont: Ptr::new(ec),
         }
     }
@@ -113,7 +128,8 @@ impl SaxHandler for NIXMLShapeHandler {
         &mut self.base.base
     }
     fn my_start_element(&mut self, element: i32, attrs: &SUMOSAXAttributes) -> Result<(), ProcessError> {
-        // shortcut: no virtual dispatch, so ShapeHandler::add_poi calls the base get_lane_pos (panics); POIs with lane= in polygon files fail until the vtable work lands
+        // ShapeHandler::my_start_element -> add_poi dispatches getLanePos/addLanePosParams
+        // through the override fields installed in new() (C++ virtual dispatch).
         ShapeHandler::my_start_element(&mut self.base, element, attrs);
         Ok(())
     }

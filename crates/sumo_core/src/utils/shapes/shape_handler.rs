@@ -27,6 +27,10 @@ pub struct ShapeHandler {
     pub myLastParameterised: Ptr<Parameterised>,
     /// geo-conversion to use during loading
     pub myGeoConvHelper: Ptr<GeoConvHelper>,
+    /// C++ virtual getLanePos, set by subclasses that override it
+    pub get_lane_pos_override: Option<fn(&mut ShapeHandler, &str, &str, f64, bool, f64) -> Position>,
+    /// C++ virtual addLanePosParams, set by subclasses that override it
+    pub add_lane_pos_params_override: Option<fn(&mut ShapeHandler) -> bool>,
 }
 
 impl std::ops::Deref for ShapeHandler {
@@ -67,6 +71,8 @@ impl ShapeHandler {
             myDefaultFill: false,
             myLastParameterised: Ptr::null(),
             myGeoConvHelper: geoConvHelper,
+            get_lane_pos_override: None,
+            add_lane_pos_params_override: None,
         }
     }
 
@@ -385,7 +391,11 @@ impl ShapeHandler {
             if (x == INVALID_POSITION) || (y == INVALID_POSITION) {
                 // try computing x,y from lane,pos
                 if laneID != "" {
-                    pos = self.get_lane_pos(&id, &laneID, lanePos, friendlyPos, lanePosLat);
+                    // C++ dispatches the pure virtual getLanePos to the subclass (NIXMLShapeHandler/NLShapeHandler)
+                    pos = match self.get_lane_pos_override {
+                        Some(f) => f(self, &id, &laneID, lanePos, friendlyPos, lanePosLat),
+                        None => self.get_lane_pos(&id, &laneID, lanePos, friendlyPos, lanePosLat),
+                    };
                 } else {
                     // try computing x,y from lon,lat
                     if (lat == INVALID_POSITION) || (lon == INVALID_POSITION) {
@@ -416,7 +426,10 @@ impl ShapeHandler {
                 Some(p) => Ptr::from_mut(&mut p.m().base3),
                 None => Ptr::null(),
             };
-            if (laneID != "") && self.add_lane_pos_params() {
+            if (laneID != "") && (match self.add_lane_pos_params_override {
+                Some(f) => f(self),
+                None => self.add_lane_pos_params(),
+            }) {
                 let lp = self.myLastParameterised.m();
                 lp.set_parameter(utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_LANE), &laneID);
                 lp.set_parameter(utils::xml::sumo_xml_definitions::Attrs.get_string(SUMO_ATTR_POSITION), &to_string(&lanePos));
