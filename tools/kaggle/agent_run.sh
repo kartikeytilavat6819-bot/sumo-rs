@@ -8,8 +8,6 @@ mkdir -p $OUT
 C=md_vtypes
 dir=tools/oracle/cases/$C
 
-# One edge-based trackVehicles detector over the WHOLE sim (single interval),
-# so no interval boundaries / resetOnly bookkeeping is involved.
 cat > $OUT/single.add.xml <<'EOF'
 <additional>
   <edgeData id="single" period="1000" trackVehicles="true" file="out_single.xml"/>
@@ -19,7 +17,8 @@ EOF
 for side in ours pris; do
   rm -f $dir/out_single.xml
   if [ $side = ours ]; then BIN=$OURS; else BIN=$PRIS; fi
-  $BIN -n $dir/ref_simple.net.xml -r $dir/routes.rou --end 200 \
+  # run to 400 so every vehicle has left before the single interval is flushed
+  $BIN -n $dir/ref_simple.net.xml -r $dir/routes.rou --end 400 \
        --additional-files $OUT/single.add.xml --no-step-log true > $OUT/$C.$side.log 2>&1
   echo "CASE single side=$side exit=$?"
   if [ -f "$dir/out_single.xml" ]; then cp "$dir/out_single.xml" "$OUT/$C.$side.single.xml"; else echo "  MISSING"; fi
