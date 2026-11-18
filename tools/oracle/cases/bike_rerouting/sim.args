@@ -1,0 +1,1 @@
+--end 200 --device.rerouting.probability 1 --device.rerouting.period 2 --device.rerouting.bike-speeds --additional-files tools/oracle/cases/bike_rerouting/bike_rerouting.add.xml

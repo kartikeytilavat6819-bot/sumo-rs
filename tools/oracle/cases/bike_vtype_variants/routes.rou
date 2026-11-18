@@ -1,0 +1,14 @@
+<routes>
+    <vType id="bike_slow" vClass="bicycle" length="1.80" width="0.60" maxSpeed="3.00" accel="0.50" decel="1.00"/>
+    <vType id="bike_med" vClass="bicycle" length="1.80" width="0.60" maxSpeed="5.00" accel="1.00" decel="2.00"/>
+    <vType id="bike_fast" vClass="bicycle" length="1.80" width="0.60" maxSpeed="7.00" accel="2.00" decel="3.50"/>
+    <vType id="bike_accel" vClass="bicycle" length="1.80" width="0.60" maxSpeed="5.00" accel="3.00" decel="4.50"/>
+    <vehicle id="bs0" type="bike_slow" depart="0.00"><route edges="E0"/></vehicle>
+    <vehicle id="bm0" type="bike_med" depart="0.00"><route edges="E0"/></vehicle>
+    <vehicle id="bf0" type="bike_fast" depart="0.00"><route edges="E0"/></vehicle>
+    <vehicle id="ba0" type="bike_accel" depart="0.00"><route edges="E0"/></vehicle>
+    <vehicle id="bs1" type="bike_slow" depart="10.00"><route edges="E0"/></vehicle>
+    <vehicle id="bm1" type="bike_med" depart="10.00"><route edges="E0"/></vehicle>
+    <vehicle id="bf1" type="bike_fast" depart="10.00"><route edges="E0"/></vehicle>
+    <vehicle id="ba1" type="bike_accel" depart="10.00"><route edges="E0"/></vehicle>
+</routes>

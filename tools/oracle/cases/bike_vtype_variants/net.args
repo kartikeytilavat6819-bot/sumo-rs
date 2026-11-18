@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_vtype_variants/bike_vtype_variants.nod.xml --edge-files tools/oracle/cases/bike_vtype_variants/bike_vtype_variants.edg.xml

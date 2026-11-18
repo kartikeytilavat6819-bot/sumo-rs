@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_rerouting/bike_rerouting.nod.xml --edge-files tools/oracle/cases/bike_rerouting/bike_rerouting.edg.xml

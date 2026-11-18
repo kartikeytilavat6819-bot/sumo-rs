@@ -1,0 +1,1 @@
+-n tools/oracle/cases/bike_person_ride/bike_person_ride.nod.xml -e tools/oracle/cases/bike_person_ride/bike_person_ride.edg.xml --sidewalks.guess
