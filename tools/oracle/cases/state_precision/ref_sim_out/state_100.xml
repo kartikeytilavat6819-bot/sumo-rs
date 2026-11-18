@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:14.526474-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_precision/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_precision/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_precision/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_precision/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_precision/ref.stat.xml"/>
+        <save-state.times value="100"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_precision/ref_sim_out/state_100.xml"/>
+        <save-state.precision value="4"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="42"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="100.000" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="rd#0" state="1" edges="D0 D1"/>
+    <route id="rd#1" state="1" edges="D0"/>
+    <routeDistribution id="rd" state="1" routes="rd#0 rd#1" probabilities="0.7000 0.3000"/>
+    <delay number="12" begin="20" end="8" depart="8.0000" time="357.0000" speedFactor="1.0954" decel="4.5000"/>
+    <vType id="vdA" maxSpeed="13.8900" probability="0.6000" speedFactor="normc(1.0000,0.1000,0.8000,1.2000)" vClass="passenger"/>
+    <vType id="vdB" maxSpeed="20.0000" probability="0.4000" vClass="passenger" accel="2.00"/>
+    <vTypeDistribution id="vd" vTypes="vdA vdB" probabilities="0.6000 0.4000"/>
+    <vehicle id="fi.3" type="vdA" depart="26.500" route="rd#0" distance="400.1 0" speedFactor="0.8151" state="2114 27000 1 5.1000 0 3.7248 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="377.9943 372.9943 10.3138" speed="10.3138 11.0192" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 110354840 0">
+        <device id="tripinfo_fi.3" state="D0_0 0 11.3217 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.6" type="vdA" depart="43.000" route="rd#0" distance="400.1 0" speedFactor="0.9924" state="2114 43000 1 5.1000 0 2.4832 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="342.6986 337.6986 13.2015" speed="13.2015 12.8267" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 134308632 0">
+        <device id="tripinfo_fi.6" state="D0_1 0 12.7152 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.7" type="vdB" depart="48.500" route="rd#0" distance="400.1 0" speedFactor="0.8767" state="2114 49000 1 5.1000 0 1.8364 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="191.5060 186.5060 12.1066" speed="12.1066 11.5054" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="8704.0000" lcState2="0 0 0 121066250 0">
+        <device id="tripinfo_fi.7" state="D0_0 0 11.9706 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.8" type="vdA" depart="54.000" route="rd#0" distance="400.1 0" speedFactor="1.0250" state="2114 54000 1 5.1000 0 2.4190 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="196.4495 191.4495 13.4154" speed="13.4154 12.9186" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="12288.0000" lcState2="0 -27 -11345660 135374270 0">
+        <device id="tripinfo_fi.8" state="D0_1 0 12.5915 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.9" type="vdA" depart="59.500" route="rd#0" distance="400.1 0" speedFactor="1.0954" state="2114 60000 1 5.1000 0 1.7697 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="122.1294 117.1294 13.1405" speed="13.1405 12.6183" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 133158718 0">
+        <device id="tripinfo_fi.9" state="D0_0 0 11.3617 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.10" type="vdA" depart="65.000" route="rd#0" distance="400.1 0" speedFactor="0.9918" state="2114 65000 1 5.1000 0 1.5750 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="51.6899 46.6899 12.5707" speed="12.5707 13.0239" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 134729797 0">
+        <device id="tripinfo_fi.10" state="D0_0 0 12.7563 395 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.11" type="vdA" depart="70.500" route="rd#0" distance="0 0" speedFactor="1.0494" state="2114 71000 0 5.1000 0 1.2455 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="376.7201 371.7201 13.8369" speed="13.8369 12.9948" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 138369002 0">
+        <device id="tripinfo_fi.11" state="D0_1 0 13.2812 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.12" type="vdB" depart="76.000" route="rd#0" distance="0 0" speedFactor="0.9100" state="2114 76000 0 5.1000 0 0.8983 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="284.4636 279.4636 11.8870" speed="11.8870 11.8774" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 124912216 0">
+        <device id="tripinfo_fi.12" state="D0_0 0 12.6399 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.13" type="vdA" depart="81.500" route="rd#0" distance="0 0" speedFactor="0.9700" state="2114 82000 0 5.1000 0 0.7060 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="224.6345 219.6345 13.3990" speed="13.3990 13.3745" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 133990210 0">
+        <device id="tripinfo_fi.13" state="D0_1 0 13.1038 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.14" type="vdB" depart="87.000" route="rd#1" distance="0 0" speedFactor="0.8451" state="2114 87000 0 5.1000 0 0.4990 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="140.1043 135.1043 11.7099" speed="11.7099 11.4946" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 117098943 0">
+        <device id="tripinfo_fi.14" state="D0_0 0 11.7384 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.15" type="vdB" depart="92.500" route="rd#0" distance="0 0" speedFactor="0.9061" state="2114 93000 0 5.1000 0 0.2645 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="77.2854 72.2854 11.7546" speed="11.7546 11.8225" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 -10307805 124054537 0">
+        <device id="tripinfo_fi.15" state="D0_1 0 12.3816 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fi.16" type="vdA" depart="98.000" route="rd#0" distance="0 0" speedFactor="0.9343" state="2114 98000 0 5.1000 0 0.0479 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="17.4558 12.4558 12.3558" speed="12.3558 12.4353" angle="90.0000" posLat="0.0000" waitingTime="100000 0" lcStateBase="0.0000" lcState2="0 0 0 123557678 0">
+        <device id="tripinfo_fi.16" state="D0_0 0 12.4353 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <flowState id="fi" type="vd" begin="10.000" number="20" next="93.5000" route="rd" done="17" index="17"/>
+    <lane id="D0_0">
+        <vehicles value="fi.16 fi.14 fi.13 fi.12 fi.11"/>
+    </lane>
+    <lane id="D0_1">
+        <vehicles value="fi.15"/>
+    </lane>
+    <lane id="D1_0">
+        <vehicles value="fi.10 fi.9 fi.7 fi.6 fi.3"/>
+    </lane>
+    <lane id="D1_1">
+        <vehicles value="fi.8"/>
+    </lane>
+</snapshot>

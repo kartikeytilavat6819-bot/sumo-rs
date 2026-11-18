@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:16.642850-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_rng/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_rng/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_rng/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_rng/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_rng/ref.stat.xml"/>
+        <save-state.times value="120"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_rng/ref_sim_out/state_120.xml"/>
+        <save-state.rng value="true"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="7"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="120.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <rngState default="0" routeHandler="78" insertionControl="120" device="0" device.btreceiver="0" driverState="0" device.toc="0">
+        <rngLane index="0" state="0"/>
+        <rngLane index="1" state="1161"/>
+        <rngLane index="2" state="748"/>
+        <rngLane index="3" state="0"/>
+        <rngLane index="4" state="0"/>
+        <rngLane index="5" state="0"/>
+        <rngLane index="6" state="0"/>
+        <rngLane index="7" state="0"/>
+        <rngLane index="8" state="0"/>
+        <rngLane index="9" state="0"/>
+        <rngLane index="10" state="0"/>
+        <rngLane index="11" state="0"/>
+        <rngLane index="12" state="0"/>
+        <rngLane index="13" state="0"/>
+        <rngLane index="14" state="0"/>
+        <rngLane index="15" state="0"/>
+        <rngLane index="16" state="0"/>
+        <rngLane index="17" state="0"/>
+        <rngLane index="18" state="0"/>
+        <rngLane index="19" state="0"/>
+        <rngLane index="20" state="0"/>
+        <rngLane index="21" state="0"/>
+        <rngLane index="22" state="0"/>
+        <rngLane index="23" state="0"/>
+        <rngLane index="24" state="0"/>
+        <rngLane index="25" state="0"/>
+        <rngLane index="26" state="0"/>
+        <rngLane index="27" state="0"/>
+        <rngLane index="28" state="0"/>
+        <rngLane index="29" state="0"/>
+        <rngLane index="30" state="0"/>
+        <rngLane index="31" state="0"/>
+        <rngLane index="32" state="0"/>
+        <rngLane index="33" state="0"/>
+        <rngLane index="34" state="0"/>
+        <rngLane index="35" state="0"/>
+        <rngLane index="36" state="0"/>
+        <rngLane index="37" state="0"/>
+        <rngLane index="38" state="0"/>
+        <rngLane index="39" state="0"/>
+        <rngLane index="40" state="0"/>
+        <rngLane index="41" state="0"/>
+        <rngLane index="42" state="0"/>
+        <rngLane index="43" state="0"/>
+        <rngLane index="44" state="0"/>
+        <rngLane index="45" state="0"/>
+        <rngLane index="46" state="0"/>
+        <rngLane index="47" state="0"/>
+        <rngLane index="48" state="0"/>
+        <rngLane index="49" state="0"/>
+        <rngLane index="50" state="0"/>
+        <rngLane index="51" state="0"/>
+        <rngLane index="52" state="0"/>
+        <rngLane index="53" state="0"/>
+        <rngLane index="54" state="0"/>
+        <rngLane index="55" state="0"/>
+        <rngLane index="56" state="0"/>
+        <rngLane index="57" state="0"/>
+        <rngLane index="58" state="0"/>
+        <rngLane index="59" state="0"/>
+        <rngLane index="60" state="0"/>
+        <rngLane index="61" state="0"/>
+        <rngLane index="62" state="0"/>
+        <rngLane index="63" state="0"/>
+    </rngState>
+    <edgeControl lanes="E0_0 E1_0"/>
+    <route id="r0" state="1" edges="E0 E1"/>
+    <delay number="22" begin="32" end="10" depart="3.00" time="793.00" speedFactor="1.17" decel="4.50"/>
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vehicle id="fp.9" type="car" depart="32.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.9521" state="2610 32000 1 5.10 0 12.68 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="487.87 482.87 10.75" speed="10.75 10.81" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.9" state="E0_0 0 13.2247 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.10" type="car" depart="37.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.8793" state="2610 37000 1 5.10 0 4.44 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="452.22 447.22 10.96" speed="10.96 11.81" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.10" state="E0_0 0 12.2135 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.11" type="car" depart="38.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0566" state="2610 38000 1 5.10 0 14.25 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="432.09 427.09 11.58" speed="11.58 12.15" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.11" state="E0_0 0 8.34805 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.12" type="car" depart="41.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.8845" state="2610 41000 1 5.10 0 4.48 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="408.31 403.31 11.97" speed="11.97 11.15" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.12" state="E0_0 0 12.2857 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.13" type="car" depart="44.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.9915" state="2610 44000 1 5.10 0 10.96 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="386.97 381.97 11.80" speed="11.80 11.82" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.13" state="E0_0 0 13.7719 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.14" type="car" depart="45.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0219" state="2610 45000 1 5.10 0 12.08 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="365.05 360.05 11.77" speed="11.77 10.69" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.14" state="E0_0 0 10.8798 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.15" type="car" depart="50.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0605" state="2610 50000 1 5.10 0 8.62 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="343.67 338.67 10.30" speed="10.30 12.19" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.15" state="E0_0 0 13.89 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fn.1" type="car" depart="50.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.9479" state="2162 51000 1 5.10 0 5.85 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="323.27 318.27 12.08" speed="12.08 11.07" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fn.1" state="E0_0 0 10.7169 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.16" type="car" depart="57.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0239" state="2610 57000 1 5.10 0 4.63 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="301.92 296.92 11.64" speed="11.64 12.64" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.16" state="E0_0 0 13.89 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.17" type="car" depart="59.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.8915" state="2610 59000 1 5.10 0 3.05 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="210.16 205.16 11.72" speed="11.72 12.09" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.17" state="E0_0 0 12.3829 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.18" type="car" depart="60.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0478" state="2610 60000 1 5.10 0 9.71 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="189.70 184.70 12.35" speed="12.35 11.74" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.18" state="E0_0 0 9.12451 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.19" type="car" depart="69.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.1290" state="2610 69000 1 5.10 0 2.32 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="167.33 162.33 12.54" speed="12.54 12.43" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.19" state="E0_0 0 13.89 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.20" type="car" depart="75.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="1.0576" state="2610 75000 1 5.10 0 2.13 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="86.51 81.51 13.13" speed="13.13 12.60" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.20" state="E0_0 0 13.89 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.21" type="car" depart="77.00" departSpeed="max" route="r0" distance="500.1 0" speedFactor="0.9924" state="2610 77000 1 5.10 0 2.04 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="55.82 50.82 13.13" speed="13.13 12.72" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.21" state="E0_0 0 13.7844 495 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.22" type="car" depart="78.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.8553" state="2610 78000 0 5.10 0 2.36 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="464.19 459.19 11.47" speed="11.47 10.77" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.22" state="E0_0 0 10.063 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.23" type="car" depart="79.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9803" state="2610 79000 0 5.10 0 7.78 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="443.87 438.87 10.89" speed="10.89 11.37" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.23" state="E0_0 0 5.94247 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.24" type="car" depart="85.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9862" state="2610 85000 0 5.10 0 3.39 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="424.40 419.40 11.77" speed="11.77 11.01" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.24" state="E0_0 0 13.6983 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.25" type="car" depart="96.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9678" state="2610 96000 0 5.10 0 1.26 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="297.38 292.38 12.15" speed="12.15 12.73" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.25" state="E0_0 0 13.4427 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fn.2" type="car" depart="100.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9169" state="2162 100000 0 5.10 0 1.05 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="233.75 228.75 12.33" speed="12.33 11.98" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fn.2" state="E0_0 0 12.7357 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.26" type="car" depart="107.00" departSpeed="max" route="r0" distance="0 0" speedFactor="1.1217" state="2610 107000 0 5.10 0 0.50 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="164.86 159.86 13.46" speed="13.46 13.33" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.26" state="E0_0 0 13.89 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.27" type="car" depart="110.00" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9450" state="2610 110000 0 5.10 0 0.44 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="117.43 112.43 13.12" speed="13.12 12.14" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.27" state="E0_0 0 13.126 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="fp.28" type="car" depart="112.00" departSpeed="max" route="r0" distance="0 0" speedFactor="1.0224" state="2610 112000 0 5.10 0 0.52 119000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="95.13 90.13 12.88" speed="12.88 13.22" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <device id="tripinfo_fp.28" state="E0_0 0 13.89 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <flowState id="fp" type="car" begin="0.00" end="200.00" probability="0.2999999999999999889" departSpeed="max" route="r0" done="29" index="29"/>
+    <flowState id="fn" type="car" begin="0.00" end="200.00" number="4" departSpeed="max" next="150.00" route="r0" done="3" index="3"/>
+    <lane id="E0_0">
+        <vehicles value="fp.28 fp.27 fp.26 fn.2 fp.25 fp.24 fp.23 fp.22"/>
+    </lane>
+    <lane id="E1_0">
+        <vehicles value="fp.21 fp.20 fp.19 fp.18 fp.17 fp.16 fn.1 fp.15 fp.14 fp.13 fp.12 fp.11 fp.10 fp.9"/>
+    </lane>
+</snapshot>

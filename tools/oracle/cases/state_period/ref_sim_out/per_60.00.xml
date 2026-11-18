@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:13.408381-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_period/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_period/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_period/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_period/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_period/ref.stat.xml"/>
+        <save-state.period value="30"/>
+        <save-state.prefix value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_period/ref_sim_out/per"/>
+        <save-state.suffix value=".xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="60.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="r0" state="1" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="r1" state="1" edges="-103227#0 -103227#1 -103227#2"/>
+    <delay number="0" begin="3" end="3" depart="0.00" time="88.00" speedFactor="1.06" decel="4.50"/>
+    <vType id="car" maxSpeed="20.00" speedFactor="normc(1.00,0.10,0.20,2.00)" decel="4.5" sigma="0"/>
+</snapshot>

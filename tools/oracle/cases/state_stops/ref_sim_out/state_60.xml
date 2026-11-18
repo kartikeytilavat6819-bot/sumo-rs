@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:15.541924-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_stops/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_stops/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_stops/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_stops/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_stops/ref.stat.xml"/>
+        <save-state.times value="60"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_stops/ref_sim_out/state_60.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="60.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="r" state="1" edges="E0 E1 E2"/>
+    <delay number="14" begin="14" end="0" depart="0.00" time="0.00" speedFactor="1.12" decel="4.50"/>
+    <vType id="DEFAULT_VEHTYPE"/>
+    <vehicle id="w0" depart="0.00" route="r" distance="300.1 0" speedFactor="1.0600" state="2048 0 1 5.10 0 2.14 59000 0 0 1 9223372036854774807 9223372036854774807 9223372036854774807" pos="268.78 263.78 14.66" speed="14.66 14.01" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="100.00" endPos="200.00" speed="5.00" started="31.00" ended="54.00"/>
+        <device id="tripinfo_w0" state="E0_0 0 13.89 295 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="w1" depart="4.00" route="r" distance="300.1 0" speedFactor="0.9383" state="2048 4000 1 5.10 0 1.63 59000 0 0 1 9223372036854774807 9223372036854774807 9223372036854774807" pos="91.03 86.03 12.90" speed="12.90 11.85" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E0" startPos="200.00" endPos="260.00" speed="3.00" started="22.00" ended="48.00"/>
+        <stop edge="E2" startPos="50.00" endPos="120.00" speed="8.00"/>
+        <device id="tripinfo_w1" state="E0_0 0 13.033 295 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="p0" depart="8.00" route="r" distance="300.1 0" speedFactor="1.0104" state="2048 8000 1 5.10 0 25.09 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="68.59 63.59 12.28" speed="12.28 12.52" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop lane="E1_0" endPos="250.00" duration="15.00" parking="1"/>
+        <device id="tripinfo_p0" state="E0_0 0 13.2312 295 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="s0" depart="12.00" route="r" distance="300.1 0" speedFactor="1.0827" state="2048 12000 1 5.10 0 24.32 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="46.12 41.12 12.57" speed="12.57 11.93" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E2" startPos="50.00" endPos="100.00" duration="5.00"/>
+        <device id="tripinfo_s0" state="E0_0 0 13.208 295 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.0" depart="14.00" route="r" distance="300.1 0" speedFactor="1.0303" state="2208 14000 1 5.10 0 22.69 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="24.24 19.24 11.39" speed="11.39 11.82" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.0" state="E0_0 0 13.4596 295 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.1" depart="19.00" route="r" distance="0 0" speedFactor="0.8310" state="2208 19000 0 5.10 0 14.71 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="297.05 292.05 10.36" speed="10.36 10.68" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.1" state="E0_0 0 11.5426 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.2" depart="24.00" route="r" distance="0 0" speedFactor="1.0458" state="2208 24000 0 5.10 0 16.23 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="277.78 272.78 10.41" speed="10.41 10.15" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.2" state="E0_0 0 8.65852 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.3" depart="29.00" route="r" distance="0 0" speedFactor="0.8860" state="2208 29000 0 5.10 0 9.55 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="256.80 251.80 11.36" speed="11.36 9.53" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.3" state="E0_0 0 6.11964 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.4" depart="34.00" route="r" distance="0 0" speedFactor="0.9379" state="2208 34000 0 5.10 0 7.21 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="236.90 231.90 9.49" speed="9.49 8.19" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.4" state="E0_0 0 6.98582 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.5" depart="39.00" route="r" distance="0 0" speedFactor="0.8569" state="2208 39000 0 5.10 0 2.20 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="216.96 211.96 9.88" speed="9.88 8.31" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.5" state="E0_0 0 5.41015 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.6" depart="44.00" route="r" distance="0 0" speedFactor="1.0907" state="2208 44000 0 5.10 0 2.47 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="194.97 189.97 9.29" speed="9.29 9.51" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.6" state="E0_0 0 5.45087 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.7" depart="49.00" route="r" distance="0 0" speedFactor="1.0263" state="2208 49000 0 5.10 0 1.32 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="128.81 123.81 13.37" speed="13.37 13.13" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.7" state="E0_0 0 5.9552 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.8" depart="54.00" route="r" distance="0 0" speedFactor="1.0471" state="2208 54000 0 5.10 0 0.51 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="70.37 65.37 14.12" speed="14.12 13.56" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.8" state="E0_0 0 8.88052 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="f.9" depart="59.00" route="r" distance="0 0" speedFactor="1.1229" state="2208 59000 0 5.10 0 0.00 60000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="5.10 0.10 11.03" speed="11.03 11.03" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 0 0">
+        <stop edge="E1" startPos="150.00" endPos="220.00" speed="6.00"/>
+        <device id="tripinfo_f.9" state="E0_0 0 11.0335 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <lane id="E0_0">
+        <vehicles value="f.9 f.8 f.7 f.6 f.5 f.4 f.3 f.2 f.1"/>
+    </lane>
+    <lane id="E1_0">
+        <vehicles value="f.0 s0 p0 w1 w0"/>
+    </lane>
+</snapshot>

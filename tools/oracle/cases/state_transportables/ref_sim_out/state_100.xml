@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:18.832768-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_transportables/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_transportables/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_transportables/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_transportables/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_transportables/ref.stat.xml"/>
+        <save-state.times value="100"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_transportables/ref_sim_out/state_100.xml"/>
+        <save-state.transportables value="true"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="42"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="100.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="A" state="1" edges="1117867028 1117867029#0 1117867029#1 1117867029#2 1117867029#3"/>
+    <delay number="0" begin="4" end="4" depart="0.00" time="25.00" speedFactor="1.08" decel="4.50"/>
+    <vType id="DEFAULT_PEDTYPE" vClass="pedestrian"/>
+    <vType id="DEFAULT_VEHTYPE"/>
+    <vType id="car" maxSpeed="13.89" accel="2.6" decel="4.5"/>
+    <transportables type="person" state="0 3 3 0 3 0 0 0 0"/>
+    <tlLogic id="10224024800" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="10224032638" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="10228962352" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="10228962353" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="12055677931" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="12055680089" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="2435108452" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="3944708047" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="3974095825" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="3974095826" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="3974095828" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="3974095829" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="3974095832" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="42428297" programID="0" phase="0" duration="10000" until="129000" cycleTime="10000" active="1"/>
+    <tlLogic id="42439984" programID="0" phase="0" duration="10000" until="132000" cycleTime="10000" active="1"/>
+    <tlLogic id="42439990" programID="0" phase="0" duration="10000" until="129000" cycleTime="10000" active="1"/>
+    <tlLogic id="4707407261" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="6597464486" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535157" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535159" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535175" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535188" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535204" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+    <tlLogic id="6598535230" programID="0" phase="0" duration="10000" until="172000" cycleTime="10000" active="1"/>
+    <tlLogic id="8373393481" programID="0" phase="0" duration="10000" until="169000" cycleTime="10000" active="1"/>
+</snapshot>

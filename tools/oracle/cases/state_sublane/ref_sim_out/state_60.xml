@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:22.688989-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_sublane/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_sublane/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_sublane/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_sublane/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_sublane/ref.stat.xml"/>
+        <save-state.times value="60"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_sublane/ref_sim_out/state_60.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="0.8"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="60.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="r0" state="1" edges="100"/>
+    <delay number="2" begin="8" end="6" depart="1.00" time="146.00" speedFactor="1.08" decel="4.50"/>
+    <vType id="car" length="4.50" maxSpeed="13.89" minGapLat="0.60" accel="2.6" decel="4.5" sigma="0.5"/>
+    <vType id="slow" length="6.00" maxSpeed="5.00" minGapLat="0.60" accel="2.6" decel="4.5" sigma="0.5"/>
+    <vehicle id="s0" type="slow" depart="2.00" departLane="0" departPos="20.00" route="r0" distance="0 0" speedFactor="1.0104" state="2062 2000 0 20.00 0 7.40 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="268.02 262.02 4.44" speed="4.44 4.55" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="32769.00">
+        <device id="tripinfo_s0" state="100_0 0 5 -20 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="s1" type="slow" depart="8.00" departLane="1" departPos="20.00" route="r0" distance="0 0" speedFactor="0.8310" state="2062 9000 0 20.00 0 5.70 59000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="241.48 235.48 4.23" speed="4.23 4.14" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="32769.00">
+        <device id="tripinfo_s1" state="100_1 0 5 -20 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <lane id="100_0">
+        <vehicles value="s1 s0"/>
+    </lane>
+</snapshot>
