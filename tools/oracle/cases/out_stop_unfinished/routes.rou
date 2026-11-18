@@ -1,0 +1,9 @@
+<routes>
+    <vType id="car" sigma="0.5"/>
+    <route id="rA" edges="-103224#0 -103224#1 -103224#2 -103224#3"/>
+    <route id="rB" edges="-103227#0 -103227#1 -103227#2"/>
+    <vehicle id="s0" type="car" route="rA" depart="5"><stop lane="-103224#2_0" endPos="50" duration="1000"/></vehicle>
+    <vehicle id="s1" type="car" route="rB" depart="10"><stop lane="-103227#1_0" endPos="40" duration="1000"/></vehicle>
+    <vehicle id="s2" type="car" route="rA" depart="20"><stop lane="-103224#1_0" endPos="30" duration="5"/></vehicle>
+    <vehicle id="s3" type="car" route="rB" depart="30"/>
+</routes>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:11:27.319244-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_queue_agg/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_queue_agg/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_queue_agg/ref.fcd.xml"/>
+        <queue-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_queue_agg/ref.queue.xml"/>
+        <queue-output.period value="5"/>
+        <queue-output.aggregation value="50"/>
+        <queue-output.skip-empty value="true"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_queue_agg/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z11/tools/oracle/cases/out_queue_agg/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<queue-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/queue_file.xsd">
+    <interval begin="0.00" end="50.00">
+        <edge id="-103224#1" samples="13" maxQueueLengthInVehicles="4.00" medianQueueLengthInVehicles="3.00" percentileQueueLengthInVehicles="4.00" maxQueueLengthInMeters="27.61" medianQueueLengthInMeters="20.10" percentileQueueLengthInMeters="27.61"/>
+    </interval>
+    <interval begin="50.00" end="100.00">
+        <edge id="-103224#1" samples="19" maxQueueLengthInVehicles="6.00" medianQueueLengthInVehicles="3.00" percentileQueueLengthInVehicles="5.10" maxQueueLengthInMeters="42.61" medianQueueLengthInMeters="35.11" percentileQueueLengthInMeters="42.61"/>
+    </interval>
+    <interval begin="100.00" end="150.00">
+        <edge id="-103224#0" samples="6" maxQueueLengthInVehicles="3.00" medianQueueLengthInVehicles="2.00" percentileQueueLengthInVehicles="2.75" maxQueueLengthInMeters="21.03" medianQueueLengthInMeters="13.52" percentileQueueLengthInMeters="19.16"/>
+        <edge id="-103224#1" samples="20" maxQueueLengthInVehicles="6.00" medianQueueLengthInVehicles="6.00" percentileQueueLengthInVehicles="6.00" maxQueueLengthInMeters="49.64" medianQueueLengthInMeters="42.61" percentileQueueLengthInMeters="43.23"/>
+    </interval>
+</queue-export>
