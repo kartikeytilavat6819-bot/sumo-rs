@@ -212,7 +212,11 @@ impl RODUAFrame {
                     utils::common::msg_handler::write_warning("Option --write-trips.junctions takes no affect when --write-trips is disabled.");
                 }
             }
-            // shortcut: gTaxiClasses lives privately in microsim/devices/ms_device_taxi.rs with no public setter, the taxi class mask is not set here, upgrade when that module exposes it
+            let mut taxiClasses: SVCPermissions = 0;
+            for name in oc.get_string_vector("taxi.vclasses").unwrap_or_else(|e| panic!("{e}")) {
+                taxiClasses |= parse_vehicle_classes(&name);
+            }
+            utils::common::std_defs::set_g_taxi_classes(taxiClasses as i32);
             ok
         })
     }
