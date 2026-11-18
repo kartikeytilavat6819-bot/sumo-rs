@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_function_junctions_join_staggered_spread/input_net.net.xml --junctions.join

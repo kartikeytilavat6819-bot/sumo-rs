@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_function_opposites_different_lengths_nofix/input_net.net.xml --opposites.guess --opposites.guess.fix-lengths false

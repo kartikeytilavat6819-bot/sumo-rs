@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_opposites_guess_noOpposite_large_gap/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_opposites_guess_noOpposite_large_gap/input_plain.nod.xml --opposites.guess

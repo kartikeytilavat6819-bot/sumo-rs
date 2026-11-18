@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_function_roundabouts_remove/input_net.net.xml --remove-edges.explicit -9892,-9891,-9890,gneE0,gneE1,gneE2

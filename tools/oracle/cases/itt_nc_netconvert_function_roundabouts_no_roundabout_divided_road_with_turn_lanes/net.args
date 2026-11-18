@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_function_roundabouts_no_roundabout_divided_road_with_turn_lanes/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_function_roundabouts_no_roundabout_divided_road_with_turn_lanes/input_plain.nod.xml --roundabouts.guess --no-internal-links
