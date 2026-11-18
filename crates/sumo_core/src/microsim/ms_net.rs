@@ -1792,6 +1792,9 @@ impl MSNet {
         }
         // maybe write a final line of output if reporting is periodic
         self.write_summary_output(true);
+        // C++ ~MSNet deletes the end-of-timestep events, running ~BTreceiverUpdate
+        // (final pass + bt-output for vehicles still running) before OutputDevice::closeAll.
+        crate::microsim::devices::ms_device_b_treceiver::finish();
     }
 
     /// C++: `SimulationState MSNet::simulationState(SUMOTime) const` [const]
