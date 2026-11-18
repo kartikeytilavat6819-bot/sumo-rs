@@ -1,0 +1,29 @@
+<additional>
+    <!-- No switching procedure: wautJunction omits 'procedure', so switches happen at the exact wautSwitch times.
+         Four programs (three extra beside the net's program 0) are cycled. -->
+    <tlLogic id="nC" type="static" programID="progA" offset="0">
+        <phase duration="18" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="18" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <tlLogic id="nC" type="static" programID="progB" offset="7">
+        <phase duration="24" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="24" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <tlLogic id="nC" type="static" programID="progC" offset="14">
+        <phase duration="30" state="GGggrrrrGGggrrrr"/>
+        <phase duration="4" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="30" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="4" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="waut0" refTime="0" startProg="progA">
+        <wautSwitch time="80" to="progB"/>
+        <wautSwitch time="160" to="progC"/>
+        <wautSwitch time="240" to="0"/>
+        <wautSwitch time="320" to="progA"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="waut0"/>
+</additional>
