@@ -1,0 +1,1 @@
+--write-license --default.departspeed 0 --default.departlane first --lateral-resolution 0.5 --collision.action warn --default.speeddev 0.1 -t -e 400 --max-depart-delay 3

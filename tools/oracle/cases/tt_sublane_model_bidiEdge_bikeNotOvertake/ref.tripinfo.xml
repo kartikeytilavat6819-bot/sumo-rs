@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:52:24.614758-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_bidiEdge_bikeNotOvertake/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_bidiEdge_bikeNotOvertake/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_bikeNotOvertake/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_bikeNotOvertake/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_bidiEdge_bikeNotOvertake/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="0.3"/>
+        <collision.action value="warn"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="bike11" depart="0.00" departLane="a_0" departPos="10.54" departPosLat="-0.67" departSpeed="5.16" departDelay="0.00" arrival="20.00" arrivalLane="b_0" arrivalPos="72.37" arrivalPosLat="-0.67" arrivalSpeed="6.44" duration="20.00" routeLength="113.95" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.33" rerouteNo="0" devices="tripinfo_bike11 fcd_bike11" vType="bike_bicycle" speedFactor="1.16" vaporized=""/>
+    <personinfo id="ped13" depart="0.00" type="ped_pedestrian" speedFactor="1.04" duration="40.40" waitingTime="0.00" timeLoss="3.90" traveltime="40.40">
+        <walk depart="0.00" departPos="35.68" arrival="40.40" arrivalPos="36.19" duration="40.40" routeLength="52.63" timeLoss="3.90" maxSpeed="1.44" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>
