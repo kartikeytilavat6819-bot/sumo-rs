@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <!-- only eastbound edges are declared; the all-bidi topology option adds the westbound bidi edges -->
+    <edge id="w_r1" from="w" to="r1" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r1_r2" from="r1" to="r2" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="r2_e" from="r2" to="e" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+</edges>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:19:22.636201-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_deadlock_teleport/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_deadlock_teleport/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_deadlock_teleport/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_deadlock_teleport/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_deadlock_teleport/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="120"/>
+        <time-to-teleport.railsignal-deadlock value="30"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="clockwise" depart="0.00" departLane="A_B_0" departPos="50.10" departSpeed="30.00" departDelay="0.00" arrival="159.00" arrivalLane="D_A_0" arrivalPos="496.80" arrivalSpeed="30.00" duration="159.00" routeLength="1944.84" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="93.44" rerouteNo="0" devices="tripinfo_clockwise fcd_clockwise" vType="train" speedFactor="1.00" vaporized=""/>
+</tripinfos>

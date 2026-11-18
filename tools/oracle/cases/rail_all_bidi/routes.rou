@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="train" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="east" edges="w_r1 r1_r2 r2_e"/>
+    <route id="west" edges="-r2_e -r1_r2 -w_r1"/>
+    <vehicle id="e1" type="train" route="east" depart="0"/>
+    <vehicle id="w1" type="train" route="west" depart="4"/>
+</routes>

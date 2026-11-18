@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:41:09.145053-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/rail_double_track/rail_double_track.nod.xml"/>
+        <edge-files value="tools/oracle/cases/rail_double_track/rail_double_track.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/rail_double_track/ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,25.00" convBoundary="0.00,0.00,1300.00,50.00" origBoundary="0.00,-25.00,1300.00,25.00" projParameter="!"/>
+
+    <edge id=":n1_0" function="internal">
+        <lane id=":n1_0_0" index="0" allow="rail" speed="30.00" length="0.10" shape="300.00,50.00 300.00,50.00"/>
+    </edge>
+    <edge id=":n2_0" function="internal">
+        <lane id=":n2_0_0" index="0" allow="rail" speed="30.00" length="0.10" shape="1000.00,50.00 1000.00,50.00"/>
+    </edge>
+    <edge id=":s1_0" function="internal">
+        <lane id=":s1_0_0" index="0" allow="rail" speed="30.00" length="0.10" shape="300.00,0.00 300.00,0.00"/>
+    </edge>
+    <edge id=":s2_0" function="internal">
+        <lane id=":s2_0_0" index="0" allow="rail" speed="30.00" length="0.10" shape="1000.00,0.00 1000.00,0.00"/>
+    </edge>
+
+    <edge id="eS_s2" from="eS" to="s2" priority="-1" spreadType="center">
+        <lane id="eS_s2_0" index="0" allow="rail" speed="30.00" length="300.00" shape="1300.00,0.00 1000.00,0.00"/>
+    </edge>
+    <edge id="n1_n2" from="n1" to="n2" priority="-1" spreadType="center">
+        <lane id="n1_n2_0" index="0" allow="rail" speed="30.00" length="700.00" shape="300.00,50.00 1000.00,50.00"/>
+    </edge>
+    <edge id="n2_eN" from="n2" to="eN" priority="-1" spreadType="center">
+        <lane id="n2_eN_0" index="0" allow="rail" speed="30.00" length="300.00" shape="1000.00,50.00 1300.00,50.00"/>
+    </edge>
+    <edge id="s1_wS" from="s1" to="wS" priority="-1" spreadType="center">
+        <lane id="s1_wS_0" index="0" allow="rail" speed="30.00" length="300.00" shape="300.00,0.00 0.00,0.00"/>
+    </edge>
+    <edge id="s2_s1" from="s2" to="s1" priority="-1" spreadType="center">
+        <lane id="s2_s1_0" index="0" allow="rail" speed="30.00" length="700.00" shape="1000.00,0.00 300.00,0.00"/>
+    </edge>
+    <edge id="wN_n1" from="wN" to="n1" priority="-1" spreadType="center">
+        <lane id="wN_n1_0" index="0" allow="rail" speed="30.00" length="300.00" shape="0.00,50.00 300.00,50.00"/>
+    </edge>
+
+    <junction id="eN" type="dead_end" x="1300.00" y="50.00" incLanes="n2_eN_0" intLanes="" shape="1300.00,48.40 1300.00,51.60"/>
+    <junction id="eS" type="dead_end" x="1300.00" y="0.00" incLanes="" intLanes="" shape="1300.00,-1.60 1300.00,1.60"/>
+    <junction id="n1" type="rail_signal" x="300.00" y="50.00" incLanes="wN_n1_0" intLanes=":n1_0_0" shape="300.00,51.60 300.00,48.40 300.00,51.60">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="n2" type="rail_signal" x="1000.00" y="50.00" incLanes="n1_n2_0" intLanes=":n2_0_0" shape="1000.00,51.60 1000.00,48.40 1000.00,51.60">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="s1" type="rail_signal" x="300.00" y="0.00" incLanes="s2_s1_0" intLanes=":s1_0_0" shape="300.00,1.60 300.00,-1.60 300.00,1.60">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="s2" type="rail_signal" x="1000.00" y="0.00" incLanes="eS_s2_0" intLanes=":s2_0_0" shape="1000.00,1.60 1000.00,-1.60 1000.00,1.60">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="wN" type="dead_end" x="0.00" y="50.00" incLanes="" intLanes="" shape="0.00,51.60 0.00,48.40"/>
+    <junction id="wS" type="dead_end" x="0.00" y="0.00" incLanes="s1_wS_0" intLanes="" shape="0.00,1.60 0.00,-1.60"/>
+
+    <connection from="eS_s2" to="s2_s1" fromLane="0" toLane="0" via=":s2_0_0" tl="s2" linkIndex="0" dir="s" state="O"/>
+    <connection from="n1_n2" to="n2_eN" fromLane="0" toLane="0" via=":n2_0_0" tl="n2" linkIndex="0" dir="s" state="O"/>
+    <connection from="s2_s1" to="s1_wS" fromLane="0" toLane="0" via=":s1_0_0" tl="s1" linkIndex="0" dir="s" state="O"/>
+    <connection from="wN_n1" to="n1_n2" fromLane="0" toLane="0" via=":n1_0_0" tl="n1" linkIndex="0" dir="s" state="O"/>
+
+    <connection from=":n1_0" to="n1_n2" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":n2_0" to="n2_eN" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":s1_0" to="s1_wS" fromLane="0" toLane="0" dir="s" state="M"/>
+    <connection from=":s2_0" to="s2_s1" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_max_block/rail_max_block.nod.xml --edge-files tools/oracle/cases/rail_max_block/rail_max_block.edg.xml

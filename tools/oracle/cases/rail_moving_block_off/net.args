@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_moving_block_off/rail_moving_block_off.nod.xml --edge-files tools/oracle/cases/rail_moving_block_off/rail_moving_block_off.edg.xml

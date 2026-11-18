@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nodes>
+    <node id="wN" x="0.00" y="25.00" type="dead_end"/>
+    <node id="n1" x="300.00" y="25.00" type="rail_signal"/>
+    <node id="n2" x="1000.00" y="25.00" type="rail_signal"/>
+    <node id="eN" x="1300.00" y="25.00" type="dead_end"/>
+    <node id="wS" x="0.00" y="-25.00" type="dead_end"/>
+    <node id="s1" x="300.00" y="-25.00" type="rail_signal"/>
+    <node id="s2" x="1000.00" y="-25.00" type="rail_signal"/>
+    <node id="eS" x="1300.00" y="-25.00" type="dead_end"/>
+</nodes>
