@@ -1,0 +1,1 @@
+official sumo exit 1: Warning: Ignoring child element 'route' for vehicle '2' because attribute 'route' is set. Warning: Missing yellow phase in tlLogic '1/1', program 't1'

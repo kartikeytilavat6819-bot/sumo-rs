@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T16:42:29.774866-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vehroutes_transportable_walk_departPos_random/ref_simple.net.xml"/>
+        <route-files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vehroutes_transportable_walk_departPos_random/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vehroutes_transportable_walk_departPos_random/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vehroutes_transportable_walk_departPos_random/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc83/tools/oracle/cases/tt_output_vehroutes_transportable_walk_departPos_random/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <xml-validation value="never"/>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p1.0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="244.00" waitingTime="0.00" timeLoss="24.76" traveltime="244.00">
+        <walk depart="0.00" departPos="445.50" arrival="244.00" arrivalPos="250.00" duration="244.00" routeLength="304.50" timeLoss="24.76" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.1" depart="4.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="314.00" waitingTime="0.00" timeLoss="30.50" traveltime="314.00">
+        <walk depart="4.00" departPos="356.25" arrival="318.00" arrivalPos="250.00" duration="314.00" routeLength="393.75" timeLoss="30.50" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.6" depart="22.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="303.00" waitingTime="0.00" timeLoss="30.57" traveltime="303.00">
+        <walk depart="22.00" departPos="371.63" arrival="325.00" arrivalPos="250.00" duration="303.00" routeLength="378.37" timeLoss="30.57" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.9" depart="33.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="303.00" waitingTime="0.00" timeLoss="31.24" traveltime="303.00">
+        <walk depart="33.00" departPos="372.56" arrival="336.00" arrivalPos="250.00" duration="303.00" routeLength="377.44" timeLoss="31.24" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.4" depart="15.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="364.00" waitingTime="0.00" timeLoss="36.38" traveltime="364.00">
+        <walk depart="15.00" departPos="294.98" arrival="379.00" arrivalPos="250.00" duration="364.00" routeLength="455.02" timeLoss="36.38" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.8" depart="29.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="383.00" waitingTime="0.00" timeLoss="39.30" traveltime="383.00">
+        <walk depart="29.00" departPos="272.64" arrival="412.00" arrivalPos="250.00" duration="383.00" routeLength="477.36" timeLoss="39.30" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.3" depart="11.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="402.00" waitingTime="0.00" timeLoss="38.92" traveltime="402.00">
+        <walk depart="11.00" departPos="245.72" arrival="413.00" arrivalPos="250.00" duration="402.00" routeLength="504.28" timeLoss="38.92" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.7" depart="26.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="500.00" waitingTime="0.00" timeLoss="49.10" traveltime="500.00">
+        <walk depart="26.00" departPos="123.75" arrival="526.00" arrivalPos="250.00" duration="500.00" routeLength="626.25" timeLoss="49.10" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.2" depart="8.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="583.00" waitingTime="0.00" timeLoss="59.37" traveltime="583.00">
+        <walk depart="8.00" departPos="22.74" arrival="591.00" arrivalPos="250.00" duration="583.00" routeLength="727.26" timeLoss="59.37" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1.5" depart="18.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="582.00" waitingTime="0.00" timeLoss="57.70" traveltime="582.00">
+        <walk depart="18.00" departPos="21.81" arrival="600.00" arrivalPos="250.00" duration="582.00" routeLength="728.19" timeLoss="57.70" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>
