@@ -1,0 +1,13 @@
+<routes>
+    <vType id="bike" vClass="bicycle" length="1.80" width="0.60" maxSpeed="6.00" accel="1.20" decel="2.50"/>
+    <!-- all bikes start on the direct path AB BD DE; the rerouter on AB closes BD at t=10 so they detour via BC CD -->
+    <vehicle id="b0" type="bike" depart="0.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b1" type="bike" depart="2.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b2" type="bike" depart="4.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b3" type="bike" depart="6.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b4" type="bike" depart="8.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b5" type="bike" depart="10.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b6" type="bike" depart="12.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b7" type="bike" depart="14.00"><route edges="AB BD DE"/></vehicle>
+    <vehicle id="b8" type="bike" depart="16.00"><route edges="AB BD DE"/></vehicle>
+</routes>

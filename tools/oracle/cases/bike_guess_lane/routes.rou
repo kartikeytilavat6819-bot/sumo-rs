@@ -1,0 +1,28 @@
+<routes>
+    <vType id="bike" vClass="bicycle" length="1.80" width="0.60" maxSpeed="5.50" accel="1.20" decel="2.00"/>
+    <vType id="car" vClass="passenger" length="4.50" maxSpeed="13.89"/>
+    <vehicle id="bike0" type="bike" depart="0.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+    <vehicle id="car0" type="car" depart="1.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+    <vehicle id="bike1" type="bike" depart="3.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+    <vehicle id="car1" type="car" depart="4.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+    <vehicle id="bikeR0" type="bike" depart="6.00" departSpeed="max">
+        <route edges="-10"/>
+    </vehicle>
+    <vehicle id="carR0" type="car" depart="7.00" departSpeed="max">
+        <route edges="-10"/>
+    </vehicle>
+    <vehicle id="bike2" type="bike" depart="10.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+    <vehicle id="car2" type="car" depart="11.00" departSpeed="max">
+        <route edges="10"/>
+    </vehicle>
+</routes>

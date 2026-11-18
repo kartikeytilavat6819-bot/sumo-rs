@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:12:21.730737-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/bike_vtype_variants/bike_vtype_variants.nod.xml"/>
+        <edge-files value="tools/oracle/cases/bike_vtype_variants/bike_vtype_variants.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/bike_vtype_variants/ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,400.00,0.00" origBoundary="0.00,0.00,400.00,0.00" projParameter="!"/>
+
+    <edge id="E0" from="a0" to="a1" priority="-1">
+        <lane id="E0_0" index="0" speed="20.00" length="400.00" shape="0.00,-1.60 400.00,-1.60"/>
+    </edge>
+
+    <junction id="a0" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-3.20"/>
+    <junction id="a1" type="dead_end" x="400.00" y="0.00" incLanes="E0_0" intLanes="" shape="400.00,-3.20 400.00,0.00"/>
+
+</net>

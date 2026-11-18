@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_crossing/bike_crossing.nod.xml --edge-files tools/oracle/cases/bike_crossing/bike_crossing.edg.xml --connection-files tools/oracle/cases/bike_crossing/bike_crossing.con.xml

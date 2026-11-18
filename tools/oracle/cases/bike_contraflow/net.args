@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_contraflow/bike_contraflow.nod.xml --edge-files tools/oracle/cases/bike_contraflow/bike_contraflow.edg.xml

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/bike_bike_speed/bike_bike_speed.nod.xml --edge-files tools/oracle/cases/bike_bike_speed/bike_bike_speed.edg.xml --type-files tools/oracle/cases/bike_bike_speed/bike_bike_speed.typ.xml

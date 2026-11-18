@@ -1,0 +1,4 @@
+<edges>
+    <edge id="E0" from="a0" to="a1" type="carroad"/>
+    <edge id="E1" from="b0" to="b1" type="bikeway"/>
+</edges>
