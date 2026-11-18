@@ -3,7 +3,7 @@
 use crate::prelude::*;
 
 /// C++ `throw libsumo::TraCIException(what)`
-// shortcut: panics with the message (C++ throws libsumo::TraCIException); TraCIException::new is still todo!, upgrade when it is ported and TraCIServer::process_get catches exceptions instead of unwinding
+// C++ throws libsumo::TraCIException; the panic carries the what() text and TraCIServer::dispatch_command turns it into an error status
 fn throw_traci_exception(what: &str) -> ! {
     panic!("{}", what)
 }
