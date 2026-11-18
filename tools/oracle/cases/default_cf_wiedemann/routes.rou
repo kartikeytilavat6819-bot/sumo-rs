@@ -1,0 +1,12 @@
+<routes>
+    <route id="r0" edges="E0"/>
+    <vType id="car" maxSpeed="20.00" decel="4.50" accel="2.60" length="5.00"/>
+    <vType id="truck" maxSpeed="16.00" decel="3.00" accel="1.20" length="12.00"/>
+    <vehicle id="l0" type="car" route="r0" depart="0.00" departSpeed="20.00">
+        <stop lane="E0_0" endPos="350.00" duration="30.00"/>
+    </vehicle>
+    <vehicle id="f0" type="car" route="r0" depart="4.00" departSpeed="20.00"/>
+    <vehicle id="f1" type="truck" route="r0" depart="8.00" departSpeed="16.00"/>
+    <vehicle id="f2" type="car" route="r0" depart="12.00" departSpeed="20.00"/>
+    <vehicle id="f3" type="car" route="r0" depart="18.00" departSpeed="20.00"/>
+</routes>

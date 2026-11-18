@@ -1,0 +1,15 @@
+<routes>
+    <route id="r0" edges="E0"/>
+    <vType id="normal" maxSpeed="20.00" decel="4.50" accel="2.60"/>
+    <vType id="hard" maxSpeed="20.00" decel="6.00" apparentDecel="6.00"/>
+    <vType id="wimpy" maxSpeed="20.00" decel="1.00" apparentDecel="1.50"/>
+    <vehicle id="l0" type="normal" route="r0" depart="0.00" departSpeed="20.00">
+        <stop lane="E0_0" endPos="300.00" duration="40.00"/>
+    </vehicle>
+    <vehicle id="f0" type="wimpy" route="r0" depart="3.00" departSpeed="20.00"/>
+    <vehicle id="l1" type="hard" route="r0" depart="12.00" departSpeed="20.00">
+        <stop lane="E0_0" endPos="500.00" duration="15.00"/>
+    </vehicle>
+    <vehicle id="f1" type="wimpy" route="r0" depart="14.00" departSpeed="20.00"/>
+    <vehicle id="f2" type="normal" route="r0" depart="20.00" departSpeed="20.00"/>
+</routes>

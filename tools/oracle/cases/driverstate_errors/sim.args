@@ -1,0 +1,1 @@
+--end 120 --device.driverstate.probability 1 --device.driverstate.errorTimeScaleCoefficient 0.5 --device.driverstate.errorNoiseIntensityCoefficient 0.3 --device.driverstate.headwayErrorCoefficient 0.4 --device.driverstate.speedDifferenceErrorCoefficient 0.2 --device.driverstate.freeSpeedErrorCoefficient 0.2
