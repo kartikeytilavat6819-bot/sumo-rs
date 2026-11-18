@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_node_overwrite_type_prio_by_prio/input_edges.edg.xml -n input_nodes.nod.xml,input_nodes2.nod.xml -v

@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_import_XML_public_transport_filter_ptline2/input_net.net.xml --ptstop-files tools/oracle/cases/itt_nc_netconvert_import_XML_public_transport_filter_ptline2/input_ptstops.xml --ptline-files tools/oracle/cases/itt_nc_netconvert_import_XML_public_transport_filter_ptline2/input_ptlines.xml --ignore-errors

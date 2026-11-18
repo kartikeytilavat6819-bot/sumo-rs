@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_set_lane_shape_removeGeometry/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_set_lane_shape_removeGeometry/input_plain.edg.xml -R --geometry.remove.width-tolerance 1

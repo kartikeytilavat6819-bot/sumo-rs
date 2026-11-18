@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_reset_internalShape/input_net.net.xml --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_reset_internalShape/input_plain.nod.xml --offset.disable-normalization --connection-files tools/oracle/cases/itt_nc_netconvert_import_XML_shapes_reset_internalShape/input_plain.con.xml
