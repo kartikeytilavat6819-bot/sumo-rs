@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:21:17.170248-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_bugs_ticket15093\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_bugs_ticket15093\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_meso_bugs_ticket15093/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_bugs_ticket15093\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_bugs_ticket15093\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_bugs_ticket15093\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <mesoscopic>
+        <meso-lane-queue value="true"/>
+    </mesoscopic>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="3600.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="2219.26" traveltime="10.87" overlapTraveltime="11.15" density="3.14" overlapDensity="3.23" laneDensity="1.05" occupancy="0.52" waitingTime="0.00" timeLoss="94.36" speed="17.58" speedRelative="0.79" departed="0" arrived="0" entered="199" left="199" laneChangedFrom="21" laneChangedTo="21" flow="199.00" distance="38028.90"/>
+    </interval>
+    <interval begin="3600.00" end="7200.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="1299.80" traveltime="10.81" overlapTraveltime="11.10" density="1.84" overlapDensity="1.89" laneDensity="0.61" occupancy="0.31" waitingTime="0.00" timeLoss="55.59" speed="17.67" speedRelative="0.80" departed="0" arrived="0" entered="118" left="117" laneChangedFrom="5" laneChangedTo="5" flow="117.14" distance="22384.74"/>
+    </interval>
+    <interval begin="7200.00" end="10800.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="1147.03" traveltime="10.66" overlapTraveltime="10.94" density="1.62" overlapDensity="1.67" laneDensity="0.54" occupancy="0.27" waitingTime="0.00" timeLoss="42.92" speed="17.93" speedRelative="0.81" departed="0" arrived="0" entered="104" left="105" laneChangedFrom="3" laneChangedTo="3" flow="104.86" distance="20039.46"/>
+    </interval>
+    <interval begin="10800.00" end="14400.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="1024.52" traveltime="10.65" overlapTraveltime="10.92" density="1.45" overlapDensity="1.49" laneDensity="0.48" occupancy="0.24" waitingTime="0.00" timeLoss="37.59" speed="17.95" speedRelative="0.81" departed="0" arrived="0" entered="94" left="93" laneChangedFrom="6" laneChangedTo="6" flow="93.81" distance="17927.36"/>
+    </interval>
+    <interval begin="14400.00" end="18000.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="1391.57" traveltime="10.74" overlapTraveltime="11.03" density="1.97" overlapDensity="2.02" laneDensity="0.66" occupancy="0.33" waitingTime="0.00" timeLoss="51.11" speed="17.79" speedRelative="0.80" departed="0" arrived="0" entered="126" left="127" laneChangedFrom="5" laneChangedTo="5" flow="126.19" distance="24114.64"/>
+    </interval>
+    <interval begin="18000.00" end="21600.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="2823.26" traveltime="10.78" overlapTraveltime="11.06" density="4.00" overlapDensity="4.10" laneDensity="1.33" occupancy="0.67" waitingTime="0.00" timeLoss="128.62" speed="17.74" speedRelative="0.80" departed="0" arrived="0" entered="256" left="255" laneChangedFrom="31" laneChangedTo="31" flow="255.39" distance="48805.54"/>
+    </interval>
+    <interval begin="21600.00" end="25200.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="5664.98" traveltime="10.78" overlapTraveltime="11.06" density="8.03" overlapDensity="8.23" laneDensity="2.68" occupancy="1.34" waitingTime="0.00" timeLoss="283.33" speed="17.73" speedRelative="0.80" departed="0" arrived="0" entered="513" left="512" laneChangedFrom="126" laneChangedTo="126" flow="512.11" distance="97864.04"/>
+    </interval>
+    <interval begin="25200.00" end="25850.00" id="edge_data">
+        <edge id="767378478" sampledSeconds="1366.12" traveltime="10.53" overlapTraveltime="10.80" density="10.72" overlapDensity="11.00" laneDensity="3.57" occupancy="1.79" waitingTime="0.00" timeLoss="65.00" speed="18.16" speedRelative="0.82" departed="0" arrived="0" entered="125" left="127" laneChangedFrom="33" laneChangedTo="33" flow="700.61" distance="24173.81"/>
+    </interval>
+</meandata>

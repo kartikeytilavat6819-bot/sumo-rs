@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --step-length=0.1 --default.action-step-length=1.0 --step-method.ballistic -a tools/oracle/cases/tt_action_step_length_CF_dynamics_apparentDecel_emergencyDecel_apparentDecel_lower/input_additional.add.xml

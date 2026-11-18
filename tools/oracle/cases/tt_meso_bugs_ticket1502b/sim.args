@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --weight-files tools/oracle/cases/tt_meso_bugs_ticket1502b/input_additional.add.xml --meso-junction-control --device.rerouting.explicit rerouted,rerouted2 --device.rerouting.period 20 --device.rerouting.init-with-loaded-weights

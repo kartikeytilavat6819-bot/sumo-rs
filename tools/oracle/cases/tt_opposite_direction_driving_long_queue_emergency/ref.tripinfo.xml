@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:30:01.155516-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_long_queue_emergency\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_long_queue_emergency\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_long_queue_emergency\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_long_queue_emergency\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_long_queue_emergency\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="overtaking" depart="1.00" departLane="VODUGES_beg_0" departPos="0.00" departSpeed="0.00" departDelay="0.00" arrival="148.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="147.00" routeLength="2000.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.25" rerouteNo="0" devices="tripinfo_overtaking fcd_overtaking" vType="emergency" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="stopped" depart="0.00" departLane="VODUGES_beg_0" departPos="1000.00" departSpeed="0.00" departDelay="0.00" arrival="175.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="175.00" routeLength="1000.00" waitingTime="0.00" waitingCount="0" stopTime="100.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_stopped fcd_stopped" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.0" depart="0.00" departLane="VODUGES_beg_0" departPos="992.40" departSpeed="0.00" departDelay="0.00" arrival="180.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="180.00" routeLength="1007.60" waitingTime="101.00" waitingCount="1" stopTime="1.00" timeLoss="102.47" rerouteNo="0" devices="tripinfo_blockers.0 fcd_blockers.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.1" depart="0.00" departLane="VODUGES_beg_0" departPos="984.80" departSpeed="0.00" departDelay="0.00" arrival="185.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="185.00" routeLength="1015.20" waitingTime="103.00" waitingCount="2" stopTime="1.00" timeLoss="106.92" rerouteNo="0" devices="tripinfo_blockers.1 fcd_blockers.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.2" depart="0.00" departLane="VODUGES_beg_0" departPos="977.20" departSpeed="0.00" departDelay="0.00" arrival="190.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="190.00" routeLength="1022.80" waitingTime="105.00" waitingCount="3" stopTime="1.00" timeLoss="111.37" rerouteNo="0" devices="tripinfo_blockers.2 fcd_blockers.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.3" depart="0.00" departLane="VODUGES_beg_0" departPos="969.60" departSpeed="0.00" departDelay="0.00" arrival="195.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="195.00" routeLength="1030.40" waitingTime="107.00" waitingCount="4" stopTime="1.00" timeLoss="115.83" rerouteNo="0" devices="tripinfo_blockers.3 fcd_blockers.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.4" depart="0.00" departLane="VODUGES_beg_0" departPos="962.00" departSpeed="0.00" departDelay="0.00" arrival="200.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="200.00" routeLength="1038.00" waitingTime="109.00" waitingCount="5" stopTime="1.00" timeLoss="120.28" rerouteNo="0" devices="tripinfo_blockers.4 fcd_blockers.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.5" depart="0.00" departLane="VODUGES_beg_0" departPos="954.40" departSpeed="0.00" departDelay="0.00" arrival="205.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="205.00" routeLength="1045.60" waitingTime="111.00" waitingCount="6" stopTime="1.00" timeLoss="124.73" rerouteNo="0" devices="tripinfo_blockers.5 fcd_blockers.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.6" depart="0.00" departLane="VODUGES_beg_0" departPos="946.80" departSpeed="0.00" departDelay="0.00" arrival="210.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="210.00" routeLength="1053.20" waitingTime="113.00" waitingCount="7" stopTime="1.00" timeLoss="129.18" rerouteNo="0" devices="tripinfo_blockers.6 fcd_blockers.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.7" depart="0.00" departLane="VODUGES_beg_0" departPos="939.20" departSpeed="0.00" departDelay="0.00" arrival="215.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="215.00" routeLength="1060.80" waitingTime="115.00" waitingCount="8" stopTime="1.00" timeLoss="133.64" rerouteNo="0" devices="tripinfo_blockers.7 fcd_blockers.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.8" depart="0.00" departLane="VODUGES_beg_0" departPos="931.60" departSpeed="0.00" departDelay="0.00" arrival="220.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="220.00" routeLength="1068.40" waitingTime="117.00" waitingCount="9" stopTime="1.00" timeLoss="138.09" rerouteNo="0" devices="tripinfo_blockers.8 fcd_blockers.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.9" depart="0.00" departLane="VODUGES_beg_0" departPos="924.00" departSpeed="0.00" departDelay="0.00" arrival="225.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="225.00" routeLength="1076.00" waitingTime="119.00" waitingCount="10" stopTime="1.00" timeLoss="142.54" rerouteNo="0" devices="tripinfo_blockers.9 fcd_blockers.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.10" depart="0.00" departLane="VODUGES_beg_0" departPos="916.40" departSpeed="0.00" departDelay="0.00" arrival="230.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="230.00" routeLength="1083.60" waitingTime="121.00" waitingCount="11" stopTime="1.00" timeLoss="147.00" rerouteNo="0" devices="tripinfo_blockers.10 fcd_blockers.10" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.11" depart="0.00" departLane="VODUGES_beg_0" departPos="908.80" departSpeed="0.00" departDelay="0.00" arrival="235.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="235.00" routeLength="1091.20" waitingTime="123.00" waitingCount="12" stopTime="1.00" timeLoss="151.45" rerouteNo="0" devices="tripinfo_blockers.11 fcd_blockers.11" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.12" depart="0.00" departLane="VODUGES_beg_0" departPos="901.20" departSpeed="0.00" departDelay="0.00" arrival="240.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="240.00" routeLength="1098.80" waitingTime="125.00" waitingCount="13" stopTime="1.00" timeLoss="155.90" rerouteNo="0" devices="tripinfo_blockers.12 fcd_blockers.12" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.13" depart="0.00" departLane="VODUGES_beg_0" departPos="893.60" departSpeed="0.00" departDelay="0.00" arrival="245.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="245.00" routeLength="1106.40" waitingTime="127.00" waitingCount="14" stopTime="1.00" timeLoss="160.35" rerouteNo="0" devices="tripinfo_blockers.13 fcd_blockers.13" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.14" depart="0.00" departLane="VODUGES_beg_0" departPos="886.00" departSpeed="0.00" departDelay="0.00" arrival="250.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="250.00" routeLength="1114.00" waitingTime="129.00" waitingCount="15" stopTime="1.00" timeLoss="164.81" rerouteNo="0" devices="tripinfo_blockers.14 fcd_blockers.14" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.15" depart="0.00" departLane="VODUGES_beg_0" departPos="878.40" departSpeed="0.00" departDelay="0.00" arrival="255.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="255.00" routeLength="1121.60" waitingTime="131.00" waitingCount="16" stopTime="1.00" timeLoss="169.26" rerouteNo="0" devices="tripinfo_blockers.15 fcd_blockers.15" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.16" depart="0.00" departLane="VODUGES_beg_0" departPos="870.80" departSpeed="0.00" departDelay="0.00" arrival="260.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="260.00" routeLength="1129.20" waitingTime="133.00" waitingCount="17" stopTime="1.00" timeLoss="173.71" rerouteNo="0" devices="tripinfo_blockers.16 fcd_blockers.16" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.17" depart="0.00" departLane="VODUGES_beg_0" departPos="863.20" departSpeed="0.00" departDelay="0.00" arrival="265.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="265.00" routeLength="1136.80" waitingTime="135.00" waitingCount="18" stopTime="1.00" timeLoss="178.17" rerouteNo="0" devices="tripinfo_blockers.17 fcd_blockers.17" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.18" depart="0.00" departLane="VODUGES_beg_0" departPos="855.60" departSpeed="0.00" departDelay="0.00" arrival="270.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="270.00" routeLength="1144.40" waitingTime="137.00" waitingCount="19" stopTime="1.00" timeLoss="182.62" rerouteNo="0" devices="tripinfo_blockers.18 fcd_blockers.18" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="blockers.19" depart="0.00" departLane="VODUGES_beg_0" departPos="848.00" departSpeed="0.00" departDelay="0.00" arrival="275.00" arrivalLane="VODUGES_beg_0" arrivalPos="2000.00" arrivalSpeed="13.89" duration="275.00" routeLength="1152.00" waitingTime="139.00" waitingCount="20" stopTime="1.00" timeLoss="187.07" rerouteNo="0" devices="tripinfo_blockers.19 fcd_blockers.19" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

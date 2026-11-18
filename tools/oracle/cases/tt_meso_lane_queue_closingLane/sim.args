@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --seed 42 --meso-lane-queue -a tools/oracle/cases/tt_meso_lane_queue_closingLane/input_additional.add.xml

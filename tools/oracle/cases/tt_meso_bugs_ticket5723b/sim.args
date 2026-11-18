@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --step-length 2 --time-to-teleport 180 --max-depart-delay 0 --meso-junction-control --meso-recheck 2 -a tools/oracle/cases/tt_meso_bugs_ticket5723b/input_additional.add.xml

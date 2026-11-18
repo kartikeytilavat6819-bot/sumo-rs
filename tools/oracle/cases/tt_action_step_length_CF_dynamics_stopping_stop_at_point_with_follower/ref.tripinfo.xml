@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:29:03.458745-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_stopping_stop_at_point_with_follower\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_stopping_stop_at_point_with_follower\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_stopping_stop_at_point_with_follower\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_stopping_stop_at_point_with_follower\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_stopping_stop_at_point_with_follower\ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <step-method.ballistic value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.action-step-length value="1.0"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="0" depart="0.00" departLane="gneE0_0" departPos="100.00" departSpeed="0.00" departDelay="0.00" arrival="35.40" arrivalLane="gneE0_0" arrivalPos="300.00" arrivalSpeed="13.89" duration="35.40" routeLength="200.00" waitingTime="0.90" waitingCount="2" stopTime="12.00" timeLoss="5.15" rerouteNo="0" devices="tripinfo_0 fcd_0" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="1" depart="0.00" departLane="gneE0_0" departPos="80.00" departSpeed="0.00" departDelay="0.00" arrival="36.90" arrivalLane="gneE0_0" arrivalPos="300.00" arrivalSpeed="13.89" duration="36.90" routeLength="220.00" waitingTime="12.80" waitingCount="2" stopTime="0.00" timeLoss="21.00" rerouteNo="0" devices="tripinfo_1 fcd_1" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="2" depart="50.00" departLane="gneE0_0" departPos="100.00" departSpeed="0.00" departDelay="0.00" arrival="88.80" arrivalLane="gneE0_0" arrivalPos="400.00" arrivalSpeed="20.28" duration="38.80" routeLength="300.00" waitingTime="1.40" waitingCount="2" stopTime="12.00" timeLoss="8.67" rerouteNo="0" devices="tripinfo_2 fcd_2" vType="t2" speedFactor="2.00" vaporized=""/>
+    <tripinfo id="3" depart="50.00" departLane="gneE0_0" departPos="80.00" departSpeed="7.21" departDelay="0.00" arrival="90.20" arrivalLane="gneE0_0" arrivalPos="400.00" arrivalSpeed="21.32" duration="40.20" routeLength="320.00" waitingTime="13.40" waitingCount="2" stopTime="0.00" timeLoss="28.61" rerouteNo="0" devices="tripinfo_3 fcd_3" vType="t2" speedFactor="2.00" vaporized=""/>
+</tripinfos>

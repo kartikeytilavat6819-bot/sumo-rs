@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-recheck 1 --duration-log.statistics --verbose --meso-junction-control --meso-tls-penalty 1 -a tools/oracle/cases/tt_meso_junction_control_tls_coordination_average_control_tlsPenalty/input_additional.add.xml

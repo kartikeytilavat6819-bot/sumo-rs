@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -b 0 -e 1200 --no-duration-log --max-depart-delay 60 -a tools/oracle/cases/tt_meso_bugs_ticket747/input_additional.add.xml
