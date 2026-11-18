@@ -9,3 +9,5 @@ Hard rules:
 - Commit with `git add -A && git commit -m "<ID>: <what>"`. Never push, never checkout/reset/switch branches.
 
 How a round works: first MEASURE (use agent_run.sh to see the exact difference), then read the C++ and our Rust for that behaviour, fix, commit, and STOP with a short summary of what you found and changed. The lead gates your branch and sends you the result. If a row that passed before now fails, undo or fix your change first. When the targets pass or you cannot make progress, remove agent_run.sh, commit, and reply DONE with a final summary.
+
+- Never commit a reference file over 40 MB (GitHub rejects files over 100 MB): drop that output (usually ref.fcd.xml) from the case or shorten the simulation (-e).

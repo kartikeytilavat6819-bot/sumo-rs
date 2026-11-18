@@ -10,3 +10,5 @@ Hard rules:
 - Commit with `git add -A && git commit -m "<ID>: add case <name>"` after each 2-3 cases. Never push, never checkout/reset/switch branches.
 
 How a round works: add 3-5 new cases, commit, then STOP and reply with a short summary (cases added, what each tests). The lead gates your branch and sends you the result. A new case whose row FAILS in the gate is a success (it found a bug): keep it and list it (row + first difference) in your next reply. If the gate shows a case broken by YOUR mistake (missing file, bad args), fix the case. Then add the next cases. When you have added 10-12 cases, reply DONE with a final summary.
+
+- Never commit a reference file over 40 MB (GitHub rejects files over 100 MB): drop that output (usually ref.fcd.xml) from the case or shorten the simulation (-e).

@@ -10,3 +10,5 @@ Hard rules:
 - Commit with `git add -A && git commit -m "<ID>: <what you ported>"` after every few shortcuts. Never push, never checkout/reset/switch branches.
 
 How a round works: list the `shortcut:` comments in your area (`grep -rn "shortcut:" <dirs>`), pick the ones that change behaviour first, port about 10-15 of them faithfully from the C++, commit, then STOP and reply with a short summary: which shortcuts you ported (file:line), which you left and why. The lead then gates your branch and sends you the result; fix what it reports before porting more.
+
+- Never commit a reference file over 40 MB (GitHub rejects files over 100 MB): drop that output (usually ref.fcd.xml) from the case or shorten the simulation (-e).
