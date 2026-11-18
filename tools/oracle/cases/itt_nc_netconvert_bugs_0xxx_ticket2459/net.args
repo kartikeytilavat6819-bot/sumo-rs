@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket2459/input_plain.edg.xml -s tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket2459/input_net.net.xml

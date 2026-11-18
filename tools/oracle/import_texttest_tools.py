@@ -84,7 +84,11 @@ DUA_OUT_OPTS = {
 SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",
     "java", "--gui", "--xdot", "--gdal", "xdot.py", "python",
-    "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output",
+    "$SUMO_HOME", "typemap", "netconvert2.py", "--image-output", "--proj ",
+    # netconvert exits before building a net (no -o output to compare):
+    "--help", "--version", "--save-template", "--save-configuration",
+    # non-XML net output that compare_net.py cannot parse:
+    "--output.format",
 )
 
 
@@ -284,7 +288,13 @@ def rewrite(tokens: list[str], app: str, copied: dict[str, Path], case: Path,
                     continue  # run_netopts_new.sh adds its own -o
                 result.append(fmt(key, f"{out_root}/routes.rou.xml"))
                 continue
-            new = f"{out_root}/{Path(val).name}" if val else f"{out_root}/output"
+            name = Path(val).name if val else "output"
+            # OpenDRIVE output embeds a wall-clock date; run_netopts_new.sh only
+            # normalizes it for *.xodr, so keep that extension regardless of the
+            # test's historical output name (e.g. foreign.net).
+            if key == "--opendrive-output" and Path(name).suffix.lower() != ".xodr":
+                name = Path(name).stem + ".xodr"
+            new = f"{out_root}/{name}"
             result.append(fmt(key, new))
             continue
 

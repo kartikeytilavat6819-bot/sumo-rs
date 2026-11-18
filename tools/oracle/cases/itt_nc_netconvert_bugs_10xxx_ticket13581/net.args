@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_bugs_10xxx_ticket13581/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_bugs_10xxx_ticket13581/input_plain.nod.xml -x tools/oracle/cases/itt_nc_netconvert_bugs_10xxx_ticket13581/input_plain.con.xml --lefthand --junctions.join --ignore-errors.edge-type

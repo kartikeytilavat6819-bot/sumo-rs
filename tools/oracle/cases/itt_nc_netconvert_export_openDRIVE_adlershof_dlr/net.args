@@ -1,0 +1,1 @@
+--write-license --osm-files tools/oracle/cases/itt_nc_netconvert_export_openDRIVE_adlershof_dlr/osm.xml -v --proj.utm --proj.plain-geo --output.original-names

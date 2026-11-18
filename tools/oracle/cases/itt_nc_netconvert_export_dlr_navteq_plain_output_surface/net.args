@@ -1,0 +1,1 @@
+--write-license --dlr-navteq.plain -p plain -s tools/oracle/cases/itt_nc_netconvert_export_dlr_navteq_plain_output_surface/input_net.net.xml --proj.plain-geo --output.street-names

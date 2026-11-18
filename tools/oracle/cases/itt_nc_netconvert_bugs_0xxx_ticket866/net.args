@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket866/input_edges.edg.xml -n tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket866/input_nodes.nod.xml --no-internal-links --ramps.guess

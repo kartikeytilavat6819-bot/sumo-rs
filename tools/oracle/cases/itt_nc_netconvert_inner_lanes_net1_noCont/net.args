@@ -1,0 +1,1 @@
+--write-license -v --edge-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_net1_noCont/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_net1_noCont/input_nodes.nod.xml --default.connection.cont-pos 0

@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_bugs_15xxx_ticket16393/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_bugs_15xxx_ticket16393/input_plain.nod.xml --edges.join-tram-dist 1.6

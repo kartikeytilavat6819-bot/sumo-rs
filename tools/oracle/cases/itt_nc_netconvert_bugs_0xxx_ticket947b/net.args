@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket947b/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_bugs_0xxx_ticket947b/input_plain.nod.xml --ramps.guess --junctions.join

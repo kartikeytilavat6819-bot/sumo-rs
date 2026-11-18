@@ -1,0 +1,1 @@
+--write-license -s tools/oracle/cases/itt_nc_netconvert_bugs_15xxx_ticket15798/input_net.net.xml --keep-edges.by-vclass rail

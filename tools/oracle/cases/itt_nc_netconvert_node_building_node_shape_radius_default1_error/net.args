@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_node_building_node_shape_radius_default1_error/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_node_building_node_shape_radius_default1_error/input_plain.nod.xml --default.junctions.radius 1 --junctions.small-radius 2

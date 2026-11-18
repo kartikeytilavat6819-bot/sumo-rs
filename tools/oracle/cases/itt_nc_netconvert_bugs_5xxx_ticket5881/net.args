@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_bugs_5xxx_ticket5881/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_bugs_5xxx_ticket5881/input_plain.nod.xml --default.junctions.radius 0 --junctions.small-radius 0 --junctions.scurve-stretch 1

@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_limit_turn_speed/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_limit_turn_speed/input_nodes.nod.xml --junctions.limit-turn-speed 2 --junctions.limit-turn-speed.min-angle 0

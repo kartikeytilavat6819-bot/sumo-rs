@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_inner_lanes_changeWidth_split2/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_inner_lanes_changeWidth_split2/input_plain.nod.xml -x tools/oracle/cases/itt_nc_netconvert_inner_lanes_changeWidth_split2/input_plain.con.xml

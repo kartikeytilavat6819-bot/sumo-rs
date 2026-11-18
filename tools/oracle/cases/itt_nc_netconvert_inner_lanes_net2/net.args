@@ -1,0 +1,1 @@
+--write-license -v --edge-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_net2/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_net2/input_nodes.nod.xml --no-turnarounds

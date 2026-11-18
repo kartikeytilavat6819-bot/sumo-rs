@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_bicycle_lanes_traffic_light/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_inner_lanes_bicycle_lanes_traffic_light/input_plain.nod.xml --connection-files tools/oracle/cases/itt_nc_netconvert_inner_lanes_bicycle_lanes_traffic_light/input_plain.con.xml --no-turnarounds
