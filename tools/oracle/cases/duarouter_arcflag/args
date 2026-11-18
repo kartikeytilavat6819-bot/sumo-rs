@@ -1,1 +1,1 @@
---trip-files @CASE@/trips.xml --routing-algorithm arcflag --output-file @DIR@/routes.rou.xml
+--trip-files @CASE@/trips.xml --routing-algorithm arcflag --ignore-errors true --output-file @DIR@/routes.rou.xml
