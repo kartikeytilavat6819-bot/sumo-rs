@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<additionalFiles>
+  <vType id="DEFAULT_VEHTYPE" carFollowModel="ACC" accel="2.6" decel="4.5" emergencyDecel="9" sigma="0.5" tau="1" length="5" minGap="2.5" maxSpeed="13.89" gapClosingControlGainSpeed="0.5" gapClosingControlGainSpace="0.1" collisionAvoidanceGainSpeed="0.6"/>
+</additionalFiles>

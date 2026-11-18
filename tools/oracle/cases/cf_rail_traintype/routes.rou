@@ -1,0 +1,18 @@
+<routes>
+    <vType id="slowTrain" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="10" minGap="2"/>
+    <route id="east" edges="w_r1 r1_j1 j1_j2_main j2_r2 r2_e"/>
+    <route id="west" edges="e_r2 r2_j2 j2_j1_main j1_r1 r1_w"/>
+    <vehicle id="slowEast" type="slowTrain" route="east" depart="0"/>
+    <vehicle id="fe0" type="DEFAULT_RAILTYPE" route="east" depart="8"/>
+    <vehicle id="tw0" type="DEFAULT_RAILTYPE" route="west" depart="3"/>
+    <vehicle id="fe1" type="DEFAULT_RAILTYPE" route="east" depart="48"/>
+    <vehicle id="tw1" type="DEFAULT_RAILTYPE" route="west" depart="43"/>
+    <vehicle id="fe2" type="DEFAULT_RAILTYPE" route="east" depart="88"/>
+    <vehicle id="tw2" type="DEFAULT_RAILTYPE" route="west" depart="83"/>
+    <vehicle id="fe3" type="DEFAULT_RAILTYPE" route="east" depart="128"/>
+    <vehicle id="tw3" type="DEFAULT_RAILTYPE" route="west" depart="123"/>
+    <vehicle id="fe4" type="DEFAULT_RAILTYPE" route="east" depart="168"/>
+    <vehicle id="tw4" type="DEFAULT_RAILTYPE" route="west" depart="163"/>
+    <vehicle id="fe5" type="DEFAULT_RAILTYPE" route="east" depart="208"/>
+    <vehicle id="tw5" type="DEFAULT_RAILTYPE" route="west" depart="203"/>
+</routes>
