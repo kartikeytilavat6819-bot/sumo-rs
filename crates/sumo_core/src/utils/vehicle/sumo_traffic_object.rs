@@ -452,9 +452,12 @@ impl SUMOTrafficObject {
     // virtual bool ignoreTransientPermissions() const {
     //         return false;
     //     }
+    // MSBaseVehicle overrides this as `(getRoutingMode() & ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0`.
+    // Calls through a SUMOVehicle pointer land here in Rust (no virtual dispatch), so derive it from the
+    // virtual getRoutingMode() to reproduce the override used by all simulation vehicles in C++.
     #[allow(unused_variables)]
     pub fn ignore_transient_permissions(&self) -> bool {
-        false
+        (self.get_routing_mode() & utils::traci::traci_constants::ROUTING_MODE_IGNORE_TRANSIENT_PERMISSIONS) != 0
     }
 
     /// C++: `int SUMOTrafficObject::getRoutingMode() const` [const, virtual, pure virtual]

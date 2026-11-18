@@ -824,7 +824,8 @@ impl MSRailSignalConstraint_Predecessor_PassedTracker {
     #[allow(unused_variables)]
     pub fn raise_limit(&mut self, limit: i32) {
         while limit > self.myPassed.len() as i32 {
-            self.myPassed.insert(self.myLastIndex as usize + 1, String::new());
+            // C++ computes (myLastIndex + 1) as int first (-1 -> 0); casting -1 to usize first overflows in debug
+            self.myPassed.insert((self.myLastIndex + 1) as usize, String::new());
         }
     }
 
