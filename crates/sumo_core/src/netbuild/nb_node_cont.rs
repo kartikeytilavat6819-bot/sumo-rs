@@ -1982,7 +1982,7 @@ impl NBNodeCont {
             for id in ["A1A0", "A0B0", "B0A0"] {
                 let e = ec.retrieve(id, false);
                 if !e.is_null() {
-                    eprintln!("OC63 after {} to={} geom={}", id, e.m().get_to_node().m().get_id(), e.m().get_geometry().size());
+                    eprintln!("OC63 after {} to={} geom={}", id, e.m().get_to_node().m().get_id(), e.m().get_geometry().len());
                 } else { eprintln!("OC63 after {} absent", id); }
             }
         }
