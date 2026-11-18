@@ -2302,8 +2302,8 @@ impl MSNet {
         }
 
         // write SSM output
-        // determinism: C++ iterates std::set<MSDevice_SSM*> by address; the BTreeSet of Ptr keeps the same order key
-        for dev in MSDevice_SSM::get_instances().iter() {
+        // C++ iterates std::set<MSDevice_SSM*, ComparatorNumericalIdLess>; the BTreeMap is keyed by numerical id
+        for dev in MSDevice_SSM::get_instances().values() {
             dev.m().update_and_write_output();
         }
 

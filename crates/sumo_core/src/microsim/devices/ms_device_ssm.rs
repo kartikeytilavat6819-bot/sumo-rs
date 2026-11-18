@@ -581,7 +581,7 @@ impl std::ops::DerefMut for MSDevice_SSM {
 
 thread_local! {
     /// C++ static `MSDevice_SSM::myInstances` (std::set<MSDevice_SSM*, ComparatorNumericalIdLess>)
-    pub static MY_INSTANCES: std::cell::RefCell<BTreeSet<Ptr<MSDevice_SSM>>> = std::cell::RefCell::new(BTreeSet::new());
+    pub static MY_INSTANCES: std::cell::RefCell<BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_SSM>>> = std::cell::RefCell::new(BTreeMap::new());
     /// C++ static `MSDevice_SSM::myEdgeFilter` (std::set<const MSEdge*>; ordered by pointer)
     pub static MY_EDGE_FILTER: std::cell::RefCell<BTreeSet<Ptr<MSEdge>>> = std::cell::RefCell::new(BTreeSet::new());
     /// C++ static `MSDevice_SSM::myEdgeFilterInitialized`
@@ -961,8 +961,8 @@ impl MSDevice_SSM {
     /// returns all currently existing SSM devices
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
-    pub fn get_instances() -> &'static BTreeSet<Ptr<MSDevice_SSM>> {
-        // determinism: C++ orders myInstances by ComparatorNumericalIdLess (numerical id); this set orders by pointer
+    pub fn get_instances() -> &'static BTreeMap<crate::utils::vehicle::sumo_traffic_object::SUMOTrafficObject_NumericalID, Ptr<MSDevice_SSM>> {
+        // ordered by holder numerical id, as C++ ComparatorNumericalIdLess
         // SAFETY: thread-local storage lives for the thread; C++ returns a reference to the global set (same pattern as MSDevice_ToC::get_instances)
         unsafe { &*MY_INSTANCES.with(|m| m.as_ptr()) }
     }
@@ -1549,7 +1549,7 @@ impl MSDevice_SSM {
     pub fn cleanup() {
         // Close current encounters and flush conflicts to file for all existing devices
         // (snapshot of the set: the calls below do not modify myInstances)
-        let devices: Vec<Ptr<MSDevice_SSM>> = MY_INSTANCES.with(|m| m.borrow().iter().copied().collect());
+        let devices: Vec<Ptr<MSDevice_SSM>> = MY_INSTANCES.with(|m| m.borrow().values().copied().collect());
         for device in devices {
             let d = device.m();
             d.reset_encounters();
@@ -1575,8 +1575,8 @@ impl MSDevice_SSM {
     pub fn drop_(&mut self) {
         // Deleted in ~BaseVehicle()
         // unregister from static instance container
-        let me = Ptr::from_mut(self);
-        MY_INSTANCES.with(|m| m.borrow_mut().remove(&me));
+        let id = self.base.get_numerical_id();
+        MY_INSTANCES.with(|m| m.borrow_mut().remove(&id));
         self.reset_encounters();
         self.flush_conflicts(true);
         self.flush_global_measures();
@@ -2350,7 +2350,7 @@ impl MSDevice_SSM {
             MY_CREATED_OUTPUT_FILES.with(|f| f.borrow_mut().insert(outputFilename.clone()));
         }
         // register at static instance container (the Box keeps the address stable)
-        MY_INSTANCES.with(|m| m.borrow_mut().insert(Ptr::from_box(&b)));
+        MY_INSTANCES.with(|m| m.borrow_mut().insert(b.base.get_numerical_id(), Ptr::from_box(&b)));
         b
     }
 
