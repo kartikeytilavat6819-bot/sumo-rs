@@ -4,8 +4,7 @@
                  // seeing oneself? skip
                  continue;
              }
-+            fprintf(stderr, "V %.2f %s %s
-+", SIMTIME, (*i).first.c_str(), vehicle->getID().c_str());
++            fprintf(stderr, "V %.2f %s %s\n", SIMTIME, (*i).first.c_str(), vehicle->getID().c_str());
              updateVisibility(*vi, *MSDevice_BTsender::sVehicles.find(vehicle->getID())->second);
          }
  
