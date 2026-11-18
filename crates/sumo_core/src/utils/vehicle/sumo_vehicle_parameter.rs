@@ -1667,7 +1667,12 @@ impl SUMOVehicleParameter {
             } else {
                 // C++ assert(poissonRate > 0) is compiled out of release builds
                 // we need to cache this do avoid double generation of the rng in the TIME2STEPS macro
-                let r = rng.m().rand_exp(self.poissonRate);
+                // RandHelper::randExp(rate, rng) falls back to the default generator when rng is null
+                let r = if rng.is_null() {
+                    utils::common::rand_helper::with_default(|r| r.rand_exp(self.poissonRate))
+                } else {
+                    rng.m().rand_exp(self.poissonRate)
+                };
                 self.repetitionTotalOffset += time2steps(r / scale);
             }
         }
@@ -2251,7 +2256,8 @@ pub struct SUMOVehicleParameter_Stop {
     /// the time at which this stop was ended
     pub ended: SUMOTime,
     /// lanes and positions connected to this stop (only used by duarouter where Stop is used to store stopping places)
-    pub accessPos: Vec<Unmapped /* std::tuple<std::string, double, double> */>,
+    /// C++ std::vector<std::tuple<std::string lane, double pos, double length>>
+    pub accessPos: Vec<(String, f64, f64)>,
     /// at which position in the stops list
     pub index: i32,
     /// at which position within the route (only used for state saving)

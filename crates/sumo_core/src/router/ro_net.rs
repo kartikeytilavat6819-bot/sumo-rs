@@ -1828,7 +1828,12 @@ impl RONet {
             let element = *element;
             for (id, stop) in stops.iter() {
                 router.get_network().m().add_access(id, inst.get_edge_for_lane_id(&stop.lane), stop.startPos, stop.endPos, 0., element, false, taxiWait);
-                // shortcut: the parser never fills Stop::accessPos (Unmapped tuple vector), so bus stop access elements are not added, upgrade with that field
+                // add access to all public transport stops
+                if element == SUMO_TAG_BUS_STOP {
+                    for (lane, pos, length) in stop.accessPos.iter() {
+                        router.get_network().m().add_access(id, inst.get_edge_for_lane_id(lane), *pos, *pos, *length, SUMO_TAG_BUS_STOP, true, taxiWait);
+                    }
+                }
             }
         }
         // fill the public transport router with pre-parsed public transport lines
