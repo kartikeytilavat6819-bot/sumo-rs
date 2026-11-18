@@ -181,6 +181,9 @@ use crate::utils::router::ch_router::CHRouter;
 use crate::utils::router::ch_router_wrapper::CHRouterWrapper;
 use crate::utils::router::dijkstra_router::DijkstraRouter;
 use crate::utils::router::sumo_abstract_router::SUMOAbstractRouter;
+use crate::utils::router::af_router::AFRouter;
+use crate::utils::router::flipped_edge::FlippedEdge;
+use crate::utils::router::kd_tree_partition::KDTreePartition;
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 
 // C++ `&ROEdge::getEmissionEffort<PollutantsInterface::X>`: one fn item per template instantiation
@@ -266,9 +269,18 @@ pub fn compute_routes(net: &mut RONet, loader: &mut ROLoader, oc: &mut OptionsCo
             crate::router::rocch_metrics::ROCCHMetrics::init(cchGraph, op, begin, weightPeriod);
             let fallback = leak_router(AStarRouter::<ROEdge, ROVehicle, ROMapMatcher>::new(&ROEdge::get_all_edges(), ignoreErrors, Some(op), None, net.has_permissions(), restrictionParams).with_compute());
             leak_router(CCHRouter::<ROEdge, ROVehicle, crate::router::rocch_metrics::ROCCHGraph>::new(cchGraph, crate::router::rocch_metrics::ROCCHMetrics::get, Some(op), ignoreErrors, fallback, if hasWeights { Some(crate::router::rocch_metrics::ROCCHMetrics::period_end) } else { None }, None))
+        } else if routingAlgorithm == "arcflag" {
+            // constexpr auto NUMBER_OF_LEVELS = 5
+            let numberOfLevels = 5;
+            // KDTreePartition and AFBuilder store a pointer to the edges Vec, so it must outlive the router.
+            let edges: &'static Vec<Ptr<ROEdge>> = Box::leak(Box::new(ROEdge::get_all_edges()));
+            let defaultVehicle: Ptr<ROVehicle> = Ptr::from_raw(Box::into_raw(Box::new(ROVehicle::new(&SUMOVehicleParameter::new(), Ptr::null(), net.get_vehicle_type_secure(DEFAULT_VTYPE_ID), Ptr::from_mut(&mut *net), Ptr::null()))));
+            let partition: Ptr<KDTreePartition<ROEdge, RONode, ROVehicle>> = Ptr::from_raw(Box::into_raw(Box::new(KDTreePartition::new(numberOfLevels, edges, net.has_permissions(), restrictionParams))));
+            partition.m().init(defaultVehicle);
+            let reversedTtFunction: crate::utils::router::af_build::AFBuild_FlippedOperation<ROEdge, RONode, ROVehicle> = if randomFactor > 1. { FlippedEdge::get_travel_time_static_randomized } else { FlippedEdge::get_travel_time_static };
+            leak_router(AFRouter::<ROEdge, RONode, ROVehicle, ROMapMatcher>::new(edges, partition, ignoreErrors, Some(ttFunction), reversedTtFunction, weightPeriod, None, std::rc::Rc::new(()), net.has_permissions(), restrictionParams).with_compute())
         } else {
-            // shortcut: the arcflag AFRouter is not wired in duarouter yet (AFBuild/KDTreePartition over FlippedEdge are not ported), upgrade with af_build.rs
-            panic!("shortcut: routing algorithm '{}' is not wired in duarouter yet", routingAlgorithm);
+            panic!("{}", ProcessError::Process(format!("Unknown routing algorithm '{}'!", routingAlgorithm)));
         }
     } else {
         op = match measure.as_str() {

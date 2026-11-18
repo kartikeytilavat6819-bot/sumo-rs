@@ -483,7 +483,7 @@ impl<E: RouterEdge<V>, N, V: RouterVehicle, M> Node2EdgeRouter<E, N, V, M> {
     //         return false;
     //     }
     #[allow(unused_variables)]
-    pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut i32, silent: bool) -> bool {
+    pub fn compute_node2_edge(&mut self, fromNode: Ptr<N>, to: Ptr<E>, vehicle: Ptr<V>, msTime: SUMOTime, into: &mut Vec<Ptr<E>>, silent: bool) -> bool {
         // C++ calls a two-argument isProhibited(edge, vehicle) and EdgeInfo::prohibited that no base class provides:
         // the member is never instantiated in C++ (it would not compile), so it has no behaviour to port
         panic!("Node2EdgeRouter::computeNode2Edge is never instantiated in C++")

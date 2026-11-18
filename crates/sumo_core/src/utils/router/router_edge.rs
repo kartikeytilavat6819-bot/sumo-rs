@@ -164,6 +164,10 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     fn travel_time(&self, veh: Ptr<V>, time: f64) -> f64 {
         panic!("this edge type has no getTravelTime member")
     }
+    /// C++ `E::hasLoadedTravelTimes()` used by FlippedEdge (C++ would not compile for the others).
+    fn has_loaded_travel_times(&self) -> bool {
+        panic!("this edge type has no hasLoadedTravelTimes()")
+    }
     fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool;
     fn restricts(&self, veh: Ptr<V>) -> bool;
 }

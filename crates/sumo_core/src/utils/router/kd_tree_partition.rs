@@ -1526,9 +1526,13 @@ impl<E, N, V> KDTreePartition<E, N, V> {
                 self.mySortedNodes.push(node);
             }
         }
-        // C++ resize keeps existing entries; the cells overwrite them
+        // C++ uses a process-global cellCounter to number cells and stores them at
+        // myCells[myNumber]; a second partition therefore starts at a nonzero index. C++ relies
+        // on unchecked std::vector access there (UB), so pad our vec by the current counter to
+        // make the same absolute indexing safe while preserving the global numbering.
+        let start = *KDTreePartition_Cell::cell_counter();
         let numberOfCells = self.number_of_cells();
-        self.myCells.resize(numberOfCells, Ptr::null());
+        self.myCells.resize(start as usize + numberOfCells, Ptr::null());
         self.myLevelCells.resize(self.myNumberOfLevels as usize, Vec::new());
         // call the recursive cell constructor at the root (instantiates the whole k-d tree of cells)
         let sortedNodes = Ptr::from_mut(&mut self.mySortedNodes).cast::<Vec<Ptr<()>>>();

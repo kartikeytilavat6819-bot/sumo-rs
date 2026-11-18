@@ -134,3 +134,24 @@ impl<E, N, V> FlippedNode<E, N, V> {
 
 }
 
+// A flipped node is a routing node over the backward graph (see the matching FlippedEdge impl).
+impl<E, N, V> RouterNode for FlippedNode<E, N, V>
+where
+    E: RouterEdge<V, Node = N>,
+    N: RouterNode<Edge = E>,
+{
+    type Edge = FlippedEdge<E, N, V>;
+    fn id(&self) -> &str {
+        self.get_id()
+    }
+    fn position(&self) -> &Position {
+        self.get_position()
+    }
+    fn incoming(&self) -> &[Ptr<Self::Edge>] {
+        &self.get_incoming()[..]
+    }
+    fn outgoing(&self) -> &[Ptr<Self::Edge>] {
+        &self.get_outgoing()[..]
+    }
+}
+

@@ -1,7 +1,7 @@
 //! Port of utils/router/FlippedEdge.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::router::router_edge::{RouterEdge, RouterEdgeInfo};
 use utils::common::sumo_vehicle_class::SVC_IGNORING;
 use utils::common::stable_cache::StableCache;
 
@@ -245,8 +245,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn has_loaded_travel_times(&self) -> bool {
-        // shortcut: needs router trait bounds (lead), E::hasLoadedTravelTimes is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::hasLoadedTravelTimes")
+        self.get_original_edge().has_loaded_travel_times()
     }
 
     /// C++: `double FlippedEdge::getSpeedLimit() const` [const]
@@ -279,5 +278,103 @@ where
         self.get_original_edge().priority()
     }
 
+}
+
+// A flipped edge is itself a routing edge over the backward graph. C++ relies on the template
+// implicitly satisfying the router's interface; spell it out here so FlippedEdge can be used as
+// `E` in Node2EdgeRouter / AFCentralizedSPTree / KDTreePartition.
+impl<E, N, V> RouterEdgeInfo for FlippedEdge<E, N, V>
+where
+    E: RouterEdge<V>,
+{
+    fn edge_numerical_id(&self) -> i32 {
+        self.base.get_numerical_id()
+    }
+    fn edge_id(&self) -> String {
+        self.base.get_id().to_string()
+    }
+    fn edge_permissions(&self) -> SVCPermissions {
+        self.get_original_edge().edge_permissions()
+    }
+}
+
+impl<E, N, V> RouterEdge<V> for FlippedEdge<E, N, V>
+where
+    E: RouterEdge<V, Node = N>,
+{
+    type Node = FlippedNode<E, N, V>;
+    type Lane = <E as RouterEdge<V>>::Lane;
+    fn id(&self) -> &str {
+        self.base.get_id()
+    }
+    fn numerical_id(&self) -> i32 {
+        self.base.get_numerical_id()
+    }
+    fn length(&self) -> f64 {
+        self.base.get_length()
+    }
+    fn length_geometry_factor(&self) -> f64 {
+        FlippedEdge::get_length_geometry_factor(self)
+    }
+    fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
+        FlippedEdge::get_distance_to(self, other, do_boundary_estimate)
+    }
+    fn successors(&self, _vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
+        panic!("C++ FlippedEdge has no getSuccessors() (C++ would not compile for it)")
+    }
+    fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
+        &FlippedEdge::get_via_successors(self, vclass, ignore_transient)[..]
+    }
+    fn speed_limit(&self) -> f64 {
+        FlippedEdge::get_speed_limit(self)
+    }
+    fn minimum_travel_time(&self, veh: Ptr<V>) -> f64 {
+        FlippedEdge::get_minimum_travel_time(self, veh)
+    }
+    fn bidi_edge(&self) -> Ptr<Self> {
+        FlippedEdge::get_bidi_edge(self)
+    }
+    fn to_junction(&self) -> Ptr<Self::Node> {
+        self.myToJunction
+    }
+    fn from_junction(&self) -> Ptr<Self::Node> {
+        self.myFromJunction
+    }
+    fn is_internal(&self) -> bool {
+        self.base.is_internal()
+    }
+    fn prohibits(&self, veh: Ptr<V>, check_restrictions: bool) -> bool {
+        self.get_original_edge().prohibits(veh, check_restrictions)
+    }
+    fn restricts(&self, veh: Ptr<V>) -> bool {
+        self.get_original_edge().restricts(veh)
+    }
+    fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        FlippedEdge::get_travel_time_static(edge, veh, time)
+    }
+    fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        <E as RouterEdge<V>>::travel_time_aggregated(edge.get_original_edge(), veh, time)
+    }
+    fn travel_time_static_randomized(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        FlippedEdge::get_travel_time_static_randomized(edge, veh, time)
+    }
+    fn has_loaded_travel_times(&self) -> bool {
+        FlippedEdge::has_loaded_travel_times(self)
+    }
+    fn is_taz_connector(&self) -> bool {
+        self.get_original_edge().is_taz_connector()
+    }
+    fn is_connected_to(&self, e: &Self, vclass: SUMOVehicleClass, ignore_transient: bool) -> bool {
+        self.get_original_edge().is_connected_to(&*e.get_original_edge(), vclass, ignore_transient)
+    }
+    fn travel_time(&self, veh: Ptr<V>, time: f64) -> f64 {
+        self.get_original_edge().travel_time(veh, time)
+    }
+    fn time_penalty(&self) -> f64 {
+        FlippedEdge::get_time_penalty(self)
+    }
+    fn priority(&self) -> i32 {
+        FlippedEdge::get_priority(self)
+    }
 }
 

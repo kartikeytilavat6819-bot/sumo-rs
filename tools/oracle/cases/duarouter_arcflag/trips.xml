@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<trips>
+  <trip id="t0" depart="0" from="397795464#0" to="397795464#3"/>
+  <trip id="t1" depart="2" from="1117867028" to="1117867029#3"/>
+  <trip id="t2" depart="4" from="682360554#0" to="1117867029#0"/>
+  <trip id="t3" depart="6" from="46522008#0" to="46522008#3"/>
+  <trip id="t4" depart="8" from="1117867039#0" to="46522008#2"/>
+  <trip id="t5" depart="10" from="397795464#0" to="397795464#2"/>
+</trips>

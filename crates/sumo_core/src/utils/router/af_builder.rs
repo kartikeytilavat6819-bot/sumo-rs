@@ -1,7 +1,8 @@
 //! Port of utils/router/AFBuilder.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
-use crate::utils::router::router_edge::RouterEdge;
+use crate::utils::router::af_build::AFBuild_FlippedOperation;
+use crate::utils::router::router_edge::{RouterEdge, RouterNode, RouterVehicle};
 
 /// C++ typedef `typename AFInfo<E>::FlagInfo AFBuilder::FlagInfo`
 pub type AFBuilder_FlagInfo = AFInfo_FlagInfo;
@@ -74,7 +75,7 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     // #endif
     //     }
     #[allow(unused_variables)]
-    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, flippedOperation: SUMOAbstractRouter_Operation, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Box<Self> where E: RouterEdge<V, Node = N> {
+    pub fn new(numberOfLevels: i32, edges: &Vec<Ptr<E>>, unbuildIsWarning: bool, flippedOperation: AFBuild_FlippedOperation<E, N, V>, flippedLookup: Rc<AFBuild_FlippedLookupTable>, havePermissions: bool, haveRestrictions: bool, toProhibit: Ptr<i32>) -> Box<Self> where E: RouterEdge<V, Node = N>, V: RouterVehicle {
         let mut b = Box::new(Self {
             myEdges: Ptr::new(edges),
             myFlippedEdges: Vec::new(),
@@ -195,16 +196,18 @@ impl<E, N, V, M> AFBuilder<E, N, V, M> {
     //     return myFlagInfos;
     // }
     #[allow(unused_variables)]
-    pub fn build(&mut self, msTime: SUMOTime, vehicle: Ptr<V>) -> &mut Vec<Ptr<AFInfo_FlagInfo>> {
+    pub fn build(&mut self, msTime: SUMOTime, vehicle: Ptr<V>) -> &mut Vec<Ptr<AFInfo_FlagInfo>>
+    where E: RouterEdge<V, Node = N>, N: RouterNode<Edge = E>, V: RouterVehicle
+    {
         if !self.myAmClean {
             self.reset();
         }
         assert!(!self.myFlippedPartition.is_null());
         if self.myFlippedPartition.m().is_clean() {
-            // shortcut: KDTreePartition::init needs RouterEdge/RouterNode for FlippedEdge/FlippedNode, which are still shortcut stubs; upgrade with flipped_edge.rs/flipped_node.rs
-            panic!("shortcut: AFBuilder::build needs RouterEdge for FlippedEdge (KDTreePartition::init)");
+            self.myFlippedPartition.m().init(vehicle);
+            self.myArcFlagBuild.m().set_flipped_partition(self.myFlippedPartition);
         } else {
-            panic!("shortcut: AFBuilder::build needs RouterEdge for FlippedEdge (KDTreePartition::reset)");
+            self.myFlippedPartition.m().reset(vehicle);
         }
         assert!(!self.myArcFlagBuild.is_null());
         self.myArcFlagBuild.m().init(msTime, vehicle, &mut self.myFlagInfos);
