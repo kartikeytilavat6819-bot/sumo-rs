@@ -697,6 +697,7 @@ impl MSPerson_MSPersonStage_Access {
         if self.myDist >= 0. {
             self.myEstimatedArrival = now + time2steps(self.myDist / person.get_max_speed());
         } else {
+            eprintln!("DEBUG access proceed now={} prev_jump={} est={}", now, previous.get_jump_duration(), now + previous.get_jump_duration());
             self.myEstimatedArrival = now + previous.get_jump_duration();
         }
         // TODO myEstimatedArrival is not a multiple of DELTA_T here. This might give a problem because the destination position will not be reached precisely
