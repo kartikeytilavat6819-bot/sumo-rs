@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:29:13.966595-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc58/tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_left/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <lateral-resolution value="0.8"/>
+        <max-depart-delay value="1"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="575.00" id="laneData">
+        <edge id="beg">
+            <lane id="beg_0" sampledSeconds="8777.21" traveltime="97.75" overlapTraveltime="97.98" density="5.08" overlapDensity="5.10" laneDensity="5.08" occupancy="2.54" waitingTime="44.00" timeLoss="1187.02" speed="30.63" speedRelative="0.85" departed="70" arrived="112" entered="0" left="0" laneChangedFrom="95" laneChangedTo="137" flow="560.73" distance="268324.35"/>
+            <lane id="beg_1" sampledSeconds="6579.30" traveltime="101.23" overlapTraveltime="101.46" density="3.81" overlapDensity="3.82" laneDensity="3.81" occupancy="1.91" waitingTime="272.00" timeLoss="1237.58" speed="29.58" speedRelative="0.82" departed="83" arrived="111" entered="0" left="0" laneChangedFrom="171" laneChangedTo="199" flow="405.74" distance="194159.12"/>
+            <lane id="beg_2" sampledSeconds="3655.42" traveltime="110.36" overlapTraveltime="110.55" density="2.12" overlapDensity="2.12" laneDensity="2.12" occupancy="1.06" waitingTime="187.00" timeLoss="474.59" speed="27.15" speedRelative="0.75" departed="73" arrived="3" entered="0" left="0" laneChangedFrom="104" laneChangedTo="34" flow="207.34" distance="99216.44"/>
+        </edge>
+    </interval>
+</meandata>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --lateral-resolution 0.8 --max-depart-delay 1 --duration-log.statistics -a tools/oracle/cases/tt_sublane_model_overtake_stopped_stopped_2right_minimal/input_additional.add.xml

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --lateral-resolution 3.2 --device.tripinfo.explicit overtaking
