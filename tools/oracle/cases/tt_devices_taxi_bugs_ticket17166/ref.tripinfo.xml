@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:46:25.923759-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/ref.stat.xml"/>
+    </output>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p_0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.06" duration="599.00" waitingTime="241.00" timeLoss="25.79" traveltime="358.00">
+        <ride waitingTime="89.00" vehicle="bike_a.0" depart="89.00" arrival="189.00" arrivalPos="84.79" duration="100.00" routeLength="182.98" timeLoss="6.91"/>
+        <walk depart="189.00" departPos="84.79" arrival="194.00" arrivalPos="91.24" duration="5.00" routeLength="6.45" timeLoss="0.62" maxSpeed="1.47" waitingTime="0.00"/>
+        <access stop="ts_0" depart="194.00" arrival="208.00" duration="14.00" routeLength="21.27"/>
+        <ride waitingTime="152.00" vehicle="train" depart="360.00" arrival="399.00" arrivalPos="87.30" duration="39.00" routeLength="167.30" timeLoss="0.00"/>
+        <access stop="ts_1" depart="399.00" arrival="416.00" duration="17.00" routeLength="25.23"/>
+        <walk depart="416.00" departPos="7.48" arrival="599.00" arrivalPos="50.00" duration="183.00" routeLength="242.52" timeLoss="18.27" maxSpeed="1.47" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="train" depart="0.00" departLane="C0D0_0" departPos="17.45" departSpeed="0.00" departDelay="0.00" arrival="2917.00" arrivalLane="D0C0_0" arrivalPos="100.00" arrivalSpeed="9.25" duration="2917.00" routeLength="4386.85" waitingTime="20.00" waitingCount="10" stopTime="2029.00" timeLoss="292.60" rerouteNo="0" devices="tripinfo_train fcd_train person_train" vType="train_short" speedFactor="1.00" vaporized=""/>
+</tripinfos>

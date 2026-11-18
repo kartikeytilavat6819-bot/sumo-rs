@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --routing-algorithm astar --astar.landmark-distances lookuptable --device.rerouting.threads 2 -a tools/oracle/cases/tt_devices_rerouting_parallel_taz_astar_landmark_parallel/input_districts.taz.xml

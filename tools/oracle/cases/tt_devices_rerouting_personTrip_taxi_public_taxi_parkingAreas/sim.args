@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --vehroute-output.skip-ptlines --persontrip.taxi.waiting-time 30 --persontrip.transfer.taxi-walk parkingAreas --persontrip.transfer.walk-taxi parkingAreas -a tools/oracle/cases/tt_devices_rerouting_personTrip_taxi_public_taxi_parkingAreas/input_additional.add.xml

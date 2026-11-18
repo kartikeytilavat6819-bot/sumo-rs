@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --weights.separate-turns 1.0 -a tools/oracle/cases/tt_devices_rerouting_turn_specific_speeds_separateTurns_1_intermodal/input_additional.add.xml

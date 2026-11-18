@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.probability 1 -b 0 --no-duration-log --device.rerouting.adaptation-weight 0.4 -a tools/oracle/cases/tt_devices_rerouting_assignment_trip_with_explicit_taz-edges/input_districts.taz.xml

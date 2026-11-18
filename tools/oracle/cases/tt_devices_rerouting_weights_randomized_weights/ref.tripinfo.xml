@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:36:34.927223-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_weights_randomized_weights/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_weights_randomized_weights/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_weights_randomized_weights/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_weights_randomized_weights/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_weights_randomized_weights/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <weights.random-factor value="1.1"/>
+        <device.rerouting.period value="0"/>
+        <device.rerouting.pre-period value="0"/>
+    </routing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="flow.0" depart="0.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="41.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.0 routing_flow.0 fcd_flow.0" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.1" depart="2.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="44.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.1 routing_flow.1 fcd_flow.1" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.2" depart="5.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="1.00" arrival="46.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.2 routing_flow.2 fcd_flow.2" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.3" depart="7.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="1.00" arrival="49.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.3 routing_flow.3 fcd_flow.3" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.4" depart="10.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="2.00" arrival="51.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.4 routing_flow.4 fcd_flow.4" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.5" depart="12.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="2.00" arrival="54.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.5 routing_flow.5 fcd_flow.5" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.6" depart="15.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="3.00" arrival="56.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.6 routing_flow.6 fcd_flow.6" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.7" depart="17.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="3.00" arrival="59.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.7 routing_flow.7 fcd_flow.7" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.8" depart="20.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="4.00" arrival="61.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.8 routing_flow.8 fcd_flow.8" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.9" depart="22.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="4.00" arrival="64.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.9 routing_flow.9 fcd_flow.9" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.10" depart="25.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="5.00" arrival="66.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.10 routing_flow.10 fcd_flow.10" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.11" depart="27.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="5.00" arrival="69.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.11 routing_flow.11 fcd_flow.11" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.12" depart="30.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="6.00" arrival="71.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.12 routing_flow.12 fcd_flow.12" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.13" depart="32.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="6.00" arrival="74.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.13 routing_flow.13 fcd_flow.13" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.14" depart="35.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="7.00" arrival="76.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.14 routing_flow.14 fcd_flow.14" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.15" depart="37.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="7.00" arrival="79.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.15 routing_flow.15 fcd_flow.15" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.16" depart="40.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="8.00" arrival="81.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.16 routing_flow.16 fcd_flow.16" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.17" depart="42.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="8.00" arrival="84.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.17 routing_flow.17 fcd_flow.17" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.18" depart="45.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="9.00" arrival="86.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="41.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.44" rerouteNo="1" devices="tripinfo_flow.18 routing_flow.18 fcd_flow.18" vType="t0" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.19" depart="47.00" departLane="0/0to1/0_0" departPos="5.10" departSpeed="0.00" departDelay="9.00" arrival="89.00" arrivalLane="2/1to3/1_0" arrivalPos="100.00" arrivalSpeed="10.00" duration="42.00" routeLength="394.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.04" rerouteNo="1" devices="tripinfo_flow.19 routing_flow.19 fcd_flow.19" vType="t0" speedFactor="1.00" vaporized=""/>
+</tripinfos>

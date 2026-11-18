@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.threads 2 --verbose --vehroute-output.skip-ptlines -a tools/oracle/cases/tt_devices_rerouting_parallel_public_walk/input_additional.add.xml

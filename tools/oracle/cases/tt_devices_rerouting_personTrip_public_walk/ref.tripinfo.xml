@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:43:12.697289-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/ref.tripinfo.xml"/>
+        <vehroute-output.skip-ptlines value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_personTrip_public_walk/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="bus.0" depart="0.00" departLane="beg_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="210.00" arrivalLane="end_0" arrivalPos="500.00" arrivalSpeed="1.93" duration="210.00" routeLength="3007.22" waitingTime="2.00" waitingCount="2" stopTime="64.00" timeLoss="18.51" rerouteNo="1" devices="tripinfo_bus.0 routing_bus.0 fcd_bus.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="bus.1" depart="300.00" departLane="beg_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="510.00" arrivalLane="end_0" arrivalPos="500.00" arrivalSpeed="2.58" duration="210.00" routeLength="3007.22" waitingTime="1.00" waitingCount="1" stopTime="66.00" timeLoss="17.46" rerouteNo="1" devices="tripinfo_bus.1 routing_bus.1 fcd_bus.1 person_bus.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="p0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="658.00" waitingTime="131.00" timeLoss="50.15" traveltime="527.00">
+        <walk depart="0.00" departPos="0.00" arrival="200.00" arrivalPos="250.00" duration="200.00" routeLength="250.00" timeLoss="20.00" maxSpeed="1.39" waitingTime="0.00"/>
+        <ride waitingTime="131.00" vehicle="bus.1" depart="331.00" arrival="458.00" arrivalPos="499.96" duration="127.00" routeLength="2512.32" timeLoss="10.12"/>
+        <walk depart="458.00" departPos="499.96" arrival="658.00" arrivalPos="250.00" duration="200.00" routeLength="249.96" timeLoss="20.03" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="bus.2" depart="600.00" departLane="beg_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="810.00" arrivalLane="end_0" arrivalPos="500.00" arrivalSpeed="2.54" duration="210.00" routeLength="3007.22" waitingTime="1.00" waitingCount="1" stopTime="69.00" timeLoss="16.97" rerouteNo="1" devices="tripinfo_bus.2 routing_bus.2 fcd_bus.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="p1" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="999.00" waitingTime="0.00" timeLoss="99.00" traveltime="999.00">
+        <walk depart="0.00" departPos="0.00" arrival="999.00" arrivalPos="250.00" duration="999.00" routeLength="1250.00" timeLoss="99.00" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <tripinfo id="bus.3" depart="900.00" departLane="beg_0" departPos="5.10" departSpeed="0.00" departDelay="0.00" arrival="1110.00" arrivalLane="end_0" arrivalPos="500.00" arrivalSpeed="2.42" duration="210.00" routeLength="3007.22" waitingTime="1.00" waitingCount="1" stopTime="64.00" timeLoss="18.69" rerouteNo="1" devices="tripinfo_bus.3 routing_bus.3 fcd_bus.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <personinfo id="walker" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="1403.00" waitingTime="0.00" timeLoss="143.00" traveltime="1403.00">
+        <walk depart="0.00" departPos="0.00" arrival="1403.00" arrivalPos="250.00" duration="1403.00" routeLength="1750.00" timeLoss="143.00" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

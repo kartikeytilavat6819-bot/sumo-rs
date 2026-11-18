@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:49:27.473377-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_2taxis_10persons_routeExtension/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_2taxis_10persons_routeExtension/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_2taxis_10persons_routeExtension/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_2taxis_10persons_routeExtension/ref.tripinfo.xml"/>
+        <tripinfo-output.write-unfinished value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_2taxis_10persons_routeExtension/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.dispatch-algorithm value="routeExtension"/>
+        <device.taxi.dispatch-algorithm.output value="dispatchinfos.xml"/>
+    </taxi_device>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="trip_0" x="10.30" y="-1.60" angle="90.00" type="taxi" speed="0.00" pos="5.10" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="10.30" y="198.40" angle="90.00" type="taxi" speed="0.00" pos="5.10" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="trip_0" x="12.81" y="-1.60" angle="90.00" type="taxi" speed="2.51" pos="7.61" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="11.66" y="198.40" angle="90.00" type="taxi" speed="1.36" pos="6.46" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="trip_0" x="17.47" y="-1.60" angle="90.00" type="taxi" speed="4.66" pos="12.27" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="14.52" y="198.40" angle="90.00" type="taxi" speed="2.86" pos="9.32" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="trip_0" x="23.50" y="-1.60" angle="90.00" type="taxi" speed="6.04" pos="18.30" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="18.84" y="198.40" angle="90.00" type="taxi" speed="4.32" pos="13.64" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="trip_0" x="31.92" y="-1.60" angle="90.00" type="taxi" speed="8.42" pos="26.72" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="25.71" y="198.40" angle="90.00" type="taxi" speed="6.87" pos="20.51" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="trip_0" x="41.89" y="-1.60" angle="90.00" type="taxi" speed="9.96" pos="36.69" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="34.64" y="198.40" angle="90.00" type="taxi" speed="8.93" pos="29.44" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="trip_0" x="53.65" y="-1.60" angle="90.00" type="taxi" speed="11.76" pos="48.45" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="45.98" y="198.40" angle="90.00" type="taxi" speed="11.34" pos="40.78" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="trip_0" x="66.94" y="-1.60" angle="90.00" type="taxi" speed="13.29" pos="61.74" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="59.76" y="198.40" angle="90.00" type="taxi" speed="13.78" pos="54.56" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="trip_0" x="80.11" y="-1.60" angle="90.00" type="taxi" speed="13.17" pos="74.91" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="73.48" y="198.40" angle="90.00" type="taxi" speed="13.72" pos="68.28" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="trip_0" x="93.63" y="-1.60" angle="90.00" type="taxi" speed="13.52" pos="88.43" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="86.27" y="198.40" angle="90.00" type="taxi" speed="12.79" pos="81.07" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="trip_0" x="107.45" y="-1.60" angle="90.00" type="taxi" speed="13.82" pos="102.25" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="99.62" y="198.40" angle="90.00" type="taxi" speed="13.35" pos="94.42" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="trip_0" x="121.25" y="-1.60" angle="90.00" type="taxi" speed="13.80" pos="116.05" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="113.08" y="198.40" angle="90.00" type="taxi" speed="13.46" pos="107.88" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="trip_0" x="134.22" y="-1.60" angle="90.00" type="taxi" speed="12.97" pos="129.02" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="126.93" y="198.40" angle="90.00" type="taxi" speed="13.85" pos="121.73" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="trip_0" x="147.51" y="-1.60" angle="90.00" type="taxi" speed="13.29" pos="142.31" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="139.99" y="198.40" angle="90.00" type="taxi" speed="13.06" pos="134.79" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="trip_0" x="160.13" y="-1.60" angle="90.00" type="taxi" speed="12.62" pos="154.93" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="153.55" y="198.40" angle="90.00" type="taxi" speed="13.56" pos="148.35" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="trip_0" x="173.37" y="-1.60" angle="90.00" type="taxi" speed="13.24" pos="168.17" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="166.92" y="198.40" angle="90.00" type="taxi" speed="13.37" pos="161.72" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="trip_0" x="186.67" y="-1.60" angle="90.00" type="taxi" speed="13.30" pos="181.47" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="179.65" y="198.40" angle="90.00" type="taxi" speed="12.72" pos="174.45" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="trip_0" x="199.58" y="-1.60" angle="90.00" type="taxi" speed="12.91" pos="194.38" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="192.62" y="198.40" angle="90.00" type="taxi" speed="12.97" pos="187.42" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="trip_0" x="213.20" y="-1.60" angle="90.00" type="taxi" speed="13.63" pos="208.00" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="206.25" y="198.40" angle="90.00" type="taxi" speed="13.63" pos="201.05" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="trip_0" x="226.46" y="-1.60" angle="90.00" type="taxi" speed="13.25" pos="221.26" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="218.93" y="198.40" angle="90.00" type="taxi" speed="12.68" pos="213.73" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="trip_0" x="239.12" y="-1.60" angle="90.00" type="taxi" speed="12.66" pos="233.92" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="231.83" y="198.40" angle="90.00" type="taxi" speed="12.90" pos="226.63" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="trip_0" x="251.95" y="-1.60" angle="90.00" type="taxi" speed="12.83" pos="246.75" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="245.02" y="198.40" angle="90.00" type="taxi" speed="13.19" pos="239.82" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="trip_0" x="265.10" y="-1.60" angle="90.00" type="taxi" speed="13.15" pos="259.90" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="257.61" y="198.40" angle="90.00" type="taxi" speed="12.59" pos="252.41" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="trip_0" x="278.18" y="-1.60" angle="90.00" type="taxi" speed="13.08" pos="272.98" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="270.91" y="198.40" angle="90.00" type="taxi" speed="13.30" pos="265.71" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="trip_0" x="286.76" y="-1.60" angle="90.00" type="taxi" speed="8.58" pos="281.56" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="282.50" y="198.40" angle="90.00" type="taxi" speed="11.59" pos="277.30" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="trip_0" x="291.81" y="-1.60" angle="90.00" type="taxi" speed="5.05" pos="286.61" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="289.59" y="198.40" angle="90.00" type="taxi" speed="7.09" pos="284.39" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="trip_0" x="292.44" y="-1.60" angle="90.00" type="taxi" speed="0.63" pos="287.24" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="292.18" y="198.40" angle="90.00" type="taxi" speed="2.59" pos="286.98" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="trip_0" x="292.78" y="-1.60" angle="90.00" type="taxi" speed="0.34" pos="287.58" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="292.55" y="198.40" angle="90.00" type="taxi" speed="0.37" pos="287.35" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="trip_0" x="292.79" y="-7.40" angle="90.00" type="taxi" speed="0.02" pos="287.59" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="292.76" y="198.40" angle="90.00" type="taxi" speed="0.21" pos="287.56" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="trip_0" x="292.79" y="-7.40" angle="90.00" type="taxi" speed="0.00" pos="287.59" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="292.79" y="192.60" angle="90.00" type="taxi" speed="0.03" pos="287.59" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="trip_0" x="292.79" y="-7.40" angle="90.00" type="taxi" speed="0.00" pos="287.59" lane="A0B0_1" slope="0.00"/>
+        <vehicle id="trip_1" x="292.79" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="287.59" lane="A2B2_1" slope="0.00"/>
+    </timestep>
+</fcd-export>

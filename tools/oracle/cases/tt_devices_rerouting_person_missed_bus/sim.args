@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --vehroute-output.skip-ptlines --persontrip.walkfactor 2 --person-device.rerouting.period 50 -a tools/oracle/cases/tt_devices_rerouting_person_missed_bus/input_additional.add.xml

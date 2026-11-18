@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --device.fcd-replay.file tools/oracle/cases/tt_devices_fcd-replay_persons_offnet/input_state.xml

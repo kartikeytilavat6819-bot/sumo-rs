@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -a tools/oracle/cases/tt_devices_fcd-replay_gap/input_additional.add.xml --device.fcd-replay.file tools/oracle/cases/tt_devices_fcd-replay_gap/input_state.xml

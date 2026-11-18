@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 5 --device.btreceiver.all-recognitions --device.btreceiver.range 50 --device.btreceiver.probability 1 --device.btsender.probability 1 -b 0 --no-duration-log --bt-output bt.xml

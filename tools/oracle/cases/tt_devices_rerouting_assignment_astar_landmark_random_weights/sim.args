@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --routing-algorithm astar --astar.landmark-distances lookuptable --weights.random-factor 2

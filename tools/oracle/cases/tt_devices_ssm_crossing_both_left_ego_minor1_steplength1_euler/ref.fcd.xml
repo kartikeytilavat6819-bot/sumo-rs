@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:30:02.736623-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_ssm_crossing_both_left_ego_minor1_steplength1_euler/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_ssm_crossing_both_left_ego_minor1_steplength1_euler/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_ssm_crossing_both_left_ego_minor1_steplength1_euler/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_ssm_crossing_both_left_ego_minor1_steplength1_euler/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_ssm_crossing_both_left_ego_minor1_steplength1_euler/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="foe1" x="98.35" y="150.00" angle="180.00" type="1" speed="13.89" pos="0.00" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="ego1" x="0.00" y="48.35" angle="90.00" type="1" speed="13.89" pos="0.00" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="136.11" angle="180.00" type="1" speed="13.89" pos="13.89" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="ego1" x="13.89" y="48.35" angle="90.00" type="1" speed="13.89" pos="13.89" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="122.22" angle="180.00" type="1" speed="13.89" pos="27.78" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="ego1" x="27.78" y="48.35" angle="90.00" type="1" speed="13.89" pos="27.78" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="108.33" angle="180.00" type="1" speed="13.89" pos="41.67" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="ego1" x="41.67" y="48.35" angle="90.00" type="1" speed="13.89" pos="41.67" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="94.44" angle="180.00" type="1" speed="13.89" pos="55.56" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="ego1" x="55.56" y="48.35" angle="90.00" type="1" speed="13.89" pos="55.56" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="80.55" angle="180.00" type="1" speed="13.89" pos="69.45" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="ego1" x="69.45" y="48.35" angle="90.00" type="1" speed="13.89" pos="69.45" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="66.66" angle="180.00" type="1" speed="13.89" pos="83.34" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="ego1" x="82.52" y="48.35" angle="90.00" type="1" speed="13.07" pos="82.52" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="98.35" y="56.46" angle="180.00" type="1" speed="10.20" pos="93.54" lane="NC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="ego1" x="91.08" y="48.35" angle="90.00" type="1" speed="8.57" pos="91.08" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="99.34" y="50.96" angle="168.33" type="1" speed="5.70" pos="3.98" lane=":C_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="ego1" x="95.15" y="48.35" angle="90.00" type="1" speed="4.07" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="foe1" x="106.71" y="48.35" angle="95.90" type="1" speed="8.30" pos="1.96" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="ego1" x="100.77" y="51.16" angle="56.96" type="1" speed="6.67" pos="6.57" lane=":C_11_0" slope="0.00"/>
+        <vehicle id="foe1" x="117.61" y="48.35" angle="90.00" type="1" speed="10.90" pos="12.86" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="ego1" x="101.65" y="60.26" angle="0.00" type="1" speed="9.27" pos="5.51" lane="CN_0" slope="0.00"/>
+        <vehicle id="foe1" x="131.10" y="48.35" angle="90.00" type="1" speed="13.50" pos="26.35" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="ego1" x="101.65" y="72.13" angle="0.00" type="1" speed="11.87" pos="17.38" lane="CN_0" slope="0.00"/>
+        <vehicle id="foe1" x="144.99" y="48.35" angle="90.00" type="1" speed="13.89" pos="40.24" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="ego1" x="101.65" y="86.02" angle="0.00" type="1" speed="13.89" pos="31.27" lane="CN_0" slope="0.00"/>
+        <vehicle id="foe1" x="158.88" y="48.35" angle="90.00" type="1" speed="13.89" pos="54.13" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="ego1" x="101.65" y="99.91" angle="0.00" type="1" speed="13.89" pos="45.16" lane="CN_0" slope="0.00"/>
+        <vehicle id="foe1" x="172.77" y="48.35" angle="90.00" type="1" speed="13.89" pos="68.02" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="ego1" x="101.65" y="113.80" angle="0.00" type="1" speed="13.89" pos="59.05" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00"/>
+</fcd-export>

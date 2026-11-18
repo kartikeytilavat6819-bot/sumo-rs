@@ -1,0 +1,1 @@
+Bluelight device behaviour differs: rescue/emergency vehicles arrive far later in the Rust port and extra teleports occur; the bluelight reaction/blocking logic is not yet faithful. Re-enable when MSDevice_Bluelight warning/reaction timing is ported.

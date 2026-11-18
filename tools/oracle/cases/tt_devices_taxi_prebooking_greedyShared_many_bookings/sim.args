@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --tripinfo-output.write-unfinished --device.taxi.dispatch-algorithm greedyShared -a tools/oracle/cases/tt_devices_taxi_prebooking_greedyShared_many_bookings/input_additional2.add.xml

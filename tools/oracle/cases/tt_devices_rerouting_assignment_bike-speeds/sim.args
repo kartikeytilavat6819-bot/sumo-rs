@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.rerouting.probability 1 -b 0 --no-duration-log --vehroute-output.cost --device.rerouting.adaptation-weight 0.5 --device.rerouting.adaptation-interval 20 --device.rerouting.bike-speeds --device.rerouting.output weights.xml

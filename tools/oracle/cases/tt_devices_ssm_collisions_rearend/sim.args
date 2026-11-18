@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --end 400 --collision.action warn --step-length 0.5 --device.ssm.probability 1 --device.ssm.file ssm.xml --device.ssm.measures TTC,DRAC,PET,PPET,MDRAC --device.driverstate.probability 1 --device.driverstate.initialAwareness 0.2 --max-depart-delay 5

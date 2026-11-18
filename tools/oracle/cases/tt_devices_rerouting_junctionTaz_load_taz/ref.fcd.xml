@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:33:18.058152-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_rerouting_junctionTaz_load_taz/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="0" x="1.65" y="8.35" angle="0.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="0" x="1.65" y="10.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.70" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="0" x="1.65" y="16.15" angle="0.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="12.90" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="0" x="1.65" y="23.95" angle="0.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="20.70" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="0" x="1.65" y="34.35" angle="0.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="31.10" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="0" x="1.65" y="47.35" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="44.10" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="0" x="1.65" y="61.25" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="58.00" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="0" x="1.65" y="75.15" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="71.90" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="0" x="1.65" y="89.05" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="85.80" lane="A0toA1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="0" x="7.45" y="98.35" angle="82.07" type="DEFAULT_VEHTYPE" speed="13.90" pos="2.70" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="0" x="21.35" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="16.60" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="0" x="35.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="30.50" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="0" x="49.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="44.40" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="0" x="63.05" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="58.30" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="0" x="76.95" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="72.20" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="0" x="87.52" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.57" pos="82.77" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="0" x="93.58" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.07" pos="88.83" lane="A1toB1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="0" x="102.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.67" pos="7.00" lane=":B1_13_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="0" x="113.52" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.27" pos="8.77" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="0" x="127.38" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.87" pos="22.63" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="0" x="141.28" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="36.53" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="0" x="155.18" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="50.43" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="0" x="169.08" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="64.33" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="0" x="182.27" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.19" pos="77.52" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="0" x="190.96" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.69" pos="86.21" lane="B1toC1_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="0" x="201.00" y="101.53" angle="52.46" type="DEFAULT_VEHTYPE" speed="11.29" pos="7.00" lane=":C1_14_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="0" x="201.65" y="115.32" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="10.57" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="0" x="201.65" y="129.22" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="24.47" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="0" x="201.65" y="143.12" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="38.37" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="0" x="201.65" y="157.02" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="52.27" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="0" x="201.65" y="170.92" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="66.17" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="0" x="201.65" y="184.82" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.90" pos="80.07" lane="C1toC2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00"/>
+</fcd-export>

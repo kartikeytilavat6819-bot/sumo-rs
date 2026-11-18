@@ -46,10 +46,10 @@ DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
 # Option names (long and short) whose value is an input file.
 NET_OPTS = ("--net-file", "-n")
 ROUTE_OPTS = ("-r", "--route-files", "--routes")
-ADD_OPTS = ("-a", "--additional-files", "--a")
+ADD_OPTS = ("-a", "--additional-files", "--additional", "--a")
 # File-valued behaviour options: their files must be copied into the case, but
 # the option itself stays in sim.args (it is not an -a/--additional-files list).
-EXTRA_INPUT_OPTS = ("--weight-files",)
+EXTRA_INPUT_OPTS = ("--weight-files", "--device.fcd-replay.file")  # (oc54: fcd-replay input)
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
 OUTPUT_OPTS = (

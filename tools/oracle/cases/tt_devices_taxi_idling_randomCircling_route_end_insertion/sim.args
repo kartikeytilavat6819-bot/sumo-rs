@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --collision.action warn --tripinfo-output.write-unfinished --device.taxi.idle-algorithm randomCircling --device.taxi.probability 1 -e 10

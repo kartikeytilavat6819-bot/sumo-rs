@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:48:04.002727-04:59 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_idling_randomCircling_route_end_insertion/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_idling_randomCircling_route_end_insertion/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_idling_randomCircling_route_end_insertion/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_idling_randomCircling_route_end_insertion/ref.tripinfo.xml"/>
+        <tripinfo-output.write-unfinished value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_idling_randomCircling_route_end_insertion/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="10"/>
+    </time>
+
+    <processing>
+        <collision.action value="warn"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <taxi_device>
+        <device.taxi.probability value="1"/>
+        <device.taxi.idle-algorithm value="randomCircling"/>
+    </taxi_device>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="left" x="392.44" y="-5.57" angle="63.44" type="DEFAULT_VEHTYPE" speed="0.10" pos="102.55" lane="beg2_0" slope="0.00"/>
+        <vehicle id="right" x="391.50" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="91.50" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="left" x="392.44" y="-5.57" angle="63.44" type="DEFAULT_VEHTYPE" speed="0.00" pos="102.55" lane="beg2_0" slope="0.00"/>
+        <vehicle id="right" x="403.48" y="1.21" angle="62.34" type="DEFAULT_VEHTYPE" speed="12.69" pos="1.32" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="left" x="394.37" y="-4.68" angle="64.17" type="DEFAULT_VEHTYPE" speed="2.13" pos="2.03" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="right" x="413.17" y="10.90" angle="44.99" type="DEFAULT_VEHTYPE" speed="13.70" pos="15.02" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="left" x="398.57" y="-2.71" angle="64.89" type="DEFAULT_VEHTYPE" speed="4.64" pos="6.67" lane=":gneJ1_0_0" slope="0.00"/>
+        <vehicle id="right" x="422.18" y="19.92" angle="44.99" type="DEFAULT_VEHTYPE" speed="12.75" pos="27.77" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="left" x="403.81" y="1.54" angle="47.87" type="DEFAULT_VEHTYPE" speed="6.79" pos="1.79" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="431.88" y="29.62" angle="44.99" type="DEFAULT_VEHTYPE" speed="13.72" pos="41.49" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="left" x="409.88" y="7.61" angle="44.99" type="DEFAULT_VEHTYPE" speed="8.58" pos="10.37" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="441.37" y="39.10" angle="44.99" type="DEFAULT_VEHTYPE" speed="13.41" pos="54.90" lane="end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="left" x="417.30" y="15.03" angle="44.99" type="DEFAULT_VEHTYPE" speed="10.49" pos="20.86" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="451.14" y="48.90" angle="44.83" type="DEFAULT_VEHTYPE" speed="13.85" pos="0.04" lane=":gneJ3_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="left" x="425.84" y="23.57" angle="44.99" type="DEFAULT_VEHTYPE" speed="12.08" pos="32.94" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="451.60" y="61.51" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.69" pos="11.51" lane="E0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="left" x="435.55" y="33.29" angle="44.99" type="DEFAULT_VEHTYPE" speed="13.74" pos="46.67" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="451.60" y="74.14" angle="0.00" type="DEFAULT_VEHTYPE" speed="12.63" pos="24.14" lane="E0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="left" x="445.14" y="42.88" angle="44.99" type="DEFAULT_VEHTYPE" speed="13.56" pos="60.24" lane="end_0" slope="0.00"/>
+        <vehicle id="right" x="451.60" y="87.49" angle="0.00" type="DEFAULT_VEHTYPE" speed="13.35" pos="37.49" lane="E0_0" slope="0.00"/>
+    </timestep>
+</fcd-export>

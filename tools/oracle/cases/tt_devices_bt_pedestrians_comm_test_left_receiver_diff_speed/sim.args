@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.btreceiver.range 50 --person-device.btreceiver.explicit left --person-device.btsender.explicit right -b 0 --no-duration-log --bt-output bt.xml

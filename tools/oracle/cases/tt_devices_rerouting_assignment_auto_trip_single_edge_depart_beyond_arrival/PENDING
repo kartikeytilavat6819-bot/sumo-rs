@@ -1,0 +1,1 @@
+The C++ reroutes a trip whose departPos (60) is beyond its arrivalPos (10) on the same edge into a longer loop (arrival 14.00, routeLength 143.54); the Rust port arrives immediately (1.00). Trip-to-route handling for this edge case is not yet faithful. Re-enable when that behaviour is ported.

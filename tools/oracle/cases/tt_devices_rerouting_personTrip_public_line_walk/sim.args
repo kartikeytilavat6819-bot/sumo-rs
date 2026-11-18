@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --vehroute-output.skip-ptlines --persontrip.ride-public-line -a tools/oracle/cases/tt_devices_rerouting_personTrip_public_line_walk/input_additional.add.xml

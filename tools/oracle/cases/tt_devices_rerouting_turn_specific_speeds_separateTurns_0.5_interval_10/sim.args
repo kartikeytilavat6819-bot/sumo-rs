@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --duration-log.statistics --device.rerouting.adaptation-interval 10 --device.rerouting.adaptation-steps 18 --weights.separate-turns 0.5 -a tools/oracle/cases/tt_devices_rerouting_turn_specific_speeds_separateTurns_0.5_interval_10/input_additional.add.xml

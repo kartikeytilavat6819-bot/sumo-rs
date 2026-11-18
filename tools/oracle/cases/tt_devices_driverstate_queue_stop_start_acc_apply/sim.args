@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.driverstate.probability 1 --device.driverstate.initialAwareness 0.5 --collision.mingap-factor 0 --step-length 0.25 --default.carfollowmodel ACC

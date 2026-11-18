@@ -1,0 +1,1 @@
+--no-duration-log -a tools/oracle/cases/tt_devices_taxi_bugs_ticket17166/input_additional.add.xml
