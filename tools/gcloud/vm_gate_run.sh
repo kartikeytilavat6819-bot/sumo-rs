@@ -81,6 +81,10 @@ if [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrout
 fi
 # netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
 [ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
+# TraCI test-client oracle: differential suite driven by the Python raw-protocol client
+if [ -f tools/oracle/run_traci_suite.sh ] && [ -x "$CARGO_TARGET_DIR/debug/sumo" ]; then
+  TRACI_SUITE_OUT=/tmp/traci$slot TRACI_JOBS=6 TRACI_SHOW=10 timeout 900 bash tools/oracle/run_traci_suite.sh 2>&1 | grep -E 'FAIL categories|traci suite oracle|^FAIL '
+fi
 # one test thread: the message handler (clear_errors/error_was_informed) is process-global like C++ MsgHandler,
 # so parallel tests that write errors made xml::tests::gz_and_include flaky
 cargo test -q -p sumo_core -p utils -- --test-threads=1 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
