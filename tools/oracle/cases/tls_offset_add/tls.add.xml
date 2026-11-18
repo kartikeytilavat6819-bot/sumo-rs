@@ -1,0 +1,31 @@
+<additional>
+    <!-- Coordinated corridor: extra programs with offsets 0, >cycle and negative are switched at runtime.
+         nB's default cycle is 46 s, so offset 57 and offset -10 both wrap around the cycle. -->
+    <tlLogic id="nA" type="static" programID="progX" offset="0">
+        <phase duration="20" state="rrGG"/>
+        <phase duration="3" state="rryy"/>
+        <phase duration="20" state="GGrr"/>
+        <phase duration="3" state="yyrr"/>
+    </tlLogic>
+    <tlLogic id="nB" type="static" programID="progX" offset="57">
+        <phase duration="20" state="rrGG"/>
+        <phase duration="3" state="rryy"/>
+        <phase duration="20" state="GGrr"/>
+        <phase duration="3" state="yyrr"/>
+    </tlLogic>
+    <tlLogic id="nB" type="static" programID="progY" offset="-10">
+        <phase duration="18" state="rrGG"/>
+        <phase duration="4" state="rryy"/>
+        <phase duration="18" state="GGrr"/>
+        <phase duration="4" state="yyrr"/>
+    </tlLogic>
+    <WAUT id="wA" refTime="0" startProg="progX">
+        <wautSwitch time="150" to="0"/>
+    </WAUT>
+    <WAUT id="wB" refTime="0" startProg="progX">
+        <wautSwitch time="150" to="progY"/>
+        <wautSwitch time="250" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nA" wautID="wA"/>
+    <wautJunction junctionID="nB" wautID="wB"/>
+</additional>
