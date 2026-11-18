@@ -418,9 +418,15 @@ impl GeoConvHelper {
 
     /// init projString such as 'UTM' in loaded projection
     pub fn resolve_abstract_projection(&mut self) {
+        // C++ only enters this block when a concrete proj string failed to build;
+        // there myProjection is non-null for a valid string such as +proj=merc.
+        // Resolving via origBoundary applies to abstract UTM/DHDN methods only.
+        // shortcut: concrete PROJ strings beyond utm/tmerc are left unbuilt; geo conversion for them
+        // would emit the "not supported" error in x2cartesian_const, upgrade with full PROJ bindings.
         if self.projection.is_none()
             && self.projection_method != ProjectionMethod::None
             && self.projection_method != ProjectionMethod::Simple
+            && self.projection_method != ProjectionMethod::Proj
         {
             let orig_proj = self.proj_string.clone();
             // try to initialized projection based on origBoundary

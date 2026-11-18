@@ -1,17 +1,18 @@
 #!/bin/bash
 # Gate diagnostic for oc55: measure every imported tt_extended row.
-# Prints first diff line for each failing row (tripinfo / fcd / stat).
+# Prints the first diff / error line for each failing row.
 set -u
 cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
-SUMO="$BIN/sumo.exe"
-[ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc55-spot
-rm -rf "$OUT"; mkdir -p "$OUT"
+SUMO="$BIN/sumo"
+[ -x "$SUMO" ] || SUMO="$BIN/sumo.exe"
+OUT="${TMPDIR:-/tmp}/oc55-spot"
+rm -rf "$OUT"; mkdir -p "$OUT" || { echo "no temp dir $OUT"; exit 1; }
 total=$(find tools/oracle/cases -maxdepth 1 -type d -name 'tt_*' | wc -l)
-active=$(find tools/oracle/cases -maxdepth 2 -type f -name PENDING -path '*tt_*' | wc -l)
+pending=$(find tools/oracle/cases -maxdepth 2 -type f -name PENDING -path '*tt_*' | wc -l)
 ext=$(find tools/oracle/cases -maxdepth 1 -type d -name 'tt_extended*' | wc -l)
-echo "tt_total=$total tt_pending=$active tt_active=$((total-active)) tt_extended=$ext"
+echo "tt_total=$total tt_pending=$pending tt_active=$((total-pending)) tt_extended=$ext"
+echo "sumo=$SUMO"
 
 ok=0; bad=0
 for d in tools/oracle/cases/tt_extended*/; do
@@ -19,12 +20,12 @@ for d in tools/oracle/cases/tt_extended*/; do
   [ -f "$d/ref.tripinfo.xml" ] || continue
   c=$(basename "$d")
   flags=$(cat "$d/sim.args" 2>/dev/null)
-  timeout 120 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
+  timeout 90 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" $flags \
       --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \
       --statistic-output "$OUT/stat.xml" --no-step-log true >"$OUT/$c.log" 2>&1
   rc=$?
   if [ "$rc" -ne 0 ]; then
-    printf 'FAIL %-64s rc=%s %s\n' "$c" "$rc" "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-60)"
+    printf 'SIMFAIL %-60s rc=%s %s\n' "$c" "$rc" "$(grep -m1 -E 'panicked at|Error:' "$OUT/$c.log" | cut -c1-140)"
     bad=$((bad+1)); continue
   fi
   r="PASS"; dd=""
@@ -38,6 +39,6 @@ for d in tools/oracle/cases/tt_extended*/; do
     x=$(python tools/oracle/compare_stat.py "$d/ref.stat.xml" "$OUT/stat.xml" 2>&1 | head -1)
     [ -n "$x" ] && { r="FAIL"; dd="$dd stat:$x"; }
   fi
-  if [ "$r" = PASS ]; then ok=$((ok+1)); else printf 'FAIL %-64s %s\n' "$c" "$(echo "$dd" | cut -c1-180)"; bad=$((bad+1)); fi
+  if [ "$r" = PASS ]; then ok=$((ok+1)); else printf 'DIFF %-60s %s\n' "$c" "$(echo "$dd" | cut -c1-200)"; bad=$((bad+1)); fi
 done
 echo "EXTENDED ok=$ok bad=$bad"
