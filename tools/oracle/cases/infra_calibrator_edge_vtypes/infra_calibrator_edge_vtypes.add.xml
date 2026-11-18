@@ -1,0 +1,7 @@
+<additional>
+    <vType id="cal_bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="4.00"/>
+    <calibrator id="calV" edge="E1" pos="40.00" vTypes="bus" local="true">
+        <flow begin="0.00" end="120.00" vehsPerHour="360" speed="9.00" route="r0" type="cal_bus"/>
+        <flow begin="120.00" end="200.00" vehsPerHour="180" speed="12.00" route="r0" type="cal_bus"/>
+    </calibrator>
+</additional>

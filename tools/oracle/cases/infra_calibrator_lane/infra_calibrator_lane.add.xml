@@ -1,0 +1,8 @@
+<additional>
+    <vType id="cal_car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <vType id="cal_truck" vClass="truck" length="12.00" maxSpeed="11.00" accel="1.00" decel="3.00"/>
+    <calibrator id="calL" lane="E1_1" pos="30.00">
+        <flow begin="0.00" end="100.00" vehsPerHour="600" speed="10.00" route="r0" type="cal_car"/>
+        <flow begin="100.00" end="200.00" vehsPerHour="300" speed="8.00" route="r0" type="cal_truck"/>
+    </calibrator>
+</additional>

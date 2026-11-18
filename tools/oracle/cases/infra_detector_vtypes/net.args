@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/infra_detector_vtypes/infra_detector_vtypes.nod.xml --edge-files tools/oracle/cases/infra_detector_vtypes/infra_detector_vtypes.edg.xml
