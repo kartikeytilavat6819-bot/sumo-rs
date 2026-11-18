@@ -7,7 +7,7 @@ echo "cppbin $CB"
 F03T=1 $CB $A --elechybrid-output $O/c_e.xml --overheadwiresegments-output $O/c_o.xml --substations-output $O/c_s.xml 2> $O/c.err >/dev/null
 F03T=1 $B $A --elechybrid-output $O/r_e.xml --overheadwiresegments-output $O/r_o.xml --substations-output $O/r_s.xml 2> $O/r.err >/dev/null
 grep -a "^TRC" $O/c.err > $O/c.trc; grep -a "^TRC" $O/r.err > $O/r.trc
-wc -l $O/c.trc $O/r.trc
+head -c 600 $O/c.err; head -c 600 $O/r.err; ls -la $O; wc -l $O/c.trc $O/r.trc
 python3 - <<'PY'
 import re
 def load(f):
