@@ -18,30 +18,35 @@ r() { R=$(( RANDOM % $1 )); }   # bash RANDOM is deterministic after RANDOM=<see
 
 gen_case() {  # gen_case <seed> <dir>; prints the parameter string
   local s=$1 d=$2 mode lanes jt nil p ff vc step lc lat ttp ped
-  mkdir -p "$d"; RANDOM=$s
+  mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up: first draws after seeding track the seed
   r 4; mode=(grid grid spider rand); mode=${mode[$R]}
   r 3; lanes=$((R + 1))
-  r 4; jt=(priority traffic_light right_before_left allway_stop); jt=${jt[$R]}
+  r 5; jt=(priority traffic_light right_before_left allway_stop traffic_light); jt=${jt[$R]}
   r 2; nil=$R
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
   [ $nil = 1 ] && net="$net --no-internal-links"
+  [ $jt = traffic_light ] && { r 2; [ $R = 1 ] && net="$net --tls.default-type actuated"; }
   case $mode in
     grid)   r 3; net="--grid --grid.number $((R + 2)) --grid.length 150 $net";;
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
     rand)   net="--rand --rand.iterations 14 --rand.max-distance 300 --rand.grid $net";;
   esac
   "$OFF/netgenerate" $net -o "$d/ref_simple.net.xml" >"$d/gen.log" 2>&1 || { echo "GENFAIL(netgenerate)"; return 1; }
-  r 4; p=(3.5 4 5 6); p=${p[$R]}
+  r 5; p=(2 2.5 3.5 5 6); p=${p[$R]}; local e=200; [ "$p" = 2 -o "$p" = 2.5 ] && e=120
   r 4; ff=(1 2 5 10); ff=${ff[$R]}
   r 6; vc=(passenger passenger bus truck passenger delivery); vc=${vc[$R]}
   r 4; ped=$R    # 0 => also persons
-  local rt="-n $d/ref_simple.net.xml -e 200 --seed $s --fringe-factor $ff --validate"
+  local rt="-n $d/ref_simple.net.xml -e $e --seed $s --fringe-factor $ff --validate"
   "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p $p --vehicle-class $vc --prefix v \
       -o "$d/trips.xml" -r "$d/veh.rou.xml" >"$d/rt.log" 2>&1 || { echo "GENFAIL(randomTrips)"; return 1; }
-  local rf="$d/veh.rou.xml"
+  local rf="$d/veh.rou.xml" vc2
+  r 3; vc2=(none motorcycle bicycle truck); vc2=${vc2[$R]}   # mixed traffic: second class on a slower period
+  if [ $vc2 != none ]; then   # distinct departs would clash on ids, hence the prefix
+    "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p 9 --vehicle-class $vc2 --prefix w --seed $((s + 1)) -o "$d/trips2.xml" -r "$d/veh2.rou.xml" >>"$d/rt.log" 2>&1       && rf="$d/veh.rou.xml,$d/veh2.rou.xml"
+  fi
   if [ $ped = 0 ]; then
     "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p 25 --pedestrians --prefix p -o "$d/ptrips.xml" -r "$d/ped.rou.xml" >>"$d/rt.log" 2>&1 \
-      && rf="$d/veh.rou.xml,$d/ped.rou.xml"
+      && rf="$rf,$d/ped.rou.xml"
   fi
   r 4; lc=(LC2013 SL2015 LC2013 default); lc=${lc[$R]}
   # merge into one routes.rou, sorted by depart (run_all takes a single routes.rou)
@@ -58,11 +63,12 @@ r = ET.Element("routes"); r.extend(types); r.extend(items)
 ET.ElementTree(r).write(sys.argv[2])
 PYEOF
   r 2; step=(1 0.5); step=${step[$R]}
-  r 4; lat=$R; r 3; ttp=(300 -1 60); ttp=${ttp[$R]}
-  local a="--end 300 --seed $s --step-length $step --time-to-teleport $ttp"
-  [ $lat = 0 ] && a="$a --lateral-resolution 0.8"
+  r 3; lat=$R; r 3; ttp=(300 -1 60); ttp=${ttp[$R]}
+  r 6; local x=("" "" "--lanechange.duration 3" "--collision.action teleport" "--ignore-junction-blocker 5" "--sloppy-insert"); x=${x[$R]}
+  local a="--end 300 --seed $s --step-length $step --time-to-teleport $ttp $x"
+  [ $lat = 0 ] && [ $lc = SL2015 ] && a="$a --lateral-resolution 0.8"
   echo "$a" > "$d/sim.args"
-  echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc | $a"
+  echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc vc2=$vc2 | $a"
 }
 
 if [ "${1:-}" = "--gen" ]; then gen_case "$2" "$3"; exit $?; fi
