@@ -1,7 +1,8 @@
 #!/bin/bash
 # netconvert option rows that run_netopts.sh and the case net.args never use: C++ 1.28.0 netconvert vs ours.
 # Each row: <name> <input> <options>. Input is osm:<case> (--simple-projection true + cases/<case>/input.osm),
-# xml:<case> (the case's net.args), or plain (cases/vtypes/plain). @D in the options is the per-side output dir.
+# xml:<case> (the case's net.args), plain (cases/vtypes/plain), or args:<netconvert args> (repo-relative paths).
+# @D in the options is the per-side output dir.
 # The net is compared with compare_net.py; extra files a row writes (@D/...) are compared byte for byte after
 # dropping the 'generated on' stamp line. Run from the repo root on the gate VM (SUMO_PRISTINE_BIN, CARGO_TARGET_DIR set).
 # Outputs: $NETOPTS2_OUT/<row>/{cpp,rust}.log, cpp.net.xml, rust.net.xml, cpp_out/, rust_out/, net.log.
@@ -48,6 +49,20 @@ row ptstopNoBidi osm:city_karlsruhe_tram "--ptstop-output @D/ptstop.xml --ptstop
 row outputRemovedNodes osm:real "--geometry.remove true --output.removed-nodes true"
 row railwayTopologyOutput osm:city_german_level_crossing "--railway.topology.repair true --railway.topology.output @D/topo.xml"
 row plainOutputLanes plain "--plain-output-prefix @D/plain/net --plain-output.lanes true"
+# I/O format rows: args:<netconvert args> (paths relative to the repo root) are new small fixtures under cases/vtypes/fmt
+row opendriveOutput plain "--opendrive-output @D/net.xodr"
+row opendriveInputStraight "args:--opendrive-files tools/oracle/cases/vtypes/fmt/straight.xodr" ""
+row opendriveInputJunction "args:--opendrive-files tools/oracle/cases/vtypes/fmt/junction.xodr" ""
+row matsimInput "args:--matsim-files tools/oracle/cases/vtypes/fmt/network.xml" ""
+row visumInput "args:--visum-file tools/oracle/cases/vtypes/fmt/tiny.net" ""
+row plainFromSumoNet "args:--sumo-net-file tools/oracle/cases/departopts/ref_simple.net.xml" "--plain-output-prefix @D/plain/net"
+row matsimOutput plain "--matsim-output @D/matsim.xml"
+row dlrNavteqOutput plain "--dlr-navteq-output @D/navteq"
+row amitranOutput plain "--amitran-output @D/amitran.xml"
+row streetSignOutput osm:signal "--street-sign-output @D/signs.xml"
+row parkingOutput osm:city_plano_mall_parking "--parking-output @D/parking.xml"
+row polygonOutput "args:--opendrive-files tools/oracle/cases/vtypes/fmt/junction.xodr" "--polygon-output @D/poly.xml"
+row outputStreetNamesOff osm:city_plano "--output.street-names false"
 
 # run_row NAME INPUT OPTIONS
 run_row() {
@@ -59,6 +74,7 @@ run_row() {
     osm:*) src="--simple-projection true --osm-files $C/${in#osm:}/input.osm" ;;
     xml:*) src=$(tr -d '\r' < "$C/${in#xml:}/net.args") ;;
     plain) src=$PLAIN ;;
+    args:*) src=${in#args:} ;;
   esac
   local co=${opts//@D/$d\/cpp_out} ro=${opts//@D/$d\/rust_out}
   local -a sa ca ra
@@ -81,7 +97,8 @@ run_row() {
     elif [ $cr -eq 2 ]; then V=FAIL; D="net unparseable: $(head -1 "$d/net.log")"
     else V=FAIL; D="$(head -1 "$d/net.log") | $(grep SUMMARY "$d/net.log")"; fi
     if [ "$V" = PASS ]; then
-      local norm='s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; /generated on/d; s/\r$//'
+      # the -o net path is echoed into some extra files (netconvert configuration): cpp/rust names differ, normalize them
+      local norm='s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; s#'"$d"'/cpp.net.xml#NET#g; s#'"$d"'/rust.net.xml#NET#g; /generated on/d; s/\r$//'
       local lc lr
       lc=$(cd "$d/cpp_out" && find . -type f | sort); lr=$(cd "$d/rust_out" && find . -type f | sort)
       if [ "$lc" != "$lr" ]; then V=FAIL; D="output files differ: cpp=[$(echo $lc)] rust=[$(echo $lr)]"
