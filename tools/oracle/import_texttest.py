@@ -64,6 +64,9 @@ OUTPUT_OPTS = (
     "--save-state.files", "--save-state.times", "--movereminder-output",
 )
 ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
+# Sub-options of these output files are meaningful: run_all/make_sim_refs
+# always pass the parent file, so keep e.g. --fcd-output.attributes.
+HARNESS_OUTPUT_PREFIXES = ("--tripinfo-output.", "--fcd-output.", "--statistic-output.")
 
 # run_all.sh / make_sim_refs.sh always pass these; a duplicate is a hard error.
 HARNESS_FLAGS = ("--no-step-log",)
@@ -75,6 +78,8 @@ SKIP_MARKERS = (
     "--od2trips", "--activitygen", "--polyconvert", "--java", "--jar",
     "--fmi", "--parquet", "--vtk", "--p2p", "--sumo-gui", "--gcf",
     "--saved-state.input", "--load-state", "--sumo-state",
+    # option removed from SUMO: the official binary itself rejects it
+    "--meso-lookahead",
 )
 
 
@@ -349,7 +354,12 @@ def import_one(source, tests_sumo, force=False):
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
     shutil.copy2(route_path, join(case_dir, "routes.rou"))
 
-    sim_args = list(sim)
+    # Drop sub-options of output files the harness does not pass (e.g.
+    # --vehroute-output.exit-times): without the parent file the C++ rejects
+    # them, and the harness never compares vehroute output.
+    sim_args = [t for t in sim if not (
+        any(t.startswith(o + ".") for o in OUTPUT_OPTS)
+        and not any(t.startswith(p) for p in HARNESS_OUTPUT_PREFIXES))]
     if kept_additions:
         sim_args += ["-a", ",".join(sorted(set(kept_additions)))]
 

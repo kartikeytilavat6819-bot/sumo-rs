@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-lane-queue --no-duration-log --lanedata-output aggregated.xml -a tools/oracle/cases/tt_meso_lane_queue_laneData_different_speeds/input_additional.add.xml

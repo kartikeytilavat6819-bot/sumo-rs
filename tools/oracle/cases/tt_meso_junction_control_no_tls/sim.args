@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-junction-control --verbose --meso-multi-queue false -a tools/oracle/cases/tt_meso_junction_control_no_tls/input_additional.add.xml

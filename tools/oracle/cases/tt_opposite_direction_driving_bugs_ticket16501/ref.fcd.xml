@@ -1,0 +1,692 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:29:54.879393-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_bugs_ticket16501\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_bugs_ticket16501\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_bugs_ticket16501\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_bugs_ticket16501\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_bugs_ticket16501\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.55" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.55" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="79.95" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="79.95" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.35" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.35" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="64.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="64.75" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.05" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="80.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.45" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.45" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="64.85" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="64.85" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="0.00" y="98.35" angle="206.98" type="emergency" speed="0.00" pos="0.00" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.55" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.55" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="64.95" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="64.95" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="2.60" y="98.35" angle="129.65" type="emergency" speed="2.60" pos="2.60" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.05" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="65.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="7.80" y="98.35" angle="90.00" type="emergency" speed="5.20" pos="7.80" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="15.60" y="98.35" angle="90.00" type="emergency" speed="7.80" pos="15.60" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="26.00" y="98.35" angle="90.00" type="emergency" speed="10.40" pos="26.00" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="39.00" y="98.35" angle="90.00" type="emergency" speed="13.00" pos="39.00" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="49.71" y="98.35" angle="90.00" type="emergency" speed="10.71" pos="49.71" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="55.93" y="101.65" angle="90.00" type="emergency" speed="6.21" pos="39.32" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="64.74" y="101.65" angle="90.00" type="emergency" speed="8.81" pos="30.51" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="76.16" y="101.65" angle="90.00" type="emergency" speed="11.41" pos="19.09" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="87.02" y="101.65" angle="90.00" type="emergency" speed="10.86" pos="8.23" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="93.39" y="101.65" angle="90.00" type="emergency" speed="6.36" pos="1.86" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="1.86" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.45" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.55" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="120.05" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="79.95" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.65" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.35" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="135.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="64.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.95" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="80.05" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.55" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.45" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="135.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="64.85" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.45" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.55" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="135.05" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="64.95" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.95" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="65.05" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.10" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="blockers.0" x="95.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="104.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="95.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="blockers.0" x="97.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="2.50" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="87.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="102.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="2.50" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="112.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="87.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="blockers.0" x="102.95" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="7.70" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="90.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="90.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="80.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="100.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.90" pos="4.40" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="109.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="90.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="119.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="80.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="blockers.0" x="110.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="6.00" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="93.03" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.78" pos="93.03" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="82.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="82.75" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="72.65" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="100.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="4.40" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="107.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.90" pos="92.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="117.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="82.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="127.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="72.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="blockers.0" x="121.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="16.40" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="95.80" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.78" pos="0.55" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="85.53" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.78" pos="85.53" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="75.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="75.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="65.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="97.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="7.00" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="107.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="92.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="115.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.90" pos="84.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="124.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="75.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="134.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="65.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="101.65" angle="90.00" type="emergency" speed="0.00" pos="0.00" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="blockers.0" x="134.15" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="29.40" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="101.18" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.38" pos="5.93" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="85.53" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="85.53" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="78.02" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.78" pos="78.02" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="67.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="67.75" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="97.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="7.00" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="105.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.10" pos="94.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="115.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="84.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="122.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.90" pos="77.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="132.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="67.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="98.35" angle="90.00" type="emergency" speed="0.00" pos="95.25" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="blockers.0" x="148.04" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="43.29" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="109.16" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.98" pos="4.41" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="86.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.72" pos="86.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="78.02" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="78.02" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="70.52" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.78" pos="70.52" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="95.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="0.10" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="105.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.50" pos="94.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="113.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.10" pos="86.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="122.85" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="77.15" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="130.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="1.90" pos="69.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="95.25" y="98.35" angle="90.00" type="emergency" speed="0.00" pos="95.25" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="blockers.0" x="161.93" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="57.18" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="119.74" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.58" pos="14.99" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="86.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="86.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="78.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.72" pos="78.75" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="70.52" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="70.52" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="89.95" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="5.30" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="102.65" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="2.10" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="112.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.50" pos="87.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="120.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.10" pos="79.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="130.35" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="69.65" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="97.62" y="97.49" angle="97.85" type="emergency" speed="2.60" pos="2.60" lane=":C_9_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="blockers.0" x="175.82" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="71.07" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="132.92" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.18" pos="28.17" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="88.85" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="88.85" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="78.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="78.75" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="71.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.72" pos="71.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="82.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="13.10" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="97.45" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="7.30" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="110.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="89.85" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="120.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.50" pos="79.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="128.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.10" pos="71.75" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="92.45" angle="162.41" type="emergency" speed="5.20" pos="2.80" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="blockers.0" x="189.71" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="84.96" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.1" x="146.81" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="42.06" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="94.05" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="94.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="81.35" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="81.35" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="71.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="71.25" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="71.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="23.50" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="89.65" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="5.60" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="104.95" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="95.05" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="117.65" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="82.35" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="127.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="0.50" pos="72.25" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="84.65" angle="180.00" type="emergency" speed="7.80" pos="10.60" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="blockers.1" x="160.70" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="55.95" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="101.85" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="6.60" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="86.55" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="86.55" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="73.85" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="73.85" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="58.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="36.50" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="79.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="16.00" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="97.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="7.60" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="112.45" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="87.55" lane="EC_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="125.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="2.60" pos="74.85" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="74.25" angle="180.00" type="emergency" speed="10.40" pos="21.00" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="blockers.1" x="174.59" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="69.84" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="112.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="7.50" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="94.35" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="94.35" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="79.05" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="79.05" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="44.86" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="50.39" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="66.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="29.00" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="86.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="8.50" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="104.65" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="0.10" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="119.95" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="5.20" pos="80.05" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="61.25" angle="180.00" type="emergency" speed="13.00" pos="34.00" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="blockers.1" x="188.48" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="83.73" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.2" x="125.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="20.50" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="104.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="9.50" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="86.85" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="86.85" lane="WC_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="30.97" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="64.28" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="52.36" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="42.89" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="73.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="21.50" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="94.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="1.00" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="112.15" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="7.80" pos="87.85" lane="EC_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="47.36" angle="180.00" type="emergency" speed="13.89" pos="47.89" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="blockers.2" x="139.14" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="34.39" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="117.75" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="13.00" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="97.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="2.00" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="17.08" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="78.17" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="38.47" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="56.78" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="59.86" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="35.39" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="81.25" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="14.00" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="101.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="10.40" pos="3.00" lane=":C_4_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="33.47" angle="180.00" type="emergency" speed="13.89" pos="61.78" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="blockers.2" x="153.03" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="48.28" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="131.64" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="26.89" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="110.25" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="5.50" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.0" x="3.19" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="92.06" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="24.58" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="70.67" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="45.97" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="49.28" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="67.36" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="27.89" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="88.75" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.00" pos="6.50" lane="CW_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="19.58" angle="180.00" type="emergency" speed="13.89" pos="75.67" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="blockers.2" x="166.92" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="62.17" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="145.53" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="40.78" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="124.14" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="19.39" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.1" x="10.69" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="84.56" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="32.08" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="63.17" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="53.47" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="41.78" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="74.86" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="20.39" lane="CW_0" slope="0.00"/>
+        <vehicle id="overtaking" x="98.35" y="5.69" angle="180.00" type="emergency" speed="13.89" pos="89.56" lane="CS_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="blockers.2" x="180.81" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="76.06" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="159.42" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="54.67" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="138.03" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="33.28" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="18.19" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="77.06" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="39.58" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="55.67" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="60.97" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="34.28" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="blockers.2" x="194.70" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="89.95" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.3" x="173.31" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="68.56" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="151.92" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="47.17" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.2" x="4.30" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="90.95" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="25.69" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="69.56" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="47.08" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="48.17" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="blockers.3" x="187.20" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="82.45" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers.4" x="165.81" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="61.06" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.3" x="11.80" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="83.45" lane="CW_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="33.19" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="62.06" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="blockers.4" x="179.70" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="74.95" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="19.30" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="75.95" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="blockers.4" x="193.59" y="98.35" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="88.84" lane="CE_0" slope="0.00"/>
+        <vehicle id="blockers2.4" x="5.41" y="101.65" angle="270.00" type="DEFAULT_VEHTYPE" speed="13.89" pos="89.84" lane="CW_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00"/>
+</fcd-export>

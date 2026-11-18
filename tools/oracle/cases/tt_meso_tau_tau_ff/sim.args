@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --meso-tauff 1.7 -b 0 -e 10000 --no-duration-log -a tools/oracle/cases/tt_meso_tau_tau_ff/input_additional.add.xml

@@ -1,0 +1,467 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:30:02.180874-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_overtake_before_minor\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_overtake_before_minor\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_overtake_before_minor\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_overtake_before_minor\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_opposite_direction_driving_overtake_before_minor\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00"/>
+    <timestep time="1.00"/>
+    <timestep time="2.00">
+        <vehicle id="overtaking" x="-100.00" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="0.00" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-60.00" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="40.00" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="overtaking" x="-98.37" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="1.63" pos="1.63" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-57.48" y="-1.60" angle="90.00" type="bus" speed="2.52" pos="42.52" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="overtaking" x="-94.22" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.16" pos="5.78" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-53.41" y="-1.60" angle="90.00" type="bus" speed="4.07" pos="46.59" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="overtaking" x="-88.18" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.03" pos="11.82" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-47.72" y="-1.60" angle="90.00" type="bus" speed="5.68" pos="52.28" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="overtaking" x="-81.29" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.89" pos="18.71" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-40.17" y="-1.60" angle="90.00" type="bus" speed="7.55" pos="59.83" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="overtaking" x="-74.87" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.42" pos="25.13" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-30.26" y="-1.60" angle="90.00" type="bus" speed="9.91" pos="69.74" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="overtaking" x="-67.50" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.36" pos="32.50" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-18.17" y="-1.60" angle="90.00" type="bus" speed="12.09" pos="81.83" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="overtaking" x="-59.32" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.19" pos="40.68" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="-5.02" y="-1.60" angle="90.00" type="bus" speed="13.15" pos="94.98" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="overtaking" x="-50.15" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.16" pos="49.85" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="7.38" y="-1.60" angle="90.00" type="bus" speed="12.40" pos="107.38" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="overtaking" x="-40.31" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.85" pos="59.69" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="15.78" y="-1.60" angle="90.00" type="bus" speed="8.40" pos="115.78" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="overtaking" x="-31.46" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.85" pos="68.54" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="21.28" y="-1.60" angle="90.00" type="bus" speed="5.50" pos="121.28" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="overtaking" x="-23.62" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.85" pos="76.38" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.78" y="-1.60" angle="90.00" type="bus" speed="1.50" pos="122.78" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="overtaking" x="-16.77" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.85" pos="59.57" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.02" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="overtaking" x="-8.55" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.22" pos="51.35" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="overtaking" x="1.00" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.54" pos="41.80" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="overtaking" x="9.54" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.54" pos="33.26" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="overtaking" x="17.08" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.54" pos="25.72" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="overtaking" x="23.63" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.54" pos="19.17" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="overtaking" x="29.24" y="1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.61" pos="13.56" lane="-VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="overtaking" x="33.89" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.65" pos="133.89" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="overtaking" x="37.54" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="3.65" pos="137.54" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="overtaking" x="40.19" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="2.65" pos="140.19" lane="VODUGES_beg_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="overtaking" x="45.09" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.90" pos="2.29" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="overtaking" x="51.33" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.24" pos="8.53" lane=":C_10_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="overtaking" x="59.63" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="8.30" pos="2.43" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="overtaking" x="69.67" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.03" pos="12.47" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="overtaking" x="80.00" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.33" pos="22.80" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="overtaking" x="90.16" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.16" pos="32.96" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="overtaking" x="100.26" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.10" pos="43.06" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="overtaking" x="110.41" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.15" pos="53.21" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="overtaking" x="120.04" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.63" pos="62.84" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="overtaking" x="129.22" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.18" pos="72.02" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="overtaking" x="138.78" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.56" pos="81.58" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="overtaking" x="147.97" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.19" pos="90.77" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="overtaking" x="157.92" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.95" pos="100.72" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="overtaking" x="167.98" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.06" pos="110.78" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="overtaking" x="177.94" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.96" pos="120.74" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="overtaking" x="187.82" y="-1.60" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.88" pos="130.62" lane="VODUGES_end_0" slope="0.00"/>
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="stopped2" x="22.80" y="-1.60" angle="90.00" type="bus" speed="0.00" pos="122.80" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="stopped2" x="25.22" y="-1.60" angle="90.00" type="bus" speed="2.42" pos="125.22" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="stopped2" x="29.73" y="-1.60" angle="90.00" type="bus" speed="4.51" pos="129.73" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="stopped2" x="36.49" y="-1.60" angle="90.00" type="bus" speed="6.76" pos="136.49" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="stopped2" x="40.90" y="-1.60" angle="90.00" type="bus" speed="4.41" pos="140.90" lane="VODUGES_beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="stopped2" x="47.53" y="-1.60" angle="90.00" type="bus" speed="6.64" pos="4.73" lane=":C_10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="stopped2" x="55.76" y="-1.60" angle="90.00" type="bus" speed="8.23" pos="12.96" lane=":C_10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="stopped2" x="65.86" y="-1.60" angle="90.00" type="bus" speed="10.09" pos="8.66" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="stopped2" x="77.73" y="-1.60" angle="90.00" type="bus" speed="11.87" pos="20.53" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="stopped2" x="90.65" y="-1.60" angle="90.00" type="bus" speed="12.92" pos="33.45" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="stopped2" x="104.50" y="-1.60" angle="90.00" type="bus" speed="13.85" pos="47.30" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="stopped2" x="117.96" y="-1.60" angle="90.00" type="bus" speed="13.46" pos="60.76" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="stopped2" x="130.70" y="-1.60" angle="90.00" type="bus" speed="12.74" pos="73.50" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="stopped2" x="144.56" y="-1.60" angle="90.00" type="bus" speed="13.86" pos="87.36" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="stopped2" x="157.77" y="-1.60" angle="90.00" type="bus" speed="13.22" pos="100.57" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="stopped2" x="171.11" y="-1.60" angle="90.00" type="bus" speed="13.34" pos="113.91" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="stopped2" x="184.56" y="-1.60" angle="90.00" type="bus" speed="13.45" pos="127.36" lane="VODUGES_end_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00"/>
+</fcd-export>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --time-to-impatience 0 --meso-junction-control --verbose -a tools/oracle/cases/tt_meso_teleport_jump_to_end/input_additional.add.xml

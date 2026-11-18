@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:35:51.797819-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_rail_crossing\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_rail_crossing\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_meso_junction_control_rail_crossing/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_rail_crossing\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_meso_junction_control_rail_crossing\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <mesoscopic>
+        <meso-junction-control value="true"/>
+    </mesoscopic>
+
+</sumoConfiguration>
+-->
+
+<tlsStates xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tlsstates_file.xsd">
+    <tlsState time="0.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="6.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="11.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="56.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="59.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="64.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="69.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="117.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="120.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="146.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="149.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="165.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="170.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="215.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="218.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="227.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="232.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="275.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="278.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="286.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="291.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="314.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="317.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="324.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="329.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="374.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="377.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="386.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="391.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="434.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="437.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="483.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="488.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="536.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="539.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="545.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="550.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="594.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="597.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="642.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="647.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="692.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="695.00" id="C" programID="0" phase="0" state="GG"/>
+    <tlsState time="704.00" id="C" programID="0" phase="1" state="yy"/>
+    <tlsState time="709.00" id="C" programID="0" phase="2" state="rr"/>
+    <tlsState time="752.00" id="C" programID="0" phase="3" state="uu"/>
+    <tlsState time="755.00" id="C" programID="0" phase="0" state="GG"/>
+</tlsStates>

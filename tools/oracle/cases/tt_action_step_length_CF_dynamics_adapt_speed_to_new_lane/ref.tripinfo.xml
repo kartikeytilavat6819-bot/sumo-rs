@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:29:02.021390-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_adapt_speed_to_new_lane\ref_simple.net.xml"/>
+        <route-files value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_adapt_speed_to_new_lane\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_adapt_speed_to_new_lane\ref.fcd.xml"/>
+        <tripinfo-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_adapt_speed_to_new_lane\ref.tripinfo.xml"/>
+        <statistic-output value="C:\Users\karti\sumo-rs\.claude\worktrees\agent-oc62\tools\oracle\cases\tt_action_step_length_CF_dynamics_adapt_speed_to_new_lane\ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.1"/>
+    </time>
+
+    <processing>
+        <step-method.ballistic value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.action-step-length value="1.0"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <verbose value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="0" depart="0.00" departLane="beg_0" departPos="0.00" departSpeed="20.00" departDelay="0.00" arrival="30.60" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="30.60" routeLength="400.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.52" rerouteNo="0" devices="tripinfo_0 fcd_0" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="1" depart="10.00" departLane="beg_0" departPos="33.00" departSpeed="20.00" departDelay="0.00" arrival="39.00" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="29.00" routeLength="367.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.58" rerouteNo="0" devices="tripinfo_1 fcd_1" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="2" depart="20.00" departLane="beg_0" departPos="66.00" departSpeed="20.00" departDelay="0.00" arrival="47.30" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="27.30" routeLength="334.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.51" rerouteNo="0" devices="tripinfo_2 fcd_2" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="3" depart="30.00" departLane="beg_0" departPos="100.00" departSpeed="20.00" departDelay="0.00" arrival="55.60" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="25.60" routeLength="300.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.52" rerouteNo="0" devices="tripinfo_3 fcd_3" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="4" depart="40.00" departLane="beg_0" departPos="133.00" departSpeed="10.00" departDelay="0.00" arrival="64.80" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="24.80" routeLength="267.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.38" rerouteNo="0" devices="tripinfo_4 fcd_4" vType="default" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="5" depart="50.00" departLane="beg_0" departPos="195.00" departSpeed="10.00" departDelay="0.00" arrival="70.60" arrivalLane="end_0" arrivalPos="200.00" arrivalSpeed="10.00" duration="20.60" routeLength="205.10" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.25" rerouteNo="0" devices="tripinfo_5 fcd_5" vType="default" speedFactor="1.00" vaporized=""/>
+</tripinfos>
