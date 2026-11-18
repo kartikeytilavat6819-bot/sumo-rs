@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --emission-output=rawdump.xml --no-duration-log -b 0 -e 10 --step-length=0.1 --emission-output.precision 5 -a tools/oracle/cases/tt_output_emission-output_one_vehicle_subsecond/input_additional2.add.xml

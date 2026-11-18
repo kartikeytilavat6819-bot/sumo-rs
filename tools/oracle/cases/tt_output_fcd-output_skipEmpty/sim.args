@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --fcd-output.filter-shapes=po_0 --fcd-output.skip-empty -a tools/oracle/cases/tt_output_fcd-output_skipEmpty/input_additional.add.xml

@@ -1,0 +1,1020 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T13:20:03.580721-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_emission-output_shut_off_auto\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_emission-output_shut_off_auto\routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <emission-output value="rawdump.xml"/>
+        <fcd-output value="tools\oracle\cases\tt_output_emission-output_shut_off_auto\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_emission-output_shut_off_auto\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_emission-output_shut_off_auto\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.period value="5"/>
+    </emissions>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="0" x="5.10" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="5.10" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="0" x="6.81" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="1.71" pos="6.81" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="0" x="11.05" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.24" pos="11.05" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="0" x="17.31" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="6.26" pos="17.31" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="0" x="24.87" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.56" pos="24.87" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="0" x="34.03" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.16" pos="34.03" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="0" x="44.52" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.49" pos="44.52" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="0" x="56.60" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.08" pos="56.60" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="0" x="69.39" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.79" pos="69.39" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="0" x="79.82" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="10.43" pos="79.82" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="0" x="87.52" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.70" pos="87.52" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="0" x="90.71" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="3.20" pos="90.71" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="0" x="90.85" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.13" pos="90.85" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="0" x="90.93" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.09" pos="90.93" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.02" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="0" x="90.95" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="0" x="92.63" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="1.68" pos="0.68" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="0" x="96.72" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="4.09" pos="4.77" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="0" x="102.28" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="5.55" pos="10.33" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="0" x="110.26" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="7.98" pos="2.21" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="0" x="119.75" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="9.50" pos="11.70" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="0" x="131.43" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="11.68" pos="23.38" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="0" x="145.17" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.74" pos="37.12" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="0" x="158.43" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.26" pos="50.38" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="0" x="171.45" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.02" pos="63.40" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="0" x="184.18" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="12.73" pos="76.13" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="0" x="197.47" y="95.05" angle="90.00" type="DEFAULT_VEHTYPE" speed="13.28" pos="89.42" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00"/>
+    <timestep time="57.00"/>
+    <timestep time="58.00"/>
+    <timestep time="59.00"/>
+    <timestep time="60.00"/>
+    <timestep time="61.00"/>
+    <timestep time="62.00"/>
+    <timestep time="63.00"/>
+    <timestep time="64.00"/>
+    <timestep time="65.00"/>
+    <timestep time="66.00"/>
+    <timestep time="67.00"/>
+    <timestep time="68.00"/>
+    <timestep time="69.00"/>
+    <timestep time="70.00"/>
+    <timestep time="71.00"/>
+    <timestep time="72.00"/>
+    <timestep time="73.00"/>
+    <timestep time="74.00"/>
+    <timestep time="75.00"/>
+    <timestep time="76.00"/>
+    <timestep time="77.00"/>
+    <timestep time="78.00"/>
+    <timestep time="79.00"/>
+    <timestep time="80.00"/>
+    <timestep time="81.00"/>
+    <timestep time="82.00"/>
+    <timestep time="83.00"/>
+    <timestep time="84.00"/>
+    <timestep time="85.00"/>
+    <timestep time="86.00"/>
+    <timestep time="87.00"/>
+    <timestep time="88.00"/>
+    <timestep time="89.00"/>
+    <timestep time="90.00">
+        <vehicle id="1" x="5.10" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="5.10" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="1" x="7.13" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="2.03" pos="7.13" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="1" x="11.05" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="3.92" pos="11.05" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="1" x="17.50" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="6.45" pos="17.50" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="1" x="25.54" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="8.05" pos="25.54" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="1" x="35.63" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="10.09" pos="35.63" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="1" x="47.29" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="11.66" pos="47.29" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="1" x="61.00" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.71" pos="61.00" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="1" x="74.11" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.11" pos="74.11" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="1" x="83.87" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="9.76" pos="83.87" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="1" x="89.38" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="5.52" pos="89.38" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="1" x="90.92" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="1.54" pos="90.92" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="1" x="90.94" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.01" pos="90.94" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="1" x="90.94" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.01" pos="90.94" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.01" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="1" x="90.95" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="1" x="93.36" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="2.41" pos="1.41" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="1" x="97.90" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="4.54" pos="5.95" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="1" x="104.22" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="6.33" pos="12.27" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="1" x="113.11" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="8.88" pos="5.06" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="1" x="123.81" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="10.70" pos="15.76" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="1" x="136.75" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="12.94" pos="28.70" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="1" x="149.87" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.13" pos="41.82" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="1" x="163.67" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.80" pos="55.62" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="1" x="177.14" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.48" pos="69.09" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="1" x="190.71" y="95.05" angle="90.00" type="HBEFA2/P_7_7" speed="13.56" pos="82.66" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00"/>
+    <timestep time="146.00"/>
+    <timestep time="147.00"/>
+    <timestep time="148.00"/>
+    <timestep time="149.00"/>
+    <timestep time="150.00"/>
+    <timestep time="151.00"/>
+    <timestep time="152.00"/>
+    <timestep time="153.00"/>
+    <timestep time="154.00"/>
+    <timestep time="155.00"/>
+    <timestep time="156.00"/>
+    <timestep time="157.00"/>
+    <timestep time="158.00"/>
+    <timestep time="159.00"/>
+    <timestep time="160.00"/>
+    <timestep time="161.00"/>
+    <timestep time="162.00"/>
+    <timestep time="163.00"/>
+    <timestep time="164.00"/>
+    <timestep time="165.00"/>
+    <timestep time="166.00"/>
+    <timestep time="167.00"/>
+    <timestep time="168.00"/>
+    <timestep time="169.00"/>
+    <timestep time="170.00"/>
+    <timestep time="171.00"/>
+    <timestep time="172.00"/>
+    <timestep time="173.00"/>
+    <timestep time="174.00"/>
+    <timestep time="175.00"/>
+    <timestep time="176.00"/>
+    <timestep time="177.00"/>
+    <timestep time="178.00"/>
+    <timestep time="179.00"/>
+    <timestep time="180.00">
+        <vehicle id="2" x="5.10" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="5.10" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="181.00">
+        <vehicle id="2" x="7.39" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="2.29" pos="7.39" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="182.00">
+        <vehicle id="2" x="11.22" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="3.83" pos="11.22" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="183.00">
+        <vehicle id="2" x="17.30" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="6.08" pos="17.30" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="184.00">
+        <vehicle id="2" x="25.59" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="8.29" pos="25.59" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="185.00">
+        <vehicle id="2" x="35.86" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="10.27" pos="35.86" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="186.00">
+        <vehicle id="2" x="48.71" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="12.85" pos="48.71" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="187.00">
+        <vehicle id="2" x="62.50" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.79" pos="62.50" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="188.00">
+        <vehicle id="2" x="75.91" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.41" pos="75.91" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="189.00">
+        <vehicle id="2" x="85.16" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="9.26" pos="85.16" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="190.00">
+        <vehicle id="2" x="89.92" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="4.76" pos="89.92" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="191.00">
+        <vehicle id="2" x="90.66" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.74" pos="90.66" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="192.00">
+        <vehicle id="2" x="90.93" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.27" pos="90.93" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="193.00">
+        <vehicle id="2" x="90.94" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.01" pos="90.94" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="194.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.01" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="195.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="196.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="197.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="198.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="199.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="200.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="201.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="202.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="203.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="204.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="205.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="206.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="207.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="208.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="209.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="210.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="211.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="212.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="213.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="214.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="215.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="216.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="217.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="218.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="219.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="220.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="221.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="222.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="223.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="224.00">
+        <vehicle id="2" x="90.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="225.00">
+        <vehicle id="2" x="92.25" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="1.30" pos="0.30" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="226.00">
+        <vehicle id="2" x="95.47" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="3.21" pos="3.52" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="227.00">
+        <vehicle id="2" x="100.27" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="4.80" pos="8.32" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="228.00">
+        <vehicle id="2" x="107.52" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="7.25" pos="15.57" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="229.00">
+        <vehicle id="2" x="117.04" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="9.52" pos="8.99" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="230.00">
+        <vehicle id="2" x="128.12" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="11.08" pos="20.07" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="231.00">
+        <vehicle id="2" x="140.68" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="12.55" pos="32.63" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="232.00">
+        <vehicle id="2" x="153.95" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.27" pos="45.90" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="233.00">
+        <vehicle id="2" x="167.81" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.86" pos="59.76" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="234.00">
+        <vehicle id="2" x="181.50" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.70" pos="73.45" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="235.00">
+        <vehicle id="2" x="194.85" y="95.05" angle="90.00" type="HBEFA3/PC_G_EU4" speed="13.35" pos="86.80" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="236.00"/>
+    <timestep time="237.00"/>
+    <timestep time="238.00"/>
+    <timestep time="239.00"/>
+    <timestep time="240.00"/>
+    <timestep time="241.00"/>
+    <timestep time="242.00"/>
+    <timestep time="243.00"/>
+    <timestep time="244.00"/>
+    <timestep time="245.00"/>
+    <timestep time="246.00"/>
+    <timestep time="247.00"/>
+    <timestep time="248.00"/>
+    <timestep time="249.00"/>
+    <timestep time="250.00"/>
+    <timestep time="251.00"/>
+    <timestep time="252.00"/>
+    <timestep time="253.00"/>
+    <timestep time="254.00"/>
+    <timestep time="255.00"/>
+    <timestep time="256.00"/>
+    <timestep time="257.00"/>
+    <timestep time="258.00"/>
+    <timestep time="259.00"/>
+    <timestep time="260.00"/>
+    <timestep time="261.00"/>
+    <timestep time="262.00"/>
+    <timestep time="263.00"/>
+    <timestep time="264.00"/>
+    <timestep time="265.00"/>
+    <timestep time="266.00"/>
+    <timestep time="267.00"/>
+    <timestep time="268.00"/>
+    <timestep time="269.00"/>
+    <timestep time="270.00">
+        <vehicle id="3" x="5.10" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="5.10" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="271.00">
+        <vehicle id="3" x="7.37" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="2.27" pos="7.37" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="272.00">
+        <vehicle id="3" x="11.75" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="4.38" pos="11.75" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="273.00">
+        <vehicle id="3" x="18.49" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="6.74" pos="18.49" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="274.00">
+        <vehicle id="3" x="26.66" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="8.16" pos="26.66" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="275.00">
+        <vehicle id="3" x="36.60" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="9.94" pos="36.60" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="276.00">
+        <vehicle id="3" x="48.61" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="12.02" pos="48.61" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="277.00">
+        <vehicle id="3" x="61.45" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="12.83" pos="61.45" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="278.00">
+        <vehicle id="3" x="74.69" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="13.25" pos="74.69" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="279.00">
+        <vehicle id="3" x="83.44" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="8.75" pos="83.44" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="280.00">
+        <vehicle id="3" x="89.37" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="5.93" pos="89.37" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="281.00">
+        <vehicle id="3" x="90.79" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="1.43" pos="90.79" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="282.00">
+        <vehicle id="3" x="90.90" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.11" pos="90.90" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="283.00">
+        <vehicle id="3" x="90.93" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.02" pos="90.93" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="284.00">
+        <vehicle id="3" x="90.94" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.01" pos="90.94" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="285.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.01" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="286.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="287.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="288.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="289.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="290.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="291.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="292.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="293.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="294.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="295.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="296.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="297.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="298.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="299.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="300.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="301.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="302.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="303.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="304.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="305.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="306.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="307.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="308.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="309.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="310.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="311.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="312.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="313.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="314.00">
+        <vehicle id="3" x="90.95" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="315.00">
+        <vehicle id="3" x="93.17" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="2.22" pos="1.22" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="316.00">
+        <vehicle id="3" x="97.76" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="4.58" pos="5.81" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="317.00">
+        <vehicle id="3" x="104.33" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="6.57" pos="12.38" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="318.00">
+        <vehicle id="3" x="112.35" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="8.02" pos="4.30" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="319.00">
+        <vehicle id="3" x="122.41" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="10.05" pos="14.36" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="320.00">
+        <vehicle id="3" x="133.81" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="11.40" pos="25.76" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="321.00">
+        <vehicle id="3" x="146.81" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="13.00" pos="38.76" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="322.00">
+        <vehicle id="3" x="159.92" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="13.11" pos="51.87" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="323.00">
+        <vehicle id="3" x="173.49" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="13.57" pos="65.44" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="324.00">
+        <vehicle id="3" x="186.42" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="12.93" pos="78.37" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="325.00">
+        <vehicle id="3" x="199.04" y="95.05" angle="90.00" type="PHEMlight/PC_G_EU4" speed="12.62" pos="90.99" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="326.00"/>
+    <timestep time="327.00"/>
+    <timestep time="328.00"/>
+    <timestep time="329.00"/>
+    <timestep time="330.00"/>
+    <timestep time="331.00"/>
+    <timestep time="332.00"/>
+    <timestep time="333.00"/>
+    <timestep time="334.00"/>
+    <timestep time="335.00"/>
+    <timestep time="336.00"/>
+    <timestep time="337.00"/>
+    <timestep time="338.00"/>
+    <timestep time="339.00"/>
+    <timestep time="340.00"/>
+    <timestep time="341.00"/>
+    <timestep time="342.00"/>
+    <timestep time="343.00"/>
+    <timestep time="344.00"/>
+    <timestep time="345.00"/>
+    <timestep time="346.00"/>
+    <timestep time="347.00"/>
+    <timestep time="348.00"/>
+    <timestep time="349.00"/>
+    <timestep time="350.00"/>
+    <timestep time="351.00"/>
+    <timestep time="352.00"/>
+    <timestep time="353.00"/>
+    <timestep time="354.00"/>
+    <timestep time="355.00"/>
+    <timestep time="356.00"/>
+    <timestep time="357.00"/>
+    <timestep time="358.00"/>
+    <timestep time="359.00"/>
+    <timestep time="360.00">
+        <vehicle id="4" x="5.10" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="5.10" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="361.00">
+        <vehicle id="4" x="7.39" y="95.05" angle="90.00" type="BEV" speed="2.29" pos="7.39" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="362.00">
+        <vehicle id="4" x="12.08" y="95.05" angle="90.00" type="BEV" speed="4.70" pos="12.08" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="363.00">
+        <vehicle id="4" x="18.69" y="95.05" angle="90.00" type="BEV" speed="6.60" pos="18.69" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="364.00">
+        <vehicle id="4" x="27.78" y="95.05" angle="90.00" type="BEV" speed="9.10" pos="27.78" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="365.00">
+        <vehicle id="4" x="39.23" y="95.05" angle="90.00" type="BEV" speed="11.45" pos="39.23" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="366.00">
+        <vehicle id="4" x="51.98" y="95.05" angle="90.00" type="BEV" speed="12.75" pos="51.98" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="367.00">
+        <vehicle id="4" x="64.89" y="95.05" angle="90.00" type="BEV" speed="12.90" pos="64.89" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="368.00">
+        <vehicle id="4" x="77.81" y="95.05" angle="90.00" type="BEV" speed="12.92" pos="77.81" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="369.00">
+        <vehicle id="4" x="86.23" y="95.05" angle="90.00" type="BEV" speed="8.42" pos="86.23" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="370.00">
+        <vehicle id="4" x="90.56" y="95.05" angle="90.00" type="BEV" speed="4.33" pos="90.56" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="371.00">
+        <vehicle id="4" x="90.89" y="95.05" angle="90.00" type="BEV" speed="0.33" pos="90.89" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="372.00">
+        <vehicle id="4" x="90.94" y="95.05" angle="90.00" type="BEV" speed="0.05" pos="90.94" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="373.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="374.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="375.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="376.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="377.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="378.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="379.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="380.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="381.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="382.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="383.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="384.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="385.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="386.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="387.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="388.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="389.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="390.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="391.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="392.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="393.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="394.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="395.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="396.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="397.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="398.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="399.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="400.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="401.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="402.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="403.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="404.00">
+        <vehicle id="4" x="90.95" y="95.05" angle="90.00" type="BEV" speed="0.00" pos="90.95" lane="WC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="405.00">
+        <vehicle id="4" x="93.22" y="95.05" angle="90.00" type="BEV" speed="2.27" pos="1.27" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="406.00">
+        <vehicle id="4" x="97.96" y="95.05" angle="90.00" type="BEV" speed="4.74" pos="6.01" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="407.00">
+        <vehicle id="4" x="105.25" y="95.05" angle="90.00" type="BEV" speed="7.29" pos="13.30" lane=":C_16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="408.00">
+        <vehicle id="4" x="114.15" y="95.05" angle="90.00" type="BEV" speed="8.90" pos="6.10" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="409.00">
+        <vehicle id="4" x="124.76" y="95.05" angle="90.00" type="BEV" speed="10.61" pos="16.71" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="410.00">
+        <vehicle id="4" x="137.95" y="95.05" angle="90.00" type="BEV" speed="13.19" pos="29.90" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="411.00">
+        <vehicle id="4" x="151.80" y="95.05" angle="90.00" type="BEV" speed="13.85" pos="43.75" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="412.00">
+        <vehicle id="4" x="165.06" y="95.05" angle="90.00" type="BEV" speed="13.26" pos="57.01" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="413.00">
+        <vehicle id="4" x="177.79" y="95.05" angle="90.00" type="BEV" speed="12.73" pos="69.74" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="414.00">
+        <vehicle id="4" x="190.93" y="95.05" angle="90.00" type="BEV" speed="13.14" pos="82.88" lane="CE_0" slope="0.00"/>
+    </timestep>
+    <timestep time="415.00"/>
+</fcd-export>

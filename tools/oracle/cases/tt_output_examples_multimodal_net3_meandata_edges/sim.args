@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -a tools/oracle/cases/tt_output_examples_multimodal_net3_meandata_edges/input_additional.add.xml
