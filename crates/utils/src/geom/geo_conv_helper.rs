@@ -1,9 +1,8 @@
 //! Port of utils/geom/GeoConvHelper.{h,cpp}
 //!
-//! UTM and DHDN use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ to
-//! well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
-//! shortcut: DHDN_UTM needs the potsdam datum shift to WGS84 (7-parameter Helmert), not ported; other
-//! explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
+//! UTM, DHDN and DHDN_UTM use an in-crate port of PROJ's default `etmerc` (see `Etmerc`), matching PROJ
+//! to well below 1 mm. The "!" (none) and "-" (simple) methods plus offset/scale/rotation are complete.
+//! shortcut: other explicit proj strings are projected only when they are +proj=utm or +proj=tmerc with lat_0=0.
 use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::f64::consts::PI;
@@ -47,6 +46,9 @@ pub struct GeoConvHelper {
     conv_boundary: Boundary,
     /// C++ `myProjection`: set once the projection is known (`None` until initialised)
     projection: Option<Etmerc>,
+    /// C++ `myInverseProjection`: DHDN Gauss-Krueger projection used by DHDN_UTM to turn the input
+    /// easting/northing into lon/lat before the WGS84 UTM forward projection is applied
+    dhdn_inverse: Option<Etmerc>,
 }
 
 impl PartialEq for GeoConvHelper {
@@ -118,6 +120,7 @@ impl GeoConvHelper {
         GeoConvHelper {
             proj_string,
             projection,
+            dhdn_inverse: None,
             offset,
             geo_scale: scale,
             sin: deg2rad(-rot).sin(), // rotate clockwise
@@ -342,8 +345,13 @@ impl GeoConvHelper {
                         write_warning(&format!("Attempt to initialize DHDN_UTM-projection on invalid longitude {}", f64_to_string(x)));
                         return false;
                     }
-                    write_error("Projection DHDN_UTM is not supported by this build (needs the potsdam datum shift)");
-                    return false;
+                    // C++: myInverseProjection = proj_create(dhdn Gauss-Krueger string)
+                    self.dhdn_inverse = Etmerc::from_proj(&dhdn_proj_string(zone));
+                    // C++ then falls through into the UTM case with x = ((x-500000)/1e6)*3
+                    let lon = ((x - 500000.) / 1000000.) * 3.;
+                    let utm_zone = (lon + 180.) as i32 / 6 + 1;
+                    self.proj_string = format!("+proj=utm +zone={utm_zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
+                    self.projection = Etmerc::from_proj(&self.proj_string);
                 }
                 ProjectionMethod::Utm => {
                     let zone = (x + 180.) as i32 / 6 + 1;
@@ -361,10 +369,18 @@ impl GeoConvHelper {
                 }
                 _ => {}
             }
-            if matches!(self.projection_method, ProjectionMethod::Utm | ProjectionMethod::Dhdn) && self.projection.is_none() {
+            if matches!(self.projection_method, ProjectionMethod::Utm | ProjectionMethod::Dhdn | ProjectionMethod::DhdnUtm)
+                && (self.projection.is_none() || (self.projection_method == ProjectionMethod::DhdnUtm && self.dhdn_inverse.is_none()))
+            {
                 write_error(&format!("Could not build projection '{}'", self.proj_string));
                 return false;
             }
+        }
+        // C++ applies myInverseProjection on every call, not just while initialising: DHDN_UTM input
+        // is a Gauss-Krueger easting/northing and must become lon/lat before the UTM forward step.
+        if let Some(inv) = &self.dhdn_inverse {
+            let (lon, lat) = inv.inv(from.x(), from.y());
+            from.set(rad2deg(lon), rad2deg(lat));
         }
         // perform conversion
         let ok = self.x2cartesian_const(from);
@@ -746,5 +762,26 @@ mod tests {
         let mut q = Position::new(12.5, 52.3);
         assert!(d.x2cartesian_const(&mut q));
         assert!((q.x() - 4534104.708578545).abs() < 1e-6 && (q.y() - 5796245.650255103).abs() < 1e-6);
+    }
+
+    #[test]
+    fn dhdn_utm_inverse_then_utm() {
+        // The DHDN reference above is lon/lat (12.5, 52.3) in Gauss-Krueger zone 4. C++ DHDN_UTM
+        // first inverts that easting/northing to lon/lat, then applies the WGS84 UTM forward
+        // projection of the zone selected by ((x-500000)/1e6)*3 (here: 33).
+        let mut h = GeoConvHelper::new("DHDN_UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut p = Position::new(4534104.708578545, 5796245.650255103);
+        assert!(h.x2cartesian(&mut p, false));
+        assert_eq!(h.get_proj_string(), utm_proj(33));
+
+        let mut u = GeoConvHelper::new(&utm_proj(33), Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        let mut expected = Position::new(12.5, 52.3);
+        assert!(u.x2cartesian(&mut expected, false));
+        assert!((p.x() - expected.x()).abs() < 1e-3, "{} vs {}", p.x(), expected.x());
+        assert!((p.y() - expected.y()).abs() < 1e-3, "{} vs {}", p.y(), expected.y());
+
+        // invalid DHDN zone: warning + false, as in GeoConvHelper.cpp
+        let mut bad = GeoConvHelper::new("DHDN_UTM", Position::default(), Boundary::new(), Boundary::new(), 1.0, 0.0, false, false);
+        assert!(!bad.x2cartesian(&mut Position::new(100000., 5000000.), false));
     }
 }
