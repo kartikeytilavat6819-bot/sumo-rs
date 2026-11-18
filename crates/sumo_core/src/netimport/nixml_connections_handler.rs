@@ -4,7 +4,7 @@ use crate::prelude::*;
 use utils::common::msg_handler::{MsgType, with_instance, write_error, write_warning};
 use utils::tlf;
 use utils::common::std_defs::NETWORK_VERSION;
-use utils::common::string_utils::to_int_secure;
+use utils::common::string_utils::{to_int, to_int_secure};
 
 /// NBEdge::UNSPECIFIED_WIDTH (NBEdge.cpp:69); no Rust const exists in nb_edge.rs yet
 const UNSPECIFIED_WIDTH: f64 = -1.0;
@@ -375,7 +375,8 @@ impl NIXMLConnectionsHandler {
         // get the begin and the end lane
         let mut fromLane: i32 = 0;
         let mut toLane: i32 = 0;
-        // shortcut: the C++ try/catch(NumberFormatException) is not reproduced; get() reports bad numbers itself and clears ok, so the "not numeric" inform is not emitted
+        // C++ try/catch(NumberFormatException) -> inform is reproduced inside parseLaneDefinition
+        // (deprecated lane definitions emit it in parseDeprecatedLaneDefinition).
         if !self.parse_lane_info(attrs, from, to, Ptr::from_mut(&mut fromLane), Ptr::from_mut(&mut toLane)) {
             return;
         }
@@ -581,7 +582,8 @@ impl NIXMLConnectionsHandler {
             return false; // There was an error.
         }
 
-        // shortcut: NumberFormatException from toIntSecure is mapped to the catch-all failure of parseLaneBound (not reproduced); toIntSecure errors return false here
+        // C++ toIntSecure throws NumberFormatException, caught in parseLaneBound -> inform;
+        // here the inform is emitted directly with the same text and the function returns false.
         let (Ok(fl), Ok(tl)) = (to_int_secure(&st[0], -1), to_int_secure(&st[1], -1)) else {
             self.myErrorMsgHandler.m().inform("At least one of the defined lanes was not numeric", true);
             return false;
@@ -606,6 +608,14 @@ impl NIXMLConnectionsHandler {
     #[allow(unused_variables)]
     pub fn parse_lane_definition(&mut self, attributes: &SUMOSAXAttributes, fromLane: Ptr<i32>, toLane: Ptr<i32>) -> bool {
         let mut ok = true;
+        // C++ get<int> throws NumberFormatException for a present but non-numeric value;
+        // parseLaneBound catches it and emits the "not numeric" inform (NIXMLConnectionsHandler.cpp:236).
+        for attr in [SUMO_ATTR_FROM_LANE, SUMO_ATTR_TO_LANE] {
+            if attributes.has_attribute(attr) && to_int(&attributes.get_string(attr)).is_err() {
+                self.myErrorMsgHandler.m().inform("At least one of the defined lanes was not numeric", true);
+                return false;
+            }
+        }
         fromLane.m().clone_from(&attributes.get::<i32>(SUMO_ATTR_FROM_LANE, "", &mut ok, true));
         toLane.m().clone_from(&attributes.get::<i32>(SUMO_ATTR_TO_LANE, "", &mut ok, true));
         ok

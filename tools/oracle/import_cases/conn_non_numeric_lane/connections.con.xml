@@ -1,0 +1,3 @@
+<connections>
+    <connection from="e0" to="e1" fromLane="x" toLane="0"/>
+</connections>
