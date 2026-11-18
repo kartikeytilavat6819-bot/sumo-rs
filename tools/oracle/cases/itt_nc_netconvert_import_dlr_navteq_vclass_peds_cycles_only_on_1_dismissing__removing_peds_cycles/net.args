@@ -1,0 +1,1 @@
+--write-license --no-internal-links --dismiss-vclasses --remove-edges.by-vclass pedestrian,bicycle --dlr-navteq-prefix=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_vclass_peds_cycles_only_on_1_dismissing__removing_peds_cycles/elmar -v

@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_type/input_edges2.edg.xml --dlr-navteq-prefix=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_type/elmar --type-files=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_type/input_types.typ.xml -v --no-internal-links

@@ -1,0 +1,2 @@
+--write-license --no-internal-links --dlr-navteq-prefix=tools/oracle/cases/itt_nc_netconvert_import_dlr_navteq_vclass_tolerant/elmar -v --dlr-navteq.tolerant-permissions --default.disallow rail rail_urban
+rail_electric rail_fast tram container cable_car subway aircraft drone ship
