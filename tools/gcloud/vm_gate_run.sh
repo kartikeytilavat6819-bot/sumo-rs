@@ -16,6 +16,8 @@ find "$NEW/tools" -type f \( -name '*.sh' -o -name '*.args' \) -exec sed -i 's/\
 echo "$2"; echo "files changed: $(rsync -rc --delete --out-format='%n' "$NEW/" "$SRC/" | grep -vc '/$')"
 # a branch whose run_all predates sharding/tt filtering gets the lead's copy (vm_gate.ps1 ships it)
 grep -q RUN_SHARDS "$SRC/tools/oracle/run_all.sh" 2>/dev/null || { [ -f /home/gate/lead_run_all.sh ] && sed 's/\r$//' /home/gate/lead_run_all.sh > "$SRC/tools/oracle/run_all.sh"; }
+# opt-level 1, no debuginfo: cases run 4x faster with identical results (measured on 150 cases); debug assertions stay on
+export CARGO_PROFILE_DEV_OPT_LEVEL=1 CARGO_PROFILE_DEV_DEBUG=0
 export PATH=$HOME/.cargo/bin:$PATH CARGO_TARGET_DIR=$SLOT_TARGET CARGO_BUILD_JOBS=8 SCORE_OUT=/tmp/score$slot \
        SUMO_HOME=/home/gate/sumo_pkg/sumo SUMO_PRISTINE_BIN=/home/gate/sumo_pkg/sumo/bin
 cd "$SRC"
