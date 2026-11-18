@@ -1,0 +1,15 @@
+<additional>
+    <!-- Static program with separate yellow ('y') and red-yellow ('u') clearance phases. -->
+    <tlLogic id="nC" type="static" programID="progRY" offset="0">
+        <phase duration="20" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="2" state="uuuurrrruuuurrrr"/>
+        <phase duration="20" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+        <phase duration="2" state="rrrruuuurrrruuuu"/>
+    </tlLogic>
+    <WAUT id="wRY" refTime="0" startProg="progRY">
+        <wautSwitch time="200" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="wRY"/>
+</additional>

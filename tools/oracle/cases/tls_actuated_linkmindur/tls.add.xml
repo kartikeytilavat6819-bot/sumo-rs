@@ -1,0 +1,20 @@
+<additional>
+    <!-- Per-link minimum green times (linkMinDur:<index>) on an actuated program. -->
+    <tlLogic id="nC" type="actuated" programID="progLM" offset="0">
+        <param key="detector-gap" value="2.0"/>
+        <param key="max-gap" value="3.0"/>
+        <param key="passing-time" value="1.8"/>
+        <param key="linkMinDur:0" value="12"/>
+        <param key="linkMinDur:2" value="8"/>
+        <param key="linkMinDur:8" value="10"/>
+        <param key="linkMaxDur:4" value="20"/>
+        <phase duration="5" minDur="5" maxDur="40" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="5" minDur="5" maxDur="40" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="wLM" refTime="0" startProg="progLM">
+        <wautSwitch time="250" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="wLM"/>
+</additional>

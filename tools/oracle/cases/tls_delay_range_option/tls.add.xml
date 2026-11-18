@@ -1,0 +1,15 @@
+<additional>
+    <!-- Delay-based program; the global detector-range option sets its default range. -->
+    <tlLogic id="nC" type="delay_based" programID="progDB" offset="0">
+        <param key="minTimeloss" value="2.0"/>
+        <param key="extendMaxDur" value="true"/>
+        <phase duration="12" minDur="8" maxDur="25" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="12" minDur="8" maxDur="25" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="wDB" refTime="0" startProg="progDB">
+        <wautSwitch time="250" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="wDB"/>
+</additional>

@@ -1,0 +1,16 @@
+<additional>
+    <!-- Actuated program exercising phase name, next, minDur and maxDur together. -->
+    <tlLogic id="nC" type="actuated" programID="progPA" offset="0">
+        <param key="detector-gap" value="2.0"/>
+        <param key="max-gap" value="3.0"/>
+        <param key="passing-time" value="1.8"/>
+        <phase duration="8" minDur="5" maxDur="30" name="EW green" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" name="EW yellow" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="8" minDur="5" maxDur="30" next="0" name="NS green" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" next="0 2" name="NS yellow" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="wPA" refTime="0" startProg="progPA">
+        <wautSwitch time="200" to="0"/>
+    </WAUT>
+    <wautJunction junctionID="nC" wautID="wPA"/>
+</additional>

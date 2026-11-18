@@ -1,0 +1,23 @@
+<additional>
+    <!-- Stretch procedure: the target program is cut/stretched inside the B* ranges until its GSP matches. -->
+    <tlLogic id="nC" type="static" programID="progA" offset="0">
+        <param key="GSP" value="0"/>
+        <phase duration="20" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="20" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <tlLogic id="nC" type="static" programID="progB" offset="0">
+        <param key="GSP" value="5"/>
+        <phase duration="22" state="GGggrrrrGGggrrrr"/>
+        <phase duration="3" state="yyyyrrrryyyyrrrr"/>
+        <phase duration="22" state="rrrrGGggrrrrGGgg"/>
+        <phase duration="3" state="rrrryyyyrrrryyyy"/>
+    </tlLogic>
+    <WAUT id="waut0" refTime="0" startProg="progA">
+        <wautSwitch time="100" to="progB"/>
+        <wautSwitch time="200" to="progA"/>
+        <wautSwitch time="300" to="progB"/>
+    </WAUT>
+    <wautJunction junctionID="nC" procedure="Stretch" wautID="waut0"/>
+</additional>
