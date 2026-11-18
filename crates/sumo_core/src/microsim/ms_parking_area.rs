@@ -621,7 +621,7 @@ impl MSParkingArea {
             lotIndex = self.myLastFreeLot;
         }
         self.mySpaceOccupancies[lotIndex as usize].vehicle = veh;
-        self.myEndPositions.insert(veh, (beg, end));
+        self.myEndPositions.insert(NumIdKey::new(veh, veh.get_numerical_id()), (beg, end));
         self.compute_last_free_pos();
         self.myMaxVehLength = max2(self.myMaxVehLength, veh.get_length());
         // current search ends here
@@ -654,7 +654,7 @@ impl MSParkingArea {
     // }
     #[allow(unused_variables)]
     pub fn leave_from(&mut self, what: Ptr<SUMOVehicle>) {
-        debug_assert!(self.myEndPositions.contains_key(&what));
+        debug_assert!(self.myEndPositions.contains_key(&NumIdKey::new(what, what.get_numerical_id())));
         schedule_update_event(self);
         for lsd in self.mySpaceOccupancies.iter_mut() {
             if lsd.vehicle == what {
@@ -664,12 +664,12 @@ impl MSParkingArea {
         }
         if what.get_length() == self.myMaxVehLength {
             let mut maxLen = 0.0;
-            for (item, _) in self.myEndPositions.iter() {
-                maxLen = max2(maxLen, item.get_length());
+            for (k, _) in self.myEndPositions.iter() {
+                maxLen = max2(maxLen, k.1.get_length());
             }
             self.myMaxVehLength = maxLen;
         }
-        self.myEndPositions.remove(&what);
+        self.myEndPositions.remove(&NumIdKey::new(what, what.get_numerical_id()));
         self.compute_last_free_pos();
     }
 
