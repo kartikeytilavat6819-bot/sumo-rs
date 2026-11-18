@@ -48,6 +48,19 @@ row ptstopNoBidi osm:city_karlsruhe_tram "--ptstop-output @D/ptstop.xml --ptstop
 row outputRemovedNodes osm:real "--geometry.remove true --output.removed-nodes true"
 row railwayTopologyOutput osm:city_german_level_crossing "--railway.topology.repair true --railway.topology.output @D/topo.xml"
 row plainOutputLanes plain "--plain-output-prefix @D/plain/net --plain-output.lanes true"
+row tlsCycleTime osm:city_melbourne_guess_signals "--tls.guess-signals true --tls.cycle.time 60"
+row roundaboutsGuessFalse osm:city_carmel_roundabouts_guess "--roundabouts.guess false"
+row opposites osm:city_cairo_priority "--opposites.guess true"
+row sidewalksFromPermissions osm:city_london_lh_sidewalks "--sidewalks.guess true --sidewalks.guess.from-permissions true"
+row crossingsSpeedThreshold osm:city_dublin_tram_crossings "--crossings.guess true --crossings.guess.speed-threshold 30"
+row lefthandOsm osm:real "--lefthand true"
+row rectangularLaneCut osm:city_paris_dense "--rectangular-lane-cut true"
+row defaultSpeed osm:city_plano "--default.speed 8.33"
+row defaultLanenumber osm:city_plano "--default.lanenumber 2"
+row tlsMinorLeftMaxSpeed osm:city_mexico_reforma_tls "--tls.minor-left.max-speed 8"
+row tlsLeftGreenTime osm:city_mexico_reforma_tls "--tls.left-green.time 4"
+row defaultJunctionsKeepClear osm:real "--default.junctions.keep-clear false"
+row simpleProjectionFalse osm:city_plano "--simple-projection false"
 
 # run_row NAME INPUT OPTIONS
 run_row() {
