@@ -1,0 +1,36 @@
+--- a/src/utils/traction_wire/Circuit.cpp
++++ b/src/utils/traction_wire/Circuit.cpp
+@@ -32,9 +32,12 @@
+ #include <mutex>
+ #include <utils/common/MsgHandler.h>
+ #include <utils/common/ToString.h>
++#include <cstdio>
+ #include "Element.h"
+ #include "Node.h"
+ #include "Circuit.h"
++#include <cstdio>
++#include <cstdlib>
+ 
+ static std::mutex circuit_lock;
+ 
+@@ -261,6 +264,10 @@
+     // map 'vals' into vector b and initialize solution x
+     Eigen::Map<Eigen::VectorXd> b(vals, numofeqs);
+     Eigen::VectorXd x = A.colPivHouseholderQr().solve(b);
++    if (getenv("F03T")) { fprintf(stderr, "TRC solve neq=%d ncol=%d nrem=%d nvs=%d
++", numofeqs, numofcolumn, (int)removable_ids->size(), (int)voltageSources->size());
++        for (int r = 0; r < numofeqs; r++) { fprintf(stderr, "TRC A%d:", r); for (int c = 0; c < A.cols(); c++) fprintf(stderr, " %.17g", A(r, c)); fprintf(stderr, " | b %.17g x0 %.17g
++", b[r], x[r]); } }
+ 
+     // initialize Jacobian matrix J and vector dx
+     Eigen::MatrixXd J = A;
+@@ -438,6 +445,9 @@
+         alpha = alphaBest + 0.5 * (alpha_notSolution.back() - alphaBest);
+     }
+ 
++    if (getenv("F03T")) { fprintf(stderr, "TRC alphaBest %.17g reason %d
++", alphaBest, (int)alphaReason); for (int r = 0; r < numofeqs; r++) fprintf(stderr, "TRC xbest%d %.17g
++", r, x_best[r]); }
+     // vals is pointer to memory and we use it now for saving solution x_best instead of right-hand side b
+     for (int i = 0; i < numofeqs; i++) {
+         vals[i] = x_best[i];
