@@ -5,7 +5,7 @@ Source: `spec/departure/departPos/pos_given0` (SUMO 1.28.0 official TextTest sui
 Collated options (`options.sumo`, parent first):
 
 ```
---write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-step-log -b 0 -e 0 --no-duration-log --net-file=net.net.xml -a=input_routes.rou.xml,input_additional.add.xml --fcd-output fcd.xml --fcd-output.attributes speed,pos,lane,edge
+--xml-validation never --write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-step-log -b 0 -e 0 --no-duration-log --net-file=net.net.xml -a=input_routes.rou.xml,input_additional.add.xml --fcd-output fcd.xml --fcd-output.attributes speed,pos,lane,edge
 ```
 
 `sim.args` keeps the behaviour options; net/route/additional/output files
