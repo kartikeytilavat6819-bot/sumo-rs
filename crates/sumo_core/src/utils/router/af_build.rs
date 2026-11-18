@@ -130,7 +130,9 @@ impl<E, N, V, M> AFBuild<E, N, V, M> {
     //         delete myNode2EdgeRouter;
     //     }
     #[allow(unused_variables)]
-    pub fn drop_(&mut self) {
+    pub fn drop_(&mut self)
+    where E: RouterEdge<V, Node = N>, V: RouterVehicle
+    {
         let tree = self.myCentralizedSPTree;
         if !tree.is_null() {
             tree.m().drop_();
