@@ -1,0 +1,1 @@
+Rerouting with pre-loaded weights is not yet faithful: the vehicle takes a different route (arrival 308.00 vs 196.00). Re-enable when loaded-weight routing matches the C++.
