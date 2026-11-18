@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:39:24.291121-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_e1Instant_nextEdges_20s_10r_5l\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_e1Instant_nextEdges_20s_10r_5l\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_e1Instant_nextEdges_20s_10r_5l/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_e1Instant_nextEdges_20s_10r_5l\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_e1Instant_nextEdges_20s_10r_5l\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_e1Instant_nextEdges_20s_10r_5l\ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="straight.0" depart="0.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="15.00" arrivalLane="CN_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_straight.0 fcd_straight.0" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="right.0" depart="2.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="16.00" arrivalLane="CE_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="14.00" routeLength="189.53" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_right.0 fcd_right.0" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="left.0" depart="4.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="19.00" arrivalLane="CW_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.70" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.98" rerouteNo="0" devices="tripinfo_left.0 fcd_left.0" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="straight.1" depart="6.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="21.00" arrivalLane="CN_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.90" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.58" rerouteNo="0" devices="tripinfo_straight.1 fcd_straight.1" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="right.1" depart="8.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="22.00" arrivalLane="CE_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="14.00" routeLength="189.53" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.29" rerouteNo="0" devices="tripinfo_right.1 fcd_right.1" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="left.1" depart="10.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="25.00" arrivalLane="CW_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.70" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.97" rerouteNo="0" devices="tripinfo_left.1 fcd_left.1" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="right.2" depart="14.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="28.00" arrivalLane="CE_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="14.00" routeLength="189.53" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_right.2 fcd_right.2" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="left.2" depart="16.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="31.00" arrivalLane="CW_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.70" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.98" rerouteNo="0" devices="tripinfo_left.2 fcd_left.2" vType="t1" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="left.3" depart="22.00" departLane="SC_0" departPos="5.10" departSpeed="13.89" departDelay="0.00" arrival="37.00" arrivalLane="CW_0" arrivalPos="92.80" arrivalSpeed="13.89" duration="15.00" routeLength="194.70" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.98" rerouteNo="0" devices="tripinfo_left.3 fcd_left.3" vType="t1" speedFactor="1.00" vaporized=""/>
+</tripinfos>

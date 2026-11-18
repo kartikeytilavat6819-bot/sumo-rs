@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 0 -e 100 -a tools/oracle/cases/tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step/input_additional.add.xml

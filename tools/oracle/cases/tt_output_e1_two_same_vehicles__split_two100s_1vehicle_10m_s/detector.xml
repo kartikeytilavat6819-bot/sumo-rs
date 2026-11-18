@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:40:43.095569-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s/input_additional.add.xml,tools/oracle/cases/tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s/input_additional2.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_e1_two_same_vehicles__split_two100s_1vehicle_10m_s\ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<detector xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/det_e1_file.xsd">
+    <interval begin="0.00" end="100.00" id="3/1to2/1" nVehContrib="2" flow="72.00" occupancy="0.60" speed="10.00" harmonicMeanSpeed="10.00" length="3.00" nVehEntered="2"/>
+    <interval begin="0.00" end="100.00" id="4/1to3/1" nVehContrib="2" flow="72.00" occupancy="0.60" speed="10.00" harmonicMeanSpeed="10.00" length="3.00" nVehEntered="2"/>
+</detector>

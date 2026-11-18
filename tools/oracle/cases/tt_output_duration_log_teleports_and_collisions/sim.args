@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --end 500 -a tools/oracle/cases/tt_output_duration_log_teleports_and_collisions/input_additional.add.xml

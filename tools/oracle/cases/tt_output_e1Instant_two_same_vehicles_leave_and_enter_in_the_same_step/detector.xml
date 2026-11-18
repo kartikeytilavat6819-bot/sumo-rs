@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T11:39:35.467164-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools\oracle\cases\tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step\ref_simple.net.xml"/>
+        <route-files value="tools\oracle\cases\tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step\routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="tools\oracle\cases\tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step\ref.fcd.xml"/>
+        <tripinfo-output value="tools\oracle\cases\tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step\ref.tripinfo.xml"/>
+        <statistic-output value="tools\oracle\cases\tt_output_e1Instant_two_same_vehicles_leave_and_enter_in_the_same_step\ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="0"/>
+        <end value="100"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<instantE1 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/instant_e1_file.xsd">
+    <instantOut id="instant" time="5.43" state="enter" vehID="0" speed="25.60" length="5.00" type="DEFAULT_VEHTYPE"/>
+    <instantOut id="instant" time="5.62" state="leave" vehID="0" speed="25.60" length="5.00" type="DEFAULT_VEHTYPE" occupancy="0.20"/>
+    <instantOut id="instant" time="6.81" state="enter" vehID="1" speed="23.93" length="5.00" type="DEFAULT_VEHTYPE" gap="1.18"/>
+    <instantOut id="instant" time="7.00" state="stay" vehID="1" speed="23.93" length="5.00" type="DEFAULT_VEHTYPE"/>
+    <instantOut id="instant" time="7.02" state="leave" vehID="1" speed="26.53" length="5.00" type="DEFAULT_VEHTYPE" occupancy="0.21"/>
+</instantE1>

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --device.emissions.probability=1.0 --emission-output=rawdump.xml -b 0 -e 150 -a tools/oracle/cases/tt_output_emission-idling/input_additional.add.xml
