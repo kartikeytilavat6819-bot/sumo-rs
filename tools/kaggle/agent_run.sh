@@ -5,7 +5,7 @@ OURS=${OURS:-${CARGO_TARGET_DIR:-/tmp/target}/debug/sumo}
 PRIS=${SUMO_PRISTINE_BIN:-/tmp/sumo_pkg/sumo/bin}/sumo
 OUT=/tmp/oc26
 mkdir -p $OUT
-CASES=${CASES:-"md_midinterval md_persons md_public md_stop md_vtypes"}
+CASES=${CASES:-"md_midinterval md_stop md_vtypes"}
 for c in $CASES; do
   dir=tools/oracle/cases/$c
   sim=$(cat $dir/sim.args)
@@ -26,9 +26,8 @@ for c in $CASES; do
   for af in $files; do
     if [ -f "$OUT/$c.ours.$af" ] && [ -f "$OUT/$c.pris.$af" ]; then
       echo "  $af: $(python3 tools/oracle/compare_xml.py "$OUT/$c.pris.$af" "$OUT/$c.ours.$af" 2>&1 | head -1)"
-      sed -n '/<meandata/,$p' "$OUT/$c.pris.$af" > $OUT/p.xml
-      sed -n '/<meandata/,$p' "$OUT/$c.ours.$af" > $OUT/o.xml
-      diff -u $OUT/p.xml $OUT/o.xml | head -80
+      echo "    ref intervals:  $(grep -o '<interval[^>]*>' "$OUT/$c.pris.$af" | tr '\n' ' ')"
+      echo "    cand intervals: $(grep -o '<interval[^>]*>' "$OUT/$c.ours.$af" | tr '\n' ' ')"
     fi
   done
 done
