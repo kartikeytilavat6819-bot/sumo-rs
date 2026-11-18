@@ -336,13 +336,14 @@ def classify(fn, t):
         return {"type": type(e).__name__, "value": str(e)}, False
 
 
-def dump_log(side, port, n=20):
+def dump_log(side, port, proc=None, n=30):
     log = Path(os.environ.get("TEMP", "/tmp")) / f"fuzz_{side}_{port}.log"
+    code = proc.poll() if proc is not None else "n/a"
     try:
         lines = log.read_text(encoding="utf-8", errors="replace").splitlines()
-        print(f"  {side} log tail (port {port}): " + " | ".join(lines[-n:]))
+        print(f"  {side} log tail (port {port}, exit={code}): " + " | ".join(lines[-n:]))
     except OSError as e:
-        print(f"  {side} log unavailable: {e}")
+        print(f"  {side} log unavailable (exit={code}): {e}")
 
 
 def run_session(side, port, ours, calls, step_every, use_infra=True):
@@ -363,7 +364,7 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
                     pass
                 traci.init(port=port, numRetries=30, host="localhost")
             except Exception as e:
-                dump_log(side, port)
+                dump_log(side, port, proc)
                 return [], 0, {"type": "InitFailed:" + type(e).__name__, "value": str(e)}
             try:
                 traci.simulationStep(0)
@@ -374,7 +375,7 @@ def run_session(side, port, ours, calls, step_every, use_infra=True):
                     if dead:
                         dead_from = k
                         if side == "ours":
-                            dump_log(side, port)
+                            dump_log(side, port, proc)
                         break
                     if step_every and (k + 1) % step_every == 0:
                         try:
