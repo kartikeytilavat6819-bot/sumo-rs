@@ -41,15 +41,18 @@ impl Command_SaveTLSState {
     //     MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(this);
     // }
     #[allow(unused_variables)]
-    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice, saveDetectors: bool, saveConditions: bool) -> Self {
+    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice, saveDetectors: bool, saveConditions: bool) -> Box<Self> {
         // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
-        Self {
+        let mut b = Box::new(Self {
             base: (),
             myOutputDevice: Ptr::from_mut(od),
             myLogics: Ptr::new(logics),
             mySaveDetectors: saveDetectors,
             mySaveConditions: saveConditions,
-        }
+        });
+        // C++ constructor: MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(this)
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(&mut *b as &mut dyn Command), -1);
+        b
     }
 
     /// C++: `void Command_SaveTLSState::~Command_SaveTLSState() noexcept` [virtual]
@@ -168,3 +171,8 @@ impl Command_SaveTLSState {
 
 }
 
+impl Command for Command_SaveTLSState {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        Command_SaveTLSState::execute(self, currentTime)
+    }
+}

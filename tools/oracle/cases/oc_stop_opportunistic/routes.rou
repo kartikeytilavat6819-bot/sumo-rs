@@ -1,0 +1,20 @@
+<routes>
+    <!-- parking="opportunistic"/"false"/"true" on lane stops with following traffic -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+    <route id="r" edges="A B C D"/>
+    <vehicle id="o0" type="car" route="r" depart="0" departSpeed="max">
+        <stop lane="B_0" endPos="250.00" duration="20" parking="opportunistic"/>
+    </vehicle>
+    <vehicle id="o1" type="car" route="r" depart="2" departSpeed="max">
+        <stop lane="B_0" endPos="200.00" duration="20" parking="false"/>
+    </vehicle>
+    <vehicle id="o2" type="car" route="r" depart="4" departSpeed="max">
+        <stop lane="C_0" endPos="250.00" duration="20" parking="true"/>
+    </vehicle>
+    <vehicle id="o3" type="car" route="r" depart="6" departSpeed="max">
+        <stop lane="C_0" endPos="150.00" until="70.00" parking="opportunistic"/>
+    </vehicle>
+    <vehicle id="o4" type="car" route="r" depart="10" departSpeed="max"/>
+    <vehicle id="o5" type="car" route="r" depart="12" departSpeed="max"/>
+    <vehicle id="o6" type="car" route="r" depart="14" departSpeed="max"/>
+</routes>

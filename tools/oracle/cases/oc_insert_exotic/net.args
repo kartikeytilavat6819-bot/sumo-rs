@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/oc_insert_exotic/net.nod.xml --edge-files tools/oracle/cases/oc_insert_exotic/net.edg.xml

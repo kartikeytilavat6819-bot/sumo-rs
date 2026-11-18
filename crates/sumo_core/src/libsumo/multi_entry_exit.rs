@@ -368,14 +368,14 @@ impl MultiEntryExit {
             VAR_EXIT_POSITIONS => wrapper.m().wrap_double_list(objID, variable, &Self::get_exit_positions(objID)),
             VAR_PARAMETER => {
                 paramData.m().read_unsigned_byte();
-                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                // C++ readString() throws ProcessError on malformed storage; panic_any keeps it as ProcessError so dispatch_command re-raises it like C++
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string(objID, variable, &Self::get_parameter(objID, &key))
             }
             VAR_PARAMETER_WITH_KEY => {
                 paramData.m().read_unsigned_byte();
-                // shortcut: C++ readString() throws ProcessError on malformed storage, here it panics, upgrade when handle_variable returns Result
-                let key = paramData.m().read_string().expect("shortcut: malformed TraCI parameter string");
+                // C++ readString() throws ProcessError on malformed storage; panic_any keeps it as ProcessError so dispatch_command re-raises it like C++
+                let key = paramData.m().read_string().unwrap_or_else(|e| std::panic::panic_any(e));
                 wrapper.m().wrap_string_pair(objID, variable, &Self::get_parameter_with_key(objID, &key))
             }
             _ => false,

@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/jt_no_internal/junction.nod.xml --edge-files tools/oracle/cases/jt_no_internal/junction.edg.xml --connection-files tools/oracle/cases/jt_no_internal/junction.con.xml --no-internal-links true

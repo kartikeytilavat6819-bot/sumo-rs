@@ -658,7 +658,7 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn write_end_rerouter_detectors(&mut self, file: &str) {
-        // shortcut: C++ declares RODFDetector::writeEndRerouterDetectors but never defines it; the only caller is RODFDetectorCon::writeEndRerouterDetectors. Keep panicking if anything reaches it.
+        // C++ note: C++ declares RODFDetector::writeEndRerouterDetectors but never defines it; the only caller is RODFDetectorCon::writeEndRerouterDetectors. Keep panicking if anything reaches it.
         panic!("RODFDetector::writeEndRerouterDetectors is declared but not defined in SUMO");
     }
 
@@ -932,7 +932,7 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn get_flow_for(&self, edge: Ptr<ROEdge>, time: SUMOTime) -> i32 {
-        // shortcut: C++ declares RODFDetector::getFlowFor but has no definition and no caller; reaching it is a link error in C++
+        // C++ note: C++ declares RODFDetector::getFlowFor but has no definition and no caller; reaching it is a link error in C++
         panic!("RODFDetector::getFlowFor is declared but not defined in SUMO");
     }
 
@@ -961,7 +961,7 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_3(src: &RODFDetector) -> Self {
-        // shortcut: C++ declares this copy constructor private and invalidated with no definition; it cannot be called
+        // C++ note: C++ declares this copy constructor private and invalidated with no definition; it cannot be called
         panic!("RODFDetector copy constructor is invalidated in SUMO");
     }
 
@@ -970,7 +970,7 @@ impl RODFDetector {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFDetector) -> &mut RODFDetector {
-        // shortcut: C++ declares operator= private and invalidated with no definition; it cannot be called
+        // C++ note: C++ declares operator= private and invalidated with no definition; it cannot be called
         panic!("RODFDetector assignment operator is invalidated in SUMO");
     }
 
@@ -1906,7 +1906,7 @@ impl RODFDetectorCon {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn new_2(src: &RODFDetectorCon) -> Self {
-        // shortcut: C++ declares this copy constructor private and invalidated with no definition; it cannot be called
+        // C++ note: C++ declares this copy constructor private and invalidated with no definition; it cannot be called
         panic!("RODFDetectorCon copy constructor is invalidated in SUMO");
     }
 
@@ -1915,7 +1915,7 @@ impl RODFDetectorCon {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn assign_op(&mut self, src: &RODFDetectorCon) -> &mut RODFDetectorCon {
-        // shortcut: C++ declares operator= private and invalidated with no definition; it cannot be called
+        // C++ note: C++ declares operator= private and invalidated with no definition; it cannot be called
         panic!("RODFDetectorCon assignment operator is invalidated in SUMO");
     }
 

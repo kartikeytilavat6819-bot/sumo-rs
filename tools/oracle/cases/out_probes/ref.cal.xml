@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:06:52.128568-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_probes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_probes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_probes/probes.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_probes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="250"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<calibratorstats xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/calibratorstats_file.xsd">
+    <interval begin="0.00" end="200.00" id="cal" nVehContrib="50" removed="0" inserted="25" cleared="0" flow="900.00" aspiredFlow="900.00" speed="11.81" aspiredSpeed="15.00"/>
+</calibratorstats>

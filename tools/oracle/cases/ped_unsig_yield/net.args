@@ -1,0 +1,1 @@
+-n tools/oracle/cases/ped_unsig_yield/ped_unsig_yield.nod.xml -e tools/oracle/cases/ped_unsig_yield/ped_unsig_yield.edg.xml --sidewalks.guess --crossings.guess --walkingareas

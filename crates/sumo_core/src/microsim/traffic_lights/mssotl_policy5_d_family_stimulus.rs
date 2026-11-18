@@ -109,6 +109,7 @@ impl MSSOTLPolicy5DFamilyStimulus {
             params_names: Vec::new(),
             family: Vec::new(),
         };
+        this.base.myIsFamily = true;
 
         this.default_values.insert("_STIM_COX".to_string(), "1".to_string());
         this.default_values.insert("_STIM_OFFSET_IN".to_string(), "1".to_string());
@@ -166,7 +167,7 @@ impl MSSOTLPolicy5DFamilyStimulus {
 
         for i in 0..size_family {
             let ref_map = sliced_maps[i as usize].clone();
-            // shortcut: C++ `new MSSOTLPolicy5DStimulus` is never deleted, the Box is leaked to match, upgrade when the family owner is typed
+            // C++ `new MSSOTLPolicy5DStimulus` is never deleted either, so the Box is leaked to match
             let stimulus: &'static mut MSSOTLPolicy5DStimulus = Box::leak(Box::new(MSSOTLPolicy5DStimulus::new(keyPrefix.clone(), &ref_map)));
             this.family.push(Ptr::from_mut(stimulus));
         }

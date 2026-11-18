@@ -1,0 +1,7 @@
+<additional>
+    <laneData id="ld_emis" type="emissions" period="100" file="out_ld_emis.xml"/>
+    <laneData id="ld_noise" type="harmonoise" period="100" file="out_ld_noise.xml"/>
+    <edgeData id="ed_int" period="60" withInternal="true" excludeEmpty="true" file="out_ed_int.xml"/>
+    <edgeData id="ed_sub" period="50" edges="-103224#1 -103227#1" aggregate="true" maxTraveltime="60" minSamples="2" file="out_ed_sub.xml"/>
+    <edgeData id="ed_attr" period="100" trackVehicles="true" writeAttributes="sampledSeconds speed density occupancy waitingTime" vTypes="truck" file="out_ed_attr.xml"/>
+</additional>

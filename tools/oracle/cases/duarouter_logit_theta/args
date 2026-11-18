@@ -1,0 +1,1 @@
+--trip-files tools/oracle/cases/duarouter_trips/trips.xml --route-choice-method logit --logit.beta -2 --logit.gamma 0.8 --logit.theta -1 --max-alternatives 3 --weight-attribute traveltime --output-file @DIR@/routes.rou.xml --alternatives-output @DIR@/alts.xml

@@ -1817,7 +1817,7 @@ impl MEVehicle {
                 let end = ((seg.get_index() + 1) as f64) * seg.get_length();
                 let entry = self.get_last_entry_time();
                 rem.m().update_detector(self, start, end, entry, currentTime, exitTime, false);
-                // shortcut: traceMoveReminder() is _DEBUG-only and not ported
+                // C++ _DEBUG-only: compiled out of the release reference build, not ported (traceMoveReminder)
                 return;
             }
         }
@@ -1882,7 +1882,7 @@ impl MEVehicle {
                 let end = ((seg.get_index() + 1) as f64) * seg.get_length();
                 let entry = self.get_last_entry_time();
                 rem.m().update_detector(self, start, end, entry, currentTime, exitTime, cleanUp);
-                // shortcut: traceMoveReminder() is _DEBUG-only and not ported
+                // C++ _DEBUG-only: compiled out of the release reference build, not ported (traceMoveReminder)
             }
             let keep = if !isLeave {
                 true
@@ -1895,11 +1895,11 @@ impl MEVehicle {
                 if isLeave {
                     let edge_len = self.get_edge().get_length();
                     self.myMoveReminders[i].1 += edge_len;
-                    // shortcut: traceMoveReminder("adaptedPos") is _DEBUG-only and not ported
+                    // C++ _DEBUG-only: compiled out of the release reference build, not ported (traceMoveReminder "adaptedPos")
                 }
                 i += 1;
             } else {
-                // shortcut: traceMoveReminder("remove") is _DEBUG-only and not ported
+                // C++ _DEBUG-only: compiled out of the release reference build, not ported (traceMoveReminder "remove")
                 self.myMoveReminders.remove(i);
             }
         }

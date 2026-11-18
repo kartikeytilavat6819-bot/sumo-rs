@@ -1,0 +1,32 @@
+<routes>
+<vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50"/>
+<route id="major" edges="N_in S_out"/>
+<route id="minor" edges="E_in W_out"/>
+<vehicle id="blocker" depart="0.00" departSpeed="max" route="major">
+    <stop lane="S_out_0" endPos="40" duration="500"/>
+</vehicle>
+    <vehicle id="m00" depart="1.00" route="major"/>
+    <vehicle id="m01" depart="2.00" route="major"/>
+    <vehicle id="m02" depart="3.00" route="major"/>
+    <vehicle id="m03" depart="4.00" route="major"/>
+    <vehicle id="m04" depart="5.00" route="major"/>
+    <vehicle id="m05" depart="6.00" route="major"/>
+    <vehicle id="m06" depart="7.00" route="major"/>
+    <vehicle id="m07" depart="8.00" route="major"/>
+    <vehicle id="m08" depart="9.00" route="major"/>
+    <vehicle id="m09" depart="10.00" route="major"/>
+    <vehicle id="m10" depart="11.00" route="major"/>
+    <vehicle id="m11" depart="12.00" route="major"/>
+    <vehicle id="m12" depart="13.00" route="major"/>
+    <vehicle id="m13" depart="14.00" route="major"/>
+    <vehicle id="m14" depart="15.00" route="major"/>
+    <vehicle id="m15" depart="16.00" route="major"/>
+    <vehicle id="i00" depart="2.00" route="minor"/>
+    <vehicle id="i01" depart="4.00" route="minor"/>
+    <vehicle id="i02" depart="6.00" route="minor"/>
+    <vehicle id="i03" depart="8.00" route="minor"/>
+    <vehicle id="i04" depart="10.00" route="minor"/>
+    <vehicle id="i05" depart="12.00" route="minor"/>
+    <vehicle id="i06" depart="14.00" route="minor"/>
+    <vehicle id="i07" depart="16.00" route="minor"/>
+</routes>

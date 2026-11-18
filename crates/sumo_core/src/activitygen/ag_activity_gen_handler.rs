@@ -291,7 +291,7 @@ impl AGActivityGenHandler {
                 write_warning(&format!("Invalid {} value of edge {} is treated as zero.", attr_name(AGEN_ATTR_OUT_WORKPOSITION), eid));
             }
         }
-        // shortcut: dynamic_cast<AGStreet*> is an unchecked cast here; the AG builder only creates AGStreet edges in this net
+        // the only builder used by load_net is AGStreet_Builder, so every edge of this net is an AGStreet and the cast is exact
         let street = self.net.get_edge(&eid).cast::<AGStreet>();
         if street.is_null() {
             write_error(&format!("Edge '{}' is not known.", eid));
@@ -519,7 +519,7 @@ impl AGActivityGenHandler {
         busL.set_max_trip_time(fail(AGEN_TAG_BUSLINE, attrs.get_int(AGEN_ATTR_MAX_TRIP_DURATION)));
         let city = self.myCity.m();
         city.busLines.push_front(busL);
-        // shortcut: C++ std::list keeps node addresses; VecDeque may move elements on the next push_front, but currentBusLine is re-set before any further use
+        // C++ std::list keeps node addresses; busLines is a LinkedList for the same reason
         self.currentBusLine = Ptr::from_mut(city.busLines.front_mut().unwrap());
     }
 

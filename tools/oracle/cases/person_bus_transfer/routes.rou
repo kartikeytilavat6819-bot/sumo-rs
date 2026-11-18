@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="bus" vClass="bus" length="12.00" maxSpeed="13.89" accel="1.20" decel="2.50"/>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <route id="rL1" edges="WA AE"/>
+  <route id="rL2" edges="AN"/>
+  <vehicle id="l1_0" type="bus" route="rL1" line="L1" depart="0">
+    <stop busStop="bsW" duration="5"/>
+    <stop busStop="bsE" duration="5"/>
+  </vehicle>
+  <vehicle id="l1_1" type="bus" route="rL1" line="L1" depart="60">
+    <stop busStop="bsW" duration="5"/>
+    <stop busStop="bsE" duration="5"/>
+  </vehicle>
+  <vehicle id="l1_2" type="bus" route="rL1" line="L1" depart="120">
+    <stop busStop="bsW" duration="5"/>
+    <stop busStop="bsE" duration="5"/>
+  </vehicle>
+  <vehicle id="l1_3" type="bus" route="rL1" line="L1" depart="180">
+    <stop busStop="bsW" duration="5"/>
+    <stop busStop="bsE" duration="5"/>
+  </vehicle>
+  <vehicle id="l2_0" type="bus" route="rL2" line="L2" depart="0">
+    <stop busStop="bsA" duration="5"/>
+    <stop busStop="bsN" duration="5"/>
+  </vehicle>
+  <vehicle id="l2_1" type="bus" route="rL2" line="L2" depart="60">
+    <stop busStop="bsA" duration="5"/>
+    <stop busStop="bsN" duration="5"/>
+  </vehicle>
+  <vehicle id="l2_2" type="bus" route="rL2" line="L2" depart="120">
+    <stop busStop="bsA" duration="5"/>
+    <stop busStop="bsN" duration="5"/>
+  </vehicle>
+  <vehicle id="l2_3" type="bus" route="rL2" line="L2" depart="180">
+    <stop busStop="bsA" duration="5"/>
+    <stop busStop="bsN" duration="5"/>
+  </vehicle>
+  <person id="t0" type="ped" depart="10">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t1" type="ped" depart="30">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t2" type="ped" depart="50">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t3" type="ped" depart="70">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t4" type="ped" depart="90">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t5" type="ped" depart="110">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t6" type="ped" depart="130">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t7" type="ped" depart="150">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t8" type="ped" depart="170">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+  <person id="t9" type="ped" depart="190">
+    <ride from="WA" busStop="bsE" lines="L1"/>
+    <walk edges="AE EA AN" arrivalPos="60"/>
+    <ride from="AN" busStop="bsN" lines="L2"/>
+  </person>
+</routes>

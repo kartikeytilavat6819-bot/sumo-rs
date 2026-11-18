@@ -52,10 +52,8 @@ fn cpp_max(a: f64, b: f64) -> f64 {
     if a < b { b } else { a }
 }
 
-/// shortcut: EngineParameters_PolynomialEngineModelRpmToHp.x is Unmapped (double[9]) in engine_parameters.rs, read m.x[i] once that field is typed as [f64; 9]
 fn poly_x(m: &EngineParameters_PolynomialEngineModelRpmToHp, i: i32) -> f64 {
-    let _ = (m, i);
-    panic!("shortcut: engine polynomial coefficients are not ported yet (EngineParameters x is unmapped)")
+    m.x[i as usize]
 }
 
 impl RealisticEngineModel {

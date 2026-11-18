@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T12:04:58.768372-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/out_tls/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/out_tls/routes.rou"/>
+        <additional-files value="tools/oracle/cases/out_tls/waut.add.xml,tools/oracle/cases/out_tls/tlsout.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_tls/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_tls/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-cv01/tools/oracle/cases/out_tls/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="320"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tlsStates xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tlsstates_file.xsd">
+    <tlsState time="0.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="20.00" id="nC" programID="progA" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="23.00" id="nC" programID="progA" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="43.00" id="nC" programID="progA" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="46.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="66.00" id="nC" programID="progA" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="69.00" id="nC" programID="progA" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="89.00" id="nC" programID="progA" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="92.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="100.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="104.00" id="nC" programID="progB" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="107.00" id="nC" programID="progB" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="115.00" id="nC" programID="progB" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="118.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="130.00" id="nC" programID="progB" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="133.00" id="nC" programID="progB" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="139.00" id="nC" programID="progB" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="142.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="150.00" id="nC" programID="progB" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="153.00" id="nC" programID="progB" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="158.00" id="nC" programID="progB" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="161.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="167.00" id="nC" programID="progB" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="170.00" id="nC" programID="progB" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="177.00" id="nC" programID="progB" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="180.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="188.00" id="nC" programID="progB" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="191.00" id="nC" programID="progB" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="196.00" id="nC" programID="progB" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="199.00" id="nC" programID="progB" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="200.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="204.00" id="nC" programID="progA" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="207.00" id="nC" programID="progA" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="227.00" id="nC" programID="progA" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="230.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="250.00" id="nC" programID="progA" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="253.00" id="nC" programID="progA" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="273.00" id="nC" programID="progA" phase="3" state="rrrryyyyrrrryyyy"/>
+    <tlsState time="276.00" id="nC" programID="progA" phase="0" state="GGggrrrrGGggrrrr"/>
+    <tlsState time="296.00" id="nC" programID="progA" phase="1" state="yyyyrrrryyyyrrrr"/>
+    <tlsState time="299.00" id="nC" programID="progA" phase="2" state="rrrrGGggrrrrGGgg"/>
+    <tlsState time="319.00" id="nC" programID="progA" phase="3" state="rrrryyyyrrrryyyy"/>
+</tlsStates>

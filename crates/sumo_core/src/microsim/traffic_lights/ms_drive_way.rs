@@ -666,14 +666,6 @@ impl MSDriveWay {
     //     for (const MSLane* lane : myForward) {
     //         for (const MSLane* lane2 : other.myForward) {
     //             if (lane->isNormal() && lane2->isNormal() && lane->getEdge().getToJunction() == lane2->getEdge().getToJunction()) {
-    //                 if (lane->getToJunction()->getType() == SumoXMLNodeType::RAIL_SIGNAL
-    //                         && lane == myForward.back()
-    //                         && &lane->getEdge() != myRoute.back()) {
-    //                     // switch/crossing is also a rail_signal (direct control) at the end of the forward section.
-    //                     // (and the route continues)
-    //                     // This means the conflict is already guarded
-    //                     return false;
-    //                 }
     //                 return true;
     //             }
     //         }
@@ -715,16 +707,8 @@ impl MSDriveWay {
                 if lane.is_normal() && lane2.is_normal() {
                     let lane_edge = lane.get_edge();
                     let lane2_edge = lane2.get_edge();
+                    // 1.28.0 has no "rail_signal at the end of the forward section" early return here (added later upstream)
                     if lane_edge.get_to_junction() == lane2_edge.get_to_junction() {
-                        if lane.get_to_junction().get_type() == SumoXMLNodeType::RAIL_SIGNAL
-                            && lane == *self.myForward.last().unwrap()
-                            && Ptr::new(lane.get_edge()) != *self.myRoute.last().unwrap()
-                        {
-                            // switch/crossing is also a rail_signal (direct control) at the end of the forward section.
-                            // (and the route continues)
-                            // This means the conflict is already guarded
-                            return false;
-                        }
                         return true;
                     }
                 }
@@ -3264,7 +3248,6 @@ impl MSDriveWay {
     //                 std::cout << "    predecessors of " << link->getDescription() << " isSwitch\n";
     //             }
     // #endif
-    //             addSwitchFoes(link);
     //             for (MSLink* pred : predLinks) {
     //                 addSwitchFoes(pred);
     //             }
@@ -3317,8 +3300,7 @@ impl MSDriveWay {
                 }
             }
             if pred_links.len() > 1 {
-                // this is a switch
-                self.add_switch_foes(link);
+                // this is a switch (1.28.0 adds only the predecessors' switch foes, not the link's own)
                 for &pred in pred_links.iter() {
                     self.add_switch_foes(pred);
                 }

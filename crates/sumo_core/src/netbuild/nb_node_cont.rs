@@ -2410,7 +2410,8 @@ impl NBNodeCont {
             // cands now only contain sets of junctions that shall be joined into being tls-controlled
             for nodeSet in cands.iter() {
                 let mut nodes: Vec<Ptr<NBNode>> = Vec::new();
-                for node in nodeSet.iter().copied() {
+                // determinism: C++ NodeSet iterates in id order (ComparatorIdLess), ours by address
+                for node in nodes_by_id(nodeSet) {
                     nodes.push(node);
                     self.myGuessedTLS.insert(node);
                 }
@@ -2477,9 +2478,14 @@ impl NBNodeCont {
     // }
     #[allow(unused_variables)]
     pub fn recheck_guessed_tls(&mut self, tlc: &mut NBTrafficLightLogicCont) {
+        // determinism: C++ myGuessedTLS is std::set<NBNode*, ComparatorIdLess> (id order); our
+        // BTreeSet<Ptr<..>> is address-ordered. Order matters: removing one node of a joined TLS
+        // shrinks it to a single node and changes recheckTLSThreshold for the other node.
+        let mut guessed: Vec<Ptr<NBNode>> = self.myGuessedTLS.iter().copied().collect();
+        guessed.sort_by(|a, b| a.get_id().cmp(b.get_id()));
         // determinism: C++ std::set<NBTrafficLightDefinition*> is ordered by pointer; BTreeSet<Ptr<..>> keeps the same order
         let mut recompute: BTreeSet<Ptr<NBTrafficLightDefinition>> = BTreeSet::new();
-        for node in self.myGuessedTLS.clone() {
+        for node in guessed {
             if !node.m().has_conflict() || !self.recheck_tls_threshold(node) {
                 let tlDefs = node.m().get_controlling_tls().clone();
                 recompute.extend(tlDefs);

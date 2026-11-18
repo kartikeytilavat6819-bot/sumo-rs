@@ -111,13 +111,16 @@ for dir in tools/oracle/cases/*/; do
       fi
       # extra_outputs.txt: "<option> <suffix>" lines, each output compared against $dir/$tag.<suffix>.xml
       XOUT=""
-      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
+      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; XOUT="$XOUT $opt $OUT/$c.$tag.$suf.xml"; done < "$dir/extra_outputs.txt"
       # extra sim outputs (cases/<c>/sim_outputs.txt, @OUT@ = run dir): written by the reference run only
       SIMOUT=""
       if [ "$tag" = "ref" ] && [ -f "$dir/sim_outputs.txt" ]; then
         SIMOUT="$OUT/$c.sim_out"; rm -rf "$SIMOUT"; mkdir -p "$SIMOUT"
         EXTRA="$EXTRA $(sed "s#@OUT@#$SIMOUT#g" "$dir/sim_outputs.txt" | tr -d '\r')"
       fi
+      # add_outputs.txt: "<file> <suffix>" lines; <file> is written by the case's additional file next to itself
+      # (detectors, laneData, timedEvent...), compared against $dir/$tag.<suffix>.xml and removed after the run
+      [ -f "$dir/add_outputs.txt" ] && while read -r af suf; do rm -f "$dir/${af%$'\r'}"; done < "$dir/add_outputs.txt"
       # a hang in our binary must not stall the whole run (a NEMA case looped forever)
       timeout "${SIM_TIMEOUT:-600}" "$BIN/sumo.exe" -n "$dir/ref_simple.net.xml" -r "$dir/routes.rou" \
           --tripinfo-output "$OUT/$c.$tag.ti.xml" --fcd-output "$OUT/$c.$tag.fcd.xml" \
@@ -144,10 +147,17 @@ for dir in tools/oracle/cases/*/; do
         python tools/oracle/compare_stat.py "$dir/$tag.stat.xml" "$OUT/$c.$tag.stat.xml" >"$OUT/$c.$tag.stat.log" 2>&1 || r="FAIL"
       fi
       xd=""
-      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do
+      [ -f "$dir/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}  # git archive (core.autocrlf) gives the VM CRLF .txt files
         [ -f "$dir/$tag.$suf.xml" ] || continue
         python tools/oracle/compare_xml.py "$dir/$tag.$suf.xml" "$OUT/$c.$tag.$suf.xml" >"$OUT/$c.$tag.$suf.log" 2>&1 || { r="FAIL"; xd="$xd | $suf: $(grep -v '^$' "$OUT/$c.$tag.$suf.log" | head -1 | cut -c1-300)"; }
       done < "$dir/extra_outputs.txt"
+      [ -f "$dir/add_outputs.txt" ] && while read -r af suf; do
+        af=${af%$'\r'}; suf=${suf%$'\r'}
+        if [ -f "$dir/$tag.$suf.xml" ]; then
+          python tools/oracle/compare_xml.py "$dir/$tag.$suf.xml" "$dir/$af" >"$OUT/$c.$tag.$suf.log" 2>&1 || { r="FAIL"; xd="$xd | $suf: $(grep -v '^$' "$OUT/$c.$tag.$suf.log" | head -1 | cut -c1-300)"; }
+        fi
+        rm -f "$dir/$af"
+      done < "$dir/add_outputs.txt"
       # edgeData output: the variant's additional file writes out_edgedata.xml next to itself (C++ resolves the path that way)
       if [ -f "$dir/$tag.edge.xml" ]; then
         python tools/oracle/compare_xml.py "$dir/$tag.edge.xml" "$dir/out_edgedata.xml" >"$OUT/$c.$tag.edge.log" 2>&1 || r="FAIL"

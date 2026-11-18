@@ -2993,7 +2993,7 @@ impl MSLane {
 
         // iterate over myVehicles, myPartialVehicles, and myManeuverReservations merge-sort style
         // reverse iterators are represented by the number of elements already consumed from the back
-        // shortcut: assert(MSGlobals::gLateralResolution || myManeuverReservations.size() == 0) skipped, gLateralResolution not ported
+        debug_assert!(MSGlobals::lateral_resolution() != 0. || self.myManeuverReservations.is_empty());
         let mut veh: usize = 0;
         let mut vehPart: usize = 0;
         let mut vehRes: usize = 0;
@@ -3384,9 +3384,9 @@ impl MSLane {
                 let disconnected = MSGlobals::time_to_teleport_disconnected() >= 0
                     && !fns.succ_edge(1).is_null()
                     && fns.get_edge().allowed_lanes(&*fns.succ_edge(1), fns.get_v_class(), false).is_null();
-                // shortcut: MSDevice_Taxi is not ported, so every vehicle is treated as having no taxi device (C++ `getDevice(typeid(MSDevice_Taxi)) == nullptr` is true);
-                // taxis that are not on their last edge would be wrongly teleported. Upgrade when MSDevice_Taxi is ported.
-                let r1 = ttt > 0 && fns.get_waiting_time(false) > ttt && !disconnected;
+                let r1 = ttt > 0 && fns.get_waiting_time(false) > ttt && !disconnected
+                    // never teleport a taxi on the last edge of it's route (where it would exit the simulation)
+                    && (MSDevice::get_device_by_name(&fns.myDevices, "taxi").is_null() || fns.get_route_position() < fns.get_route().size() - 1);
                 let r2 = !r1 && MSGlobals::time_to_gridlock_highways() > 0
                     && fns.get_waiting_time(false) > MSGlobals::time_to_gridlock_highways()
                     && self.get_speed_limit() > MSGlobals::gridlock_highways_speed() && wrongLane
@@ -4474,7 +4474,7 @@ impl MSLane {
     //     return succLinkSource.myLinks.end();
     // }
     /// Returns the index into `succLinkSource.myLinks` of the link to use (`myLinks.len()` stands for C++ `end()`).
-    // shortcut: iterators are modelled as indices into myLinks (usize), `len()` is end()
+    // iterators are indices into myLinks (usize), `len()` is end() (AGENTS.md "Route iterators" convention)
     pub fn succ_link_sec(veh: &SUMOVehicle, nRouteSuccs: i32, succLinkSource: &MSLane, conts: &Vec<Ptr<MSLane>>) -> usize {
         let nRouteEdge = veh.succ_edge(nRouteSuccs);
         // check whether the vehicle tried to look beyond its route
@@ -6250,7 +6250,7 @@ impl MSLane {
                     // XXX ignoring the fact that the link leader may alread by following us
                     // XXX ignoring the fact that we may drive up to the crossing point
                     let mut tmpSpeed = safeSpeed;
-                    // shortcut: C++ passes tmpSpeed as both v and vLinkPass (aliased references), two separate locals here, merged back into tmpSpeed afterwards, upgrade when adaptToJunctionLeader takes one mutable state
+                    // C++ passes tmpSpeed as both v and vLinkPass (aliased); adaptToJunctionLeader only does v = MIN2(v, s) and vLinkPass = MIN2(vLinkPass, s), so the result equals v
                     let mut v = tmpSpeed;
                     let mut vLinkPass = tmpSpeed;
                     veh.adapt_to_junction_leader(it.vehAndGap, seen, Ptr::null(), nextLane, &mut v, &mut vLinkPass, it.distToCrossing);
@@ -7632,7 +7632,7 @@ impl MSLane {
     #[allow(unused_variables)]
     pub fn load_state(&mut self, vehs: &Vec<Ptr<SUMOVehicle>>) {
         for veh in vehs.iter() {
-            // shortcut: C++ dynamic_cast<MSVehicle*> is unchecked; loadState only receives MSVehicles from the state loader
+            // C++ dereferences the dynamic_cast<MSVehicle*> unchecked: lane state is only loaded in microsim, where every vehicle is an MSVehicle
             let v: Ptr<MSVehicle> = veh.cast::<MSVehicle>();
             v.m().update_best_lanes(false, Ptr::new(self));
             // incorporateVehicle resets the lastActionTime (which has just been loaded from state) so we must restore it
@@ -8964,7 +8964,7 @@ impl MSLane {
     // (no C++ body found: implicit/defaulted or defined elsewhere)
     #[allow(unused_variables)]
     pub fn has_approaching_2(&self, links: &Vec<Ptr<MSLink>>) -> bool {
-        // shortcut: C++ declares this overload but never defines or calls it; it mirrors hasApproaching() over the given links
+        // C++ declares this overload but never defines or calls it; it mirrors hasApproaching() over the given links
         for link in links.iter() {
             if link.get_approaching_2().len() > 0 {
                 return true;

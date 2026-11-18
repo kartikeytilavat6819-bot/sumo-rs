@@ -128,7 +128,7 @@ pub struct MSBaseVehicle {
     /// This vehicle's type.
     pub myType: Ptr<MSVehicleType>,
     /// Iterator to current route-edge
-    /// shortcut: MSRouteIterator is Unmapped (ms_route.rs), so the iterator is an index into myRoute's edges
+    /// MSRouteIterator is an index into myRoute's edges (AGENTS.md "Route iterators")
     pub myCurrEdge: usize,
     /// A precomputed factor by which the driver wants to be faster than the speed limit
     pub myChosenSpeedFactor: f64,
@@ -222,6 +222,22 @@ thread_local! {
     /// C++ `MSBaseVehicle::myCurrentNumericalIndex`
     static MS_BASE_VEHICLE_CURRENT_NUMERICAL_INDEX: std::cell::Cell<SUMOTrafficObject_NumericalID> = const { std::cell::Cell::new(0) };
 }
+/// C++ `delete dev` (virtual destructor, dispatched by deviceName like MSDevice::get_parameter_of); only the
+/// destructors with side effects are listed, the memory itself stays leaked
+fn delete_vehicle_device(dev: Ptr<MSVehicleDevice>) {
+    match dev.base2.device_name().as_str() {
+        "rerouting" => dev.cast::<MSDevice_Routing>().m().drop_(),
+        "ssm" => dev.cast::<MSDevice_SSM>().m().drop_(),
+        "stationfinder" => dev.cast::<MSDevice_StationFinder>().m().drop_(),
+        "taxi" => dev.cast::<MSDevice_Taxi>().m().drop_(),
+        "toc" => dev.cast::<MSDevice_ToC>().m().drop_(),
+        "tripinfo" => dev.cast::<MSDevice_Tripinfo>().m().drop_(),
+        "vehroute" => dev.cast::<MSDevice_Vehroutes>().m().drop_(),
+        "person" | "container" => dev.cast::<MSDevice_Transportable>().m().drop_(),
+        _ => {}
+    }
+}
+
 /// C++ `new StoppingPlaceMemory()` owned by the vehicle
 // shortcut: the memory is leaked (never freed), because the vehicle destructor does not free it yet
 fn new_stopping_place_memory() -> Ptr<StoppingPlaceMemory> {
@@ -336,7 +352,7 @@ impl MSBaseVehicle {
             myRandomSeed: utils::common::rand_helper::murmur3_32(&id, rand_helper_get_seed()) as i64,
             myEdgeWeights: std::cell::Cell::new(Ptr::default()),
         };
-        // shortcut: _DEBUG-only move reminder tracing (myTraceMoveReminders) not ported
+        // myTraceMoveReminders is _DEBUG-only; the release C++ (the oracle) has none
         if first_edge.is_taz_connector() || last_edge.is_taz_connector() {
             this.myParameter.m().parametersSet |= VEHPARS_FORCE_REROUTE;
         }
@@ -368,11 +384,14 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn drop_(&mut self) {
-        // C++ frees owned devices/params; Rust ownership handles that.
         if self.myParameter.repetitionNumber == -1 {
             // this is not a flow (flows call checkDist in MSInsertionControl::determineCandidates)
             MSRoute::check_dist(&self.myParameter.routeid);
         }
+        for dev in self.myDevices.clone() {
+            delete_vehicle_device(dev);
+        }
+        // myEdgeWeights, myEnergyParams, the stopping place memories and myParameter have no destructor side effects
         self.check_route_removal();
     }
 
@@ -677,10 +696,15 @@ impl MSBaseVehicle {
         if !self.has_device(deviceName) {
             if deviceName == "rerouting" {
                 self.myParameter.m().set_parameter(&format!("has.{}.device", deviceName), "true");
-                // shortcut: MSDevice_Routing::buildVehicleDevices(*this, myDevices) not wired to the device vector yet
+                let self_ptr = self as *mut MSBaseVehicle;
+                let v: &mut SUMOVehicle = unsafe { &mut *(self_ptr as *mut SUMOVehicle) };
+                MSDevice_Routing::build_vehicle_devices(v, &mut self.myDevices);
                 if self.has_departed() {
                     // vehicle already departed: disable pre-insertion rerouting and enable regular routing behavior
-                    // shortcut: getDevice(typeid(MSDevice_Routing)) + notifyEnter(*this, NOTIFICATION_DEPARTED) not wired yet
+                    let routingDevice = self.get_device("rerouting").cast::<MSDevice_Routing>();
+                    assert!(!routingDevice.is_null());
+                    let veh: &mut SUMOTrafficObject = unsafe { &mut *(self_ptr as *mut SUMOTrafficObject) };
+                    routingDevice.m().notify_enter(veh, MSMoveReminder_Notification::NOTIFICATION_DEPARTED, Ptr::null());
                 }
             } else {
                 panic!("{}", utils::tlf!("creating device of type '%' is not supported", deviceName));
@@ -1546,7 +1570,7 @@ impl MSBaseVehicle {
                         }
                     }
                     sourcePos = stops[idx].pos;
-                    // shortcut: the C++ int64 add wraps in the release build; a SUMOTIME_MAX duration (setStop default) overflows here, so wrap the same way, upgrade if C++ is ever checked for overflow
+                    // the C++ int64 add wraps in the release build (a SUMOTIME_MAX setStop duration overflows here); wrap the same way
                     startTime = startTime.wrapping_add(self.myStops[stopIt].get_min_duration(startTime));
                 }
                 edges.pop();
@@ -1616,12 +1640,19 @@ impl MSBaseVehicle {
         // trips have no loaded route to compare against when routed on insertion
         let previousCost = if onInit { routeCost } else { router.recompute_costs(&oldEdgesRemaining, Ptr::from_mut(&mut self.base), t, Ptr::default()) };
         let savings = previousCost - routeCost;
-        // shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
-        let mut savingsOk = onInit || info != "device.rerouting" || utils::options::options_cont::get_float("weights.random-factor") != 1.0;
+        let mut savingsOk = onInit || info != "device.rerouting" || utils::common::std_defs::g_weights_random_factor() != 1.0;
         if !savingsOk {
-            // shortcut: MSDevice_Routing::sufficientSaving and hasValidRoute over an edge range need the
-            // routing device and MSRouteIterator, neither reachable yet; the old route is treated as prohibited
-            savingsOk = true;
+            let routingDevice = self.get_device("rerouting").cast::<MSDevice_Routing>();
+            assert!(!routingDevice.is_null());
+            savingsOk = routingDevice.m().sufficient_saving(previousCost, routeCost);
+            if !savingsOk {
+                let mut dummyMsg = String::new();
+                // C++ passes checkJumps=true, but hasJump compares myRoute's stop iterators with iterators into this copy, which never match
+                if !self.has_valid_route_2(&mut dummyMsg, &oldEdgesRemaining, 0, oldEdgesRemaining.len(), false) {
+                    // the old route is prohibted (i.e. due to temporary permission changes)
+                    savingsOk = true;
+                }
+            }
         }
         if savingsOk {
             self.replace_route_edges(&mut edges, routeCost, savings, info, onInit, false, hasSkipped, Ptr::default());
@@ -1980,8 +2011,13 @@ impl MSBaseVehicle {
             };
             let lane = self.get_lane();
             if !lane.is_null() {
-                // shortcut: the junction-internal check via MSLane::getOutgoingViaLanes is not ported yet
-                if self.get_position_on_lane() > lane.get_length()
+                if lane.get_edge().is_internal() && (
+                        newCurrEdge + 1 == newRoute.get_edges().len() || newRoute.get_edges()[newCurrEdge + 1] != Ptr::new(lane.get_outgoing_via_lanes()[0].0.get_edge())) {
+                    if !msgReturn.is_null() {
+                        *msgReturn.m() = "Vehicle is on junction-internal edge leading elsewhere".to_string();
+                    }
+                    return false;
+                } else if self.get_position_on_lane() > lane.get_length()
                     && self.myCurrEdge + 1 != self.myRoute.size() as usize
                     && newCurrEdge + 1 != newRoute.get_edges().len()
                     && self.myRoute.index_op(self.myCurrEdge as i32 + 1) != newRoute.get_edges()[newCurrEdge + 1]
@@ -2416,9 +2452,21 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_leaving_person_number(&self) -> i32 {
-        // shortcut: MSStageDriving::canLeaveVehicle and MSDevice_Transportable::willTransferAtJoin are not ported,
-        // so every person currently in the vehicle is counted as leaving
-        self.get_persons().len() as i32
+        let mut leavingPersonNumber = 0;
+        let persons = self.get_persons();
+        for p in persons.iter() {
+            let stage = p.get_current_stage();
+            let stop = self.myStops.front().unwrap();
+            // C++ dynamic_cast<MSVehicle*>: null for a meso vehicle
+            let joinVeh = if MSGlobals::use_meso_sim() { Ptr::null() } else { MSNet::get_instance().m().get_vehicle_control().get_vehicle(&stop.pars.join).cast::<MSBaseVehicle>() };
+            // C++ dynamic_cast<MSStageDriving*> is dereferenced unchecked: a person in a vehicle is always in a driving stage
+            assert!(stage.get_stage_type() == MSStageType::DRIVING);
+            let veh: &SUMOVehicle = self;
+            if stage.cast::<MSStageDriving>().m().can_leave_vehicle(*p, veh, stop) && !MSDevice_Transportable::will_transfer_at_join(*p, joinVeh) {
+                leavingPersonNumber += 1;
+            }
+        }
+        leavingPersonNumber
     }
 
     /// C++: `std::vector<std::string> MSBaseVehicle::getPersonIDList() const` [const, virtual]
@@ -2489,7 +2537,10 @@ impl MSBaseVehicle {
         if self.is_stopped() && self.myStops.front().unwrap().pars.permitted.len() > 0 && !self.myStops.front().unwrap().pars.permitted.contains(t.get_id()) {
             return false;
         }
-        // shortcut: MSDevice_Taxi::allowsBoarding (getDevice(typeid(MSDevice_Taxi))) is not reachable yet
+        let taxiDevice = self.get_device("taxi").cast::<MSDevice_Taxi>();
+        if !taxiDevice.is_null() {
+            return taxiDevice.allows_boarding(t);
+        }
         true
     }
 
@@ -4179,15 +4230,22 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn have_valid_stop_edges(&self, silent: bool) -> bool {
-        // shortcut: the internal-lane check (getNormalBefore / getNormalSuccessor) is not applied; only edge
-        // presence after the current route index is verified
         let mut start = self.myCurrEdge;
         let mut i = 0;
         let mut ok = true;
         let edges = self.myRoute.get_edges();
         for stop in self.myStops.iter() {
-            let stopEdge = Ptr::new(stop.lane.get_edge());
-            let found = edges.get(start..).and_then(|s| s.iter().position(|e| *e == stopEdge)).map(|p| start + p);
+            let found = if stop.lane.is_internal() {
+                // find the normal predecessor and ensure that the next route edge
+                // matches the successor of the internal edge successor
+                let normalBefore = stop.lane.get_edge().get_normal_before();
+                let it = edges.get(start..).and_then(|s| s.iter().position(|e| *e == normalBefore)).map(|p| start + p);
+                // signal failure
+                it.filter(|&it| it + 1 != edges.len() && edges[it + 1] == stop.lane.get_edge().get_normal_successor())
+            } else {
+                let stopEdge = Ptr::new(stop.lane.get_edge());
+                edges.get(start..).and_then(|s| s.iter().position(|e| *e == stopEdge)).map(|p| start + p)
+            };
             match found {
                 None => {
                     if !silent {
@@ -5274,7 +5332,15 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_state_of_charge(&self) -> f64 {
-        // shortcut: battery / elec-hybrid device lookup by typeid is not ported; device-less vehicles return -1
+        let battery = self.get_device("battery").cast::<MSDevice_Battery>();
+        if !battery.is_null() {
+            return battery.get_actual_battery_capacity();
+        } else {
+            let elecHybrid = self.get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+            if !elecHybrid.is_null() {
+                return elecHybrid.get_actual_battery_capacity();
+            }
+        }
         -1.0
     }
 
@@ -5295,7 +5361,15 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_relative_state_of_charge(&self) -> f64 {
-        // shortcut: battery device lookup by typeid is not ported; device-less vehicles return -1
+        let battery = self.get_device("battery").cast::<MSDevice_Battery>();
+        if !battery.is_null() {
+            return battery.get_actual_battery_capacity() / battery.get_maximum_battery_capacity();
+        } else {
+            let elecHybrid = self.get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+            if !elecHybrid.is_null() {
+                return elecHybrid.get_actual_battery_capacity() / elecHybrid.get_maximum_battery_capacity();
+            }
+        }
         -1.0
     }
 
@@ -5316,7 +5390,15 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_charged_energy(&self) -> f64 {
-        // shortcut: battery device lookup by typeid is not ported; device-less vehicles return -1
+        let battery = self.get_device("battery").cast::<MSDevice_Battery>();
+        if !battery.is_null() {
+            return battery.get_energy_charged();
+        } else {
+            let elecHybrid = self.get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+            if !elecHybrid.is_null() {
+                return elecHybrid.get_energy_charged();
+            }
+        }
         -1.0
     }
 
@@ -5332,7 +5414,10 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_max_charge_rate(&self) -> f64 {
-        // shortcut: battery device lookup by typeid is not ported; device-less vehicles return -1
+        let battery = self.get_device("battery").cast::<MSDevice_Battery>();
+        if !battery.is_null() {
+            return battery.get_maximum_charge_rate();
+        }
         -1.0
     }
 
@@ -5349,8 +5434,11 @@ impl MSBaseVehicle {
     // }
     #[allow(unused_variables)]
     pub fn get_elec_hybrid_current(&self) -> f64 {
-        // shortcut: elec-hybrid device lookup by typeid is not ported; device-less vehicles return 0
-        0.0
+        let elecHybrid = self.get_device("elecHybrid").cast::<MSDevice_ElecHybrid>();
+        if !elecHybrid.is_null() {
+            return elecHybrid.get_current_from_overhead_wire();
+        }
+        f64::NAN
     }
 
     /// C++: `double MSBaseVehicle::getHarmonoise_NoiseEmissions() const` [const]
@@ -6113,7 +6201,35 @@ impl MSBaseVehicle {
                 }
             }
         }
-        // shortcut: the device.rerouting.mode -> setRoutingMode part of MSBaseVehicle::initTransientModelParams is not ported, upgrade with the rerouting device
+        // SUMOTrafficObject::getStringParam(name, false, ""), run in the constructor where C++ resolves the virtuals to
+        // MSBaseVehicle's (the Rust vtable is not installed yet), so read this object's own parameters
+        let paramName = "device.rerouting.mode";
+        let routingModeStr = if MSBaseVehicle::get_parameter(self).has_parameter(paramName) {
+            MSBaseVehicle::get_parameter(self).get_parameter(paramName, "")
+        } else if MSBaseVehicle::get_v_type_parameter(self).has_parameter(paramName) {
+            MSBaseVehicle::get_v_type_parameter(self).get_parameter(paramName, "")
+        } else if utils::options::options_cont::exists(paramName) {
+            utils::options::options_cont::with_options(|oc| oc.get_value_string(paramName)).unwrap_or_else(|e| panic!("{e}"))
+        } else {
+            String::new()
+        };
+        match utils::common::string_utils::to_int(&routingModeStr) {
+            Ok(routingMode) => {
+                if routingMode != ROUTING_MODE_DEFAULT {
+                    self.set_routing_mode(routingMode);
+                    if (routingMode & (ROUTING_MODE_AGGREGATED | ROUTING_MODE_AGGREGATED_CUSTOM)) != 0 {
+                        // vehicles wishes to use traffic-dependent routing weights on triggere rerouting
+                        // (initWeightUpdate would be triggered anyway when equipped with device.rerouting)
+                        MSRoutingEngine::init_weight_update(-1);
+                        MSRoutingEngine::init_edge_weights(self.get_v_class(), -1, -1);
+                    }
+                }
+            }
+            Err(_) => {
+                // @todo interpret symbolic constants
+                std::panic::panic_any(ProcessError::new(utils::tlf!("could not interpret routing.mode '%'", routingModeStr)));
+            }
+        }
     }
 
     /// C++: `std::string MSBaseVehicle::getFlowID() const` [const, private]

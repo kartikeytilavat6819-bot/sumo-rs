@@ -38,15 +38,18 @@ impl Command_SaveTLSSwitches {
     //     myOutputDevice.writeXMLHeader("tlsSwitches", "tlsswitches_file.xsd");
     // }
     #[allow(unused_variables)]
-    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Self {
+    pub fn new(logics: &MSTLLogicControl_TLSLogicVariants, od: &mut OutputDevice) -> Box<Self> {
         // shortcut: C++ registers this with MSNet end-of-timestep events (addEvent(this)); Command is not ported yet and a by-value constructor has no stable address, so registration is skipped; upgrade when Command is ported and constructors return Box<Self>
         od.write_xml_header("tlsSwitches", "tlsswitches_file.xsd", BTreeMap::new(), true);
-        Self {
+        let mut b = Box::new(Self {
             base: (),
             myOutputDevice: Ptr::from_mut(od),
             myLogics: Ptr::new(logics),
             myPreviousLinkStates: BTreeMap::new(),
-        }
+        });
+        // C++ constructor: MSNet::getInstance()->getEndOfTimestepEvents()->addEvent(this)
+        MSNet::get_instance().m().get_end_of_timestep_events().m().add_event(Ptr::from_mut(&mut *b as &mut dyn Command), -1);
+        b
     }
 
     /// C++: `void Command_SaveTLSSwitches::~Command_SaveTLSSwitches() noexcept` [virtual]
@@ -114,11 +117,14 @@ impl Command_SaveTLSSwitches {
                     continue;
                 }
                 let currLinks = &links[i];
+                let currLanes = light.get_lanes_at(i as i32);
                 let lastOn = self.myPreviousLinkStates[&(i as i32)];
                 for j in 0..currLinks.len() {
-                    let _link = currLinks[j];
-                    // shortcut: the tlsSwitch line needs fromLane from MSTrafficLightLogic::getLanesAt, which currently returns the generated LaneVector (Vec<i32>) instead of Vec<Ptr<MSLane>>; upgrade when ms_traffic_light_logic.rs maps the type correctly
-                    panic!("Command_SaveTLSSwitches::execute: fromLane lookup not ported yet");
+                    let link = currLinks[j];
+                    self.myOutputDevice.m().write(&format!(
+                        "   <tlsSwitch id=\"{}\" programID=\"{}\" fromLane=\"{}\" toLane=\"{}\" begin=\"{}\" end=\"{}\" duration=\"{}\"/>\n",
+                        light.get_id(), light.get_program_id(), currLanes[j].get_id(), link.get_lane().get_id(),
+                        time2string(lastOn), time2string(currentTime), time2string(currentTime - lastOn)));
                 }
                 self.myPreviousLinkStates.remove(&(i as i32));
             }
@@ -144,3 +150,8 @@ impl Command_SaveTLSSwitches {
 
 }
 
+impl Command for Command_SaveTLSSwitches {
+    fn execute(&mut self, currentTime: SUMOTime) -> SUMOTime {
+        Command_SaveTLSSwitches::execute(self, currentTime)
+    }
+}

@@ -1,0 +1,1 @@
+-n tools/oracle/cases/ped_striping_burst/ped_striping_burst.nod.xml -e tools/oracle/cases/ped_striping_burst/ped_striping_burst.edg.xml --sidewalks.guess --crossings.guess --walkingareas
