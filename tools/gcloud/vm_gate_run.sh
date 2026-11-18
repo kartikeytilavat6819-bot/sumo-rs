@@ -81,7 +81,9 @@ if [ -f tools/oracle/run_jtrrouter.sh ] && [ -x "$CARGO_TARGET_DIR/debug/jtrrout
 fi
 # netgenerate / polyconvert oracles (tools/oracle/run_gen_poly.sh)
 [ -f tools/oracle/run_gen_poly.sh ] && GENPOLY_OUT=/tmp/genpoly$slot timeout 900 bash tools/oracle/run_gen_poly.sh 2>&1
-cargo test -q -p sumo_core -p utils 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
+# one test thread: the message handler (clear_errors/error_was_informed) is process-global like C++ MsgHandler,
+# so parallel tests that write errors made xml::tests::gz_and_include flaky
+cargo test -q -p sumo_core -p utils -- --test-threads=1 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10
 echo "GATE DONE"
 # agents write /tmp/target (the Kaggle path); here every slot has its own target
 if [ -f tools/kaggle/agent_run.sh ]; then sed -i "s#/tmp/target#$CARGO_TARGET_DIR#g" tools/kaggle/agent_run.sh; timeout 1800 bash tools/kaggle/agent_run.sh 2>&1 | tail -400; echo "AGENT RUN DONE"; fi
