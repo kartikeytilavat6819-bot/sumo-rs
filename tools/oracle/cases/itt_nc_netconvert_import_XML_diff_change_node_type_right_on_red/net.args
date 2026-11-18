@@ -1,0 +1,1 @@
+--write-license --sumo-net-file tools/oracle/cases/itt_nc_netconvert_import_XML_diff_change_node_type_right_on_red/input_net.net.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_diff_change_node_type_right_on_red/input_plain.nod.xml
