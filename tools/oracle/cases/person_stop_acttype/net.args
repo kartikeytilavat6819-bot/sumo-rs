@@ -1,0 +1,1 @@
+-n tools/oracle/cases/person_stop_acttype/person_stop_acttype.nod.xml -e tools/oracle/cases/person_stop_acttype/person_stop_acttype.edg.xml --sidewalks.guess --crossings.guess --walkingareas

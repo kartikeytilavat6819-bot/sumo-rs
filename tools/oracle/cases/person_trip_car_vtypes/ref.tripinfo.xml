@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:19.263201-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/person_trip_car_vtypes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/person_trip_car_vtypes/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_car_vtypes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_car_vtypes/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_car_vtypes/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_trip_car_vtypes/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="pc0_0" depart="0.00" departLane="AB_0" departPos="4.90" departSpeed="8.00" departDelay="0.00" arrival="42.00" arrivalLane="BC_0" arrivalPos="100.00" arrivalSpeed="0.17" duration="42.00" routeLength="295.20" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.10" rerouteNo="1" devices="tripinfo_pc0_0 fcd_pc0_0 person_pc0_0" vType="carB" speedFactor="1.01" vaporized=""/>
+    <tripinfo id="pc1_0" depart="20.00" departLane="BC_0" departPos="4.60" departSpeed="13.89" departDelay="0.00" arrival="85.00" arrivalLane="AB_0" arrivalPos="100.00" arrivalSpeed="0.07" duration="65.00" routeLength="704.84" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="12.91" rerouteNo="1" devices="tripinfo_pc1_0 fcd_pc1_0 person_pc1_0" vType="carA" speedFactor="1.05" vaporized=""/>
+    <tripinfo id="pc3_0" depart="60.00" departLane="CB_0" departPos="4.60" departSpeed="11.90" departDelay="0.00" arrival="87.00" arrivalLane="BA_0" arrivalPos="100.00" arrivalSpeed="2.94" duration="27.00" routeLength="295.50" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="2.17" rerouteNo="1" devices="tripinfo_pc3_0 fcd_pc3_0 person_pc3_0" vType="carA" speedFactor="0.86" vaporized=""/>
+    <tripinfo id="pc2_0" depart="40.00" departLane="AB_0" departPos="5.10" departSpeed="13.03" departDelay="0.00" arrival="88.00" arrivalLane="CB_0" arrivalPos="100.00" arrivalSpeed="0.20" duration="48.00" routeLength="499.67" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="9.00" rerouteNo="1" devices="tripinfo_pc2_0 fcd_pc2_0 person_pc2_0" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized=""/>
+    <tripinfo id="pc4_0" depart="80.00" departLane="BA_0" departPos="4.90" departSpeed="8.00" departDelay="0.00" arrival="149.00" arrivalLane="BC_0" arrivalPos="100.00" arrivalSpeed="0.09" duration="69.00" routeLength="499.87" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="5.61" rerouteNo="1" devices="tripinfo_pc4_0 fcd_pc4_0 person_pc4_0" vType="carB" speedFactor="1.09" vaporized=""/>
+</tripinfos>

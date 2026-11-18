@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:29.788714-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/person_stop_acttype/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/person_stop_acttype/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_stop_acttype/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_stop_acttype/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_stop_acttype/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/person_stop_acttype/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="as0" depart="0.00" type="ped" speedFactor="1.06" duration="127.00" waitingTime="0.00" timeLoss="12.66" traveltime="107.00">
+        <walk depart="0.00" departPos="0.00" arrival="33.00" arrivalPos="50.00" duration="33.00" routeLength="50.00" timeLoss="3.52" maxSpeed="1.70" waitingTime="0.00"/>
+        <stop duration="20.00" arrival="53.00" arrivalPos="50.00" actType="shopping"/>
+        <walk depart="53.00" departPos="50.00" arrival="127.00" arrivalPos="60.00" duration="74.00" routeLength="110.00" timeLoss="9.14" maxSpeed="1.70" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="as1" depart="8.00" type="ped" speedFactor="0.94" duration="123.00" waitingTime="0.00" timeLoss="12.77" traveltime="123.00">
+        <walk depart="8.00" departPos="0.00" arrival="45.00" arrivalPos="50.00" duration="37.00" routeLength="50.00" timeLoss="3.70" maxSpeed="1.50" waitingTime="0.00"/>
+        <stop duration="0.00" arrival="45.00" arrivalPos="50.00" actType="waiting"/>
+        <walk depart="45.00" departPos="50.00" arrival="131.00" arrivalPos="50.00" duration="86.00" routeLength="100.00" timeLoss="9.08" maxSpeed="1.30" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="as2" depart="15.00" type="ped" speedFactor="1.08" duration="132.00" waitingTime="0.00" timeLoss="15.21" traveltime="122.00">
+        <walk depart="15.00" departPos="5.00" arrival="46.00" arrivalPos="50.00" duration="31.00" routeLength="45.00" timeLoss="5.02" maxSpeed="1.73" waitingTime="0.00"/>
+        <stop duration="10.00" arrival="56.00" arrivalPos="50.00" actType="resting"/>
+        <walk depart="56.00" departPos="50.00" arrival="147.00" arrivalPos="90.00" duration="91.00" routeLength="140.00" timeLoss="10.18" maxSpeed="1.73" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

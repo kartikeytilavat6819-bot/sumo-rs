@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <vType id="carA" vClass="passenger" length="4.50" maxSpeed="13.89" accel="2.0" decel="4.5"/>
+  <vType id="carB" vClass="passenger" length="4.80" maxSpeed="8.00" accel="1.5" decel="4.0"/>
+  <personFlow id="pfc0" type="ped" begin="0" end="200" period="15">
+    <personTrip from="AB" to="BC" modes="car" vTypes="carA"/>
+  </personFlow>
+  <personFlow id="pfc1" type="ped" begin="10" end="150" probability="0.3">
+    <personTrip from="BC" to="AB" modes="car" vTypes="carB"/>
+  </personFlow>
+</routes>

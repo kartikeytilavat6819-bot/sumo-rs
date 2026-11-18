@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+  <vType id="carA" vClass="passenger" length="4.50" maxSpeed="13.89" accel="2.0" decel="4.5"/>
+  <vType id="carB" vClass="passenger" length="4.80" maxSpeed="8.00" accel="1.5" decel="4.0"/>
+  <person id="pc0" type="ped" depart="0">
+    <personTrip from="AB" to="BC" modes="car" vTypes="carB"/>
+  </person>
+  <person id="pc1" type="ped" depart="20">
+    <personTrip from="BC" to="AB" modes="car" vTypes="carA carB"/>
+  </person>
+  <person id="pc2" type="ped" depart="40">
+    <personTrip from="AB" to="CB" modes="car"/>
+  </person>
+  <person id="pc3" type="ped" depart="60">
+    <personTrip from="CB" to="BA" modes="car" vTypes="carA"/>
+  </person>
+  <person id="pc4" type="ped" depart="80">
+    <personTrip from="BA" to="BC" modes="car" vTypes="carB"/>
+  </person>
+</routes>

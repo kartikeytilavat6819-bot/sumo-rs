@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:23.311211-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ped_tls_tjunction_striping/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ped_tls_tjunction_striping/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/ped_tls_tjunction_striping/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/ped_tls_tjunction_striping/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/ped_tls_tjunction_striping/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/ped_tls_tjunction_striping/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <processing>
+        <pedestrian.model value="striping"/>
+        <pedestrian.striping.stripe-width value="0.9"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="pa4" depart="16.00" type="ped" speedFactor="1.08" duration="38.00" waitingTime="0.00" timeLoss="4.49" traveltime="38.00">
+        <walk depart="16.00" departPos="0.00" arrival="54.00" arrivalPos="46.40" duration="38.00" routeLength="58.05" timeLoss="4.49" maxSpeed="1.73" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pa3" depart="11.00" type="ped" speedFactor="1.01" duration="75.00" waitingTime="0.00" timeLoss="8.40" traveltime="75.00">
+        <walk depart="11.00" departPos="20.00" arrival="86.00" arrivalPos="30.00" duration="75.00" routeLength="107.66" timeLoss="8.40" maxSpeed="1.62" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pa5" depart="22.00" type="ped" speedFactor="1.03" duration="73.00" waitingTime="19.00" timeLoss="24.63" traveltime="73.00">
+        <walk depart="22.00" departPos="0.00" arrival="95.00" arrivalPos="46.40" duration="73.00" routeLength="58.05" timeLoss="24.63" maxSpeed="1.20" waitingTime="19.00"/>
+    </personinfo>
+    <personinfo id="pa2" depart="7.00" type="ped" speedFactor="0.94" duration="107.00" waitingTime="0.00" timeLoss="11.04" traveltime="107.00">
+        <walk depart="7.00" departPos="0.00" arrival="114.00" arrivalPos="46.40" duration="107.00" routeLength="144.06" timeLoss="11.04" maxSpeed="1.50" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="pa6" depart="30.00" type="ped" speedFactor="0.83" duration="153.00" waitingTime="14.00" timeLoss="29.44" traveltime="153.00">
+        <walk depart="30.00" departPos="0.00" arrival="183.00" arrivalPos="46.40" duration="153.00" routeLength="164.29" timeLoss="29.44" maxSpeed="1.33" waitingTime="14.00"/>
+    </personinfo>
+</tripinfos>
