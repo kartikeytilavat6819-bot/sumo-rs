@@ -1,0 +1,23 @@
+<routes>
+    <vType id="slow" length="5.00" maxSpeed="8.00" accel="2.00" decel="3.00"/>
+    <vType id="fast" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="E0"/>
+    <vehicle id="s0" type="slow" route="r0" depart="0.00" departLane="1" departSpeed="max"/>
+    <vehicle id="s1" type="slow" route="r0" depart="2.00" departLane="2" departSpeed="max"/>
+    <vehicle id="s2" type="slow" route="r0" depart="4.00" departLane="1" departSpeed="max"/>
+    <vehicle id="s3" type="slow" route="r0" depart="6.00" departLane="2" departSpeed="max"/>
+    <vehicle id="s4" type="slow" route="r0" depart="8.00" departLane="1" departSpeed="max"/>
+    <vehicle id="s5" type="slow" route="r0" depart="10.00" departLane="2" departSpeed="max"/>
+    <vehicle id="f0" type="fast" route="r0" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f1" type="fast" route="r0" depart="14.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f2" type="fast" route="r0" depart="16.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f3" type="fast" route="r0" depart="18.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f4" type="fast" route="r0" depart="20.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f5" type="fast" route="r0" depart="22.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f6" type="fast" route="r0" depart="24.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f7" type="fast" route="r0" depart="26.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f8" type="fast" route="r0" depart="28.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f9" type="fast" route="r0" depart="30.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f10" type="fast" route="r0" depart="32.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f11" type="fast" route="r0" depart="34.00" departLane="0" departSpeed="max"/>
+</routes>

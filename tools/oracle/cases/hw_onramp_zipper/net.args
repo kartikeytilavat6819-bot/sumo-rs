@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_onramp_zipper/hw_onramp_zipper.nod.xml --edge-files tools/oracle/cases/hw_onramp_zipper/hw_onramp_zipper.edg.xml

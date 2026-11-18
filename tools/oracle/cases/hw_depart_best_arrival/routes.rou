@@ -1,0 +1,23 @@
+<routes>
+    <vType id="car" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <vType id="slow" length="5.00" maxSpeed="7.00" accel="2.00" decel="3.00"/>
+    <route id="rThrough" edges="E0 E1 E2"/>
+    <route id="rExit" edges="E0 E1 off"/>
+    <vehicle id="blocker" type="slow" route="rThrough" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="b0" type="car" route="rThrough" depart="1.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b1" type="car" route="rThrough" depart="2.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b2" type="car" route="rThrough" depart="3.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b3" type="car" route="rThrough" depart="4.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b4" type="car" route="rThrough" depart="5.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b5" type="car" route="rThrough" depart="6.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b6" type="car" route="rThrough" depart="7.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b7" type="car" route="rThrough" depart="8.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b8" type="car" route="rThrough" depart="9.00" departLane="best" departSpeed="max"/>
+    <vehicle id="b9" type="car" route="rThrough" depart="10.00" departLane="best" departSpeed="max"/>
+    <vehicle id="x0" type="car" route="rExit" depart="2.00" departLane="0" arrivalLane="1" arrivalSpeed="5.00"/>
+    <vehicle id="x1" type="car" route="rExit" depart="6.00" departLane="0" arrivalLane="0" arrivalSpeed="5.00"/>
+    <vehicle id="x2" type="car" route="rExit" depart="10.00" departLane="1" arrivalLane="1" arrivalSpeed="7.00"/>
+    <vehicle id="x3" type="car" route="rExit" depart="14.00" departLane="0" arrivalLane="0" arrivalSpeed="5.00"/>
+    <vehicle id="x4" type="car" route="rExit" depart="18.00" departLane="1" arrivalLane="1" arrivalSpeed="6.00"/>
+    <vehicle id="x5" type="car" route="rExit" depart="22.00" departLane="0" arrivalLane="1" arrivalSpeed="5.00"/>
+</routes>

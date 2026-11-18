@@ -1,0 +1,34 @@
+<routes>
+    <vType id="slow" carFollowModel="Krauss" length="5.00" maxSpeed="9.00" accel="2.00" decel="3.00"/>
+    <vType id="krauss" carFollowModel="Krauss" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50" tau="1.00"/>
+    <vType id="idm" carFollowModel="IDM" length="5.00" maxSpeed="25.00" accel="1.80" decel="2.50" tau="1.20">
+        <param key="delta" value="3.00"/>
+        <param key="stepping" value="0.10"/>
+    </vType>
+    <vType id="eidm" carFollowModel="EIDM" length="5.00" maxSpeed="25.00" accel="1.50" decel="2.50" tau="1.10">
+        <param key="treaction" value="0.60"/>
+        <param key="tpreview" value="3.00"/>
+        <param key="ccoolness" value="0.90"/>
+        <param key="siggap" value="0.20"/>
+    </vType>
+    <route id="r0" edges="E0"/>
+    <vehicle id="lead" type="slow" route="r0" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f0" type="krauss" route="r0" depart="1.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f1" type="idm" route="r0" depart="2.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f2" type="eidm" route="r0" depart="3.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f3" type="krauss" route="r0" depart="4.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f4" type="idm" route="r0" depart="5.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f5" type="eidm" route="r0" depart="6.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f6" type="krauss" route="r0" depart="7.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f7" type="idm" route="r0" depart="8.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f8" type="eidm" route="r0" depart="9.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f9" type="krauss" route="r0" depart="10.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f10" type="idm" route="r0" depart="11.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f11" type="eidm" route="r0" depart="12.00" departLane="0" departSpeed="max"/>
+    <vehicle id="q0" type="krauss" route="r0" depart="6.00" departLane="1" departSpeed="max"/>
+    <vehicle id="q1" type="idm" route="r0" depart="12.00" departLane="1" departSpeed="max"/>
+    <vehicle id="q2" type="eidm" route="r0" depart="18.00" departLane="1" departSpeed="max"/>
+    <vehicle id="q3" type="krauss" route="r0" depart="24.00" departLane="1" departSpeed="max"/>
+    <vehicle id="q4" type="idm" route="r0" depart="30.00" departLane="1" departSpeed="max"/>
+    <vehicle id="q5" type="eidm" route="r0" depart="36.00" departLane="1" departSpeed="max"/>
+</routes>

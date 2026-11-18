@@ -1,0 +1,32 @@
+<routes>
+    <vType id="slow" carFollowModel="Krauss" length="5.00" maxSpeed="9.00" accel="2.00" decel="3.00"/>
+    <vType id="cacc" carFollowModel="CACC" length="5.00" maxSpeed="25.00" accel="2.00" decel="3.00" tau="1.00" minGap="2.00" sigma="0.0">
+        <param key="speedControlGainCACC" value="-0.60"/>
+        <param key="gapClosingControlGainGap" value="0.01"/>
+        <param key="gapClosingControlGainGapDot" value="0.07"/>
+        <param key="gapControlGainGap" value="0.55"/>
+        <param key="gapControlGainGapDot" value="0.02"/>
+        <param key="collisionAvoidanceGainGap" value="0.55"/>
+        <param key="collisionAvoidanceGainGapDot" value="0.06"/>
+        <param key="tauCACCToACC" value="1.20"/>
+        <param key="speedControlMinGap" value="1.80"/>
+        <param key="collisionAvoidanceOverride" value="1.80"/>
+    </vType>
+    <vType id="fast" carFollowModel="Krauss" length="5.00" maxSpeed="25.00" accel="2.60" decel="4.50"/>
+    <route id="r0" edges="E0"/>
+    <vehicle id="lead" type="slow" route="r0" depart="0.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a0" type="cacc" route="r0" depart="1.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a1" type="cacc" route="r0" depart="2.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a2" type="cacc" route="r0" depart="3.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a3" type="cacc" route="r0" depart="4.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a4" type="cacc" route="r0" depart="5.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a5" type="cacc" route="r0" depart="6.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a6" type="cacc" route="r0" depart="7.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a7" type="cacc" route="r0" depart="8.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a8" type="cacc" route="r0" depart="9.00" departLane="0" departSpeed="max"/>
+    <vehicle id="a9" type="cacc" route="r0" depart="10.00" departLane="0" departSpeed="max"/>
+    <vehicle id="f0" type="fast" route="r0" depart="12.00" departLane="1" departSpeed="max"/>
+    <vehicle id="f1" type="fast" route="r0" depart="16.00" departLane="1" departSpeed="max"/>
+    <vehicle id="f2" type="fast" route="r0" depart="20.00" departLane="1" departSpeed="max"/>
+    <vehicle id="f3" type="fast" route="r0" depart="24.00" departLane="1" departSpeed="max"/>
+</routes>

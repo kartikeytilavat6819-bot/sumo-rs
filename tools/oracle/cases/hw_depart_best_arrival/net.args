@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/hw_depart_best_arrival/hw_depart_best_arrival.nod.xml --edge-files tools/oracle/cases/hw_depart_best_arrival/hw_depart_best_arrival.edg.xml
