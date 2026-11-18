@@ -40,12 +40,12 @@ if [ -n "${RUN_SHARDS:-}" ] && [ -z "${RUN_SHARD:-}" ]; then
   awk -F'[= ]' '/^PASS=/{p+=$2; f+=$4; s+=$6} END{print "PASS=" p " FAIL=" f " SKIP=" s}' "$tmp"/*
   rm -rf "$tmp"; exit 0
 fi
-n=-1
+shard_i=-1
 
 for dir in tools/oracle/cases/*/; do
   c=$(basename "$dir")
-  n=$((n + 1))
-  [ -n "${RUN_SHARD:-}" ] && [ $((n % RUN_SHARDS)) -ne "$RUN_SHARD" ] && continue
+  shard_i=$((shard_i + 1))
+  [ -n "${RUN_SHARD:-}" ] && [ $((shard_i % RUN_SHARDS)) -ne "$RUN_SHARD" ] && continue
   # TT_FILTER (newline list, set by the gate for agent branches): official-suite tt_ cases outside it are not run
   case $c in tt_*) [ -n "${TT_FILTER+x}" ] && ! grep -qxF "$c" <<<"$TT_FILTER" && continue;; esac
   # depart needs one sim per route file (15 references): run_all_variants.sh, not this loop
