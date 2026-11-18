@@ -1295,7 +1295,7 @@ impl ROPerson_Ride {
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, _from: Ptr<ROEdge>, _to: Ptr<ROEdge>, _lines: &str, _group: &str, cost: f64, arrivalPos: f64, _length: f64, _destStop: &str, _intended: &str, _depart: SUMOTime) -> Self {
         ROPerson_Ride {
-            base: ROPerson_TripItem { kind: 1, ..ROPerson_TripItem { kind: 2, ..ROPerson_TripItem { kind: 2, ..ROPerson_TripItem::new(start, cost) } } },
+            base: ROPerson_TripItem { kind: 1, ..ROPerson_TripItem::new(start, cost) },
             from: _from,
             to: _to,
             lines: _lines.to_string(),
@@ -1746,7 +1746,7 @@ impl ROPerson_Walk {
     #[allow(unused_variables)]
     pub fn new(start: SUMOTime, _edges: &ConstROEdgeVector, cost: f64, _exitTimes: &Vec<f64>, departPos: f64, arrivalPos: f64, _destStop: &str) -> Self {
         ROPerson_Walk {
-            base: ROPerson_TripItem::new(start, cost),
+            base: ROPerson_TripItem { kind: 2, ..ROPerson_TripItem::new(start, cost) },
             edges: _edges.clone(),
             exitTimes: _exitTimes.clone(),
             dur: -1.,
@@ -1764,7 +1764,7 @@ impl ROPerson_Walk {
     #[allow(unused_variables)]
     pub fn new_2(start: SUMOTime, edges: &ConstROEdgeVector, cost: f64, duration: f64, speed: f64, departPos: f64, arrivalPos: f64, _destStop: &str) -> Self {
         ROPerson_Walk {
-            base: ROPerson_TripItem::new(start, cost),
+            base: ROPerson_TripItem { kind: 2, ..ROPerson_TripItem::new(start, cost) },
             edges: edges.clone(),
             exitTimes: Vec::new(),
             dur: duration,
