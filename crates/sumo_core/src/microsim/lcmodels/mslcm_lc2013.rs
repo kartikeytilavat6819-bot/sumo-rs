@@ -561,7 +561,7 @@ impl MSLCM_LC2013 {
     #[allow(unused_variables)]
     pub fn inform(&mut self, info: Ptr<()>, sender: Ptr<MSVehicle>) -> Ptr<()> {
         let pinfo = unsafe { Box::from_raw(info.as_raw() as *mut MSLCM_LC2013_Info) };
-        debug_assert!(pinfo.0 >= 0. || !MSGlobals::semi_implicit_euler_update());
+        // C++ assert(pinfo->first >= 0 || !MSGlobals::gSemiImplicitEulerUpdate) is compiled out in the release oracle; negative vSafe does occur (cases/fuzz_8008): not a debug_assert here
         self.add_lc_speed_advice(pinfo.0, LCA_CHANGE_TO_HELP);
         self.myOwnState |= pinfo.1;
         // C++ `(void*) true`
