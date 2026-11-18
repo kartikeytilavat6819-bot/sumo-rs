@@ -46,6 +46,9 @@ DEFAULT_TESTS_SUMO = r"C:\Users\karti\sumo-src\tests\sumo"
 NET_OPTS = ("--net-file", "-n")
 ROUTE_OPTS = ("-r", "--route-files", "--routes")
 ADD_OPTS = ("-a", "--additional-files", "--a")
+# Input files named by a behaviour option rather than -n/-r/-a.  These stay in
+# sim.args but their value must be rewritten to the copied case-relative path.
+STATE_OPTS = ("--device.fcd-replay.file",)
 # Output-file options.  Sub-options such as --fcd-output.attributes are *not*
 # here: they stay in sim.args as pure behaviour flags.
 OUTPUT_OPTS = (
@@ -60,7 +63,7 @@ OUTPUT_OPTS = (
     "--weights-output", "--deadlock-output", "--ssm-output", "--bh-output",
     "--save-state.files", "--save-state.times", "--movereminder-output",
 )
-ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, OUTPUT_OPTS)
+ALL_FILE_OPTS = (NET_OPTS, ROUTE_OPTS, ADD_OPTS, STATE_OPTS, OUTPUT_OPTS)
 
 # run_all.sh / make_sim_refs.sh always pass these; a duplicate is a hard error.
 HARNESS_FLAGS = ("--no-step-log",)
@@ -147,6 +150,7 @@ def parse_file_options(tokens):
     net = None
     routes = []
     additions = []
+    state_files = []
     outputs = []
     i = 0
     while i < len(tokens):
@@ -180,9 +184,11 @@ def parse_file_options(tokens):
             routes.extend(x for x in val.split(",") if x)
         elif group is ADD_OPTS:
             additions.extend(x for x in val.split(",") if x)
+        elif group is STATE_OPTS:
+            state_files.append((name, val))
         else:
             outputs.append((name, val))
-    return sim, net, routes, additions, outputs
+    return sim, net, routes, additions, state_files, outputs
 
 
 def resolve(fname: str, potentials):
@@ -259,7 +265,7 @@ def import_one(source, tests_sumo, force=False):
         if marker in joined:
             return None, "needs external tool/GUI/TraCI: " + marker
 
-    sim, net, routes, additions, outputs = parse_file_options(tokens)
+    sim, net, routes, additions, state_files, outputs = parse_file_options(tokens)
 
     net_path = resolve(net, potentials) if net else None
     if not net_path or not net_path.lower().endswith(".net.xml"):
@@ -276,7 +282,7 @@ def import_one(source, tests_sumo, force=False):
         p = resolve(a, potentials)
         if not p:
             continue
-        if route_path is None and is_route_file(p):
+        if route_path is None and is_route_file(p) and not state_files:
             route_path = p
         else:
             # run_all.sh and make_sim_refs.sh both run from the repo root, so
@@ -284,14 +290,24 @@ def import_one(source, tests_sumo, force=False):
             # use "tools/oracle/cases/<case>/<file>" for the same reason).
             kept_additions.append(os.path.relpath(
                 join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/"))
-    if not route_path:
+    if not route_path and not state_files:
         return None, "no route input"
 
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
-    chosen = [net, os.path.basename(route_path)]
+    kept_state = []
+    for opt_name, val in state_files:
+        p = resolve(val, potentials)
+        if not p:
+            continue
+        kept_state.append((opt_name, os.path.relpath(
+            join(case_dir, os.path.basename(p)), REPO).replace(os.sep, "/")))
+
+    chosen = [net] + ([os.path.basename(route_path)] if route_path else [])
     chosen += [os.path.basename(resolve(a, potentials)) for a in additions if resolve(a, potentials)]
+    chosen += [os.path.basename(resolve(val, potentials)) for _, val in state_files
+               if resolve(val, potentials)]
     chosen += [v for _, v in outputs]
     chosen = [c for c in chosen if c]
 
@@ -303,11 +319,18 @@ def import_one(source, tests_sumo, force=False):
 
     # Normalised, stable inputs for run_all.sh.
     shutil.copy2(net_path, join(case_dir, "ref_simple.net.xml"))
-    shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    if route_path:
+        shutil.copy2(route_path, join(case_dir, "routes.rou"))
+    else:
+        # FCD-replay builds its vehicles from the state file, not from -r.
+        with open(join(case_dir, "routes.rou"), "w", encoding="utf-8", newline="\n") as fh:
+            fh.write("<routes/>\n")
 
     sim_args = list(sim)
     if kept_additions:
         sim_args += ["-a", ",".join(sorted(set(kept_additions)))]
+    for opt_name, path in kept_state:
+        sim_args += [opt_name, path]
 
     with open(join(case_dir, "sim.args"), "w", encoding="utf-8", newline="\n") as fh:
         fh.write(" ".join(sim_args) + "\n")
@@ -328,7 +351,7 @@ def import_one(source, tests_sumo, force=False):
     return name, {
         "source": rel,
         "net": os.path.basename(net_path),
-        "route": os.path.basename(route_path),
+        "route": os.path.basename(route_path) if route_path else "(empty)",
         "additions": sorted(set(kept_additions)),
         "outputs": [n for n, _ in outputs],
         "sim_args": sim_args,

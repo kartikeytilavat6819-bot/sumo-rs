@@ -1,0 +1,935 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:59:42.430419-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.stationfinder.probability value="1"/>
+        <device.stationfinder.rescueAction value="none"/>
+        <device.stationfinder.emptyThreshold value="0"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="veh0" x="-987.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="0.00" pos="12.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="veh0" x="-986.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="1.00" pos="13.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="veh0" x="-984.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="2.00" pos="15.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="veh0" x="-981.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="3.00" pos="18.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="veh0" x="-977.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="4.00" pos="22.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="veh0" x="-972.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="5.00" pos="27.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="veh0" x="-966.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="6.00" pos="33.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="veh0" x="-959.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="7.00" pos="40.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="veh0" x="-951.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="8.00" pos="48.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="veh0" x="-942.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="9.00" pos="57.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="veh0" x="-932.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="10.00" pos="67.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="veh0" x="-921.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="11.00" pos="78.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="veh0" x="-909.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="12.00" pos="90.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="veh0" x="-896.90" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.00" pos="103.10" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="veh0" x="-883.01" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="116.99" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="veh0" x="-869.12" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="130.88" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="veh0" x="-855.23" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="144.77" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="veh0" x="-841.34" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="158.66" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="veh0" x="-827.45" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="172.55" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="veh0" x="-813.56" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="186.44" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="veh0" x="-799.67" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="200.33" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="veh0" x="-785.78" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="214.22" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="veh0" x="-771.89" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="228.11" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="veh0" x="-758.00" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="242.00" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="veh0" x="-744.11" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="255.89" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="veh0" x="-730.22" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="269.78" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="veh0" x="-716.33" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="283.67" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="veh0" x="-702.44" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="297.56" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="veh0" x="-688.55" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="311.45" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="veh0" x="-674.66" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="325.34" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="veh0" x="-660.77" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="339.23" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="veh0" x="-646.88" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="353.12" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="veh0" x="-632.99" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="367.01" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="veh0" x="-619.10" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="380.90" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="veh0" x="-605.21" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="394.79" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="veh0" x="-591.32" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="408.68" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="veh0" x="-577.43" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="422.57" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="veh0" x="-563.54" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="436.46" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="veh0" x="-549.65" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="450.35" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="veh0" x="-535.76" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="464.24" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="veh0" x="-521.87" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="478.13" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="veh0" x="-507.98" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="492.02" lane="D2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="veh0" x="-494.19" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="5.81" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="veh0" x="-480.30" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="19.70" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="veh0" x="-466.41" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="33.59" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="veh0" x="-452.52" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="47.48" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="veh0" x="-438.63" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="61.37" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="veh0" x="-424.74" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="75.26" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="veh0" x="-410.85" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="89.15" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="veh0" x="-396.96" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="103.04" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="veh0" x="-383.07" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="116.93" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="veh0" x="-369.18" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="130.82" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="veh0" x="-355.29" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="144.71" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="veh0" x="-341.40" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="158.60" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="veh0" x="-327.51" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="172.49" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="veh0" x="-313.62" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="186.38" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="veh0" x="-299.73" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="200.27" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="veh0" x="-285.84" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="214.16" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="veh0" x="-271.95" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="228.05" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="veh0" x="-258.06" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="241.94" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="veh0" x="-244.17" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="255.83" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="veh0" x="-230.28" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="269.72" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="veh0" x="-216.39" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="283.61" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="veh0" x="-202.50" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="297.50" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="veh0" x="-188.61" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="311.39" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="veh0" x="-174.72" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="325.28" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="veh0" x="-160.83" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="339.17" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="veh0" x="-146.94" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="353.06" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="veh0" x="-133.05" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="366.95" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="veh0" x="-119.16" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="380.84" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="veh0" x="-105.27" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="394.73" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="veh0" x="-91.38" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="408.62" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="veh0" x="-77.49" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="422.51" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="veh0" x="-63.60" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="436.40" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="veh0" x="-49.71" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="450.29" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="veh0" x="-35.82" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="464.18" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="veh0" x="-21.93" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="478.07" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="veh0" x="-8.04" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="491.96" lane="L2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="veh0" x="5.36" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="3.86" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="veh0" x="19.25" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="17.75" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="veh0" x="33.14" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="31.64" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="veh0" x="47.03" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="45.53" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="veh0" x="60.92" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="59.42" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="veh0" x="74.81" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="73.31" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="veh0" x="88.70" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="87.20" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="veh0" x="102.59" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="101.09" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="veh0" x="116.48" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="114.98" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="veh0" x="130.37" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="128.87" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="veh0" x="144.26" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="142.76" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="veh0" x="158.15" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="156.65" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="veh0" x="172.04" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="170.54" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="veh0" x="185.93" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="184.43" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="veh0" x="199.82" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="198.32" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="veh0" x="213.71" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="212.21" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="veh0" x="227.60" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="226.10" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="veh0" x="241.49" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="239.99" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="veh0" x="255.38" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="253.88" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="veh0" x="269.27" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="267.77" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="veh0" x="283.16" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="281.66" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="veh0" x="297.05" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="295.55" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="veh0" x="310.94" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="309.44" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="veh0" x="324.83" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="323.33" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="veh0" x="338.72" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="337.22" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="veh0" x="352.61" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="351.11" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="veh0" x="366.50" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="365.00" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="veh0" x="380.39" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="378.89" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="veh0" x="394.28" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="392.78" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="veh0" x="408.17" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="406.67" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="veh0" x="422.06" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="420.56" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="veh0" x="435.95" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="434.45" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="veh0" x="449.84" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="448.34" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="veh0" x="463.73" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="462.23" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="veh0" x="477.62" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="476.12" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="veh0" x="491.51" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="490.01" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="veh0" x="505.40" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="503.90" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="veh0" x="519.29" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="517.79" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="veh0" x="533.18" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="531.68" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="veh0" x="547.07" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="545.57" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="veh0" x="560.96" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="559.46" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="veh0" x="574.85" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="573.35" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="veh0" x="588.74" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="587.24" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="veh0" x="602.63" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="601.13" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="veh0" x="616.52" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="615.02" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="veh0" x="630.41" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="628.91" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="veh0" x="644.30" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="642.80" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="veh0" x="658.19" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="656.69" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="veh0" x="672.08" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="670.58" lane="L12_0" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="veh0" x="685.97" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="684.47" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="veh0" x="699.86" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="698.36" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="veh0" x="713.75" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="712.25" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="veh0" x="727.64" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="726.14" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="veh0" x="741.53" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="740.03" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="veh0" x="755.42" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="753.92" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="veh0" x="769.31" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="767.81" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="veh0" x="783.20" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="781.70" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="veh0" x="797.09" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="795.59" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="veh0" x="810.98" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="809.48" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="veh0" x="824.87" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="823.37" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="veh0" x="838.76" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="837.26" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="veh0" x="852.65" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="851.15" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="veh0" x="866.54" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="865.04" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="veh0" x="880.43" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="878.93" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="veh0" x="894.32" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="892.82" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="veh0" x="908.21" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="906.71" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="144.00">
+        <vehicle id="veh0" x="922.10" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="920.60" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="145.00">
+        <vehicle id="veh0" x="935.99" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="934.49" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="146.00">
+        <vehicle id="veh0" x="949.88" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="948.38" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="147.00">
+        <vehicle id="veh0" x="963.77" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="962.27" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="148.00">
+        <vehicle id="veh0" x="977.66" y="995.05" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="976.16" lane="L12_1" slope="0.00"/>
+    </timestep>
+    <timestep time="149.00">
+        <vehicle id="veh0" x="991.57" y="994.83" angle="91.07" type="ElectricVehicle1" speed="13.89" pos="2.90" lane=":6_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="150.00">
+        <vehicle id="veh0" x="1005.29" y="992.22" angle="101.77" type="ElectricVehicle1" speed="13.89" pos="16.79" lane=":6_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="151.00">
+        <vehicle id="veh0" x="1019.22" y="991.75" angle="91.52" type="ElectricVehicle1" speed="13.89" pos="7.87" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="152.00">
+        <vehicle id="veh0" x="1033.11" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="21.76" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="153.00">
+        <vehicle id="veh0" x="1047.00" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="35.65" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="154.00">
+        <vehicle id="veh0" x="1060.89" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="49.54" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="155.00">
+        <vehicle id="veh0" x="1074.78" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="63.43" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="156.00">
+        <vehicle id="veh0" x="1088.67" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="77.32" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="157.00">
+        <vehicle id="veh0" x="1102.56" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="91.21" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="158.00">
+        <vehicle id="veh0" x="1116.45" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="105.10" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="159.00">
+        <vehicle id="veh0" x="1130.34" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="118.99" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="160.00">
+        <vehicle id="veh0" x="1144.23" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="132.88" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="161.00">
+        <vehicle id="veh0" x="1158.12" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="146.77" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="162.00">
+        <vehicle id="veh0" x="1172.01" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="160.66" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="163.00">
+        <vehicle id="veh0" x="1185.90" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="174.55" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="164.00">
+        <vehicle id="veh0" x="1199.79" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="188.44" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="165.00">
+        <vehicle id="veh0" x="1213.68" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="202.33" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="166.00">
+        <vehicle id="veh0" x="1227.57" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="216.22" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="167.00">
+        <vehicle id="veh0" x="1241.46" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="230.11" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="168.00">
+        <vehicle id="veh0" x="1255.35" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="244.00" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="169.00">
+        <vehicle id="veh0" x="1269.24" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="257.89" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="170.00">
+        <vehicle id="veh0" x="1283.13" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="271.78" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="171.00">
+        <vehicle id="veh0" x="1297.02" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="285.67" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="172.00">
+        <vehicle id="veh0" x="1310.91" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="299.56" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="173.00">
+        <vehicle id="veh0" x="1324.80" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="313.45" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="174.00">
+        <vehicle id="veh0" x="1338.69" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="327.34" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="175.00">
+        <vehicle id="veh0" x="1352.58" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="341.23" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="176.00">
+        <vehicle id="veh0" x="1366.47" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="355.12" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="177.00">
+        <vehicle id="veh0" x="1380.36" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="369.01" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="178.00">
+        <vehicle id="veh0" x="1394.25" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="382.90" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="179.00">
+        <vehicle id="veh0" x="1408.14" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="396.79" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="180.00">
+        <vehicle id="veh0" x="1422.03" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="410.68" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="181.00">
+        <vehicle id="veh0" x="1435.92" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="424.57" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="182.00">
+        <vehicle id="veh0" x="1449.81" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="438.46" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="183.00">
+        <vehicle id="veh0" x="1463.70" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="452.35" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="184.00">
+        <vehicle id="veh0" x="1477.59" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="466.24" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="185.00">
+        <vehicle id="veh0" x="1491.48" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="480.13" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="186.00">
+        <vehicle id="veh0" x="1505.37" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="494.02" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="187.00">
+        <vehicle id="veh0" x="1519.26" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="507.91" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="188.00">
+        <vehicle id="veh0" x="1533.15" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="521.80" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="189.00">
+        <vehicle id="veh0" x="1547.04" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="535.69" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="190.00">
+        <vehicle id="veh0" x="1560.93" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="549.58" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="191.00">
+        <vehicle id="veh0" x="1574.82" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="563.47" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="192.00">
+        <vehicle id="veh0" x="1588.71" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="577.36" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="193.00">
+        <vehicle id="veh0" x="1602.60" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="591.25" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="194.00">
+        <vehicle id="veh0" x="1616.49" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="605.14" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="195.00">
+        <vehicle id="veh0" x="1630.38" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="619.03" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="196.00">
+        <vehicle id="veh0" x="1644.27" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="632.92" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="197.00">
+        <vehicle id="veh0" x="1658.16" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="646.81" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="198.00">
+        <vehicle id="veh0" x="1672.05" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="660.70" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="199.00">
+        <vehicle id="veh0" x="1685.94" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="674.59" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="200.00">
+        <vehicle id="veh0" x="1699.83" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="688.48" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="201.00">
+        <vehicle id="veh0" x="1713.72" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="702.37" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="202.00">
+        <vehicle id="veh0" x="1727.61" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="716.26" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="203.00">
+        <vehicle id="veh0" x="1741.50" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="730.15" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="204.00">
+        <vehicle id="veh0" x="1755.39" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="744.04" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="205.00">
+        <vehicle id="veh0" x="1769.28" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="757.93" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="206.00">
+        <vehicle id="veh0" x="1783.17" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="771.82" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="207.00">
+        <vehicle id="veh0" x="1797.06" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="785.71" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="208.00">
+        <vehicle id="veh0" x="1810.95" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="799.60" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="209.00">
+        <vehicle id="veh0" x="1824.84" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="813.49" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="210.00">
+        <vehicle id="veh0" x="1838.73" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="827.38" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="211.00">
+        <vehicle id="veh0" x="1852.62" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="841.27" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="212.00">
+        <vehicle id="veh0" x="1866.51" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="855.16" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="213.00">
+        <vehicle id="veh0" x="1880.40" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="869.05" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="214.00">
+        <vehicle id="veh0" x="1894.29" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="882.94" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="215.00">
+        <vehicle id="veh0" x="1908.18" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="896.83" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="216.00">
+        <vehicle id="veh0" x="1922.07" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="910.72" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="217.00">
+        <vehicle id="veh0" x="1935.96" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="924.61" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="218.00">
+        <vehicle id="veh0" x="1949.85" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="938.50" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="219.00">
+        <vehicle id="veh0" x="1963.74" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="952.39" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="220.00">
+        <vehicle id="veh0" x="1977.63" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="966.28" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="221.00">
+        <vehicle id="veh0" x="1991.52" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="980.17" lane="L10_0" slope="0.00"/>
+    </timestep>
+    <timestep time="222.00">
+        <vehicle id="veh0" x="2005.41" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="3.91" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="223.00">
+        <vehicle id="veh0" x="2019.30" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="17.80" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="224.00">
+        <vehicle id="veh0" x="2033.19" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="31.69" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="225.00">
+        <vehicle id="veh0" x="2047.08" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="45.58" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="226.00">
+        <vehicle id="veh0" x="2060.97" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="59.47" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="227.00">
+        <vehicle id="veh0" x="2074.86" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="73.36" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="228.00">
+        <vehicle id="veh0" x="2088.75" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="87.25" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="229.00">
+        <vehicle id="veh0" x="2102.64" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="101.14" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="230.00">
+        <vehicle id="veh0" x="2116.53" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="115.03" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="231.00">
+        <vehicle id="veh0" x="2130.42" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="128.92" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="232.00">
+        <vehicle id="veh0" x="2144.31" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="142.81" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="233.00">
+        <vehicle id="veh0" x="2158.20" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="156.70" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="234.00">
+        <vehicle id="veh0" x="2172.09" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="170.59" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="235.00">
+        <vehicle id="veh0" x="2185.98" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="184.48" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="236.00">
+        <vehicle id="veh0" x="2199.87" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="198.37" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="237.00">
+        <vehicle id="veh0" x="2213.76" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="212.26" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="238.00">
+        <vehicle id="veh0" x="2227.65" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="226.15" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="239.00">
+        <vehicle id="veh0" x="2241.54" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="240.04" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="240.00">
+        <vehicle id="veh0" x="2255.43" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="253.93" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="241.00">
+        <vehicle id="veh0" x="2269.32" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="267.82" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="242.00">
+        <vehicle id="veh0" x="2283.21" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="281.71" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="243.00">
+        <vehicle id="veh0" x="2297.10" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="295.60" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="244.00">
+        <vehicle id="veh0" x="2310.99" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="309.49" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="245.00">
+        <vehicle id="veh0" x="2324.88" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="323.38" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="246.00">
+        <vehicle id="veh0" x="2338.77" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="337.27" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="247.00">
+        <vehicle id="veh0" x="2352.66" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="351.16" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="248.00">
+        <vehicle id="veh0" x="2366.55" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="365.05" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="249.00">
+        <vehicle id="veh0" x="2380.44" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="378.94" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="250.00">
+        <vehicle id="veh0" x="2394.33" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="392.83" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="251.00">
+        <vehicle id="veh0" x="2408.22" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="406.72" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="252.00">
+        <vehicle id="veh0" x="2422.11" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="420.61" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="253.00">
+        <vehicle id="veh0" x="2436.00" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="434.50" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="254.00">
+        <vehicle id="veh0" x="2449.89" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="448.39" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="255.00">
+        <vehicle id="veh0" x="2463.78" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="462.28" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="256.00">
+        <vehicle id="veh0" x="2477.67" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="476.17" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="257.00">
+        <vehicle id="veh0" x="2491.56" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="490.06" lane="L7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="258.00">
+        <vehicle id="veh0" x="2505.35" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="5.35" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="259.00">
+        <vehicle id="veh0" x="2519.24" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="19.24" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="260.00">
+        <vehicle id="veh0" x="2533.13" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="33.13" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="261.00">
+        <vehicle id="veh0" x="2547.02" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="47.02" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="262.00">
+        <vehicle id="veh0" x="2560.91" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="60.91" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="263.00">
+        <vehicle id="veh0" x="2574.80" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="74.80" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="264.00">
+        <vehicle id="veh0" x="2588.69" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="88.69" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="265.00">
+        <vehicle id="veh0" x="2602.58" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="102.58" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="266.00">
+        <vehicle id="veh0" x="2616.47" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="116.47" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="267.00">
+        <vehicle id="veh0" x="2630.36" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="130.36" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="268.00">
+        <vehicle id="veh0" x="2644.25" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="144.25" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="269.00">
+        <vehicle id="veh0" x="2658.14" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="158.14" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="270.00">
+        <vehicle id="veh0" x="2672.03" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="172.03" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="271.00">
+        <vehicle id="veh0" x="2685.92" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="185.92" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="272.00">
+        <vehicle id="veh0" x="2699.81" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="199.81" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="273.00">
+        <vehicle id="veh0" x="2713.70" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="213.70" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="274.00">
+        <vehicle id="veh0" x="2727.59" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="227.59" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="275.00">
+        <vehicle id="veh0" x="2741.48" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="241.48" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="276.00">
+        <vehicle id="veh0" x="2755.37" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="255.37" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="277.00">
+        <vehicle id="veh0" x="2769.26" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="269.26" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="278.00">
+        <vehicle id="veh0" x="2783.15" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="283.15" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="279.00">
+        <vehicle id="veh0" x="2797.04" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="297.04" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="280.00">
+        <vehicle id="veh0" x="2810.93" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="310.93" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="281.00">
+        <vehicle id="veh0" x="2824.82" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="324.82" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="282.00">
+        <vehicle id="veh0" x="2838.71" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="338.71" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="283.00">
+        <vehicle id="veh0" x="2852.60" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="352.60" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="284.00">
+        <vehicle id="veh0" x="2866.49" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="366.49" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="285.00">
+        <vehicle id="veh0" x="2880.38" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="380.38" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="286.00">
+        <vehicle id="veh0" x="2894.27" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="394.27" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="287.00">
+        <vehicle id="veh0" x="2908.16" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="408.16" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="288.00">
+        <vehicle id="veh0" x="2922.05" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="422.05" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="289.00">
+        <vehicle id="veh0" x="2935.94" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="435.94" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="290.00">
+        <vehicle id="veh0" x="2949.83" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="449.83" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="291.00">
+        <vehicle id="veh0" x="2963.72" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="463.72" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="292.00">
+        <vehicle id="veh0" x="2977.61" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="477.61" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="293.00">
+        <vehicle id="veh0" x="2991.50" y="991.75" angle="90.00" type="ElectricVehicle1" speed="13.89" pos="491.50" lane="D7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="294.00"/>
+</fcd-export>

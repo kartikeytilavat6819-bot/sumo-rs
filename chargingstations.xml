@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<!-- generated on 2026-11-18T10:25:52.219807-05:00 by Eclipse SUMO sumo 1.28.0
+<!-- generated on 2026-11-18T10:59:42.436301-05:00 by Eclipse SUMO sumo 1.28.0
 This data file and the accompanying materials
 are made available under the terms of the Eclipse Public License v2.0
 which accompanies this distribution, and is available at
@@ -14,19 +14,18 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
 <sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
 
     <input>
-        <net-file value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref_simple.net.xml"/>
-        <route-files value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/routes.rou"/>
-        <additional-files value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/input_additional.add.xml"/>
+        <net-file value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_stationfinder_zeroPower/input_additional.add.xml"/>
     </input>
 
     <output>
         <write-license value="true"/>
-        <emission-output value="emissions.xml"/>
         <battery-output.precision value="4"/>
         <chargingstations-output value="chargingstations.xml"/>
-        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.fcd.xml"/>
-        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.tripinfo.xml"/>
-        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.stat.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_stationfinder_zeroPower/ref.stat.xml"/>
     </output>
 
     <processing>
@@ -40,19 +39,19 @@ SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
         <no-step-log value="true"/>
     </report>
 
-    <emissions>
-        <device.emissions.probability value="1"/>
-    </emissions>
-
     <battery>
-        <device.battery.probability value="1"/>
+        <device.stationfinder.probability value="1"/>
+        <device.stationfinder.rescueAction value="none"/>
+        <device.stationfinder.emptyThreshold value="0"/>
     </battery>
 
 </sumoConfiguration>
 -->
 
 <chargingstations-export>
-    <chargingStation id="cS_17to2_0a" totalEnergyCharged="0.00" chargingSteps="0"/>
-    <chargingStation id="cS_17to2_1a" totalEnergyCharged="0.00" chargingSteps="0"/>
-    <chargingStation id="cS_2to19_0a" totalEnergyCharged="0.00" chargingSteps="0"/>
+    <chargingStation id="CS1" totalEnergyCharged="0.00" chargingSteps="0"/>
+    <chargingStation id="CS2" totalEnergyCharged="0.00" chargingSteps="0"/>
+    <chargingStation id="CS3" totalEnergyCharged="0.00" chargingSteps="0"/>
+    <chargingStation id="CS4" totalEnergyCharged="0.00" chargingSteps="0"/>
+    <chargingStation id="CS5" totalEnergyCharged="0.00" chargingSteps="0"/>
 </chargingstations-export>

@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:48:38.137373-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_bluelight_opposite_multiple_oncoming/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_bluelight_opposite_multiple_oncoming/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bluelight_opposite_multiple_oncoming/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bluelight_opposite_multiple_oncoming/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_bluelight_opposite_multiple_oncoming/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="150"/>
+        <step-length value="0.2"/>
+    </time>
+
+    <processing>
+        <lateral-resolution value="0.64"/>
+        <collision.action value="warn"/>
+        <collision.check-junctions value="true"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <bluelight_device>
+        <device.bluelight.reactiondist value="100"/>
+    </bluelight_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="case_1_engine" depart="20.00" departLane="edge_5_0" departPos="8.10" departPosLat="0.00" departSpeed="0.00" departDelay="0.00" arrival="126.40" arrivalLane="edge_0_1" arrivalPos="488.32" arrivalPosLat="-0.00" arrivalSpeed="19.60" duration="106.40" routeLength="990.47" waitingTime="20.60" waitingCount="1" stopTime="0.00" timeLoss="55.82" rerouteNo="0" devices="tripinfo_case_1_engine bluelight_case_1_engine fcd_case_1_engine" vType="engine" speedFactor="1.40" vaporized="">
+        <bluelight/>
+    </tripinfo>
+    <tripinfo id="case_1_ladder" depart="24.40" departLane="edge_5_0" departPos="10.10" departPosLat="0.00" departSpeed="0.00" departDelay="4.40" arrival="133.80" arrivalLane="edge_0_1" arrivalPos="488.32" arrivalPosLat="0.00" arrivalSpeed="19.51" duration="109.40" routeLength="988.47" waitingTime="16.40" waitingCount="1" stopTime="0.00" timeLoss="58.85" rerouteNo="0" devices="tripinfo_case_1_ladder bluelight_case_1_ladder fcd_case_1_ladder" vType="ladder" speedFactor="1.40" vaporized="">
+        <bluelight/>
+    </tripinfo>
+</tripinfos>

@@ -1,0 +1,1 @@
+official sumo exits 1 for this fcd-replay test (errors.sumo expects a broken vehicle route); the oracle harness needs a zero exit to generate refs, so this row cannot be compared.

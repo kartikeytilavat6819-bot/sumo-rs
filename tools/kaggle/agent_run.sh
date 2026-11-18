@@ -5,7 +5,7 @@ cd "$(dirname "$0")/../.." || exit 1
 BIN="${CARGO_TARGET_DIR:-/c/Users/karti/sumo-rs-target}/debug"
 SUMO="$BIN/sumo.exe"
 [ -x "$SUMO" ] || SUMO="$BIN/sumo"
-OUT=/c/Users/karti/AppData/Local/Temp/opencode/oc54-spot
+OUT=${TMPDIR:-/tmp}/oc54-spot
 rm -rf "$OUT"; mkdir -p "$OUT"
 
 for d in tools/oracle/cases/tt_devices_*/; do

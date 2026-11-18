@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --battery-output.precision 4 --device.stationfinder.probability 1 --chargingstations-output chargingstations.xml -a tools/oracle/cases/tt_devices_stationfinder_breakdown/input_additional.add.xml
