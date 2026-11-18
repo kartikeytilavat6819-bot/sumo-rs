@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:31:27.967425-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_radial_drag/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_radial_drag/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_radial_drag/vt.add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_radial_drag/ref.battery.xml"/>
+        <battery-output.precision value="2"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_radial_drag/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_radial_drag/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_radial_drag/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="v1" depart="1.00" departLane="-103227#0_0" departPos="5.10" departSpeed="26.07" departDelay="0.00" arrival="14.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="25.36" duration="13.00" routeLength="307.51" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.39" rerouteNo="0" devices="tripinfo_v1 battery_v1 fcd_v1" vType="DEFAULT_VEHTYPE" speedFactor="0.94" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="19960.70" totalEnergyConsumed="54.25" totalEnergyRegenerated="14.95"/>
+    </tripinfo>
+    <tripinfo id="v3" depart="3.00" departLane="-103227#0_0" departPos="5.10" departSpeed="27.78" departDelay="0.00" arrival="15.00" arrivalLane="-103227#2_0" arrivalPos="142.31" arrivalSpeed="27.58" duration="12.00" routeLength="307.51" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.42" rerouteNo="0" devices="tripinfo_v3 battery_v3 fcd_v3" vType="DEFAULT_VEHTYPE" speedFactor="1.08" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="19952.63" totalEnergyConsumed="80.70" totalEnergyRegenerated="33.33"/>
+    </tripinfo>
+    <tripinfo id="v2" depart="2.00" departLane="-103224#0_0" departPos="5.10" departSpeed="22.32" departDelay="0.00" arrival="21.00" arrivalLane="-103224#3_1" arrivalPos="35.74" arrivalSpeed="22.06" duration="19.00" routeLength="305.55" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="5.21" rerouteNo="0" devices="tripinfo_v2 battery_v2 fcd_v2" vType="DEFAULT_VEHTYPE" speedFactor="1.01" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="19967.38" totalEnergyConsumed="118.82" totalEnergyRegenerated="86.20"/>
+    </tripinfo>
+    <tripinfo id="v0" depart="0.00" departLane="-103224#0_0" departPos="5.10" departSpeed="22.22" departDelay="0.00" arrival="23.00" arrivalLane="-103224#3_0" arrivalPos="35.74" arrivalSpeed="22.72" duration="23.00" routeLength="305.55" waitingTime="1.00" waitingCount="1" stopTime="0.00" timeLoss="9.24" rerouteNo="0" devices="tripinfo_v0 battery_v0 fcd_v0" vType="DEFAULT_VEHTYPE" speedFactor="1.06" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="19957.29" totalEnergyConsumed="142.76" totalEnergyRegenerated="100.05"/>
+    </tripinfo>
+</tripinfos>
