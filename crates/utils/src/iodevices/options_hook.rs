@@ -1,6 +1,6 @@
 //! What iodevices needs from OptionsCont::getOptions(), plus the port of OptionsCont::writeXMLHeader.
-// shortcut: replace with utils::options::OptionsCont once merged; until then the options port
-// registers itself with `set_options_hook`
+// Production uses the OptionsCont singleton (RealOptions); `set_options_hook` is only a test seam
+// that lets the unit tests replace it with fixed values.
 use crate::xml::stand_ins::iso_time_string;
 use crate::xml::sumo_sax_attributes::ENCODING;
 use std::io::Write;

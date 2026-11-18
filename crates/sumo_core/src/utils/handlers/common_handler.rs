@@ -10,15 +10,35 @@ use utils::xml::sumo_xml_definitions::{
 };
 
 /// C++ `toString(SumoXMLTag)`: reverse lookup in the generated tag table.
-// shortcut: linear reverse lookup of the generated TAGS table, C++ uses a map; upgrade by generating a reverse map
+/// The reverse map is built once; the first table entry wins for a repeated value, as in the linear scan.
 pub(crate) fn tag_str(tag: SumoXMLTag) -> String {
-    utils::xml::sumo_xml_definitions::TAGS.iter().find(|(_, t)| *t == tag).map(|(n, _)| n.to_string()).unwrap_or_default()
+    static MAP: std::sync::OnceLock<HashMap<SumoXMLTag, &'static str>> = std::sync::OnceLock::new();
+    MAP.get_or_init(|| {
+        let mut m = HashMap::new();
+        for (n, t) in utils::xml::sumo_xml_definitions::TAGS.iter() {
+            m.entry(*t).or_insert(*n);
+        }
+        m
+    })
+    .get(&tag)
+    .map(|n| n.to_string())
+    .unwrap_or_default()
 }
 
 /// C++ `toString(SumoXMLAttr)`: reverse lookup in the generated attribute table.
-// shortcut: linear reverse lookup of the generated ATTRS table, C++ uses a map; upgrade by generating a reverse map
+/// The reverse map is built once; the first table entry wins for a repeated value, as in the linear scan.
 pub(crate) fn attr_str(attr: SumoXMLAttr) -> String {
-    utils::xml::sumo_xml_definitions::ATTRS.iter().find(|(_, a)| *a == attr).map(|(n, _)| n.to_string()).unwrap_or_default()
+    static MAP: std::sync::OnceLock<HashMap<SumoXMLAttr, &'static str>> = std::sync::OnceLock::new();
+    MAP.get_or_init(|| {
+        let mut m = HashMap::new();
+        for (n, a) in utils::xml::sumo_xml_definitions::ATTRS.iter() {
+            m.entry(*a).or_insert(*n);
+        }
+        m
+    })
+    .get(&attr)
+    .map(|n| n.to_string())
+    .unwrap_or_default()
 }
 
 /// C++ class `CommonHandler` (utils/handlers/CommonHandler.h)
