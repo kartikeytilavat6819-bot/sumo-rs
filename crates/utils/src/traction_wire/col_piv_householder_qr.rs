@@ -131,7 +131,12 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
     let mut col_norms_updated: Vec<f64> = (0..cols).map(|j| col_norm(&qr, j, 0)).collect();
     let mut col_norms_direct = col_norms_updated.clone();
     let max_norm = col_norms_updated.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
-    let threshold_helper = (max_norm * eps) * (max_norm * eps) / rows as f64;
+    // Eigen 3.4 computeInPlace: threshold() = epsilon * diagonalSize, applied to the column norms
+    let threshold = eps * size as f64;
+    let threshold_helper = (max_norm * threshold) * (max_norm * threshold) / rows as f64;
+    let norm_downdate_threshold = eps.sqrt();
+    // number of meaningful pivots (m_nonzero_pivots), fixed at the first column whose norm is too small
+    let mut nonzero_pivots = size;
 
     for k in 0..size {
         // column with the largest remaining norm, first one on ties (Eigen maxCoeff)
@@ -140,6 +145,9 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
             if col_norms_updated[j] > col_norms_updated[biggest] {
                 biggest = j;
             }
+        }
+        if nonzero_pivots == size && col_norms_updated[biggest] * col_norms_updated[biggest] < threshold_helper * (rows - k) as f64 {
+            nonzero_pivots = k;
         }
         if biggest != k {
             qr.swap_columns(k, biggest);
@@ -161,13 +169,13 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
         for j in k + 1..cols {
             if col_norms_updated[j] != 0.0 {
                 let mut temp = qr.get(k, j).abs() / col_norms_updated[j];
-                temp = 1.0 - temp * temp;
+                temp = (1.0 + temp) * (1.0 - temp);
                 if temp < 0.0 {
                     temp = 0.0;
                 }
                 let ratio = col_norms_updated[j] / col_norms_direct[j];
                 let temp2 = temp * (ratio * ratio);
-                if temp2 <= threshold_helper {
+                if temp2 <= norm_downdate_threshold {
                     col_norms_direct[j] = col_norm(&qr, j, k + 1);
                     col_norms_updated[j] = col_norms_direct[j];
                 } else {
@@ -177,23 +185,11 @@ pub fn col_piv_householder_qr_solve(a: &DenseMatrix, b: &[f64]) -> Vec<f64> {
         }
     }
 
-    // numerical rank: first diagonal entry at or below diagSize * eps times the largest one
-    let threshold = size as f64 * eps;
-    let mut max_pivot = 0.0_f64;
-    for k in 0..size {
-        max_pivot = max_pivot.max(qr.get(k, k).abs());
-    }
-    let mut rank = size;
-    for k in 0..size {
-        if qr.get(k, k).abs() <= threshold * max_pivot {
-            rank = k;
-            break;
-        }
-    }
+    let rank = nonzero_pivots;
 
-    // c = Q^T b, applying the reflectors in order H_0, H_1, ...
+    // c = Q^T b with householderQ().setLength(nonzero_pivots): only the first `rank` reflectors
     let mut c = b.to_vec();
-    for k in 0..size {
+    for k in 0..rank {
         let tau = hcoeffs[k];
         if tau == 0.0 {
             continue;
