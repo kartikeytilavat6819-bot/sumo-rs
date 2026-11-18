@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model striping --pedestrian.striping.stripe-width 0.75 --pedestrian.striping.dawdling 0.2 --duration-log.statistics -a tools/oracle/cases/tt_pedestrian_model_striping_pedestrian_interactions_bidirectional_flow_5stripes/input_routes.rou.xml

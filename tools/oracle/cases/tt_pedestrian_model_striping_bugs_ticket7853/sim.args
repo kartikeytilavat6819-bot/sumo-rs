@@ -1,0 +1,1 @@
+--write-license --default.departspeed 0 --default.departlane first --pedestrian.model striping --pedestrian.striping.mingap-to-vehicle 0 --step-length 0.1 --step-method.ballistic --default.speeddev 0 -e 60

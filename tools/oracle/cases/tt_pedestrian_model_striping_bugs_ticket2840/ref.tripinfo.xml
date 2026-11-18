@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:50:23.074426-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_pedestrian_model_striping_bugs_ticket2840/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_pedestrian_model_striping_bugs_ticket2840/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_striping_bugs_ticket2840/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_striping_bugs_ticket2840/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc61/tools/oracle/cases/tt_pedestrian_model_striping_bugs_ticket2840/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+        <pedestrian.model value="striping"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="9.00" waitingTime="0.00" timeLoss="1.01" traveltime="9.00">
+        <walk depart="0.00" departPos="39.90" arrival="9.00" arrivalPos="10.00" duration="9.00" routeLength="11.10" timeLoss="1.01" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="p1" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="10.00" waitingTime="0.00" timeLoss="1.72" traveltime="10.00">
+        <walk depart="0.00" departPos="39.50" arrival="10.00" arrivalPos="10.00" duration="10.00" routeLength="11.50" timeLoss="1.72" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="blocker3" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="107.00" waitingTime="107.00" timeLoss="7.00" traveltime="107.00">
+        <walk depart="0.00" departPos="0.00" arrival="107.00" arrivalPos="10.00" duration="107.00" routeLength="10.00" timeLoss="7.00" maxSpeed="0.10" waitingTime="107.00"/>
+    </personinfo>
+    <personinfo id="blocker2" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="107.00" waitingTime="107.00" timeLoss="7.00" traveltime="107.00">
+        <walk depart="0.00" departPos="0.00" arrival="107.00" arrivalPos="10.00" duration="107.00" routeLength="10.00" timeLoss="7.00" maxSpeed="0.10" waitingTime="107.00"/>
+    </personinfo>
+    <personinfo id="blocker" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="108.00" waitingTime="108.00" timeLoss="8.00" traveltime="108.00">
+        <walk depart="0.00" departPos="0.00" arrival="108.00" arrivalPos="10.00" duration="108.00" routeLength="10.00" timeLoss="8.00" maxSpeed="0.10" waitingTime="108.00"/>
+    </personinfo>
+</tripinfos>

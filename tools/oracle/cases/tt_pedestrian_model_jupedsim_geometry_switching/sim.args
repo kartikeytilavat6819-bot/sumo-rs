@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -e 900 --no-duration-log --pedestrian.model jupedsim --verbose --device.fcd.period 100 -a tools/oracle/cases/tt_pedestrian_model_jupedsim_geometry_switching/input_additional.add.xml

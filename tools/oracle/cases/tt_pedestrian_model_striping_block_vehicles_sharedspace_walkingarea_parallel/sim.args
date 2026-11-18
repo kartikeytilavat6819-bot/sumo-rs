@@ -1,0 +1,1 @@
+--write-license --default.departspeed 0 --default.departlane first --pedestrian.model striping --collision.check-junctions --duration-log.statistics --default.speeddev 0.1

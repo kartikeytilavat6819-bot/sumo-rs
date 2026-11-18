@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --pedestrian.model striping --pedestrian.striping.dawdling 0 --collision.check-junctions --step-length 0.5 --device.tripinfo.probability 0 -a tools/oracle/cases/tt_pedestrian_model_striping_block_vehicles_largeJunction_bikelane/input_additional2.add.xml
