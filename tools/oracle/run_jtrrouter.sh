@@ -32,8 +32,8 @@ run_case() {
   local c=$1 cdir=tools/oracle/cases/$1
   local sub=$OUT/$c net args rargs cargs rrc crc verdict detail="" f
   rm -rf "$sub"; mkdir -p "$sub/ref" "$sub/cand"
-  net=$(tr -d '' < "$cdir/net")
-  args=$(tr -d '' < "$cdir/args")
+  net=$(tr -d '[:cntrl:]' < "$cdir/net")
+  args=$(tr -d '[:cntrl:]' < "$cdir/args")
   rargs=${args//@CASE@/$cdir}; rargs=${rargs//@DIR@/$sub/ref}
   cargs=${args//@CASE@/$cdir}; cargs=${cargs//@DIR@/$sub/cand}
   "$REF_BIN" -n "$net" $rargs --no-step-log true >"$sub/ref.log" 2>&1
