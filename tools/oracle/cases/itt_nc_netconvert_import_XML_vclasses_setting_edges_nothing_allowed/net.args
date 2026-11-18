@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_vclasses_setting_edges_nothing_allowed/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_vclasses_setting_edges_nothing_allowed/input_nodes.nod.xml --speed-in-kmh

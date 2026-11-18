@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_rail_crossing_all_plain/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_rail_crossing_all_plain/input_plain.nod.xml

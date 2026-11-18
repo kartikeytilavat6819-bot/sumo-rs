@@ -1,0 +1,1 @@
+--write-license --dismiss-vclasses --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_vclasses_dismissing_all_lanes_si_center_no_passenger_lane/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_vclasses_dismissing_all_lanes_si_center_no_passenger_lane/input_nodes.nod.xml --speed-in-kmh

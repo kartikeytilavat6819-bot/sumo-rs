@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_connections_3arm/input_plain.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_connections_3arm/input_plain.nod.xml --no-turnarounds

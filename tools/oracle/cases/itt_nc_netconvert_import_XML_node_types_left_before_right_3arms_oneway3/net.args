@@ -1,0 +1,1 @@
+--write-license -e tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_left_before_right_3arms_oneway3/input_plain.edg.xml -n tools/oracle/cases/itt_nc_netconvert_import_XML_node_types_left_before_right_3arms_oneway3/input_plain.nod.xml -v --no-turnarounds
