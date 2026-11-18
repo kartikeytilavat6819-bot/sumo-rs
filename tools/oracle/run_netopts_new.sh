@@ -81,7 +81,7 @@ run_row() {
     elif [ $cr -eq 2 ]; then V=FAIL; D="net unparseable: $(head -1 "$d/net.log")"
     else V=FAIL; D="$(head -1 "$d/net.log") | $(grep SUMMARY "$d/net.log")"; fi
     if [ "$V" = PASS ]; then
-      local norm='s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; /generated on/d; s/\r$//'
+      local norm='s#'"$d"'/cpp.net.xml#NET#g; s#'"$d"'/rust.net.xml#NET#g; s#'"$d"'/cpp_out#OUT#g; s#'"$d"'/rust_out#OUT#g; /generated on/d; s/\r$//'
       local lc lr
       lc=$(cd "$d/cpp_out" && find . -type f | sort); lr=$(cd "$d/rust_out" && find . -type f | sort)
       if [ "$lc" != "$lr" ]; then V=FAIL; D="output files differ: cpp=[$(echo $lc)] rust=[$(echo $lr)]"
