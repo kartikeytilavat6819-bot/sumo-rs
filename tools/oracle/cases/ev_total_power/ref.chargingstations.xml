@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:58:32.252720-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_total_power/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_total_power/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_total_power/add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_total_power/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<chargingstations-export>
+    <chargingStation id="cs_limited" totalEnergyCharged="102.50" chargingSteps="8">
+        <vehicle id="ev0" type="EV" totalEnergyChargedIntoVehicle="51.25" chargingBegin="11.00" chargingEnd="14.00">
+            <step time="11.00" chargingStatus="chargingInTransit" energyCharged="25.00" partialCharge="25.00" power="100000.00" efficiency="0.90" actualBatteryCapacity="5069.44" maximumBatteryCapacity="35000.00"/>
+            <step time="12.00" chargingStatus="chargingInTransit" energyCharged="25.00" partialCharge="50.00" power="100000.00" efficiency="0.90" actualBatteryCapacity="5079.20" maximumBatteryCapacity="35000.00"/>
+            <step time="13.00" chargingStatus="chargingInTransit" energyCharged="0.62" partialCharge="50.62" power="2500.00" efficiency="0.90" actualBatteryCapacity="5055.43" maximumBatteryCapacity="35000.00"/>
+            <step time="14.00" chargingStatus="chargingInTransit" energyCharged="0.62" partialCharge="51.88" power="2500.00" efficiency="0.90" actualBatteryCapacity="5034.17" maximumBatteryCapacity="35000.00"/>
+        </vehicle>
+        <vehicle id="ev1" type="EV" totalEnergyChargedIntoVehicle="51.25" chargingBegin="13.00" chargingEnd="16.00">
+            <step time="13.00" chargingStatus="chargingInTransit" energyCharged="0.62" partialCharge="75.62" power="2500.00" efficiency="0.90" actualBatteryCapacity="5025.52" maximumBatteryCapacity="35000.00"/>
+            <step time="14.00" chargingStatus="chargingInTransit" energyCharged="0.62" partialCharge="76.88" power="2500.00" efficiency="0.90" actualBatteryCapacity="5001.49" maximumBatteryCapacity="35000.00"/>
+            <step time="15.00" chargingStatus="chargingInTransit" energyCharged="25.00" partialCharge="77.50" power="100000.00" efficiency="0.90" actualBatteryCapacity="5003.47" maximumBatteryCapacity="35000.00"/>
+            <step time="16.00" chargingStatus="chargingInTransit" energyCharged="25.00" partialCharge="102.50" power="100000.00" efficiency="0.90" actualBatteryCapacity="5024.52" maximumBatteryCapacity="35000.00"/>
+        </vehicle>
+    </chargingStation>
+</chargingstations-export>

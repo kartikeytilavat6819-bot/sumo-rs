@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+  <route id="down" edges="e0 e1"/>
+  <vehicle id="ev0" type="EV" route="down" depart="0"/>
+  <vehicle id="ev1" type="EV" route="down" depart="10"/>
+</routes>

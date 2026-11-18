@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T00:56:06.211304-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/ev_downhill_recuperation/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/ev_downhill_recuperation/routes.rou"/>
+        <additional-files value="tools/oracle/cases/ev_downhill_recuperation/vt.add.xml"/>
+    </input>
+
+    <output>
+        <battery-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.battery.xml"/>
+        <battery-output.precision value="4"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc19/tools/oracle/cases/ev_downhill_recuperation/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="120"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="ev0" depart="0.00" departLane="e0_0" departPos="5.10" departSpeed="20.00" departDelay="0.00" arrival="39.00" arrivalLane="e1_0" arrivalPos="402.00" arrivalSpeed="21.12" duration="39.00" routeLength="799.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.17" rerouteNo="0" devices="tripinfo_ev0 battery_ev0 fcd_ev0" vType="EV" speedFactor="1.06" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="10220.83" totalEnergyConsumed="10.68" totalEnergyRegenerated="231.51"/>
+    </tripinfo>
+    <tripinfo id="ev1" depart="10.00" departLane="e0_0" departPos="5.10" departSpeed="18.77" departDelay="0.00" arrival="55.00" arrivalLane="e1_0" arrivalPos="402.00" arrivalSpeed="18.34" duration="45.00" routeLength="799.00" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="1.67" rerouteNo="0" devices="tripinfo_ev1 battery_ev1 fcd_ev1" vType="EV" speedFactor="0.94" vaporized="">
+        <battery depleted="0" actualBatteryCapacity="10248.19" totalEnergyConsumed="7.62" totalEnergyRegenerated="255.82"/>
+    </tripinfo>
+</tripinfos>
