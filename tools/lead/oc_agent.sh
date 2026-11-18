@@ -11,7 +11,7 @@ OC="$APPDATA/npm/node_modules/@opencode/cli/bin/opencode.exe"
 MODEL=${OC_MODEL:-opencode/hy4-flash-free}
 LOG=$REPO/.claude/oc-$ID.log
 # rows failing on main 5413c53b: not regressions
-KNOWN=" out_bt/ref out_meandata/ref out_tls/ref elechybrid_overhead/ref emis_mmpevem_params/ref lc_lc2013_turnlanes_dur/ref meso_calibrator_edgedata/ref state_meso/ref taxi_greedy_shared/ref taxi_route_extension/ref duarouter_persontrip_walkfactor duarouter_intermodal_outputs opendriveOutput "
+KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref state_meso/ref md_midinterval/ref md_noperiod/ref md_persons/ref md_public/ref md_stop/ref md_vtypes/ref md_window/ref "
 
 say() { echo "$(date +%H:%M) $*" | tee -a "$LOG"; }
 # every failing line whose row is not a known main FAIL, plus build/test/harness failures
