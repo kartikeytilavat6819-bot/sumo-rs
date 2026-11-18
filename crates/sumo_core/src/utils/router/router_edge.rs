@@ -85,6 +85,10 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     fn time_penalty(&self) -> f64 {
         panic!("shortcut: this edge type has no getTimePenalty()")
     }
+    // C++ E::getPriority() (road class); ROEdge and MSEdge have it, the others never reach it
+    fn priority(&self) -> i32 {
+        panic!("this edge type has no getPriority()")
+    }
     // C++ L::getIncomingLinkState() used by pedestrian crossings
     fn lane_incoming_link_state(_lane: Ptr<Self::Lane>) -> LinkState
     where
@@ -121,6 +125,10 @@ pub trait RouterEdge<V>: RouterEdgeInfo {
     }
     fn travel_time_static(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64;
     fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64;
+    /// C++ static `E::getTravelTimeStaticRandomized(const E*, const V*, double)`; only ROEdge has it
+    fn travel_time_static_randomized(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
+        panic!("this edge type has no static getTravelTimeStaticRandomized")
+    }
     fn is_internal(&self) -> bool;
     // shortcut: IntermodalEdge has no isTazConnector in C++, upgrade when an edge type needs it
     fn is_taz_connector(&self) -> bool {
@@ -158,7 +166,7 @@ pub trait RouterVehicle {
     fn id(&self) -> String {
         self.get_id()
     }
-    // shortcut: only SUMOVehicle exposes its vtype parameter to the router, upgrade when NBVehicle/ROVehicle are routed through IntermodalTrip
+    // shortcut: only SUMOVehicle and ROVehicle expose their vtype parameter to the router, upgrade when NBVehicle is routed through IntermodalTrip
     fn v_type_parameter(&self) -> &SUMOVTypeParameter {
         panic!("shortcut: this vehicle type has no getVTypeParameter()")
     }

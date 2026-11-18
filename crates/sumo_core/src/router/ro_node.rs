@@ -1,6 +1,13 @@
 //! Port of router/RONode.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use crate::utils::router::flipped_edge::FlippedRoutingNode;
+
+impl FlippedRoutingNode<ROEdge, ROVehicle> for RONode {
+    fn flipped_routing_node(&self) -> Ptr<FlippedNode<ROEdge, RONode, ROVehicle>> {
+        self.get_flipped_routing_node()
+    }
+}
 
 /// Base class for nodes used by the router
 /// C++ class `RONode` (router/RONode.h)

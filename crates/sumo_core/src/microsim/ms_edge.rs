@@ -163,6 +163,9 @@ impl RouterEdge<SUMOVehicle> for MSEdge {
     fn lane_incoming_link_state(lane: Ptr<MSLane>) -> LinkState {
         lane.m().get_incoming_link_state()
     }
+    fn priority(&self) -> i32 {
+        self.get_priority()
+    }
     fn lane_permissions(lane: Ptr<MSLane>) -> SVCPermissions {
         lane.get_permissions()
     }
