@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first -v --end 400 --collision.check-junctions --collision.action warn --step-length 0.5 --device.ssm.probability 1 --device.ssm.file ssm.xml --device.ssm.measures TTC,DRAC,PET,PPET,MDRAC -a tools/oracle/cases/tt_devices_ssm_collisions_junction/input_additional.add.xml

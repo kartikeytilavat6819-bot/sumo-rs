@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --step-length=0.1 --step-method.ballistic --device.ssm.filter-edges.input-file input_selection.txt

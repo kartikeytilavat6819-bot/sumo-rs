@@ -11,6 +11,7 @@ rm -rf "$OUT"; mkdir -p "$OUT"
 for d in tools/oracle/cases/tt_devices_*/; do
   c=$(basename "$d")
   [ -f "$d/ref.tripinfo.xml" ] || continue
+  [ -f "$d/PENDING" ] && continue
   flags=$(cat "$d/sim.args" 2>/dev/null)
   timeout 25 "$SUMO" -n "$d/ref_simple.net.xml" -r "$d/routes.rou" \
       --tripinfo-output "$OUT/ti.xml" --fcd-output "$OUT/fcd.xml" \

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --ignore-route-errors --device.ssm.explicit trip_0 --device.ssm.file ssm.xml

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --device.ssm.probability 1 --device.ssm.measures TTC DRAC --device.ssm.thresholds 5 3 --device.ssm.range 200 --device.ssm.file ssm.xml
