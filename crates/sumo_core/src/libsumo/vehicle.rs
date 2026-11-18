@@ -3446,11 +3446,21 @@ pub fn get_stop_parameter(vehID: &str, nextStopIndex: i32, param: &str, customPa
             panic!("{}", format!("Vehicle type '{}' is not known", typeID));
         }
         let veh = Helper::get_vehicle(vehID);
-        veh.m().replace_vehicle_type(vehicleType);
-        let microVeh = micro_veh(veh);
-        if microVeh.is_on_road() {
-            microVeh.m().update_best_lanes(true, Ptr::default());
-            microVeh.m().update_lane_brutto_sum();
+        // C++ dispatches replaceVehicleType virtually: MSVehicle's override recreates
+        // myCFVariables, calling the base method directly leaves it null and the next
+        // car-follow-model call dereferences a null pointer.
+        let meso = crate::microsim::ms_globals::use_meso_sim();
+        if meso {
+            veh.cast::<MEVehicle>().m().replace_vehicle_type(vehicleType);
+        } else {
+            micro_veh(veh).m().replace_vehicle_type(vehicleType);
+        }
+        if !meso {
+            let microVeh = micro_veh(veh);
+            if microVeh.is_on_road() {
+                microVeh.m().update_best_lanes(true, Ptr::default());
+                microVeh.m().update_lane_brutto_sum();
+            }
         }
     }
 

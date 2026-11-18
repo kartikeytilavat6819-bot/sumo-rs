@@ -85,6 +85,12 @@ fi
 if [ -f tools/oracle/run_traci_suite.sh ] && [ -x "$CARGO_TARGET_DIR/debug/sumo" ]; then
   TRACI_SUITE_OUT=/tmp/traci$slot TRACI_JOBS=6 TRACI_SHOW=10 timeout 900 bash tools/oracle/run_traci_suite.sh 2>&1 | grep -E 'FAIL categories|traci suite oracle|^FAIL '
 fi
+# complex TraCI suite oracle: official vs our sumo over the bundled runner.py scripts
+if [ -f tools/oracle/run_complex_suite.sh ]; then
+  COMPLEX_OUT=/tmp/complex$slot COMPLEX_TIMEOUT=12 timeout 600 bash tools/oracle/run_complex_suite.sh > /tmp/complexlog$slot 2>&1
+  grep '^complex suite oracle:' /tmp/complexlog$slot
+  grep '^FAIL' /tmp/complexlog$slot | head -12
+fi
 # one test thread: the message handler (clear_errors/error_was_informed) is process-global like C++ MsgHandler,
 # so parallel tests that write errors made xml::tests::gz_and_include flaky
 cargo test -q -p sumo_core -p utils -- --test-threads=1 2>&1 | grep -E 'test result|FAILED|panicked|error' | head -10

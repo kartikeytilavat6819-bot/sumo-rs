@@ -3696,6 +3696,18 @@ impl NLHandler {
 
 }
 
+/// Trampoline for the C++ virtual `NLShapeHandler::getLanePos`.
+fn nl_shape_get_lane_pos_virtual(base: &mut ShapeHandler, poiID: &str, laneID: &str, lanePos: f64, friendlyPos: bool, lanePosLat: f64) -> Position {
+    // SAFETY: NLShapeHandler is #[repr(C)] and base is its first field.
+    let this = unsafe { &mut *(base as *mut ShapeHandler as *mut NLShapeHandler) };
+    NLShapeHandler::get_lane_pos(this, poiID, laneID, lanePos, friendlyPos, lanePosLat)
+}
+
+/// Trampoline for the C++ virtual `NLShapeHandler::addLanePosParams` (always true).
+fn nl_shape_add_lane_pos_params_virtual(_base: &mut ShapeHandler) -> bool {
+    true
+}
+
 /// The XML-Handler for shapes loading network loading
 /// C++ class `NLShapeHandler` (netload/NLHandler.h)
 #[repr(C)]
@@ -3723,7 +3735,10 @@ impl NLShapeHandler {
     #[allow(unused_variables)]
     pub fn new(file: &str, sc: &mut ShapeContainer) -> Self {
         // C++ default for the GeoConvHelper argument of ShapeHandler is nullptr
-        NLShapeHandler { base: ShapeHandler::new(file, sc, Ptr::null()) }
+        let mut base = ShapeHandler::new(file, sc, Ptr::null());
+        base.get_lane_pos_override = Some(nl_shape_get_lane_pos_virtual);
+        base.add_lane_pos_params_override = Some(nl_shape_add_lane_pos_params_virtual);
+        NLShapeHandler { base }
     }
 
     /// C++: `void NLShapeHandler::~NLShapeHandler() noexcept` [virtual]

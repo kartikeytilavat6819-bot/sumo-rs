@@ -1440,8 +1440,25 @@ impl Simulation {
             utils::common::msg_handler::progress_begin_message(&format!("Loading state from '{}'", fileName));
             current_millis()
         };
-        // shortcut: C++ catches IOError and ProcessError and rethrows TraCIException with the "Loading state from ... failed" text; errors from MSNet::load_state unwind unchanged, upgrade with the Result-based libsumo error convention
-        let newTime = MSNet::get_instance().m().load_state(fileName, false);
+        // C++ catches IOError first, then ProcessError, and rethrows TraCIException with a
+        // domain-specific prefix. Rust panics stand in for those exceptions.
+        let newTime = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            MSNet::get_instance().m().load_state(fileName, false)
+        })) {
+            Ok(t) => t,
+            Err(p) => {
+                if let Some(e) = p.downcast_ref::<utils::common::util_exceptions::ProcessError>() {
+                    let msg = match e {
+                        utils::common::util_exceptions::ProcessError::IOError(m) => {
+                            format!("Loading state from '{}' failed. {}", fileName, m)
+                        }
+                        _ => format!("Loading state from '{}' failed, check whether SUMO versions match. {}", fileName, e),
+                    };
+                    panic!("{}", msg);
+                }
+                std::panic::resume_unwind(p);
+            }
+        };
         Helper::clear_state_changes();
         Helper::clear_subscriptions();
         utils::common::msg_handler::progress_time_message(current_millis() - before);

@@ -1288,11 +1288,11 @@ impl MSStateHandler_MSStateTimeHandler {
         handler.set_file_name(fileName);
         handler.myTime = -1;
         let mut parser = utils::xml::xml_sub_sys::get_sax_reader(false, false);
-        if !parser.parse_first(&mut handler, fileName).unwrap_or_else(|e| panic!("{}", e)) {
+        if !parser.parse_first(&mut handler, fileName).unwrap_or_else(|e| std::panic::panic_any(e)) {
             panic!("{}", ProcessError::new(format!("Can not read XML-file '{}'.", fileName)));
         }
         // parse
-        while parser.parse_next(&mut handler).unwrap_or_else(|e| panic!("{}", e)) && handler.myTime != -1 {}
+        while parser.parse_next(&mut handler).unwrap_or_else(|e| std::panic::panic_any(e)) && handler.myTime != -1 {}
         // clean up
         if handler.myTime == -1 {
             panic!("{}", ProcessError::new(format!("Could not parse time from state file '{}'", fileName)));
