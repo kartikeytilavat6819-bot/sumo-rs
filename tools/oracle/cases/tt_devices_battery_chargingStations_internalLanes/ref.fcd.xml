@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:25:37.453247-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <battery-output.precision value="4"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_chargingStations_internalLanes/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <battery>
+        <device.battery.probability value="1"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="t_0" x="45.20" y="87.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="0.00" pos="12.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="t_0" x="45.20" y="86.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="1.00" pos="13.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="t_0" x="45.20" y="84.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="2.00" pos="15.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="t_0" x="45.20" y="81.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="3.00" pos="18.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="t_0" x="45.20" y="77.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="4.00" pos="22.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="t_0" x="45.20" y="72.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="5.00" pos="27.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="t_0" x="45.20" y="66.90" z="0.00" angle="180.00" type="ElectricVehicle" speed="6.00" pos="33.10" lane="6_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="t_0" x="45.13" y="59.90" z="0.00" angle="180.34" type="ElectricVehicle" speed="7.00" pos="0.50" lane=":Center_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="t_0" x="40.12" y="54.87" z="0.00" angle="209.35" type="ElectricVehicle" speed="8.00" pos="8.50" lane=":Center_0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="t_0" x="31.49" y="54.80" z="2.46" angle="265.54" type="ElectricVehicle" speed="9.00" pos="8.47" lane="3_0" slope="12.06"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="t_0" x="21.92" y="54.80" z="5.36" angle="270.00" type="ElectricVehicle" speed="10.00" pos="18.47" lane="3_0" slope="16.86"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="t_0" x="12.35" y="54.80" z="8.26" angle="270.00" type="ElectricVehicle" speed="10.00" pos="28.47" lane="3_0" slope="16.86"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="t_0" x="2.78" y="54.80" z="11.16" angle="270.00" type="ElectricVehicle" speed="10.00" pos="38.47" lane="3_0" slope="16.86"/>
+    </timestep>
+    <timestep time="13.00"/>
+</fcd-export>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:25:57.083067-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_driverstate_queue_stop_start_cacc_apply/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_driverstate_queue_stop_start_cacc_apply/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_driverstate_queue_stop_start_cacc_apply/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_driverstate_queue_stop_start_cacc_apply/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_driverstate_queue_stop_start_cacc_apply/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <step-length value="0.25"/>
+    </time>
+
+    <processing>
+        <collision.mingap-factor value="0"/>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.carfollowmodel value="CACC"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <driver_state_device>
+        <device.driverstate.probability value="1"/>
+        <device.driverstate.initialAwareness value="0.5"/>
+    </driver_state_device>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="first" depart="0.00" departLane="0_0" departPos="5.10" departSpeed="30.00" departDelay="0.00" arrival="352.25" arrivalLane="0_0" arrivalPos="10000.00" arrivalSpeed="30.00" duration="352.25" routeLength="9994.90" waitingTime="0.00" waitingCount="0" stopTime="10.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_first driverstatefirst fcd_first" vType="tFirst" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="flow.0" depart="2.00" departLane="0_0" departPos="5.10" departSpeed="32.89" departDelay="0.00" arrival="353.50" arrivalLane="0_0" arrivalPos="10000.00" arrivalSpeed="33.32" duration="351.50" routeLength="9994.90" waitingTime="9.25" waitingCount="1" stopTime="0.00" timeLoss="73.68" rerouteNo="0" devices="tripinfo_flow.0 driverstateflow.0 fcd_flow.0" vType="tFlow" speedFactor="1.20" vaporized=""/>
+    <tripinfo id="flow.1" depart="4.00" departLane="0_0" departPos="5.10" departSpeed="35.43" departDelay="0.00" arrival="355.00" arrivalLane="0_0" arrivalPos="10000.00" arrivalSpeed="33.94" duration="351.00" routeLength="9994.90" waitingTime="8.50" waitingCount="1" stopTime="0.00" timeLoss="73.20" rerouteNo="0" devices="tripinfo_flow.1 driverstateflow.1 fcd_flow.1" vType="tFlow" speedFactor="1.20" vaporized=""/>
+    <tripinfo id="flow.2" depart="6.00" departLane="0_0" departPos="5.10" departSpeed="36.00" departDelay="0.00" arrival="356.25" arrivalLane="0_0" arrivalPos="10000.00" arrivalSpeed="33.44" duration="350.25" routeLength="9994.90" waitingTime="8.00" waitingCount="1" stopTime="0.00" timeLoss="72.54" rerouteNo="0" devices="tripinfo_flow.2 driverstateflow.2 fcd_flow.2" vType="tFlow" speedFactor="1.20" vaporized=""/>
+</tripinfos>

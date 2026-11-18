@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 50 --battery-output.precision 4 --device.battery.probability 1 -a tools/oracle/cases/tt_devices_battery_chargeLevelDist_error/input_additional.add.xml

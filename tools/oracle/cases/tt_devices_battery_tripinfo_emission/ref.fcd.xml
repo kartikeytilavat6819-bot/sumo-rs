@@ -1,0 +1,218 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:25:52.209118-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_battery_tripinfo_emission/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <emission-output value="emissions.xml"/>
+        <battery-output.precision value="4"/>
+        <chargingstations-output value="chargingstations.xml"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_tripinfo_emission/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1"/>
+    </emissions>
+
+    <battery>
+        <device.battery.probability value="1"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1428.27" y="25.57" angle="338.97" type="PKW" speed="13.61" pos="0.00" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1423.10" y="39.02" angle="338.97" type="PKW" speed="14.41" pos="14.41" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1418.01" y="52.26" angle="338.97" type="PKW" speed="14.18" pos="28.59" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1412.53" y="66.51" angle="338.97" type="PKW" speed="15.27" pos="43.86" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1407.12" y="80.58" angle="338.97" type="PKW" speed="15.08" pos="58.93" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1401.75" y="94.55" angle="338.97" type="PKW" speed="14.97" pos="73.90" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1396.34" y="108.64" angle="338.97" type="PKW" speed="15.10" pos="89.00" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1391.05" y="122.38" angle="338.97" type="PKW" speed="14.72" pos="103.72" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1385.80" y="136.05" angle="338.97" type="PKW" speed="14.64" pos="118.36" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1380.52" y="149.78" angle="338.97" type="PKW" speed="14.71" pos="133.08" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1375.31" y="163.35" angle="338.97" type="PKW" speed="14.53" pos="147.61" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1370.05" y="177.02" angle="338.97" type="PKW" speed="14.65" pos="162.26" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1364.86" y="190.52" angle="338.97" type="PKW" speed="14.46" pos="176.72" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1359.48" y="204.52" angle="338.97" type="PKW" speed="15.01" pos="191.73" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1354.22" y="218.20" angle="338.97" type="PKW" speed="14.65" pos="206.38" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1348.85" y="232.17" angle="338.97" type="PKW" speed="14.97" pos="221.34" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1343.44" y="246.25" angle="338.97" type="PKW" speed="15.08" pos="236.43" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1338.24" y="259.77" angle="338.97" type="PKW" speed="14.49" pos="250.92" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1333.41" y="272.33" angle="338.97" type="PKW" speed="13.45" pos="264.37" lane="76to16_0" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1333.46" y="280.33" angle="21.82" type="PKW" speed="8.95" pos="5.51" lane=":16_2_0" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1341.54" y="284.12" angle="65.31" type="PKW" speed="8.92" pos="8.48" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1349.12" y="287.61" angle="65.31" type="PKW" speed="8.35" pos="16.83" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1357.00" y="291.23" angle="65.31" type="PKW" speed="8.67" pos="25.50" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1364.26" y="294.57" angle="65.31" type="PKW" speed="7.99" pos="33.49" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1372.31" y="298.27" angle="65.31" type="PKW" speed="8.86" pos="42.36" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1379.59" y="301.62" angle="65.31" type="PKW" speed="8.01" pos="50.36" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1387.38" y="305.20" angle="65.31" type="PKW" speed="8.58" pos="58.94" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1395.60" y="308.98" angle="65.31" type="PKW" speed="9.05" pos="67.99" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1403.46" y="312.60" angle="65.31" type="PKW" speed="8.65" pos="76.64" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1410.82" y="315.98" angle="65.31" type="PKW" speed="8.10" pos="84.74" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1419.13" y="319.80" angle="65.31" type="PKW" speed="9.15" pos="93.89" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1426.89" y="323.37" angle="65.31" type="PKW" speed="8.53" pos="102.42" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1434.65" y="326.94" angle="65.31" type="PKW" speed="8.54" pos="110.96" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1442.29" y="330.45" angle="65.31" type="PKW" speed="8.41" pos="119.38" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1450.54" y="334.25" angle="65.31" type="PKW" speed="9.08" pos="128.46" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1458.47" y="337.89" angle="65.31" type="PKW" speed="8.73" pos="137.19" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1465.77" y="341.25" angle="65.31" type="PKW" speed="8.03" pos="145.22" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1473.56" y="344.83" angle="65.31" type="PKW" speed="8.58" pos="153.80" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1481.09" y="348.29" angle="65.31" type="PKW" speed="8.29" pos="162.08" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1488.63" y="351.76" angle="65.31" type="PKW" speed="8.29" pos="170.38" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1496.64" y="355.44" angle="65.31" type="PKW" speed="8.81" pos="179.19" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1504.80" y="359.19" angle="65.31" type="PKW" speed="8.98" pos="188.17" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1512.13" y="362.56" angle="65.31" type="PKW" speed="8.07" pos="196.24" lane="16to38_0" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1519.97" y="366.27" angle="64.18" type="PKW" speed="8.68" pos="4.57" lane=":38_7_0" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1527.47" y="370.82" angle="57.75" type="PKW" speed="8.78" pos="2.54" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1534.41" y="375.23" angle="57.58" type="PKW" speed="8.23" pos="10.77" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1541.95" y="380.02" angle="57.58" type="PKW" speed="8.93" pos="19.70" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1549.67" y="384.92" angle="57.58" type="PKW" speed="9.14" pos="28.84" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1557.26" y="389.74" angle="57.58" type="PKW" speed="8.99" pos="37.83" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1564.88" y="394.58" angle="57.58" type="PKW" speed="9.02" pos="46.86" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1571.59" y="398.84" angle="57.58" type="PKW" speed="7.96" pos="54.82" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1579.11" y="403.62" angle="57.58" type="PKW" speed="8.91" pos="63.72" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1586.78" y="408.49" angle="57.58" type="PKW" speed="9.08" pos="72.81" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="vehWithCustDepartEnergy" x="1594.05" y="413.11" angle="57.58" type="PKW" speed="8.61" pos="81.42" lane="38to167_0" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00"/>
+</fcd-export>

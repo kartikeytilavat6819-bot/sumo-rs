@@ -247,6 +247,7 @@ def import_one(source, tests_sumo, force=False):
     source = realpath(source)
     rel = os.path.relpath(source, realpath(tests_sumo))
     name = "tt_" + rel.replace(os.sep, "_")
+    case_dir = join(CASES, name)
 
     option_files, config_files, potentials = collect_files_and_config(source, tests_sumo)
     tokens = collate_options(option_files, "sumo")
@@ -286,7 +287,6 @@ def import_one(source, tests_sumo, force=False):
     if not route_path:
         return None, "no route input"
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 

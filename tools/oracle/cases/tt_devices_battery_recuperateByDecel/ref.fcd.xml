@@ -1,0 +1,484 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:25:47.988744-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_battery_recuperateByDecel/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_battery_recuperateByDecel/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_recuperateByDecel/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_recuperateByDecel/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_battery_recuperateByDecel/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <emissions>
+        <device.emissions.probability value="1.0"/>
+    </emissions>
+
+    <battery>
+        <device.battery.probability value="1.0"/>
+    </battery>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="flow.0" x="-6000.00" y="-1.60" angle="90.00" type="PKW" speed="40.32" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="flow.0" x="-5960.29" y="-1.60" angle="90.00" type="PKW" speed="39.71" pos="39.71" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-6000.00" y="1.60" angle="90.00" type="PKW" speed="31.56" pos="0.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="flow.0" x="-5921.08" y="-1.60" angle="90.00" type="PKW" speed="39.21" pos="78.92" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5969.64" y="1.60" angle="90.00" type="PKW" speed="30.36" pos="30.36" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-6000.00" y="4.80" angle="90.00" type="PKW" speed="36.75" pos="0.00" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="flow.0" x="-5881.35" y="-1.60" angle="90.00" type="PKW" speed="39.73" pos="118.65" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5938.64" y="1.60" angle="90.00" type="PKW" speed="31.00" pos="61.36" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5964.51" y="4.80" angle="90.00" type="PKW" speed="35.49" pos="35.49" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-6000.00" y="-1.60" angle="90.00" type="PKW" speed="41.67" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="flow.0" x="-5842.15" y="-1.60" angle="90.00" type="PKW" speed="39.20" pos="157.85" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5908.04" y="1.60" angle="90.00" type="PKW" speed="30.60" pos="91.96" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5928.30" y="4.80" angle="90.00" type="PKW" speed="36.21" pos="71.70" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5959.53" y="-1.60" angle="90.00" type="PKW" speed="40.47" pos="40.47" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-6000.00" y="1.60" angle="90.00" type="PKW" speed="37.34" pos="0.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="flow.0" x="-5802.57" y="-1.60" angle="90.00" type="PKW" speed="39.58" pos="197.43" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5876.94" y="1.60" angle="90.00" type="PKW" speed="31.11" pos="123.06" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5892.56" y="4.80" angle="90.00" type="PKW" speed="35.74" pos="107.44" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5923.56" y="-1.60" angle="90.00" type="PKW" speed="35.97" pos="76.44" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5962.88" y="1.60" angle="90.00" type="PKW" speed="37.12" pos="37.12" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.5" x="-6000.00" y="4.80" angle="90.00" type="PKW" speed="23.84" pos="0.00" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="flow.0" x="-5762.57" y="-1.60" angle="90.00" type="PKW" speed="40.00" pos="237.43" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5846.27" y="1.60" angle="90.00" type="PKW" speed="30.67" pos="153.73" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5856.55" y="4.80" angle="90.00" type="PKW" speed="36.01" pos="143.45" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5891.34" y="-1.60" angle="90.00" type="PKW" speed="32.22" pos="108.66" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5927.07" y="1.60" angle="90.00" type="PKW" speed="35.81" pos="72.93" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.5" x="-5976.23" y="4.80" angle="90.00" type="PKW" speed="23.77" pos="23.77" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-6000.00" y="-1.60" angle="90.00" type="PKW" speed="39.30" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="flow.0" x="-5722.42" y="-1.60" angle="90.00" type="PKW" speed="40.15" pos="277.58" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5814.80" y="1.60" angle="90.00" type="PKW" speed="31.47" pos="185.20" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5820.64" y="4.80" angle="90.00" type="PKW" speed="35.91" pos="179.36" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5859.65" y="-1.60" angle="90.00" type="PKW" speed="31.70" pos="140.35" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5890.99" y="4.80" angle="90.00" type="PKW" speed="36.08" pos="109.01" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5953.23" y="4.80" angle="90.00" type="PKW" speed="23.01" pos="46.77" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5960.93" y="1.60" angle="90.00" type="PKW" speed="39.07" pos="39.07" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-6000.00" y="-1.60" angle="90.00" type="PKW" speed="27.79" pos="0.00" lane="beg_0" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="flow.0" x="-5683.32" y="-1.60" angle="90.00" type="PKW" speed="39.10" pos="316.68" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5783.58" y="1.60" angle="90.00" type="PKW" speed="31.22" pos="216.42" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5784.62" y="4.80" angle="90.00" type="PKW" speed="36.02" pos="215.38" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5827.38" y="-1.60" angle="90.00" type="PKW" speed="32.27" pos="172.62" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5852.95" y="4.80" angle="90.00" type="PKW" speed="38.03" pos="147.05" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5930.03" y="4.80" angle="90.00" type="PKW" speed="23.19" pos="69.97" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5921.98" y="1.60" angle="90.00" type="PKW" speed="38.96" pos="78.02" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5972.36" y="-1.60" angle="90.00" type="PKW" speed="27.64" pos="27.64" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-6000.00" y="1.60" angle="90.00" type="PKW" speed="31.53" pos="0.00" lane="beg_1" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="flow.0" x="-5644.28" y="-1.60" angle="90.00" type="PKW" speed="39.04" pos="355.72" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5752.63" y="1.60" angle="90.00" type="PKW" speed="30.95" pos="247.37" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5748.38" y="4.80" angle="90.00" type="PKW" speed="36.24" pos="251.62" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5795.43" y="-1.60" angle="90.00" type="PKW" speed="31.95" pos="204.57" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5815.40" y="4.80" angle="90.00" type="PKW" speed="37.56" pos="184.60" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5907.39" y="4.80" angle="90.00" type="PKW" speed="22.65" pos="92.61" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5883.57" y="1.60" angle="90.00" type="PKW" speed="38.41" pos="116.43" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5944.59" y="-1.60" angle="90.00" type="PKW" speed="27.77" pos="55.41" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5968.93" y="1.60" angle="90.00" type="PKW" speed="31.07" pos="31.07" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-6000.00" y="4.80" angle="90.00" type="PKW" speed="25.70" pos="0.00" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="flow.0" x="-5604.74" y="-1.60" angle="90.00" type="PKW" speed="39.54" pos="395.26" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5722.01" y="1.60" angle="90.00" type="PKW" speed="30.62" pos="277.99" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5712.90" y="4.80" angle="90.00" type="PKW" speed="35.49" pos="287.10" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5763.80" y="-1.60" angle="90.00" type="PKW" speed="31.62" pos="236.20" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5777.50" y="4.80" angle="90.00" type="PKW" speed="37.90" pos="222.50" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5883.95" y="4.80" angle="90.00" type="PKW" speed="23.44" pos="116.05" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5845.42" y="1.60" angle="90.00" type="PKW" speed="38.16" pos="154.58" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5917.58" y="-1.60" angle="90.00" type="PKW" speed="27.00" pos="82.42" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5941.11" y="1.60" angle="90.00" type="PKW" speed="27.83" pos="58.89" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5974.80" y="4.80" angle="90.00" type="PKW" speed="25.20" pos="25.20" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="flow.0" x="-5564.80" y="-1.60" angle="90.00" type="PKW" speed="39.94" pos="435.20" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5691.58" y="1.60" angle="90.00" type="PKW" speed="30.43" pos="308.42" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.2" x="-5677.31" y="4.80" angle="90.00" type="PKW" speed="35.59" pos="322.69" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5732.59" y="-1.60" angle="90.00" type="PKW" speed="31.22" pos="267.41" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5739.93" y="4.80" angle="90.00" type="PKW" speed="37.57" pos="260.07" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5860.93" y="4.80" angle="90.00" type="PKW" speed="23.02" pos="139.07" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5806.40" y="1.60" angle="90.00" type="PKW" speed="39.02" pos="193.60" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5890.42" y="-1.60" angle="90.00" type="PKW" speed="27.17" pos="109.58" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5913.34" y="1.60" angle="90.00" type="PKW" speed="27.77" pos="86.66" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5949.78" y="4.80" angle="90.00" type="PKW" speed="25.01" pos="50.22" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="flow.0" x="-5524.60" y="-1.60" angle="90.00" type="PKW" speed="40.20" pos="475.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5661.03" y="-1.60" angle="90.00" type="PKW" speed="30.55" pos="338.97" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5641.38" y="4.80" angle="90.00" type="PKW" speed="35.92" pos="358.62" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5701.64" y="-1.60" angle="90.00" type="PKW" speed="30.95" pos="298.36" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5702.87" y="4.80" angle="90.00" type="PKW" speed="37.06" pos="297.13" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5837.63" y="4.80" angle="90.00" type="PKW" speed="23.29" pos="162.37" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5768.36" y="1.60" angle="90.00" type="PKW" speed="38.04" pos="231.64" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5863.55" y="-1.60" angle="90.00" type="PKW" speed="26.86" pos="136.45" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5886.59" y="1.60" angle="90.00" type="PKW" speed="26.75" pos="113.41" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5924.71" y="4.80" angle="90.00" type="PKW" speed="25.08" pos="75.29" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="flow.0" x="-5484.87" y="-1.60" angle="90.00" type="PKW" speed="39.72" pos="515.13" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5630.69" y="-1.60" angle="90.00" type="PKW" speed="30.34" pos="369.31" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5604.75" y="4.80" angle="90.00" type="PKW" speed="36.64" pos="395.25" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5670.91" y="-1.60" angle="90.00" type="PKW" speed="30.73" pos="329.09" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5665.74" y="4.80" angle="90.00" type="PKW" speed="37.13" pos="334.26" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5814.35" y="4.80" angle="90.00" type="PKW" speed="23.28" pos="185.65" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5729.23" y="1.60" angle="90.00" type="PKW" speed="39.13" pos="270.77" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5836.12" y="-1.60" angle="90.00" type="PKW" speed="27.44" pos="163.88" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5860.19" y="1.60" angle="90.00" type="PKW" speed="26.40" pos="139.81" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5899.42" y="4.80" angle="90.00" type="PKW" speed="25.28" pos="100.58" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="flow.0" x="-5445.43" y="-1.60" angle="90.00" type="PKW" speed="39.45" pos="554.57" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5599.57" y="-1.60" angle="90.00" type="PKW" speed="31.12" pos="400.43" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5568.07" y="4.80" angle="90.00" type="PKW" speed="36.67" pos="431.93" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5640.61" y="-1.60" angle="90.00" type="PKW" speed="30.30" pos="359.39" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5627.72" y="4.80" angle="90.00" type="PKW" speed="38.02" pos="372.28" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5791.61" y="4.80" angle="90.00" type="PKW" speed="22.74" pos="208.39" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.6" x="-5690.69" y="1.60" angle="90.00" type="PKW" speed="38.54" pos="309.31" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5808.59" y="-1.60" angle="90.00" type="PKW" speed="27.53" pos="191.41" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5834.31" y="1.60" angle="90.00" type="PKW" speed="25.87" pos="165.69" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5873.73" y="4.80" angle="90.00" type="PKW" speed="25.69" pos="126.27" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="flow.0" x="-5405.30" y="-1.60" angle="90.00" type="PKW" speed="40.12" pos="594.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5568.03" y="-1.60" angle="90.00" type="PKW" speed="31.54" pos="431.97" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5531.36" y="4.80" angle="90.00" type="PKW" speed="36.71" pos="468.64" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5610.06" y="-1.60" angle="90.00" type="PKW" speed="30.54" pos="389.94" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5590.07" y="4.80" angle="90.00" type="PKW" speed="37.65" pos="409.93" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5768.07" y="1.60" angle="90.00" type="PKW" speed="23.54" pos="231.93" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5652.05" y="1.60" angle="90.00" type="PKW" speed="38.65" pos="347.95" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5781.17" y="-1.60" angle="90.00" type="PKW" speed="27.42" pos="218.83" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5809.41" y="4.80" angle="90.00" type="PKW" speed="24.90" pos="190.59" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5849.32" y="4.80" angle="90.00" type="PKW" speed="24.41" pos="150.68" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="flow.0" x="-5366.14" y="-1.60" angle="90.00" type="PKW" speed="39.16" pos="633.86" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5536.95" y="-1.60" angle="90.00" type="PKW" speed="31.08" pos="463.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5494.77" y="4.80" angle="90.00" type="PKW" speed="36.59" pos="505.23" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5578.15" y="-1.60" angle="90.00" type="PKW" speed="31.92" pos="421.85" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5552.31" y="4.80" angle="90.00" type="PKW" speed="37.75" pos="447.69" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5744.57" y="1.60" angle="90.00" type="PKW" speed="23.50" pos="255.43" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5613.20" y="1.60" angle="90.00" type="PKW" speed="38.84" pos="386.80" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5757.63" y="-1.60" angle="90.00" type="PKW" speed="23.54" pos="242.37" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5782.71" y="4.80" angle="90.00" type="PKW" speed="26.70" pos="217.29" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5823.72" y="4.80" angle="90.00" type="PKW" speed="25.60" pos="176.28" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="flow.0" x="-5326.76" y="-1.60" angle="90.00" type="PKW" speed="39.38" pos="673.24" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5505.89" y="-1.60" angle="90.00" type="PKW" speed="31.06" pos="494.11" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5458.85" y="4.80" angle="90.00" type="PKW" speed="35.92" pos="541.15" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5547.15" y="-1.60" angle="90.00" type="PKW" speed="30.99" pos="452.85" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5515.06" y="4.80" angle="90.00" type="PKW" speed="37.26" pos="484.94" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5721.50" y="1.60" angle="90.00" type="PKW" speed="23.07" pos="278.50" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5574.37" y="1.60" angle="90.00" type="PKW" speed="38.84" pos="425.63" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5734.13" y="-1.60" angle="90.00" type="PKW" speed="23.50" pos="265.87" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5753.47" y="4.80" angle="90.00" type="PKW" speed="29.24" pos="246.53" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5798.68" y="4.80" angle="90.00" type="PKW" speed="25.04" pos="201.32" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="flow.0" x="-5286.72" y="-1.60" angle="90.00" type="PKW" speed="40.04" pos="713.28" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5474.95" y="-1.60" angle="90.00" type="PKW" speed="30.94" pos="525.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5422.17" y="4.80" angle="90.00" type="PKW" speed="36.69" pos="577.83" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5516.64" y="-1.60" angle="90.00" type="PKW" speed="30.51" pos="483.36" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5478.24" y="4.80" angle="90.00" type="PKW" speed="36.81" pos="521.76" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5697.97" y="1.60" angle="90.00" type="PKW" speed="23.53" pos="302.03" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5535.98" y="1.60" angle="90.00" type="PKW" speed="38.38" pos="464.02" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5711.06" y="-1.60" angle="90.00" type="PKW" speed="23.07" pos="288.94" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5722.97" y="4.80" angle="90.00" type="PKW" speed="30.50" pos="277.03" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5773.91" y="4.80" angle="90.00" type="PKW" speed="24.77" pos="226.09" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="flow.0" x="-5246.58" y="-1.60" angle="90.00" type="PKW" speed="40.14" pos="753.42" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5444.64" y="-1.60" angle="90.00" type="PKW" speed="30.31" pos="555.36" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5385.97" y="4.80" angle="90.00" type="PKW" speed="36.20" pos="614.03" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5486.41" y="-1.60" angle="90.00" type="PKW" speed="30.23" pos="513.59" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5440.95" y="4.80" angle="90.00" type="PKW" speed="37.29" pos="559.05" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5674.46" y="1.60" angle="90.00" type="PKW" speed="23.51" pos="325.54" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5497.62" y="1.60" angle="90.00" type="PKW" speed="38.36" pos="502.38" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5687.53" y="-1.60" angle="90.00" type="PKW" speed="23.53" pos="312.47" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5692.36" y="4.80" angle="90.00" type="PKW" speed="30.61" pos="307.64" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5748.95" y="4.80" angle="90.00" type="PKW" speed="24.96" pos="251.05" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="flow.0" x="-5207.13" y="-1.60" angle="90.00" type="PKW" speed="39.45" pos="792.87" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5413.61" y="-1.60" angle="90.00" type="PKW" speed="31.03" pos="586.39" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5349.23" y="4.80" angle="90.00" type="PKW" speed="36.74" pos="650.77" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5456.15" y="-1.60" angle="90.00" type="PKW" speed="30.27" pos="543.85" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5404.50" y="4.80" angle="90.00" type="PKW" speed="36.45" pos="595.50" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5651.39" y="1.60" angle="90.00" type="PKW" speed="23.07" pos="348.61" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5458.96" y="1.60" angle="90.00" type="PKW" speed="38.66" pos="541.04" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5664.01" y="-1.60" angle="90.00" type="PKW" speed="23.51" pos="335.99" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5661.73" y="4.80" angle="90.00" type="PKW" speed="30.62" pos="338.27" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5723.74" y="4.80" angle="90.00" type="PKW" speed="25.21" pos="276.26" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="flow.0" x="-5167.82" y="-1.60" angle="90.00" type="PKW" speed="39.32" pos="832.18" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5382.33" y="-1.60" angle="90.00" type="PKW" speed="31.27" pos="617.67" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5313.69" y="4.80" angle="90.00" type="PKW" speed="35.54" pos="686.31" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5425.25" y="-1.60" angle="90.00" type="PKW" speed="30.89" pos="574.75" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.4" x="-5366.51" y="4.80" angle="90.00" type="PKW" speed="37.99" pos="633.49" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5628.64" y="1.60" angle="90.00" type="PKW" speed="22.75" pos="371.36" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5421.28" y="1.60" angle="90.00" type="PKW" speed="37.68" pos="578.72" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5640.95" y="-1.60" angle="90.00" type="PKW" speed="23.07" pos="359.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5631.20" y="4.80" angle="90.00" type="PKW" speed="30.53" pos="368.80" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5698.99" y="4.80" angle="90.00" type="PKW" speed="24.75" pos="301.01" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="flow.0" x="-5128.09" y="-1.60" angle="90.00" type="PKW" speed="39.72" pos="871.91" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5351.57" y="-1.60" angle="90.00" type="PKW" speed="30.76" pos="648.43" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5276.95" y="4.80" angle="90.00" type="PKW" speed="36.74" pos="723.05" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5394.30" y="1.60" angle="90.00" type="PKW" speed="30.95" pos="605.70" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.4" x="-5330.79" y="4.80" angle="90.00" type="PKW" speed="35.72" pos="669.21" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5606.07" y="1.60" angle="90.00" type="PKW" speed="22.57" pos="393.93" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5383.10" y="1.60" angle="90.00" type="PKW" speed="38.18" pos="616.90" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5618.19" y="-1.60" angle="90.00" type="PKW" speed="22.75" pos="381.81" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5600.64" y="4.80" angle="90.00" type="PKW" speed="30.56" pos="399.36" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5673.46" y="4.80" angle="90.00" type="PKW" speed="25.52" pos="326.54" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="flow.0" x="-5089.05" y="-1.60" angle="90.00" type="PKW" speed="39.04" pos="910.95" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5320.75" y="-1.60" angle="90.00" type="PKW" speed="30.82" pos="679.25" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5240.74" y="4.80" angle="90.00" type="PKW" speed="36.21" pos="759.26" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5361.71" y="1.60" angle="90.00" type="PKW" speed="32.59" pos="638.29" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.4" x="-5293.97" y="4.80" angle="90.00" type="PKW" speed="36.82" pos="706.03" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5582.63" y="1.60" angle="90.00" type="PKW" speed="23.43" pos="417.37" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5346.29" y="1.60" angle="90.00" type="PKW" speed="36.82" pos="653.71" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5595.62" y="-1.60" angle="90.00" type="PKW" speed="22.57" pos="404.38" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5569.76" y="4.80" angle="90.00" type="PKW" speed="30.89" pos="430.24" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5648.49" y="4.80" angle="90.00" type="PKW" speed="24.97" pos="351.51" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="flow.0" x="-5049.42" y="-1.60" angle="90.00" type="PKW" speed="39.63" pos="950.58" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5289.90" y="-1.60" angle="90.00" type="PKW" speed="30.85" pos="710.10" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5205.04" y="4.80" angle="90.00" type="PKW" speed="35.70" pos="794.96" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.3" x="-5328.54" y="4.80" angle="90.00" type="PKW" speed="33.17" pos="671.46" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5257.31" y="4.80" angle="90.00" type="PKW" speed="36.66" pos="742.69" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5559.87" y="1.60" angle="90.00" type="PKW" speed="22.76" pos="440.13" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5308.52" y="1.60" angle="90.00" type="PKW" speed="37.77" pos="691.48" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5572.19" y="-1.60" angle="90.00" type="PKW" speed="23.43" pos="427.81" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5538.85" y="4.80" angle="90.00" type="PKW" speed="30.91" pos="461.15" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5622.87" y="4.80" angle="90.00" type="PKW" speed="25.62" pos="377.13" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="flow.0" x="-5009.26" y="-1.60" angle="90.00" type="PKW" speed="40.16" pos="990.74" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.1" x="-5259.12" y="-1.60" angle="90.00" type="PKW" speed="30.78" pos="740.88" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5168.39" y="1.60" angle="90.00" type="PKW" speed="36.65" pos="831.61" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.3" x="-5293.21" y="4.80" angle="90.00" type="PKW" speed="35.34" pos="706.79" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5220.65" y="4.80" angle="90.00" type="PKW" speed="36.65" pos="779.35" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5537.24" y="1.60" angle="90.00" type="PKW" speed="22.63" pos="462.76" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5271.02" y="1.60" angle="90.00" type="PKW" speed="37.50" pos="728.98" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5549.43" y="-1.60" angle="90.00" type="PKW" speed="22.76" pos="450.57" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5508.10" y="4.80" angle="90.00" type="PKW" speed="30.75" pos="491.90" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5598.23" y="4.80" angle="90.00" type="PKW" speed="24.64" pos="401.77" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="flow.1" x="-5228.37" y="-1.60" angle="90.00" type="PKW" speed="30.75" pos="771.63" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5132.17" y="1.60" angle="90.00" type="PKW" speed="36.22" pos="867.83" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.3" x="-5255.87" y="4.80" angle="90.00" type="PKW" speed="37.33" pos="744.13" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5183.47" y="4.80" angle="90.00" type="PKW" speed="37.19" pos="816.53" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5513.87" y="1.60" angle="90.00" type="PKW" speed="23.37" pos="486.13" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5233.62" y="1.60" angle="90.00" type="PKW" speed="37.40" pos="766.38" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5526.80" y="-1.60" angle="90.00" type="PKW" speed="22.63" pos="473.20" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5476.94" y="4.80" angle="90.00" type="PKW" speed="31.16" pos="523.06" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5573.05" y="4.80" angle="90.00" type="PKW" speed="25.18" pos="426.95" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="flow.1" x="-5196.87" y="-1.60" angle="90.00" type="PKW" speed="31.50" pos="803.13" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5095.81" y="1.60" angle="90.00" type="PKW" speed="36.36" pos="904.19" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.3" x="-5216.32" y="4.80" angle="90.00" type="PKW" speed="39.55" pos="783.68" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5145.50" y="4.80" angle="90.00" type="PKW" speed="37.97" pos="854.50" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5490.13" y="1.60" angle="90.00" type="PKW" speed="23.75" pos="509.87" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5195.77" y="1.60" angle="90.00" type="PKW" speed="37.85" pos="804.23" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5503.43" y="-1.60" angle="90.00" type="PKW" speed="23.37" pos="496.57" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5446.03" y="4.80" angle="90.00" type="PKW" speed="30.91" pos="553.97" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5548.01" y="4.80" angle="90.00" type="PKW" speed="25.05" pos="451.99" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="flow.1" x="-5165.92" y="-1.60" angle="90.00" type="PKW" speed="30.95" pos="834.08" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5059.73" y="1.60" angle="90.00" type="PKW" speed="36.08" pos="940.27" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.3" x="-5176.26" y="4.80" angle="90.00" type="PKW" speed="40.07" pos="823.74" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5107.74" y="4.80" angle="90.00" type="PKW" speed="37.76" pos="892.26" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5467.28" y="1.60" angle="90.00" type="PKW" speed="22.85" pos="532.72" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5157.22" y="1.60" angle="90.00" type="PKW" speed="38.56" pos="842.78" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5479.68" y="-1.60" angle="90.00" type="PKW" speed="23.75" pos="520.32" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5415.58" y="4.80" angle="90.00" type="PKW" speed="30.46" pos="584.42" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5523.16" y="4.80" angle="90.00" type="PKW" speed="24.84" pos="476.84" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="flow.1" x="-5135.20" y="-1.60" angle="90.00" type="PKW" speed="30.72" pos="864.80" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.2" x="-5023.83" y="1.60" angle="90.00" type="PKW" speed="35.90" pos="976.17" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.3" x="-5136.35" y="4.80" angle="90.00" type="PKW" speed="39.90" pos="863.65" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5069.61" y="4.80" angle="90.00" type="PKW" speed="38.13" pos="930.39" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5443.45" y="1.60" angle="90.00" type="PKW" speed="23.83" pos="556.55" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5118.93" y="1.60" angle="90.00" type="PKW" speed="38.29" pos="881.07" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5456.84" y="-1.60" angle="90.00" type="PKW" speed="22.85" pos="543.16" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5385.21" y="4.80" angle="90.00" type="PKW" speed="30.37" pos="614.79" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5498.61" y="4.80" angle="90.00" type="PKW" speed="24.55" pos="501.39" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="flow.1" x="-5104.60" y="-1.60" angle="90.00" type="PKW" speed="30.60" pos="895.40" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.3" x="-5096.48" y="4.80" angle="90.00" type="PKW" speed="39.87" pos="903.52" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.4" x="-5032.72" y="4.80" angle="90.00" type="PKW" speed="36.89" pos="967.28" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5420.91" y="1.60" angle="90.00" type="PKW" speed="22.54" pos="579.09" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5080.38" y="1.60" angle="90.00" type="PKW" speed="38.55" pos="919.62" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5433.01" y="-1.60" angle="90.00" type="PKW" speed="23.83" pos="566.99" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5354.82" y="4.80" angle="90.00" type="PKW" speed="30.39" pos="645.18" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5473.88" y="4.80" angle="90.00" type="PKW" speed="24.73" pos="526.12" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="flow.1" x="-5073.26" y="-1.60" angle="90.00" type="PKW" speed="31.34" pos="926.74" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.3" x="-5057.71" y="4.80" angle="90.00" type="PKW" speed="38.78" pos="942.29" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5397.22" y="1.60" angle="90.00" type="PKW" speed="23.70" pos="602.78" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5043.07" y="1.60" angle="90.00" type="PKW" speed="37.31" pos="956.93" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5410.47" y="-1.60" angle="90.00" type="PKW" speed="22.54" pos="589.53" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5324.52" y="4.80" angle="90.00" type="PKW" speed="30.30" pos="675.48" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.9" x="-5448.44" y="4.80" angle="90.00" type="PKW" speed="25.44" pos="551.56" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="flow.1" x="-5042.00" y="-1.60" angle="90.00" type="PKW" speed="31.26" pos="958.00" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.3" x="-5016.84" y="4.80" angle="90.00" type="PKW" speed="40.86" pos="983.16" lane="beg_2" slope="0.00"/>
+        <vehicle id="flow.5" x="-5373.58" y="1.60" angle="90.00" type="PKW" speed="23.64" pos="626.42" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.6" x="-5004.21" y="1.60" angle="90.00" type="PKW" speed="38.87" pos="995.79" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5386.77" y="-1.60" angle="90.00" type="PKW" speed="23.70" pos="613.23" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5293.78" y="1.60" angle="90.00" type="PKW" speed="30.73" pos="706.22" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5422.80" y="4.80" angle="90.00" type="PKW" speed="25.64" pos="577.20" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="flow.1" x="-5010.70" y="-1.60" angle="90.00" type="PKW" speed="31.30" pos="989.30" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.5" x="-5350.78" y="1.60" angle="90.00" type="PKW" speed="22.80" pos="649.22" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5363.14" y="-1.60" angle="90.00" type="PKW" speed="23.64" pos="636.86" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5263.32" y="1.60" angle="90.00" type="PKW" speed="30.46" pos="736.68" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5397.72" y="4.80" angle="90.00" type="PKW" speed="25.08" pos="602.28" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="flow.5" x="-5328.22" y="1.60" angle="90.00" type="PKW" speed="22.56" pos="671.78" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5340.34" y="-1.60" angle="90.00" type="PKW" speed="22.80" pos="659.66" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5232.80" y="1.60" angle="90.00" type="PKW" speed="30.52" pos="767.20" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5372.70" y="4.80" angle="90.00" type="PKW" speed="25.02" pos="627.30" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="flow.5" x="-5304.76" y="1.60" angle="90.00" type="PKW" speed="23.46" pos="695.24" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5317.78" y="-1.60" angle="90.00" type="PKW" speed="22.56" pos="682.22" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5202.53" y="1.60" angle="90.00" type="PKW" speed="30.27" pos="797.47" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5347.84" y="4.80" angle="90.00" type="PKW" speed="24.85" pos="652.16" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="flow.5" x="-5281.69" y="1.60" angle="90.00" type="PKW" speed="23.07" pos="718.31" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5294.32" y="-1.60" angle="90.00" type="PKW" speed="23.46" pos="705.68" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5171.36" y="1.60" angle="90.00" type="PKW" speed="31.17" pos="828.64" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5322.49" y="4.80" angle="90.00" type="PKW" speed="25.36" pos="677.51" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="flow.5" x="-5258.74" y="1.60" angle="90.00" type="PKW" speed="22.95" pos="741.26" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5271.25" y="-1.60" angle="90.00" type="PKW" speed="23.07" pos="728.75" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5140.17" y="1.60" angle="90.00" type="PKW" speed="31.19" pos="859.83" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5298.04" y="4.80" angle="90.00" type="PKW" speed="24.45" pos="701.96" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="flow.5" x="-5235.42" y="1.60" angle="90.00" type="PKW" speed="23.32" pos="764.58" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5248.30" y="-1.60" angle="90.00" type="PKW" speed="22.95" pos="751.70" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5109.47" y="1.60" angle="90.00" type="PKW" speed="30.70" pos="890.53" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5273.52" y="4.80" angle="90.00" type="PKW" speed="24.52" pos="726.48" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="flow.5" x="-5212.17" y="1.60" angle="90.00" type="PKW" speed="23.25" pos="787.83" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5224.98" y="-1.60" angle="90.00" type="PKW" speed="23.32" pos="775.02" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5078.98" y="1.60" angle="90.00" type="PKW" speed="30.50" pos="921.02" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5248.81" y="4.80" angle="90.00" type="PKW" speed="24.71" pos="751.19" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="flow.5" x="-5188.55" y="1.60" angle="90.00" type="PKW" speed="23.62" pos="811.45" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5201.73" y="-1.60" angle="90.00" type="PKW" speed="23.25" pos="798.27" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5048.74" y="1.60" angle="90.00" type="PKW" speed="30.24" pos="951.26" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5224.38" y="4.80" angle="90.00" type="PKW" speed="24.43" pos="775.62" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="flow.5" x="-5164.76" y="1.60" angle="90.00" type="PKW" speed="23.80" pos="835.24" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5178.11" y="-1.60" angle="90.00" type="PKW" speed="23.62" pos="821.89" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.8" x="-5017.54" y="1.60" angle="90.00" type="PKW" speed="31.20" pos="982.46" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.9" x="-5199.91" y="4.80" angle="90.00" type="PKW" speed="24.47" pos="800.09" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="flow.5" x="-5141.78" y="1.60" angle="90.00" type="PKW" speed="22.98" pos="858.22" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5154.31" y="-1.60" angle="90.00" type="PKW" speed="23.80" pos="845.69" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5174.51" y="4.80" angle="90.00" type="PKW" speed="25.40" pos="825.49" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="flow.5" x="-5119.21" y="1.60" angle="90.00" type="PKW" speed="22.57" pos="880.79" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5131.33" y="-1.60" angle="90.00" type="PKW" speed="22.98" pos="868.67" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5149.68" y="4.80" angle="90.00" type="PKW" speed="24.82" pos="850.32" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="flow.5" x="-5096.39" y="1.60" angle="90.00" type="PKW" speed="22.82" pos="903.61" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5108.77" y="-1.60" angle="90.00" type="PKW" speed="22.57" pos="891.23" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5124.00" y="4.80" angle="90.00" type="PKW" speed="25.68" pos="876.00" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="flow.5" x="-5073.15" y="1.60" angle="90.00" type="PKW" speed="23.23" pos="926.85" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5085.95" y="-1.60" angle="90.00" type="PKW" speed="22.82" pos="914.05" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5099.49" y="4.80" angle="90.00" type="PKW" speed="24.51" pos="900.51" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="flow.5" x="-5050.32" y="1.60" angle="90.00" type="PKW" speed="22.84" pos="949.68" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5062.71" y="-1.60" angle="90.00" type="PKW" speed="23.23" pos="937.29" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5074.45" y="4.80" angle="90.00" type="PKW" speed="25.04" pos="925.55" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="flow.5" x="-5026.57" y="1.60" angle="90.00" type="PKW" speed="23.75" pos="973.43" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5039.88" y="-1.60" angle="90.00" type="PKW" speed="22.84" pos="960.12" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5049.45" y="4.80" angle="90.00" type="PKW" speed="25.00" pos="950.55" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="flow.5" x="-5002.82" y="1.60" angle="90.00" type="PKW" speed="23.75" pos="997.18" lane="beg_1" slope="0.00"/>
+        <vehicle id="flow.7" x="-5016.13" y="-1.60" angle="90.00" type="PKW" speed="23.75" pos="983.87" lane="beg_0" slope="0.00"/>
+        <vehicle id="flow.9" x="-5024.93" y="4.80" angle="90.00" type="PKW" speed="24.53" pos="975.07" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="flow.9" x="-5000.25" y="4.80" angle="90.00" type="PKW" speed="24.68" pos="999.75" lane="beg_2" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00"/>
+</fcd-export>
