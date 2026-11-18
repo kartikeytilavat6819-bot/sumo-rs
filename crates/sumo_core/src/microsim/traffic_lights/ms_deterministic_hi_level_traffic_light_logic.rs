@@ -273,7 +273,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
         let mut vSpeedInTot: f64 = 0.0;
         let inputLanes = self.inputLanes.clone();
         for laneId in inputLanes.iter() {
-            let maxSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            let maxSpeed = self.get_sensors().cast::<MSSOTLE2Sensors>().m().mean_vehicles_speed_2(laneId.clone());
             if maxSpeed > -1.0 {
                 vSpeedInTot += (13.89 - maxSpeed) * 10.0 / 13.89;
             }
@@ -310,7 +310,7 @@ impl MSDeterministicHiLevelTrafficLightLogic {
         let mut vSpeedOutTot: f64 = 0.0;
         let outputLanes = self.outputLanes.clone();
         for laneId in outputLanes.iter() {
-            let maxSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            let maxSpeed = self.get_sensors().cast::<MSSOTLE2Sensors>().m().mean_vehicles_speed_2(laneId.clone());
             if maxSpeed > -1.0 {
                 vSpeedOutTot += (13.89 - maxSpeed) * 10.0 / 13.89;
             }

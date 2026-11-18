@@ -178,7 +178,7 @@ impl MSSOTLWaveTrafficLightLogic {
                 continue;
             }
             if state.as_bytes()[i] != b'r' {
-                vehicles += self.get_sensors().m().count_vehicles(self.get_lane_vectors()[i][0]);
+                vehicles += self.get_sensors().cast::<MSSOTLE2Sensors>().m().count_vehicles(self.get_lane_vectors()[i][0]);
             }
         }
         vehicles

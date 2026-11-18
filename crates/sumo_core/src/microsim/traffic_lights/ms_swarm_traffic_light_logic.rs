@@ -1313,8 +1313,8 @@ impl MSSwarmTrafficLightLogic {
         let laneIds: Vec<String> = arg0.keys().cloned().collect();
         for laneId in laneIds.iter() {
             let oldPhero: f64 = arg0[laneId];
-            let maxSpeed = self.get_sensors().m().get_max_speed(laneId.clone());
-            let meanVehiclesSpeed = self.get_sensors().m().mean_vehicles_speed_2(laneId.clone());
+            let maxSpeed = self.get_sensors().cast::<MSSOTLE2Sensors>().m().get_max_speed(laneId.clone());
+            let meanVehiclesSpeed = self.get_sensors().cast::<MSSOTLE2Sensors>().m().mean_vehicles_speed_2(laneId.clone());
             let updatePheromone = meanVehiclesSpeed > -1.0;
 
             // derivative
