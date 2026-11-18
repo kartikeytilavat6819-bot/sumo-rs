@@ -1,1 +1,1 @@
---write-license --route-choice-method logit --weight-files=tools/oracle/cases/duarouter_itt_duarouter_logit_logit_step2/input_weights.dump.xml --route-files=tools/oracle/cases/duarouter_itt_duarouter_logit_logit_step2/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml
+--xml-validation never --write-license --route-choice-method logit --weight-files=tools/oracle/cases/duarouter_itt_duarouter_logit_logit_step2/input_weights.dump.xml --route-files=tools/oracle/cases/duarouter_itt_duarouter_logit_logit_step2/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml

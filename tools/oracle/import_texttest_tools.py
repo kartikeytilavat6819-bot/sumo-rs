@@ -75,7 +75,7 @@ NET_OUT_OPTS = {
 }
 DUA_OUT_OPTS = {
     "-o", "--output-file", "--alt-output-file", "--vtype-output",
-    "--write-trips", "--write-trips.geo", "--save-configuration", "--log",
+    "--save-configuration", "--log",
 }
 SKIP_TOKENS = (
     "netedit", "sumo-gui", "netgen.py", "polyconvert", "netconvert.py", ".jar",
@@ -142,11 +142,13 @@ def effective_options(leaf: Path, app: str, root: Path) -> list[str]:
             if skip:
                 skip = False
                 continue
-            if o == "--xml-validation":
-                skip = True  # validation is irrelevant to byte comparison
-                continue
-            if o.startswith("--xml-validation="):
-                continue
+            if app == "netconvert":
+                # netconvert rows all validate cleanly; dropping this keeps their args small
+                if o == "--xml-validation":
+                    skip = True
+                    continue
+                if o.startswith("--xml-validation="):
+                    continue
             if o == "--no-step-log":
                 continue  # run_duarouter.sh already adds it
             if o == "{CLEAR}":

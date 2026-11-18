@@ -1,1 +1,1 @@
---write-license --weight-files=tools/oracle/cases/duarouter_itt_duarouter_dua_oldstyle_dua3s_step3/input_weights.dump.xml --route-files=tools/oracle/cases/duarouter_itt_duarouter_dua_oldstyle_dua3s_step3/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml
+--xml-validation never --write-license --weight-files=tools/oracle/cases/duarouter_itt_duarouter_dua_oldstyle_dua3s_step3/input_weights.dump.xml --route-files=tools/oracle/cases/duarouter_itt_duarouter_dua_oldstyle_dua3s_step3/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml

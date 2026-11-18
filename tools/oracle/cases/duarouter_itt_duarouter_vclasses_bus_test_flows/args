@@ -1,1 +1,1 @@
---write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_vclasses_bus_test_flows/input_flows.flows.xml -o @DIR@/routes.rou.xml
+--xml-validation never --write-license --route-files=tools/oracle/cases/duarouter_itt_duarouter_vclasses_bus_test_flows/input_flows.flows.xml -o @DIR@/routes.rou.xml
