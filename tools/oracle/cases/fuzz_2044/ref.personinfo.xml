@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:20:20.623666-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/fuzz_2044/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/fuzz_2044/routes.rou"/>
+        <additional-files value="tools/oracle/cases/fuzz_2044/fuzz.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_2044/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_2044/ref.tripinfo.xml"/>
+        <personinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_2044/ref.personinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc22/tools/oracle/cases/fuzz_2044/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+        <step-length value="0.5"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <random_number>
+        <seed value="2044"/>
+    </random_number>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="fz_p1" depart="60.00" type="fz_ped" speedFactor="1.16" duration="142.50" waitingTime="0.00" timeLoss="14.85" traveltime="142.50">
+        <walk depart="60.00" departPos="0.00" arrival="202.50" arrivalPos="61.40" duration="142.50" routeLength="236.86" timeLoss="14.85" maxSpeed="1.86" waitingTime="0.00"/>
+    </personinfo>
+    <personinfo id="fz_p0" depart="20.00" type="fz_ped" speedFactor="1.02" duration="266.50" waitingTime="0.00" timeLoss="25.34" traveltime="266.50">
+        <walk depart="20.00" departPos="0.00" arrival="286.50" arrivalPos="62.40" duration="266.50" routeLength="395.23" timeLoss="25.34" maxSpeed="1.64" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

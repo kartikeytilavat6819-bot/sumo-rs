@@ -207,18 +207,21 @@ shrink() {  # shrink <dir> <signature>: smaller --end, then fewer vehicles/perso
   done
   n=$("$PY" -c "import xml.etree.ElementTree as ET;print(sum(e.tag not in('vType','vTypeDistribution') for e in ET.parse('$d/routes.rou').getroot()))")
   ch=$(( (n + 1) / 2 ))
-  while [ $ch -ge 1 ]; do
+  while [ $ch -ge 1 ] && [ $n -gt 1 ]; do
     i=0
     while [ $i -lt $n ] && [ $(( $(date +%s) - START )) -lt $(( BUDGET + 250 )) ]; do   # try deleting items [i, i+ch)
+      c=$ch; [ $(( i + c )) -gt $n ] && c=$(( n - i ))   # never delete past the end (or the last item)
+      [ $c -ge $n ] && c=$(( n - 1 ))
+      [ $c -lt 1 ] && break
       cp "$d/routes.rou" "$d/routes.keep"
-      "$PY" - "$d/routes.rou" $i $ch <<'PYEOF'
+      "$PY" - "$d/routes.rou" $i $c <<'PYEOF'
 import sys, xml.etree.ElementTree as ET
 t = ET.parse(sys.argv[1]); r = t.getroot(); i, c = int(sys.argv[2]), int(sys.argv[3])
 it = [e for e in r if e.tag not in ("vType", "vTypeDistribution")]
 for e in it[i:i + c]: r.remove(e)
 t.write(sys.argv[1])
 PYEOF
-      if still; then n=$(( n - ch )); else cp "$d/routes.keep" "$d/routes.rou"; i=$(( i + ch )); fi
+      if still; then n=$(( n - c )); else cp "$d/routes.keep" "$d/routes.rou"; i=$(( i + c )); fi
     done
     ch=$(( ch / 2 ))
   done

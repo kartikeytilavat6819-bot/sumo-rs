@@ -1,0 +1,189 @@
+<routes><vType id="v_delivery" vClass="delivery" laneChangeModel="LC2013" />
+    <vType id="w_motorcycle" vClass="motorcycle" laneChangeModel="LC2013" />
+    <vehicle id="v0" type="v_delivery" depart="0.00" departSpeed="0">
+        <route edges="-126 48 -50 113 136" />
+    </vehicle>
+    <vehicle id="w0" type="w_motorcycle" depart="0.00" departSpeed="0">
+        <route edges="113 -113 -5 5" />
+    </vehicle>
+    <vehicle id="v1" type="v_delivery" depart="2.50" departSpeed="0">
+        <route edges="113 -113 50 -48" />
+    </vehicle>
+    <vehicle id="v2" type="v_delivery" depart="5.00">
+        <route edges="9 -11 50 -48 118" />
+    </vehicle>
+    <vehicle id="v3" type="v_delivery" depart="7.50">
+        <route edges="-11 50 -48 126" />
+    </vehicle>
+    <vehicle id="w1" type="w_motorcycle" depart="9.00">
+        <route edges="-138 -113 -5 7 -118" />
+    </vehicle>
+    <vehicle id="v4" type="v_delivery" depart="10.00">
+        <route edges="9 -11 -5" />
+    </vehicle>
+    <vehicle id="v5" type="v_delivery" depart="12.50">
+        <route edges="-138 -113 50 -48 -60" />
+    </vehicle>
+    <vehicle id="v6" type="v_delivery" depart="15.00">
+        <route edges="5 50 -48 118" />
+    </vehicle>
+    <vehicle id="v7" type="v_delivery" depart="17.50">
+        <route edges="5 -5 3" />
+    </vehicle>
+    <vehicle id="w2" type="w_motorcycle" depart="18.00">
+        <route edges="-55 -48 -3 9" />
+    </vehicle>
+    <vehicle id="v8" type="v_delivery" depart="20.00">
+        <route edges="48 -50 113 136" />
+    </vehicle>
+    <vehicle id="v9" type="v_delivery" depart="22.50">
+        <route edges="-118 48 -50 113 138" />
+    </vehicle>
+    <vehicle id="v10" type="v_delivery" depart="25.00">
+        <route edges="-136 -113 50 55 62" />
+    </vehicle>
+    <vehicle id="w3" type="w_motorcycle" depart="27.00">
+        <route edges="-5 3 134" />
+    </vehicle>
+    <vehicle id="v11" type="v_delivery" depart="27.50">
+        <route edges="113 138" />
+    </vehicle>
+    <vehicle id="v12" type="v_delivery" depart="30.00">
+        <route edges="-50 50 -48 48" />
+    </vehicle>
+    <vehicle id="v13" type="v_delivery" depart="32.50">
+        <route edges="-5 7" />
+    </vehicle>
+    <vehicle id="v14" type="v_delivery" depart="35.00">
+        <route edges="-11 50 -48 118 -7" />
+    </vehicle>
+    <vehicle id="w4" type="w_motorcycle" depart="36.00">
+        <route edges="-60 -55 -50 11" />
+    </vehicle>
+    <vehicle id="v15" type="v_delivery" depart="37.50">
+        <route edges="-50 50 55 60" />
+    </vehicle>
+    <vehicle id="v16" type="v_delivery" depart="40.00">
+        <route edges="11 -9 3 -60 -55" />
+    </vehicle>
+    <vehicle id="v17" type="v_delivery" depart="42.50">
+        <route edges="118 -7 3 -60 -55" />
+    </vehicle>
+    <vehicle id="v18" type="v_delivery" depart="45.00">
+        <route edges="-55 55 62" />
+    </vehicle>
+    <vehicle id="w5" type="w_motorcycle" depart="45.00">
+        <route edges="-138 -113 50 -48 134" />
+    </vehicle>
+    <vehicle id="v19" type="v_delivery" depart="47.50">
+        <route edges="55 60 -60" />
+    </vehicle>
+    <vehicle id="v20" type="v_delivery" depart="50.00">
+        <route edges="-118 -3 7" />
+    </vehicle>
+    <vehicle id="v21" type="v_delivery" depart="52.50">
+        <route edges="-113 50 -48" />
+    </vehicle>
+    <vehicle id="w6" type="w_motorcycle" depart="54.00">
+        <route edges="-5 3 126" />
+    </vehicle>
+    <vehicle id="v22" type="v_delivery" depart="55.00">
+        <route edges="-48 -60 60" />
+    </vehicle>
+    <vehicle id="v23" type="v_delivery" depart="57.50">
+        <route edges="55 -55 -50 113 138" />
+    </vehicle>
+    <vehicle id="v24" type="v_delivery" depart="60.00">
+        <route edges="7 -118 -3 3" />
+    </vehicle>
+    <vehicle id="v25" type="v_delivery" depart="62.50">
+        <route edges="118 -7 3 126" />
+    </vehicle>
+    <vehicle id="w7" type="w_motorcycle" depart="63.00">
+        <route edges="-118 48 -48" />
+    </vehicle>
+    <vehicle id="v26" type="v_delivery" depart="65.00">
+        <route edges="-7 5 113 136" />
+    </vehicle>
+    <vehicle id="v27" type="v_delivery" depart="67.50">
+        <route edges="-78 78" />
+    </vehicle>
+    <vehicle id="v28" type="v_delivery" depart="70.00">
+        <route edges="9 -11 -5 7 -118" />
+    </vehicle>
+    <vehicle id="w8" type="w_motorcycle" depart="72.00">
+        <route edges="-78 60 -3 9 -11" />
+    </vehicle>
+    <vehicle id="v29" type="v_delivery" depart="72.50">
+        <route edges="11 -9 3 118 -7" />
+    </vehicle>
+    <vehicle id="v30" type="v_delivery" depart="75.00">
+        <route edges="60 48 -50 113 -113" />
+    </vehicle>
+    <vehicle id="v31" type="v_delivery" depart="77.50">
+        <route edges="7 -118 -3 5" />
+    </vehicle>
+    <vehicle id="v32" type="v_delivery" depart="80.00">
+        <route edges="-7 3 134" />
+    </vehicle>
+    <vehicle id="w9" type="w_motorcycle" depart="81.00">
+        <route edges="-50 -5 5" />
+    </vehicle>
+    <vehicle id="v33" type="v_delivery" depart="82.50">
+        <route edges="-55 -48 -3 9 -11" />
+    </vehicle>
+    <vehicle id="v34" type="v_delivery" depart="85.00">
+        <route edges="-126 -3 7" />
+    </vehicle>
+    <vehicle id="v35" type="v_delivery" depart="87.50">
+        <route edges="9 -11 50 55 62" />
+    </vehicle>
+    <vehicle id="v36" type="v_delivery" depart="90.00">
+        <route edges="-134 126" />
+    </vehicle>
+    <vehicle id="w10" type="w_motorcycle" depart="90.00">
+        <route edges="-126 -60 78" />
+    </vehicle>
+    <vehicle id="v37" type="v_delivery" depart="92.50">
+        <route edges="50 -50 11" />
+    </vehicle>
+    <vehicle id="v38" type="v_delivery" depart="95.00">
+        <route edges="-126 -3" />
+    </vehicle>
+    <vehicle id="v39" type="v_delivery" depart="97.50">
+        <route edges="55 -55 -50 113 138" />
+    </vehicle>
+    <vehicle id="w11" type="w_motorcycle" depart="99.00">
+        <route edges="-60 -55 -50 11" />
+    </vehicle>
+    <vehicle id="v40" type="v_delivery" depart="100.00">
+        <route edges="3 -3" />
+    </vehicle>
+    <vehicle id="v41" type="v_delivery" depart="102.50">
+        <route edges="-60" />
+    </vehicle>
+    <vehicle id="v42" type="v_delivery" depart="105.00">
+        <route edges="7 -118" />
+    </vehicle>
+    <vehicle id="v43" type="v_delivery" depart="107.50">
+        <route edges="50 -48 -3 3" />
+    </vehicle>
+    <vehicle id="w12" type="w_motorcycle" depart="108.00">
+        <route edges="-134 -60 -55" />
+    </vehicle>
+    <vehicle id="v44" type="v_delivery" depart="110.00">
+        <route edges="-60 -55 -50" />
+    </vehicle>
+    <vehicle id="v45" type="v_delivery" depart="112.50">
+        <route edges="55 -55 -50 113 136" />
+    </vehicle>
+    <vehicle id="v46" type="v_delivery" depart="115.00">
+        <route edges="-60 60 126" />
+    </vehicle>
+    <vehicle id="w13" type="w_motorcycle" depart="117.00">
+        <route edges="55 -55 -50 113" />
+    </vehicle>
+<vehicle id="v47" type="v_delivery" depart="117.50">
+        <route edges="-78 60 134" />
+    </vehicle>
+</routes>

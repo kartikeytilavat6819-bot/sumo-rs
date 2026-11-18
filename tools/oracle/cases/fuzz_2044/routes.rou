@@ -1,0 +1,174 @@
+<routes><vType id="v_passenger" vClass="passenger" />
+    <vType id="w_bicycle" vClass="bicycle" />
+    <vType id="fz_bus" vClass="bus" length="12" maxSpeed="13.89" /><vType id="fz_ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6" /><vehicle id="v0" type="v_passenger" depart="0.00" departLane="best" departSpeed="max">
+        <route edges="C2B2 B2B1 B1C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="w0" type="w_bicycle" depart="0.00" departLane="best" departSpeed="max">
+        <route edges="C1C2 C2B2 B2B1 B1A1" />
+    </vehicle>
+    <route id="fz_busR" edges="C2B2 B2B1 B1C1 C1C0 C0B0" /><flow id="fz_L1" type="fz_bus" route="fz_busR" line="L1" begin="5" end="250" period="60" departSpeed="max"><stop busStop="bs0" until="35" duration="5" /><stop busStop="bs1" until="150" /></flow><vehicle id="v1" type="v_passenger" depart="6.00" departLane="best" departSpeed="max">
+        <route edges="A1A0 A0B0 B0B1 B1C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="w1" type="w_bicycle" depart="9.00">
+        <route edges="C1C0 C0B0 B0B1 B1B2 B2B1" />
+    </vehicle>
+    <vehicle id="v2" type="v_passenger" depart="12.00">
+        <route edges="A2B2 B2B1 B1B2" />
+    </vehicle>
+    <vehicle id="v3" type="v_passenger" depart="18.00">
+        <route edges="A1A0 A0B0 B0B1 B1C1 C1C2 C2B2" />
+    </vehicle>
+    <vehicle id="w2" type="w_bicycle" depart="18.00">
+        <route edges="A1A0 A0B0 B0C0" />
+    </vehicle>
+    <person id="fz_p0" type="fz_ped" depart="20"><personTrip from="C2B2" to="C0B0" modes="public" /></person><vehicle id="v4" type="v_passenger" depart="24.00">
+        <route edges="A0B0 B0B1 B1C1 C1C2 C2B2" />
+    </vehicle>
+    <vehicle id="w3" type="w_bicycle" depart="27.00">
+        <route edges="B2C2 C2C1 C1B1 B1B2 B2B1" />
+    </vehicle>
+    <vehicle id="v5" type="v_passenger" depart="30.00">
+        <route edges="B0C0 C0C1 C1B1 B1A1 A1B1" />
+    </vehicle>
+    <vehicle id="v6" type="v_passenger" depart="36.00">
+        <route edges="C2B2 B2B1 B1C1" />
+    </vehicle>
+    <vehicle id="w4" type="w_bicycle" depart="36.00">
+        <route edges="B1B0 B0A0 A0A1 A1B1" />
+    </vehicle>
+    <vehicle id="v7" type="v_passenger" depart="42.00">
+        <route edges="A1B1 B1B0 B0A0" />
+    </vehicle>
+    <vehicle id="w5" type="w_bicycle" depart="45.00">
+        <route edges="B0B1 B1C1 C1C0" />
+    </vehicle>
+    <vehicle id="v8" type="v_passenger" depart="48.00">
+        <route edges="B2B1 B1B0" />
+    </vehicle>
+    <vehicle id="v9" type="v_passenger" depart="54.00">
+        <route edges="B1A1 A1A2 A2B2" />
+    </vehicle>
+    <vehicle id="w6" type="w_bicycle" depart="54.00">
+        <route edges="A0B0 B0B1 B1B2 B2C2 C2C1" />
+    </vehicle>
+    <vehicle id="v10" type="v_passenger" depart="60.00">
+        <route edges="B0C0 C0C1 C1B1 B1B0 B0A0 A0A1" />
+    </vehicle>
+    <person id="fz_p1" type="fz_ped" depart="60"><personTrip from="C2B2" to="B2B1" modes="public" /></person><vehicle id="w7" type="w_bicycle" depart="63.00">
+        <route edges="C2C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="v11" type="v_passenger" depart="66.00">
+        <route edges="C2C1 C1C0 C0B0 B0B1" />
+    </vehicle>
+    <vehicle id="v12" type="v_passenger" depart="72.00">
+        <route edges="C1B1" />
+    </vehicle>
+    <vehicle id="w8" type="w_bicycle" depart="72.00">
+        <route edges="B2A2 A2A1 A1B1 B1B0 B0A0" />
+    </vehicle>
+    <vehicle id="v13" type="v_passenger" depart="78.00">
+        <route edges="B2A2 A2A1 A1B1 B1B2 B2C2 C2C1" />
+    </vehicle>
+    <vehicle id="w9" type="w_bicycle" depart="81.00">
+        <route edges="B2B1 B1B0 B0C0" />
+    </vehicle>
+    <vehicle id="v14" type="v_passenger" depart="84.00">
+        <route edges="B1B2 B2B1 B1B0 B0B1" />
+    </vehicle>
+    <vehicle id="v15" type="v_passenger" depart="90.00">
+        <route edges="B0A0 A0A1 A1B1 B1C1 C1C0" />
+    </vehicle>
+    <vehicle id="w10" type="w_bicycle" depart="90.00">
+        <route edges="C1B1 B1A1 A1A0" />
+    </vehicle>
+    <vehicle id="v16" type="v_passenger" depart="96.00">
+        <route edges="C1B1 B1B0 B0A0 A0A1" />
+    </vehicle>
+    <vehicle id="w11" type="w_bicycle" depart="99.00">
+        <route edges="C1B1 B1B2 B2A2 A2A1" />
+    </vehicle>
+    <person id="fz_p2" type="fz_ped" depart="100"><personTrip from="B2B1" to="C0B0" modes="public" /></person><vehicle id="v17" type="v_passenger" depart="102.00">
+        <route edges="C2B2" />
+    </vehicle>
+    <vehicle id="v18" type="v_passenger" depart="108.00">
+        <route edges="A0B0 B0B1 B1A1 A1A0" />
+    </vehicle>
+    <vehicle id="w12" type="w_bicycle" depart="108.00">
+        <route edges="B2C2 C2C1" />
+    </vehicle>
+    <vehicle id="v19" type="v_passenger" depart="114.00">
+        <route edges="A1A0 A0B0 B0B1 B1C1 C1C0" />
+    </vehicle>
+    <vehicle id="w13" type="w_bicycle" depart="117.00">
+        <route edges="B1B2 B2C2 C2C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="v20" type="v_passenger" depart="120.00">
+        <route edges="A0B0 B0B1 B1C1 C1C2" />
+    </vehicle>
+    <vehicle id="v21" type="v_passenger" depart="126.00">
+        <route edges="B1B2 B2A2 A2A1" />
+    </vehicle>
+    <vehicle id="w14" type="w_bicycle" depart="126.00">
+        <route edges="A2A1 A1B1 B1C1" />
+    </vehicle>
+    <vehicle id="v22" type="v_passenger" depart="132.00">
+        <route edges="A1B1 B1B2 B2A2 A2A1" />
+    </vehicle>
+    <vehicle id="w15" type="w_bicycle" depart="135.00">
+        <route edges="A1B1 B1A1 A1A2 A2B2" />
+    </vehicle>
+    <vehicle id="v23" type="v_passenger" depart="138.00">
+        <route edges="A0B0 B0C0 C0C1 C1B1" />
+    </vehicle>
+    <vehicle id="v24" type="v_passenger" depart="144.00">
+        <route edges="C0C1 C1B1 B1A1 A1B1" />
+    </vehicle>
+    <vehicle id="w16" type="w_bicycle" depart="144.00">
+        <route edges="C0C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="v25" type="v_passenger" depart="150.00">
+        <route edges="B1A1 A1B1 B1B0 B0A0 A0A1" />
+    </vehicle>
+    <vehicle id="w17" type="w_bicycle" depart="153.00">
+        <route edges="A2B2 B2B1 B1B0 B0C0" />
+    </vehicle>
+    <vehicle id="v26" type="v_passenger" depart="156.00">
+        <route edges="B1B0" />
+    </vehicle>
+    <vehicle id="v27" type="v_passenger" depart="162.00">
+        <route edges="B0B1 B1C1 C1C0" />
+    </vehicle>
+    <vehicle id="w18" type="w_bicycle" depart="162.00">
+        <route edges="C2C1 C1B1 B1A1 A1A2" />
+    </vehicle>
+    <vehicle id="v28" type="v_passenger" depart="168.00">
+        <route edges="B0B1 B1A1 A1A0 A0B0" />
+    </vehicle>
+    <vehicle id="w19" type="w_bicycle" depart="171.00">
+        <route edges="B1B0 B0A0 A0A1 A1A2" />
+    </vehicle>
+    <vehicle id="v29" type="v_passenger" depart="174.00">
+        <route edges="B2A2 A2A1 A1B1 B1C1 C1C0 C0B0" />
+    </vehicle>
+    <vehicle id="v30" type="v_passenger" depart="180.00">
+        <route edges="B0B1 B1C1 C1B1" />
+    </vehicle>
+    <vehicle id="w20" type="w_bicycle" depart="180.00">
+        <route edges="A2B2 B2B1 B1A1" />
+    </vehicle>
+    <vehicle id="v31" type="v_passenger" depart="186.00">
+        <route edges="C2B2 B2B1 B1B0 B0A0 A0A1" />
+    </vehicle>
+    <vehicle id="w21" type="w_bicycle" depart="189.00">
+        <route edges="A1A2 A2B2 B2B1 B1B2" />
+    </vehicle>
+    <vehicle id="v32" type="v_passenger" depart="192.00">
+        <route edges="B1B0 B0B1 B1B2 B2C2" />
+    </vehicle>
+    <vehicle id="v33" type="v_passenger" depart="198.00">
+        <route edges="B0B1 B1B2" />
+    </vehicle>
+<vehicle id="w22" type="w_bicycle" depart="198.00">
+        <route edges="C1C2 C2B2 B2B1 B1C1 C1C0 C0B0" />
+    </vehicle>
+</routes>

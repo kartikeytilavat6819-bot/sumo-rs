@@ -1,0 +1,1 @@
+fuzz_sim.sh seed 2044 (net: fuzz_sim.sh --gen 2044 <dir>). Fuzz-found reproducer: allway_stop junction + personTrip public bus flow, depv=1, step 0.5. Our binary panics in ms_link.rs:4044 blocked_by_foe debug_assert(waitingTime > 0); official SUMO completes. Shrunk by fuzz_sim.sh to 3 route items.

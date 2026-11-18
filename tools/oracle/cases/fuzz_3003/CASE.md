@@ -1,0 +1,1 @@
+fuzz_sim.sh seed 3003 (net: fuzz_sim.sh --gen 3003 <dir>). personTrip public with a bus flow at stops, actuated TLS, SL2015 and emissions output at step 0.2. personinfo is compared as an extra output.
