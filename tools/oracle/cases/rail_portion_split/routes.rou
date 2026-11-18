@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="mainTrain" vClass="rail" length="100" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <vType id="partTrain" vClass="rail" length="50" accel="1.0" decel="1.0" maxSpeed="30" minGap="2"/>
+    <route id="east" edges="w_r1 r1_r2 r2_e"/>
+    <!-- main train sheds 'part' at busStop B -->
+    <vehicle id="main" type="mainTrain" route="east" depart="0">
+        <stop busStop="B" duration="10" split="part"/>
+    </vehicle>
+    <!-- portion waits until the split, then starts from the back of the main train -->
+    <vehicle id="part" type="partTrain" route="east" depart="split" departPos="last"/>
+</routes>

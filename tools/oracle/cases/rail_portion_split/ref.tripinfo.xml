@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T01:19:23.426380-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/rail_portion_split/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/rail_portion_split/routes.rou"/>
+        <additional-files value="tools/oracle/cases/rail_portion_split/split.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_portion_split/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_portion_split/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc20/tools/oracle/cases/rail_portion_split/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="300"/>
+    </time>
+
+    <processing>
+        <time-to-teleport value="-1"/>
+    </processing>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="main" depart="0.00" departLane="w_r1_0" departPos="100.10" departSpeed="25.96" departDelay="0.00" arrival="79.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="79.00" routeLength="1200.10" waitingTime="0.00" waitingCount="0" stopTime="10.00" timeLoss="0.14" rerouteNo="0" devices="tripinfo_main fcd_main" vType="mainTrain@main" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="part" depart="45.00" departLane="w_r1_0" departPos="14.00" departSpeed="23.42" departDelay="0.00" arrival="119.00" arrivalLane="r2_e_0" arrivalPos="300.00" arrivalSpeed="30.00" duration="74.00" routeLength="1286.20" waitingTime="2.00" waitingCount="1" stopTime="0.00" timeLoss="31.00" rerouteNo="0" devices="tripinfo_part fcd_part" vType="partTrain" speedFactor="1.00" vaporized=""/>
+</tripinfos>

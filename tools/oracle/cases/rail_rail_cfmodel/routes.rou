@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<routes>
+    <vType id="freight" vClass="rail" carFollowModel="Rail" trainType="Freight" length="150" maxSpeed="20" minGap="5"/>
+    <vType id="ice" vClass="rail" carFollowModel="Rail" trainType="ICE3" length="100" maxSpeed="40" minGap="3"/>
+    <vType id="rb" vClass="rail" carFollowModel="Rail" trainType="RB425" length="80" maxSpeed="30" minGap="2"/>
+    <route id="east" edges="w_r1 r1_r2 r2_e"/>
+    <route id="west" edges="e_r2 r2_r1 r1_w"/>
+    <!-- three different Rail train types following each other eastbound -->
+    <vehicle id="f1" type="freight" route="east" depart="0"/>
+    <vehicle id="i1" type="ice" route="east" depart="15"/>
+    <vehicle id="r1" type="rb" route="east" depart="30"/>
+    <vehicle id="i2" type="ice" route="west" depart="45"/>
+</routes>

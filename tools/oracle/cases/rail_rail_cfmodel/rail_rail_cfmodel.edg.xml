@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <edge id="w_r1" from="w" to="r1" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+    <edge id="r1_r2" from="r1" to="r2" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+    <edge id="r2_e" from="r2" to="e" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+    <edge id="e_r2" from="e" to="r2" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+    <edge id="r2_r1" from="r2" to="r1" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+    <edge id="r1_w" from="r1" to="w" numLanes="1" speed="40" allow="rail" spreadType="center"/>
+</edges>

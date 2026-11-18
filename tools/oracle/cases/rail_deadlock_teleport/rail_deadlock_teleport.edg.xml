@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<edges>
+    <!-- clockwise -->
+    <edge id="A_B" from="A" to="B" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="B_C" from="B" to="C" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="C_D" from="C" to="D" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="D_A" from="D" to="A" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <!-- counter-clockwise (bidi counterparts) -->
+    <edge id="B_A" from="B" to="A" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="C_B" from="C" to="B" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="D_C" from="D" to="C" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+    <edge id="A_D" from="A" to="D" numLanes="1" speed="30" allow="rail" spreadType="center"/>
+</edges>

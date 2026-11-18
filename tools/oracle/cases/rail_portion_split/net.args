@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/rail_portion_split/rail_portion_split.nod.xml --edge-files tools/oracle/cases/rail_portion_split/rail_portion_split.edg.xml

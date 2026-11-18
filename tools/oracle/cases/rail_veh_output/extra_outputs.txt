@@ -1,0 +1,1 @@
+--railsignal-vehicle-output vehicles
