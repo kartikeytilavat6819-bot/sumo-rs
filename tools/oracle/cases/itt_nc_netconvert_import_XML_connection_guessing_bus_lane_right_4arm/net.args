@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_bus_lane_right_4arm/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_bus_lane_right_4arm/input_plain.edg.xml --no-turnarounds --no-internal-links --ignore-errors.edge-type

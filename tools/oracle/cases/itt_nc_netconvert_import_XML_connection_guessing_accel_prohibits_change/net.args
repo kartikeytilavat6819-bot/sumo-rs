@@ -1,0 +1,1 @@
+--write-license --node-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_accel_prohibits_change/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_accel_prohibits_change/input_plain.edg.xml --no-turnarounds --no-internal-links

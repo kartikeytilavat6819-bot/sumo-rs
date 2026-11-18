@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_tram_turnaround/input_plain.nod.xml --edge-files tools/oracle/cases/itt_nc_netconvert_import_XML_connection_guessing_tram_turnaround/input_plain.edg.xml

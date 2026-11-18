@@ -1,0 +1,1 @@
+--write-license --dlr-navteq-prefix=elmar --geometry.remove --output.original-names --no-internal-links -e tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_speed_navteq/input_edges.edg.xml

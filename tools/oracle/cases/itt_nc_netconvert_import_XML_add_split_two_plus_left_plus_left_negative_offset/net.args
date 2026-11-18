@@ -1,0 +1,1 @@
+--write-license --edge-files=input_edges.edg.xml,input_edges2.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_two_plus_left_plus_left_negative_offset/input_nodes.nod.xml

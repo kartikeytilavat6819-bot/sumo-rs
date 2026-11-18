@@ -1,0 +1,1 @@
+--write-license --edge-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_no_change_keep_node/input_edges.edg.xml --node-files=tools/oracle/cases/itt_nc_netconvert_import_XML_add_split_no_change_keep_node/input_nodes.nod.xml --no-internal-links --geometry.remove
