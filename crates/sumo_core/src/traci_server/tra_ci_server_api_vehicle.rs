@@ -597,7 +597,7 @@ impl TraCIServerAPI_Vehicle {
     // }
     #[allow(unused_variables)]
     pub fn process_set(server: &mut TraCIServer, inputStorage: &mut Storage, outputStorage: &mut Storage) -> bool {
-        // shortcut: C++ try/catch turns ProcessError and TraCIException raised by StoHelp/libsumo into an error status; here they panic, upgrade when StoHelp and libsumo return Result
+        // C++ outer catch (TraCIException) is reproduced by dispatch_command; a ProcessError escapes in C++ too and is re-raised there
         let warning = String::new();
         let variable = inputStorage.read_unsigned_byte().unwrap();
         let supported = variable == CMD_STOP
@@ -1164,9 +1164,11 @@ impl TraCIServerAPI_Vehicle {
                 Vehicle::set_min_gap_lat(&id, value);
             }
             _ => {
-                // shortcut: C++ catches ProcessError and TraCIException from the vehicle type setter and answers with an error status; here they panic, upgrade with the TraCI server Result rework
-                if !TraCIServerAPI_VehicleType::set_variable(CMD_SET_VEHICLE_VARIABLE, variable, v.m().get_singular_type().get_id(), server, inputStorage, outputStorage) {
-                    return false;
+                // C++ inner `catch (ProcessError&)` and `catch (libsumo::TraCIException&)` from the vehicle type setter -> writeErrorStatusCmd
+                match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| TraCIServerAPI_VehicleType::set_variable(CMD_SET_VEHICLE_VARIABLE, variable, v.m().get_singular_type().get_id(), server, inputStorage, outputStorage))) {
+                    Ok(true) => {}
+                    Ok(false) => return false,
+                    Err(e) => return server.write_error_status_cmd(CMD_SET_VEHICLE_VARIABLE, &crate::traci_server::tra_ci_server::panic_text(e), outputStorage),
                 }
             }
         }

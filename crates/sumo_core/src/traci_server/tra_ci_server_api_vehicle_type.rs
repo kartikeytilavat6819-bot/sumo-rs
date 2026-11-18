@@ -98,11 +98,15 @@ impl TraCIServerAPI_VehicleType {
         }
         // id
         let id = inputStorage.read_string().expect("readString");
-        // shortcut: libsumo has no TraCIException mapping yet, so the C++ catch (which writes an error status) is not reproduced; upgrade when libsumo gets an error convention
         // process
-        if Self::set_variable(CMD_SET_VEHICLETYPE_VARIABLE, variable, &id, server, inputStorage, outputStorage) {
-            server.write_status_cmd(CMD_SET_VEHICLETYPE_VARIABLE, RTYPE_OK, &warning, outputStorage);
-            return true;
+        // C++ `catch (ProcessError&)` and `catch (libsumo::TraCIException&)` -> writeErrorStatusCmd
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Self::set_variable(CMD_SET_VEHICLETYPE_VARIABLE, variable, &id, server, inputStorage, outputStorage))) {
+            Ok(true) => {
+                server.write_status_cmd(CMD_SET_VEHICLETYPE_VARIABLE, RTYPE_OK, &warning, outputStorage);
+                return true;
+            }
+            Ok(false) => {}
+            Err(e) => return server.write_error_status_cmd(CMD_SET_VEHICLETYPE_VARIABLE, &crate::traci_server::tra_ci_server::panic_text(e), outputStorage),
         }
         false
     }
