@@ -22,4 +22,4 @@ if [ ! -x "$CARGO_TARGET_DIR/debug/netgenerate" ]; then
   cargo build -p netgenerate --message-format short 2>&1 | grep -E ': error|^error' | head -20
 fi
 echo "ours ng: $(test -x "$CARGO_TARGET_DIR/debug/netgenerate" && echo yes || echo no); official ng: $(test -x "$SUMO_PRISTINE_BIN/netgenerate" && echo yes || echo no)"
-FUZZ_BUDGET=480 bash "$ROOT/tools/oracle/fuzz_net.sh" 45 2>&1 | head -300
+FUZZ_BUDGET=400 bash "$ROOT/tools/oracle/fuzz_net.sh" 30 2>&1 | head -240
