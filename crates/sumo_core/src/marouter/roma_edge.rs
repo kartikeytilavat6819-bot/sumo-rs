@@ -33,8 +33,11 @@ impl ROMAEdge {
     // }
     #[allow(unused_variables)]
     pub fn new(id: &str, from: Ptr<RONode>, to: Ptr<RONode>, index: i32, priority: i32, type_: &str, routingType: &str) -> Self {
+        let mut base = ROEdge::new(id, from, to, index, priority, type_, routingType);
+        // C++ ROMAEdge overrides the virtual ROEdge::addSuccessor; dispatch through the hook
+        base.addSuccessorFn = Some(|e, s, via, dir| Ptr::from_mut(e).cast::<ROMAEdge>().m().add_successor(s, via, dir));
         Self {
-            base: ROEdge::new(id, from, to, index, priority, type_, routingType),
+            base,
             myLeftTurns: BTreeSet::new(),
             myFlow: ValueTimeLine::default(),
             myHelpFlow: ValueTimeLine::default(),
@@ -61,7 +64,8 @@ impl ROMAEdge {
     #[allow(unused_variables)]
     pub fn add_successor(&mut self, s: Ptr<ROEdge>, via: Ptr<ROEdge>, dir: String) {
         let is_left = dir == "l" || dir == "L";
-        self.base.add_successor(s, via, dir);
+        // C++ calls the qualified ROEdge::addSuccessor, i.e. the non-virtual base body
+        self.base.add_successor_base(s, via, dir);
         if is_left {
             // determinism: std::set<ROMAEdge*> is pointer-ordered in C++; BTreeSet<Ptr> orders by address too
             self.myLeftTurns.insert(s.cast::<ROMAEdge>());
