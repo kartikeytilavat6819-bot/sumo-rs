@@ -1,0 +1,1 @@
+--node-files tools/oracle/cases/pt_tram_stops/pt_tram_stops.nod.xml --edge-files tools/oracle/cases/pt_tram_stops/pt_tram_stops.edg.xml --sidewalks.guess --crossings.guess --walkingareas

@@ -1,0 +1,29 @@
+<routes>
+    <vType id="tram" vClass="tram" length="25.00" maxSpeed="13.89" accel="1.00" decel="1.50" personCapacity="60"/>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6"/>
+    <route id="rT" edges="E0 E1 E2"/>
+    <vehicle id="t1a" type="tram" route="rT" line="T1" depart="0.00">
+        <stop busStop="ts0" until="40.00"/>
+        <stop busStop="ts1" until="90.00"/>
+    </vehicle>
+    <vehicle id="t1b" type="tram" route="rT" line="T1" depart="60.00">
+        <stop busStop="ts0" until="100.00"/>
+        <stop busStop="ts1" until="150.00"/>
+    </vehicle>
+    <vehicle id="t1c" type="tram" route="rT" line="T1" depart="120.00">
+        <stop busStop="ts0" until="160.00"/>
+        <stop busStop="ts1" until="210.00"/>
+    </vehicle>
+    <person id="tp0" type="ped" depart="10.00" departPos="10.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="tp1" type="ped" depart="20.00" departPos="20.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="tp2" type="ped" depart="70.00" departPos="10.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+    <person id="tp3" type="ped" depart="80.00" departPos="20.00">
+        <personTrip from="E0" to="E2" modes="public" arrivalPos="90.00"/>
+    </person>
+</routes>
