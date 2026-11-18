@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_am" type="amitran" period="60" file="out_ed_am.xml"/>
+    <laneData id="ld_am" type="amitran" period="60" file="out_ld_am.xml"/>
+</additional>

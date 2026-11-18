@@ -1,0 +1,4 @@
+<additional>
+    <edgeData id="ed_win" begin="50" end="200" period="50" file="out_ed_win.xml"/>
+    <laneData id="ld_win" begin="100" end="250" period="50" file="out_ld_win.xml"/>
+</additional>
