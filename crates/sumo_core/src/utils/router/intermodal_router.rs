@@ -558,8 +558,15 @@ where
             match self.myRoutingMode {
                 0 => {
                     if self.myRoutingAlgorithm == "astar" {
-                        // shortcut: _InternalAStar needs the AStarRouter lookup table and MapMatcher, which are not ported
-                        panic!("shortcut: IntermodalRouter astar routing needs AStarRouter lookup table and MapMatcher");
+                        // C++: new _InternalAStar(getAllEdges(), true,
+                        //      gWeightsRandomFactor > 1 ? &getTravelTimeStaticRandomized : &getTravelTimeStatic,
+                        //      nullptr, true);  -- no lookup table, M stands in for the unported map matcher
+                        let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::common::std_defs::g_weights_random_factor() > 1. {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static_randomized
+                        } else {
+                            IntermodalEdge::<E, L, N, V>::get_travel_time_static
+                        };
+                        self.set_internal_astar(&edges, Some(effort));
                     } else {
                         // C++ gWeightsRandomFactor > 1 selects the randomized travel time
                         let effort: SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>> = if utils::common::std_defs::g_weights_random_factor() > 1. {
@@ -582,6 +589,12 @@ where
                 _ => {}
             }
         }
+    }
+
+    /// C++: `_InternalAStar(myIntermodalNet->getAllEdges(), true, <operation>, nullptr, true)` in createNet
+    fn set_internal_astar(&mut self, edges: &Vec<Ptr<IntermodalEdge<E, L, N, V>>>, effort: Option<SUMOAbstractRouter_TypedOperation<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>>>) {
+        let internal = AStarRouter::<IntermodalEdge<E, L, N, V>, IntermodalTrip<E, N, V>, Unmapped>::new(edges, true, effort, None, true, false).with_compute();
+        self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
     }
 
     /// C++: `_InternalDijkstra(myIntermodalNet->getAllEdges(), true, <operations>, nullptr, false, calc, true)` in createNet
