@@ -209,7 +209,8 @@ impl NEMALogic {
     pub fn new(tlcontrol: &mut MSTLLogicControl, id: &str, programID: &str, offset: SUMOTime, phases: &MSTrafficLightLogic_Phases, step: i32, delay: SUMOTime, parameter: &BTreeMap<String, String>, basePath: &str) -> Self {
         let mut this = Self {
             base: MSSimpleTrafficLightLogic::new(tlcontrol, id, programID, offset, TrafficLightType::NEMA, phases, step, delay, parameter),
-            lightHeadPriority: String::new(),
+            // C++ NEMAController.h: `const std::string lightHeadPriority = "GgyuOs";`
+            lightHeadPriority: "GgyuOs".to_string(),
             coordinateMode: false,
             coordinatePhaseObjs: [Ptr::null(); 2],
             queuedTraciChanges: false,
