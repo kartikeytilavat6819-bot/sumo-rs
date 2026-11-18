@@ -29,9 +29,9 @@ pc osmPruneInNet "--osm-files $R --net-file $RN --prune.in-net true --prune.in-n
 pc osmOffset "--osm-files $R --net-file $RN --offset.x 100 --offset.y -50 -o @D/out.xml"
 pc osmFullTypeName "--osm-files $R --net-file $RN --osm.keep-full-type true --osm.use-name true -o @D/out.xml"
 pc osmTypemapProj "--osm-files $R --type-file \$SUMO_HOME/data/typemap/osmPolyconvertRail.typ.xml --simple-projection true -o @D/out.xml"
-pc xmlShapes "--xml-files $SH -n $RN -o @D/out.xml"
-pc xmlPruneBoundary "--xml-files $SH -n $RN --prune.boundary 0,0,500,500 -o @D/out.xml"
-pc xmlFlatten "--xml-files $SH -n $RN --flatten true --poi-layer-offset 2 --prefix x_ -o @D/out.xml"
+pc xmlShapes "--xml-files $SH -o @D/out.xml"
+pc xmlPruneBoundary "--xml-files $SH --prune.boundary 0,0,500,500 -o @D/out.xml"
+pc xmlFlatten "--xml-files $SH --flatten true --poi-layer-offset 2 --prefix x_ -o @D/out.xml"
 
 run_ng() { # idx
   local n opts; read -r n opts <<< "${NG[$1]}"; local d=$OUT/ng/$n; mkdir -p "$d"

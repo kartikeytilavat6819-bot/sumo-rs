@@ -786,7 +786,7 @@ impl PCLoaderOSM {
                 for n in nodes.values().copied() {
                     free_box(n);
                 }
-                panic!("");
+                std::panic::panic_any(ProcessError::default_msg());
             }
             progress_time_message(current_millis() - before);
         }
