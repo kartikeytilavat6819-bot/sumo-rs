@@ -5,6 +5,11 @@ cd "$(dirname "$0")/../.." || exit 1
 OUT=/tmp/oc50_out
 rm -rf "$OUT"; mkdir -p "$OUT"
 
+# the Kaggle gate only builds sumo + netconvert; duarouter cases need their binary
+export PATH=$HOME/.cargo/bin:$PATH
+export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-/tmp/target}
+cargo build -p duarouter --message-format short >"$OUT/build.log" 2>&1 || tail -20 "$OUT/build.log"
+
 mapfile -t NC < <(sed -n 's/^row \([^ ]*\) .*/\1/p' tools/oracle/import_texttest_net.rows)
 echo "IMPORTED NC ROWS: ${#NC[@]}"
 NETOPTS2_JOBS=4 NETOPTS2_OUT="$OUT/nc" timeout 1200 \
