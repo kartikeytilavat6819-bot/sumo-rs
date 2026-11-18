@@ -177,8 +177,12 @@ impl std::ops::DerefMut for TraCIServer {
 //   static TraCIServer * TraCIServer::myInstance;
 //   static bool TraCIServer::myDoCloseConnection;
 
-fn panic_text(p: Box<dyn std::any::Any + Send>) -> String {
-    p.downcast_ref::<String>().cloned().or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string())).unwrap_or_default()
+pub(crate) fn panic_text(p: Box<dyn std::any::Any + Send>) -> String {
+    p.downcast_ref::<String>()
+        .cloned()
+        .or_else(|| p.downcast_ref::<&str>().map(|s| s.to_string()))
+        .or_else(|| p.downcast_ref::<utils::common::util_exceptions::ProcessError>().map(|e| e.to_string()))
+        .unwrap_or_default()
 }
 
 impl TraCIServer {
@@ -2359,8 +2363,15 @@ impl TraCIServer {
                     success = self.command_get_version();
                 }
                 CMD_LOAD => {
-                    // shortcut: C++ wraps the argument read in try/catch and answers with writeErrorStatusCmd; libsumo has no TraCIException mapping yet, so a bad argument panics here
-                    let args = StorageHelper::read_typed_string_list(inp.m(), "A load command needs a list of string arguments.");
+                    // C++ `catch (libsumo::TraCIException& e) { return writeErrorStatusCmd(...) }`: the bad-argument panic is answered with an error status
+                    let args = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| StorageHelper::read_typed_string_list(inp.m(), "A load command needs a list of string arguments."))) {
+                        Ok(args) => args,
+                        Err(p) if p.is::<utils::common::util_exceptions::ProcessError>() => std::panic::resume_unwind(p),
+                        Err(p) => {
+                            self.write_error_status_cmd(CMD_LOAD, &panic_text(p), outp.m());
+                            return 0;
+                        }
+                    };
                     self.myLoadArgs = args;
                     success = true;
                     self.write_status_cmd_2(CMD_LOAD, RTYPE_OK, "");

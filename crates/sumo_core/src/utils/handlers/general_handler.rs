@@ -1,6 +1,7 @@
 //! Port of utils/handlers/GeneralHandler.{h,cpp} — GENERATED SKELETON (tools/skeleton/gen.py). Replace every todo!() with a faithful translation of the C++ shown above it.
 #![allow(non_snake_case, non_camel_case_types, dead_code, unused_imports, unused_variables, unreachable_code, clippy::all)]
 use crate::prelude::*;
+use utils::common::file_bucket::FileBucket;
 
 /// C++ class `GeneralHandler` (utils/handlers/GeneralHandler.h)
 #[repr(C)]
@@ -27,9 +28,8 @@ impl GeneralHandler {
     // GeneralHandler::GeneralHandler(FileBucket* fileBucket) :
     //     SUMOSAXHandler(fileBucket->getFilename()) {
     // }
-    // shortcut: FileBucket is not ported yet, so the caller passes fileBucket->getFilename() directly, upgrade when FileBucket exists
-    pub fn new(file_name: &str) -> Self {
-        GeneralHandler { base: utils::xml::sumo_sax_handler::new(file_name, "") }
+    pub fn new(fileBucket: Ptr<FileBucket>) -> Self {
+        GeneralHandler { base: utils::xml::sumo_sax_handler::new(fileBucket.get_filename(), "") }
     }
 
     /// C++: `void GeneralHandler::~GeneralHandler() noexcept` [virtual]

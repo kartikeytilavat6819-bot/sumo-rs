@@ -1,5 +1,5 @@
 //! Port of utils/common/FileHelpers.{h,cpp}
-// shortcut: the binary stream writers (writeInt, writeFloat, ...) are not ported, add them with OutputDevice_Binary
+// shortcut: FileHelpers::writeInt/writeFloat/writeString/writeTime are not ported: their only C++ users are TraCI, libsumo and GUI code, and foreign::tcpip::storage has the equivalent writers; port them here when a utils consumer appears
 use super::string_tokenizer::StringTokenizer;
 use super::to_string::join_to_string;
 use super::util_exceptions::ProcessError;

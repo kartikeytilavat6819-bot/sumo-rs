@@ -1,3 +1,4 @@
+pub mod file_bucket;
 pub mod file_helpers;
 pub mod msg_handler;
 pub mod named;
