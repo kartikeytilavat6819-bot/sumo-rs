@@ -218,8 +218,7 @@ where
     //     }
     #[allow(unused_variables)]
     pub fn get_time_penalty(&self) -> f64 {
-        // shortcut: needs router trait bounds (lead), E::getTimePenalty is not callable on generic E
-        panic!("shortcut: needs router trait bounds (lead), E::getTimePenalty")
+        self.get_original_edge().time_penalty()
     }
 
     /// C++: `bool FlippedEdge::hasLoadedTravelTimes() const` [const]

@@ -17,6 +17,8 @@ pub type SUMOAbstractRouter_ProhibitFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>,
 pub type SUMOAbstractRouter_SupportsProhibitionsFn<E, V> = fn(&SUMOAbstractRouter<E, V>) -> bool;
 pub type SUMOAbstractRouter_ResetFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<V>);
 pub type SUMOAbstractRouter_SetBulkModeFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, bool);
+pub type SUMOAbstractRouter_SetMsgHandlerFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>, Ptr<MsgHandler>);
+pub type SUMOAbstractRouter_CloneFn<E, V> = fn(&mut SUMOAbstractRouter<E, V>) -> Ptr<SUMOAbstractRouter<E, V>>;
 
 /// C++ typedef `double (*)(const E *const, const V *const, double) SUMOAbstractRouter::Operation`
 pub type SUMOAbstractRouter_Operation = Unmapped /* double (*)(const E *const, const V *const, double) */;
@@ -115,6 +117,10 @@ pub struct SUMOAbstractRouter<E, V> {
     pub myReset: Option<SUMOAbstractRouter_ResetFn<E, V>>,
     /// the subclass setBulkMode override (C++ virtual `setBulkMode`), None for the base behaviour
     pub mySetBulkMode: Option<SUMOAbstractRouter_SetBulkModeFn<E, V>>,
+    /// the subclass setMsgHandler override (C++ virtual `setMsgHandler`), None for the base behaviour
+    pub mySetMsgHandler: Option<SUMOAbstractRouter_SetMsgHandlerFn<E, V>>,
+    /// the subclass clone (C++ pure virtual `clone`)
+    pub myClone: Option<SUMOAbstractRouter_CloneFn<E, V>>,
     /// whether we are currently operating several route queries in a bulk
     pub myBulkMode: bool,
     /// whether we are currently trying to detect bulk mode automatically
@@ -173,6 +179,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             mySupportsProhibitions: None,
             myReset: None,
             mySetBulkMode: None,
+            mySetMsgHandler: None,
+            myClone: None,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -217,6 +225,8 @@ impl<E, V> SUMOAbstractRouter<E, V> {
             mySupportsProhibitions: other.mySupportsProhibitions,
             myReset: other.myReset,
             mySetBulkMode: other.mySetBulkMode,
+            mySetMsgHandler: other.mySetMsgHandler,
+            myClone: other.myClone,
             myBulkMode: false,
             myAutoBulkMode: false,
             myAmClean: true,
@@ -256,8 +266,10 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     // (pure virtual: no C++ body; subclasses implement it)
     #[allow(unused_variables)]
     pub fn clone(&mut self) -> Ptr<SUMOAbstractRouter<E, V>> {
-        // shortcut: pure virtual, subclasses implement clone() and the Rust base has no dynamic dispatch yet, upgrade when routers are trait objects
-        panic!("shortcut: SUMOAbstractRouter::clone is pure virtual, no dynamic dispatch yet")
+        match self.myClone {
+            Some(clone) => clone(self),
+            None => panic!("pure virtual method called"),
+        }
     }
 
     /// C++: `void SUMOAbstractRouter::init(const int, const SUMOTime)`
@@ -333,6 +345,14 @@ impl<E, V> SUMOAbstractRouter<E, V> {
     //     }
     #[allow(unused_variables)]
     pub fn set_msg_handler(&mut self, errorMsgHandler: Ptr<MsgHandler>) {
+        match self.mySetMsgHandler {
+            Some(set_msg_handler) => set_msg_handler(self, errorMsgHandler),
+            None => self.set_msg_handler_base(errorMsgHandler),
+        }
+    }
+
+    /// the base-class body of setMsgHandler (what `SUMOAbstractRouter<E, V>::setMsgHandler` names in C++)
+    pub fn set_msg_handler_base(&mut self, errorMsgHandler: Ptr<MsgHandler>) {
         self.myErrorMsgHandler = errorMsgHandler;
     }
 

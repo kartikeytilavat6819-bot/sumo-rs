@@ -100,6 +100,7 @@ impl<E, V> DijkstraRouter<E, V> {
         let mut clone: DijkstraRouter<E, V> = DijkstraRouter::new_2(&self.base.myEdgeInfos, warning, self.base.myOperation, self.base.myTTOperation, self.mySilent, self.myExternalEffort, self.base.myHavePermissions, self.base.myHaveRestrictions);
         clone.set_auto_bulk_mode(self.base.myAutoBulkMode);
         clone.base.myCompute = self.base.myCompute;
+        clone.base.myClone = self.base.myClone;
         Ptr::from_raw(Box::into_raw(Box::new(clone))).cast::<SUMOAbstractRouter<E, V>>()
     }
 
@@ -109,6 +110,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> DijkstraRouter<E, V> {
     /// Installs this router's compute into the base, so a `SUMOAbstractRouter` pointer (C++ virtual call) reaches it.
     pub fn with_compute(mut self) -> Self {
         self.base.myCompute = Some(dijkstra_compute::<E, V>);
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<DijkstraRouter<E, V>>().m().clone());
         self
     }
 

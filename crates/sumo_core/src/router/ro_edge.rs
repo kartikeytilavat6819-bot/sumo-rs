@@ -174,6 +174,12 @@ impl RouterEdge<ROVehicle> for ROEdge {
     fn other_taz_connector(&self) -> Ptr<ROEdge> {
         self.get_other_taz_connector()
     }
+    fn lane_geometry_position_at_offset(lane: Ptr<ROLane>, offset: f64) -> Position {
+        lane.geometry_position_at_offset(offset, 0.)
+    }
+    fn junction_position(node: Ptr<RONode>) -> Position {
+        node.get_position().clone()
+    }
     fn time_penalty(&self) -> f64 {
         self.get_time_penalty()
     }
@@ -357,10 +363,9 @@ fn min2(a: f64, b: f64) -> f64 {
     if a < b { a } else { b }
 }
 
-/// C++ `gWeightsRandomFactor` (StdDefs.cpp) is not ported; it is set from the option of the same name
-// shortcut: gWeightsRandomFactor is not a ported global, read the option it is copied from (SystemFrame.cpp) on each use, upgrade when std_defs gains it
+/// C++ `gWeightsRandomFactor` (StdDefs.cpp, set by SystemFrame::checkOptions)
 fn g_weights_random_factor() -> f64 {
-    utils::options::options_cont::get_float("weights.random-factor")
+    utils::common::std_defs::g_weights_random_factor()
 }
 
 /// C++ implicit conversion `ROVehicle *` -> `RORoutable *` (the base subobject)
@@ -844,8 +849,8 @@ impl ROEdge {
     pub fn cache_param_restrictions(&mut self, restrictionKeys: &Vec<String>) {
         for key in restrictionKeys {
             let value = self.base2.get_parameter(key, "1e40");
-            // shortcut: C++ StringUtils::toDouble throws on malformed input; here it panics with the same message
-            self.myParamRestrictions.push(utils::common::string_utils::to_double(&value).unwrap_or_else(|e| panic!("{e}")));
+            // C++ StringUtils::toDouble throws on malformed input: rethrown as the same exception
+            self.myParamRestrictions.push(utils::common::string_utils::to_double(&value).unwrap_or_else(|e| std::panic::panic_any(e)));
         }
     }
 

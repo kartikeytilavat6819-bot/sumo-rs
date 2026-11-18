@@ -75,6 +75,7 @@ impl<E: RouterEdge<V>, V: RouterVehicle> CHRouter<E, V> {
         self.base.myProhibit = Some(ch_prohibit::<E, V>);
         self.base.mySupportsProhibitions = Some(ch_supports_prohibitions::<E, V>);
         self.base.myReset = Some(ch_reset::<E, V>);
+        self.base.myClone = Some(|base| Ptr::from_mut(base).cast::<CHRouter<E, V>>().m().clone());
         self
     }
 }

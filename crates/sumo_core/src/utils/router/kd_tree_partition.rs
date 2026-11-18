@@ -491,7 +491,7 @@ impl KDTreePartition_Cell {
         N: RouterNode<Edge = E>,
         V: RouterVehicle,
     {
-        // shortcut: C++ throws std::invalid_argument here, Rust panics with the same message
+        // C++ throws std::invalid_argument; the panic carries the same message to the same top-level handler
         if fromInclusive >= toExclusive {
             panic!("Cell::Cell: myFromInclusive greater than or equal to myToExclusive!");
         }
@@ -1156,7 +1156,7 @@ impl KDTreePartition_Cell {
     //         }
     #[allow(unused_variables)]
     pub fn cell_counter() -> &'static mut i32 {
-        // shortcut: the C++ function-local static is ported as the module-level CELL_COUNTER
+        // the C++ function-local static is the module-level CELL_COUNTER
         unsafe { &mut *std::ptr::addr_of_mut!(CELL_COUNTER) }
     }
 

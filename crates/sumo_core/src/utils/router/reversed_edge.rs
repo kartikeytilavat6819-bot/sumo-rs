@@ -202,7 +202,7 @@ where
 }
 
 // C++ ReversedEdge<E, V> is a valid routing edge type for the generic routers (e.g. the backward DijkstraRouter of the
-// landmark table); accessors C++ ReversedEdge does not have stay shortcuts, as in the IntermodalEdge case of RouterEdge.
+// landmark table); accessors C++ ReversedEdge does not have panic (C++ would not compile for them), as in the IntermodalEdge case of RouterEdge.
 impl<E, V> RouterEdgeInfo for ReversedEdge<E, V>
 where
     E: RouterEdge<V>,
@@ -234,22 +234,22 @@ where
         self.myOriginal.length()
     }
     fn length_geometry_factor(&self) -> f64 {
-        panic!("shortcut: C++ ReversedEdge has no getLengthGeometryFactor()")
+        panic!("C++ ReversedEdge has no getLengthGeometryFactor() (C++ would not compile for it)")
     }
     fn distance_to(&self, other: Ptr<Self>, do_boundary_estimate: bool) -> f64 {
-        panic!("shortcut: C++ ReversedEdge has no getDistanceTo()")
+        panic!("C++ ReversedEdge has no getDistanceTo() (C++ would not compile for it)")
     }
     fn successors(&self, vclass: SUMOVehicleClass) -> &[Ptr<Self>] {
-        panic!("shortcut: C++ ReversedEdge has no getSuccessors()")
+        panic!("C++ ReversedEdge has no getSuccessors() (C++ would not compile for it)")
     }
     fn via_successors(&self, vclass: SUMOVehicleClass, ignore_transient: bool) -> &[(Ptr<Self>, Ptr<Self>)] {
         &self.get_via_successors(vclass, ignore_transient)[..]
     }
     fn speed_limit(&self) -> f64 {
-        panic!("shortcut: C++ ReversedEdge has no getSpeedLimit()")
+        panic!("C++ ReversedEdge has no getSpeedLimit() (C++ would not compile for it)")
     }
     fn minimum_travel_time(&self, veh: Ptr<V>) -> f64 {
-        panic!("shortcut: C++ ReversedEdge has no getMinimumTravelTime()")
+        panic!("C++ ReversedEdge has no getMinimumTravelTime() (C++ would not compile for it)")
     }
     fn bidi_edge(&self) -> Ptr<Self> {
         self.get_bidi_edge()
@@ -267,7 +267,7 @@ where
         Self::get_travel_time_static(edge, veh, time)
     }
     fn travel_time_aggregated(edge: Ptr<Self>, veh: Ptr<V>, time: f64) -> f64 {
-        panic!("shortcut: C++ ReversedEdge has no getTravelTimeAggregated()")
+        panic!("C++ ReversedEdge has no getTravelTimeAggregated() (C++ would not compile for it)")
     }
 }
 

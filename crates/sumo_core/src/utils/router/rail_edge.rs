@@ -508,9 +508,9 @@ impl<E: crate::utils::router::router_edge::RouterEdgeInfo, V> crate::utils::rout
     fn edge_id(&self) -> String {
         if self.myOriginal.is_null() { self.myID.clone() } else { self.myOriginal.edge_id() }
     }
-    // shortcut: C++ RailEdge has no getPermissions, only its original edge does; upgrade when the railway router needs CH/CCH arc permissions
+    /// C++ RailEdge has no getPermissions, only its original edge does (C++ would not compile for it)
     fn edge_permissions(&self) -> SVCPermissions {
-        panic!("shortcut: C++ RailEdge has no getPermissions")
+        panic!("C++ RailEdge has no getPermissions")
     }
 }
 

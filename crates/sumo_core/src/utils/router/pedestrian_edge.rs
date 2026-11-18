@@ -197,8 +197,7 @@ where
             }
             tlsDelay += e.time_penalty();
         }
-        // shortcut: gWeightsWalkOppositeFactor is not a ported global, read the option it is copied from on each use, upgrade when std_defs gains it
-        let oppositeFactor = if self.myIsOpposite { utils::options::options_cont::get_float("persontrip.walk-opposite-factor") } else { 1. };
+        let oppositeFactor = if self.myIsOpposite { utils::common::std_defs::g_weights_walk_opposite_factor() } else { 1. };
         length / (trip.speed * oppositeFactor) + tlsDelay
     }
 
