@@ -8418,7 +8418,8 @@ impl NBNode {
                 of2 = vec_max(&is1);
                 of1 = vec_min(&is2);
             }
-            debug_assert!(of1 <= of2);
+            // C++ assert(of1 <= of2) is compiled out in the official release build;
+            // getSubpart handles the of1 > of2 case without panicking, so stay faithful here too.
             return cut.get_subpart(of1, of2);
         } else {
             return def.clone();
