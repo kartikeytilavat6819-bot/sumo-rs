@@ -66,24 +66,30 @@ def free_port():
 
 
 def prepare(run_dir, test_dir, root):
+    """TextTest-style: files from the test dir win, ancestors fill the gaps."""
     os.makedirs(run_dir, exist_ok=True)
-    for name in os.listdir(test_dir):
-        src = os.path.join(test_dir, name)
-        if os.path.isfile(src):
-            shutil.copyfile(src, os.path.join(run_dir, name))
-    for name in COPY_NAMES:
-        if os.path.exists(os.path.join(run_dir, name)):
-            continue
-        d = test_dir
-        while True:
-            cand = os.path.join(d, name)
-            if os.path.isfile(cand):
-                shutil.copyfile(cand, os.path.join(run_dir, name))
-                break
-            parent = os.path.dirname(d)
-            if parent == d or not os.path.abspath(d).startswith(os.path.abspath(root)):
-                break
-            d = parent
+    chain = []
+    d = os.path.abspath(test_dir)
+    r = os.path.abspath(root)
+    while d.startswith(r):
+        chain.append(d)
+        if d == r:
+            break
+        d = os.path.dirname(d)
+    chain.reverse()
+    for d in chain:
+        for name in os.listdir(d):
+            src = os.path.join(d, name)
+            if not os.path.isfile(src):
+                continue
+            dst = os.path.join(run_dir, name)
+            if os.path.splitext(name)[1].lower() in (".prog", ".traci", ".xml", ".txt", ".sumo", ".cfg", ".netgcfg", ".netccfg"):
+                with open(src, "r", encoding="utf-8", errors="replace") as f:
+                    data = f.read().replace("\r\n", "\n")
+                with open(dst, "w", encoding="utf-8", newline="\n") as f:
+                    f.write(data)
+            else:
+                shutil.copyfile(src, dst)
 
 
 def norm_client(text):
