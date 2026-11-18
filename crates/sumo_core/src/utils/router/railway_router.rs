@@ -347,7 +347,8 @@ impl<E: RouterEdge<V>, V: RouterVehicle> RailwayRouter<E, V> {
         if self.myInternalRouter.is_null() {
             let warning = self.base.myErrorMsgHandler == msg_instance(true);
             let edges = self.get_rail_edges().clone();
-            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, Some(Self::get_travel_time_static), None, self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions);
+            // C++ _InternalDijkstra inherits DijkstraRouter::compute (virtual dispatch); install the slot.
+            let internal = DijkstraRouter::<RailEdge<E, V>, V>::new(&edges, warning, Some(Self::get_travel_time_static), None, self.mySilent, Ptr::null(), self.base.myHavePermissions, self.base.myHaveRestrictions).with_compute();
             self.myInternalRouter = Ptr::from_raw(Box::into_raw(Box::new(internal))).cast();
         }
     }
