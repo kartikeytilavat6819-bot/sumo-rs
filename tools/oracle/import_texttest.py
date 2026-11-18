@@ -258,6 +258,8 @@ def import_one(source, tests_sumo, force=False):
         if marker in joined:
             return None, "needs external tool/GUI/TraCI: " + marker
 
+    case_dir = join(CASES, name)
+
     sim, net, routes, additions, outputs = parse_file_options(tokens)
 
     net_path = resolve(net, potentials) if net else None
@@ -286,7 +288,6 @@ def import_one(source, tests_sumo, force=False):
     if not route_path:
         return None, "no route input"
 
-    case_dir = join(CASES, name)
     if os.path.exists(case_dir) and not force:
         return name, {"skipped_existing": True, "source": rel}
 
