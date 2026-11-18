@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/dfrouter_itt_dfrouter_bugs_ticket6931BOM/input_tri.net.xml --detector-files=tools/oracle/cases/dfrouter_itt_dfrouter_bugs_ticket6931BOM/input_tri.det.xml --detector-output detectors_def.det.xml --measure-files tools/oracle/cases/dfrouter_itt_dfrouter_bugs_ticket6931BOM/input_flows.txt

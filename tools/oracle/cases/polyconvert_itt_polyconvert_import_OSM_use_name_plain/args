@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v --osm tools/oracle/cases/polyconvert_itt_polyconvert_import_OSM_use_name_plain/osm.xml -o @DIR@/routes.rou.xml

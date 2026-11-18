@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_time_window_before_begin/input_flows.flows.xml --output-file=@DIR@/routes.rou.xml --sinks=end --begin=20 --end=30

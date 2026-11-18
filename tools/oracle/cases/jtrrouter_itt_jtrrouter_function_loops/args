@@ -1,0 +1,1 @@
+--xml-validation never --write-license --output-file=@DIR@/routes.rou.xml --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_loops/input_flows.flows.xml --sinks=end --turns=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_loops/input_turns.turns.xml --allow-loops

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/dfrouter_itt_dfrouter_routes_tri_only_shortest/input_tri.net.xml --detector-files=tools/oracle/cases/dfrouter_itt_dfrouter_routes_tri_only_shortest/input_tri.det.xml --routes-output routes.rou.xml

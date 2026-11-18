@@ -1,0 +1,1 @@
+--xml-validation never --write-license -n tools/oracle/cases/marouter_itt_marouter_import_o_100vehs_day/input_net.net.xml -a tools/oracle/cases/marouter_itt_marouter_import_o_100vehs_day/input_taz.taz.xml -m tools/oracle/cases/marouter_itt_marouter_import_o_100vehs_day/input_od_o.fma -o @DIR@/routes.rou.xml

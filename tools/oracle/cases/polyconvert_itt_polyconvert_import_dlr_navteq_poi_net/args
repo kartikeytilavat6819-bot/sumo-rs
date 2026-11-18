@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v --dlr-navteq-poi-files tools/oracle/cases/polyconvert_itt_polyconvert_import_dlr_navteq_poi_net/dlr_navteq_pois.txt -o @DIR@/routes.rou.xml -n tools/oracle/cases/polyconvert_itt_polyconvert_import_dlr_navteq_poi_net/input_net.net.xml

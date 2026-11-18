@@ -1,0 +1,1 @@
+--xml-validation never --write-license -n tools/oracle/cases/marouter_itt_marouter_sue_cch_reset_regression/input_net.net.xml -a tools/oracle/cases/marouter_itt_marouter_sue_cch_reset_regression/input_taz.taz.xml -z tools/oracle/cases/marouter_itt_marouter_sue_cch_reset_regression/input_od.xml --output routes.rou.xml --assignment-method SUE --routing-algorithm CCH

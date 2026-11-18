@@ -1,0 +1,1 @@
+--xml-validation never --write-license --timeline.day-in-hours --timeline 0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1 -n tools/oracle/cases/od2trips_itt_od2trips_timelines_hours_split_after12/input_taz.taz.xml -d tools/oracle/cases/od2trips_itt_od2trips_timelines_hours_split_after12/input_od_o.fma -o @DIR@/routes.rou.xml

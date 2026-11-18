@@ -1,0 +1,1 @@
+--xml-validation never --write-license -v --dlr-navteq-poly-files tools/oracle/cases/polyconvert_itt_polyconvert_import_dlr_navteq_polygon_net/dlr_navteq_polygons.txt -o @DIR@/routes.rou.xml -n tools/oracle/cases/polyconvert_itt_polyconvert_import_dlr_navteq_polygon_net/input_net.net.xml

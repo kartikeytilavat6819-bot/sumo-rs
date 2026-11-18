@@ -1,0 +1,1 @@
+--xml-validation never --write-license --rand -o @DIR@/routes.rou.xml --rand.iterations=20 --rand.min-distance 100 --rand.max-distance 400 --rand.grid --turn-lanes 2 --turn-lanes.length 50 --default.lanenumber 2

@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/dfrouter_itt_dfrouter_emitters_vtype/input_messstrecke.net.xml --detector-files=tools/oracle/cases/dfrouter_itt_dfrouter_emitters_vtype/input_messstrecke.det.xml --routes-output routes.rou.xml --emitters-output emitters.add.xml --vtype --vtype-output @DIR@/vtypes.rou.xml

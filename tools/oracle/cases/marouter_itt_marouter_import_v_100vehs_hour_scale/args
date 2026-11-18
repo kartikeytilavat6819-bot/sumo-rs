@@ -1,0 +1,1 @@
+--xml-validation never --write-license -n tools/oracle/cases/marouter_itt_marouter_import_v_100vehs_hour_scale/input_net.net.xml -a tools/oracle/cases/marouter_itt_marouter_import_v_100vehs_hour_scale/input_taz.taz.xml -m tools/oracle/cases/marouter_itt_marouter_import_v_100vehs_hour_scale/input_od_v.fma -o @DIR@/routes.rou.xml --netload-output aggregated.xml --scale 0.25

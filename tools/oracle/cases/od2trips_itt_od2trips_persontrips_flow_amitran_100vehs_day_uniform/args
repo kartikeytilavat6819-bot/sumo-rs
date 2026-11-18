@@ -1,0 +1,1 @@
+--xml-validation never --write-license --persontrips -n tools/oracle/cases/od2trips_itt_od2trips_persontrips_flow_amitran_100vehs_day_uniform/input_taz.taz.xml --amitran tools/oracle/cases/od2trips_itt_od2trips_persontrips_flow_amitran_100vehs_day_uniform/input_od.xml --flow-output trips.trips.xml --spread.uniform

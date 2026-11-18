@@ -1,0 +1,1 @@
+--xml-validation never --write-license --grid --grid.x-number=1 --grid.y-number=1 --grid.length=100 --output=net.net.xml --grid.attach-length 100

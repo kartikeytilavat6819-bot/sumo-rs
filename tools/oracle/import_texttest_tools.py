@@ -41,7 +41,11 @@ ROOT = HERE.parent.parent
 CASES = ROOT / "tools" / "oracle" / "cases"
 ROWS = HERE / "import_texttest_net.rows"
 
-PREFIX = {"netconvert": "itt_nc_", "duarouter": "duarouter_itt_"}
+PREFIX = {"netconvert": "itt_nc_", "duarouter": "duarouter_itt_",
+          "polyconvert": "polyconvert_itt_", "netgen": "netgenerate_itt_",
+          "od2trips": "od2trips_itt_", "jtrrouter": "jtrrouter_itt_",
+          "marouter": "marouter_itt_", "activitygen": "activitygen_itt_",
+          "dfrouter": "dfrouter_itt_"}
 
 # Options whose value is a file name.  Used only to tell "value" from "next flag".
 VALUE_OPTS = {
@@ -269,8 +273,8 @@ def rewrite(tokens: list[str], app: str, copied: dict[str, Path], case: Path,
         def fmt(k: str, v: str) -> str:
             return f"{k}={v}" if had_eq else f"{k} {v}"
 
-        # net-file is supplied by run_duarouter.sh (-n); netconvert never needs it.
-        if key in ("--net-file", "-n") and app == "duarouter":
+        # net-file is supplied by the runner (-n); only duarouter/jtrrouter need it split out.
+        if key in ("--net-file", "-n") and app in ("duarouter", "jtrrouter"):
             if copied.get(val) is not None:
                 net = case_path(copied[val])
             continue
@@ -354,11 +358,10 @@ def skip_test(leaf: Path, app: str, root: Path, tokens: list[str]) -> bool:
         if cur == root:
             break
         cur = cur.parent
-    # duarouter with no options exits 1 ("No output specified."); the runner labels any
-    # candidate error as ERROR and never compares stderr, so such error-cases are unverifiable.
-    if app == "duarouter" and not tokens:
+    # Tools with no options are unverifiable by the runners.
+    if app != "netconvert" and not tokens:
         return True
-    if app == "duarouter":
+    if app in ("duarouter", "jtrrouter"):
         texts = [f.read_text(encoding="utf-8", errors="replace")
                  for f in leaf.glob("*.xml") if f.is_file()]
         joined_inputs = "\n".join(texts)
@@ -409,19 +412,21 @@ def import_app(app: str, subtrees: list[Path], limit: int,
                 cand = [p for n, p in copied.items() if n.endswith(".net.xml")]
                 if cand:
                     net = case_path(sorted(set(cand))[0])
-            if app == "duarouter":
+            if app in ("duarouter", "jtrrouter"):
                 if net is None:
                     shutil.rmtree(case)
                     continue
                 (case / "net").write_text(net + "\n", encoding="utf-8", newline="\n")
                 (case / "args").write_text(" ".join(opts) + "\n", encoding="utf-8", newline="\n")
-            else:
+            elif app == "netconvert":
                 # netconvert: inputs in `args:`, redirected extra outputs in OPTIONS
                 inputs = [t for t in opts if "@D" not in t]
                 outputs = [t for t in opts if "@D" in t]
                 args_txt = " ".join(inputs)
                 (case / "net.args").write_text(args_txt + "\n", encoding="utf-8", newline="\n")
                 rows.append(f"row {name} \"args:{args_txt}\" \"{' '.join(outputs)}\"")
+            else:
+                (case / "args").write_text(" ".join(opts) + "\n", encoding="utf-8", newline="\n")
             imported += 1
             per_subtree += 1
     return rows, imported

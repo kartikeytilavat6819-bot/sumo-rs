@@ -1,0 +1,1 @@
+--xml-validation never --write-license --net-file=tools/oracle/cases/dfrouter_itt_dfrouter_detector_pois_tri/input_tri.net.xml --detector-files=tools/oracle/cases/dfrouter_itt_dfrouter_detector_pois_tri/input_tri.det.xml --detectors-poi-output detectors.poi.xml

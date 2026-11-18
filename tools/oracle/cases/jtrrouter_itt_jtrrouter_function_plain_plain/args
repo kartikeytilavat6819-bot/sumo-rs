@@ -1,0 +1,1 @@
+--xml-validation never --write-license --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_function_plain_plain/input_flows.flows.xml --output-file=@DIR@/routes.rou.xml --ignore-errors

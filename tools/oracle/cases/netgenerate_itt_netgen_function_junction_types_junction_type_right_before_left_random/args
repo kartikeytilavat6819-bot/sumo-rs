@@ -1,0 +1,1 @@
+--xml-validation never --write-license --rand.bidi-probability 0 --default-junction-type right_before_left -v --rand -o @DIR@/routes.rou.xml --rand.iterations=10

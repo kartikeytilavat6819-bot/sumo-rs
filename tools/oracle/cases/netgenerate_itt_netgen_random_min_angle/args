@@ -1,0 +1,1 @@
+--xml-validation never --write-license --rand -o @DIR@/routes.rou.xml --rand.iterations=100 --rand.min-distance 100 --rand.max-distance 250 --rand.grid --rand.min-angle 60

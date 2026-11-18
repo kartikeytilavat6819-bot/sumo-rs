@@ -1,0 +1,1 @@
+--xml-validation never --write-license --output-file=@DIR@/routes.rou.xml --route-files=tools/oracle/cases/jtrrouter_itt_jtrrouter_bugs_ticket9327b/input_flows.flows.xml --accept-all-destinations --departlane=random --turns=tools/oracle/cases/jtrrouter_itt_jtrrouter_bugs_ticket9327b/input_turns.turns.xml --unsorted-input -e 1000
