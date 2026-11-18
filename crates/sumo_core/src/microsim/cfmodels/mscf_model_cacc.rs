@@ -61,25 +61,20 @@ const DEFAULT_SC_MIN_GAP: f64 = 1.66;
 const DEFAULT_EMERGENCY_OVERRIDE_THRESHOLD: f64 = 2.0;
 
 /// C++ `MSCFModel_CACC::CommunicationsOverrideModeMap[value]` (std::map operator[]: a missing key yields CACC_NO_OVERRIDE)
-fn comm_override_mode_from_str(value: &str) -> MSCFModel_CACC_CommunicationsOverrideMode {
+fn comm_override_mode_from_str(value: &str) -> i32 {
     match value {
-        "0" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE,
-        "1" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_NO_LEADER,
-        "2" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_NO_CAV,
-        "3" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_CAV,
-        _ => MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE,
+        "1" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_NO_LEADER as i32,
+        "2" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_NO_CAV as i32,
+        "3" => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_CAV as i32,
+        _ => MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE as i32,
     }
 }
 
 /// C++ `(CommunicationsOverrideMode)mode` for an int read from a saved state
-fn comm_override_mode_from_i64(value: i64) -> MSCFModel_CACC_CommunicationsOverrideMode {
-    // shortcut: C++ casts any int to the enum; unknown values fall back to CACC_NO_OVERRIDE here, since a Rust enum cannot hold them
-    match value {
-        1 => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_NO_LEADER,
-        2 => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_NO_CAV,
-        3 => MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_CAV,
-        _ => MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE,
-    }
+fn comm_override_mode_from_i64(value: i64) -> i32 {
+    // C++ casts any int to the enum without a range check; keep the raw value so
+    // getParameter and the v() switch behave like C++ for values outside 0..3
+    value as i32
 }
 
 /// C++ `MSCFModel_CACC::VehicleModeNames[mode]`
@@ -126,7 +121,8 @@ pub struct MSCFModel_CACC_CACCVehicleVariables {
     pub base: MSCFModel_ACC_ACCVehicleVariables,
     /// The vehicle's CACC precious time step gap error
     pub CACC_ControlMode: i32,
-    pub CACC_CommunicationsOverrideMode: MSCFModel_CACC_CommunicationsOverrideMode,
+    /// raw int: C++ casts any int to enum CommunicationsOverrideMode
+    pub CACC_CommunicationsOverrideMode: i32,
 }
 
 impl std::ops::Deref for MSCFModel_CACC_CACCVehicleVariables {
@@ -149,7 +145,7 @@ impl MSCFModel_CACC_CACCVehicleVariables {
         MSCFModel_CACC_CACCVehicleVariables {
             base: MSCFModel_ACC_ACCVehicleVariables::new(),
             CACC_ControlMode: 0,
-            CACC_CommunicationsOverrideMode: MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE,
+            CACC_CommunicationsOverrideMode: MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE as i32,
         }
     }
 
@@ -169,7 +165,7 @@ impl MSCFModel_CACC_CACCVehicleVariables {
     pub fn save_state(&self, out: &mut OutputDevice, cfm: &MSCFModel) {
         out.open_tag_id(SUMO_TAG_CFM_VARIABLES);
         out.write_attr(SUMO_ATTR_ID, "CACC");
-        let internals = format!("{} {}", self.CACC_ControlMode, self.CACC_CommunicationsOverrideMode as i64);
+        let internals = format!("{} {}", self.CACC_ControlMode, self.CACC_CommunicationsOverrideMode);
         out.write_attr(SUMO_ATTR_STATE, internals.as_str());
         out.close_tag("");
         let _ = cfm;
@@ -560,7 +556,7 @@ impl MSCFModel_CACC {
         let vars = veh.get_car_follow_variables().cast::<MSCFModel_CACC_CACCVehicleVariables>();
 
         if key == "caccCommunicationsOverrideMode" {
-            return (vars.CACC_CommunicationsOverrideMode as i64).to_string();
+            return vars.CACC_CommunicationsOverrideMode.to_string();
         }
 
         String::new()
@@ -802,7 +798,7 @@ impl MSCFModel_CACC {
 
         let commMode = vars.CACC_CommunicationsOverrideMode;
 
-        if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE { // old CACC logic (rely on time gap from predecessor)
+        if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_NO_OVERRIDE as i32 { // old CACC logic (rely on time gap from predecessor)
             // @note: using (gap2pred + minGap) here increases oscillations but may
             // actually be a good idea once the acceleration-spike-problem is fixed
             let time_gap = gap2pred / max2(NUMERICAL_EPS, speed);
@@ -833,12 +829,12 @@ impl MSCFModel_CACC {
                     newSpeed = self.speed_gap_control(veh, gap2pred, speed, predSpeed, desSpeed, vErr, pred, &mut vehMode);
                 }
             }
-        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_NO_LEADER {
+        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_NO_LEADER as i32 {
             newSpeed = self.speed_speed_control(speed, vErr, &mut vehMode);
-        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_NO_CAV {
+        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_NO_CAV as i32 {
             newSpeed = self.acc_CFM.v(veh, gap2pred, speed, predSpeed, desSpeed, true);
             vehMode = MSCFModel_CACC_VehicleMode::ACC_MODE;
-        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_CAV {
+        } else if commMode == MSCFModel_CACC_CommunicationsOverrideMode::CACC_MODE_LEADER_CAV as i32 {
             let desSpacing = self.myHeadwayTime * speed;
             let spacingErr = gap2pred - desSpacing;
             let accel = veh.get_acceleration();
