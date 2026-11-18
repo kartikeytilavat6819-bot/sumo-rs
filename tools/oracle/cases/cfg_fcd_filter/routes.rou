@@ -1,0 +1,11 @@
+<routes>
+    <!-- Cars use E0 (cars only), bicycles use E1 (bicycles only). The FCD edge filter keeps only E0. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <vType id="bike" vClass="bicycle" length="2.00" maxSpeed="5.00" accel="1.50" decel="3.00" sigma="0"/>
+    <route id="rc" edges="E0"/>
+    <route id="rb" edges="E1"/>
+    <vehicle id="c0" type="car" route="rc" depart="0" departSpeed="max"/>
+    <vehicle id="b0" type="bike" route="rb" depart="0" departSpeed="max"/>
+    <flow id="fc" type="car" route="rc" begin="5.00" end="60.00" period="10.00" departSpeed="max"/>
+    <flow id="fb" type="bike" route="rb" begin="5.00" end="60.00" period="10.00" departSpeed="max"/>
+</routes>

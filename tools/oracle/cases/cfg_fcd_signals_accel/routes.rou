@@ -1,0 +1,10 @@
+<routes>
+    <!-- Cars and a truck with braking/accelerating phases on a two-lane edge. -->
+    <vType id="car" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0"/>
+    <vType id="slow" length="8.00" maxSpeed="8.00" accel="1.20" decel="3.00" sigma="0"/>
+    <route id="r" edges="A"/>
+    <vehicle id="v0" type="car" route="r" depart="0" departLane="0" departSpeed="max"/>
+    <vehicle id="v1" type="slow" route="r" depart="2" departLane="0" departSpeed="max"/>
+    <vehicle id="v2" type="car" route="r" depart="4" departLane="1" departSpeed="max"/>
+    <flow id="f" type="car" route="r" begin="8.00" end="70.00" period="6.00" departSpeed="max"/>
+</routes>
