@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:38:41.625678-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_junction_model_avoid_spill_back_network_ends_behind_junction/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_junction_model_avoid_spill_back_network_ends_behind_junction/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_avoid_spill_back_network_ends_behind_junction/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_avoid_spill_back_network_ends_behind_junction/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_avoid_spill_back_network_ends_behind_junction/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <tripinfo id="ego.0" depart="0.00" departLane="beg_0" departPos="109.95" departSpeed="13.89" departDelay="0.00" arrival="3.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="3.00" routeLength="30.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.0 fcd_ego.0" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.1" depart="1.00" departLane="beg_0" departPos="102.35" departSpeed="13.89" departDelay="0.00" arrival="4.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="3.00" routeLength="37.65" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.1 fcd_ego.1" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.2" depart="2.00" departLane="beg_0" departPos="94.75" departSpeed="13.89" departDelay="0.00" arrival="6.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="4.00" routeLength="45.25" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.2 fcd_ego.2" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.3" depart="3.00" departLane="beg_0" departPos="87.15" departSpeed="13.89" departDelay="0.00" arrival="7.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="4.00" routeLength="52.85" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.3 fcd_ego.3" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.4" depart="4.00" departLane="beg_0" departPos="79.55" departSpeed="13.89" departDelay="0.00" arrival="9.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="5.00" routeLength="60.45" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.4 fcd_ego.4" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.5" depart="5.00" departLane="beg_0" departPos="71.95" departSpeed="13.89" departDelay="0.00" arrival="10.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="5.00" routeLength="68.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.5 fcd_ego.5" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.6" depart="6.00" departLane="beg_0" departPos="64.35" departSpeed="13.89" departDelay="0.00" arrival="12.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="6.00" routeLength="75.65" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.6 fcd_ego.6" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.7" depart="7.00" departLane="beg_0" departPos="56.75" departSpeed="13.89" departDelay="0.00" arrival="13.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="6.00" routeLength="83.25" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.7 fcd_ego.7" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.8" depart="8.00" departLane="beg_0" departPos="49.15" departSpeed="13.89" departDelay="0.00" arrival="15.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="7.00" routeLength="90.85" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.8 fcd_ego.8" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.9" depart="9.00" departLane="beg_0" departPos="41.55" departSpeed="13.89" departDelay="0.00" arrival="17.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="8.00" routeLength="98.45" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.9 fcd_ego.9" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.10" depart="10.00" departLane="beg_0" departPos="33.95" departSpeed="13.89" departDelay="0.00" arrival="18.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="8.00" routeLength="106.05" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.10 fcd_ego.10" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.11" depart="11.00" departLane="beg_0" departPos="26.35" departSpeed="13.89" departDelay="0.00" arrival="20.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="9.00" routeLength="113.65" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.11 fcd_ego.11" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.12" depart="12.00" departLane="beg_0" departPos="18.75" departSpeed="13.89" departDelay="0.00" arrival="21.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="9.00" routeLength="121.25" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.12 fcd_ego.12" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.13" depart="13.00" departLane="beg_0" departPos="11.15" departSpeed="13.89" departDelay="0.00" arrival="23.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="128.85" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.13 fcd_ego.13" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.14" depart="14.00" departLane="beg_0" departPos="3.55" departSpeed="13.89" departDelay="0.00" arrival="24.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="136.45" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.14 fcd_ego.14" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.15" depart="16.00" departLane="beg_0" departPos="9.84" departSpeed="13.89" departDelay="1.00" arrival="26.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="130.16" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.15 fcd_ego.15" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.16" depart="17.00" departLane="beg_0" departPos="2.24" departSpeed="13.89" departDelay="1.00" arrival="27.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="137.76" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.16 fcd_ego.16" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.17" depart="19.00" departLane="beg_0" departPos="8.53" departSpeed="13.89" departDelay="2.00" arrival="29.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="131.47" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.17 fcd_ego.17" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.18" depart="20.00" departLane="beg_0" departPos="0.93" departSpeed="13.89" departDelay="2.00" arrival="31.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="11.00" routeLength="139.07" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.18 fcd_ego.18" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+    <tripinfo id="ego.19" depart="22.00" departLane="beg_0" departPos="7.22" departSpeed="13.89" departDelay="3.00" arrival="32.00" arrivalLane="end_0" arrivalPos="6.75" arrivalSpeed="13.89" duration="10.00" routeLength="132.78" waitingTime="0.00" waitingCount="0" stopTime="0.00" timeLoss="0.00" rerouteNo="0" devices="tripinfo_ego.19 fcd_ego.19" vType="DEFAULT_VEHTYPE" speedFactor="1.00" vaporized=""/>
+</tripinfos>

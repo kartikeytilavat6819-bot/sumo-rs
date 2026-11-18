@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 25 -a tools/oracle/cases/tt_junction_model_driveAfterRedTime_red_1s_cannot_brake/input_additional.add.xml

@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -b 25 --collision.check-junctions --collision.stoptime 5 -a tools/oracle/cases/tt_junction_model_driveAfterRedTime_red_15s_brake_junction_foes_stopped/input_additional.add.xml

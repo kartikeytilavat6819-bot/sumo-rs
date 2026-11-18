@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:38:57.648597-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_driveAfterRedTime_yellow_2s_drive/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="25"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="25.00">
+        <vehicle id="ego" x="104.95" y="5.10" angle="0.00" type="egoType" speed="2.00" pos="5.10" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="ego" x="104.95" y="9.70" angle="0.00" type="egoType" speed="4.60" pos="9.70" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="ego" x="104.95" y="16.90" angle="0.00" type="egoType" speed="7.20" pos="16.90" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="ego" x="104.95" y="26.70" angle="0.00" type="egoType" speed="9.80" pos="26.70" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="ego" x="104.95" y="39.10" angle="0.00" type="egoType" speed="12.40" pos="39.10" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="ego" x="104.95" y="52.99" angle="0.00" type="egoType" speed="13.89" pos="52.99" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="ego" x="104.95" y="66.88" angle="0.00" type="egoType" speed="13.89" pos="66.88" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="ego" x="104.95" y="80.77" angle="0.00" type="egoType" speed="13.89" pos="80.77" lane="SC_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="ego" x="104.95" y="94.66" angle="0.00" type="egoType" speed="13.89" pos="2.71" lane=":C_11_0" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="ego" x="104.95" y="108.55" angle="0.00" type="egoType" speed="13.89" pos="0.50" lane="CN_0" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00"/>
+</fcd-export>

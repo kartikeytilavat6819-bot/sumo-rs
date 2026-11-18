@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T10:38:30.478403-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_junction_model_approachInformation_one_green2yellow/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_junction_model_approachInformation_one_green2yellow/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_approachInformation_one_green2yellow/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_approachInformation_one_green2yellow/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc60/tools/oracle/cases/tt_junction_model_approachInformation_one_green2yellow/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <begin value="20"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="20.00"/>
+    <timestep time="21.00"/>
+    <timestep time="22.00">
+        <vehicle id="ego" x="304.11" y="-1.65" angle="90.00" type="t_ego" speed="0.00" pos="307.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="ego" x="306.07" y="-1.65" angle="90.00" type="t_ego" speed="2.00" pos="309.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="ego" x="309.99" y="-1.65" angle="90.00" type="t_ego" speed="4.00" pos="313.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="ego" x="315.87" y="-1.65" angle="90.00" type="t_ego" speed="6.00" pos="319.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="ego" x="323.71" y="-1.65" angle="90.00" type="t_ego" speed="8.00" pos="327.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="ego" x="333.51" y="-1.65" angle="90.00" type="t_ego" speed="10.00" pos="337.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="ego" x="345.27" y="-1.65" angle="90.00" type="t_ego" speed="12.00" pos="349.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="ego" x="358.99" y="-1.65" angle="90.00" type="t_ego" speed="14.00" pos="363.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="ego" x="374.67" y="-1.65" angle="90.00" type="t_ego" speed="16.00" pos="379.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="ego" x="392.31" y="-1.65" angle="90.00" type="t_ego" speed="18.00" pos="397.00" lane="0/0to1/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="ego" x="421.35" y="-1.65" angle="90.00" type="t_ego" speed="20.00" pos="17.00" lane="1/0to2/0_0" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00"/>
+</fcd-export>

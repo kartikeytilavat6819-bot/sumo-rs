@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log -e 20 --tripinfo-output.write-unfinished --device.tripinfo.explicit vehicle_0 --step-length 0.1
