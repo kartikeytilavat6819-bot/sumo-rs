@@ -17,7 +17,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-HERE = Path(__file__).resolve().parent
+# FUZZ_ROOT lets the gate runner execute an embedded copy of this file from /tmp
+# while still resolving the case net/routes relative to the real repo checkout.
+HERE = Path(os.environ.get("FUZZ_ROOT", str(Path(__file__).resolve().parent)))
 sys.path.insert(0, str(HERE / "cases" / "traci_basic"))
 import client as C  # noqa: E402  (sumo_command / kill_cpp / PRISTINE_BIN)
 
