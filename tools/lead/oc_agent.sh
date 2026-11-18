@@ -15,7 +15,7 @@ MODELS=" $MODEL ${OC_FALLBACKS:-opencode/beam-free} "
 next_model() { local rest=${MODELS#* $1 }; [ "$rest" = "$MODELS" ] && rest=$MODELS; set -- $rest; echo "${1:-}"; }
 LOG=$REPO/.claude/oc-$ID.log
 # rows failing on main 2be57fb57: not regressions
-KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_stop/ref md_vtypes/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref tt_bugs_13xxx_ticket13108/ref tt_bugs_15xxx_ticket15030/ref tt_bugs_16xxx_ticket16641/ref tt_bugs_17xxx_ticket17583/ref tt_bugs_4xxx_ticket4299/ref tt_bugs_7xxx_ticket7149/ref "
+KNOWN=" out_bt/ref out_meandata/ref elechybrid_overhead/ref md_midinterval/ref md_stop/ref md_vtypes/ref tt_basic_routes_parsing_nested_ref/ref tt_basic_routes_parsing_repeat_stops_no_period/ref tt_bugs_13xxx_ticket13108/ref tt_bugs_15xxx_ticket15030/ref tt_bugs_16xxx_ticket16641/ref tt_bugs_17xxx_ticket17583/ref tt_bugs_4xxx_ticket4299/ref tt_bugs_7xxx_ticket7149/ref itt_nc_netconvert_bugs_5xxx_ticket6497 "
 
 say() { echo "$(date +%H:%M) $*" | tee -a "$LOG"; }
 # every failing line whose row is not a known main FAIL, plus build/test/harness failures
@@ -23,7 +23,15 @@ regressions() {
   local r=""
   grep -q 'GATE DONE' <<<"$1" || r="gate did not finish;"
   grep -q 'BUILD FAILED' <<<"$1" || grep -q '^PASS=[0-9]' <<<"$1" || r="$r no run_all summary (partial gate);"
-  while read -r row _; do
+  while read -r _line; do
+    read -r row _ <<<"$_line"
+    if [ "$row" = "netopts_new:" ]; then
+      # one summary line lists every failing netconvert row as name:FAIL; judge each row by name
+      for nr in $(grep -oE '[A-Za-z0-9_.-]+:(FAIL|PANIC)' <<<"$_line" | cut -d: -f1); do
+        [[ "$KNOWN" == *" $nr "* ]] || r="$r $nr;"
+      done
+      continue
+    fi
     [[ "$KNOWN" == *" $row "* ]] || r="$r $row;"
   done < <(grep -E 'FAIL|PANIC|TIMEOUT|panicked|STALE|MISSING' <<<"$1" | grep -vE '(^| )PASS=[0-9]+ FAIL=0|^PASS=')
   # the run_all summary "PASS=n FAIL=m" is judged by the rows above, not by its count
