@@ -711,22 +711,33 @@ impl TrafficLight {
             let basePath = "";
             let nextSwitch = net.get_current_time_step() + phases[0].m().duration;
             // TraCILogic.type is a raw int: 0 STATIC, 3 ACTUATED, 4 NEMA, 5 DELAYBASED (TrafficLightType values)
+            // The C++ constructor creates and schedules the initial SwitchCommand. Rust's
+            // by-value constructors cannot schedule `this`, so callers must do it after boxing;
+            // without it mySwitchCommand stays null and setPhase dereferences it.
             let tlLogic: Ptr<MSTrafficLightLogic> = match logic.type_ {
                 3 => {
-                    let actuated = Ptr::from_raw(Box::into_raw(Box::new(MSActuatedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath, &Default::default(), &Default::default(), &Default::default()))));
-                    actuated.cast::<MSTrafficLightLogic>()
+                    let mut actuated = Box::new(MSActuatedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath, &Default::default(), &Default::default(), &Default::default()));
+                    actuated.base.schedule_initial_switch(tlc, nextSwitch);
+                    let p = Ptr::from_raw(Box::into_raw(actuated));
+                    p.cast::<MSTrafficLightLogic>()
                 }
                 4 => {
-                    let nema = Ptr::from_raw(Box::into_raw(Box::new(NEMALogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
-                    nema.cast::<MSTrafficLightLogic>()
+                    let mut nema = Box::new(NEMALogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath));
+                    nema.base.schedule_initial_switch(tlc, nextSwitch);
+                    let p = Ptr::from_raw(Box::into_raw(nema));
+                    p.cast::<MSTrafficLightLogic>()
                 }
                 5 => {
-                    let delayBased = Ptr::from_raw(Box::into_raw(Box::new(MSDelayBasedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath))));
-                    delayBased.cast::<MSTrafficLightLogic>()
+                    let mut delayBased = Box::new(MSDelayBasedTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, &phases, step, nextSwitch, &logic.subParameter, basePath));
+                    delayBased.base.schedule_initial_switch(tlc, nextSwitch);
+                    let p = Ptr::from_raw(Box::into_raw(delayBased));
+                    p.cast::<MSTrafficLightLogic>()
                 }
                 0 => {
-                    let simple = Ptr::from_raw(Box::into_raw(Box::new(MSSimpleTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, TrafficLightType::STATIC, &phases, step, nextSwitch, &logic.subParameter))));
-                    simple.cast::<MSTrafficLightLogic>()
+                    let mut simple = Box::new(MSSimpleTrafficLightLogic::new(tlc, tlsID, &logic.programID, 0, TrafficLightType::STATIC, &phases, step, nextSwitch, &logic.subParameter));
+                    simple.schedule_initial_switch(tlc, nextSwitch);
+                    let p = Ptr::from_raw(Box::into_raw(simple));
+                    p.cast::<MSTrafficLightLogic>()
                 }
                 _ => panic!("Unsupported traffic light type '{}'", logic.type_),
             };
