@@ -1,0 +1,40 @@
+<routes>
+    <vTypeDistribution id="vd">
+        <vType id="calm" carFollowModel="Krauss" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0.5" speedDev="0.1" probability="0.5"/>
+        <vType id="wild" carFollowModel="Krauss" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="1.0" speedDev="0.2" probability="0.5"/>
+    </vTypeDistribution>
+    <routeDistribution id="rd">
+        <route id="r0" edges="A B C D" probability="0.6"/>
+        <route id="r1" edges="A B" probability="0.4"/>
+    </routeDistribution>
+    <vehicle id="v00" type="vd" depart="0.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v01" type="vd" depart="1.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v02" type="vd" depart="2.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v03" type="vd" depart="3.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v04" type="vd" depart="4.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v05" type="vd" depart="5.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v06" type="vd" depart="6.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v07" type="vd" depart="7.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v08" type="vd" depart="8.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v09" type="vd" depart="9.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v10" type="vd" depart="10.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v11" type="vd" depart="11.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v12" type="vd" depart="12.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v13" type="vd" depart="13.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v14" type="vd" depart="14.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v15" type="vd" depart="15.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v16" type="vd" depart="16.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v17" type="vd" depart="17.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v18" type="vd" depart="18.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v19" type="vd" depart="19.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v20" type="vd" depart="20.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v21" type="vd" depart="21.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v22" type="vd" depart="22.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v23" type="vd" depart="23.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v24" type="vd" depart="24.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v25" type="vd" depart="25.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v26" type="vd" depart="26.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v27" type="vd" depart="27.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v28" type="vd" depart="28.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+    <vehicle id="v29" type="vd" depart="29.00" route="rd" departLane="random" departPos="random" departSpeed="random"/>
+</routes>

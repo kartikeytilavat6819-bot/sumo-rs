@@ -1,0 +1,24 @@
+<routes>
+    <vType id="car" carFollowModel="Krauss" length="5.00" maxSpeed="13.89" accel="2.60" decel="4.50" sigma="0.5" lcSigma="2.0"/>
+    <route id="r" edges="A B C D"/>
+    <vehicle id="v00" type="car" depart="0.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v01" type="car" depart="2.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v02" type="car" depart="4.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v03" type="car" depart="6.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v04" type="car" depart="8.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v05" type="car" depart="10.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v06" type="car" depart="12.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v07" type="car" depart="14.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v08" type="car" depart="16.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v09" type="car" depart="18.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v10" type="car" depart="20.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v11" type="car" depart="22.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v12" type="car" depart="24.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v13" type="car" depart="26.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v14" type="car" depart="28.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v15" type="car" depart="30.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v16" type="car" depart="32.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v17" type="car" depart="34.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v18" type="car" depart="36.00" route="r" departLane="0" departSpeed="max"/>
+    <vehicle id="v19" type="car" depart="38.00" route="r" departLane="0" departSpeed="max"/>
+</routes>

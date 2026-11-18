@@ -1,0 +1,13 @@
+<routes>
+    <vType id="ped" vClass="pedestrian" length="0.25" width="0.50" maxSpeed="1.6" speedDev="0.3"/>
+    <person id="p00" type="ped" depart="0.00"><walk edges="AB BC"/></person>
+    <person id="p01" type="ped" depart="2.00"><walk edges="AB BC"/></person>
+    <person id="p02" type="ped" depart="4.00"><walk edges="AB BC"/></person>
+    <person id="p03" type="ped" depart="6.00"><walk edges="AB BC"/></person>
+    <person id="p04" type="ped" depart="8.00"><walk edges="AB BC"/></person>
+    <person id="p05" type="ped" depart="10.00"><walk edges="AB BC"/></person>
+    <person id="p06" type="ped" depart="12.00"><walk edges="AB BC"/></person>
+    <person id="p07" type="ped" depart="14.00"><walk edges="AB BC"/></person>
+    <person id="p08" type="ped" depart="16.00"><walk edges="AB BC"/></person>
+    <person id="p09" type="ped" depart="18.00"><walk edges="AB BC"/></person>
+</routes>
