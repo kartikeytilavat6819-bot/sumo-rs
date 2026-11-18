@@ -1,0 +1,11 @@
+<additional>
+    <vType id="EV" emissionClass="Energy/unknown">
+        <param key="has.battery.device" value="true"/>
+        <param key="device.battery.capacity" value="35000"/>
+        <param key="device.battery.chargeLevel" value="2000"/>
+        <param key="device.battery.stoppingThreshold" value="0.1"/>
+        <param key="device.battery.chargeLevelTable" value="0 0.3 0.7 1"/>
+        <param key="device.battery.chargeCurveTable" value="15000 15000 5000 500"/>
+    </vType>
+    <chargingStation id="cs0" lane="-103224#2_0" startPos="20" endPos="60" power="100000" efficiency="0.9" chargeInTransit="false" chargeDelay="0"/>
+</additional>
