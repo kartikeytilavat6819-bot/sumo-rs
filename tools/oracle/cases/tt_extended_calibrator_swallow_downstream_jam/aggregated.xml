@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T14:48:06.527596-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc55/tools/oracle/cases/tt_extended_calibrator_swallow_downstream_jam/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="5401"/>
+    </time>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+    <interval begin="0.00" end="3600.00" id="emissions">
+        <edge id="beg" sampledSeconds="33890.38" CO_abs="3355404.57" CO2_abs="250503429.47" HC_abs="22511.14" PMx_abs="24437.42" NOx_abs="98059.37" fuel_abs="81208691.65" electricity_abs="0.00"
+            CO_normed="6710.81" CO2_normed="501006.86" HC_normed="45.02" PMx_normed="48.87" NOx_normed="196.12" fuel_normed="162417.38" electricity_normed="0.00"
+            traveltime="23.87" CO_perVeh="2362.90" CO2_perVeh="176406.35" HC_perVeh="15.85" PMx_perVeh="17.21" NOx_perVeh="69.05" fuel_perVeh="57187.76" electricity_perVeh="0.00"/>
+        <edge id="beg2left" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+        <edge id="beg2right" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+        <edge id="end" sampledSeconds="194933.55" CO_abs="596.30" CO2_abs="299554777.88" HC_abs="4.16" PMx_abs="5071.87" NOx_abs="119250.93" fuel_abs="97114006.04" electricity_abs="0.00"
+            CO_normed="1.19" CO2_normed="599109.56" HC_normed="0.01" PMx_normed="10.14" NOx_normed="238.50" fuel_normed="194228.01" electricity_normed="0.00"
+            traveltime="500.00" CO_perVeh="1.53" CO2_perVeh="768351.01" HC_perVeh="0.01" PMx_perVeh="13.01" NOx_perVeh="305.88" fuel_perVeh="249095.16" electricity_perVeh="0.00"/>
+        <edge id="left" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+        <edge id="left2end" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+        <edge id="middle" sampledSeconds="395279.68" CO_abs="152854.18" CO2_abs="609130265.85" HC_abs="1063.92" PMx_abs="12268.83" NOx_abs="242470.62" fuel_abs="197476611.20" electricity_abs="0.00"
+            CO_normed="152.85" CO2_normed="609130.27" HC_normed="1.06" PMx_normed="12.27" NOx_normed="242.47" fuel_normed="197476.61" electricity_normed="0.00"
+            traveltime="815.93" CO_perVeh="315.52" CO2_perVeh="1257361.33" HC_perVeh="2.20" PMx_perVeh="25.33" NOx_perVeh="500.51" fuel_perVeh="407629.48" electricity_perVeh="0.00"/>
+        <edge id="rend" sampledSeconds="8270.58" CO_abs="898193.47" CO2_abs="66315810.10" HC_abs="6040.67" PMx_abs="6932.27" NOx_abs="26080.29" fuel_abs="21498426.64" electricity_abs="0.00"
+            CO_normed="1796.39" CO2_normed="132631.62" HC_normed="12.08" PMx_normed="13.86" NOx_normed="52.16" fuel_normed="42996.85" electricity_normed="0.00"
+            traveltime="23.05" CO_perVeh="2503.02" CO2_perVeh="184803.82" HC_perVeh="16.83" PMx_perVeh="19.32" NOx_perVeh="72.68" fuel_perVeh="59910.17" electricity_perVeh="0.00"/>
+        <edge id="right" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+        <edge id="right2end" sampledSeconds="0.00" CO_abs="0.00" CO2_abs="0.00" HC_abs="0.00" PMx_abs="0.00" NOx_abs="0.00" fuel_abs="0.00" electricity_abs="0.00"
+            CO_normed="0.00" CO2_normed="0.00" HC_normed="0.00" PMx_normed="0.00" NOx_normed="0.00" fuel_normed="0.00" electricity_normed="0.00"/>
+    </interval>
+</meandata>

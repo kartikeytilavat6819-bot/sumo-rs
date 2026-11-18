@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --end 5401 -a tools/oracle/cases/tt_extended_calibrator_vType_change_speedFactor_origDev0/input_additional.add.xml
