@@ -46,7 +46,7 @@ pub struct GeoConvHelper {
     orig_boundary: Boundary,
     conv_boundary: Boundary,
     /// C++ `myProjection`: set once the projection is known (`None` until initialised)
-    projection: Option<Etmerc>,
+    projection: Option<Projection>,
 }
 
 impl PartialEq for GeoConvHelper {
@@ -114,7 +114,7 @@ impl GeoConvHelper {
             "DHDN_UTM" => ProjectionMethod::DhdnUtm,
             _ => ProjectionMethod::Proj,
         };
-        let projection = if projection_method == ProjectionMethod::Proj { Etmerc::from_proj(&proj_string) } else { None };
+        let projection = if projection_method == ProjectionMethod::Proj { Projection::from_proj(&proj_string) } else { None };
         GeoConvHelper {
             proj_string,
             projection,
@@ -348,7 +348,7 @@ impl GeoConvHelper {
                 ProjectionMethod::Utm => {
                     let zone = (x + 180.) as i32 / 6 + 1;
                     self.proj_string = format!("+proj=utm +zone={zone} +ellps=WGS84 +datum=WGS84 +units=m +no_defs");
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = Etmerc::from_proj(&self.proj_string).map(Projection::Etmerc);
                 }
                 ProjectionMethod::Dhdn => {
                     let zone = (x / 3.) as i32;
@@ -357,7 +357,7 @@ impl GeoConvHelper {
                         return false;
                     }
                     self.proj_string = dhdn_proj_string(zone);
-                    self.projection = Etmerc::from_proj(&self.proj_string);
+                    self.projection = Etmerc::from_proj(&self.proj_string).map(Projection::Etmerc);
                 }
                 _ => {}
             }
@@ -482,6 +482,85 @@ impl GeoConvHelper {
         into.write_attr(SUMO_ATTR_ORIG_PROJ, escape_xml(self.get_proj_string(), false).as_str());
         into.close_tag("");
         into.lf();
+    }
+}
+
+/// The projections this build can instantiate from a proj.4 string.
+#[derive(Clone, Copy, Debug)]
+enum Projection {
+    Etmerc(Etmerc),
+    Merc(Merc),
+}
+
+impl Projection {
+    fn from_proj(proj: &str) -> Option<Projection> {
+        if let Some(m) = Merc::from_proj(proj) {
+            return Some(Projection::Merc(m));
+        }
+        Etmerc::from_proj(proj).map(Projection::Etmerc)
+    }
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        match self {
+            Projection::Etmerc(e) => e.fwd(lon, lat),
+            Projection::Merc(m) => m.fwd(lon, lat),
+        }
+    }
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        match self {
+            Projection::Etmerc(e) => e.inv(x, y),
+            Projection::Merc(m) => m.inv(x, y),
+        }
+    }
+}
+
+/// Spherical Mercator (`+proj=merc`), as used by web maps. PROJ's merc with
+/// `+a=6378137 +b=6378137 +lat_ts=0` is x=a*k0*lon, y=a*k0*ln(tan(pi/4+lat/2)).
+#[derive(Clone, Copy, Debug)]
+struct Merc {
+    a: f64,
+    k0: f64,
+    lon0: f64,
+    x0: f64,
+    y0: f64,
+}
+
+impl Merc {
+    fn from_proj(proj: &str) -> Option<Merc> {
+        let mut kind = None;
+        let mut a = None;
+        let mut lon0 = 0.;
+        let mut k0 = 1.;
+        let mut x0 = 0.;
+        let mut y0 = 0.;
+        for tok in proj.split_whitespace() {
+            let body = tok.strip_prefix('+')?;
+            let (key, val) = body.split_once('=').unwrap_or((body, ""));
+            match key {
+                "proj" => kind = Some(val),
+                "a" => a = Some(val.parse::<f64>().ok()?),
+                "lon_0" => lon0 = val.parse::<f64>().ok()?,
+                "k" | "k_0" => k0 = val.parse::<f64>().ok()?,
+                "x_0" => x0 = val.parse::<f64>().ok()?,
+                "y_0" => y0 = val.parse::<f64>().ok()?,
+                _ => {}
+            }
+        }
+        if kind? != "merc" {
+            return None;
+        }
+        Some(Merc { a: a?, k0, lon0: deg2rad(lon0), x0, y0 })
+    }
+    fn fwd(&self, lon: f64, lat: f64) -> (f64, f64) {
+        let k = self.a * self.k0;
+        let x = k * adjlon(lon - self.lon0);
+        let y = k * (PI / 4. + lat / 2.).tan().ln();
+        (x + self.x0, y + self.y0)
+    }
+    fn inv(&self, x: f64, y: f64) -> (f64, f64) {
+        let k = self.a * self.k0;
+        let lon = (x - self.x0) / k + self.lon0;
+        let lat = 2. * ((y - self.y0) / k).exp().atan() - PI / 2.;
+        (lon, lat)
     }
 }
 
