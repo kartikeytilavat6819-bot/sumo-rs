@@ -1,7 +1,7 @@
 # Rules for every sumo-rs agent (read first)
 
 - Repo: C:\Users\karti\sumo-rs (Rust port of SUMO 1.28.0). Create your worktree:
-  `git -C C:\Users\karti\sumo-rs worktree add .claude/worktrees/agent-<ID> -b worktree-agent-<ID> main` (main = f807000a or later).
+  `git -C C:\Users\karti\sumo-rs worktree add .claude/worktrees/agent-<ID> -b worktree-agent-<ID> main` (main = 21a266a7 or later).
   If your branch already exists, reuse its worktree and first `git merge origin/main` (fix conflicts faithfully).
   NEVER edit files under C:\Users\karti\sumo-rs\ directly (that is the lead's main checkout) — only inside your
   worktree C:\Users\karti\sumo-rs\.claude\worktrees\agent-<ID>\. Double-check paths before every edit.
@@ -27,9 +27,9 @@
     `bash tools/gcloud/vm_cpp_trace.sh <ID> <patch-file> [sumo|netconvert]` prints the path of an instrumented binary
     (patch = `git diff` against the official src/ tree, paths src/...). Never use it for references.
   * Remove agent_run.sh (and any trace code) in your final commit: it must never reach main.
-- Do NOT run gates on `main`. Main's numbers (f807000a, gated 2026-11-18): run_all PASS=900 FAIL=10 SKIP=239,
-  depart 15/15, duarouter oracle 50/52, netopts_new 55/55, dfrouter 6/6, activitygen 5/5, unit tests ok. Known failing rows (each has an owner; NOT
-  your regressions unless they are your target): out_bt/ref out_meandata/ref out_tls/ref elechybrid_overhead/ref emis_mmpevem_params/ref lc_lc2013_turnlanes_dur/ref meso_calibrator_edgedata/ref state_meso/ref taxi_greedy_shared/ref taxi_route_extension/ref duarouter_persontrip_walkfactor duarouter_intermodal_outputs opendriveOutput.
+- Do NOT run gates on `main`. Main's numbers (21a266a7, gated 2026-11-18): run_all PASS=988 FAIL=9 SKIP=280,
+  depart 15/15, duarouter oracle 50/52, netopts_new 55/55, dfrouter 6/6, activitygen 5/5, od2trips 8/8, marouter 5/5, unit tests ok. Known failing rows (each has an owner; NOT
+  your regressions unless they are your target): out_bt/ref out_meandata/ref out_tls/ref elechybrid_overhead/ref emis_mmpevem_params/ref lc_lc2013_turnlanes_dur/ref state_meso/ref taxi_greedy_shared/ref taxi_route_extension/ref duarouter_persontrip_walkfactor duarouter_intermodal_outputs opendriveOutput.
   run_all has a per-case sim timeout (SIM_TIMEOUT, default 600 s).
 - New case references: put an empty NEW_CASE file in the case dir, run tools/oracle/make_sim_refs.sh <case> (it then
   writes tripinfo+fcd+stat, all outputs run_all compares), delete NEW_CASE before committing. Merge main into your branch often.
