@@ -1,0 +1,1 @@
+--end 60 --seed 8008 --step-length 1 --time-to-teleport 300 --ignore-junction-blocker 5 --additional-files tools/oracle/cases/fuzz_8008/fuzz.add.xml

@@ -1,0 +1,36 @@
+<routes><vType id="v_passenger" vClass="passenger" laneChangeModel="SL2015" />
+    <vType id="w_bicycle" vClass="bicycle" laneChangeModel="SL2015" />
+    <vType id="fz_bus" vClass="bus" length="12" maxSpeed="13.89" /><vType id="fz_ped" vClass="pedestrian" length="0.25" width="0.5" maxSpeed="1.6" /><vehicle id="v0" type="v_passenger" depart="0.00" departLane="free" departSpeed="desired">
+        <route edges="C4C1 C1B1 B1B4 B4A1" />
+    </vehicle>
+    <vehicle id="w0" type="w_bicycle" depart="0.00" departLane="free" departSpeed="desired">
+        <route edges="B4A1 A1B1" />
+    </vehicle>
+    <route id="fz_busR" edges="C4C1 C1B1 B1B4 B4A1" /><vehicle id="v1" type="v_passenger" depart="2.50" departLane="free" departSpeed="desired">
+        <route edges="B4A1 A1B1 B1A1" />
+    </vehicle>
+    <vehicle id="v2" type="v_passenger" depart="5.00">
+        <route edges="B3B2 B2A1 A1B4 B4C4" />
+    </vehicle>
+    <flow id="fz_L1" type="fz_bus" route="fz_busR" line="L1" begin="5" end="250" period="60" departSpeed="max"><stop busStop="bs0" until="35" duration="5" /><stop busStop="bs1" until="150" /></flow><vehicle id="v3" type="v_passenger" depart="7.50">
+        <route edges="B2C2 C2C1 C1C4" />
+    </vehicle>
+    <vehicle id="w1" type="w_bicycle" depart="9.00">
+        <route edges="C2C1" />
+    </vehicle>
+    <vehicle id="v4" type="v_passenger" depart="10.00">
+        <route edges="C2C1 C1C2" />
+    </vehicle>
+    <vehicle id="v5" type="v_passenger" depart="12.50">
+        <route edges="B1B4 B4A1 A1B4" />
+    </vehicle>
+    <vehicle id="v6" type="v_passenger" depart="15.00">
+        <route edges="B3A1 A1B4 B4C4 C4B4" />
+    </vehicle>
+    <vehicle id="v7" type="v_passenger" depart="17.50">
+        <route edges="B4B1 B1C1 C1C4" />
+    </vehicle>
+    <vehicle id="w2" type="w_bicycle" depart="18.00">
+        <route edges="C4C1 C1B1 B1A1 A1B1" />
+    </vehicle>
+    </routes>
