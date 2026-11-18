@@ -1,0 +1,1 @@
+--xml-validation never --write-license --weight-files=tools/oracle/cases/duarouter_itt_duarouter_alternatives_iteration_bug1/input_weights.dump.xml -b 0 -e 86400 --route-files=tools/oracle/cases/duarouter_itt_duarouter_alternatives_iteration_bug1/input_alts.rou.alt.xml -o @DIR@/routes.rou.xml -v --ignore-errors
