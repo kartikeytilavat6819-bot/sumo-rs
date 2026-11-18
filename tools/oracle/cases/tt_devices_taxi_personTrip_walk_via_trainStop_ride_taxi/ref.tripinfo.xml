@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:48:49.769147-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/routes.rou"/>
+        <additional-files value="tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/input_additional.add.xml"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <routing>
+        <persontrip.transfer.taxi-walk value="ptStops"/>
+        <persontrip.transfer.walk-taxi value="ptStops"/>
+    </routing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <personinfo id="p0" depart="0.00" type="DEFAULT_PEDTYPE" speedFactor="1.00" duration="863.00" waitingTime="139.00" timeLoss="50.92" traveltime="724.00">
+        <walk depart="0.00" departPos="0.00" arrival="8.00" arrivalPos="10.00" duration="8.00" routeLength="10.00" timeLoss="0.80" maxSpeed="1.39" waitingTime="0.00"/>
+        <access stop="stopB_S" depart="8.00" arrival="44.00" duration="36.00" routeLength="50.07"/>
+        <access stop="stopB_S" depart="44.00" arrival="121.00" duration="77.00" routeLength="107.28"/>
+        <walk depart="121.00" departPos="477.02" arrival="216.00" arrivalPos="894.80" duration="95.00" routeLength="118.86" timeLoss="9.42" maxSpeed="1.39" waitingTime="0.00"/>
+        <ride waitingTime="139.00" vehicle="trip_0" depart="355.00" arrival="534.00" arrivalPos="904.80" duration="179.00" routeLength="1501.21" timeLoss="6.90"/>
+        <walk depart="534.00" departPos="904.80" arrival="863.00" arrivalPos="494.80" duration="329.00" routeLength="410.00" timeLoss="33.80" maxSpeed="1.39" waitingTime="0.00"/>
+    </personinfo>
+</tripinfos>

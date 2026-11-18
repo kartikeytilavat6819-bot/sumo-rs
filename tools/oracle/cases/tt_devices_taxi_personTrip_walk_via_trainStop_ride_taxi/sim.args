@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --persontrip.transfer.walk-taxi ptStops --persontrip.transfer.taxi-walk ptStops -a tools/oracle/cases/tt_devices_taxi_personTrip_walk_via_trainStop_ride_taxi/input_additional.add.xml

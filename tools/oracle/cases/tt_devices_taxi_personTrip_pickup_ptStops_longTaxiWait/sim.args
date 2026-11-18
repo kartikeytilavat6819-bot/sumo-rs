@@ -1,0 +1,1 @@
+--write-license --default.speeddev 0 --default.departspeed 0 --default.departlane first --no-duration-log --persontrip.transfer.walk-taxi ptStops --persontrip.taxi.waiting-time 3600 -a tools/oracle/cases/tt_devices_taxi_personTrip_pickup_ptStops_longTaxiWait/input_additional.add.xml

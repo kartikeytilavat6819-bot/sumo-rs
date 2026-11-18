@@ -1,0 +1,617 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-18T12:48:45.476537-05:00 by Eclipse SUMO sumo 1.28.0
+This data file and the accompanying materials
+are made available under the terms of the Eclipse Public License v2.0
+which accompanies this distribution, and is available at
+http://www.eclipse.org/legal/epl-v20.html
+This file may also be made available under the following Secondary
+Licenses when the conditions for such availability set forth in the Eclipse
+Public License 2.0 are satisfied: GNU General Public License, version 2
+or later which is available at
+https://www.gnu.org/licenses/old-licenses/gpl-2.0-standalone.html
+SPDX-License-Identifier: EPL-2.0 OR GPL-2.0-or-later
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/tt_devices_taxi_personTrip_short/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/tt_devices_taxi_personTrip_short/routes.rou"/>
+    </input>
+
+    <output>
+        <write-license value="true"/>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_short/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_short/ref.tripinfo.xml"/>
+        <tripinfo-output.write-unfinished value="true"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-oc54/tools/oracle/cases/tt_devices_taxi_personTrip_short/ref.stat.xml"/>
+    </output>
+
+    <processing>
+        <default.departspeed value="0"/>
+        <default.departlane value="first"/>
+        <default.speeddev value="0"/>
+    </processing>
+
+    <report>
+        <duration-log.disable value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<fcd-export xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/fcd_file.xsd">
+    <timestep time="0.00">
+        <vehicle id="trip_0" x="10.30" y="-1.60" angle="90.00" type="taxi" speed="0.00" pos="5.10" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="1.00">
+        <vehicle id="trip_0" x="12.81" y="-1.60" angle="90.00" type="taxi" speed="2.51" pos="7.61" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="2.00">
+        <vehicle id="trip_0" x="17.47" y="-1.60" angle="90.00" type="taxi" speed="4.66" pos="12.27" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="3.00">
+        <vehicle id="trip_0" x="23.50" y="-1.60" angle="90.00" type="taxi" speed="6.04" pos="18.30" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="4.00">
+        <vehicle id="trip_0" x="31.92" y="-1.60" angle="90.00" type="taxi" speed="8.42" pos="26.72" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="5.00">
+        <vehicle id="trip_0" x="41.89" y="-1.60" angle="90.00" type="taxi" speed="9.96" pos="36.69" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="6.00">
+        <vehicle id="trip_0" x="53.65" y="-1.60" angle="90.00" type="taxi" speed="11.76" pos="48.45" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="7.00">
+        <vehicle id="trip_0" x="66.94" y="-1.60" angle="90.00" type="taxi" speed="13.29" pos="61.74" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="8.00">
+        <vehicle id="trip_0" x="80.11" y="-1.60" angle="90.00" type="taxi" speed="13.17" pos="74.91" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="9.00">
+        <vehicle id="trip_0" x="93.63" y="-1.60" angle="90.00" type="taxi" speed="13.52" pos="88.43" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="10.00">
+        <vehicle id="trip_0" x="107.45" y="-1.60" angle="90.00" type="taxi" speed="13.82" pos="102.25" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="11.00">
+        <vehicle id="trip_0" x="121.25" y="-1.60" angle="90.00" type="taxi" speed="13.80" pos="116.05" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="12.00">
+        <vehicle id="trip_0" x="134.22" y="-1.60" angle="90.00" type="taxi" speed="12.97" pos="129.02" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="13.00">
+        <vehicle id="trip_0" x="147.51" y="-1.60" angle="90.00" type="taxi" speed="13.29" pos="142.31" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="14.00">
+        <vehicle id="trip_0" x="160.13" y="-1.60" angle="90.00" type="taxi" speed="12.62" pos="154.93" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="15.00">
+        <vehicle id="trip_0" x="173.37" y="-1.60" angle="90.00" type="taxi" speed="13.24" pos="168.17" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="16.00">
+        <vehicle id="trip_0" x="186.67" y="-1.60" angle="90.00" type="taxi" speed="13.30" pos="181.47" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="17.00">
+        <vehicle id="trip_0" x="199.58" y="-1.60" angle="90.00" type="taxi" speed="12.91" pos="194.38" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="18.00">
+        <vehicle id="trip_0" x="213.20" y="-1.60" angle="90.00" type="taxi" speed="13.63" pos="208.00" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="19.00">
+        <vehicle id="trip_0" x="226.46" y="-1.60" angle="90.00" type="taxi" speed="13.25" pos="221.26" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="20.00">
+        <vehicle id="trip_0" x="239.12" y="-1.60" angle="90.00" type="taxi" speed="12.66" pos="233.92" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="21.00">
+        <vehicle id="trip_0" x="251.95" y="-1.60" angle="90.00" type="taxi" speed="12.83" pos="246.75" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="22.00">
+        <vehicle id="trip_0" x="265.10" y="-1.60" angle="90.00" type="taxi" speed="13.15" pos="259.90" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="23.00">
+        <vehicle id="trip_0" x="278.39" y="-1.60" angle="90.00" type="taxi" speed="13.29" pos="273.19" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="24.00">
+        <vehicle id="trip_0" x="288.39" y="-1.60" angle="90.00" type="taxi" speed="9.99" pos="283.19" lane="A0B0_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="25.00">
+        <vehicle id="trip_0" x="295.51" y="-1.21" angle="85.55" type="taxi" speed="7.15" pos="2.74" lane=":B0_7_0" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="26.00">
+        <vehicle id="trip_0" x="301.01" y="3.28" angle="41.44" type="taxi" speed="7.48" pos="4.29" lane=":B0_10_0" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="27.00">
+        <vehicle id="trip_0" x="301.60" y="10.81" angle="2.26" type="taxi" speed="7.58" pos="3.61" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="28.00">
+        <vehicle id="trip_0" x="301.60" y="20.91" angle="0.00" type="taxi" speed="10.10" pos="13.71" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="29.00">
+        <vehicle id="trip_0" x="301.60" y="32.65" angle="0.00" type="taxi" speed="11.73" pos="25.45" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="30.00">
+        <vehicle id="trip_0" x="301.60" y="45.49" angle="0.00" type="taxi" speed="12.84" pos="38.29" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="31.00">
+        <vehicle id="trip_0" x="301.60" y="59.30" angle="0.00" type="taxi" speed="13.82" pos="52.10" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="32.00">
+        <vehicle id="trip_0" x="301.60" y="72.20" angle="0.00" type="taxi" speed="12.90" pos="65.00" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="33.00">
+        <vehicle id="trip_0" x="301.60" y="85.37" angle="0.00" type="taxi" speed="13.17" pos="78.17" lane="B0B1_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="34.00">
+        <vehicle id="trip_0" x="301.60" y="98.53" angle="0.00" type="taxi" speed="13.16" pos="5.73" lane=":B1_9_0" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="35.00">
+        <vehicle id="trip_0" x="301.60" y="111.96" angle="0.00" type="taxi" speed="13.43" pos="4.76" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="36.00">
+        <vehicle id="trip_0" x="301.60" y="125.83" angle="0.00" type="taxi" speed="13.87" pos="18.63" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="37.00">
+        <vehicle id="trip_0" x="301.60" y="138.48" angle="0.00" type="taxi" speed="12.65" pos="31.28" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="38.00">
+        <vehicle id="trip_0" x="301.60" y="151.97" angle="0.00" type="taxi" speed="13.49" pos="44.77" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="39.00">
+        <vehicle id="trip_0" x="301.60" y="165.53" angle="0.00" type="taxi" speed="13.56" pos="58.33" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="40.00">
+        <vehicle id="trip_0" x="301.60" y="178.12" angle="0.00" type="taxi" speed="12.59" pos="70.92" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="41.00">
+        <vehicle id="trip_0" x="301.60" y="186.91" angle="0.00" type="taxi" speed="8.79" pos="79.71" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="42.00">
+        <vehicle id="trip_0" x="301.60" y="191.21" angle="0.00" type="taxi" speed="4.29" pos="84.01" lane="B1B2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="43.00">
+        <vehicle id="trip_0" x="302.67" y="196.45" angle="12.62" type="taxi" speed="5.47" pos="3.87" lane=":B2_3_0" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="44.00">
+        <vehicle id="trip_0" x="308.29" y="198.40" angle="77.17" type="taxi" speed="6.25" pos="1.09" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="45.00">
+        <vehicle id="trip_0" x="317.01" y="198.40" angle="90.00" type="taxi" speed="8.72" pos="9.81" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="46.00">
+        <vehicle id="trip_0" x="327.25" y="198.40" angle="90.00" type="taxi" speed="10.24" pos="20.05" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="47.00">
+        <vehicle id="trip_0" x="339.54" y="198.40" angle="90.00" type="taxi" speed="12.29" pos="32.34" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="48.00">
+        <vehicle id="trip_0" x="352.79" y="198.40" angle="90.00" type="taxi" speed="13.25" pos="45.59" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="49.00">
+        <vehicle id="trip_0" x="366.12" y="198.40" angle="90.00" type="taxi" speed="13.33" pos="58.92" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="50.00">
+        <vehicle id="trip_0" x="379.11" y="198.40" angle="90.00" type="taxi" speed="12.99" pos="71.91" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="51.00">
+        <vehicle id="trip_0" x="392.65" y="198.40" angle="90.00" type="taxi" speed="13.55" pos="85.45" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="52.00">
+        <vehicle id="trip_0" x="405.35" y="198.40" angle="90.00" type="taxi" speed="12.70" pos="98.15" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="53.00">
+        <vehicle id="trip_0" x="418.91" y="198.40" angle="90.00" type="taxi" speed="13.55" pos="111.71" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="54.00">
+        <vehicle id="trip_0" x="431.79" y="198.40" angle="90.00" type="taxi" speed="12.88" pos="124.59" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="55.00">
+        <vehicle id="trip_0" x="445.58" y="198.40" angle="90.00" type="taxi" speed="13.79" pos="138.38" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="56.00">
+        <vehicle id="trip_0" x="458.96" y="198.40" angle="90.00" type="taxi" speed="13.38" pos="151.76" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="57.00">
+        <vehicle id="trip_0" x="472.79" y="198.40" angle="90.00" type="taxi" speed="13.83" pos="165.59" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="58.00">
+        <vehicle id="trip_0" x="485.71" y="198.40" angle="90.00" type="taxi" speed="12.92" pos="178.51" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="59.00">
+        <vehicle id="trip_0" x="499.21" y="198.40" angle="90.00" type="taxi" speed="13.50" pos="192.01" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="60.00">
+        <vehicle id="trip_0" x="512.39" y="198.40" angle="90.00" type="taxi" speed="13.18" pos="205.19" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="61.00">
+        <vehicle id="trip_0" x="525.37" y="198.40" angle="90.00" type="taxi" speed="12.98" pos="218.17" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="62.00">
+        <vehicle id="trip_0" x="538.18" y="198.40" angle="90.00" type="taxi" speed="12.81" pos="230.98" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="63.00">
+        <vehicle id="trip_0" x="551.20" y="198.40" angle="90.00" type="taxi" speed="13.02" pos="244.00" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="64.00">
+        <vehicle id="trip_0" x="564.10" y="198.40" angle="90.00" type="taxi" speed="12.91" pos="256.90" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="65.00">
+        <vehicle id="trip_0" x="574.81" y="198.40" angle="90.00" type="taxi" speed="10.70" pos="267.61" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="66.00">
+        <vehicle id="trip_0" x="581.01" y="198.40" angle="90.00" type="taxi" speed="6.20" pos="273.81" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="67.00">
+        <vehicle id="trip_0" x="582.71" y="198.40" angle="90.00" type="taxi" speed="1.70" pos="275.51" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="68.00">
+        <vehicle id="trip_0" x="582.77" y="198.40" angle="90.00" type="taxi" speed="0.05" pos="275.57" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="69.00">
+        <vehicle id="trip_0" x="582.79" y="198.40" angle="90.00" type="taxi" speed="0.03" pos="275.59" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="70.00">
+        <vehicle id="trip_0" x="582.80" y="198.40" angle="90.00" type="taxi" speed="0.01" pos="275.60" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.80" angle="0.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="71.00">
+        <vehicle id="trip_0" x="582.80" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="275.60" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="582.80" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="275.60" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="72.00">
+        <vehicle id="trip_0" x="585.32" y="198.40" angle="90.00" type="taxi" speed="2.52" pos="278.12" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="585.32" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="2.52" pos="278.12" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="73.00">
+        <vehicle id="trip_0" x="590.44" y="198.40" angle="90.00" type="taxi" speed="5.12" pos="283.24" lane="B2C2_1" slope="0.00"/>
+        <person id="p0" x="590.44" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="5.12" pos="283.24" edge="B2C2" slope="0.00"/>
+    </timestep>
+    <timestep time="74.00">
+        <vehicle id="trip_0" x="598.04" y="198.40" angle="90.00" type="taxi" speed="7.59" pos="5.24" lane=":C2_7_0" slope="0.00"/>
+        <person id="p0" x="598.04" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="7.59" pos="5.24" edge=":C2_7" slope="0.00"/>
+    </timestep>
+    <timestep time="75.00">
+        <vehicle id="trip_0" x="607.18" y="198.40" angle="90.00" type="taxi" speed="9.14" pos="14.38" lane=":C2_7_0" slope="0.00"/>
+        <person id="p0" x="607.18" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="9.14" pos="14.38" edge=":C2_7" slope="0.00"/>
+    </timestep>
+    <timestep time="76.00">
+        <vehicle id="trip_0" x="613.48" y="198.40" angle="90.00" type="taxi" speed="6.30" pos="6.28" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="613.48" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="6.30" pos="6.28" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="77.00">
+        <vehicle id="trip_0" x="616.58" y="198.40" angle="90.00" type="taxi" speed="3.09" pos="9.38" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="616.58" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="3.09" pos="9.38" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="78.00">
+        <vehicle id="trip_0" x="616.98" y="198.40" angle="90.00" type="taxi" speed="0.40" pos="9.78" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="616.98" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.40" pos="9.78" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="79.00">
+        <vehicle id="trip_0" x="617.09" y="198.40" angle="90.00" type="taxi" speed="0.11" pos="9.89" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.09" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.11" pos="9.89" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="80.00">
+        <vehicle id="trip_0" x="617.20" y="198.40" angle="90.00" type="taxi" speed="0.10" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.10" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="81.00">
+        <vehicle id="trip_0" x="617.20" y="198.40" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="198.40" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="82.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="83.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="84.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="85.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="86.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="87.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="88.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="89.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="90.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="91.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="92.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="93.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="94.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="95.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="96.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="97.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="98.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="99.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="100.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="101.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="102.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="103.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="104.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="105.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="106.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="107.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="108.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="109.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="110.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="111.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="112.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="113.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="114.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="115.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="116.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="117.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="118.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="119.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="120.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="121.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="122.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="123.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="124.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="125.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="126.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="127.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="128.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="129.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="130.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="131.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="132.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="133.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="134.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="135.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="136.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="137.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="138.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="139.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="140.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+        <person id="p0" x="617.20" y="192.60" angle="90.00" type="DEFAULT_PEDTYPE" speed="0.00" pos="10.00" edge="C2D2" slope="0.00"/>
+    </timestep>
+    <timestep time="141.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="142.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+    </timestep>
+    <timestep time="143.00">
+        <vehicle id="trip_0" x="617.20" y="192.60" angle="90.00" type="taxi" speed="0.00" pos="10.00" lane="C2D2_1" slope="0.00"/>
+    </timestep>
+</fcd-export>
