@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:17.834071-05:00 by Eclipse SUMO netconvert 1.28.0
+<netconvertConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/netconvertConfiguration.xsd">
+
+    <input>
+        <node-files value="tools/oracle/cases/ped_ride_line_select/ped_ride_line_select.nod.xml"/>
+        <edge-files value="tools/oracle/cases/ped_ride_line_select/ped_ride_line_select.edg.xml"/>
+    </input>
+
+    <output>
+        <output-file value="tools/oracle/cases/ped_ride_line_select/ref_simple.net.xml"/>
+    </output>
+
+</netconvertConfiguration>
+-->
+
+<net version="1.20" junctionCornerDetail="5" limitTurnSpeed="5.50" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/net_file.xsd">
+
+    <location netOffset="0.00,0.00" convBoundary="0.00,0.00,400.00,0.00" origBoundary="0.00,0.00,400.00,0.00" projParameter="!"/>
+
+    <edge id=":A_0" function="internal">
+        <lane id=":A_0_0" index="0" speed="13.89" length="0.10" shape="200.00,-1.60 200.00,-1.60"/>
+    </edge>
+
+    <edge id="AE" from="A" to="E" priority="-1">
+        <lane id="AE_0" index="0" speed="13.89" length="200.00" shape="200.00,-1.60 400.00,-1.60"/>
+    </edge>
+    <edge id="WA" from="W" to="A" priority="-1">
+        <lane id="WA_0" index="0" speed="13.89" length="200.00" shape="0.00,-1.60 200.00,-1.60"/>
+    </edge>
+
+    <junction id="A" type="priority" x="200.00" y="0.00" incLanes="WA_0" intLanes=":A_0_0" shape="200.00,0.00 200.00,-3.20 200.00,0.00">
+        <request index="0" response="0" foes="0" cont="0"/>
+    </junction>
+    <junction id="E" type="dead_end" x="400.00" y="0.00" incLanes="AE_0" intLanes="" shape="400.00,-3.20 400.00,0.00"/>
+    <junction id="W" type="dead_end" x="0.00" y="0.00" incLanes="" intLanes="" shape="0.00,0.00 0.00,-3.20"/>
+
+    <connection from="WA" to="AE" fromLane="0" toLane="0" via=":A_0_0" dir="s" state="M"/>
+
+    <connection from=":A_0" to="AE" fromLane="0" toLane="0" dir="s" state="M"/>
+
+</net>

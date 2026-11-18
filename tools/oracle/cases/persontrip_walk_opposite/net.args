@@ -1,0 +1,1 @@
+-n tools/oracle/cases/persontrip_walk_opposite/persontrip_walk_opposite.nod.xml -e tools/oracle/cases/persontrip_walk_opposite/persontrip_walk_opposite.edg.xml --sidewalks.guess

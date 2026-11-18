@@ -1,0 +1,22 @@
+<routes>
+    <vType id="truck" vClass="truck" length="10.00" maxSpeed="13.89" accel="1.30" decel="4.00" containerCapacity="1"/>
+    <route id="AB" edges="A B"/>
+    <!-- stop cs0 waits until t=30 (until) for a container; capacity 1 forces the next containers to wait for truck1 -->
+    <vehicle id="truck0" type="truck" line="truckline" depart="0" route="AB">
+        <stop containerStop="cs0" until="30" triggered="container"/>
+        <stop containerStop="cs1" duration="15"/>
+    </vehicle>
+    <vehicle id="truck1" type="truck" line="truckline" depart="100" route="AB">
+        <stop containerStop="cs0" duration="8" triggered="container"/>
+        <stop containerStop="cs1" until="140"/>
+    </vehicle>
+    <container id="u0" depart="10" departPos="110">
+        <transport from="A" to="B" lines="truckline" arrivalPos="110"/>
+    </container>
+    <container id="u1" depart="20" departPos="110">
+        <transport from="A" to="B" lines="truckline" arrivalPos="115"/>
+    </container>
+    <container id="u2" depart="50" departPos="110">
+        <transport from="A" to="B" lines="truckline" arrivalPos="120"/>
+    </container>
+</routes>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:35:28.467830-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/container_stop_until/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/container_stop_until/routes.rou"/>
+        <additional-files value="tools/oracle/cases/container_stop_until/container_stop_until.add.xml"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/container_stop_until/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/container_stop_until/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z23/tools/oracle/cases/container_stop_until/ref.stat.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<tripinfos xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/tripinfo_file.xsd">
+    <containerinfo id="u0" depart="10.00" type="DEFAULT_CONTAINERTYPE" duration="140.00" waitingTime="93.00" timeLoss="5.18" traveltime="47.00">
+        <transport waitingTime="93.00" vehicle="truck0" depart="103.00" arrival="150.00" arrivalPos="139.97" duration="47.00" routeLength="500.13" timeLoss="5.18"/>
+    </containerinfo>
+    <containerinfo id="u1" depart="20.00" type="DEFAULT_CONTAINERTYPE" duration="230.00" waitingTime="184.00" timeLoss="3.48" traveltime="46.00">
+        <transport waitingTime="184.00" vehicle="truck1" depart="204.00" arrival="250.00" arrivalPos="140.00" duration="46.00" routeLength="500.10" timeLoss="3.48"/>
+    </containerinfo>
+    <tripinfo id="truck0" depart="0.00" departLane="A_0" departPos="10.10" departSpeed="13.89" departDelay="0.00" arrival="272.00" arrivalLane="B_0" arrivalPos="500.00" arrivalSpeed="13.76" duration="272.00" routeLength="990.00" waitingTime="2.00" waitingCount="2" stopTime="180.00" timeLoss="8.38" rerouteNo="0" devices="tripinfo_truck0 fcd_truck0 container_truck0" vType="truck" speedFactor="1.03" vaporized=""/>
+    <tripinfo id="truck1" depart="100.00" departLane="A_0" departPos="10.10" departSpeed="13.46" departDelay="0.00" arrival="373.00" arrivalLane="B_0" arrivalPos="500.00" arrivalSpeed="13.10" duration="273.00" routeLength="990.00" waitingTime="0.00" waitingCount="0" stopTime="180.00" timeLoss="6.51" rerouteNo="0" devices="tripinfo_truck1 fcd_truck1 container_truck1" vType="truck" speedFactor="0.97" vaporized=""/>
+</tripinfos>
