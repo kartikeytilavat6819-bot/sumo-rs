@@ -19,7 +19,7 @@ normalize() { grep -v 'generated on' "$1" | sed -E 's#/(ref|cand)/#/SIDE/#g'; }
 
 gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
   local s=$1 d=$2 mode lanes jt nil p e sidewalks feat algo rf rep rmloop taz unsorted
-  local maxalt rcm wf vt flows igerr randflow seed input
+  local maxalt rcm wf vt flows igerr randflow seed input x xkeep
   mkdir -p "$d"; RANDOM=$s; r 1; r 1; r 1   # warm-up
   r 6; algo=(dijkstra astar CH CHWrapper CCH arcflag); algo=${algo[$R]}
   r 3; mode=(grid grid spider rand); mode=${mode[$R]}
@@ -52,12 +52,15 @@ gen_case() {  # gen_case <seed> <dir>; prints the drawn parameters
 
   # ---- random option draws ----
   r 4; local rfi=$R; local rfs=(1.0 1.3 2.0 3.5); rf=${rfs[$rfi]}
+  if [ $algo = arcflag ]; then rf=1.0; fi   # random factor crashes official arcflag KD-tree
   r 4; rep=$R      # 0 => --repair
   r 4; rmloop=$R   # 0 => --remove-loops
   r 4; taz=$R      # 0 => --with-taz (needs an additional file)
   r 4; unsorted=$R # 0 => --unsorted-input
   r 3; maxalt=$R; maxalt=$((maxalt + 1))
-  r 4; rcm=$R; local rcms=(none logit gawron logit); rcm=${rcms[$rcm]}
+  r 5; rcm=$R; local rcms=(none logit gawron logit lohse); rcm=${rcms[$rcm]}
+  r 7; local xs=("" "--write-costs true" "--route-length true" "--exit-times true" "--weights.priority-factor 0.5" "--scale 0.5" "--scale 2"); x=${xs[$R]}
+  r 4; xkeep=$R
   r 3; wf=$R       # 0 => weight file
   r 4; vt=$R       # 0 => vType with speedFactor/vClass
   r 3; flows=$R    # 0 => use --flow-files instead of --trip-files
@@ -120,8 +123,10 @@ PYEOF
   fi
 
   local a="--net-file $d/ref_simple.net.xml $input --seed $seed --output-file @DIR@/routes.rou.xml --no-step-log true"
-  a="$a --routing-algorithm $algo"
+  a="$a --routing-algorithm $algo $x"
   [ "$rf" != 1.0 ] && a="$a --weights.random-factor $rf"
+  [ $xkeep = 0 ] && [ $maxalt -gt 1 ] && a="$a --keep-all-routes true"
+  [ $xkeep = 1 ] && [ $flows = 0 ] && a="$a --keep-flows true"
   [ $rep = 0 ] && a="$a --repair true"
   [ $rmloop = 0 ] && a="$a --remove-loops true"
   [ $unsorted = 0 ] && a="$a --unsorted-input true"
