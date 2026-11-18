@@ -14,27 +14,27 @@ OFF=${SUMO_PRISTINE_BIN:?}; OURS=${CARGO_TARGET_DIR:-/tmp/target}/debug
 PY=$(command -v python3 || command -v python)
 export PATH="$OFF:$PATH"            # randomTrips finds the official duarouter through PATH/SUMO_HOME
 OUT=${FUZZ_OUT:-/tmp/fuzz_sim}; mkdir -p "$OUT"
-pick() { echo $(( ($1 * $2 + $3) % $4 )); }   # pick seed mult add mod
+r() { R=$(( RANDOM % $1 )); }   # bash RANDOM is deterministic after RANDOM=<seed>; no subshell, or the stream would not advance
 
 gen_case() {  # gen_case <seed> <dir>; prints the parameter string
   local s=$1 d=$2 mode lanes jt nil p ff vc step lc lat ttp ped
-  mkdir -p "$d"
-  mode=(grid grid spider rand); mode=${mode[$(pick $s 7 1 4)]}
-  lanes=$(( $(pick $s 5 2 3) + 1 ))
-  jt=(priority traffic_light right_before_left allway_stop); jt=${jt[$(pick $s 3 0 4)]}
-  nil=$(pick $s 11 3 2)
+  mkdir -p "$d"; RANDOM=$s
+  r 4; mode=(grid grid spider rand); mode=${mode[$R]}
+  r 3; lanes=$((R + 1))
+  r 4; jt=(priority traffic_light right_before_left allway_stop); jt=${jt[$R]}
+  r 2; nil=$R
   local net="--default.lanenumber $lanes --default-junction-type $jt --seed $s"
   [ $nil = 1 ] && net="$net --no-internal-links"
   case $mode in
-    grid)   net="--grid --grid.number $(( $(pick $s 3 1 3) + 2 )) --grid.length 150 $net";;
+    grid)   r 3; net="--grid --grid.number $((R + 2)) --grid.length 150 $net";;
     spider) net="--spider --spider.arm-number 4 --spider.circle-number 2 --spider.space-radius 150 $net";;
     rand)   net="--rand --rand.iterations 14 --rand.max-distance 300 --rand.grid $net";;
   esac
   "$OFF/netgenerate" $net -o "$d/ref_simple.net.xml" >"$d/gen.log" 2>&1 || { echo "GENFAIL(netgenerate)"; return 1; }
-  p=(3.5 4 5 6); p=${p[$(pick $s 13 1 4)]}
-  ff=(1 2 5 10); ff=${ff[$(pick $s 17 2 4)]}
-  vc=(passenger passenger bus truck passenger delivery); vc=${vc[$(pick $s 19 0 6)]}
-  ped=$(pick $s 23 5 4)    # 0 => also persons
+  r 4; p=(3.5 4 5 6); p=${p[$R]}
+  r 4; ff=(1 2 5 10); ff=${ff[$R]}
+  r 6; vc=(passenger passenger bus truck passenger delivery); vc=${vc[$R]}
+  r 4; ped=$R    # 0 => also persons
   local rt="-n $d/ref_simple.net.xml -e 200 --seed $s --fringe-factor $ff --validate"
   "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p $p --vehicle-class $vc --prefix v \
       -o "$d/trips.xml" -r "$d/veh.rou.xml" >"$d/rt.log" 2>&1 || { echo "GENFAIL(randomTrips)"; return 1; }
@@ -43,25 +43,26 @@ gen_case() {  # gen_case <seed> <dir>; prints the parameter string
     "$PY" "$SUMO_HOME/tools/randomTrips.py" $rt -p 25 --pedestrians --prefix p -o "$d/ptrips.xml" -r "$d/ped.rou.xml" >>"$d/rt.log" 2>&1 \
       && rf="$d/veh.rou.xml,$d/ped.rou.xml"
   fi
+  r 4; lc=(LC2013 SL2015 LC2013 default); lc=${lc[$R]}
   # merge into one routes.rou, sorted by depart (run_all takes a single routes.rou)
-  "$PY" - "$rf" "$d/routes.rou" <<'PYEOF'
+  "$PY" - "$rf" "$d/routes.rou" "$lc" <<'PYEOF'
 import sys, xml.etree.ElementTree as ET
 items = []; types = []
 for f in sys.argv[1].split(","):
     for e in ET.parse(f).getroot():
         (types if e.tag in ("vType", "vTypeDistribution") else items).append(e)
+for t in types:
+    if sys.argv[3] != "default": t.set("laneChangeModel", sys.argv[3])
 items.sort(key=lambda e: float(e.get("depart", e.get("begin", "0"))))
 r = ET.Element("routes"); r.extend(types); r.extend(items)
 ET.ElementTree(r).write(sys.argv[2])
 PYEOF
-  step=(1 0.5); step=${step[$(pick $s 29 1 2)]}
-  lc=(LC2013 SL2015 LC2013 default); lc=${lc[$(pick $s 31 0 4)]}
-  lat=$(pick $s 37 2 4); ttp=(300 -1 60); ttp=${ttp[$(pick $s 41 1 3)]}
+  r 2; step=(1 0.5); step=${step[$R]}
+  r 4; lat=$R; r 3; ttp=(300 -1 60); ttp=${ttp[$R]}
   local a="--end 300 --seed $s --step-length $step --time-to-teleport $ttp"
-  [ $lc != default ] && a="$a --lanechange.model $lc"
   [ $lat = 0 ] && a="$a --lateral-resolution 0.8"
   echo "$a" > "$d/sim.args"
-  echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped | $a"
+  echo "$mode lanes=$lanes jt=$jt nil=$nil p=$p ff=$ff vc=$vc ped=$ped lc=$lc | $a"
 }
 
 if [ "${1:-}" = "--gen" ]; then gen_case "$2" "$3"; exit $?; fi
@@ -122,7 +123,7 @@ PYEOF
   echo "  --- routes.rou ($d)"; cat "$d/routes.rou"; echo; echo "  ---"
 }
 
-declare -A SEEN; FAILS=""; P=0; F=0
+set +u; declare -A SEEN; FAILS=""; P=0; F=0
 for ((s = FIRST; s < FIRST + N; s++)); do
   [ $(( $(date +%s) - START )) -gt $(( BUDGET * 6 / 10 )) ] && { echo "budget: stopped fuzzing at seed $s"; break; }
   d=$OUT/seed$s; rm -rf "$d"
