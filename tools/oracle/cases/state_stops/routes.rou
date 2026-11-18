@@ -1,0 +1,19 @@
+<routes>
+    <route id="r" edges="E0 E1 E2"/>
+    <vehicle id="w0" route="r" depart="0">
+        <stop edge="E1" startPos="100" endPos="200" speed="5"/>
+    </vehicle>
+    <vehicle id="w1" route="r" depart="4">
+        <stop edge="E0" startPos="200" endPos="260" speed="3"/>
+        <stop edge="E2" startPos="50" endPos="120" speed="8"/>
+    </vehicle>
+    <vehicle id="p0" route="r" depart="8">
+        <stop lane="E1_0" endPos="250" duration="15" parking="true"/>
+    </vehicle>
+    <vehicle id="s0" route="r" depart="12">
+        <stop edge="E2" startPos="50" endPos="100" duration="5"/>
+    </vehicle>
+    <flow id="f" route="r" begin="14" end="60" period="5">
+        <stop edge="E1" startPos="150" endPos="220" speed="6"/>
+    </flow>
+</routes>

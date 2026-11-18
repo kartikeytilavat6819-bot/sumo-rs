@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:21.640422-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_lanechange/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_lanechange/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_lanechange/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_lanechange/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_lanechange/ref.stat.xml"/>
+        <save-state.times value="100"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_lanechange/ref_sim_out/state_100.xml"/>
+    </output>
+
+    <time>
+        <end value="200"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="micro" version="1.28.0" time="100.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="r0" state="1" edges="E0 E1"/>
+    <route id="rr" state="1" edges="ramp E1"/>
+    <delay number="5" begin="5" end="0" depart="0.00" time="0.00" speedFactor="1.08" decel="4.50"/>
+    <vType id="lcA" length="5.00" maxSpeed="13.89" laneChangeModel="LC2013" lcStrategic="1" lcCooperative="1" lcSpeedGain="1" lcKeepRight="1" lcOpposite="1" lcLookaheadLeft="2" lcSpeedGainRight="0.1" accel="2.60" decel="4.50"/>
+    <vType id="lcB" length="5.00" maxSpeed="13.89" laneChangeModel="LC2013" lcStrategic="0.5" lcCooperative="0.2" lcSpeedGain="2" lcKeepRight="0" lcOpposite="0.5" lcAssertive="2" lcLookaheadLeft="3" lcSpeedGainRight="0.5" lcCooperativeRoundabout="0.5" lcCooperativeSpeed="0.5" lcMaxSpeedLatStanding="0.5" lcMaxSpeedLatFactor="0.5" lcOvertakeRight="1" lcSigma="0.5" lcOvertakeDeltaSpeedFactor="0.1" accel="2.60" decel="4.50"/>
+    <vType id="lcC" length="5.00" maxSpeed="13.89" laneChangeModel="LC2013" lcStrategic="3" lcCooperative="0" lcSpeedGain="0" lcKeepRight="2" lcMaxSpeedLatStanding="1.2" lcMaxSpeedLatFactor="2" lcSigma="0.2" accel="2.60" decel="4.50"/>
+    <vType id="slow" length="5.00" maxSpeed="4.00" accel="2.60" decel="4.50"/>
+    <vehicle id="s0" type="slow" depart="0.00" departLane="1" departSpeed="max" route="r0" distance="0 0" speedFactor="1.0600" state="2070 0 0 5.10 0 16.74 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="334.15 329.15 3.32" speed="3.32 3.61" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 36588683 0">
+        <device id="tripinfo_s0" state="E0_1 0 4 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="s1" type="slow" depart="30.00" departLane="0" departSpeed="max" route="r0" distance="0 0" speedFactor="0.9383" state="2070 30000 0 5.10 0 12.65 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="230.49 225.49 3.68" speed="3.68 2.71" angle="90.00" posLat="0.00" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 36832252 0">
+        <device id="tripinfo_s1" state="E0_0 0 4 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="a3" type="lcB" depart="35.00" departLane="1" departSpeed="max" route="r0" distance="507.2 0" speedFactor="1.0104" state="2070 35000 1 5.10 0 2.63 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="350.37 345.37 13.21" speed="13.21 12.62" angle="89.84" posLat="0.66" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 -11510823 134564818 0">
+        <device id="tripinfo_a3" state="E0_1 0 13.89 502.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="a4" type="lcC" depart="45.00" departLane="0" departSpeed="max" route="r0" distance="0 0" speedFactor="1.0827" state="2070 45000 0 5.10 0 38.65 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="218.34 213.34 1.81" speed="1.81 3.30" angle="89.96" posLat="0.08" waitingTime="100000 0" lcStateBase="0.00" lcState2="172549004 0 0 37383398 0">
+        <device id="tripinfo_a4" state="E0_0 0 13.89 -5.1 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="m2" type="lcC" depart="50.00" departLane="0" departSpeed="max" route="rr" distance="145.43 0" speedFactor="1.0303" state="2070 50000 1 5.10 0 4.34 99000 0 0 0 9223372036854774807 9223372036854774807 9223372036854774807" pos="473.10 468.10 13.48" speed="13.48 13.45" angle="90.12" posLat="0.05" waitingTime="100000 0" lcStateBase="0.00" lcState2="0 0 0 134826097 0">
+        <device id="tripinfo_m2" state="ramp_0 0 13.89 140.33 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <lane id="E0_0">
+        <vehicles value="a4 s1 s0"/>
+    </lane>
+    <lane id="E1_0">
+        <vehicles value="m2"/>
+    </lane>
+    <lane id="E1_1">
+        <vehicles value="a3"/>
+    </lane>
+</snapshot>

@@ -19,6 +19,8 @@
 # Only outputs the case already compares are written (fcd/stat appear only if the committed ref has them).
 # A case with extra_outputs.txt (lines "<option> <suffix>") writes fcd+stat and each <suffix> as ref.<suffix>.xml.
 # A case with add_outputs.txt (lines "<file> <suffix>"; <file> is written by its additional file) keeps it as ref.<suffix>.xml.
+# A case with sim_outputs.txt (options; @OUT@ = ref_sim_out/) writes e.g. state files in the reference run into ref_sim_out/,
+# which run_all compares with compare_xml.py (the state configuration is a comment, so it is ignored).
 # Usage: bash tools/oracle/make_sim_refs.sh [case ...]     (default: all cases above). Overwrites references!
 # DEST=/c/... writes <DEST>/<case>/ instead, to check committed references without touching them.
 set -u
@@ -48,6 +50,7 @@ run_ref() {  # run_ref <log> <wsl-cmd> <end or empty> <outdir> <tag>
   local chk=(--tripinfo "$od/$tag.tripinfo.xml")
   [ -f "$od/$tag.fcd.xml" ] && chk+=(--fcd "$od/$tag.fcd.xml")
   [ -f "$od/$tag.stat.xml" ] && chk+=(--stat "$od/$tag.stat.xml")
+  [ -d "$od/ref_sim_out" ] && for x in "$od"/ref_sim_out/*; do [ -f "$x" ] && chk+=(--xml "$x"); done
   for x in "$od/$tag".*.xml; do
     case $x in *.tripinfo.xml|*.fcd.xml|*.stat.xml) ;; *) [ -f "$x" ] && chk+=(--xml "$x");; esac
   done
@@ -72,7 +75,12 @@ for c in $CASES; do
   want "$src/ref.stat.xml" && outs="$outs --statistic-output $(wp "$o")/ref.stat.xml"
   [ -f "$src/extra_outputs.txt" ] && while read -r opt suf; do suf=${suf%$'\r'}; outs="$outs $opt $(wp "$o")/ref.$suf.xml"; done < "$src/extra_outputs.txt"
   flags=$(cat "$src/sim.args" 2>/dev/null)
-  run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
+  sout=""
+  if [ -f "$src/sim_outputs.txt" ]; then
+    rm -rf "$o/ref_sim_out"; mkdir -p "$o/ref_sim_out"
+    sout=$(sed "s#@OUT@#$(wp "$o")/ref_sim_out#g" "$src/sim_outputs.txt" | tr -d '\r')
+  fi
+  run_ref "$LOG/ref_$c.log" "cd $W && SUMO_HOME=\$HOME/sumo-pristine/lib/python3.12/site-packages/sumo setsid --wait \${SUMO_ORACLE_BIN:-\$HOME/sumo-pristine/bin}/sumo -n $src/ref_simple.net.xml -r $src/routes.rou $flags $outs $sout --no-step-log true" "$(echo "$flags" | sed -n 's/.*--end \([0-9.]*\).*/\1/p')" "$o" ref
   echo "$c: exit $?  flags: ${flags:-none}  $(ls "$o"/ref.*.xml 2>/dev/null | wc -l) ref files"
   # Variants: run_all pairs ref_<v>.tripinfo.xml with sim_<v>.args, so each variant reference must be
   # regenerable the same way. Without this loop a variant reference can only be reproduced by hand.

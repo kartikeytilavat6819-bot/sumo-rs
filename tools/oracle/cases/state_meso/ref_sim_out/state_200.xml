@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2026-11-17T22:56:20.122263-05:00 by Eclipse SUMO sumo 1.28.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="tools/oracle/cases/state_meso/ref_simple.net.xml"/>
+        <route-files value="tools/oracle/cases/state_meso/routes.rou"/>
+    </input>
+
+    <output>
+        <fcd-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_meso/ref.fcd.xml"/>
+        <tripinfo-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_meso/ref.tripinfo.xml"/>
+        <statistic-output value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_meso/ref.stat.xml"/>
+        <save-state.times value="200"/>
+        <save-state.files value="/mnt/c/Users/karti/sumo-rs/.claude/worktrees/agent-z29/tools/oracle/cases/state_meso/ref_sim_out/state_200.xml"/>
+    </output>
+
+    <time>
+        <end value="400"/>
+    </time>
+
+    <report>
+        <no-step-log value="true"/>
+    </report>
+
+    <mesoscopic>
+        <mesosim value="true"/>
+        <meso-junction-control value="true"/>
+    </mesoscopic>
+
+</sumoConfiguration>
+-->
+
+<snapshot type="meso" version="1.28.0" time="200.00" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/state_file.xsd">
+    <route id="!mf" state="0" edges="M F"/>
+    <route id="!nf" state="0" edges="N C F"/>
+    <route id="!ns" state="0" edges="N S"/>
+    <route id="!wf" state="0" edges="W C F"/>
+    <delay number="69" begin="154" end="85" depart="0.00" time="6421.00" speedFactor="1.23" decel="4.50"/>
+    <vType id="DEFAULT_VEHTYPE"/>
+    <vehicle id="mf.19" depart="95.00" route="!mf" distance="592 0" speedFactor="0.9551" state="160 95000 1 0 1 0 203613 196176 9223372036854774807 0 0">
+        <device id="tripinfo_mf.19" state="M_0 13.2663 305.03 48641 0 1 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.19" time="196176" pos="98.67"/>
+    </vehicle>
+    <vehicle id="mf.20" depart="100.00" route="!mf" distance="592 0" speedFactor="1.0073" state="160 100000 1 0 0 0 205759 198530 9223372036854774807 0 0">
+        <device id="tripinfo_mf.20" state="M_0 13.9913 305.03 8199 0 1 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="mf.21" depart="105.00" route="!mf" distance="0 0" speedFactor="0.9981" state="160 105000 0 0 2 0 199955 119234 9223372036854774807 0 0">
+        <device id="tripinfo_mf.21" state="M_0 13.8635 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.21" time="119234" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.22" depart="110.00" route="!mf" distance="0 0" speedFactor="0.9759" state="160 110000 0 0 2 0 131837 124558 9223372036854774807 0 0">
+        <device id="tripinfo_mf.22" state="M_0 13.555 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.22" time="124558" pos="197.33"/>
+    </vehicle>
+    <vehicle id="ns.16" depart="113.00" route="!ns" distance="592 0" speedFactor="1.0071" state="160 113000 1 0 2 0 201214 194313 9223372036854774807 0 0">
+        <device id="tripinfo_ns.16" state="N_0 13.189 310.4 44000 0 1 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.16" time="194313" pos="193.07"/>
+    </vehicle>
+    <vehicle id="mf.23" depart="115.00" route="!mf" distance="0 0" speedFactor="1.0167" state="160 115000 0 0 2 0 135961 128974 9223372036854774807 0 0">
+        <device id="tripinfo_mf.23" state="M_0 14.1215 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.23" time="128974" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.39" depart="117.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.8918" state="164 117000 2 0 2 0 199428 191463 9223372036854774807 0 0">
+        <device id="tripinfo_wf.39" state="W_0 12.3871 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.39" time="191463" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.24" depart="120.00" route="!mf" distance="0 0" speedFactor="0.8336" state="160 120000 0 0 2 0 145563 137042 9223372036854774807 0 0">
+        <device id="tripinfo_mf.24" state="M_0 11.5787 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.24" time="137042" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.40" depart="120.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.9214" state="164 120000 2 0 2 0 200262 192297 9223372036854774807 0 0">
+        <device id="tripinfo_wf.40" state="W_0 12.7982 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.40" time="192297" pos="197.33"/>
+    </vehicle>
+    <vehicle id="ns.17" depart="120.00" route="!ns" distance="592 0" speedFactor="1.0910" state="160 120000 1 0 2 0 202883 195982 9223372036854774807 0 0">
+        <device id="tripinfo_ns.17" state="N_0 15.1538 310.4 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.17" time="195982" pos="193.07"/>
+    </vehicle>
+    <vehicle id="wf.41" depart="123.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0568" state="164 123000 2 0 2 0 201096 193131 9223372036854774807 0 0">
+        <device id="tripinfo_wf.41" state="W_0 14.6789 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.41" time="193131" pos="197.33"/>
+    </vehicle>
+    <vehicle id="nf.11" depart="123.00" route="!nf" distance="592 0" speedFactor="1.0099" state="160 123000 1 0 2 0 205253 198390 9223372036854774807 0 0">
+        <device id="tripinfo_nf.11" state="N_0 14.0271 305.03 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_nf.11" time="198390" pos="192.53"/>
+    </vehicle>
+    <vehicle id="mf.25" depart="125.00" route="!mf" distance="0 0" speedFactor="0.9065" state="160 125000 0 0 2 0 148508 140672 9223372036854774807 0 0">
+        <device id="tripinfo_mf.25" state="M_0 12.5913 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.25" time="140672" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.42" depart="126.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.1216" state="164 126000 2 0 2 0 201930 193965 9223372036854774807 0 0">
+        <device id="tripinfo_wf.42" state="W_0 15.5786 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.42" time="193965" pos="197.33"/>
+    </vehicle>
+    <vehicle id="ns.18" depart="127.00" route="!ns" distance="592 0" speedFactor="1.0972" state="160 127000 1 0 1 0 199902 193568 9223372036854774807 0 0">
+        <device id="tripinfo_ns.18" state="N_0 15.2401 310.4 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.18" time="193568" pos="96.53"/>
+    </vehicle>
+    <vehicle id="wf.43" depart="129.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0650" state="164 129000 2 0 2 0 202764 194799 9223372036854774807 0 0">
+        <device id="tripinfo_wf.43" state="W_0 14.7924 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.43" time="194799" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.26" depart="130.00" route="!mf" distance="0 0" speedFactor="0.9567" state="160 130000 0 0 2 0 152275 144850 9223372036854774807 0 0">
+        <device id="tripinfo_mf.26" state="M_0 13.2884 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.26" time="144850" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.44" depart="132.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.9682" state="164 132000 2 0 2 0 203598 195633 9223372036854774807 0 0">
+        <device id="tripinfo_wf.44" state="W_0 13.4483 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.44" time="195633" pos="197.33"/>
+    </vehicle>
+    <vehicle id="ns.19" depart="134.00" route="!ns" distance="592 0" speedFactor="0.9525" state="160 134000 1 0 1 0 204238 196942 9223372036854774807 0 0">
+        <device id="tripinfo_ns.19" state="N_0 13.2296 310.4 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.19" time="196942" pos="96.53"/>
+    </vehicle>
+    <vehicle id="nf.12" depart="134.00" route="!nf" distance="592 0" speedFactor="0.8939" state="160 134000 1 0 0 0 199307 191554 9223372036854774807 0 0">
+        <device id="tripinfo_nf.12" state="N_0 10.8104 305.03 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="mf.27" depart="135.00" route="!mf" distance="0 0" speedFactor="1.0727" state="160 135000 0 0 2 0 154866 148244 9223372036854774807 0 0">
+        <device id="tripinfo_mf.27" state="M_0 14.8998 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.27" time="148244" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.45" depart="135.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0140" state="164 135000 2 0 2 0 204432 196467 9223372036854774807 0 0">
+        <device id="tripinfo_wf.45" state="W_0 14.0837 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.45" time="196467" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.46" depart="138.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0345" state="164 138000 2 0 2 0 205266 197301 9223372036854774807 0 0">
+        <device id="tripinfo_wf.46" state="W_0 14.3692 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.46" time="197301" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.28" depart="140.00" route="!mf" distance="0 0" speedFactor="1.0648" state="160 140000 0 0 2 0 160013 153342 9223372036854774807 0 0">
+        <device id="tripinfo_mf.28" state="M_0 14.7901 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.28" time="153342" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.47" depart="141.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.9596" state="164 141000 2 0 1 0 201116 193714 9223372036854774807 0 0">
+        <device id="tripinfo_wf.47" state="W_0 13.3288 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.47" time="193714" pos="98.67"/>
+    </vehicle>
+    <vehicle id="ns.20" depart="141.00" route="!ns" distance="592 0" speedFactor="0.9277" state="160 141000 1 0 0 0 201705 194214 9223372036854774807 0 0">
+        <device id="tripinfo_ns.20" state="N_0 12.8858 310.4 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="wf.48" depart="144.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.8659" state="164 144000 2 0 0 0 202423 194219 9223372036854774807 0 0">
+        <device id="tripinfo_wf.48" state="W_0 12.0271 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="mf.29" depart="145.00" route="!mf" distance="0 0" speedFactor="1.0985" state="160 145000 0 0 2 0 164398 157932 9223372036854774807 0 0">
+        <device id="tripinfo_mf.29" state="M_0 15.2582 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.29" time="157932" pos="197.33"/>
+    </vehicle>
+    <vehicle id="nf.13" depart="145.00" route="!nf" distance="592 0" speedFactor="1.0090" state="160 145000 1 0 0 0 202878 196009 9223372036854774807 0 0">
+        <device id="tripinfo_nf.13" state="N_0 14.015 305.03 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="wf.49" depart="147.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0964" state="164 147000 2 0 1 0 201950 194548 9223372036854774807 0 0">
+        <device id="tripinfo_wf.49" state="W_0 15.2286 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.49" time="194548" pos="98.67"/>
+    </vehicle>
+    <vehicle id="ns.21" depart="148.00" route="!ns" distance="592 0" speedFactor="0.9220" state="160 148000 1 0 0 0 206296 198758 9223372036854774807 0 0">
+        <device id="tripinfo_ns.21" state="N_0 12.8066 310.4 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="mf.30" depart="150.00" route="!mf" distance="0 0" speedFactor="1.1771" state="160 150000 0 0 2 0 168105 162070 9223372036854774807 0 0">
+        <device id="tripinfo_mf.30" state="M_0 16.3491 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.30" time="162070" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.50" depart="150.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.0043" state="164 150000 2 0 0 0 203257 195053 9223372036854774807 0 0">
+        <device id="tripinfo_wf.50" state="W_0 13.9488 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="wf.51" depart="153.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="0.9914" state="164 153000 2 0 0 0 204091 196863 9223372036854774807 0 0">
+        <device id="tripinfo_wf.51" state="W_0 13.7698 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="mf.31" depart="155.00" route="!mf" distance="0 0" speedFactor="1.0709" state="160 155000 0 0 2 0 174899 168266 9223372036854774807 0 0">
+        <device id="tripinfo_mf.31" state="M_0 14.8748 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.31" time="168266" pos="197.33"/>
+    </vehicle>
+    <vehicle id="ns.22" depart="155.00" route="!ns" distance="0 0" speedFactor="0.9415" state="160 155000 0 0 2 0 199903 170090 9223372036854774807 0 0">
+        <device id="tripinfo_ns.22" state="N_0 13.0771 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.22" time="170090" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.52" depart="156.00" departLane="best" route="!wf" distance="1163.2 0" speedFactor="1.1032" state="164 156000 2 0 0 0 204925 197697 9223372036854774807 0 0">
+        <device id="tripinfo_wf.52" state="W_0 15.3234 604 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="nf.14" depart="156.00" route="!nf" distance="0 0" speedFactor="1.0314" state="160 156000 0 0 2 0 179304 171759 9223372036854774807 0 0">
+        <device id="tripinfo_nf.14" state="N_0 12.012 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_nf.14" time="171759" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.53" depart="159.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0234" state="164 159000 0 0 2 0 199598 172732 179598 0 0">
+        <device id="tripinfo_wf.53" state="W_0 14.215 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.53" time="172732" pos="195.20"/>
+    </vehicle>
+    <vehicle id="mf.32" depart="160.00" route="!mf" distance="0 0" speedFactor="1.0609" state="160 160000 0 0 2 0 194114 187418 9223372036854774807 0 0">
+        <device id="tripinfo_mf.32" state="M_0 14.7352 -0 14026 0 1 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.32" time="187418" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.54" depart="162.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.1528" state="164 162000 0 0 2 1 199285 174190 180285 0 0">
+        <device id="tripinfo_wf.54" state="W_0 16.0124 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.54" time="174190" pos="195.20"/>
+    </vehicle>
+    <vehicle id="ns.23" depart="162.00" route="!ns" distance="0 0" speedFactor="1.0322" state="160 162000 0 0 2 0 182646 175764 9223372036854774807 0 0">
+        <device id="tripinfo_ns.23" state="N_0 14.3369 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.23" time="175764" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.33" depart="165.00" route="!mf" distance="0 0" speedFactor="0.8221" state="160 165000 0 0 2 0 206328 197687 9223372036854774807 0 0">
+        <device id="tripinfo_mf.33" state="M_0 11.4184 -0 8600 0 1 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.33" time="197687" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.55" depart="165.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.1184" state="164 165000 0 0 2 0 183849 177566 9223372036854774807 0 0">
+        <device id="tripinfo_wf.55" state="W_0 15.534 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.55" time="177566" pos="195.20"/>
+    </vehicle>
+    <vehicle id="nf.15" depart="167.00" route="!nf" distance="0 0" speedFactor="1.0083" state="160 167000 0 0 2 0 188135 181090 9223372036854774807 0 0">
+        <device id="tripinfo_nf.15" state="N_0 14.0052 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_nf.15" time="181090" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.56" depart="168.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0322" state="164 168000 0 0 2 1 188421 181614 9223372036854774807 0 0">
+        <device id="tripinfo_wf.56" state="W_0 14.3373 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.56" time="181614" pos="195.20"/>
+    </vehicle>
+    <vehicle id="ns.24" depart="169.00" route="!ns" distance="0 0" speedFactor="1.0683" state="160 169000 0 0 2 0 189804 182759 9223372036854774807 0 0">
+        <device id="tripinfo_ns.24" state="N_0 14.6957 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.24" time="182759" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.34" depart="170.00" route="!mf" distance="0 0" speedFactor="0.9597" state="160 170000 0 0 1 0 199356 177402 9223372036854774807 0 0">
+        <device id="tripinfo_mf.34" state="M_0 13.3297 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.34" time="177402" pos="98.67"/>
+    </vehicle>
+    <vehicle id="wf.57" depart="171.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0374" state="164 171000 0 0 2 0 191319 184546 9223372036854774807 0 0">
+        <device id="tripinfo_wf.57" state="W_0 14.4095 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.57" time="184546" pos="195.20"/>
+    </vehicle>
+    <vehicle id="wf.58" depart="174.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.2260" state="164 174000 0 0 2 1 191193 185462 9223372036854774807 0 0">
+        <device id="tripinfo_wf.58" state="W_0 17.0291 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.58" time="185462" pos="195.20"/>
+    </vehicle>
+    <vehicle id="mf.35" depart="175.00" route="!mf" distance="0 0" speedFactor="1.0117" state="160 175000 0 0 1 0 189042 182021 9223372036854774807 0 0">
+        <device id="tripinfo_mf.35" state="M_0 14.0525 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.35" time="182021" pos="98.67"/>
+    </vehicle>
+    <vehicle id="ns.25" depart="176.00" route="!ns" distance="0 0" speedFactor="1.1195" state="160 176000 0 0 2 0 195035 188690 9223372036854774807 0 0">
+        <device id="tripinfo_ns.25" state="N_0 15.5499 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.25" time="188690" pos="197.33"/>
+    </vehicle>
+    <vehicle id="wf.59" depart="177.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0152" state="164 177000 0 0 2 0 197763 190842 9223372036854774807 0 0">
+        <device id="tripinfo_wf.59" state="W_0 14.1011 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.59" time="190842" pos="195.20"/>
+    </vehicle>
+    <vehicle id="nf.16" depart="178.00" route="!nf" distance="0 0" speedFactor="1.0039" state="160 178000 0 0 2 0 199228 192152 9223372036854774807 0 0">
+        <device id="tripinfo_nf.16" state="N_0 13.9438 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_nf.16" time="192152" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.36" depart="180.00" route="!mf" distance="0 0" speedFactor="0.9535" state="160 180000 0 0 1 0 194900 187450 9223372036854774807 0 0">
+        <device id="tripinfo_mf.36" state="M_0 13.2438 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.36" time="187450" pos="98.67"/>
+    </vehicle>
+    <vehicle id="wf.60" depart="180.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.1138" state="164 180000 0 0 2 1 198927 192618 9223372036854774807 0 0">
+        <device id="tripinfo_wf.60" state="W_0 15.47 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.60" time="192618" pos="195.20"/>
+    </vehicle>
+    <vehicle id="wf.61" depart="183.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.1643" state="164 183000 0 0 2 0 201105 195070 9223372036854774807 0 0">
+        <device id="tripinfo_wf.61" state="W_0 16.1721 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.61" time="195070" pos="195.20"/>
+    </vehicle>
+    <vehicle id="ns.26" depart="183.00" route="!ns" distance="0 0" speedFactor="0.9364" state="160 183000 0 0 2 0 205758 198172 9223372036854774807 0 0">
+        <device id="tripinfo_ns.26" state="N_0 13.0064 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.26" time="198172" pos="197.33"/>
+    </vehicle>
+    <vehicle id="mf.37" depart="185.00" route="!mf" distance="0 0" speedFactor="1.1290" state="160 185000 0 0 1 0 197584 191292 9223372036854774807 0 0">
+        <device id="tripinfo_mf.37" state="M_0 15.6813 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.37" time="191292" pos="98.67"/>
+    </vehicle>
+    <vehicle id="wf.62" depart="186.00" departLane="best" route="!wf" distance="0 0" speedFactor="0.7336" state="164 186000 0 0 1 0 205156 195578 9223372036854774807 0 0">
+        <device id="tripinfo_wf.62" state="W_0 10.1897 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.62" time="195578" pos="97.60"/>
+    </vehicle>
+    <vehicle id="wf.63" depart="189.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.1408" state="164 189000 0 0 1 0 205990 196412 9223372036854774807 0 0">
+        <device id="tripinfo_wf.63" state="W_0 13.1678 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.63" time="196412" pos="97.60"/>
+    </vehicle>
+    <vehicle id="nf.17" depart="189.00" route="!nf" distance="0 0" speedFactor="0.8868" state="160 189000 0 0 1 0 205020 197010 9223372036854774807 0 0">
+        <device id="tripinfo_nf.17" state="N_0 12.3177 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_nf.17" time="197010" pos="98.67"/>
+    </vehicle>
+    <vehicle id="mf.38" depart="190.00" route="!mf" distance="0 0" speedFactor="1.0022" state="160 190000 0 0 1 0 204176 197088 9223372036854774807 0 0">
+        <device id="tripinfo_mf.38" state="M_0 13.9202 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_mf.38" time="197088" pos="98.67"/>
+    </vehicle>
+    <vehicle id="ns.27" depart="190.00" route="!ns" distance="0 0" speedFactor="0.9668" state="160 190000 0 0 1 0 206689 198679 9223372036854774807 0 0">
+        <device id="tripinfo_ns.27" state="N_0 11.3684 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_ns.27" time="198679" pos="98.67"/>
+    </vehicle>
+    <vehicle id="wf.64" depart="192.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0399" state="164 192000 0 0 1 0 206824 198757 9223372036854774807 0 0">
+        <device id="tripinfo_wf.64" state="W_0 14.4442 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+        <rem id="tripinfo_wf.64" time="198757" pos="97.60"/>
+    </vehicle>
+    <vehicle id="mf.39" depart="195.00" route="!mf" distance="0 0" speedFactor="0.9630" state="160 195000 0 0 0 0 202376 195000 9223372036854774807 0 0">
+        <device id="tripinfo_mf.39" state="M_0 13.3761 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="wf.65" depart="195.00" departLane="best" route="!wf" distance="0 0" speedFactor="1.0046" state="164 195000 0 0 0 0 201994 195000 9223372036854774807 0 0">
+        <device id="tripinfo_wf.65" state="W_0 13.9539 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="ns.28" depart="197.00" route="!ns" distance="0 0" speedFactor="1.0714" state="160 197000 0 0 0 0 203630 197000 9223372036854774807 0 0">
+        <device id="tripinfo_ns.28" state="N_0 14.8817 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <vehicle id="wf.66" depart="198.00" departLane="best" route="!wf" distance="0 0" speedFactor="0.9270" state="164 198000 0 0 0 0 205580 198000 9223372036854774807 0 0">
+        <device id="tripinfo_wf.66" state="W_0 12.876 -0 0 0 0 0 -1 -1000 NONE -1 0 -1"/>
+    </vehicle>
+    <flowState id="mf" begin="0.00" end="300.00" period="5" next="200.00" route="!mf" done="40" index="40"/>
+    <flowState id="wf" begin="0.00" end="300.00" period="3" departLane="best" next="201.00" route="!wf" done="67" index="67"/>
+    <flowState id="ns" begin="1.00" end="300.00" period="7" next="203.00" route="!ns" done="29" index="29"/>
+    <flowState id="nf" begin="2.00" end="300.00" period="11" next="198.00" route="!nf" done="18" index="18"/>
+    <segment id=":b_0:0">
+        <vehicles time="201027" blockTime="199302" value=""/>
+    </segment>
+    <segment id=":b_1:0">
+        <vehicles time="198891" blockTime="197646" value=""/>
+    </segment>
+    <segment id=":b_3:0">
+        <vehicles time="176745" blockTime="175940" value=""/>
+    </segment>
+    <segment id=":c_0:0">
+        <vehicles time="201412" blockTime="199967" value=""/>
+    </segment>
+    <segment id=":c_1:0">
+        <vehicles time="198531" blockTime="197717" value=""/>
+    </segment>
+    <segment id="C:0">
+        <vehicles time="192361" blockTime="196842" value="nf.13 nf.12"/>
+    </segment>
+    <segment id="C:1">
+        <vehicles time="199224" blockTime="192360" value=""/>
+    </segment>
+    <segment id="C:2">
+        <vehicles time="197718" blockTime="199223" value="nf.11"/>
+    </segment>
+    <segment id="F:0">
+        <vehicles time="197010" blockTime="199363" value="mf.20 wf.52 wf.51 wf.50 wf.48"/>
+    </segment>
+    <segment id="F:1">
+        <vehicles time="198135" blockTime="197009" value="mf.19 wf.49 wf.47"/>
+    </segment>
+    <segment id="F:2">
+        <vehicles time="197911" blockTime="198134" value="wf.46 wf.45 wf.44 wf.43 wf.42 wf.41 wf.40 wf.39"/>
+    </segment>
+    <segment id="M:0">
+        <vehicles time="198757" blockTime="-9223372036854775808" value="mf.39"/>
+    </segment>
+    <segment id="M:1">
+        <vehicles time="199356" blockTime="198756" value="mf.38 mf.37 mf.36 mf.35 mf.34"/>
+    </segment>
+    <segment id="M:2">
+        <vehicles time="199955" blockTime="199355" value="mf.33 mf.32 mf.31 mf.30 mf.29 mf.28 mf.27 mf.26 mf.25 mf.24 mf.23 mf.22 mf.21"/>
+    </segment>
+    <segment id="N:0">
+        <vehicles time="200348" blockTime="-9223372036854775808" value="ns.28"/>
+    </segment>
+    <segment id="N:1">
+        <vehicles time="199841" blockTime="200347" value="ns.27 nf.17"/>
+    </segment>
+    <segment id="N:2">
+        <vehicles time="199903" blockTime="199840" value="ns.26 nf.16 ns.25 ns.24 nf.15 ns.23 nf.14 ns.22"/>
+    </segment>
+    <segment id="S:0">
+        <vehicles time="198611" blockTime="200426" value="ns.21 ns.20"/>
+    </segment>
+    <segment id="S:1">
+        <vehicles time="197651" blockTime="198610" value="ns.19 ns.18"/>
+    </segment>
+    <segment id="S:2">
+        <vehicles time="154777" blockTime="197650" value="ns.17 ns.16"/>
+    </segment>
+    <segment id="W:0">
+        <vehicles time="199591" blockTime="-9223372036854775808" value="wf.66 wf.65"/>
+    </segment>
+    <segment id="W:1">
+        <vehicles time="195904" blockTime="199590" value="wf.64 wf.63 wf.62"/>
+    </segment>
+    <segment id="W:2">
+        <vehicles time="176776" blockTime="196738" value="wf.61 wf.59 wf.57 wf.55 wf.53"/>
+        <vehicles time="175933" blockTime="194286" value="wf.60 wf.58 wf.56 wf.54"/>
+    </segment>
+    <tlLogic id="b" programID="0" phase="0" duration="20000" until="222000" cycleTime="20000" active="1"/>
+</snapshot>
