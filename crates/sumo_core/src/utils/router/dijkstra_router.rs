@@ -287,7 +287,8 @@ impl<E: RouterEdge<V>, V: RouterVehicle> DijkstraRouter<E, V> {
         let ignoreTransient = if vehicle.is_null() { false } else { vehicle.ignore_transient_permissions() };
         let query = (from, vehicle, msTime);
         let cmp = DijkstraRouter_EdgeInfoByEffortComparator {};
-        if ((self.myBulkMode && from == self.myLastQuery.0) || (self.myAutoBulkMode && query == self.myLastQuery)) && !self.myAmClean {
+        // C++: (myBulkMode || (myAutoBulkMode && query == myLastQuery)) && !myAmClean
+        if (self.myBulkMode || (self.myAutoBulkMode && query == self.myLastQuery)) && !self.myAmClean {
             let toInfo = Ptr::from_mut(&mut self.myEdgeInfos[to.numerical_id() as usize]);
             if toInfo.visited {
                 self.build_path_from(toInfo, into);
